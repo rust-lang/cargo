@@ -1,6 +1,6 @@
 #[crate_id="cargo-rustc"];
 
-extern crate rustc;
+extern crate toml;
 
 use std::os::args;
 use std::io::process::Process;
@@ -14,8 +14,6 @@ use std::io::process::Process;
 fn main() {
   let mut arguments = args();
   arguments.shift();
-
-  println!("host: {}", driver::host_triple());
 
   if arguments[0] != ~"--" {
     fail!("LOL");
