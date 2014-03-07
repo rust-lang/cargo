@@ -1,0 +1,3 @@
+[submodule "libs/rust-toml"]
+	path = libs/rust-toml
+	url = https://github.com/mneumann/rust-toml
