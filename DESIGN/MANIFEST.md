@@ -7,7 +7,7 @@ The `Cargo.toml` file contains several top-level sections:
 * `[project]`: project-specific details, such as name, version and author
 * `[[lib]]`: information about the main library file, if one exists. By
   default, the main library file is `src/<package-name>.rs`
-* `[[executable]]`: optionally repeated information about executables
+* `[[bin]]`: optionally repeated information about executables
   that the project is generating. This can both be used for projects
   that primarily build executables, as well as projects that contain
   utility executables (such as an HTTP library that comes with a web
@@ -53,9 +53,9 @@ Note that we plan to support multiple `Cargo.toml` files in Cargo's git
 support, so you don't have to have a separate git repository per
 library.
 
-## The `[[executable]]` Section
+## The `[[bin]]` Section
 
-The `executable` section is optionally repeated. It is designed for
+The `bin` section is optionally repeated. It is designed for
 projects whose main raison d'être is a single executable, or for projects
 that want to provide utility executables alongside a primary library.
 
@@ -71,18 +71,18 @@ standalone library limited to the bare minimum requirements.
   an executable, `src/bin/<name>.rs` if the project has both a lib and
   executable, see below)
 
-## Projects Containing Both `lib` and `executable`
+## Projects Containing Both `lib` and `bin`
 
 Most projects will primarily produce either a library or an executable.
 Such projects should name the main crate file `<projectname>.rs` and
-omit the optional `path` from the `lib` or `executable` sections.
+omit the optional `path` from the `lib` or `bin` sections.
 
 Projects that contain both a library and one or more executables should
 generally use `<projectname>.rs` for their library, and `bin/*.rs`
 for the executables.
 
 These rules are also the default behavior if `path` is left off of `lib`
-or `executable` sections.
+or `bin` sections.
 
 ## Example Manifests
 
@@ -101,7 +101,7 @@ authors = ["Yehuda Katz <wycats@gmail.com>"]
 name = "hammer"
 ```
 
-Simple `executable`:
+Simple `bin`:
 
 ```toml
 [project]
@@ -111,13 +111,13 @@ version = "0.5.0"
 authors = ["Tom Dale <tom@tomdale.net>", "Carl Lerche <me@carllerche.com>"]
 tags = ["performance", "profiling"]
 
-[[executable]]
+[[bin]]
 
 name = "skylight"
 path = "bin/skylight.rs" # supports existing project structures
 ```
 
-A project with both a lib and an `executable`:
+A project with both a `lib` and an `bin`:
 
 ```toml
 [project]
@@ -131,11 +131,11 @@ tags = ["performance", "profiling"]
 
 name = "skylight" # path defaults to src/skylight.rs
 
-[[executable]]
+[[bin]]
 
 name = "skylight" # path defaults to src/bin/skylight.rs
 
-[[executable]]
+[[bin]]
 
 name = "skylight-setup" # path defaults to src/bin/skylight-setup.rs
 ```
