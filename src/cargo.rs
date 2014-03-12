@@ -32,4 +32,3 @@ pub struct Project {
   version: ~str,
   authors: ~[~str]
 }
-
