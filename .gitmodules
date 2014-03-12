@@ -4,3 +4,6 @@
 [submodule "libs/hammer.rs"]
 	path = libs/hammer.rs
 	url = https://github.com/wycats/hammer.rs.git
+[submodule "libs/hamcrest-rust"]
+	path = libs/hamcrest-rust
+	url = https://github.com/carllerche/hamcrest-rust/
