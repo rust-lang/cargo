@@ -4,13 +4,11 @@ extern crate cargo;
 extern crate hammer;
 extern crate serialize;
 extern crate toml;
-extern crate semver;
 
 use hammer::{FlagDecoder,FlagConfig,FlagConfiguration};
 use serialize::{Decoder,Decodable};
 use serialize::json::Encoder;
 use toml::from_toml;
-use semver::Version;
 use cargo::{Manifest,LibTarget,ExecTarget,Project};
 use std::path::Path;
 
@@ -78,7 +76,7 @@ fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExec
     }
 
     let b = bin.get_ref().map(|b_ref| {
-      let mut b = b_ref.clone();
+      let b = b_ref.clone();
       let mut path = b.path.clone();
       if path.is_none() {
         path = Some(format!("src/bin/{}.rs", b.name.clone()));
@@ -97,7 +95,7 @@ fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExec
     (~[LibTarget{ path: path.unwrap(), name: l.name }], ~[])
   } else if bin.is_some() {
     let b = bin.get_ref().map(|b_ref| {
-      let mut b = b_ref.clone();
+      let b = b_ref.clone();
       let mut path = b.path.clone();
       if path.is_none() {
         path = Some(format!("src/bin/{}.rs", b.name.clone()));

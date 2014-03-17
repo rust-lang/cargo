@@ -4,8 +4,7 @@ extern crate toml;
 extern crate getopts;
 
 use std::os::{args,set_exit_status};
-use std::io::process::Process;
-use getopts::{reqopt,getopts,OptGroup};
+use getopts::{reqopt,getopts};
 
 /**
   cargo-verify-project --manifest=LOCATION
@@ -20,7 +19,7 @@ fn main() {
 
   let matches = match getopts(arguments.tail(), opts) {
     Ok(m) => m,
-    Err(err) => {
+    Err(_) => {
       fail("missing-argument", "manifest");
       return;
     }
@@ -39,8 +38,8 @@ fn main() {
     return;
   }
 
-  let root = match toml::parse_from_file(file.as_str().unwrap()) {
-    Err(e) => {
+  match toml::parse_from_file(file.as_str().unwrap()) {
+    Err(_) => {
       fail("invalid", "invalid-format");
       return;
     },

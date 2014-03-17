@@ -8,9 +8,9 @@ use std::os::args;
 use std::io;
 use std::io::process::Process;
 use serialize::json;
-use serialize::{Decoder,Decodable};
+use serialize::Decodable;
 use std::path::Path;
-use cargo::{Manifest,LibTarget,ExecTarget,Project};
+use cargo::Manifest;
 
 /**
   cargo-rustc -- ...args
@@ -47,7 +47,10 @@ fn main() {
     ~"--crate-type", ~"lib"
   ];
 
-  io::fs::mkdir_recursive(&root.join("target"), io::UserRWX);
+  match io::fs::mkdir_recursive(&root.join("target"), io::UserRWX) {
+    Err(_) => fail!("Couldn't mkdir -p"),
+    Ok(val) => val
+  }
 
   println!("Executing {}", args);
 
