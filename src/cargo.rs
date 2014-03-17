@@ -5,22 +5,22 @@ use serialize::{Decoder};
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct Manifest {
-  project: ~Project,
-  root: ~str,
-  lib: ~[LibTarget],
-  bin: ~[ExecTarget]
+    project: ~Project,
+    root: ~str,
+    lib: ~[LibTarget],
+    bin: ~[ExecTarget]
 }
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct ExecTarget {
-  name: ~str,
-  path: ~str
+    name: ~str,
+    path: ~str
 }
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct LibTarget {
-  name: ~str,
-  path: ~str
+    name: ~str,
+    path: ~str
 }
 
 //pub type LibTarget = Target;
@@ -28,7 +28,7 @@ pub struct LibTarget {
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct Project {
-  name: ~str,
-  version: ~str,
-  authors: ~[~str]
+    name: ~str,
+    version: ~str,
+    authors: ~[~str]
 }

@@ -13,57 +13,57 @@ use std::path::Path;
 use cargo::Manifest;
 
 /**
-  cargo-rustc -- ...args
+    cargo-rustc -- ...args
 
-  Delegate ...args to actual rustc command
+    Delegate ...args to actual rustc command
 */
 
 fn main() {
-  let mut reader = io::stdin();
-  let input = reader.read_to_str().unwrap();
+    let mut reader = io::stdin();
+    let input = reader.read_to_str().unwrap();
 
-  let json = json::from_str(input).unwrap();
-  let mut decoder = json::Decoder::new(json);
-  let manifest: Manifest = Decodable::decode(&mut decoder);
+    let json = json::from_str(input).unwrap();
+    let mut decoder = json::Decoder::new(json);
+    let manifest: Manifest = Decodable::decode(&mut decoder);
 
-  //let mut arguments = args();
-  //arguments.shift();
-
-  //if arguments[0] != ~"--" {
-    //fail!("LOL");
-  //} else {
+    //let mut arguments = args();
     //arguments.shift();
-  //}
 
-  let Manifest{ root, lib, .. } = manifest;
+    //if arguments[0] != ~"--" {
+        //fail!("LOL");
+    //} else {
+        //arguments.shift();
+    //}
 
-  let root = Path::new(root);
-  let out_dir = lib[0].path;
-  let target = join(&root, ~"target");
+    let Manifest{ root, lib, .. } = manifest;
 
-  let args = ~[
-    join(&root, out_dir),
-    ~"--out-dir", target,
-    ~"--crate-type", ~"lib"
-  ];
+    let root = Path::new(root);
+    let out_dir = lib[0].path;
+    let target = join(&root, ~"target");
 
-  match io::fs::mkdir_recursive(&root.join("target"), io::UserRWX) {
-    Err(_) => fail!("Couldn't mkdir -p"),
-    Ok(val) => val
-  }
+    let args = ~[
+        join(&root, out_dir),
+        ~"--out-dir", target,
+        ~"--crate-type", ~"lib"
+    ];
 
-  println!("Executing {}", args);
+    match io::fs::mkdir_recursive(&root.join("target"), io::UserRWX) {
+        Err(_) => fail!("Couldn't mkdir -p"),
+        Ok(val) => val
+    }
 
-  let mut p = Process::new("rustc", args).unwrap();
-  let o = p.wait_with_output();
+    println!("Executing {}", args);
 
-  if o.status == std::io::process::ExitStatus(0) {
-    println!("output: {:s}", std::str::from_utf8(o.output).unwrap());
-  } else {
-    fail!("Failed to execute")
-  }
+    let mut p = Process::new("rustc", args).unwrap();
+    let o = p.wait_with_output();
+
+    if o.status == std::io::process::ExitStatus(0) {
+        println!("output: {:s}", std::str::from_utf8(o.output).unwrap());
+    } else {
+        fail!("Failed to execute")
+    }
 }
 
 fn join(path: &Path, part: ~str) -> ~str {
-  path.join(part).as_str().unwrap().to_owned()
+    path.join(part).as_str().unwrap().to_owned()
 }
