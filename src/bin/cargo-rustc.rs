@@ -43,7 +43,7 @@ fn main() {
         Ok(val) => val
     }
 
-    println!("Executing {}", args.as_slice());
+    println!("Executing rustc {}", args.as_slice());
 
     let mut config = ProcessConfig::new();
     config.stdout = InheritFd(1);

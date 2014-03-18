@@ -2,9 +2,10 @@ RUSTC ?= rustc
 RUSTC_FLAGS ?=
 
 # Link flags to pull in dependencies
-BINS = cargo-read-manifest \
-			 cargo-rustc \
-			 cargo-verify-project
+BINS = cargo-compile \
+	   cargo-read-manifest \
+	   cargo-rustc \
+	   cargo-verify-project
 
 SRC = $(wildcard src/*.rs)
 DEPS = -L libs/hammer.rs/target -L libs/rust-toml/lib
