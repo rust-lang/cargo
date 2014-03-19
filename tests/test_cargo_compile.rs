@@ -1,4 +1,5 @@
 use support::project;
+use cargo;
 
 fn setup() {
 
