@@ -10,7 +10,7 @@ use std::io::process::{Process,ProcessConfig,InheritFd};
 use serialize::json;
 use serialize::Decodable;
 use std::path::Path;
-use cargo::Manifest;
+use cargo::{Manifest,CargoResult,ToCargoError};
 
 /**
     cargo-rustc -- ...args
@@ -19,10 +19,20 @@ use cargo::Manifest;
 */
 
 fn main() {
-    let mut reader = io::stdin();
-    let input = reader.read_to_str().unwrap();
+    match execute() {
+        Err(e) => {
+            println!("{}", e.message);
+            // TODO: Exit with error code
+        },
+        _ => return
+    }
+}
 
-    let json = json::from_str(input).unwrap();
+fn execute() -> CargoResult<()> {
+    let mut reader = io::stdin();
+    let input = try!(reader.read_to_str().to_cargo_error(~"Cannot read stdin to a string", 1));
+
+    let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
     let mut decoder = json::Decoder::new(json);
     let manifest: Manifest = Decodable::decode(&mut decoder);
 
@@ -51,15 +61,17 @@ fn main() {
     config.program = "rustc";
     config.args = args.as_slice();
 
-    let mut p = Process::configure(config).unwrap();
+    let mut p = try!(Process::configure(config).to_cargo_error(format!("Could not start process: rustc {}", args.as_slice()), 1));
 
     let status = p.wait();
 
     if status != std::io::process::ExitStatus(0) {
         fail!("Failed to execute")
     }
+
+    Ok(())
 }
 
 fn join(path: &Path, part: ~str) -> ~str {
-    path.join(part).as_str().unwrap().to_owned()
+    format!("{}", path.join(part).display())
 }

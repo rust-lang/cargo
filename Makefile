@@ -42,11 +42,22 @@ libcargo: $(LIBCARGO)
 $(BIN_TARGETS): target/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
 	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) -Ltarget --out-dir target $<
 
-test:
-	echo "testing"
+# === Tests
+
+TEST_SRC = $(wildcard tests/*.rs)
+TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
+
+tests/tests: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
+	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget --out-dir tests tests/tests.rs
+
+test-integration: tests/tests
+	tests/tests
+
+test: test-integration
 
 clean:
 	rm -rf target
+	rm -f tests/tests
 
 distclean: clean
 	cd libs/hamcrest-rust && make clean
@@ -54,7 +65,8 @@ distclean: clean
 	cd libs/rust-toml && make clean
 
 # Setup phony tasks
-.PHONY: all clean distclean test libcargo
+.PHONY: all clean distclean test test-integration libcargo
 
 # Disable unnecessary built-in rules
 .SUFFIXES:
+

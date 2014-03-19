@@ -9,7 +9,7 @@ use hammer::{FlagDecoder,FlagConfig,FlagConfiguration};
 use serialize::{Decoder,Decodable};
 use serialize::json::Encoder;
 use toml::from_toml;
-use cargo::{Manifest,LibTarget,ExecTarget,Project};
+use cargo::{Manifest,LibTarget,ExecTarget,Project,CargoResult,CargoError,ToCargoError};
 use std::path::Path;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
@@ -41,21 +41,32 @@ impl FlagConfig for ReadManifestFlags {
 }
 
 fn main() {
+    match execute() {
+        Err(e) => {
+            println!("{}", e.message);
+            // TODO: Exit with error code
+        },
+        _ => return
+    }
+}
+
+fn execute() -> CargoResult<()> {
     let mut decoder = FlagDecoder::new::<ReadManifestFlags>(std::os::args().tail());
     let flags: ReadManifestFlags = Decodable::decode(&mut decoder);
 
     if decoder.error.is_some() {
-        fail!("Error: {}", decoder.error.unwrap());
+        return Err(CargoError::new(decoder.error.unwrap(), 1));
     }
 
-    let root = toml::parse_from_file(flags.manifest_path).unwrap();
+    let manifest_path = flags.manifest_path;
+    let root = try!(toml::parse_from_file(manifest_path.clone()).to_cargo_error(format!("Couldn't parse Toml file: {}", manifest_path), 1));
 
     let toml_manifest = from_toml::<SerializedManifest>(root.clone());
 
     let (lib, bin) = normalize(&toml_manifest.lib, &toml_manifest.bin);
 
     let manifest = Manifest{
-        root: Path::new(flags.manifest_path).dirname_str().unwrap().to_owned(),
+        root: try!(Path::new(manifest_path.clone()).dirname_str().to_cargo_error(format!("Could not get dirname from {}", manifest_path), 1)).to_owned(),
         project: toml_manifest.project,
         lib: lib,
         bin: bin
@@ -64,6 +75,8 @@ fn main() {
     let encoded: ~str = Encoder::str_encode(&manifest);
 
     println!("{}", encoded);
+
+    Ok(())
 }
 
 fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> (~[LibTarget], ~[ExecTarget]) {
