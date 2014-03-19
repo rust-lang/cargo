@@ -7,7 +7,8 @@ BINS = cargo-compile \
 	   cargo-rustc \
 	   cargo-verify-project
 
-SRC = $(wildcard src/*.rs)
+SRC = $(shell find src -name '*.rs')
+
 DEPS = -L libs/hammer.rs/target -L libs/rust-toml/lib
 TOML = libs/rust-toml/lib/$(shell rustc --crate-file-name libs/rust-toml/src/toml/lib.rs)
 HAMMER = libs/hammer.rs/target/$(shell rustc --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
@@ -25,14 +26,14 @@ $(HAMMER): $(wildcard libs/hammer.rs/src/*.rs)
 $(TOML): $(wildcard libs/rust-toml/src/toml/*.rs)
 	cd libs/rust-toml && make
 
-$(HAMCREST): $(wildcard libs/hamcrest-rust/src/*.rs)
+$(HAMCREST): $(wildcard libs/hamcrest-rust/src/hamcrest/*.rs)
 	cd libs/hamcrest-rust && make
 
 # === Cargo
 
 $(LIBCARGO): $(SRC)
 	mkdir -p target
-	$(RUSTC) $(RUSTC_FLAGS) --out-dir target src/cargo.rs
+	$(RUSTC) $(RUSTC_FLAGS) --out-dir target src/cargo/mod.rs
 	touch $(LIBCARGO)
 
 libcargo: $(LIBCARGO)
@@ -42,8 +43,18 @@ libcargo: $(LIBCARGO)
 $(BIN_TARGETS): target/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
 	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) -Ltarget --out-dir target $<
 
-test:
-	echo "testing"
+# === Tests
+
+TEST_SRC = $(wildcard tests/*.rs)
+TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
+
+target/tests: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
+	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget --out-dir target tests/tests.rs
+
+test-integration: target/tests
+	CARGO_BIN_PATH=$(PWD)/target/ $<
+
+test: test-integration
 
 clean:
 	rm -rf target
@@ -54,7 +65,8 @@ distclean: clean
 	cd libs/rust-toml && make clean
 
 # Setup phony tasks
-.PHONY: all clean distclean test libcargo
+.PHONY: all clean distclean test test-integration libcargo
 
 # Disable unnecessary built-in rules
 .SUFFIXES:
+
