@@ -1,3 +1,4 @@
+use std;
 use std::os;
 use std::io::process::{Process,ProcessConfig,InheritFd};
 
@@ -9,7 +10,7 @@ pub struct ProcessBuilder {
 
 impl ProcessBuilder {
   fn args(mut self, arguments: &[~str]) -> ProcessBuilder {
-    self.args = arguments.clone();
+    self.args = arguments.to_owned();
     self
   }
 }
@@ -20,6 +21,6 @@ pub fn process(cmd: &str) -> ProcessBuilder {
 
 fn get_curr_path() -> ~[~str] {
   os::getenv("PATH").map(|path| {
-    path.split(std::path::SEP).collect()
-  }).or(~[])
+    path.split(std::path::SEP).map(|seg| seg.to_owned()).collect()
+  }).unwrap_or(~[])
 }
