@@ -6,6 +6,8 @@ use serialize::{Decoder};
 use std::fmt;
 use std::fmt::{Show,Formatter};
 
+mod util;
+
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct Manifest {
     project: ~Project,
