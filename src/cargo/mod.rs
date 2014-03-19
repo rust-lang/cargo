@@ -1,3 +1,4 @@
+#[crate_id="cargo"];
 #[crate_type="rlib"];
 
 extern crate serialize;

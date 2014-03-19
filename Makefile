@@ -7,7 +7,8 @@ BINS = cargo-compile \
 	   cargo-rustc \
 	   cargo-verify-project
 
-SRC = $(wildcard src/*.rs)
+SRC = $(shell find src -name '*.rs')
+
 DEPS = -L libs/hammer.rs/target -L libs/rust-toml/lib
 TOML = libs/rust-toml/lib/$(shell rustc --crate-file-name libs/rust-toml/src/toml/lib.rs)
 HAMMER = libs/hammer.rs/target/$(shell rustc --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
@@ -32,7 +33,7 @@ $(HAMCREST): $(wildcard libs/hamcrest-rust/src/*.rs)
 
 $(LIBCARGO): $(SRC)
 	mkdir -p target
-	$(RUSTC) $(RUSTC_FLAGS) --out-dir target src/cargo.rs
+	$(RUSTC) $(RUSTC_FLAGS) --out-dir target src/cargo/mod.rs
 	touch $(LIBCARGO)
 
 libcargo: $(LIBCARGO)

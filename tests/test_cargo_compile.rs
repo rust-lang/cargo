@@ -13,7 +13,7 @@ test!(cargo_compile_with_explicit_manifest_path {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [[bin]]
 
             name = "foo"
         "#)
@@ -22,6 +22,12 @@ test!(cargo_compile_with_explicit_manifest_path {
                 println!("i am foo");
             }"#)
         .build();
+
+     cargo::util::process("cargo-compile")
+       .args([]);
+     //   //.extra_path("target/")
+     //   //.cwd("/foo/bar")
+     //   //.exec_with_output()
 
     fail!("not implemented");
     // 1) Setup project
