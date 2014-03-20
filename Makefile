@@ -26,7 +26,7 @@ $(HAMMER): $(wildcard libs/hammer.rs/src/*.rs)
 $(TOML): $(wildcard libs/rust-toml/src/toml/*.rs)
 	cd libs/rust-toml && make
 
-$(HAMCREST): $(wildcard libs/hamcrest-rust/src/*.rs)
+$(HAMCREST): $(wildcard libs/hamcrest-rust/src/hamcrest/*.rs)
 	cd libs/hamcrest-rust && make
 
 # === Cargo

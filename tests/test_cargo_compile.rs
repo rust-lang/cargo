@@ -1,6 +1,30 @@
 use std;
 use support::project;
+use hamcrest::{SelfDescribing,Description,Matcher,assert_that};
 use cargo;
+
+#[deriving(Clone,Eq)]
+pub struct ExistingFile;
+
+impl SelfDescribing for ExistingFile {
+  fn describe_to(&self, desc: &mut Description) {
+    desc.append_text("an existing file");
+  }
+}
+
+impl Matcher<Path> for ExistingFile {
+  fn matches(&self, actual: &Path) -> bool {
+    actual.exists()
+  }
+
+  fn describe_mismatch(&self, actual: &Path, desc: &mut Description) {
+    desc.append_text(format!("`{}` was missing", actual.display()));
+  }
+}
+
+pub fn existing_file() -> ExistingFile {
+  ExistingFile
+}
 
 fn setup() {
 
@@ -39,6 +63,7 @@ test!(cargo_compile_with_explicit_manifest_path {
       Err(e) => println!("err: {}", e)
     }
 
+    assert_that(p.root().join("target/foo/bar"), existing_file());
     assert!(p.root().join("target/foo").exists(), "the executable exists");
 
     let o = cargo::util::process("foo")

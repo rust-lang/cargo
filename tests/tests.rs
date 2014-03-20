@@ -2,6 +2,7 @@
 #[allow(deprecated_owned_vector)];
 
 extern crate cargo;
+extern crate hamcrest;
 
 macro_rules! test(
     ($name:ident $expr:expr) => (
