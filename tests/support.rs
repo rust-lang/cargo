@@ -1,10 +1,17 @@
 // use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use std::io::fs;
-use std::os::tmpdir;
+use std::os;
 use std::path::{Path};
+use cargo::util::{process,ProcessBuilder};
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
 static MKDIR_PERM : u32 = 0o755;
+
+/*
+ *
+ * ===== Builders =====
+ *
+ */
 
 #[deriving(Eq,Clone)]
 struct FileBuilder {
@@ -53,6 +60,12 @@ impl ProjectBuilder {
       self.root.clone()
     }
 
+    pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
+      process(program)
+        .cwd(self.root())
+        .extra_path(cargo_dir())
+    }
+
     pub fn file(mut self, path: &str, body: &str) -> ProjectBuilder {
         self.files.push(FileBuilder::new(self.root.join(path), body));
         self
@@ -94,7 +107,7 @@ impl ProjectBuilder {
 
 // Generates a project layout
 pub fn project(name: &str) -> ProjectBuilder {
-    ProjectBuilder::new(name, tmpdir().join(CARGO_INTEGRATION_TEST_DIR))
+    ProjectBuilder::new(name, os::tmpdir().join(CARGO_INTEGRATION_TEST_DIR))
 }
 
 // === Helpers ===
@@ -121,3 +134,16 @@ impl<T, E> ErrMsg<T> for Result<T, E> {
         }
     }
 }
+
+// Path to cargo executables
+pub fn cargo_dir() -> ~str {
+  os::getenv("CARGO_BIN_PATH").unwrap_or_else(|| {
+    fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
+  })
+}
+
+/*
+ *
+ * ===== Matchers =====
+ *
+ */
