@@ -1,4 +1,5 @@
 #[crate_id="cargo-compile"];
+#[allow(deprecated_owned_vector)];
 
 extern crate serialize;
 extern crate hammer;

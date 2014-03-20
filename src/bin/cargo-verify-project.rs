@@ -1,4 +1,5 @@
 #[crate_id="cargo-verify-project"];
+#[allow(deprecated_owned_vector)];
 
 extern crate toml;
 extern crate getopts;

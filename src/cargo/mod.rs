@@ -1,6 +1,8 @@
 #[crate_id="cargo"];
 #[crate_type="rlib"];
 
+#[allow(deprecated_owned_vector)];
+
 extern crate serialize;
 use serialize::{Decoder};
 use std::fmt;

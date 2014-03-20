@@ -49,19 +49,24 @@ impl ProjectBuilder {
         }
     }
 
+    pub fn root(&self) -> Path {
+      self.root.clone()
+    }
+
     pub fn file(mut self, path: &str, body: &str) -> ProjectBuilder {
         self.files.push(FileBuilder::new(self.root.join(path), body));
         self
     }
 
-    pub fn build(self) {
+    // TODO: return something different than a ProjectBuilder
+    pub fn build(self) -> ProjectBuilder {
         match self.build_with_result() {
             Err(e) => fail!(e),
-            _ => return
+            _ => return self
         }
     }
 
-    pub fn build_with_result(self) -> Result<(), ~str> {
+    pub fn build_with_result(&self) -> Result<(), ~str> {
         // First, clean the directory if it already exists
         try!(self.rm_root());
 

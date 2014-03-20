@@ -52,7 +52,7 @@ tests/tests: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
 	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget --out-dir tests tests/tests.rs
 
 test-integration: tests/tests
-	tests/tests
+	CARGO_BIN_PATH=$(PWD)/target/ tests/tests
 
 test: test-integration
 

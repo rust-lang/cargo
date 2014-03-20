@@ -1,4 +1,5 @@
 #[crate_id="cargo-read-manifest"];
+#[allow(deprecated_owned_vector)];
 
 extern crate cargo;
 extern crate hammer;
@@ -111,7 +112,7 @@ fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExec
             let b = b_ref.clone();
             let mut path = b.path.clone();
             if path.is_none() {
-                path = Some(format!("src/bin/{}.rs", b.name.clone()));
+                path = Some(format!("src/{}.rs", b.name.clone()));
             }
             ExecTarget{ path: path.unwrap(), name: b.name }
         });

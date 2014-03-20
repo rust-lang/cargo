@@ -1,4 +1,5 @@
 #[feature(macro_rules)];
+#[allow(deprecated_owned_vector)];
 
 extern crate cargo;
 
