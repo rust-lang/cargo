@@ -2,16 +2,18 @@
 #[allow(deprecated_owned_vector)];
 
 extern crate toml;
+extern crate hammer;
 extern crate serialize;
 extern crate cargo;
 
+use hammer::FlagConfig;
 use std::os::args;
 use std::io;
 use std::io::process::{Process,ProcessConfig,InheritFd};
 use serialize::json;
 use serialize::Decodable;
 use std::path::Path;
-use cargo::{Manifest,CargoResult,CargoError,ToCargoError};
+use cargo::{Manifest,CargoResult,CargoError,ToCargoError,execute_main};
 
 /**
     cargo-rustc -- ...args
@@ -20,16 +22,15 @@ use cargo::{Manifest,CargoResult,CargoError,ToCargoError};
 */
 
 fn main() {
-    match execute() {
-        Err(e) => {
-            write!(&mut std::io::stderr(), "{}", e.message);
-            // TODO: Exit with error code
-        },
-        _ => return
-    }
+    execute_main::<RustcFlags>(execute);
 }
 
-fn execute() -> CargoResult<()> {
+#[deriving(Decodable,Eq,Clone,Ord)]
+struct RustcFlags;
+
+impl FlagConfig for RustcFlags {}
+
+fn execute(_: RustcFlags) -> CargoResult<()> {
     let mut reader = io::stdin();
     let input = try!(reader.read_to_str().to_cargo_error(~"Cannot read stdin to a string", 1));
 
@@ -82,12 +83,4 @@ fn execute() -> CargoResult<()> {
 
 fn join(path: &Path, part: ~str) -> ~str {
     format!("{}", path.join(part).display())
-}
-
-fn vec_idx<T>(v: ~[T], idx: uint) -> Option<T> {
-    if idx < v.len() {
-        Some(v[idx])
-    } else {
-        None
-    }
 }

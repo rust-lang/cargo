@@ -6,11 +6,11 @@ extern crate hammer;
 extern crate serialize;
 extern crate toml;
 
-use hammer::{FlagDecoder,FlagConfig,FlagConfiguration};
-use serialize::{Decoder,Decodable};
+use hammer::FlagConfig;
+use serialize::Decoder;
 use serialize::json::Encoder;
 use toml::from_toml;
-use cargo::{Manifest,LibTarget,ExecTarget,Project,CargoResult,CargoError,ToCargoError};
+use cargo::{Manifest,LibTarget,ExecTarget,Project,CargoResult,ToCargoError,execute_main};
 use std::path::Path;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
@@ -35,30 +35,13 @@ struct ReadManifestFlags {
     manifest_path: ~str
 }
 
-impl FlagConfig for ReadManifestFlags {
-    fn config(_: Option<ReadManifestFlags>, c: FlagConfiguration) -> FlagConfiguration {
-        c
-    }
-}
+impl FlagConfig for ReadManifestFlags {}
 
 fn main() {
-    match execute() {
-        Err(e) => {
-            println!("{}", e.message);
-            // TODO: Exit with error code
-        },
-        _ => return
-    }
+    execute_main::<ReadManifestFlags>(execute);
 }
 
-fn execute() -> CargoResult<()> {
-    let mut decoder = FlagDecoder::new::<ReadManifestFlags>(std::os::args().tail());
-    let flags: ReadManifestFlags = Decodable::decode(&mut decoder);
-
-    if decoder.error.is_some() {
-        return Err(CargoError::new(decoder.error.unwrap(), 1));
-    }
-
+fn execute(flags: ReadManifestFlags) -> CargoResult<()> {
     let manifest_path = flags.manifest_path;
     let root = try!(toml::parse_from_file(manifest_path.clone()).to_cargo_error(format!("Couldn't parse Toml file: {}", manifest_path), 1));
 
@@ -82,7 +65,7 @@ fn execute() -> CargoResult<()> {
 
 fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> (~[LibTarget], ~[ExecTarget]) {
     fn lib_targets(libs: &[SerializedLibTarget]) -> ~[LibTarget] {
-        let l = &lib[0];
+        let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         ~[LibTarget{ path: path, name: l.name.clone() }]
     }
