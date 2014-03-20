@@ -31,9 +31,9 @@ $(HAMCREST): $(wildcard libs/hamcrest-rust/src/hamcrest/*.rs)
 
 # === Cargo
 
-$(LIBCARGO): $(SRC)
+$(LIBCARGO): $(SRC) $(HAMMER)
 	mkdir -p target
-	$(RUSTC) $(RUSTC_FLAGS) --out-dir target src/cargo/mod.rs
+	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir target src/cargo/mod.rs
 	touch $(LIBCARGO)
 
 libcargo: $(LIBCARGO)

@@ -1,7 +1,5 @@
-use std;
 use std::os;
 use std::path::Path;
-use std::io::IoResult;
 use std::io::process::{Process,ProcessConfig,ProcessOutput};
 use ToCargoError;
 use CargoResult;

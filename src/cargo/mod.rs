@@ -4,9 +4,12 @@
 #[allow(deprecated_owned_vector)];
 
 extern crate serialize;
-use serialize::{Decoder};
+extern crate hammer;
+
+use serialize::{Decoder,Decodable};
 use std::fmt;
 use std::fmt::{Show,Formatter};
+use hammer::{FlagDecoder,FlagConfig};
 
 pub mod util;
 
@@ -78,5 +81,30 @@ impl<T> ToCargoError<T> for Option<T> {
             None => Err(CargoError{ message: message, exit_code: exit_code }),
             Some(val) => Ok(val)
         }
+    }
+}
+
+pub fn execute_main<T: FlagConfig + Decodable<FlagDecoder>>(exec: fn(T) -> CargoResult<()>) {
+    fn call<T: FlagConfig + Decodable<FlagDecoder>>(exec: fn(T) -> CargoResult<()>) -> CargoResult<()> {
+        let flags = try!(flags_from_args::<T>());
+        exec(flags)
+    }
+
+    match call(exec) {
+        Err(e) => {
+            let _ = write!(&mut std::io::stderr(), "{}", e.message);
+            std::os::set_exit_status(e.exit_code as int);
+        },
+        Ok(_) => ()
+    }
+}
+
+fn flags_from_args<T: FlagConfig + Decodable<FlagDecoder>>() -> CargoResult<T> {
+    let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
+    let flags: T = Decodable::decode(&mut decoder);
+
+    match decoder.error {
+        Some(err) => Err(CargoError::new(err, 1)),
+        None => Ok(flags)
     }
 }
