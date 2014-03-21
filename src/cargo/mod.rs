@@ -6,7 +6,8 @@
 extern crate serialize;
 extern crate hammer;
 
-use serialize::{Decoder,Decodable};
+use serialize::{Decoder,Encoder,Decodable,Encodable,json};
+use std::io;
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use hammer::{FlagDecoder,FlagConfig};
@@ -84,22 +85,54 @@ impl<T> ToCargoError<T> for Option<T> {
     }
 }
 
-pub fn execute_main<T: FlagConfig + Decodable<FlagDecoder>>(exec: fn(T) -> CargoResult<()>) {
-    fn call<T: FlagConfig + Decodable<FlagDecoder>>(exec: fn(T) -> CargoResult<()>) -> CargoResult<()> {
+trait RepresentsFlags : FlagConfig + Decodable<FlagDecoder> {}
+impl<T: FlagConfig + Decodable<FlagDecoder>> RepresentsFlags for T {}
+
+trait RepresentsJSON : Decodable<json::Decoder> {}
+impl <T: Decodable<json::Decoder>> RepresentsJSON for T {}
+
+#[deriving(Decodable)]
+pub struct NoFlags;
+
+impl FlagConfig for NoFlags {}
+
+pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>>>(exec: fn(T, U) -> CargoResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>>>(exec: fn(T, U) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
+        let json = try!(json_from_stdin::<U>());
+
+        exec(flags, json)
+    }
+
+    process_executed(call(exec))
+}
+
+pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>>>(exec: fn(T) -> CargoResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>>>(exec: fn(T) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
+        let flags = try!(flags_from_args::<T>());
+
         exec(flags)
     }
 
-    match call(exec) {
+    process_executed(call(exec))
+}
+
+fn process_executed<'a, T: Encodable<json::Encoder<'a>>>(result: CargoResult<Option<T>>) {
+    match result {
         Err(e) => {
             let _ = write!(&mut std::io::stderr(), "{}", e.message);
             std::os::set_exit_status(e.exit_code as int);
         },
-        Ok(_) => ()
+        Ok(encodable) => {
+            encodable.map(|encodable| {
+                let encoded: ~str = json::Encoder::str_encode(&encodable);
+                println!("{}", encoded);
+            });
+        }
     }
 }
 
-fn flags_from_args<T: FlagConfig + Decodable<FlagDecoder>>() -> CargoResult<T> {
+fn flags_from_args<T: RepresentsFlags>() -> CargoResult<T> {
     let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
     let flags: T = Decodable::decode(&mut decoder);
 
@@ -107,4 +140,14 @@ fn flags_from_args<T: FlagConfig + Decodable<FlagDecoder>>() -> CargoResult<T> {
         Some(err) => Err(CargoError::new(err, 1)),
         None => Ok(flags)
     }
+}
+
+fn json_from_stdin<T: RepresentsJSON>() -> CargoResult<T> {
+    let mut reader = io::stdin();
+    let input = try!(reader.read_to_str().to_cargo_error(~"Cannot read stdin to a string", 1));
+
+    let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
+    let mut decoder = json::Decoder::new(json);
+
+    Ok(Decodable::decode(&mut decoder))
 }

@@ -6,14 +6,11 @@ extern crate hammer;
 extern crate serialize;
 extern crate cargo;
 
-use hammer::FlagConfig;
 use std::os::args;
 use std::io;
 use std::io::process::{Process,ProcessConfig,InheritFd};
-use serialize::json;
-use serialize::Decodable;
 use std::path::Path;
-use cargo::{Manifest,CargoResult,CargoError,ToCargoError,execute_main};
+use cargo::{Manifest,CargoResult,CargoError,ToCargoError,NoFlags,execute_main};
 
 /**
     cargo-rustc -- ...args
@@ -22,22 +19,10 @@ use cargo::{Manifest,CargoResult,CargoError,ToCargoError,execute_main};
 */
 
 fn main() {
-    execute_main::<RustcFlags>(execute);
+    execute_main::<NoFlags, Manifest, Manifest>(execute);
 }
 
-#[deriving(Decodable,Eq,Clone,Ord)]
-struct RustcFlags;
-
-impl FlagConfig for RustcFlags {}
-
-fn execute(_: RustcFlags) -> CargoResult<()> {
-    let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().to_cargo_error(~"Cannot read stdin to a string", 1));
-
-    let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
-    let mut decoder = json::Decoder::new(json);
-    let manifest: Manifest = Decodable::decode(&mut decoder);
-
+fn execute(_: NoFlags, manifest: Manifest) -> CargoResult<Option<Manifest>> {
     let Manifest{ root, lib, bin, .. } = manifest;
 
     let (crate_type, out_dir) = if lib.len() > 0 {
@@ -78,7 +63,7 @@ fn execute(_: RustcFlags) -> CargoResult<()> {
         fail!("Failed to execute")
     }
 
-    Ok(())
+    Ok(None)
 }
 
 fn join(path: &Path, part: ~str) -> ~str {

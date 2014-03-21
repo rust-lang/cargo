@@ -8,9 +8,8 @@ extern crate toml;
 
 use hammer::FlagConfig;
 use serialize::Decoder;
-use serialize::json::Encoder;
 use toml::from_toml;
-use cargo::{Manifest,LibTarget,ExecTarget,Project,CargoResult,ToCargoError,execute_main};
+use cargo::{Manifest,LibTarget,ExecTarget,Project,CargoResult,ToCargoError,execute_main_without_stdin};
 use std::path::Path;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
@@ -38,10 +37,10 @@ struct ReadManifestFlags {
 impl FlagConfig for ReadManifestFlags {}
 
 fn main() {
-    execute_main::<ReadManifestFlags>(execute);
+    execute_main_without_stdin::<ReadManifestFlags, Manifest>(execute);
 }
 
-fn execute(flags: ReadManifestFlags) -> CargoResult<()> {
+fn execute(flags: ReadManifestFlags) -> CargoResult<Option<Manifest>> {
     let manifest_path = flags.manifest_path;
     let root = try!(toml::parse_from_file(manifest_path.clone()).to_cargo_error(format!("Couldn't parse Toml file: {}", manifest_path), 1));
 
@@ -49,18 +48,12 @@ fn execute(flags: ReadManifestFlags) -> CargoResult<()> {
 
     let (lib, bin) = normalize(&toml_manifest.lib, &toml_manifest.bin);
 
-    let manifest = Manifest{
+    Ok(Some(Manifest {
         root: try!(Path::new(manifest_path.clone()).dirname_str().to_cargo_error(format!("Could not get dirname from {}", manifest_path), 1)).to_owned(),
         project: toml_manifest.project,
         lib: lib,
         bin: bin
-    };
-
-    let encoded: ~str = Encoder::str_encode(&manifest);
-
-    println!("{}", encoded);
-
-    Ok(())
+    }))
 }
 
 fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> (~[LibTarget], ~[ExecTarget]) {
