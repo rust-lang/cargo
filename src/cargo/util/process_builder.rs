@@ -4,6 +4,7 @@ use std::io::process::{Process,ProcessConfig,ProcessOutput};
 use ToCargoError;
 use CargoResult;
 
+#[deriving(Clone,Eq)]
 pub struct ProcessBuilder {
   program: ~str,
   args: ~[~str],
@@ -20,8 +21,9 @@ impl ProcessBuilder {
     self
   }
 
-  pub fn extra_path(mut self, path: &str) -> ProcessBuilder {
-    self.path.push(path.to_owned());
+  pub fn extra_path(mut self, path: Path) -> ProcessBuilder {
+    // For now, just convert to a string, but we should do something better
+    self.path.push(format!("{}", path.display()));
     self
   }
 
@@ -30,7 +32,7 @@ impl ProcessBuilder {
     self
   }
 
-  pub fn exec_with_output(self) -> CargoResult<ProcessOutput> {
+  pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {
     let mut config = ProcessConfig::new();
 
     println!("cwd: {}", self.cwd.display());

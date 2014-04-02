@@ -1,7 +1,10 @@
 // use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use std::io::fs;
+use std::io::process::{ProcessOutput,ProcessExit};
 use std::os;
 use std::path::{Path};
+use std::str;
+use ham = hamcrest;
 use cargo::util::{process,ProcessBuilder};
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
@@ -136,10 +139,10 @@ impl<T, E> ErrMsg<T> for Result<T, E> {
 }
 
 // Path to cargo executables
-pub fn cargo_dir() -> ~str {
-  os::getenv("CARGO_BIN_PATH").unwrap_or_else(|| {
-    fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
-  })
+pub fn cargo_dir() -> Path {
+  os::getenv("CARGO_BIN_PATH")
+    .map(|s| Path::new(s))
+    .unwrap_or_else(|| fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
 }
 
 /*
@@ -147,3 +150,73 @@ pub fn cargo_dir() -> ~str {
  * ===== Matchers =====
  *
  */
+
+#[deriving(Clone,Eq)]
+struct Execs {
+  expect_stdout: Option<~str>,
+  expect_stdin: Option<~str>,
+  expect_exit_code: Option<int>
+}
+
+impl Execs {
+
+  pub fn with_stdout(mut self, expected: &str) -> Execs {
+    self.expect_stdout = Some(expected.to_owned());
+    self
+  }
+
+  fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
+    self.match_status(actual.status)
+      .and(self.match_stdout(actual.output))
+  }
+
+  fn match_status(&self, actual: ProcessExit) -> ham::MatchResult {
+    match self.expect_exit_code {
+      None => ham::success(),
+      Some(code) => {
+        ham::expect(
+          actual.matches_exit_status(code),
+          format!("exited with {}", actual))
+      }
+    }
+  }
+
+  fn match_stdout(&self, actual: &[u8]) -> ham::MatchResult {
+    match self.expect_stdout.as_ref().map(|s| s.as_slice()) {
+      None => ham::success(),
+      Some(out) => {
+        match str::from_utf8(actual) {
+          None => Err(~"stdout was not utf8 encoded"),
+          Some(actual) => {
+            ham::expect(actual == out, format!("stdout was `{}`", actual))
+          }
+        }
+      }
+    }
+  }
+}
+
+impl ham::SelfDescribing for Execs {
+  fn describe(&self) -> ~str {
+    ~"execs"
+  }
+}
+
+impl ham::Matcher<ProcessBuilder> for Execs {
+  fn matches(&self, process: &ProcessBuilder) -> ham::MatchResult {
+    let res = process.exec_with_output();
+
+    match res {
+      Ok(out) => self.match_output(&out),
+      Err(_) => Err(~"could not exec process")
+    }
+  }
+}
+
+pub fn execs() -> Execs {
+  Execs {
+    expect_stdout: None,
+    expect_stdin: None,
+    expect_exit_code: None
+  }
+}
