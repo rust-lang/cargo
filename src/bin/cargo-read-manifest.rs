@@ -1,5 +1,5 @@
-#[crate_id="cargo-read-manifest"];
-#[allow(deprecated_owned_vector)];
+#![crate_id="cargo-read-manifest"]
+#![allow(deprecated_owned_vector)]
 
 extern crate cargo;
 extern crate hammer;
@@ -44,7 +44,7 @@ fn execute(flags: ReadManifestFlags) -> CargoResult<Option<Manifest>> {
     let manifest_path = flags.manifest_path;
     let root = try!(toml::parse_from_file(manifest_path.clone()).to_cargo_error(format!("Couldn't parse Toml file: {}", manifest_path), 1));
 
-    let toml_manifest = from_toml::<SerializedManifest>(root.clone());
+    let toml_manifest = try!(from_toml::<SerializedManifest>(root.clone()).to_cargo_error(|e: toml::Error| format!("{}", e), 1));
 
     let (lib, bin) = normalize(&toml_manifest.lib, &toml_manifest.bin);
 
@@ -64,10 +64,10 @@ fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExec
     }
 
     fn bin_targets(bins: &[SerializedExecTarget], default: |&SerializedExecTarget| -> ~str) -> ~[ExecTarget] {
-        bins.map(|bin| {
+        bins.iter().map(|bin| {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
             ExecTarget{ path: path, name: bin.name.clone() }
-        })
+        }).collect()
     }
 
     match (lib, bin) {

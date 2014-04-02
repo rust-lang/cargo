@@ -1,7 +1,7 @@
-#[crate_id="cargo"];
-#[crate_type="rlib"];
+#![crate_id="cargo"]
+#![crate_type="rlib"]
 
-#[allow(deprecated_owned_vector)];
+#![allow(deprecated_owned_vector)]
 
 extern crate serialize;
 extern crate hammer;
@@ -10,28 +10,28 @@ use serialize::{Decoder,Encoder,Decodable,Encodable,json};
 use std::io;
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use hammer::{FlagDecoder,FlagConfig};
+use hammer::{FlagDecoder,FlagConfig,HammerError};
 
 pub mod util;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct Manifest {
-    project: ~Project,
-    root: ~str,
-    lib: ~[LibTarget],
-    bin: ~[ExecTarget]
+    pub project: ~Project,
+    pub root: ~str,
+    pub lib: ~[LibTarget],
+    pub bin: ~[ExecTarget]
 }
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct ExecTarget {
-    name: ~str,
-    path: ~str
+    pub name: ~str,
+    pub path: ~str
 }
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct LibTarget {
-    name: ~str,
-    path: ~str
+    pub name: ~str,
+    pub path: ~str
 }
 
 //pub type LibTarget = Target;
@@ -39,9 +39,9 @@ pub struct LibTarget {
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 pub struct Project {
-    name: ~str,
-    version: ~str,
-    authors: ~[~str]
+    pub name: ~str,
+    pub version: ~str,
+    pub authors: ~[~str]
 }
 
 pub type CargoResult<T> = Result<T, CargoError>;
@@ -63,41 +63,57 @@ impl Show for CargoError {
     }
 }
 
-pub trait ToCargoError<T> {
-    fn to_cargo_error(self, message: ~str, exit_code: uint) -> Result<T, CargoError>;
+pub trait ToCargoErrorMessage<E> {
+    fn to_cargo_error_message(self, error: E) -> ~str;
 }
 
-impl<T,U> ToCargoError<T> for Result<T,U> {
-    fn to_cargo_error(self, message: ~str, exit_code: uint) -> Result<T, CargoError> {
+impl<E> ToCargoErrorMessage<E> for ~str {
+    fn to_cargo_error_message(self, _: E) -> ~str {
+        self
+    }
+}
+
+impl<E> ToCargoErrorMessage<E> for 'static |E| -> ~str {
+    fn to_cargo_error_message(self, err: E) -> ~str {
+        self(err)
+    }
+}
+
+pub trait ToCargoError<T, E> {
+    fn to_cargo_error<M: ToCargoErrorMessage<E>>(self, to_message: M, exit_code: uint) -> Result<T, CargoError>;
+}
+
+impl<T,E> ToCargoError<T, E> for Result<T,E> {
+    fn to_cargo_error<M: ToCargoErrorMessage<E>>(self, to_message: M, exit_code: uint) -> Result<T, CargoError> {
         match self {
-            Err(_) => Err(CargoError{ message: message, exit_code: exit_code }),
+            Err(err) => Err(CargoError{ message: to_message.to_cargo_error_message(err), exit_code: exit_code }),
             Ok(val) => Ok(val)
         }
     }
 }
 
-impl<T> ToCargoError<T> for Option<T> {
-    fn to_cargo_error(self, message: ~str, exit_code: uint) -> CargoResult<T> {
+impl<T> ToCargoError<T, Option<T>> for Option<T> {
+    fn to_cargo_error<M: ToCargoErrorMessage<Option<T>>>(self, to_message: M, exit_code: uint) -> Result<T, CargoError> {
         match self {
-            None => Err(CargoError{ message: message, exit_code: exit_code }),
+            None => Err(CargoError{ message: to_message.to_cargo_error_message(None), exit_code: exit_code }),
             Some(val) => Ok(val)
         }
     }
 }
 
-trait RepresentsFlags : FlagConfig + Decodable<FlagDecoder> {}
-impl<T: FlagConfig + Decodable<FlagDecoder>> RepresentsFlags for T {}
+trait RepresentsFlags : FlagConfig + Decodable<FlagDecoder, HammerError> {}
+impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> RepresentsFlags for T {}
 
-trait RepresentsJSON : Decodable<json::Decoder> {}
-impl <T: Decodable<json::Decoder>> RepresentsJSON for T {}
+trait RepresentsJSON : Decodable<json::Decoder, json::Error> {}
+impl <T: Decodable<json::Decoder, json::Error>> RepresentsJSON for T {}
 
 #[deriving(Decodable)]
 pub struct NoFlags;
 
 impl FlagConfig for NoFlags {}
 
-pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>>>(exec: fn(T, U) -> CargoResult<Option<V>>) {
-    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>>>(exec: fn(T, U) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
+pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CargoResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
         let json = try!(json_from_stdin::<U>());
 
@@ -107,8 +123,8 @@ pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json
     process_executed(call(exec))
 }
 
-pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>>>(exec: fn(T) -> CargoResult<Option<V>>) {
-    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>>>(exec: fn(T) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
+pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CargoResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
 
         exec(flags)
@@ -117,7 +133,7 @@ pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Enc
     process_executed(call(exec))
 }
 
-fn process_executed<'a, T: Encodable<json::Encoder<'a>>>(result: CargoResult<Option<T>>) {
+fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CargoResult<Option<T>>) {
     match result {
         Err(e) => {
             let _ = write!(&mut std::io::stderr(), "{}", e.message);
@@ -134,12 +150,7 @@ fn process_executed<'a, T: Encodable<json::Encoder<'a>>>(result: CargoResult<Opt
 
 fn flags_from_args<T: RepresentsFlags>() -> CargoResult<T> {
     let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
-    let flags: T = Decodable::decode(&mut decoder);
-
-    match decoder.error {
-        Some(err) => Err(CargoError::new(err, 1)),
-        None => Ok(flags)
-    }
+    Decodable::decode(&mut decoder).to_cargo_error(|e: HammerError| e.message, 1)
 }
 
 fn json_from_stdin<T: RepresentsJSON>() -> CargoResult<T> {
@@ -149,5 +160,5 @@ fn json_from_stdin<T: RepresentsJSON>() -> CargoResult<T> {
     let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
     let mut decoder = json::Decoder::new(json);
 
-    Ok(Decodable::decode(&mut decoder))
+    Decodable::decode(&mut decoder).to_cargo_error(|e: json::Error| format!("{}", e), 1)
 }
