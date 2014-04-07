@@ -133,12 +133,9 @@ pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Enc
     process_executed(call(exec))
 }
 
-fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CargoResult<Option<T>>) {
+pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CargoResult<Option<T>>) {
     match result {
-        Err(e) => {
-            let _ = write!(&mut std::io::stderr(), "{}", e.message);
-            std::os::set_exit_status(e.exit_code as int);
-        },
+        Err(e) => handle_error(e),
         Ok(encodable) => {
             encodable.map(|encodable| {
                 let encoded: ~str = json::Encoder::str_encode(&encodable);
@@ -146,6 +143,11 @@ fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: Ca
             });
         }
     }
+}
+
+pub fn handle_error(err: CargoError) {
+    let _ = write!(&mut std::io::stderr(), "{}", err.message);
+    std::os::set_exit_status(err.exit_code as int);
 }
 
 fn flags_from_args<T: RepresentsFlags>() -> CargoResult<T> {
