@@ -5,9 +5,9 @@ extern crate serialize;
 extern crate collections;
 
 use hammer::{FlagConfig,FlagConfiguration};
-use std::{os,io};
-use serialize::{Decodable,Encodable,json};
-use cargo::{CargoResult,ToCargoError,NoFlags,execute_main_without_stdin,process_executed,handle_error};
+use std::os;
+use serialize::Encodable;
+use cargo::{CargoResult,ToCargoError,NoFlags,execute_main_without_stdin,handle_error};
 use cargo::util::important_paths::find_project;
 use cargo::util::config;
 
@@ -20,13 +20,19 @@ struct ProjectLocation {
     root: ~str
 }
 
+/**
+  The top-level `cargo` command handles configuration and project location
+  because they are fundamental (and intertwined). Other commands can rely
+  on this top-level information.
+*/
 fn execute() {
-    let (cmd, args) = match process(os::args()) {
+    let (cmd, _) = match process(os::args()) {
         Ok((cmd, args)) => (cmd, args),
         Err(err) => return handle_error(err)
     };
 
-    if cmd == ~"config" { execute_main_without_stdin(config) }
+    if cmd == ~"config-for-key" { execute_main_without_stdin(config_for_key) }
+    else if cmd == ~"config-list" { execute_main_without_stdin(config_list) }
     else if cmd == ~"locate-project" { execute_main_without_stdin(locate_project) }
 }
 
@@ -38,25 +44,24 @@ fn process(mut args: ~[~str]) -> CargoResult<(~str, ~[~str])> {
     Ok((head, tail))
 }
 
-#[deriving(Decodable)]
-struct ConfigFlags {
-    key: ~str,
-    value: Option<~str>,
-    human: bool
-}
-
-impl FlagConfig for ConfigFlags {
-    fn config(_: Option<ConfigFlags>, c: FlagConfiguration) -> FlagConfiguration {
-        c.short("human", 'h')
-    }
-}
-
 #[deriving(Encodable)]
 struct ConfigOut {
     values: collections::HashMap<~str, config::ConfigValue>
 }
 
-fn config(args: ConfigFlags) -> CargoResult<Option<ConfigOut>> {
+#[deriving(Decodable)]
+struct ConfigForKeyFlags {
+    key: ~str,
+    human: bool
+}
+
+impl FlagConfig for ConfigForKeyFlags {
+    fn config(_: Option<ConfigForKeyFlags>, config: FlagConfiguration) -> FlagConfiguration {
+        config.short("human", 'h')
+    }
+}
+
+fn config_for_key(args: ConfigForKeyFlags) -> CargoResult<Option<ConfigOut>> {
     let value = try!(config::get_config(os::getcwd(), args.key.as_slice()));
 
     if args.human {
@@ -69,7 +74,31 @@ fn config(args: ConfigFlags) -> CargoResult<Option<ConfigOut>> {
     }
 }
 
-fn locate_project(args: NoFlags) -> CargoResult<Option<ProjectLocation>> {
+#[deriving(Decodable)]
+struct ConfigListFlags {
+    human: bool
+}
+
+impl FlagConfig for ConfigListFlags {
+    fn config(_: Option<ConfigListFlags>, config: FlagConfiguration) -> FlagConfiguration {
+        config.short("human", 'h')
+    }
+}
+
+fn config_list(args: ConfigListFlags) -> CargoResult<Option<ConfigOut>> {
+    let configs = try!(config::all_configs(os::getcwd()));
+
+    if args.human {
+        for (key, value) in configs.iter() {
+            println!("{} = {}", key, value);
+        }
+        Ok(None)
+    } else {
+        Ok(Some(ConfigOut { values: configs }))
+    }
+}
+
+fn locate_project(_: NoFlags) -> CargoResult<Option<ProjectLocation>> {
     let root = try!(find_project(os::getcwd(), ~"Cargo.toml"));
     let string = try!(root.as_str().to_cargo_error(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), 1));
     Ok(Some(ProjectLocation { root: string.to_owned() }))

@@ -1,4 +1,3 @@
-use std::os;
 use super::super::{CargoResult,CargoError};
 
 pub fn find_project(pwd: Path, file: ~str) -> CargoResult<Path> {
