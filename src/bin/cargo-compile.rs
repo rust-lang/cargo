@@ -5,6 +5,7 @@ extern crate serialize;
 extern crate hammer;
 extern crate cargo;
 
+use std::vec::Vec;
 use serialize::{Decodable};
 use hammer::{FlagDecoder,FlagConfig,FlagConfiguration,HammerError};
 use std::io;
@@ -40,7 +41,7 @@ fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CargoResult<T
     Decodable::decode(&mut decoder).to_cargo_error(|e: HammerError| e.message, 1)
 }
 
-fn read_manifest(manifest_path: &str) -> CargoResult<~[u8]> {
+fn read_manifest(manifest_path: &str) -> CargoResult<Vec<u8>> {
     Ok((try!(exec_with_output("cargo-read-manifest", [~"--manifest-path", manifest_path.to_owned()], None))).output)
 }
 

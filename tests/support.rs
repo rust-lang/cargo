@@ -4,6 +4,7 @@ use std::io::process::{ProcessOutput,ProcessExit};
 use std::os;
 use std::path::{Path};
 use std::str;
+use std::vec::Vec;
 use ham = hamcrest;
 use cargo::util::{process,ProcessBuilder};
 
@@ -167,7 +168,7 @@ impl Execs {
 
   fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
     self.match_status(actual.status)
-      .and(self.match_stdout(actual.output))
+      .and(self.match_stdout(&actual.output))
   }
 
   fn match_status(&self, actual: ProcessExit) -> ham::MatchResult {
@@ -181,11 +182,11 @@ impl Execs {
     }
   }
 
-  fn match_stdout(&self, actual: &[u8]) -> ham::MatchResult {
+  fn match_stdout(&self, actual: &Vec<u8>) -> ham::MatchResult {
     match self.expect_stdout.as_ref().map(|s| s.as_slice()) {
       None => ham::success(),
       Some(out) => {
-        match str::from_utf8(actual) {
+        match str::from_utf8(actual.as_slice()) {
           None => Err(~"stdout was not utf8 encoded"),
           Some(actual) => {
             ham::expect(actual == out, format!("stdout was `{}`", actual))

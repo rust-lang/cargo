@@ -73,7 +73,7 @@ impl<E> ToCargoErrorMessage<E> for ~str {
     }
 }
 
-impl<E> ToCargoErrorMessage<E> for 'static |E| -> ~str {
+impl<'a, E> ToCargoErrorMessage<E> for |E|:'a -> ~str {
     fn to_cargo_error_message(self, err: E) -> ~str {
         self(err)
     }

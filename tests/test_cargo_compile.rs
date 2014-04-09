@@ -1,4 +1,3 @@
-use std;
 use support::{project,execs};
 use hamcrest::{assert_that,existing_file};
 use cargo;
@@ -25,17 +24,10 @@ test!(cargo_compile_with_explicit_manifest_path {
             }"#)
         .build();
 
-    let output = p.cargo_process("cargo-compile")
+    p.cargo_process("cargo-compile")
       .args([~"--manifest-path", ~"Cargo.toml"])
-      .exec_with_output();
-
-    match output {
-      Ok(out) => {
-        println!("out:\n{}\n", std::str::from_utf8(out.output));
-        println!("err:\n{}\n", std::str::from_utf8(out.error));
-      },
-      Err(e) => println!("err: {}", e)
-    }
+      .exec_with_output()
+      .unwrap();
 
     assert_that(&p.root().join("target/foo"), existing_file());
 
