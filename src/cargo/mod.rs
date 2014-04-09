@@ -12,37 +12,8 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use hammer::{FlagDecoder,FlagConfig,HammerError};
 
+pub mod core;
 pub mod util;
-
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
-pub struct Manifest {
-    pub project: ~Project,
-    pub root: ~str,
-    pub lib: ~[LibTarget],
-    pub bin: ~[ExecTarget]
-}
-
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
-pub struct ExecTarget {
-    pub name: ~str,
-    pub path: ~str
-}
-
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
-pub struct LibTarget {
-    pub name: ~str,
-    pub path: ~str
-}
-
-//pub type LibTarget = Target;
-//pub type ExecTarget = Target;
-
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
-pub struct Project {
-    pub name: ~str,
-    pub version: ~str,
-    pub authors: ~[~str]
-}
 
 pub type CargoResult<T> = Result<T, CargoError>;
 

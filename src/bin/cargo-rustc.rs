@@ -10,7 +10,8 @@ use std::os::args;
 use std::io;
 use std::io::process::{Process,ProcessConfig,InheritFd};
 use std::path::Path;
-use cargo::{Manifest,CargoResult,CargoError,ToCargoError,NoFlags,execute_main};
+use cargo::{CargoResult,CargoError,ToCargoError,NoFlags,execute_main};
+use cargo::core;
 
 /**
     cargo-rustc -- ...args
@@ -19,11 +20,11 @@ use cargo::{Manifest,CargoResult,CargoError,ToCargoError,NoFlags,execute_main};
 */
 
 fn main() {
-    execute_main::<NoFlags, Manifest, Manifest>(execute);
+    execute_main(execute);
 }
 
-fn execute(_: NoFlags, manifest: Manifest) -> CargoResult<Option<Manifest>> {
-    let Manifest{ root, lib, bin, .. } = manifest;
+fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core::Manifest>> {
+    let core::Manifest { root, lib, bin, .. } = manifest;
 
     let (crate_type, out_dir) = if lib.len() > 0 {
         ( ~"lib", lib[0].path )

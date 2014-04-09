@@ -9,12 +9,13 @@ extern crate toml;
 use hammer::FlagConfig;
 use serialize::Decoder;
 use toml::from_toml;
-use cargo::{Manifest,LibTarget,ExecTarget,Project,CargoResult,ToCargoError,execute_main_without_stdin};
+use cargo::core;
+use cargo::{CargoResult,ToCargoError,execute_main_without_stdin};
 use std::path::Path;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
 struct SerializedManifest {
-    project: ~Project,
+    project: ~core::Project,
     lib: Option<~[SerializedLibTarget]>,
     bin: Option<~[SerializedExecTarget]>
 }
@@ -37,10 +38,10 @@ struct ReadManifestFlags {
 impl FlagConfig for ReadManifestFlags {}
 
 fn main() {
-    execute_main_without_stdin::<ReadManifestFlags, Manifest>(execute);
+    execute_main_without_stdin(execute);
 }
 
-fn execute(flags: ReadManifestFlags) -> CargoResult<Option<Manifest>> {
+fn execute(flags: ReadManifestFlags) -> CargoResult<Option<core::Manifest>> {
     let manifest_path = flags.manifest_path;
     let root = try!(toml::parse_from_file(manifest_path.clone()).to_cargo_error(format!("Couldn't parse Toml file: {}", manifest_path), 1));
 
@@ -48,7 +49,7 @@ fn execute(flags: ReadManifestFlags) -> CargoResult<Option<Manifest>> {
 
     let (lib, bin) = normalize(&toml_manifest.lib, &toml_manifest.bin);
 
-    Ok(Some(Manifest {
+    Ok(Some(core::Manifest {
         root: try!(Path::new(manifest_path.clone()).dirname_str().to_cargo_error(format!("Could not get dirname from {}", manifest_path), 1)).to_owned(),
         project: toml_manifest.project,
         lib: lib,
@@ -56,17 +57,17 @@ fn execute(flags: ReadManifestFlags) -> CargoResult<Option<Manifest>> {
     }))
 }
 
-fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> (~[LibTarget], ~[ExecTarget]) {
-    fn lib_targets(libs: &[SerializedLibTarget]) -> ~[LibTarget] {
+fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> (~[core::LibTarget], ~[core::ExecTarget]) {
+    fn lib_targets(libs: &[SerializedLibTarget]) -> ~[core::LibTarget] {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
-        ~[LibTarget{ path: path, name: l.name.clone() }]
+        ~[core::LibTarget { path: path, name: l.name.clone() }]
     }
 
-    fn bin_targets(bins: &[SerializedExecTarget], default: |&SerializedExecTarget| -> ~str) -> ~[ExecTarget] {
+    fn bin_targets(bins: &[SerializedExecTarget], default: |&SerializedExecTarget| -> ~str) -> ~[core::ExecTarget] {
         bins.iter().map(|bin| {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
-            ExecTarget{ path: path, name: bin.name.clone() }
+            core::ExecTarget { path: path, name: bin.name.clone() }
         }).collect()
     }
 
