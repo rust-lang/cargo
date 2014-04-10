@@ -161,7 +161,7 @@ struct Execs {
 
 impl Execs {
 
-  pub fn with_stdout(mut self, expected: &str) -> Execs {
+  pub fn with_stdout(mut ~self, expected: &str) -> ~Execs {
     self.expect_stdout = Some(expected.to_owned());
     self
   }
@@ -204,7 +204,7 @@ impl ham::SelfDescribing for Execs {
 }
 
 impl ham::Matcher<ProcessBuilder> for Execs {
-  fn matches(&self, process: &ProcessBuilder) -> ham::MatchResult {
+  fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
     let res = process.exec_with_output();
 
     match res {
@@ -214,8 +214,8 @@ impl ham::Matcher<ProcessBuilder> for Execs {
   }
 }
 
-pub fn execs() -> Execs {
-  Execs {
+pub fn execs() -> ~Execs {
+  ~Execs {
     expect_stdout: None,
     expect_stdin: None,
     expect_exit_code: None

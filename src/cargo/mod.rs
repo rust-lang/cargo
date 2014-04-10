@@ -3,14 +3,19 @@
 
 #![allow(deprecated_owned_vector)]
 
-extern crate serialize;
+extern crate collections;
 extern crate hammer;
+extern crate serialize;
+
+#[cfg(test)]
+extern crate hamcrest;
 
 use serialize::{Decoder,Encoder,Decodable,Encodable,json};
 use std::io;
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use hammer::{FlagDecoder,FlagConfig,HammerError};
+
 
 pub mod core;
 pub mod util;

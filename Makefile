@@ -27,7 +27,7 @@ $(HAMMER): $(wildcard libs/hammer.rs/src/*.rs)
 $(TOML): $(wildcard libs/rust-toml/src/toml/*.rs)
 	cd libs/rust-toml && make
 
-$(HAMCREST): $(wildcard libs/hamcrest-rust/src/hamcrest/*.rs)
+$(HAMCREST): $(shell find libs/hamcrest-rust/src/hamcrest -name '*.rs')
 	cd libs/hamcrest-rust && make
 
 # === Cargo
@@ -49,13 +49,20 @@ $(BIN_TARGETS): target/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
 TEST_SRC = $(wildcard tests/*.rs)
 TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
 
-target/tests: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
-	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget --out-dir target tests/tests.rs
+target/tests/test-integration: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
+	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget -o $@  tests/tests.rs
 
-test-integration: target/tests
+target/tests/test-unit: $(HAMCREST) $(SRC) $(HAMMER)
+	mkdir -p target/tests
+	$(RUSTC) --test $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/mod.rs
+
+test-unit: target/tests/test-unit
+	target/tests/test-unit
+
+test-integration: target/tests/test-integration
 	CARGO_BIN_PATH=$(PWD)/target/ $<
 
-test: test-integration
+test: test-unit test-integration
 
 clean:
 	rm -rf target
@@ -66,7 +73,7 @@ distclean: clean
 	cd libs/rust-toml && make clean
 
 # Setup phony tasks
-.PHONY: all clean distclean test test-integration libcargo
+.PHONY: all clean distclean test test-unit test-integration libcargo
 
 # Disable unnecessary built-in rules
 .SUFFIXES:

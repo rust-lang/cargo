@@ -32,7 +32,7 @@ test!(cargo_compile_with_explicit_manifest_path {
     assert_that(&p.root().join("target/foo"), existing_file());
 
     assert_that(
-      &cargo::util::process("foo").extra_path(p.root().join("target")),
+      cargo::util::process("foo").extra_path(p.root().join("target")),
       execs().with_stdout("i am foo\n"));
 })
 
