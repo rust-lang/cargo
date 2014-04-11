@@ -21,6 +21,12 @@ pub fn resolve(deps: &Vec<core::Dependency>, registry: &core::Registry) -> Cargo
 
         let pkg = opts.get(0);
         resolve.insert(pkg.get_name(), *pkg);
+
+        for dep in pkg.get_dependencies().iter() {
+            if !resolve.contains_key_equiv(&dep.get_name()) {
+                remaining.push(dep.clone());
+            }
+        }
     }
 }
 
@@ -30,7 +36,6 @@ mod test {
     use hamcrest::{
         assert_that,
         equal_to,
-        of_len,
         contains
     };
 
@@ -44,7 +49,15 @@ mod test {
         resolve
     };
 
+    macro_rules! pkg(
+        ($name:expr => $($deps:expr),+) => (
+            Package::new($name, &vec!($($deps),+).iter().map(|s| Dependency::new(*s)).collect())
+        );
 
+        ($name:expr) => (
+            Package::new($name, &vec!())
+        )
+    )
 
     fn pkg(name: &str) -> Package {
         Package::new(name, &Vec::<Dependency>::new())
@@ -83,14 +96,17 @@ mod test {
 
     #[test]
     pub fn test_resolving_multiple_deps() {
-        let reg = registry(vec!(pkg("foo"), pkg("bar"), pkg("baz")));
+        let reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
         let res = resolve(&vec!(dep("foo"), dep("baz")), &reg).unwrap();
 
-        assert_that(&res, of_len(2));
         assert_that(&res, contains(vec!(pkg("foo"), pkg("baz"))).exactly());
     }
 
     #[test]
     pub fn test_resolving_transitive_deps() {
+        let reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
+        let res = resolve(&vec!(dep("bar")), &reg).unwrap();
+
+        assert_that(&res, contains(vec!(pkg!("foo"), pkg!("bar" => "foo"))));
     }
 }

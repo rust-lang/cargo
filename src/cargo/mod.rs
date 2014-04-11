@@ -2,6 +2,7 @@
 #![crate_type="rlib"]
 
 #![allow(deprecated_owned_vector)]
+#![feature(macro_rules)]
 
 extern crate collections;
 extern crate hammer;

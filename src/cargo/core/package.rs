@@ -22,4 +22,8 @@ impl Package {
   pub fn get_name<'a>(&'a self) -> &'a str {
     self.name.as_slice()
   }
+
+  pub fn get_dependencies<'a>(&'a self) -> &'a Vec<core::Dependency> {
+      &self.deps
+  }
 }
