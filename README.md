@@ -1,3 +1,14 @@
+
+## Compiling cargo
+
+Firstly you will need to get cargo's dependencies, which are just git submodules.
+
+```
+$ git submodule init
+$ git submodule upgrade
+```
+Then it's as simple as ```make && make install```.
+
 ## Porcelain
 
 ### cargo-compile
