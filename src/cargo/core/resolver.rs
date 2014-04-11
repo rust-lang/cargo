@@ -109,4 +109,12 @@ mod test {
 
         assert_that(&res, contains(vec!(pkg!("foo"), pkg!("bar" => "foo"))));
     }
+
+    #[test]
+    pub fn test_resolving_common_transitive_deps() {
+        let reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
+        let res = resolve(&vec!(dep("foo"), dep("bar")), &reg).unwrap();
+
+        assert_that(&res, contains(vec!(pkg!("foo" => "bar"), pkg!("bar"))));
+    }
 }
