@@ -1,13 +1,15 @@
-
 ## Compiling cargo
 
-Firstly you will need to get cargo's dependencies, which are just git submodules.
-
+You'll want to clone cargo using --recursive on git, to clone in it's submodule dependencies.
+```
+$ git clone --recursive https://github.com/carlhuda/cargo
+```
+or
 ```
 $ git submodule init
 $ git submodule upgrade
 ```
-Then it's as simple as ```make && make install```.
+Then it's as simple as ```make``` and you're ready to go.
 
 ## Porcelain
 
