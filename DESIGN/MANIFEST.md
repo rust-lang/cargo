@@ -71,6 +71,15 @@ standalone library limited to the bare minimum requirements.
   an executable, `src/bin/<name>.rs` if the project has both a lib and
   executable, see below)
 
+## The `[dependencies]` Section
+
+```toml
+[dependencies]
+
+rust-http = "~1.2.0"
+hamcrest = [">1.2.0", "<2.0.0"]
+```
+
 ## Projects Containing Both `lib` and `bin`
 
 Most projects will primarily produce either a library or an executable.

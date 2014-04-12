@@ -10,20 +10,20 @@ use core;
  */
 #[deriving(Clone,Eq,Show)]
 pub struct Package {
-  name: ~str,
-  deps: Vec<core::Dependency>
+    name: ~str,
+    deps: Vec<core::Dependency>
 }
 
 impl Package {
-  pub fn new(name: &str, deps: &Vec<core::Dependency>) -> Package {
-    Package { name: name.to_owned(), deps: deps.clone() }
-  }
+    pub fn new(name: &str, deps: &Vec<core::Dependency>) -> Package {
+        Package { name: name.to_owned(), deps: deps.clone() }
+    }
 
-  pub fn get_name<'a>(&'a self) -> &'a str {
-    self.name.as_slice()
-  }
+    pub fn get_name<'a>(&'a self) -> &'a str {
+        self.name.as_slice()
+    }
 
-  pub fn get_dependencies<'a>(&'a self) -> &'a Vec<core::Dependency> {
-      &self.deps
-  }
+    pub fn get_dependencies<'a>(&'a self) -> &'a Vec<core::Dependency> {
+            &self.deps
+    }
 }

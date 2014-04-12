@@ -7,6 +7,7 @@
 extern crate collections;
 extern crate hammer;
 extern crate serialize;
+extern crate semver;
 
 #[cfg(test)]
 extern crate hamcrest;
