@@ -1,7 +1,7 @@
 extern crate collections;
 extern crate toml;
 
-use super::super::{CargoResult,ToCargoError};
+use super::super::{CargoResult,ToCargoError,CargoError};
 use std::{io,fmt};
 
 #[deriving(Eq,TotalEq,Clone,Encodable,Decodable)]
@@ -10,9 +10,15 @@ pub enum Location {
     Global
 }
 
+#[deriving(Eq,TotalEq,Clone,Encodable,Decodable,Show)]
+enum ConfigValueValue {
+    String(~str),
+    List(~[~str])
+}
+
 #[deriving(Eq,TotalEq,Clone,Encodable,Decodable)]
 pub struct ConfigValue {
-    value: ~str,
+    value: ConfigValueValue,
     path: ~str
 }
 
@@ -82,8 +88,15 @@ fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
     let path = try!(file.path().as_str().to_cargo_error(~"", 1)).to_owned();
     let mut buf = io::BufferedReader::new(file);
     let root = try!(toml::parse_from_buffer(&mut buf).to_cargo_error(~"", 1));
-    let val = try!(try!(root.lookup(key).to_cargo_error(~"", 1)).get_str().to_cargo_error(~"", 1));
-    Ok(ConfigValue{ value: val.to_owned(), path: path })
+    let val = try!(root.lookup(key).to_cargo_error(~"", 1));
+
+    let v = match val {
+        &toml::String(ref val) => String(val.to_owned()),
+        &toml::Array(ref val) => List(val.iter().map(|s: &toml::Value| s.to_str()).collect()),
+        _ => return Err(CargoError::new(~"", 1))
+    };
+
+    Ok(ConfigValue{ value: v, path: path })
 }
 
 fn extract_all_configs(file: io::fs::File) -> CargoResult<collections::HashMap<~str, ConfigValue>> {
@@ -96,7 +109,8 @@ fn extract_all_configs(file: io::fs::File) -> CargoResult<collections::HashMap<~
 
     for (key, value) in table.iter() {
         match value {
-            &toml::String(ref val) => { map.insert(key.to_owned(), ConfigValue { value: val.to_owned(), path: path.clone() }); }
+            &toml::String(ref val) => { map.insert(key.to_owned(), ConfigValue { value: String(val.to_owned()), path: path.clone() }); }
+            &toml::Array(ref val) => { map.insert(key.to_owned(), ConfigValue { value: List(val.iter().map(|s: &toml::Value| s.to_str()).collect()), path: path.clone() }); }
             _ => ()
         }
     }

@@ -19,9 +19,11 @@ use std::vec::Vec;
 use serialize::{Decodable};
 use hammer::{FlagDecoder,FlagConfig,FlagConfiguration,HammerError};
 use std::io;
+use std::os;
 use std::io::BufReader;
 use std::io::process::{Process,ProcessExit,ProcessOutput,InheritFd,ProcessConfig};
 use {ToCargoError,CargoResult};
+use util::config::{get_config,all_configs};
 
 #[deriving(Decodable)]
 struct Options {
@@ -34,7 +36,7 @@ impl FlagConfig for Options {
 
 pub fn compile() -> CargoResult<()> {
     let options = try!(flags::<Options>());
-    let manifest_bytes = try!(read_manifest(options.manifest_path).to_cargo_error(~"Could not read manifest", 1));
+    let manifest_bytes = try!(read_manifest(options.manifest_path));
 
     call_rustc(~BufReader::new(manifest_bytes.as_slice()))
 }
@@ -66,6 +68,8 @@ fn exec_tty(program: &str, args: &[~str], input: Option<&mut Reader>) -> CargoRe
 }
 
 fn exec(program: &str, args: &[~str], input: Option<&mut Reader>, configurator: |&mut ProcessConfig|) -> CargoResult<Process> {
+    let paths = get_config(os::getcwd(), "source-paths");
+
     let mut config = ProcessConfig::new();
     config.program = program;
     config.args = args;
@@ -73,7 +77,7 @@ fn exec(program: &str, args: &[~str], input: Option<&mut Reader>, configurator: 
 
     println!("Executing {} {}", program, args);
 
-    let mut process = try!(Process::configure(config).to_cargo_error(~"Could not configure process", 1));
+    let mut process = try!(Process::configure(config).to_cargo_error(|e: io::IoError| format!("Could not configure process: {}", e), 1));
 
     input.map(|mut reader| io::util::copy(&mut reader, process.stdin.get_mut_ref()));
 
