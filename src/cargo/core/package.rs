@@ -12,7 +12,6 @@ pub struct NameVer {
 
 impl NameVer {
     pub fn new(name: &str, version: &str) -> NameVer {
-        println!("version: {}", version);
         NameVer { name: name.to_owned(), version: semver::parse(version.to_owned()).unwrap() }
     }
 
