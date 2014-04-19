@@ -8,6 +8,7 @@ extern crate collections;
 extern crate hammer;
 extern crate serialize;
 extern crate semver;
+extern crate toml;
 
 #[cfg(test)]
 extern crate hamcrest;
@@ -21,6 +22,9 @@ use hammer::{FlagDecoder,FlagConfig,HammerError};
 
 pub mod core;
 pub mod util;
+pub mod sources;
+pub mod ops;
+
 
 pub type CargoResult<T> = Result<T, CargoError>;
 

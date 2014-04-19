@@ -1,3 +1,4 @@
+use core::package::NameVer;
 
 /*
  * TODO: Make all struct fields private
@@ -8,7 +9,18 @@ pub struct Manifest {
     pub project: ~Project,
     pub root: ~str,
     pub lib: ~[LibTarget],
-    pub bin: ~[ExecTarget]
+    pub bin: ~[ExecTarget],
+    pub dependencies: Vec<NameVer>
+}
+
+impl Manifest {
+    pub fn get_name_ver(&self) -> NameVer {
+        NameVer::new(self.project.name.as_slice(), self.project.version.as_slice())
+    }
+
+    pub fn get_path<'a>(&'a self) -> Path {
+        Path::new(self.root.as_slice())
+    }
 }
 
 #[deriving(Decodable,Encodable,Eq,Clone,Ord)]
