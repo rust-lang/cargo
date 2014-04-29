@@ -7,8 +7,8 @@ use CargoResult;
 #[deriving(Clone,Eq)]
 pub struct ProcessBuilder {
   program: ~str,
-  args: ~[~str],
-  path: ~[~str],
+  args: Vec<~str>,
+  path: Vec<~str>,
   cwd: Path
 }
 
@@ -17,7 +17,7 @@ static PATH_SEP : &'static str = ":";
 
 impl ProcessBuilder {
   pub fn args(mut self, arguments: &[~str]) -> ProcessBuilder {
-    self.args = arguments.to_owned();
+    self.args = Vec::from_slice(arguments);
     self
   }
 
@@ -56,8 +56,8 @@ impl ProcessBuilder {
 pub fn process(cmd: &str) -> ProcessBuilder {
   ProcessBuilder {
     program: cmd.to_owned(),
-    args: ~[],
-    path: ~[],
+    args: vec!(),
+    path: vec!(),
     cwd: os::getcwd()
   }
 }
