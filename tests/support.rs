@@ -48,7 +48,7 @@ impl FileBuilder {
 struct ProjectBuilder {
     name: ~str,
     root: Path,
-    files: ~[FileBuilder]
+    files: Vec<FileBuilder>
 }
 
 impl ProjectBuilder {
@@ -56,7 +56,7 @@ impl ProjectBuilder {
         ProjectBuilder {
             name: name.to_owned(),
             root: root,
-            files: ~[]
+            files: vec!()
         }
     }
 
