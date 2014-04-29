@@ -1,9 +1,17 @@
+use std::fmt;
 use core::package::NameVer;
 use CargoResult;
 
+#[deriving(Clone,Eq)]
 pub struct PackagePath {
     name: NameVer,
     path: Path
+}
+
+impl fmt::Show for PackagePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f.buf, "{} at {}", self.name, self.path.display())
+    }
 }
 
 impl PackagePath {
