@@ -18,6 +18,10 @@ impl NameVer {
     pub fn get_name<'a>(&'a self) -> &'a str {
         self.name.as_slice()
     }
+
+    pub fn get_version<'a>(&'a self) -> &'a Version {
+        &self.version
+    }
 }
 
 impl<E, D: Decoder<E>> Decodable<D,E> for NameVer {
@@ -42,20 +46,39 @@ impl<E, S: Encoder<E>> Encodable<S,E> for NameVer {
  */
 #[deriving(Clone,Eq,Show)]
 pub struct Package {
-    name: ~str,
-    deps: Vec<core::Dependency>
+    name_ver: NameVer,
+    deps: Vec<core::Dependency>,
+    root: ~str,
+    source: ~str,
+    target: ~str
 }
 
 impl Package {
-    pub fn new(name: &str, deps: &Vec<core::Dependency>) -> Package {
-        Package { name: name.to_owned(), deps: deps.clone() }
+    pub fn new(name: &NameVer, deps: &Vec<core::Dependency>, root: &str, source: &str, target: &str) -> Package {
+        Package { name_ver: name.clone(), deps: deps.clone(), root: root.to_owned(), source: source.to_owned(), target: target.to_owned()  }
     }
 
     pub fn get_name<'a>(&'a self) -> &'a str {
-        self.name.as_slice()
+        self.name_ver.get_name()
     }
 
-    pub fn get_dependencies<'a>(&'a self) -> &'a Vec<core::Dependency> {
-            &self.deps
+    pub fn get_version<'a>(&'a self) -> &'a Version {
+        self.name_ver.get_version()
+    }
+
+    pub fn get_root<'a>(&'a self) -> &'a str {
+        self.root.as_slice()
+    }
+
+    pub fn get_source<'a>(&'a self) -> &'a str {
+        self.source.as_slice()
+    }
+
+    pub fn get_target<'a>(&'a self) -> &'a str {
+        self.target.as_slice()
+    }
+
+    pub fn get_dependencies<'a>(&'a self) -> &'a [core::Dependency] {
+        self.deps.as_slice()
     }
 }
