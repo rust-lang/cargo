@@ -19,11 +19,9 @@ use std::vec::Vec;
 use serialize::{Decodable};
 use hammer::{FlagDecoder,FlagConfig,FlagConfiguration,HammerError};
 use std::io;
-use std::os;
 use std::io::BufReader;
 use std::io::process::{Process,ProcessExit,ProcessOutput,InheritFd,ProcessConfig};
 use {ToCargoError,CargoResult};
-use util::config::{get_config,all_configs};
 
 #[deriving(Decodable)]
 struct Options {
@@ -68,8 +66,6 @@ fn exec_tty(program: &str, args: &[~str], input: Option<&mut Reader>) -> CargoRe
 }
 
 fn exec(program: &str, args: &[~str], input: Option<&mut Reader>, configurator: |&mut ProcessConfig|) -> CargoResult<Process> {
-    let paths = get_config(os::getcwd(), "source-paths");
-
     let mut config = ProcessConfig::new();
     config.program = program;
     config.args = args;

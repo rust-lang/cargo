@@ -5,11 +5,10 @@ use std::io::process::{Process,ProcessConfig,InheritFd};
 use std::path::Path;
 use {CargoResult,CargoError,ToCargoError,NoFlags,core};
 
-/**
-    cargo-rustc -- ...args
 
-    Delegate ...args to actual rustc command
-*/
+
+pub fn compile() {
+}
 
 pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core::Manifest>> {
     let core::Manifest { root, lib, bin, .. } = manifest;

@@ -1,4 +1,4 @@
-use core::package::NameVer;
+use core::NameVer;
 
 /*
  * TODO: Make all struct fields private

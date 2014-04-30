@@ -1,5 +1,5 @@
 use std::fmt;
-use core::package::NameVer;
+use core::NameVer;
 use CargoResult;
 
 #[deriving(Clone,Eq)]

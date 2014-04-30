@@ -5,8 +5,7 @@ use toml::from_toml;
 use {CargoResult,ToCargoError,core};
 use std::path::Path;
 use collections::HashMap;
-use core::package::NameVer;
-use core::dependency::Dependency;
+use core::NameVer;
 
 #[deriving(Decodable,Encodable,Eq,Clone)]
 struct SerializedManifest {

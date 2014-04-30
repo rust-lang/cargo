@@ -21,9 +21,9 @@ use hammer::{FlagDecoder,FlagConfig,HammerError};
 
 
 pub mod core;
-pub mod util;
-pub mod sources;
 pub mod ops;
+pub mod sources;
+pub mod util;
 
 
 pub type CargoResult<T> = Result<T, CargoError>;
