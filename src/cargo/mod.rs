@@ -19,6 +19,13 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use hammer::{FlagDecoder,FlagConfig,HammerError};
 
+macro_rules! some(
+  ($e:expr) => (
+    match $e {
+      Some(e) => e,
+      None => return None
+    }
+  ))
 
 pub mod core;
 pub mod ops;

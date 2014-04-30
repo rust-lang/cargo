@@ -18,6 +18,10 @@ impl Dependency {
         Dependency { name: core::NameVer::new(name, version) }
     }
 
+    pub fn get_namever<'a>(&'a self) -> &'a core::NameVer {
+        &self.name
+    }
+
     pub fn get_name<'a>(&'a self) -> &'a str {
         self.name.get_name()
     }

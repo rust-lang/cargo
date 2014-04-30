@@ -1,8 +1,10 @@
-use std::vec::Vec;
+use std::slice;
 use semver;
 use core;
 use core::{NameVer,Dependency};
 use core::manifest::{Manifest,LibTarget};
+use core::Registry;
+use util::graph;
 
 /**
  * Represents a rust library internally to cargo. This will things like where
@@ -60,4 +62,55 @@ impl Package {
     pub fn get_dependencies<'a>(&'a self) -> &'a [core::Dependency] {
         self.deps.as_slice()
     }
+}
+
+pub struct PackageSet {
+    packages: ~[Package]
+}
+
+impl PackageSet {
+    pub fn new(packages: &[Package]) -> PackageSet {
+        PackageSet { packages: packages.to_owned() }
+    }
+
+    /**
+     * Get a package by name out of the set
+     */
+    pub fn get<'a>(&'a self, name: &str) -> &'a Package {
+        let opts = self.query(name);
+        assert!(opts.len() == 1, "expected exactly one package named `{}`", name);
+        *opts.get(0)
+    }
+
+    // For now, assume that the package set contains only one package with a
+    // given name
+    pub fn sort(&self) -> Option<PackageSet> {
+        let mut graph = graph::Graph::new();
+
+        for pkg in self.packages.iter() {
+            let deps: ~[&str] = pkg.get_dependencies().iter()
+                .map(|dep| dep.get_name())
+                .collect();
+
+            graph.add(pkg.get_name(), deps.as_slice());
+        }
+
+        let pkgs = some!(graph.sort()).iter().map(|name| self.get(*name).clone()).collect();
+
+        Some(PackageSet {
+            packages: pkgs
+        })
+    }
+
+    pub fn iter<'a>(&'a self) -> slice::Items<'a, Package> {
+        self.packages.iter()
+    }
+}
+
+impl Registry for PackageSet {
+  fn query<'a>(&'a self, name: &str) -> Vec<&'a Package> {
+    self.packages.iter()
+      .filter(|pkg| name == pkg.get_name())
+      .collect()
+  }
 }

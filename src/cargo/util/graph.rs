@@ -1,56 +1,47 @@
+use std::hash::Hash;
 use collections::HashMap;
 
-trait Node<'a, I: Iterator<&'a Self>> {
-    fn children(&'a self) -> I;
+pub struct Graph<N> {
+    nodes: HashMap<N, ~[N]>
 }
 
-trait Graph<'a, N: Node<'a, I>, I: Iterator<&'a N>> {
-    fn nodes(&'a self) -> I;
-}
-
-#[deriving(Clone)]
 enum Mark {
     InProgress,
     Done
 }
 
-/**
- * Returns None in the event of a cycle
- */
-pub fn topsort<'a, N: Node<'a, I>, G: Graph<'a, N, I>, I: Iterator<&'a N>>(graph: &'a G) -> Option<Vec<&'a N>> {
-    let mut ret = Vec::new();
-    let mut iter: I = graph.nodes();
-    let mut stack = Vec::<&'a N>::new();
-    let mut marks: HashMap<*N, Mark> = HashMap::new();
-
-    // Prime the stack
-    for node in iter {
-        visit(node, &mut ret, &mut marks);
+impl<N: TotalEq + Hash + Clone> Graph<N> {
+    pub fn new() -> Graph<N> {
+        Graph { nodes: HashMap::new() }
     }
 
-    Some(ret)
-}
-
-fn visit<'a, N: Node<'a, I>, I: Iterator<&'a N>>(curr: &'a N, dst: &mut Vec<&'a N>, marks: &mut HashMap<*N, Mark>) {
-    let ident = curr as *N;
-
-    if marks.contains_key(&ident) {
-        return;
+    pub fn add(&mut self, node: N, children: &[N]) {
+        self.nodes.insert(node, children.to_owned());
     }
 
-    marks.insert(ident, InProgress);
+    pub fn sort(&self) -> Option<Vec<N>> {
+        let mut ret = Vec::new();
+        let mut marks = HashMap::new();
 
-    let mut iter: I = curr.children();
+        for node in self.nodes.keys() {
+            self.visit(node, &mut ret, &mut marks);
+        }
 
-    for child in iter {
-        visit::<'a, N, I>(child, dst, marks);
+        Some(ret)
     }
 
-    dst.push(curr);
-    marks.insert(ident, Done);
-}
+    fn visit(&self, node: &N, dst: &mut Vec<N>, marks: &mut HashMap<N, Mark>) {
+        if marks.contains_key(node) {
+            return;
+        }
 
-#[cfg(test)]
-mod test {
-    // TODO: tests
+        marks.insert(node.clone(), InProgress);
+
+        for child in self.nodes.get(node).iter() {
+            self.visit(child, dst, marks);
+        }
+
+        dst.push(node.clone());
+        marks.insert(node.clone(), Done);
+    }
 }
