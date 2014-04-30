@@ -24,6 +24,6 @@ pub mod namever;
 pub mod source;
 pub mod package;
 pub mod dependency;
-mod manifest;
+pub mod manifest;
 mod registry;
 mod resolver;
