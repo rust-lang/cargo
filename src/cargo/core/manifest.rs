@@ -1,19 +1,60 @@
 use core::NameVer;
+use core::dependency::Dependency;
+use collections::HashMap;
+use {CargoResult,ToCargoError};
 
 /*
  * TODO: Make all struct fields private
  */
 
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
+#[deriving(Decodable,Encodable,Eq,Clone)]
+pub struct SerializedManifest {
+    project: ~Project,
+    lib: Option<~[SerializedLibTarget]>,
+    bin: Option<~[SerializedExecTarget]>,
+    dependencies: Option<HashMap<~str, ~str>>
+}
+
+#[deriving(Decodable,Encodable,Eq,Clone)]
+struct SerializedTarget {
+    name: ~str,
+    path: Option<~str>
+}
+
+type SerializedLibTarget = SerializedTarget;
+type SerializedExecTarget = SerializedTarget;
+
+#[deriving(Decodable,Encodable,Eq,Clone)]
 pub struct Manifest {
     pub project: ~Project,
     pub root: ~str,
     pub lib: ~[LibTarget],
     pub bin: ~[ExecTarget],
-    pub dependencies: Vec<NameVer>
+    pub target: ~str,
+    pub dependencies: Vec<Dependency>
 }
 
 impl Manifest {
+    pub fn from_serialized(path: &str, serialized: &SerializedManifest) -> CargoResult<Manifest> {
+        let (lib,bin) = normalize(&serialized.lib, &serialized.bin);
+        let &SerializedManifest { ref project, ref dependencies, .. } = serialized;
+
+        let deps = dependencies.clone().map(|deps| {
+            deps.iter().map(|(k,v)| {
+                Dependency::with_namever(&NameVer::new(k.clone(), v.clone()))
+            }).collect()
+        }).unwrap_or_else(|| vec!());
+
+        Ok(Manifest {
+            root: try!(Path::new(path.to_owned()).dirname_str().to_cargo_error(format!("Could not get dirname from {}", path), 1)).to_owned(),
+            project: project.clone(),
+            lib: lib,
+            bin: bin,
+            target: ~"target",
+            dependencies: deps
+        })
+    }
+
     pub fn get_name_ver(&self) -> NameVer {
         NameVer::new(self.project.name.as_slice(), self.project.version.as_slice())
     }
@@ -23,19 +64,49 @@ impl Manifest {
     }
 }
 
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
+fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> (~[LibTarget], ~[ExecTarget]) {
+    fn lib_targets(libs: &[SerializedLibTarget]) -> ~[LibTarget] {
+        let l = &libs[0];
+        let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
+        ~[LibTarget { path: path, name: l.name.clone() }]
+    }
+
+    fn bin_targets(bins: &[SerializedExecTarget], default: |&SerializedExecTarget| -> ~str) -> ~[ExecTarget] {
+        bins.iter().map(|bin| {
+            let path = bin.path.clone().unwrap_or_else(|| default(bin));
+            ExecTarget { path: path, name: bin.name.clone() }
+        }).collect()
+    }
+
+    match (lib, bin) {
+        (&Some(ref libs), &Some(ref bins)) => {
+            (lib_targets(libs.as_slice()), bin_targets(bins.as_slice(), |bin| format!("src/bin/{}.rs", bin.name)))
+        },
+        (&Some(ref libs), &None) => {
+            (lib_targets(libs.as_slice()), ~[])
+        },
+        (&None, &Some(ref bins)) => {
+            (~[], bin_targets(bins.as_slice(), |bin| format!("src/{}.rs", bin.name)))
+        },
+        (&None, &None) => {
+            (~[], ~[])
+        }
+    }
+}
+
+#[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct ExecTarget {
     pub name: ~str,
     pub path: ~str
 }
 
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
+#[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct LibTarget {
     pub name: ~str,
     pub path: ~str
 }
 
-#[deriving(Decodable,Encodable,Eq,Clone,Ord)]
+#[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct Project {
     pub name: ~str,
     pub version: ~str,
