@@ -1,3 +1,7 @@
+pub use self::namever::{
+    NameVer
+};
+
 pub use self::registry::{
     Registry,
     MemRegistry
@@ -11,12 +15,12 @@ pub use self::manifest::{
 };
 
 pub use self::package::{
-    Package,
-    NameVer
+    Package
 };
 
 pub use self::dependency::Dependency;
 
+pub mod namever;
 pub mod source;
 pub mod package;
 pub mod dependency;

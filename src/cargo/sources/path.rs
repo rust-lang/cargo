@@ -1,5 +1,5 @@
 use core::source::{Source,PackagePath};
-use core::package::NameVer;
+use core::NameVer;
 use CargoResult;
 use ops::cargo_read_manifest::read_manifest;
 
