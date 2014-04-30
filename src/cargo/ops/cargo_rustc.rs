@@ -4,10 +4,25 @@ use std::io;
 use std::io::process::{Process,ProcessConfig,InheritFd};
 use std::path::Path;
 use {CargoResult,CargoError,ToCargoError,NoFlags,core};
+use core;
+
+pub fn compile(pkgs: &core::PackageSet) {
+    let sorted = match pkgs.sort() {
+        Some(pkgs) => pkgs,
+        None => return
+    };
+
+    for pkg in sorted.iter() {
+        compile_pkg(pkg, pkgs);
+    }
+}
 
 
+fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) {
 
-pub fn compile() {
+}
+
+fn rustc() {
 }
 
 pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core::Manifest>> {

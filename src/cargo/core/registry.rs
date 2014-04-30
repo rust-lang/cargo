@@ -14,6 +14,7 @@ pub trait Registry {
  *
  */
 
+/*
 pub struct MemRegistry {
   packages: Vec<Package>
 }
@@ -35,3 +36,4 @@ impl Registry for MemRegistry {
       .collect()
   }
 }
+*/

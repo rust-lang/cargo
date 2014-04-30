@@ -4,7 +4,6 @@ pub use self::namever::{
 
 pub use self::registry::{
     Registry,
-    MemRegistry
 };
 
 pub use self::manifest::{
@@ -15,7 +14,8 @@ pub use self::manifest::{
 };
 
 pub use self::package::{
-    Package
+    Package,
+    PackageSet
 };
 
 pub use self::dependency::Dependency;
