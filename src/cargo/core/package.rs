@@ -89,6 +89,10 @@ impl PackageSet {
         *opts.get(0)
     }
 
+    pub fn get_all<'a>(&'a self, names: &[&str]) -> ~[&'a Package] {
+        names.iter().map(|name| self.get(*name) ).collect()
+    }
+
     // For now, assume that the package set contains only one package with a
     // given name
     pub fn sort(&self) -> Option<PackageSet> {
