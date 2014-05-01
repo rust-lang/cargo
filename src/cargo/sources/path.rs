@@ -1,9 +1,10 @@
-use core::source::{Source,PackagePath};
-use core::NameVer;
+use core::{NameVer,Package};
+use core::source::Source;
+use core::manifest::Manifest;
 use CargoResult;
-use ops::cargo_read_manifest::read_manifest;
+use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
 
-struct PathSource {
+pub struct PathSource {
     paths: Vec<Path>
 }
 
@@ -27,23 +28,29 @@ impl Source for PathSource {
     fn update(&self) -> CargoResult<()> { Ok(()) }
 
     fn list(&self) -> CargoResult<Vec<NameVer>> {
-        self.map(|path| {
-            let manifest = try!(read_manifest(path.as_str().unwrap()));
-            Ok(manifest.get_name_ver())
-        })
+        Ok(self.paths.iter().filter_map(|path| {
+            match read_manifest(path) {
+                Ok(ref manifest) => Some(manifest.get_name_ver()),
+                Err(_) => None
+            }
+        }).collect())
     }
 
-    fn download(&self, name_ver: Vec<NameVer>)  -> CargoResult<()>{
+    fn download(&self, name_ver: &[NameVer])  -> CargoResult<()>{
         Ok(())
     }
 
-    fn get(&self, packages: Vec<NameVer>) -> CargoResult<Vec<PackagePath>> {
-        self.map(|path| {
-            let manifest = try!(read_manifest(path.as_str().unwrap()));
-            let name_ver = manifest.get_name_ver();
-            let path = manifest.get_path();
-
-            Ok(PackagePath::new(name_ver, path))
-        })
+    fn get(&self, packages: Vec<NameVer>) -> CargoResult<Vec<Package>> {
+        Ok(self.paths.iter().filter_map(|path| {
+            match read_manifest(path) {
+                Ok(ref manifest) => Some(Package::from_manifest(manifest)),
+                Err(_) => None
+            }
+        }).collect())
     }
+}
+
+fn read_manifest(path: &Path) -> CargoResult<Manifest> {
+    let joined = path.join("Cargo.toml");
+    cargo_read_manifest(joined.as_str().unwrap())
 }
