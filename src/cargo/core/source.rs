@@ -1,24 +1,6 @@
 use std::fmt;
-use core::NameVer;
+use core::{NameVer,Package};
 use CargoResult;
-
-#[deriving(Clone,Eq)]
-pub struct PackagePath {
-    name: NameVer,
-    path: Path
-}
-
-impl fmt::Show for PackagePath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f.buf, "{} at {}", self.name, self.path.display())
-    }
-}
-
-impl PackagePath {
-    pub fn new(name: NameVer, path: Path) -> PackagePath {
-        PackagePath { name: name, path: path }
-    }
-}
 
 /**
  * A Source finds and downloads remote packages based on names and
@@ -44,7 +26,7 @@ pub trait Source {
      * The download method fetches the full package for each name and
      * version specified.
      */
-    fn download(&self, packages: Vec<NameVer>) -> CargoResult<()>;
+    fn download(&self, packages: &[NameVer]) -> CargoResult<()>;
 
     /**
      * The get method returns the Path of each specified package on the
@@ -52,5 +34,5 @@ pub trait Source {
      * and that the packages are already locally available on the file
      * system.
      */
-    fn get(&self, packages: Vec<NameVer>) -> CargoResult<Vec<PackagePath>>;
+    fn get(&self, packages: Vec<NameVer>) -> CargoResult<Vec<Package>>;
 }

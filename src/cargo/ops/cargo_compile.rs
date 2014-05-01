@@ -26,6 +26,8 @@ use util::config;
 use util::config::{all_configs,ConfigValue};
 use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
 use core::Package;
+use core::source::Source;
+use sources::path::PathSource;
 use {CargoError,ToCargoError,CargoResult};
 
 #[deriving(Decodable)]
@@ -46,20 +48,13 @@ pub fn compile() -> CargoResult<()> {
 
     let paths = match config_paths.get_value() {
         &config::String(_) => return Err(CargoError::new(~"The path was configured as a String instead of a List", 1)),
-        &config::List(ref list) => list
+        &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 
-    println!("Paths: {}: {}", paths.len(), paths);
-
-    let packages: Vec<Package> = paths.iter().filter_map(|path| {
-        let joined = Path::new(path.as_slice()).join("Cargo.toml");
-        let manifest = cargo_read_manifest(joined.as_str().unwrap());
-
-        match manifest {
-            Ok(ref manifest) => Some(Package::from_manifest(manifest)),
-            Err(_) => None
-        }
-    }).collect();
+    let source = PathSource::new(paths);
+    let names = try!(source.list());
+    try!(source.download(names.as_slice()));
+    let packages = try!(source.get(names));
 
     println!("Packages: {}", packages);
     Ok(())
