@@ -3,8 +3,8 @@ use core;
 use {CargoResult};
 
 #[allow(dead_code)]
-pub fn resolve(deps: &Vec<core::Dependency>, registry: &core::Registry) -> CargoResult<Vec<core::Package>> {
-    let mut remaining = deps.clone();
+pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoResult<Vec<core::Package>> {
+    let mut remaining = Vec::from_slice(deps);
     let mut resolve = HashMap::<&str, &core::Package>::new();
 
     loop {

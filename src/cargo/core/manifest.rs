@@ -41,6 +41,8 @@ impl Manifest {
 
         let deps = dependencies.clone().map(|deps| {
             deps.iter().map(|(k,v)| {
+                // This can produce an invalid version, but it's temporary because this needs
+                // to be replaced with Dependency, not NameVer
                 Dependency::with_namever(&NameVer::new(k.clone(), v.clone()))
             }).collect()
         }).unwrap_or_else(|| vec!());
