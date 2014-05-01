@@ -24,7 +24,7 @@ struct SerializedTarget {
 type SerializedLibTarget = SerializedTarget;
 type SerializedExecTarget = SerializedTarget;
 
-#[deriving(Decodable,Encodable,Eq,Clone)]
+#[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct Manifest {
     pub project: ~Project,
     pub root: ~str,

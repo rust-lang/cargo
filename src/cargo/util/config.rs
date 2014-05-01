@@ -13,7 +13,7 @@ pub enum Location {
 }
 
 #[deriving(Eq,TotalEq,Clone,Decodable)]
-enum ConfigValueValue {
+pub enum ConfigValueValue {
     String(~str),
     List(Vec<~str>)
 }
@@ -46,6 +46,16 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValueValue {
 pub struct ConfigValue {
     value: ConfigValueValue,
     path: Vec<~str>
+}
+
+impl ConfigValue {
+    pub fn new() -> ConfigValue {
+        ConfigValue { value: List(vec!()), path: vec!() }
+    }
+
+    pub fn get_value<'a>(&'a self) -> &'a ConfigValueValue {
+        &self.value
+    }
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {

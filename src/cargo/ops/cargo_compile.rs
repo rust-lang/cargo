@@ -21,7 +21,12 @@ use hammer::{FlagDecoder,FlagConfig,FlagConfiguration,HammerError};
 use std::io;
 use std::io::BufReader;
 use std::io::process::{Process,ProcessExit,ProcessOutput,InheritFd,ProcessConfig};
-use {ToCargoError,CargoResult};
+use std::os;
+use util::config;
+use util::config::{all_configs,ConfigValue};
+use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
+use core::Package;
+use {CargoError,ToCargoError,CargoResult};
 
 #[deriving(Decodable)]
 struct Options {
@@ -36,7 +41,29 @@ pub fn compile() -> CargoResult<()> {
     let options = try!(flags::<Options>());
     let manifest_bytes = try!(read_manifest(options.manifest_path));
 
-    call_rustc(~BufReader::new(manifest_bytes.as_slice()))
+    let configs = try!(all_configs(os::getcwd()));
+    let config_paths = configs.find(&~"paths").map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
+
+    let paths = match config_paths.get_value() {
+        &config::String(_) => return Err(CargoError::new(~"The path was configured as a String instead of a List", 1)),
+        &config::List(ref list) => list
+    };
+
+    println!("Paths: {}: {}", paths.len(), paths);
+
+    let packages: Vec<Package> = paths.iter().filter_map(|path| {
+        let joined = Path::new(path.as_slice()).join("Cargo.toml");
+        let manifest = cargo_read_manifest(joined.as_str().unwrap());
+
+        match manifest {
+            Ok(ref manifest) => Some(Package::from_manifest(manifest)),
+            Err(_) => None
+        }
+    }).collect();
+
+    println!("Packages: {}", packages);
+    Ok(())
+    //call_rustc(~BufReader::new(manifest_bytes.as_slice()))
 }
 
 fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CargoResult<T> {
