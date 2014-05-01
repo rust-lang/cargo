@@ -40,7 +40,7 @@ impl Source for PathSource {
         Ok(())
     }
 
-    fn get(&self, packages: Vec<NameVer>) -> CargoResult<Vec<Package>> {
+    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
                 Ok(ref manifest) => Some(Package::from_manifest(manifest)),

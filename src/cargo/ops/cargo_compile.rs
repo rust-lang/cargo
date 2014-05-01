@@ -25,8 +25,11 @@ use std::os;
 use util::config;
 use util::config::{all_configs,ConfigValue};
 use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
+use core::resolver::resolve;
+use core::package::PackageSet;
 use core::Package;
 use core::source::Source;
+use core::dependency::Dependency;
 use sources::path::PathSource;
 use {CargoError,ToCargoError,CargoResult};
 
@@ -41,7 +44,7 @@ impl FlagConfig for Options {
 
 pub fn compile() -> CargoResult<()> {
     let options = try!(flags::<Options>());
-    let manifest_bytes = try!(read_manifest(options.manifest_path));
+    let manifest = try!(cargo_read_manifest(options.manifest_path));
 
     let configs = try!(all_configs(os::getcwd()));
     let config_paths = configs.find(&~"paths").map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
@@ -54,7 +57,16 @@ pub fn compile() -> CargoResult<()> {
     let source = PathSource::new(paths);
     let names = try!(source.list());
     try!(source.download(names.as_slice()));
-    let packages = try!(source.get(names));
+
+    let deps: Vec<Dependency> = names.iter().map(|namever| {
+        Dependency::with_namever(namever)
+    }).collect();
+
+    let packages = try!(source.get(names.as_slice()));
+    let registry = PackageSet::new(packages.as_slice());
+
+    let resolved = resolve(deps.as_slice(), &registry);
+    println!("Resolved: {}", resolved);
 
     Ok(())
     //call_rustc(~BufReader::new(manifest_bytes.as_slice()))

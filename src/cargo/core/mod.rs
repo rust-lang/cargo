@@ -25,5 +25,5 @@ pub mod source;
 pub mod package;
 pub mod dependency;
 pub mod manifest;
+pub mod resolver;
 mod registry;
-mod resolver;

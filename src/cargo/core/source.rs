@@ -34,5 +34,5 @@ pub trait Source {
      * and that the packages are already locally available on the file
      * system.
      */
-    fn get(&self, packages: Vec<NameVer>) -> CargoResult<Vec<Package>>;
+    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>>;
 }
