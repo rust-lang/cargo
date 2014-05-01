@@ -56,7 +56,6 @@ pub fn compile() -> CargoResult<()> {
     try!(source.download(names.as_slice()));
     let packages = try!(source.get(names));
 
-    println!("Packages: {}", packages);
     Ok(())
     //call_rustc(~BufReader::new(manifest_bytes.as_slice()))
 }

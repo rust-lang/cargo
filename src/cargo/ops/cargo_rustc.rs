@@ -5,6 +5,7 @@ use std::io::process::{Process,ProcessConfig,InheritFd};
 use std::path::Path;
 use {CargoResult,CargoError,ToCargoError,NoFlags,core};
 use core;
+use util;
 
 pub fn compile(pkgs: &core::PackageSet) {
     let sorted = match pkgs.sort() {
@@ -19,10 +20,25 @@ pub fn compile(pkgs: &core::PackageSet) {
 
 
 fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) {
+    let root = pkg.get_root();
 
+    mk_target(pkg.get_root(), &Path::new(pkg.get_target()));
 }
 
-fn rustc() {
+fn mk_target(root: &Path, target: &Path) -> io::IoResult<()> {
+    let target = root.join(target);
+    io::fs::mkdir_recursive(&target, io::UserRWX)
+}
+
+fn rustc(root: &Path, target: &core::LibTarget) {
+    util::process("rustc")
+        .cwd(root.clone())
+        .args(rustc_args(root, target))
+        .exec();
+}
+
+fn rustc_args(root: &Path, target: &core::LibTarget) -> ~[~str] {
+    ~[]
 }
 
 pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core::Manifest>> {

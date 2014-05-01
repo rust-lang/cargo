@@ -1,5 +1,6 @@
 use std::os;
 use std::path::Path;
+use std::io;
 use std::io::process::{Process,ProcessConfig,ProcessOutput};
 use ToCargoError;
 use CargoResult;
@@ -30,6 +31,28 @@ impl ProcessBuilder {
   pub fn cwd(mut self, path: Path) -> ProcessBuilder {
     self.cwd = path;
     self
+  }
+
+  pub fn exec(&self) -> io::IoResult<()> {
+      let mut config = ProcessConfig::new();
+
+      config.program = self.program.as_slice();
+      config.args = self.args.as_slice();
+      config.cwd = Some(&self.cwd);
+
+      let mut process = try!(Process::configure(config));
+      let exit = process.wait();
+
+      if exit.success() {
+          Ok(())
+      }
+      else {
+          Err(io::IoError {
+              kind: io::OtherIoError,
+              desc: "process did not exit successfully",
+              detail: None
+          })
+      }
   }
 
   pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {

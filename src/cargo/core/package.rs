@@ -1,4 +1,5 @@
 use std::slice;
+use std::path::Path;
 use semver;
 use core;
 use core::{NameVer,Dependency};
@@ -13,18 +14,24 @@ use util::graph;
  *
  * This differs from core::Project
  */
-#[deriving(Clone,Eq,Show)]
+#[deriving(Clone,Eq)]
 pub struct Package {
     name_ver: core::NameVer,
     deps: Vec<core::Dependency>,
-    root: ~str,
+    root: Path,
     source: LibTarget,
     target: ~str
 }
 
 impl Package {
     pub fn new(name: &core::NameVer, deps: &Vec<core::Dependency>, root: &str, source: &LibTarget, target: &str) -> Package {
-        Package { name_ver: name.clone(), deps: deps.clone(), root: root.to_owned(), source: source.clone(), target: target.to_owned()  }
+        Package {
+            name_ver: name.clone(),
+            deps: deps.clone(),
+            root: Path::new(root),
+            source: source.clone(),
+            target: target.to_owned()
+        }
     }
 
     pub fn from_manifest(manifest: &Manifest) -> Package {
@@ -33,7 +40,7 @@ impl Package {
         Package {
             name_ver: core::NameVer::new(project.name.as_slice(), project.version.as_slice()),
             deps: manifest.dependencies.clone(),
-            root: manifest.root.clone(),
+            root: Path::new(manifest.root.as_slice()),
             source: manifest.lib.as_slice().get(0).unwrap().clone(),
             target: manifest.target.clone()
         }
@@ -47,8 +54,8 @@ impl Package {
         self.name_ver.get_version()
     }
 
-    pub fn get_root<'a>(&'a self) -> &'a str {
-        self.root.as_slice()
+    pub fn get_root<'a>(&'a self) -> &'a Path {
+        &self.root
     }
 
     pub fn get_source<'a>(&'a self) -> &'a LibTarget {
