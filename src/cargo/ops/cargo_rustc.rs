@@ -7,6 +7,8 @@ use {CargoResult,CargoError,ToCargoError,NoFlags,core};
 use core;
 use util;
 
+type Args = Vec<~str>;
+
 pub fn compile(pkgs: &core::PackageSet) {
     let sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
@@ -20,25 +22,54 @@ pub fn compile(pkgs: &core::PackageSet) {
 
 
 fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) {
-    let root = pkg.get_root();
+    // Build up the destination
+    let src = pkg.get_root().join(Path::new(pkg.get_source().name.as_slice()));
+    let target = pkg.get_root().join(Path::new(pkg.get_target()));
 
-    mk_target(pkg.get_root(), &Path::new(pkg.get_target()));
+    // First ensure that the directory exists
+    mk_target(&target);
+
+    // compile
+    rustc(pkg.get_root(), &src, &target, deps(pkg, pkgs));
 }
 
-fn mk_target(root: &Path, target: &Path) -> io::IoResult<()> {
-    let target = root.join(target);
-    io::fs::mkdir_recursive(&target, io::UserRWX)
+fn mk_target(target: &Path) -> io::IoResult<()> {
+    io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
-fn rustc(root: &Path, target: &core::LibTarget) {
+fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) {
+    let mut args = Vec::new();
+
+    build_base_args(&mut args, src, target);
+    build_deps_args(&mut args, deps);
+
     util::process("rustc")
         .cwd(root.clone())
-        .args(rustc_args(root, target))
+        .args(args.as_slice())
         .exec();
 }
 
-fn rustc_args(root: &Path, target: &core::LibTarget) -> ~[~str] {
-    ~[]
+fn build_base_args(dst: &mut Args, src: &Path, target: &Path) {
+    dst.push(src.as_str().unwrap().to_owned());
+    dst.push(~"--crate-type");
+    dst.push(~"lib");
+    dst.push(~"--out-dir");
+    dst.push(target.as_str().unwrap().to_owned());
+}
+
+fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
+    for dep in deps.iter() {
+        let target = dep.get_root().join(Path::new(dep.get_target()));
+
+        dst.push(~"-L");
+        dst.push(target.as_str().unwrap().to_owned());
+    }
+}
+
+// Collect all dependencies for a given package
+fn deps(pkg: &core::Package, pkgs: &core::PackageSet) -> ~[core::Package] {
+    let names: ~[&str] = pkg.get_dependencies().iter().map(|d| d.get_name()).collect();
+    pkgs.get_all(names).iter().map(|p| (*p).clone()).collect()
 }
 
 pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core::Manifest>> {
