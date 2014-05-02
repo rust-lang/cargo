@@ -66,7 +66,6 @@ pub fn compile() -> CargoResult<()> {
     let registry = PackageSet::new(packages.as_slice());
 
     let resolved = resolve(deps.as_slice(), &registry);
-    println!("Resolved: {}", resolved);
 
     Ok(())
     //call_rustc(~BufReader::new(manifest_bytes.as_slice()))

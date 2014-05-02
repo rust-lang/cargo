@@ -1,16 +1,20 @@
 use collections::HashMap;
 use core;
+use core::package::PackageSet;
 use {CargoResult};
 
 #[allow(dead_code)]
-pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoResult<Vec<core::Package>> {
+pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoResult<PackageSet> {
     let mut remaining = Vec::from_slice(deps);
     let mut resolve = HashMap::<&str, &core::Package>::new();
 
     loop {
         let curr = match remaining.pop() {
             Some(curr) => curr,
-            None => return Ok(resolve.values().map(|v| (*v).clone()).collect())
+            None => {
+                let packages: Vec<core::Package> = resolve.values().map(|v| (*v).clone()).collect();
+                return Ok(PackageSet::new(packages.as_slice()))
+            }
         };
 
         let opts = registry.query(curr.get_name());
