@@ -31,6 +31,7 @@ use core::Package;
 use core::source::Source;
 use core::dependency::Dependency;
 use sources::path::PathSource;
+use ops::cargo_rustc;
 use {CargoError,ToCargoError,CargoResult};
 
 #[deriving(Decodable)]
@@ -65,7 +66,9 @@ pub fn compile() -> CargoResult<()> {
     let packages = try!(source.get(names.as_slice()));
     let registry = PackageSet::new(packages.as_slice());
 
-    let resolved = resolve(deps.as_slice(), &registry);
+    let resolved = try!(resolve(deps.as_slice(), &registry));
+
+    cargo_rustc::compile(&resolved);
 
     Ok(())
     //call_rustc(~BufReader::new(manifest_bytes.as_slice()))

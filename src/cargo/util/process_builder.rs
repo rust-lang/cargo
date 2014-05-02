@@ -1,7 +1,7 @@
 use std::os;
 use std::path::Path;
 use std::io;
-use std::io::process::{Process,ProcessConfig,ProcessOutput};
+use std::io::process::{Process,ProcessConfig,ProcessOutput,InheritFd};
 use ToCargoError;
 use CargoResult;
 
@@ -33,12 +33,15 @@ impl ProcessBuilder {
     self
   }
 
+  // TODO: clean all this up
   pub fn exec(&self) -> io::IoResult<()> {
       let mut config = ProcessConfig::new();
 
       config.program = self.program.as_slice();
       config.args = self.args.as_slice();
       config.cwd = Some(&self.cwd);
+      config.stdout = InheritFd(1);
+      config.stderr = InheritFd(2);
 
       let mut process = try!(Process::configure(config));
       let exit = process.wait();
