@@ -12,7 +12,7 @@ type Args = Vec<~str>;
 pub fn compile(pkgs: &core::PackageSet) {
     let sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
-        None => return
+        None => fail!("Could not perform topsort on PackageSet")
     };
 
     for pkg in sorted.iter() {
@@ -23,7 +23,7 @@ pub fn compile(pkgs: &core::PackageSet) {
 
 fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) {
     // Build up the destination
-    let src = pkg.get_root().join(Path::new(pkg.get_source().name.as_slice()));
+    let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
     let target = pkg.get_root().join(Path::new(pkg.get_target()));
 
     // First ensure that the directory exists

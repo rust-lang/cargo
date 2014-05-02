@@ -93,8 +93,8 @@ impl<T> ToCargoError<T, Option<T>> for Option<T> {
 trait RepresentsFlags : FlagConfig + Decodable<FlagDecoder, HammerError> {}
 impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> RepresentsFlags for T {}
 
-trait RepresentsJSON : Decodable<json::Decoder, json::Error> {}
-impl <T: Decodable<json::Decoder, json::Error>> RepresentsJSON for T {}
+trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
+impl <T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
 #[deriving(Decodable)]
 pub struct NoFlags;
@@ -151,5 +151,5 @@ fn json_from_stdin<T: RepresentsJSON>() -> CargoResult<T> {
     let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
     let mut decoder = json::Decoder::new(json);
 
-    Decodable::decode(&mut decoder).to_cargo_error(|e: json::Error| format!("{}", e), 1)
+    Decodable::decode(&mut decoder).to_cargo_error(|e: json::DecoderError| format!("{}", e), 1)
 }
