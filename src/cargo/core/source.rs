@@ -1,4 +1,3 @@
-use std::fmt;
 use core::{NameVer,Package};
 use CargoResult;
 

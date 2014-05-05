@@ -12,16 +12,6 @@ impl PathSource {
     pub fn new(paths: Vec<Path>) -> PathSource {
         PathSource { paths: paths }
     }
-
-    fn map<T>(&self, callback: |&Path| -> CargoResult<T>) -> CargoResult<Vec<T>> {
-        let mut ret = Vec::with_capacity(self.paths.len());
-
-        for path in self.paths.iter() {
-            ret.push(try!(callback(path)));
-        }
-
-        Ok(ret)
-    }
 }
 
 impl Source for PathSource {
@@ -36,11 +26,11 @@ impl Source for PathSource {
         }).collect())
     }
 
-    fn download(&self, name_ver: &[NameVer])  -> CargoResult<()>{
+    fn download(&self, _: &[NameVer])  -> CargoResult<()>{
         Ok(())
     }
 
-    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
+    fn get(&self, _: &[NameVer]) -> CargoResult<Vec<Package>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
                 Ok(ref manifest) => Some(Package::from_manifest(manifest)),
