@@ -44,9 +44,9 @@ mod test {
     };
 
     use core::{
-        MemRegistry,
         Dependency,
-        Package
+        Package,
+        PackageSet
     };
 
     use super::{
@@ -71,8 +71,8 @@ mod test {
         Dependency::new(name)
     }
 
-    fn registry(pkgs: Vec<Package>) -> MemRegistry {
-        MemRegistry::new(&pkgs)
+    fn registry(pkgs: Vec<Package>) -> PackageSet {
+        PackageSet::new(&pkgs)
     }
 
     #[test]
