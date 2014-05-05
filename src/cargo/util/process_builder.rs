@@ -67,15 +67,15 @@ impl ProcessBuilder {
     config.args = self.args.as_slice();
     config.cwd = Some(&self.cwd);
 
-    let os_path = try!(os::getenv("PATH").to_cargo_error(~"Could not find the PATH environment variable", 1));
+    let os_path = try!(os::getenv("PATH").to_cargo_error("Could not find the PATH environment variable".to_owned(), 1));
     let path = os_path + PATH_SEP + self.path.connect(PATH_SEP);
 
-    let path = [(~"PATH", path)];
+    let path = [("PATH".to_owned(), path)];
     config.env = Some(path.as_slice());
 
     println!("{:?}", config);
 
-    Process::configure(config).map(|mut ok| ok.wait_with_output()).to_cargo_error(~"Could not spawn process", 1)
+    Process::configure(config).map(|mut ok| ok.wait_with_output()).to_cargo_error("Could not spawn process".to_owned(), 1)
   }
 }
 

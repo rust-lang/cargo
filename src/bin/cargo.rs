@@ -31,14 +31,14 @@ fn execute() {
         Err(err) => return handle_error(err)
     };
 
-    if cmd == ~"config-for-key" { execute_main_without_stdin(config_for_key) }
-    else if cmd == ~"config-list" { execute_main_without_stdin(config_list) }
-    else if cmd == ~"locate-project" { execute_main_without_stdin(locate_project) }
+    if cmd == "config-for-key".to_owned() { execute_main_without_stdin(config_for_key) }
+    else if cmd == "config-list".to_owned() { execute_main_without_stdin(config_list) }
+    else if cmd == "locate-project".to_owned() { execute_main_without_stdin(locate_project) }
 }
 
 fn process(mut args: ~[~str]) -> CargoResult<(~str, ~[~str])> {
     args = args.tail().to_owned();
-    let head = try!(args.head().to_cargo_error(~"No subcommand found", 1)).to_owned();
+    let head = try!(args.head().to_cargo_error("No subcommand found".to_owned(), 1)).to_owned();
     let tail = args.tail().to_owned();
 
     Ok((head, tail))
@@ -99,7 +99,7 @@ fn config_list(args: ConfigListFlags) -> CargoResult<Option<ConfigOut>> {
 }
 
 fn locate_project(_: NoFlags) -> CargoResult<Option<ProjectLocation>> {
-    let root = try!(find_project(os::getcwd(), ~"Cargo.toml"));
+    let root = try!(find_project(os::getcwd(), "Cargo.toml".to_owned()));
     let string = try!(root.as_str().to_cargo_error(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), 1));
     Ok(Some(ProjectLocation { root: string.to_owned() }))
 }

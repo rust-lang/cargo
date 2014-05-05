@@ -146,7 +146,7 @@ fn flags_from_args<T: RepresentsFlags>() -> CargoResult<T> {
 
 fn json_from_stdin<T: RepresentsJSON>() -> CargoResult<T> {
     let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().to_cargo_error(~"Cannot read stdin to a string", 1));
+    let input = try!(reader.read_to_str().to_cargo_error("Cannot read stdin to a string".to_owned(), 1));
 
     let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
     let mut decoder = json::Decoder::new(json);

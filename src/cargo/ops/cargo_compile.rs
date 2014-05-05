@@ -34,24 +34,15 @@ use sources::path::PathSource;
 use ops::cargo_rustc;
 use {CargoError,ToCargoError,CargoResult};
 
-#[deriving(Decodable)]
-struct Options {
-    manifest_path: ~str
-}
 
-impl FlagConfig for Options {
-    fn config(_: Option<Options>, c: FlagConfiguration) -> FlagConfiguration { c }
-}
-
-pub fn compile() -> CargoResult<()> {
-    let options = try!(flags::<Options>());
-    let manifest = try!(cargo_read_manifest(options.manifest_path));
+pub fn compile(manifest_path: &str) -> CargoResult<()> {
+    let manifest = try!(cargo_read_manifest(manifest_path));
 
     let configs = try!(all_configs(os::getcwd()));
-    let config_paths = configs.find(&~"paths").map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
+    let config_paths = configs.find(&("paths".to_owned())).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
     let paths = match config_paths.get_value() {
-        &config::String(_) => return Err(CargoError::new(~"The path was configured as a String instead of a List", 1)),
+        &config::String(_) => return Err(CargoError::new("The path was configured as a String instead of a List".to_owned(), 1)),
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 
@@ -74,13 +65,9 @@ pub fn compile() -> CargoResult<()> {
     //call_rustc(~BufReader::new(manifest_bytes.as_slice()))
 }
 
-fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CargoResult<T> {
-    let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
-    Decodable::decode(&mut decoder).to_cargo_error(|e: HammerError| e.message, 1)
-}
 
 fn read_manifest(manifest_path: &str) -> CargoResult<Vec<u8>> {
-    Ok((try!(exec_with_output("cargo-read-manifest", [~"--manifest-path", manifest_path.to_owned()], None))).output)
+    Ok((try!(exec_with_output("cargo-read-manifest", ["--manifest-path".to_owned(), manifest_path.to_owned()], None))).output)
 }
 
 fn call_rustc(mut manifest_data: ~Reader:) -> CargoResult<()> {
