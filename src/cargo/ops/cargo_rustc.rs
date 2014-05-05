@@ -51,9 +51,9 @@ fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) {
 
 fn build_base_args(dst: &mut Args, src: &Path, target: &Path) {
     dst.push(src.as_str().unwrap().to_owned());
-    dst.push(~"--crate-type");
-    dst.push(~"lib");
-    dst.push(~"--out-dir");
+    dst.push("--crate-type".to_owned());
+    dst.push("lib".to_owned());
+    dst.push("--out-dir".to_owned());
     dst.push(target.as_str().unwrap().to_owned());
 }
 
@@ -61,7 +61,7 @@ fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
     for dep in deps.iter() {
         let target = dep.get_root().join(Path::new(dep.get_target()));
 
-        dst.push(~"-L");
+        dst.push("-L".to_owned());
         dst.push(target.as_str().unwrap().to_owned());
     }
 }
@@ -76,20 +76,20 @@ pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core:
     let core::Manifest { root, lib, bin, .. } = manifest;
 
     let (crate_type, out_dir) = if lib.len() > 0 {
-        ( ~"lib", lib[0].path )
+        ( "lib".to_owned(), lib[0].path )
     } else if bin.len() > 0 {
-        ( ~"bin", bin[0].path )
+        ( "bin".to_owned(), bin[0].path )
     } else {
-        return Err(CargoError::new(~"bad manifest, no lib or bin specified", 1));
+        return Err(CargoError::new("bad manifest, no lib or bin specified".to_owned(), 1));
     };
 
     let root = Path::new(root);
-    let target = join(&root, ~"target");
+    let target = join(&root, "target".to_owned());
 
     let args = [
         join(&root, out_dir),
-        ~"--out-dir", target,
-        ~"--crate-type", crate_type
+        "--out-dir".to_owned(), target,
+        "--crate-type".to_owned(), crate_type
     ];
 
     match io::fs::mkdir_recursive(&root.join("target"), io::UserRWX) {

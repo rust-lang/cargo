@@ -99,7 +99,7 @@ fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoR
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible).to_cargo_error(~"", 1));
+            let file = try!(io::fs::File::open(&possible).to_cargo_error("".to_owned(), 1));
             match walk(file) {
                 Ok(res) => return Ok(res),
                 _ => ()
@@ -109,7 +109,7 @@ fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoR
         if !current.pop() { break; }
     }
 
-    Err(CargoError::new(~"", 1))
+    Err(CargoError::new("".to_owned(), 1))
 }
 
 fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult<()> {
@@ -119,14 +119,14 @@ fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible).to_cargo_error(~"", 1));
+            let file = try!(io::fs::File::open(&possible).to_cargo_error("".to_owned(), 1));
             match walk(file) {
                 Err(_) => err = false,
                 _ => ()
             }
         }
 
-        if err { return Err(CargoError::new(~"", 1)); }
+        if err { return Err(CargoError::new("".to_owned(), 1)); }
         if !current.pop() { break; }
     }
 
@@ -134,25 +134,25 @@ fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult
 }
 
 fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
-    let path = try!(file.path().as_str().to_cargo_error(~"", 1)).to_owned();
+    let path = try!(file.path().as_str().to_cargo_error("".to_owned(), 1)).to_owned();
     let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf).to_cargo_error(~"", 1));
-    let val = try!(root.lookup(key).to_cargo_error(~"", 1));
+    let root = try!(toml::parse_from_buffer(&mut buf).to_cargo_error("".to_owned(), 1));
+    let val = try!(root.lookup(key).to_cargo_error("".to_owned(), 1));
 
     let v = match val {
         &toml::String(ref val) => String(val.to_owned()),
         &toml::Array(ref val) => List(val.iter().map(|s: &toml::Value| s.to_str()).collect()),
-        _ => return Err(CargoError::new(~"", 1))
+        _ => return Err(CargoError::new("".to_owned(), 1))
     };
 
     Ok(ConfigValue{ value: v, path: vec!(path) })
 }
 
 fn extract_all_configs(file: io::fs::File, map: &mut collections::HashMap<~str, ConfigValue>) -> CargoResult<()> {
-    let path = try!(file.path().as_str().to_cargo_error(~"", 1)).to_owned();
+    let path = try!(file.path().as_str().to_cargo_error("".to_owned(), 1)).to_owned();
     let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf).to_cargo_error(~"", 1));
-    let table = try!(root.get_table().to_cargo_error(~"", 1));
+    let root = try!(toml::parse_from_buffer(&mut buf).to_cargo_error("".to_owned(), 1));
+    let table = try!(root.get_table().to_cargo_error("".to_owned(), 1));
 
     for (key, value) in table.iter() {
         match value {
@@ -173,11 +173,11 @@ fn extract_all_configs(file: io::fs::File, map: &mut collections::HashMap<~str, 
 
 fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &str) -> CargoResult<()> {
     match existing.value {
-        String(_) => return Err(CargoError::new(~"", 1)),
+        String(_) => return Err(CargoError::new("".to_owned(), 1)),
         List(ref mut list) => {
             let new_list: Vec<CargoResult<~str>> = val.iter().map(|s: &toml::Value| toml_string(s)).collect();
             if new_list.iter().any(|v| v.is_err()) {
-                return Err(CargoError::new(~"", 1));
+                return Err(CargoError::new("".to_owned(), 1));
             } else {
                 let new_list: Vec<~str> = new_list.move_iter().map(|v| v.unwrap()).collect();
                 list.push_all(new_list.as_slice());
@@ -191,6 +191,6 @@ fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &str) -> C
 fn toml_string(val: &toml::Value) -> CargoResult<~str> {
     match val {
         &toml::String(ref str) => Ok(str.to_owned()),
-        _ => Err(CargoError::new(~"", 1))
+        _ => Err(CargoError::new("".to_owned(), 1))
     }
 }

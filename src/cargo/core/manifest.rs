@@ -52,7 +52,7 @@ impl Manifest {
             project: project.clone(),
             lib: lib,
             bin: bin,
-            target: ~"target",
+            target: "target".to_owned(),
             dependencies: deps
         })
     }
