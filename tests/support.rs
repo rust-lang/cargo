@@ -187,7 +187,7 @@ impl Execs {
       None => ham::success(),
       Some(out) => {
         match str::from_utf8(actual.as_slice()) {
-          None => Err(~"stdout was not utf8 encoded"),
+          None => Err("stdout was not utf8 encoded".to_owned()),
           Some(actual) => {
             ham::expect(actual == out, format!("stdout was `{}`", actual))
           }
@@ -199,7 +199,7 @@ impl Execs {
 
 impl ham::SelfDescribing for Execs {
   fn describe(&self) -> ~str {
-    ~"execs"
+    "execs".to_owned()
   }
 }
 
@@ -209,7 +209,7 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 
     match res {
       Ok(out) => self.match_output(&out),
-      Err(_) => Err(~"could not exec process")
+      Err(_) => Err("could not exec process".to_owned())
     }
   }
 }

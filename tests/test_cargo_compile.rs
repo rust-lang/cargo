@@ -24,10 +24,12 @@ test!(cargo_compile_with_explicit_manifest_path {
             }"#)
         .build();
 
-    p.cargo_process("cargo-compile")
-      .args([~"--manifest-path", ~"Cargo.toml"])
-      .exec_with_output()
+    println!("~~~~~~~");
+    p.cargo_process("cargo")
+      .args(["compile".to_owned(), "--manifest-path".to_owned(), "Cargo.toml".to_owned()])
+      .exec()
       .unwrap();
+    println!("~~~~~~~");
 
     assert_that(&p.root().join("target/foo"), existing_file());
 
