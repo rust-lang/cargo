@@ -14,29 +14,19 @@
  *    b. Compile each dependency in order, passing in the -L's pointing at each previously compiled dependency
  */
 
-use std;
 use std::vec::Vec;
-use serialize::{Decodable};
-use std::io;
-use std::io::BufReader;
-use std::io::process::{Process,ProcessExit,ProcessOutput,InheritFd,ProcessConfig};
 use std::os;
 use util::config;
 use util::config::{all_configs,ConfigValue};
-use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
 use core::resolver::resolve;
 use core::package::PackageSet;
-use core::Package;
 use core::source::Source;
 use core::dependency::Dependency;
 use sources::path::PathSource;
 use ops::cargo_rustc;
-use {CargoError,ToCargoError,CargoResult};
-
+use {CargoError,CargoResult};
 
 pub fn compile(manifest_path: &str) -> CargoResult<()> {
-    let manifest = try!(cargo_read_manifest(manifest_path));
-
     let configs = try!(all_configs(os::getcwd()));
     let config_paths = configs.find(&("paths".to_owned())).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
@@ -58,46 +48,7 @@ pub fn compile(manifest_path: &str) -> CargoResult<()> {
 
     let resolved = try!(resolve(deps.as_slice(), &registry));
 
-    cargo_rustc::compile(&resolved);
+    try!(cargo_rustc::compile(&resolved));
 
     Ok(())
-    //call_rustc(~BufReader::new(manifest_bytes.as_slice()))
 }
-
-
-fn read_manifest(manifest_path: &str) -> CargoResult<Vec<u8>> {
-    Ok((try!(exec_with_output("cargo-read-manifest", ["--manifest-path".to_owned(), manifest_path.to_owned()], None))).output)
-}
-
-fn call_rustc(mut manifest_data: ~Reader:) -> CargoResult<()> {
-    let data: &mut Reader = manifest_data;
-    try!(exec_tty("cargo-rustc", [], Some(data)));
-    Ok(())
-}
-
-fn exec_with_output(program: &str, args: &[~str], input: Option<&mut Reader>) -> CargoResult<ProcessOutput> {
-    Ok((try!(exec(program, args, input, |_| {}))).wait_with_output())
-}
-
-fn exec_tty(program: &str, args: &[~str], input: Option<&mut Reader>) -> CargoResult<ProcessExit> {
-    Ok((try!(exec(program, args, input, |config| {
-        config.stdout = InheritFd(1);
-        config.stderr = InheritFd(2);
-    }))).wait())
-}
-
-fn exec(program: &str, args: &[~str], input: Option<&mut Reader>, configurator: |&mut ProcessConfig|) -> CargoResult<Process> {
-    let mut config = ProcessConfig::new();
-    config.program = program;
-    config.args = args;
-    configurator(&mut config);
-
-    println!("Executing {} {}", program, args);
-
-    let mut process = try!(Process::configure(config).to_cargo_error(|e: io::IoError| format!("Could not configure process: {}", e), 1));
-
-    input.map(|mut reader| io::util::copy(&mut reader, process.stdin.get_mut_ref()));
-
-    Ok(process)
-}
-

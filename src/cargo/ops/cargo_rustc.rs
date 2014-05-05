@@ -3,50 +3,56 @@ use std::os::args;
 use std::io;
 use std::io::process::{Process,ProcessConfig,InheritFd};
 use std::path::Path;
-use {CargoResult,CargoError,ToCargoError,NoFlags,core};
+use {CargoResult,CargoError,ToCargoError,NoFlags};
 use core;
 use util;
 
 type Args = Vec<~str>;
 
-pub fn compile(pkgs: &core::PackageSet) {
+pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
     let sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
-        None => fail!("Could not perform topsort on PackageSet")
+        None => return Err(CargoError::new("Circular dependency detected".to_owned(), 1))
     };
 
     for pkg in sorted.iter() {
-        compile_pkg(pkg, pkgs);
+        try!(compile_pkg(pkg, pkgs));
     }
+
+    Ok(())
 }
 
 
-fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) {
+fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CargoResult<()> {
     // Build up the destination
     let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
     let target = pkg.get_root().join(Path::new(pkg.get_target()));
 
     // First ensure that the directory exists
-    mk_target(&target);
+    try!(mk_target(&target).to_cargo_error(format!("Could not create the target directory {}", target.display()), 1));
 
     // compile
-    rustc(pkg.get_root(), &src, &target, deps(pkg, pkgs));
+    try!(rustc(pkg.get_root(), &src, &target, deps(pkg, pkgs)));
+
+    Ok(())
 }
 
 fn mk_target(target: &Path) -> io::IoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
-fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) {
+fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) -> CargoResult<()> {
     let mut args = Vec::new();
 
     build_base_args(&mut args, src, target);
     build_deps_args(&mut args, deps);
 
-    util::process("rustc")
+    try!(util::process("rustc")
         .cwd(root.clone())
         .args(args.as_slice())
-        .exec();
+        .exec().to_cargo_error(format!("Couldn't execute rustc {}", args.connect(" ")), 1));
+
+    Ok(())
 }
 
 fn build_base_args(dst: &mut Args, src: &Path, target: &Path) {

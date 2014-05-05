@@ -7,7 +7,7 @@ extern crate serialize;
 
 use cargo::ops::cargo_compile::compile;
 use cargo::{CargoResult,ToCargoError};
-use hammer::{FlagDecoder,FlagConfig,FlagConfiguration,HammerError};
+use hammer::{FlagDecoder,FlagConfig,HammerError};
 use serialize::Decodable;
 
 #[deriving(Eq,Clone,Decodable,Encodable)]
