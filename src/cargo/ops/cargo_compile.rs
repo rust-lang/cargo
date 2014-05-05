@@ -17,7 +17,6 @@
 use std;
 use std::vec::Vec;
 use serialize::{Decodable};
-use hammer::{FlagDecoder,FlagConfig,FlagConfiguration,HammerError};
 use std::io;
 use std::io::BufReader;
 use std::io::process::{Process,ProcessExit,ProcessOutput,InheritFd,ProcessConfig};
