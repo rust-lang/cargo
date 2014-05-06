@@ -3,6 +3,10 @@ use core;
 use core::package::PackageSet;
 use core::errors::CargoResult;
 
+/* TODO:
+ * - The correct input here is not a registry. Resolves should be performable
+ * on package summaries vs. the packages themselves.
+ */
 #[allow(dead_code)]
 pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoResult<PackageSet> {
     let mut remaining = Vec::from_slice(deps);
