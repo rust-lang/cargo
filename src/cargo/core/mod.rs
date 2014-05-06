@@ -8,14 +8,17 @@ pub use self::registry::{
 
 pub use self::manifest::{
     Manifest,
-    Project,
-    LibTarget,
-    ExecTarget
+    Target,
+    TargetKind
 };
 
 pub use self::package::{
     Package,
     PackageSet
+};
+
+pub use self::summary::{
+    Summary
 };
 
 pub use self::dependency::Dependency;
@@ -27,4 +30,5 @@ pub mod package;
 pub mod dependency;
 pub mod manifest;
 pub mod resolver;
+mod summary;
 mod registry;

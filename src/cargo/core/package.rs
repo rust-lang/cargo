@@ -1,73 +1,60 @@
 use std::slice;
 use std::path::Path;
-use semver;
-use core;
-use core::{NameVer,Dependency};
-use core::manifest::{Manifest,LibTarget};
-use core::Registry;
+use core::{
+    Dependency,
+    Manifest,
+    Registry,
+    Target,
+    Summary
+};
 use util::graph;
 
-/**
- * Represents a rust library internally to cargo. This will things like where
- * on the local system the code is located, it's remote location, dependencies,
- * etc..
- *
- * This differs from core::Project
- */
-#[deriving(Clone,Eq)]
+#[deriving(Clone)]
 pub struct Package {
-    name_ver: core::NameVer,
-    deps: Vec<core::Dependency>,
+    // The package's manifest
+    manifest: Manifest,
+    // The root of the package
     root: Path,
-    source: LibTarget,
-    target: ~str
 }
 
 impl Package {
-    pub fn new(name: &core::NameVer, deps: &Vec<core::Dependency>, root: &str, source: &LibTarget, target: &str) -> Package {
+    pub fn new(manifest: &Manifest, root: &Path) -> Package {
         Package {
-            name_ver: name.clone(),
-            deps: deps.clone(),
-            root: Path::new(root),
-            source: source.clone(),
-            target: target.to_owned()
+            manifest: manifest.clone(),
+            root: root.clone()
         }
     }
 
-    pub fn from_manifest(manifest: &Manifest) -> Package {
-        let project = &manifest.project;
+    pub fn get_manifest<'a>(&'a self) -> &'a Manifest {
+        &self.manifest
+    }
 
-        Package {
-            name_ver: core::NameVer::new(project.name.as_slice(), project.version.as_slice()),
-            deps: manifest.dependencies.clone(),
-            root: Path::new(manifest.root.as_slice()),
-            source: manifest.lib.as_slice().get(0).unwrap().clone(),
-            target: manifest.target.clone()
-        }
+    pub fn get_summary<'a>(&'a self) -> &'a Summary {
+        self.manifest.get_summary()
     }
 
     pub fn get_name<'a>(&'a self) -> &'a str {
-        self.name_ver.get_name()
+        self.get_manifest().get_name()
     }
 
-    pub fn get_version<'a>(&'a self) -> &'a semver::Version {
-        self.name_ver.get_version()
+    pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
+        self.get_manifest().get_dependencies()
+    }
+
+    pub fn get_targets<'a>(&'a self) -> &'a [Target] {
+        self.get_manifest().get_targets()
     }
 
     pub fn get_root<'a>(&'a self) -> &'a Path {
         &self.root
     }
 
-    pub fn get_source<'a>(&'a self) -> &'a LibTarget {
-        &self.source
+    pub fn get_target_dir<'a>(&'a self) -> &'a Path {
+        self.manifest.get_target_dir()
     }
 
-    pub fn get_target<'a>(&'a self) -> &'a str {
-        self.target.as_slice()
-    }
-
-    pub fn get_dependencies<'a>(&'a self) -> &'a [core::Dependency] {
-        self.deps.as_slice()
+    pub fn get_absolute_target_dir(&self) -> Path {
+        self.get_root().join(self.get_target_dir())
     }
 }
 
