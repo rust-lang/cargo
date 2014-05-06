@@ -2,7 +2,6 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use core::{NameVer,Package};
 use core::source::Source;
-use core::manifest::Manifest;
 use core::errors::{CargoResult,CargoCLIError,ToResult};
 use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
 
@@ -28,7 +27,7 @@ impl Source for PathSource {
     fn list(&self) -> CargoResult<Vec<NameVer>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
-                Ok(ref manifest) => Some(manifest.get_name_ver()),
+                Ok(ref pkg) => Some(pkg.get_summary().get_name_ver().clone()),
                 Err(_) => None
             }
         }).collect())
@@ -41,14 +40,14 @@ impl Source for PathSource {
     fn get(&self, _: &[NameVer]) -> CargoResult<Vec<Package>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
-                Ok(ref manifest) => Some(Package::from_manifest(manifest)),
+                Ok(pkg) => Some(pkg),
                 Err(_) => None
             }
         }).collect())
     }
 }
 
-fn read_manifest(path: &Path) -> CargoResult<Manifest> {
+fn read_manifest(path: &Path) -> CargoResult<Package> {
     let joined = path.join("Cargo.toml");
     cargo_read_manifest(joined.as_str().unwrap()).to_result(|err| CargoCLIError(err))
 }

@@ -5,6 +5,7 @@ use cargo;
 fn setup() {
 }
 
+// Currently doesn't pass due to the code being broken
 test!(cargo_compile_with_explicit_manifest_path {
     let p = project("foo")
         .file("Cargo.toml", r#"

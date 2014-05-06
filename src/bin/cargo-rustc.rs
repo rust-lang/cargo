@@ -3,9 +3,7 @@
 
 extern crate cargo;
 
-use cargo::execute_main;
-use cargo::ops::cargo_rustc::execute;
-
 fn main() {
-    execute_main(execute);
+    // Standalone cargo-rustc will go here
+    unimplemented!();
 }
