@@ -24,29 +24,34 @@ use core::source::Source;
 use core::dependency::Dependency;
 use sources::path::PathSource;
 use ops::cargo_rustc;
-use {CargoError,CargoResult};
+use core::errors::{CargoError,CLIError,CLIResult,ToResult};
 
-pub fn compile(manifest_path: &str) -> CargoResult<()> {
-    let configs = try!(all_configs(os::getcwd()));
+pub fn compile(manifest_path: &str) -> CLIResult<()> {
+    let configs = try!(all_configs(os::getcwd()).to_result(|err: CargoError|
+        CLIError::new("Could not load configurations", Some(err.to_str()), 1)));
+
     let config_paths = configs.find(&("paths".to_owned())).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
     let paths = match config_paths.get_value() {
-        &config::String(_) => return Err(CargoError::new("The path was configured as a String instead of a List".to_owned(), 1)),
+        &config::String(_) => return Err(CLIError::new("The path was configured as a String instead of a List", None, 1)),
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 
     let source = PathSource::new(paths);
-    let names = try!(source.list());
-    try!(source.download(names.as_slice()));
+    let names = try!(source.list().to_result(|err| CLIError::new(format!("Unable to list packages from {}", source), Some(err.to_str()), 1)));
+    try!(source.download(names.as_slice()).to_result(|err| CLIError::new(format!("Unable to download packages from {}", source), Some(err.to_str()), 1)));
 
     let deps: Vec<Dependency> = names.iter().map(|namever| {
         Dependency::with_namever(namever)
     }).collect();
 
-    let packages = try!(source.get(names.as_slice()));
+    let packages = try!(source.get(names.as_slice()).to_result(|err|
+        CLIError::new(format!("Unable to get packages from {} for {}", source, names), Some(err.to_str()), 1)));
+
     let registry = PackageSet::new(packages.as_slice());
 
-    let resolved = try!(resolve(deps.as_slice(), &registry));
+    let resolved = try!(resolve(deps.as_slice(), &registry).to_result(|err: CargoError|
+        CLIError::new("Unable to resolve dependencies", Some(err.to_str()), 1)));
 
     try!(cargo_rustc::compile(&resolved));
 

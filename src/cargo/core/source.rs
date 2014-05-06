@@ -1,11 +1,12 @@
 use core::{NameVer,Package};
-use CargoResult;
+use core::errors::CargoResult;
+use std::fmt::Show;
 
 /**
  * A Source finds and downloads remote packages based on names and
  * versions.
  */
-pub trait Source {
+pub trait Source : Show {
     /**
      * The update method performs any network operations required to
      * get the entire list of all names, versions and dependencies of

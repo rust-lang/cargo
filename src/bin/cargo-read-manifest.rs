@@ -5,9 +5,10 @@ extern crate cargo;
 extern crate serialize;
 extern crate hammer;
 
-use cargo::{CargoResult,execute_main_without_stdin};
+use cargo::execute_main_without_stdin;
 use cargo::ops::cargo_read_manifest::read_manifest;
 use cargo::core::Manifest;
+use cargo::core::errors::CLIResult;
 use hammer::FlagConfig;
 
 #[deriving(Decodable,Eq,Clone,Ord)]
@@ -21,7 +22,7 @@ fn main() {
     execute_main_without_stdin(execute);
 }
 
-fn execute(flags: ReadManifestFlags) -> CargoResult<Option<Manifest>> {
+fn execute(flags: ReadManifestFlags) -> CLIResult<Option<Manifest>> {
     match read_manifest(flags.manifest_path) {
         Ok(manifest) => Ok(Some(manifest)),
         Err(e) => Err(e)

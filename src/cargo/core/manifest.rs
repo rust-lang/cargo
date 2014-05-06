@@ -1,7 +1,7 @@
 use core::NameVer;
 use core::dependency::Dependency;
 use collections::HashMap;
-use {CargoResult,ToCargoError};
+use core::errors::{CargoResult,CargoError,ToResult,PathError};
 
 /*
  * TODO: Make all struct fields private
@@ -47,8 +47,11 @@ impl Manifest {
             }).collect()
         }).unwrap_or_else(|| vec!());
 
+        let root = try!(Path::new(path.to_owned()).dirname_str().map(|s| s.to_owned()).to_result(|_|
+            CargoError::internal(PathError(format!("Couldn't convert {} to a directory name", path)))));
+
         Ok(Manifest {
-            root: try!(Path::new(path.to_owned()).dirname_str().to_cargo_error(format!("Could not get dirname from {}", path), 1)).to_owned(),
+            root: root.to_owned(),
             project: project.clone(),
             lib: lib,
             bin: bin,
