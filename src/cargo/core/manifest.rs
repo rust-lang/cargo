@@ -58,33 +58,6 @@ impl Manifest {
     pub fn get_target_dir<'a>(&'a self) -> &'a Path {
         &self.target_dir
     }
-
-    /*
-    pub fn from_serialized(path: &str, serialized: &SerializedManifest) -> CargoResult<Manifest> {
-        let (lib,bin) = normalize(&serialized.lib, &serialized.bin);
-        let &SerializedManifest { ref project, ref dependencies, .. } = serialized;
-
-        let deps = dependencies.clone().map(|deps| {
-            deps.iter().map(|(k,v)| {
-                // This can produce an invalid version, but it's temporary because this needs
-                // to be replaced with Dependency, not NameVer
-                Dependency::with_namever(&NameVer::new(k.clone(), v.clone()))
-            }).collect()
-        }).unwrap_or_else(|| vec!());
-
-        let root = try!(Path::new(path.to_owned()).dirname_str().map(|s| s.to_owned()).to_result(|_|
-            CargoError::internal(PathError(format!("Couldn't convert {} to a directory name", path)))));
-
-        Ok(Manifest {
-            root: root.to_owned(),
-            project: project.clone(),
-            lib: lib,
-            bin: bin,
-            target: "target".to_owned(),
-            dependencies: deps
-        })
-    }
-    */
 }
 
 impl Target {
