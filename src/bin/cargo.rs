@@ -7,7 +7,8 @@ extern crate collections;
 use hammer::{FlagConfig,FlagConfiguration};
 use std::os;
 use serialize::Encodable;
-use cargo::{CargoResult,ToCargoError,NoFlags,execute_main_without_stdin,handle_error};
+use cargo::{NoFlags,execute_main_without_stdin,handle_error};
+use cargo::core::errors::{CLIError,CLIResult,ToResult};
 use cargo::util::important_paths::find_project;
 use cargo::util::config;
 
@@ -36,9 +37,9 @@ fn execute() {
     else if cmd == "locate-project".to_owned() { execute_main_without_stdin(locate_project) }
 }
 
-fn process(mut args: ~[~str]) -> CargoResult<(~str, ~[~str])> {
+fn process(mut args: ~[~str]) -> CLIResult<(~str, ~[~str])> {
     args = args.tail().to_owned();
-    let head = try!(args.head().to_cargo_error("No subcommand found".to_owned(), 1)).to_owned();
+    let head = try!(args.head().to_result(|_| CLIError::new("No subcommand found", None, 1))).to_owned();
     let tail = args.tail().to_owned();
 
     Ok((head, tail))
@@ -61,8 +62,9 @@ impl FlagConfig for ConfigForKeyFlags {
     }
 }
 
-fn config_for_key(args: ConfigForKeyFlags) -> CargoResult<Option<ConfigOut>> {
-    let value = try!(config::get_config(os::getcwd(), args.key.as_slice()));
+fn config_for_key(args: ConfigForKeyFlags) -> CLIResult<Option<ConfigOut>> {
+    let value = try!(config::get_config(os::getcwd(), args.key.as_slice()).to_result(|err|
+        CLIError::new("Couldn't load configuration", Some(err.to_str()), 1)));
 
     if args.human {
         println!("{}", value);
@@ -85,8 +87,9 @@ impl FlagConfig for ConfigListFlags {
     }
 }
 
-fn config_list(args: ConfigListFlags) -> CargoResult<Option<ConfigOut>> {
-    let configs = try!(config::all_configs(os::getcwd()));
+fn config_list(args: ConfigListFlags) -> CLIResult<Option<ConfigOut>> {
+    let configs = try!(config::all_configs(os::getcwd()).to_result(|err|
+        CLIError::new("Couldn't load conifguration", Some(err.to_str()), 1)));
 
     if args.human {
         for (key, value) in configs.iter() {
@@ -98,8 +101,12 @@ fn config_list(args: ConfigListFlags) -> CargoResult<Option<ConfigOut>> {
     }
 }
 
-fn locate_project(_: NoFlags) -> CargoResult<Option<ProjectLocation>> {
-    let root = try!(find_project(os::getcwd(), "Cargo.toml".to_owned()));
-    let string = try!(root.as_str().to_cargo_error(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), 1));
+fn locate_project(_: NoFlags) -> CLIResult<Option<ProjectLocation>> {
+    let root = try!(find_project(os::getcwd(), "Cargo.toml".to_owned()).to_result(|err|
+        CLIError::new(err.to_str(), None, 1)));
+
+    let string = try!(root.as_str().to_result(|_|
+        CLIError::new(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), None, 1)));
+
     Ok(Some(ProjectLocation { root: string.to_owned() }))
 }

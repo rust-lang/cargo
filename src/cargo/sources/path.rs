@@ -1,7 +1,9 @@
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use core::{NameVer,Package};
 use core::source::Source;
 use core::manifest::Manifest;
-use CargoResult;
+use core::errors::{CargoResult,CargoCLIError,ToResult};
 use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
 
 pub struct PathSource {
@@ -11,6 +13,12 @@ pub struct PathSource {
 impl PathSource {
     pub fn new(paths: Vec<Path>) -> PathSource {
         PathSource { paths: paths }
+    }
+}
+
+impl Show for PathSource {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f.buf, "the paths source")
     }
 }
 
@@ -42,5 +50,5 @@ impl Source for PathSource {
 
 fn read_manifest(path: &Path) -> CargoResult<Manifest> {
     let joined = path.join("Cargo.toml");
-    cargo_read_manifest(joined.as_str().unwrap())
+    cargo_read_manifest(joined.as_str().unwrap()).to_result(|err| CargoCLIError(err))
 }

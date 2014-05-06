@@ -20,6 +20,7 @@ pub use self::package::{
 
 pub use self::dependency::Dependency;
 
+pub mod errors;
 pub mod namever;
 pub mod source;
 pub mod package;

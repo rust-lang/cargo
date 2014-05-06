@@ -6,7 +6,7 @@ extern crate hammer;
 extern crate serialize;
 
 use cargo::ops::cargo_compile::compile;
-use cargo::{CargoResult,ToCargoError};
+use cargo::core::errors::{CLIResult,CLIError,ToResult};
 use hammer::{FlagDecoder,FlagConfig,HammerError};
 use serialize::Decodable;
 
@@ -17,18 +17,19 @@ pub struct Options {
 
 impl FlagConfig for Options {}
 
-fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CargoResult<T> {
+fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CLIResult<T> {
     let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
-    Decodable::decode(&mut decoder).to_cargo_error(|e: HammerError| e.message, 1)
+    Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None, 1))
 }
 
-fn execute() -> CargoResult<()> {
-    compile(try!(flags::<Options>()).manifest_path.as_slice())
+fn execute() -> CLIResult<()> {
+    compile(try!(flags::<Options>()).manifest_path.as_slice()).to_result(|_|
+        CLIError::new("Compilation failed", None, 1))
 }
 
 fn main() {
     match execute() {
-        Err(io_error) => fail!("{}", io_error),
+        Err(err) => fail!("{}", err),
         Ok(_) => return
     }
 }

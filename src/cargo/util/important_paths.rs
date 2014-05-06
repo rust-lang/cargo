@@ -1,4 +1,4 @@
-use super::super::{CargoResult,CargoError};
+use core::errors::{CargoResult,CargoError,MissingManifest};
 
 pub fn find_project(pwd: Path, file: ~str) -> CargoResult<Path> {
     let mut current = pwd.clone();
@@ -11,5 +11,5 @@ pub fn find_project(pwd: Path, file: ~str) -> CargoResult<Path> {
         if !current.pop() { break; }
     }
 
-    Err(CargoError::new(format!("Could not find a Cargo manifest ({}) in your current directory or any parent directory", file), 1))
+    Err(CargoError::internal(MissingManifest(pwd, file)))
 }

@@ -3,8 +3,7 @@ use std::path::Path;
 use std::io;
 use std::io::process::{Process,ProcessConfig,ProcessOutput,InheritFd};
 use collections::HashMap;
-use ToCargoError;
-use CargoResult;
+use core::errors::{ToResult,CargoResult,CargoError,Described};
 
 #[deriving(Clone,Eq)]
 pub struct ProcessBuilder {
@@ -68,13 +67,16 @@ impl ProcessBuilder {
         config.args = self.args.as_slice();
         config.cwd = Some(&self.cwd);
 
-        let os_path = try!(os::getenv("PATH").to_cargo_error("Could not find the PATH environment variable".to_owned(), 1));
+        let os_path = try!(os::getenv("PATH").to_result(|_|
+            CargoError::internal(Described("Could not find the PATH environment variable".to_owned()))));
+
         let path = os_path + PATH_SEP + self.path.connect(PATH_SEP);
 
         let path = [("PATH".to_owned(), path)];
         config.env = Some(path.as_slice());
 
-        Process::configure(config).map(|mut ok| ok.wait_with_output()).to_cargo_error("Could not spawn process".to_owned(), 1)
+        Process::configure(config).map(|mut ok| ok.wait_with_output()).to_result(|_|
+            CargoError::internal(Described("Could not spawn process".to_owned())))
     }
 
     fn build_config<'a>(&'a self) -> io::IoResult<ProcessConfig<'a>> {

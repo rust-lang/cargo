@@ -15,9 +15,8 @@ extern crate hamcrest;
 
 use serialize::{Decoder,Encoder,Decodable,Encodable,json};
 use std::io;
-use std::fmt;
-use std::fmt::{Show,Formatter};
 use hammer::{FlagDecoder,FlagConfig,HammerError};
+pub use core::errors::{CLIError,CLIResult,ToResult};
 
 macro_rules! some(
   ($e:expr) => (
@@ -32,64 +31,6 @@ pub mod ops;
 pub mod sources;
 pub mod util;
 
-
-pub type CargoResult<T> = Result<T, CargoError>;
-
-pub struct CargoError {
-    message: ~str,
-    exit_code: uint
-}
-
-impl CargoError {
-    pub fn new(message: ~str, exit_code: uint) -> CargoError {
-        CargoError { message: message, exit_code: exit_code }
-    }
-}
-
-impl Show for CargoError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f.buf, "{}", self.message)
-    }
-}
-
-pub trait ToCargoErrorMessage<E> {
-    fn to_cargo_error_message(self, error: E) -> ~str;
-}
-
-impl<E> ToCargoErrorMessage<E> for ~str {
-    fn to_cargo_error_message(self, _: E) -> ~str {
-        self
-    }
-}
-
-impl<'a, E> ToCargoErrorMessage<E> for |E|:'a -> ~str {
-    fn to_cargo_error_message(self, err: E) -> ~str {
-        self(err)
-    }
-}
-
-pub trait ToCargoError<T, E> {
-    fn to_cargo_error<M: ToCargoErrorMessage<E>>(self, to_message: M, exit_code: uint) -> Result<T, CargoError>;
-}
-
-impl<T,E> ToCargoError<T, E> for Result<T,E> {
-    fn to_cargo_error<M: ToCargoErrorMessage<E>>(self, to_message: M, exit_code: uint) -> Result<T, CargoError> {
-        match self {
-            Err(err) => Err(CargoError{ message: to_message.to_cargo_error_message(err), exit_code: exit_code }),
-            Ok(val) => Ok(val)
-        }
-    }
-}
-
-impl<T> ToCargoError<T, Option<T>> for Option<T> {
-    fn to_cargo_error<M: ToCargoErrorMessage<Option<T>>>(self, to_message: M, exit_code: uint) -> Result<T, CargoError> {
-        match self {
-            None => Err(CargoError{ message: to_message.to_cargo_error_message(None), exit_code: exit_code }),
-            Some(val) => Ok(val)
-        }
-    }
-}
-
 trait RepresentsFlags : FlagConfig + Decodable<FlagDecoder, HammerError> {}
 impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> RepresentsFlags for T {}
 
@@ -101,8 +42,8 @@ pub struct NoFlags;
 
 impl FlagConfig for NoFlags {}
 
-pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CargoResult<Option<V>>) {
-    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
+pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CLIResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CLIResult<Option<V>>) -> CLIResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
         let json = try!(json_from_stdin::<U>());
 
@@ -112,8 +53,8 @@ pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json
     process_executed(call(exec))
 }
 
-pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CargoResult<Option<V>>) {
-    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CargoResult<Option<V>>) -> CargoResult<Option<V>> {
+pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CLIResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CLIResult<Option<V>>) -> CLIResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
 
         exec(flags)
@@ -122,7 +63,7 @@ pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Enc
     process_executed(call(exec))
 }
 
-pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CargoResult<Option<T>>) {
+pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CLIResult<Option<T>>) {
     match result {
         Err(e) => handle_error(e),
         Ok(encodable) => {
@@ -134,22 +75,22 @@ pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result
     }
 }
 
-pub fn handle_error(err: CargoError) {
-    let _ = write!(&mut std::io::stderr(), "{}", err.message);
+pub fn handle_error(err: CLIError) {
+    let _ = write!(&mut std::io::stderr(), "{}", err.msg);
     std::os::set_exit_status(err.exit_code as int);
 }
 
-fn flags_from_args<T: RepresentsFlags>() -> CargoResult<T> {
+fn flags_from_args<T: RepresentsFlags>() -> CLIResult<T> {
     let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
-    Decodable::decode(&mut decoder).to_cargo_error(|e: HammerError| e.message, 1)
+    Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None, 1))
 }
 
-fn json_from_stdin<T: RepresentsJSON>() -> CargoResult<T> {
+fn json_from_stdin<T: RepresentsJSON>() -> CLIResult<T> {
     let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().to_cargo_error("Cannot read stdin to a string".to_owned(), 1));
+    let input = try!(reader.read_to_str().to_result(|_| CLIError::new("Standard in did not exist or was not UTF-8", None, 1)));
 
-    let json = try!(json::from_str(input).to_cargo_error(format!("Cannot parse json: {}", input), 1));
+    let json = try!(json::from_str(input).to_result(|_| CLIError::new("Could not parse standard in as JSON", Some(input.clone()), 1)));
     let mut decoder = json::Decoder::new(json);
 
-    Decodable::decode(&mut decoder).to_cargo_error(|e: json::DecoderError| format!("{}", e), 1)
+    Decodable::decode(&mut decoder).to_result(|e: json::DecoderError| CLIError::new("Could not process standard in as input", Some(e.to_str()), 1))
 }

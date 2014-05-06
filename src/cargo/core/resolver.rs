@@ -1,7 +1,7 @@
 use collections::HashMap;
 use core;
 use core::package::PackageSet;
-use {CargoResult};
+use core::errors::CargoResult;
 
 #[allow(dead_code)]
 pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoResult<PackageSet> {

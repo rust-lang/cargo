@@ -3,16 +3,17 @@ use std::os::args;
 use std::io;
 use std::io::process::{Process,ProcessConfig,InheritFd};
 use std::path::Path;
-use {CargoResult,CargoError,ToCargoError,NoFlags};
+use core::errors::{CLIError,CLIResult,ToResult};
+use NoFlags;
 use core;
 use util;
 
 type Args = Vec<~str>;
 
-pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
+pub fn compile(pkgs: &core::PackageSet) -> CLIResult<()> {
     let sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
-        None => return Err(CargoError::new("Circular dependency detected".to_owned(), 1))
+        None => return Err(CLIError::new("Circular dependency detected", None, 1))
     };
 
     for pkg in sorted.iter() {
@@ -23,13 +24,14 @@ pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
 }
 
 
-fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CargoResult<()> {
+fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CLIResult<()> {
     // Build up the destination
     let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
     let target = pkg.get_root().join(Path::new(pkg.get_target()));
 
     // First ensure that the directory exists
-    try!(mk_target(&target).to_cargo_error(format!("Could not create the target directory {}", target.display()), 1));
+    try!(mk_target(&target).to_result(|err|
+        CLIError::new(format!("Could not create the target directory {}", target.display()), Some(err.to_str()), 1)));
 
     // compile
     try!(rustc(pkg.get_root(), &src, &target, deps(pkg, pkgs)));
@@ -41,7 +43,7 @@ fn mk_target(target: &Path) -> io::IoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
-fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) -> CargoResult<()> {
+fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) -> CLIResult<()> {
     let mut args = Vec::new();
 
     build_base_args(&mut args, src, target);
@@ -50,7 +52,9 @@ fn rustc(root: &Path, src: &Path, target: &Path, deps: &[core::Package]) -> Carg
     try!(util::process("rustc")
         .cwd(root.clone())
         .args(args.as_slice())
-        .exec().to_cargo_error(format!("Couldn't execute rustc {}", args.connect(" ")), 1));
+        .exec()
+        .to_result(|err|
+            CLIError::new(format!("Couldn't execute rustc {}", args.connect(" ")), Some(err.to_str()), 1)));
 
     Ok(())
 }
@@ -78,7 +82,7 @@ fn deps(pkg: &core::Package, pkgs: &core::PackageSet) -> ~[core::Package] {
     pkgs.get_all(names).iter().map(|p| (*p).clone()).collect()
 }
 
-pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core::Manifest>> {
+pub fn execute(_: NoFlags, manifest: core::Manifest) -> CLIResult<Option<core::Manifest>> {
     let core::Manifest { root, lib, bin, .. } = manifest;
 
     let (crate_type, out_dir) = if lib.len() > 0 {
@@ -86,7 +90,7 @@ pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core:
     } else if bin.len() > 0 {
         ( "bin".to_owned(), bin[0].path )
     } else {
-        return Err(CargoError::new("bad manifest, no lib or bin specified".to_owned(), 1));
+        return Err(CLIError::new("bad manifest, no lib or bin specified", None, 1));
     };
 
     let root = Path::new(root);
@@ -111,12 +115,13 @@ pub fn execute(_: NoFlags, manifest: core::Manifest) -> CargoResult<Option<core:
     config.program = "rustc";
     config.args = args.as_slice();
 
-    let mut p = try!(Process::configure(config).to_cargo_error(format!("Could not start process: rustc {}", args.as_slice()), 1));
+    let mut p = try!(Process::configure(config).to_result(|err|
+        CLIError::new(format!("Could not start process: rustc {}", args.connect(" ")), Some(err.to_str()), 1)));
 
     let status = p.wait();
 
     if status != std::io::process::ExitStatus(0) {
-        fail!("Failed to execute")
+        return Err(CLIError::new(format!("Non-zero status code from rustc {}", args.connect(" ")), None, 1));
     }
 
     Ok(None)
