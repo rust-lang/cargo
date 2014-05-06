@@ -1,12 +1,11 @@
-use core::{NameVer,Package};
+use core::{Summary,NameVer,Package};
 use core::errors::CargoResult;
-use std::fmt::Show;
 
 /**
  * A Source finds and downloads remote packages based on names and
  * versions.
  */
-pub trait Source : Show {
+pub trait Source {
     /**
      * The update method performs any network operations required to
      * get the entire list of all names, versions and dependencies of
@@ -20,7 +19,7 @@ pub trait Source : Show {
      * already been called and no additional network operations are
      * required.
      */
-    fn list(&self) -> CargoResult<Vec<NameVer>>;
+    fn list(&self) -> CargoResult<Vec<Summary>>;
 
     /**
      * The download method fetches the full package for each name and
