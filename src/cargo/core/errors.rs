@@ -107,6 +107,14 @@ impl CargoError {
         CargoInternalError(error)
     }
 
+    pub fn described<T: ToStr>(description: T) -> CargoError {
+        CargoInternalError(Described(description.to_str()))
+    }
+
+    pub fn other() -> CargoError {
+        CargoInternalError(Other)
+    }
+
     pub fn cli_error(self) -> CLIError {
         match self {
             CargoInternalError(err) =>
