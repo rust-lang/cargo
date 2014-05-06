@@ -17,6 +17,10 @@ pub use self::package::{
     PackageSet
 };
 
+pub use self::source::{
+    Source
+};
+
 pub use self::summary::{
     Summary
 };

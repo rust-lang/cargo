@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use core::{NameVer,Package};
+use core::{NameVer,Package,Summary};
 use core::source::Source;
 use core::errors::{CargoResult,CargoCLIError,ToResult};
 use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
@@ -24,10 +24,10 @@ impl Show for PathSource {
 impl Source for PathSource {
     fn update(&self) -> CargoResult<()> { Ok(()) }
 
-    fn list(&self) -> CargoResult<Vec<NameVer>> {
+    fn list(&self) -> CargoResult<Vec<Summary>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
-                Ok(ref pkg) => Some(pkg.get_summary().get_name_ver().clone()),
+                Ok(ref pkg) => Some(pkg.get_summary().clone()),
                 Err(_) => None
             }
         }).collect())

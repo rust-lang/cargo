@@ -18,10 +18,8 @@ use std::vec::Vec;
 use std::os;
 use util::config;
 use util::config::{all_configs,ConfigValue};
+use core::{PackageSet,Source,Dependency,NameVer};
 use core::resolver::resolve;
-use core::package::PackageSet;
-use core::source::Source;
-use core::dependency::Dependency;
 use sources::path::PathSource;
 use ops::cargo_rustc;
 use core::errors::{CargoError,CLIError,CLIResult,ToResult};
@@ -38,11 +36,14 @@ pub fn compile(manifest_path: &str) -> CLIResult<()> {
     };
 
     let source = PathSource::new(paths);
-    let names = try!(source.list().to_result(|err| CLIError::new(format!("Unable to list packages from {}", source), Some(err.to_str()), 1)));
-    try!(source.download(names.as_slice()).to_result(|err| CLIError::new(format!("Unable to download packages from {}", source), Some(err.to_str()), 1)));
+    let summaries = try!(source.list().to_result(|err| CLIError::new(format!("Unable to list packages from {}", source), Some(err.to_str()), 1)));
+    let names: Vec<NameVer> = summaries.iter().map(|s| s.get_name_ver().clone()).collect();
 
-    let deps: Vec<Dependency> = names.iter().map(|namever| {
-        Dependency::with_namever(namever)
+    // This does not need to happen
+    // try!(source.download(names.as_slice()).to_result(|err| CLIError::new(format!("Unable to download packages from {}", source), Some(err.to_str()), 1)));
+
+    let deps: Vec<Dependency> = summaries.iter().map(|summary| {
+        Dependency::with_namever(summary.get_name_ver())
     }).collect();
 
     let packages = try!(source.get(names.as_slice()).to_result(|err|
