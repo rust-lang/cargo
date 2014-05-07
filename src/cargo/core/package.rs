@@ -10,13 +10,41 @@ use core::{
     Summary
 };
 use util::graph;
+use serialize::{Encoder,Encodable};
 
-#[deriving(Clone)]
+#[deriving(Clone,Eq)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
     // The root of the package
     root: Path,
+}
+
+#[deriving(Encodable)]
+struct SerializedPackage {
+    name: ~str,
+    version: ~str,
+    dependencies: Vec<Dependency>,
+    authors: Vec<~str>,
+    targets: Vec<Target>,
+    root: ~str
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for Package {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        let manifest = self.get_manifest();
+        let summary = manifest.get_summary();
+        let name_ver = summary.get_name_ver();
+
+        SerializedPackage {
+            name: name_ver.get_name().to_owned(),
+            version: name_ver.get_version().to_str(),
+            dependencies: Vec::from_slice(summary.get_dependencies()),
+            authors: Vec::from_slice(manifest.get_authors()),
+            targets: Vec::from_slice(manifest.get_targets()),
+            root: self.root.as_str().unwrap().to_owned()
+        }.encode(s)
+    }
 }
 
 impl Package {

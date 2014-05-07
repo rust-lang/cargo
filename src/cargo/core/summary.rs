@@ -3,7 +3,7 @@ use core::{
     NameVer
 };
 
-#[deriving(Show,Clone,Eq)]
+#[deriving(Show,Clone,Eq,Encodable)]
 pub struct Summary {
     name_ver: NameVer,
     dependencies: Vec<Dependency>

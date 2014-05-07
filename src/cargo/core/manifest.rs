@@ -8,6 +8,7 @@ use core::{
     Summary
 };
 use core::errors::{CargoResult,CargoError,ToResult,PathError};
+use serialize::{Encoder,Encodable};
 
 // #[deriving(Decodable,Encodable,Eq,Clone)]
 #[deriving(Eq,Clone)]
@@ -24,7 +25,26 @@ impl Show for Manifest {
     }
 }
 
-#[deriving(Show,Clone,Eq)]
+#[deriving(Eq,Clone,Encodable)]
+pub struct SerializedManifest {
+    summary: Summary,
+    authors: Vec<~str>,
+    targets: Vec<Target>,
+    target_dir: ~str
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        SerializedManifest {
+            summary: self.summary.clone(),
+            authors: self.authors.clone(),
+            targets: self.targets.clone(),
+            target_dir: self.target_dir.as_str().unwrap().to_owned()
+        }.encode(s)
+    }
+}
+
+#[deriving(Show,Clone,Eq,Encodable)]
 pub enum TargetKind {
     LibTarget,
     BinTarget
@@ -35,6 +55,28 @@ pub struct Target {
     kind: TargetKind,
     name: ~str,
     path: Path
+}
+
+#[deriving(Encodable)]
+pub struct SerializedTarget {
+    kind: &'static str,
+    name: ~str,
+    path: ~str
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for Target {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        let kind = match self.kind {
+            LibTarget => "lib",
+            BinTarget => "bin"
+        };
+
+        SerializedTarget {
+            kind: kind,
+            name: self.name.clone(),
+            path: self.path.as_str().unwrap().to_owned()
+        }.encode(s)
+    }
 }
 
 impl Show for Target {
@@ -59,6 +101,10 @@ impl Manifest {
 
     pub fn get_name<'a>(&'a self) -> &'a str {
         self.get_summary().get_name_ver().get_name()
+    }
+
+    pub fn get_authors<'a>(&'a self) -> &'a [~str] {
+        self.authors.as_slice()
     }
 
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
@@ -109,8 +155,8 @@ impl Target {
  *
  */
 
-type SerializedLibTarget = SerializedTarget;
-type SerializedExecTarget = SerializedTarget;
+type TomlLibTarget = TomlTarget;
+type TomlExecTarget = TomlTarget;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct Project {
@@ -124,14 +170,14 @@ pub struct Project {
  */
 
 #[deriving(Decodable,Encodable,Eq,Clone)]
-pub struct SerializedManifest {
+pub struct TomlManifest {
     project: ~Project,
-    lib: Option<~[SerializedLibTarget]>,
-    bin: Option<~[SerializedExecTarget]>,
+    lib: Option<~[TomlLibTarget]>,
+    bin: Option<~[TomlExecTarget]>,
     dependencies: Option<HashMap<~str, ~str>>
 }
 
-impl SerializedManifest {
+impl TomlManifest {
     pub fn to_package(&self, path: &str) -> CargoResult<Package> {
         // Get targets
         let targets = normalize(&self.lib, &self.bin);
@@ -163,19 +209,19 @@ impl Project {
 }
 
 #[deriving(Decodable,Encodable,Eq,Clone)]
-struct SerializedTarget {
+struct TomlTarget {
     name: ~str,
     path: Option<~str>
 }
 
-fn normalize(lib: &Option<~[SerializedLibTarget]>, bin: &Option<~[SerializedExecTarget]>) -> Vec<Target> {
-    fn lib_targets(dst: &mut Vec<Target>, libs: &[SerializedLibTarget]) {
+fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlExecTarget]>) -> Vec<Target> {
+    fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         dst.push(Target::lib_target(l.name, &Path::new(path)));
     }
 
-    fn bin_targets(dst: &mut Vec<Target>, bins: &[SerializedExecTarget], default: |&SerializedExecTarget| -> ~str) {
+    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlExecTarget], default: |&TomlExecTarget| -> ~str) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
             dst.push(Target::bin_target(bin.name.clone(), &Path::new(path)));
