@@ -14,6 +14,7 @@ pub fn compile(pkgs: &core::PackageSet) -> CLIResult<()> {
     };
 
     for pkg in sorted.iter() {
+        println!("Compiling {}", pkg);
         try!(compile_pkg(pkg, pkgs));
     }
 
@@ -52,7 +53,7 @@ fn rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]
         .args(args.as_slice())
         .exec()
         .to_result(|err|
-            CLIError::new(format!("Couldn't execute rustc {}", args.connect(" ")), Some(err.to_str()), 1)));
+            CLIError::new(format!("Couldn't execute `rustc {}` in `{}`", args.connect(" "), root.display()), Some(err.to_str()), 1)));
 
     Ok(())
 }

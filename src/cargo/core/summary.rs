@@ -29,3 +29,18 @@ impl Summary {
         self.dependencies.as_slice()
     }
 }
+
+pub trait SummaryVec {
+    fn names(&self) -> Vec<~str>;
+    fn deps(&self) -> Vec<Dependency>;
+}
+
+impl SummaryVec for Vec<Summary> {
+    fn names(&self) -> Vec<~str> {
+        self.iter().map(|summary| summary.name_ver.get_name().to_owned()).collect()
+    }
+
+    fn deps(&self) -> Vec<Dependency> {
+        self.iter().map(|summary| Dependency::with_namever(summary.get_name_ver())).collect()
+    }
+}

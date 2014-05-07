@@ -1,4 +1,6 @@
 use collections::HashMap;
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use core::{
     Dependency,
     NameVer,
@@ -16,7 +18,13 @@ pub struct Manifest {
     target_dir: Path,
 }
 
-#[deriving(Clone,Eq)]
+impl Show for Manifest {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f.buf, "Manifest({}, authors={}, targets={}, target_dir={})", self.summary, self.authors, self.targets, self.target_dir.display())
+    }
+}
+
+#[deriving(Show,Clone,Eq)]
 pub enum TargetKind {
     LibTarget,
     BinTarget
@@ -27,6 +35,12 @@ pub struct Target {
     kind: TargetKind,
     name: ~str,
     path: Path
+}
+
+impl Show for Target {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f.buf, "{}(name={}, path={})", self.kind, self.name, self.path.display())
+    }
 }
 
 impl Manifest {
