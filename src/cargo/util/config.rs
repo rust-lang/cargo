@@ -45,7 +45,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValueValue {
 #[deriving(Eq,TotalEq,Clone,Decodable)]
 pub struct ConfigValue {
     value: ConfigValueValue,
-    path: Vec<~str>
+    path: Vec<Path>
 }
 
 impl ConfigValue {
@@ -70,7 +70,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
 
 impl fmt::Show for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f.buf, "{} (from {})", self.value, self.path)
+        let paths: Vec<~str> = self.path.iter().map(|p| p.display().to_str()).collect();
+        write!(f.buf, "{} (from {})", self.value, paths)
     }
 }
 
@@ -135,7 +136,7 @@ fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult
 }
 
 fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
-    let path = try!(file.path().as_str().to_result(|_| CargoError::other())).to_owned();
+    let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
     let root = try!(toml::parse_from_buffer(&mut buf).to_result(|_| CargoError::other()));
     let val = try!(root.lookup(key).to_result(|_| CargoError::other()));
@@ -150,10 +151,13 @@ fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
 }
 
 fn extract_all_configs(file: io::fs::File, map: &mut collections::HashMap<~str, ConfigValue>) -> CargoResult<()> {
-    let path = try!(file.path().as_str().to_result(|_| CargoError::other())).to_owned();
+    let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf).to_result(|_| CargoError::other()));
-    let table = try!(root.get_table().to_result(|_| CargoError::other()));
+    let root = try!(toml::parse_from_buffer(&mut buf).to_result(|err|
+        CargoError::described(format!("Couldn't parse Toml manifest `{}`: {}", path.display(), err))));
+
+    let table = try!(root.get_table().to_result(|err|
+        CargoError::described(format!("Couldn't parse Toml manifest `{}`: {}", path.display(), err))));
 
     for (key, value) in table.iter() {
         match value {
@@ -163,7 +167,8 @@ fn extract_all_configs(file: io::fs::File, map: &mut collections::HashMap<~str, 
                     ConfigValue { path: vec!(), value: List(vec!()) }
                 });
 
-                try!(merge_array(config, val.as_slice(), path.as_slice()));
+                try!(merge_array(config, val.as_slice(), &path).to_result(|err|
+                    CargoError::described(format!("The `{}` key in your config {}", key, err))));
             },
             _ => ()
         }
@@ -172,17 +177,17 @@ fn extract_all_configs(file: io::fs::File, map: &mut collections::HashMap<~str, 
     Ok(())
 }
 
-fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &str) -> CargoResult<()> {
+fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &Path) -> CargoResult<()> {
     match existing.value {
-        String(_) => return Err(CargoError::other()),
+        String(_) => return Err(CargoError::described("should be an Array, but it was a String")),
         List(ref mut list) => {
             let new_list: Vec<CargoResult<~str>> = val.iter().map(|s: &toml::Value| toml_string(s)).collect();
             if new_list.iter().any(|v| v.is_err()) {
-                return Err(CargoError::other());
+                return Err(CargoError::described("should be an Array of Strings, but was an Array of other values"));
             } else {
                 let new_list: Vec<~str> = new_list.move_iter().map(|v| v.unwrap()).collect();
                 list.push_all(new_list.as_slice());
-                existing.path.push(path.to_owned());
+                existing.path.push(path.clone());
                 Ok(())
             }
         }
