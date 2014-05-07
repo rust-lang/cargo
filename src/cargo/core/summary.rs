@@ -21,6 +21,10 @@ impl Summary {
         &self.name_ver
     }
 
+    pub fn get_name<'a>(&'a self) -> &'a str {
+        self.get_name_ver().get_name()
+    }
+
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
         self.dependencies.as_slice()
     }

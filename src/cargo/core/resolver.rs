@@ -1,6 +1,10 @@
 use collections::HashMap;
-use core;
-use core::package::PackageSet;
+use core::{
+    Dependency,
+    NameVer,
+    Summary,
+    Registry
+};
 use core::errors::CargoResult;
 
 /* TODO:
@@ -8,16 +12,15 @@ use core::errors::CargoResult;
  * on package summaries vs. the packages themselves.
  */
 #[allow(dead_code)]
-pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoResult<PackageSet> {
+pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<NameVer>> {
     let mut remaining = Vec::from_slice(deps);
-    let mut resolve = HashMap::<&str, &core::Package>::new();
+    let mut resolve = HashMap::<&str, &Summary>::new();
 
     loop {
         let curr = match remaining.pop() {
             Some(curr) => curr,
             None => {
-                let packages: Vec<core::Package> = resolve.values().map(|v| (*v).clone()).collect();
-                return Ok(PackageSet::new(packages.as_slice()))
+                return Ok(resolve.values().map(|summary| summary.get_name_ver().clone()).collect());
             }
         };
 
@@ -40,7 +43,6 @@ pub fn resolve(deps: &[core::Dependency], registry: &core::Registry) -> CargoRes
 
 #[cfg(test)]
 mod test {
-
     use hamcrest::{
         assert_that,
         equal_to,
@@ -49,8 +51,8 @@ mod test {
 
     use core::{
         Dependency,
-        Package,
-        PackageSet
+        NameVer,
+        Summary
     };
 
     use super::{
@@ -59,70 +61,79 @@ mod test {
 
     macro_rules! pkg(
         ($name:expr => $($deps:expr),+) => (
-            Package::new($name, &vec!($($deps),+).iter().map(|s| Dependency::new(*s)).collect())
+            {
+            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::new(*s)).collect();
+            Summary::new(&NameVer::new($name, "1.0.0"), d.as_slice())
+            }
         );
 
         ($name:expr) => (
-            Package::new($name, &vec!())
+            Summary::new(&NameVer::new($name, "1.0.0"), [])
         )
     )
 
-    fn pkg(name: &str) -> Package {
-        Package::new(name, &Vec::<Dependency>::new())
+    fn pkg(name: &str) -> Summary {
+        Summary::new(&NameVer::new(name, "1.0.0"), &[])
     }
 
     fn dep(name: &str) -> Dependency {
         Dependency::new(name)
     }
 
-    fn registry(pkgs: Vec<Package>) -> PackageSet {
-        PackageSet::new(&pkgs)
+    fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
+        pkgs
+    }
+
+    fn names(names: &[&'static str]) -> Vec<NameVer> {
+        names.iter()
+            .map(|name| NameVer::new(*name, "1.0.0"))
+            .collect()
     }
 
     #[test]
     pub fn test_resolving_empty_dependency_list() {
-        let res = resolve(&vec!(), &registry(vec!())).unwrap();
+        let res = resolve([], &registry(vec!())).unwrap();
 
-        assert_that(&res, equal_to(&Vec::<Package>::new()));
+        assert_that(&res, equal_to(&names([])));
     }
 
     #[test]
     pub fn test_resolving_only_package() {
         let reg = registry(vec!(pkg("foo")));
-        let res = resolve(&vec!(dep("foo")), &reg);
+        let res = resolve([dep("foo")], &reg);
 
-        assert_that(&res.unwrap(), equal_to(&vec!(pkg("foo"))));
+        assert_that(&res.unwrap(), equal_to(&names(["foo"])));
     }
 
     #[test]
     pub fn test_resolving_one_dep() {
         let reg = registry(vec!(pkg("foo"), pkg("bar")));
-        let res = resolve(&vec!(dep("foo")), &reg);
+        let res = resolve([dep("foo")], &reg);
 
-        assert_that(&res.unwrap(), equal_to(&vec!(pkg("foo"))));
+        assert_that(&res.unwrap(), equal_to(&names(["foo"])));
     }
 
     #[test]
     pub fn test_resolving_multiple_deps() {
         let reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
-        let res = resolve(&vec!(dep("foo"), dep("baz")), &reg).unwrap();
+        let res = resolve([dep("foo"), dep("baz")], &reg).unwrap();
 
-        assert_that(&res, contains(vec!(pkg("foo"), pkg("baz"))).exactly());
+        assert_that(&res, contains(names(["foo", "baz"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_transitive_deps() {
         let reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
-        let res = resolve(&vec!(dep("bar")), &reg).unwrap();
+        let res = resolve([dep("bar")], &reg).unwrap();
 
-        assert_that(&res, contains(vec!(pkg!("foo"), pkg!("bar" => "foo"))));
+        assert_that(&res, contains(names(["foo", "bar"])));
     }
 
     #[test]
     pub fn test_resolving_common_transitive_deps() {
         let reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
-        let res = resolve(&vec!(dep("foo"), dep("bar")), &reg).unwrap();
+        let res = resolve([dep("foo"), dep("bar")], &reg).unwrap();
 
-        assert_that(&res, contains(vec!(pkg!("foo" => "bar"), pkg!("bar"))));
+        assert_that(&res, contains(names(["foo", "bar"])));
     }
 }

@@ -25,6 +25,7 @@ use ops::cargo_rustc;
 use core::errors::{CargoError,CLIError,CLIResult,ToResult};
 
 pub fn compile(manifest_path: &str) -> CLIResult<()> {
+    // TODO: Fix
     let configs = try!(all_configs(os::getcwd()).to_result(|err: CargoError|
         CLIError::new("Could not load configurations", Some(err.to_str()), 1)));
 
@@ -54,7 +55,7 @@ pub fn compile(manifest_path: &str) -> CLIResult<()> {
     let resolved = try!(resolve(deps.as_slice(), &registry).to_result(|err: CargoError|
         CLIError::new("Unable to resolve dependencies", Some(err.to_str()), 1)));
 
-    try!(cargo_rustc::compile(&resolved));
+    try!(cargo_rustc::compile(&registry));
 
     Ok(())
 }

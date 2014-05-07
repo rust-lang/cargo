@@ -71,9 +71,7 @@ impl PackageSet {
      * Get a package by name out of the set
      */
     pub fn get<'a>(&'a self, name: &str) -> &'a Package {
-        let opts = self.query(name);
-        assert!(opts.len() == 1, "expected exactly one package named `{}`", name);
-        *opts.get(0)
+        self.packages.iter().find(|pkg| name == pkg.get_name()).unwrap()
     }
 
     pub fn get_all<'a>(&'a self, names: &[&str]) -> ~[&'a Package] {
@@ -106,9 +104,10 @@ impl PackageSet {
 }
 
 impl Registry for PackageSet {
-  fn query<'a>(&'a self, name: &str) -> Vec<&'a Package> {
+  fn query<'a>(&'a self, name: &str) -> Vec<&'a Summary> {
     self.packages.iter()
       .filter(|pkg| name == pkg.get_name())
+      .map(|pkg| pkg.get_summary())
       .collect()
   }
 }
