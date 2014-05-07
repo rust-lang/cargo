@@ -23,8 +23,8 @@ fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CLIResult<T> 
 }
 
 fn execute() -> CLIResult<()> {
-    compile(try!(flags::<Options>()).manifest_path.as_slice()).to_result(|_|
-        CLIError::new("Compilation failed", None, 1))
+    compile(try!(flags::<Options>()).manifest_path.as_slice()).to_result(|err|
+        CLIError::new(format!("Compilation failed: {}", err), None, 1))
 }
 
 fn main() {

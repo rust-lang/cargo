@@ -1,4 +1,6 @@
 use semver;
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use serialize::{
     Encodable,
     Encoder,
@@ -6,7 +8,7 @@ use serialize::{
     Decoder
 };
 
-#[deriving(Clone,Eq,Show,Ord)]
+#[deriving(Clone,Eq,Ord)]
 pub struct NameVer {
     name: ~str,
     version: semver::Version
@@ -23,6 +25,12 @@ impl NameVer {
 
     pub fn get_version<'a>(&'a self) -> &'a semver::Version {
         &self.version
+    }
+}
+
+impl Show for NameVer {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f.buf, "{} v{}", self.name, self.version)
     }
 }
 

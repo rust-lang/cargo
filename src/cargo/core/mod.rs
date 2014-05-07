@@ -34,5 +34,5 @@ pub mod package;
 pub mod dependency;
 pub mod manifest;
 pub mod resolver;
-mod summary;
+pub mod summary;
 mod registry;

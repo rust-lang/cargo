@@ -14,18 +14,20 @@
  *    b. Compile each dependency in order, passing in the -L's pointing at each previously compiled dependency
  */
 
-use std::vec::Vec;
 use std::os;
 use util::config;
 use util::config::{all_configs,ConfigValue};
-use core::{PackageSet,Source,Dependency,NameVer};
+use core::{PackageSet,Source};
 use core::resolver::resolve;
 use sources::path::PathSource;
 use ops::cargo_rustc;
+use ops::cargo_read_manifest::read_manifest;
 use core::errors::{CargoError,CLIError,CLIResult,ToResult};
+use core::summary::SummaryVec;
 
 pub fn compile(manifest_path: &str) -> CLIResult<()> {
-    // TODO: Fix
+    let root_dep = try!(read_manifest(manifest_path)).to_dependency();
+
     let configs = try!(all_configs(os::getcwd()).to_result(|err: CargoError|
         CLIError::new("Could not load configurations", Some(err.to_str()), 1)));
 
@@ -37,25 +39,21 @@ pub fn compile(manifest_path: &str) -> CLIResult<()> {
     };
 
     let source = PathSource::new(paths);
-    let summaries = try!(source.list().to_result(|err| CLIError::new(format!("Unable to list packages from {}", source), Some(err.to_str()), 1)));
-    let names: Vec<NameVer> = summaries.iter().map(|s| s.get_name_ver().clone()).collect();
+    let summaries = try!(source.list().to_result(|err|
+        CLIError::new(format!("Unable to list packages from {}", source), Some(err.to_str()), 1)));
 
-    // This does not need to happen
-    // try!(source.download(names.as_slice()).to_result(|err| CLIError::new(format!("Unable to download packages from {}", source), Some(err.to_str()), 1)));
-
-    let deps: Vec<Dependency> = summaries.iter().map(|summary| {
-        Dependency::with_namever(summary.get_name_ver())
-    }).collect();
-
-    let packages = try!(source.get(names.as_slice()).to_result(|err|
-        CLIError::new(format!("Unable to get packages from {} for {}", source, names), Some(err.to_str()), 1)));
-
-    let registry = PackageSet::new(packages.as_slice());
-
-    let resolved = try!(resolve(deps.as_slice(), &registry).to_result(|err: CargoError|
+    let resolved = try!(resolve([root_dep], &summaries).to_result(|err: CargoError|
         CLIError::new("Unable to resolve dependencies", Some(err.to_str()), 1)));
 
-    try!(cargo_rustc::compile(&registry));
+    try!(source.download(resolved.as_slice()).to_result(|err|
+        CLIError::new(format!("Unable to download packages from {}", source), Some(err.to_str()), 1)));
+
+    let packages = try!(source.get(resolved.as_slice()).to_result(|err|
+        CLIError::new(format!("Unable to get packages from {} for {}", source, summaries.names()), Some(err.to_str()), 1)));
+
+    let package_set = PackageSet::new(packages.as_slice());
+
+    try!(cargo_rustc::compile(&package_set));
 
     Ok(())
 }

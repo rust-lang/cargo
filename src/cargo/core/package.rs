@@ -1,4 +1,6 @@
 use std::slice;
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use std::path::Path;
 use core::{
     Dependency,
@@ -23,6 +25,10 @@ impl Package {
             manifest: manifest.clone(),
             root: root.clone()
         }
+    }
+
+    pub fn to_dependency(&self) -> Dependency {
+        Dependency::with_namever(self.manifest.get_summary().get_name_ver())
     }
 
     pub fn get_manifest<'a>(&'a self) -> &'a Manifest {
@@ -55,6 +61,12 @@ impl Package {
 
     pub fn get_absolute_target_dir(&self) -> Path {
         self.get_root().join(self.get_target_dir())
+    }
+}
+
+impl Show for Package {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f.buf, "{}", self.get_summary().get_name_ver())
     }
 }
 
