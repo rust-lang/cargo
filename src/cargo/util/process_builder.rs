@@ -3,7 +3,6 @@ use std::path::Path;
 use std::io;
 use std::io::process::{Process,ProcessConfig,ProcessOutput,InheritFd};
 use collections::HashMap;
-use core::errors::{ToResult,CargoResult,CargoError};
 
 #[deriving(Clone,Eq)]
 pub struct ProcessBuilder {
@@ -59,24 +58,13 @@ impl ProcessBuilder {
         }
     }
 
-    // TODO: Match exec()
-    pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {
-        let mut config = ProcessConfig::new();
+    pub fn exec_with_output(&self) -> io::IoResult<ProcessOutput> {
+        let mut config = try!(self.build_config());
+        let env = self.build_env();
 
-        config.program = self.program.as_slice();
-        config.args = self.args.as_slice();
-        config.cwd = Some(&self.cwd);
+        config.env = Some(env.as_slice());
 
-        let os_path = try!(os::getenv("PATH").to_result(|_|
-            CargoError::described("Could not find the PATH environment variable")));
-
-        let path = os_path + PATH_SEP + self.path.connect(PATH_SEP);
-
-        let path = [("PATH".to_owned(), path)];
-        config.env = Some(path.as_slice());
-
-        Process::configure(config).map(|mut ok| ok.wait_with_output()).to_result(|_|
-            CargoError::described("Could not spawn process"))
+        Process::configure(config).map(|mut ok| ok.wait_with_output())
     }
 
     fn build_config<'a>(&'a self) -> io::IoResult<ProcessConfig<'a>> {
