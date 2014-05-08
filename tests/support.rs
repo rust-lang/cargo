@@ -3,7 +3,7 @@ use std::io;
 use std::io::fs;
 use std::io::process::{ProcessOutput,ProcessExit};
 use std::os;
-use std::path::{Path};
+use std::path::{Path,BytesContainer};
 use std::str;
 use std::vec::Vec;
 use ham = hamcrest;
@@ -70,7 +70,7 @@ impl ProjectBuilder {
         .extra_path(cargo_dir())
     }
 
-    pub fn file(mut self, path: &str, body: &str) -> ProjectBuilder {
+    pub fn file<B: BytesContainer>(mut self, path: B, body: &str) -> ProjectBuilder {
         self.files.push(FileBuilder::new(self.root.join(path), body));
         self
     }
