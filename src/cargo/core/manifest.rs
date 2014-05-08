@@ -1,16 +1,15 @@
-use collections::HashMap;
 use std::fmt;
 use std::fmt::{Show,Formatter};
+use collections::HashMap;
+use serialize::{Encoder,Encodable};
 use core::{
     Dependency,
     NameVer,
     Package,
     Summary
 };
-use core::errors::{CargoResult,CargoError,ToResult,PathError};
-use serialize::{Encoder,Encodable};
+use util::result::CargoResult;
 
-// #[deriving(Decodable,Encodable,Eq,Clone)]
 #[deriving(Eq,Clone)]
 pub struct Manifest {
     summary: Summary,
@@ -179,6 +178,9 @@ pub struct TomlManifest {
 
 impl TomlManifest {
     pub fn to_package(&self, path: &str) -> CargoResult<Package> {
+        // TODO: Convert hte argument to take a Path
+        let path = Path::new(path);
+
         // Get targets
         let targets = normalize(&self.lib, &self.bin);
         // Get deps
@@ -190,15 +192,15 @@ impl TomlManifest {
             }).collect()
         }).unwrap_or_else(|| vec!());
 
-        let root = try!(Path::new(path.to_owned()).dirname_str().map(|s| s.to_owned()).to_result(|_|
-            CargoError::internal(PathError(format!("Couldn't convert {} to a directory name", path)))));
+        // TODO: https://github.com/mozilla/rust/issues/14049
+        let root = Path::new(path.dirname());
 
         Ok(Package::new(
             &Manifest::new(
                 &Summary::new(&self.project.to_name_ver(), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target")),
-            &Path::new(root)))
+            &root))
     }
 }
 
