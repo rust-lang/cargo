@@ -6,7 +6,7 @@ fn setup() {
 }
 
 // Currently doesn't pass due to the code being broken
-test!(cargo_compile_with_explicit_manifest_path {
+test!(cargo_compile {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -22,15 +22,14 @@ test!(cargo_compile_with_explicit_manifest_path {
         .file("src/foo.rs", r#"
             fn main() {
                 println!("i am foo");
-            }"#)
+            }
+        "#)
         .build();
 
-    println!("~~~~~~~");
-    p.cargo_process("cargo")
-      .args(["compile".to_owned(), "--manifest-path".to_owned(), "Cargo.toml".to_owned()])
+    p.cargo_process("cargo-compile")
+      .args([])
       .exec()
       .unwrap();
-    println!("~~~~~~~");
 
     assert_that(&p.root().join("target/foo"), existing_file());
 

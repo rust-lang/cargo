@@ -33,10 +33,12 @@ pub fn compile(manifest_path: &str) -> CLIResult<()> {
 
     let config_paths = configs.find(&("paths".to_owned())).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
-    let paths = match config_paths.get_value() {
+    let mut paths: Vec<Path> = match config_paths.get_value() {
         &config::String(_) => return Err(CLIError::new("The path was configured as a String instead of a List", None, 1)),
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
+
+    paths.push(Path::new(manifest_path).dir_path());
 
     let source = PathSource::new(paths);
     let summaries = try!(source.list().to_result(|err|
