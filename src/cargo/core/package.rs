@@ -98,6 +98,7 @@ impl Show for Package {
     }
 }
 
+#[deriving(Eq,Clone,Show)]
 pub struct PackageSet {
     packages: ~[Package]
 }
@@ -116,6 +117,10 @@ impl PackageSet {
 
     pub fn get_all<'a>(&'a self, names: &[&str]) -> ~[&'a Package] {
         names.iter().map(|name| self.get(*name) ).collect()
+    }
+
+    pub fn get_packages<'a>(&'a self) -> &'a [Package] {
+        self.packages.as_slice()
     }
 
     // For now, assume that the package set contains only one package with a

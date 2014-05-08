@@ -32,7 +32,7 @@ fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CLIResult<()> {
 
     // compile
     for target in pkg.get_targets().iter() {
-        try!(rustc(pkg.get_root(), target, &target_dir, deps(pkg, pkgs)));
+        try!(rustc(pkg.get_root(), target, &target_dir, pkgs.get_packages()))
     }
 
     Ok(())
@@ -73,10 +73,4 @@ fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
         dst.push("-L".to_owned());
         dst.push(dir.as_str().unwrap().to_owned());
     }
-}
-
-// Collect all dependencies for a given package
-fn deps(pkg: &core::Package, pkgs: &core::PackageSet) -> ~[core::Package] {
-    let names: ~[&str] = pkg.get_dependencies().iter().map(|d| d.get_name()).collect();
-    pkgs.get_all(names).iter().map(|p| (*p).clone()).collect()
 }
