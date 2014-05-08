@@ -60,7 +60,7 @@ test-unit: target/tests/test-unit
 	target/tests/test-unit
 
 test-integration: target/tests/test-integration
-	CARGO_BIN_PATH=$(PWD)/target/ $<
+	RUST_TEST_TASKS=1 CARGO_BIN_PATH=$(PWD)/target/ $<
 
 test: test-unit test-integration
 

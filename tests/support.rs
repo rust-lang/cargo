@@ -6,6 +6,7 @@ use std::os;
 use std::path::{Path,BytesContainer};
 use std::str;
 use std::vec::Vec;
+use std::fmt::Show;
 use ham = hamcrest;
 use cargo::util::{process,ProcessBuilder};
 
@@ -94,8 +95,6 @@ impl ProjectBuilder {
           try!(file.mk());
         }
 
-        println!("{}", self.root.display());
-        println!("{:?}", self);
         Ok(())
     }
 
@@ -130,20 +129,20 @@ trait ErrMsg<T> {
     fn with_err_msg(self, val: ~str) -> Result<T, ~str>;
 }
 
-impl<T, E> ErrMsg<T> for Result<T, E> {
+impl<T, E: Show> ErrMsg<T> for Result<T, E> {
     fn with_err_msg(self, val: ~str) -> Result<T, ~str> {
         match self {
             Ok(val) => Ok(val),
-            Err(_) => Err(val)
+            Err(err) => Err(format!("{}; original={}", val, err))
         }
     }
 }
 
 // Path to cargo executables
 pub fn cargo_dir() -> Path {
-  os::getenv("CARGO_BIN_PATH")
-    .map(|s| Path::new(s))
-    .unwrap_or_else(|| fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
+    os::getenv("CARGO_BIN_PATH")
+        .map(|s| Path::new(s))
+        .unwrap_or_else(|| fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
 }
 
 /*
@@ -220,4 +219,17 @@ pub fn execs() -> Box<Execs> {
     expect_stdin: None,
     expect_exit_code: None
   }
+}
+
+pub trait ResultTest<T,E> {
+    fn assert(self) -> T;
+}
+
+impl<T,E: Show> ResultTest<T,E> for Result<T,E> {
+    fn assert(self) -> T {
+        match self {
+            Ok(val) => val,
+            Err(err) => fail!("Result was error: {}", err)
+        }
+    }
 }
