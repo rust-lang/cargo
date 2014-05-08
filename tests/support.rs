@@ -1,4 +1,5 @@
 // use std::io::fs::{mkdir_recursive,rmdir_recursive};
+use std::io;
 use std::io::fs;
 use std::io::process::{ProcessOutput,ProcessExit};
 use std::os;
@@ -9,7 +10,6 @@ use ham = hamcrest;
 use cargo::util::{process,ProcessBuilder};
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
-static MKDIR_PERM : u32 = 0o755;
 
 /*
  *
@@ -117,7 +117,7 @@ pub fn project(name: &str) -> ProjectBuilder {
 // === Helpers ===
 
 pub fn mkdir_recursive(path: &Path) -> Result<(), ~str> {
-    fs::mkdir_recursive(path, MKDIR_PERM)
+    fs::mkdir_recursive(path, io::UserDir)
         .with_err_msg(format!("could not create directory; path={}", path.display()))
 }
 
@@ -161,7 +161,7 @@ struct Execs {
 
 impl Execs {
 
-  pub fn with_stdout(mut ~self, expected: &str) -> ~Execs {
+  pub fn with_stdout(mut ~self, expected: &str) -> Box<Execs> {
     self.expect_stdout = Some(expected.to_owned());
     self
   }
@@ -214,8 +214,8 @@ impl ham::Matcher<ProcessBuilder> for Execs {
   }
 }
 
-pub fn execs() -> ~Execs {
-  ~Execs {
+pub fn execs() -> Box<Execs> {
+  box Execs {
     expect_stdout: None,
     expect_stdin: None,
     expect_exit_code: None
