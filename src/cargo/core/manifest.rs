@@ -171,7 +171,7 @@ pub struct Project {
 
 #[deriving(Decodable,Encodable,Eq,Clone)]
 pub struct TomlManifest {
-    project: ~Project,
+    project: Box<Project>,
     lib: Option<~[TomlLibTarget]>,
     bin: Option<~[TomlExecTarget]>,
     dependencies: Option<HashMap<~str, ~str>>
