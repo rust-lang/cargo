@@ -8,7 +8,6 @@ use core::{
     Package,
     Summary
 };
-use util::result::CargoResult;
 
 #[deriving(Eq,Clone)]
 pub struct Manifest {
@@ -177,7 +176,7 @@ pub struct TomlManifest {
 }
 
 impl TomlManifest {
-    pub fn to_package(&self, path: &str) -> CargoResult<Package> {
+    pub fn to_package(&self, path: &str) -> Package {
         // TODO: Convert hte argument to take a Path
         let path = Path::new(path);
 
@@ -195,12 +194,12 @@ impl TomlManifest {
         // TODO: https://github.com/mozilla/rust/issues/14049
         let root = Path::new(path.dirname());
 
-        Ok(Package::new(
+        Package::new(
             &Manifest::new(
                 &Summary::new(&self.project.to_name_ver(), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target")),
-            &root))
+            &root)
     }
 }
 

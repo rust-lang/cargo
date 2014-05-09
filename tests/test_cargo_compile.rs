@@ -31,19 +31,24 @@ test!(cargo_compile {
       execs().with_stdout("i am foo\n"));
 })
 
-fn main_file(println: &str, deps: &[&str]) -> ~str {
-    let mut buf = StrBuf::new();
+test!(cargo_compile_with_invalid_manifest {
+    let p = project("foo")
+        .file("Cargo.toml", "");
 
-    for dep in deps.iter() {
-        buf.push_str(format!("extern crate {};\n", dep));
-    }
+    assert_that(p.cargo_process("cargo-compile"),
+        execs()
+        .with_status(101)
+        .with_stderr("Cargo.toml is not a valid Cargo manifest"));
+})
 
-    buf.push_str("fn main() { println!(");
-    buf.push_str(println);
-    buf.push_str("); }\n");
+test!(cargo_compile_without_manifest {
+    let p = project("foo");
 
-    buf.to_owned()
-}
+    assert_that(p.cargo_process("cargo-compile"),
+        execs()
+        .with_status(102)
+        .with_stderr("Could not find Cargo.toml in this directory or any parent directory"));
+})
 
 test!(cargo_compile_with_nested_deps {
     let mut p = project("foo");
@@ -119,5 +124,19 @@ test!(cargo_compile_with_nested_deps {
       cargo::util::process("foo").extra_path(p.root().join("target")),
       execs().with_stdout("test passed\n"));
 })
+
+fn main_file(println: &str, deps: &[&str]) -> ~str {
+    let mut buf = StrBuf::new();
+
+    for dep in deps.iter() {
+        buf.push_str(format!("extern crate {};\n", dep));
+    }
+
+    buf.push_str("fn main() { println!(");
+    buf.push_str(println);
+    buf.push_str("); }\n");
+
+    buf.to_owned()
+}
 
 // test!(compiling_project_with_invalid_manifest)

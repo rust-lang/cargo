@@ -155,9 +155,10 @@ pub fn cargo_dir() -> Path {
 
 #[deriving(Clone,Eq)]
 struct Execs {
-  expect_stdout: Option<~str>,
-  expect_stdin: Option<~str>,
-  expect_exit_code: Option<int>
+    expect_stdout: Option<~str>,
+    expect_stdin: Option<~str>,
+    expect_stderr: Option<~str>,
+    expect_exit_code: Option<int>
 }
 
 impl Execs {
@@ -167,9 +168,20 @@ impl Execs {
     self
   }
 
+  pub fn with_stderr(mut ~self, expected: &str) -> Box<Execs> {
+      self.expect_stderr = Some(expected.to_owned());
+      self
+  }
+
+  pub fn with_status(mut ~self, expected: int) -> Box<Execs> {
+       self.expect_exit_code = Some(expected);
+       self
+  }
+
   fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
     self.match_status(actual.status)
       .and(self.match_stdout(&actual.output))
+      .and(self.match_stderr(&actual.error))
   }
 
   fn match_status(&self, actual: ProcessExit) -> ham::MatchResult {
@@ -184,13 +196,21 @@ impl Execs {
   }
 
   fn match_stdout(&self, actual: &Vec<u8>) -> ham::MatchResult {
-    match self.expect_stdout.as_ref().map(|s| s.as_slice()) {
+      self.match_std(&self.expect_stdout, actual, "stdout")
+  }
+
+  fn match_stderr(&self, actual: &Vec<u8>) -> ham::MatchResult {
+      self.match_std(&self.expect_stderr, actual, "stderr")
+  }
+
+  fn match_std(&self, expected: &Option<~str>, actual: &Vec<u8>, description: &str) -> ham::MatchResult {
+    match expected.as_ref().map(|s| s.as_slice()) {
       None => ham::success(),
       Some(out) => {
         match str::from_utf8(actual.as_slice()) {
-          None => Err("stdout was not utf8 encoded".to_owned()),
+          None => Err(format!("{} was not utf8 encoded", description)),
           Some(actual) => {
-            ham::expect(actual == out, format!("stdout was `{}`", actual))
+            ham::expect(actual == out, format!("{} was `{}`", description, actual))
           }
         }
       }
@@ -216,11 +236,12 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 }
 
 pub fn execs() -> Box<Execs> {
-  box Execs {
-    expect_stdout: None,
-    expect_stdin: None,
-    expect_exit_code: None
-  }
+    box Execs {
+        expect_stdout: None,
+        expect_stderr: None,
+        expect_stdin: None,
+        expect_exit_code: None
+    }
 }
 
 pub trait ResultTest<T,E> {

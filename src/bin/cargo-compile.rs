@@ -5,11 +5,11 @@ extern crate cargo;
 extern crate hammer;
 extern crate serialize;
 
+use cargo::{execute_main_without_stdin,CLIResult,CLIError,ToResult};
 use cargo::ops::cargo_compile::compile;
-use cargo::core::errors::{CLIResult,CLIError,ToResult};
 use cargo::util::important_paths::find_project;
-use hammer::{FlagDecoder,FlagConfig,HammerError};
-use serialize::Decodable;
+use cargo::util::ToCLI;
+use hammer::FlagConfig;
 use std::os;
 
 #[deriving(Eq,Clone,Decodable,Encodable)]
@@ -19,29 +19,18 @@ pub struct Options {
 
 impl FlagConfig for Options {}
 
-fn flags<T: FlagConfig + Decodable<FlagDecoder, HammerError>>() -> CLIResult<T> {
-    let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
-    Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None, 1))
+fn main() {
+    execute_main_without_stdin(execute);
 }
 
-fn execute() -> CLIResult<()> {
-    let options = try!(flags::<Options>());
-
+fn execute(options: Options) -> CLIResult<Option<()>> {
     let root = match options.manifest_path {
         Some(path) => Path::new(path),
         None => try!(find_project(os::getcwd(), "Cargo.toml".to_owned())
                     .map(|path| path.join("Cargo.toml"))
                     .to_result(|err|
-                        CLIError::new("Could not find Cargo.toml in this directory or any parent directory", Some(err.to_str()), 1)))
+                        CLIError::new("Could not find Cargo.toml in this directory or any parent directory", Some(err.to_str()), 102)))
     };
 
-    compile(root.as_str().unwrap().as_slice()).to_result(|err|
-        CLIError::new(format!("Compilation failed: {}", err), None, 1))
-}
-
-fn main() {
-    match execute() {
-        Err(err) => fail!("{}", err),
-        Ok(_) => return
-    }
+    compile(root.as_str().unwrap().as_slice()).map(|v| Some(v)).to_cli(101)
 }
