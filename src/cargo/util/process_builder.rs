@@ -1,3 +1,5 @@
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use std::os;
 use std::path::Path;
 use std::io;
@@ -11,6 +13,18 @@ pub struct ProcessBuilder {
     path: Vec<~str>,
     env: HashMap<~str, ~str>,
     cwd: Path
+}
+
+impl Show for ProcessBuilder {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        try!(write!(f.buf, "`{}", self.program));
+
+        if self.args.len() > 0 {
+            try!(write!(f.buf, " {}", self.args.connect(" ")));
+        }
+
+        write!(f.buf, "`")
+    }
 }
 
 // TODO: Upstream a Windows/Posix branch to Rust proper
