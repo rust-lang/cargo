@@ -1,7 +1,6 @@
 use std::os::args;
 use std::io;
 use std::path::Path;
-use core::errors::{CLIError,CLIResult,ToResult};
 use core;
 use util;
 use util::{other_error,CargoResult,CargoError};
@@ -28,7 +27,7 @@ fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CargoResult<()> 
     let target_dir = pkg.get_absolute_target_dir();
 
     // First ensure that the directory exists
-    try!(mk_target(&target_dir).map_err(|err| other_error("could not create target directory")));
+    try!(mk_target(&target_dir).map_err(|_| other_error("could not create target directory")));
 
     // compile
     for target in pkg.get_targets().iter() {

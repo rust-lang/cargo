@@ -22,9 +22,7 @@ use core::resolver::resolve;
 use sources::path::PathSource;
 use ops::cargo_rustc;
 use ops::cargo_read_manifest::read_manifest;
-// use core::errors::{CargoError,CLIError,CLIResult,ToResult};
-use core::summary::SummaryVec;
-use util::{other_error, CargoError, CargoResult, Wrap};
+use util::{other_error, CargoResult, Wrap};
 
 pub fn compile(manifest_path: &str) -> CargoResult<()> {
     let root_dep = try!(read_manifest(manifest_path)).to_dependency();
