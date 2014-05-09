@@ -2,36 +2,8 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::io::IoError;
 
-/**
- * There are two kinds of errors returned by Cargo functions:
- *
- * * CargoCLIError, which represents a failure that can be directly presented
- *   to the user.
- * * CargoInternalError, which represents an internal failure that must be
- *   converted into a CargoCLIError before it may be presented to the user.
- *
- * These two kinds of errors are wrapped up in a `CargoError` enum.
- *
- * Cargo functions must first convert all other kinds of errors (such as
- * IoError) into one of the Cargo errors before returning.
- *
- * This module includes several convenience functions for working with these
- * different kinds of errors:
- *
- * `to_result::<E1, E2>(|E1| -> E2) -> E2` converts any kind of error into
- * another kind of error. It can be used together with `try!`, as in:
- *
- *     try!(mkdir(path).to_result(|err| {
- *         let msg = format!("Couldn't make directory {}", path.display());
- *         CargoError::cli(msg, 12)
- *     })
- *
- * `to_result::<Option<T>, E>(|| -> E) -> E` converts a `None` value into
- * another kind of error. It can also be used together with `try!`:
- *
- *     try!(from_str(val).to_result(|| {
- *         CargoError::internal(StringConversionError(val))
- *     })
+/*
+ * Deprecated and will be phased out. Use util::result instead
  */
 
 pub type CargoResult<T> = Result<T, CargoError>;
