@@ -66,9 +66,11 @@ impl ProjectBuilder {
     }
 
     pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
-      process(program)
-        .cwd(self.root())
-        .extra_path(cargo_dir())
+        self.build();
+
+        process(program)
+            .cwd(self.root())
+            .extra_path(cargo_dir())
     }
 
     pub fn file<B: BytesContainer>(mut self, path: B, body: &str) -> ProjectBuilder {
@@ -77,7 +79,7 @@ impl ProjectBuilder {
     }
 
     // TODO: return something different than a ProjectBuilder
-    pub fn build(self) -> ProjectBuilder {
+    pub fn build<'a>(&'a self) -> &'a ProjectBuilder {
         match self.build_with_result() {
             Err(e) => fail!(e),
             _ => return self
@@ -208,7 +210,7 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 
     match res {
       Ok(out) => self.match_output(&out),
-      Err(_) => Err("could not exec process".to_owned())
+      Err(_) => Err(format!("could not exec process {}", process))
     }
   }
 }
