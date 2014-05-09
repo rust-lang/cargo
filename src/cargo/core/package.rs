@@ -100,12 +100,12 @@ impl Show for Package {
 
 #[deriving(Eq,Clone,Show)]
 pub struct PackageSet {
-    packages: ~[Package]
+    packages: Vec<Package>
 }
 
 impl PackageSet {
     pub fn new(packages: &[Package]) -> PackageSet {
-        PackageSet { packages: packages.to_owned() }
+        PackageSet { packages: Vec::from_slice(packages) }
     }
 
     /**
@@ -115,7 +115,7 @@ impl PackageSet {
         self.packages.iter().find(|pkg| name == pkg.get_name()).unwrap()
     }
 
-    pub fn get_all<'a>(&'a self, names: &[&str]) -> ~[&'a Package] {
+    pub fn get_all<'a>(&'a self, names: &[&str]) -> Vec<&'a Package> {
         names.iter().map(|name| self.get(*name) ).collect()
     }
 
@@ -129,7 +129,7 @@ impl PackageSet {
         let mut graph = graph::Graph::new();
 
         for pkg in self.packages.iter() {
-            let deps: ~[&str] = pkg.get_dependencies().iter()
+            let deps: Vec<&str> = pkg.get_dependencies().iter()
                 .map(|dep| dep.get_name())
                 .collect();
 

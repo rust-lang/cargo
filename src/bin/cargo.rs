@@ -37,10 +37,10 @@ fn execute() {
     else if cmd == "locate-project".to_owned() { execute_main_without_stdin(locate_project) }
 }
 
-fn process(mut args: ~[~str]) -> CLIResult<(~str, ~[~str])> {
-    args = args.tail().to_owned();
-    let head = try!(args.head().to_result(|_| CLIError::new("No subcommand found", None, 1))).to_owned();
-    let tail = args.tail().to_owned();
+fn process(mut args: Vec<~str>) -> CLIResult<(~str, Vec<~str>)> {
+    args = Vec::from_slice(args.tail());
+    let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None, 1))).to_owned();
+    let tail = Vec::from_slice(args.tail());
 
     Ok((head, tail))
 }
