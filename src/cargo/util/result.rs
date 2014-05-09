@@ -63,7 +63,17 @@ pub trait Wrap {
 
 impl<T> Wrap for Result<T, CargoError> {
     fn wrap(self, desc: &'static str) -> Result<T, CargoError> {
-        self
+        match self {
+            Ok(x) => Ok(x),
+            Err(e) => {
+                Err(CargoError {
+                    kind: e.kind.clone(),
+                    desc: desc,
+                    detail: None,
+                    cause: Some(box e)
+                })
+            }
+        }
     }
 }
 
