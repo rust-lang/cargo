@@ -4,13 +4,14 @@ use std::path::Path;
 use core::errors::{CLIError,CLIResult,ToResult};
 use core;
 use util;
+use util::{other_error,CargoResult,CargoError};
 
 type Args = Vec<~str>;
 
-pub fn compile(pkgs: &core::PackageSet) -> CLIResult<()> {
+pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
     let sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
-        None => return Err(CLIError::new("Circular dependency detected", None, 1))
+        None => return Err(other_error("circular dependency detected"))
     };
 
     for pkg in sorted.iter() {
@@ -21,14 +22,13 @@ pub fn compile(pkgs: &core::PackageSet) -> CLIResult<()> {
     Ok(())
 }
 
-fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CLIResult<()> {
+fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CargoResult<()> {
     // Build up the destination
     // let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
     let target_dir = pkg.get_absolute_target_dir();
 
     // First ensure that the directory exists
-    try!(mk_target(&target_dir).to_result(|err|
-        CLIError::new(format!("Could not create the target directory {}", target_dir.display()), Some(err.to_str()), 1)));
+    try!(mk_target(&target_dir).map_err(|err| other_error("could not create target directory")));
 
     // compile
     for target in pkg.get_targets().iter() {
@@ -42,7 +42,7 @@ fn mk_target(target: &Path) -> io::IoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
-fn rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]) -> CLIResult<()> {
+fn rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]) -> CargoResult<()> {
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, dest);
@@ -52,8 +52,7 @@ fn rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]
         .cwd(root.clone())
         .args(args.as_slice())
         .exec()
-        .to_result(|err|
-            CLIError::new(format!("Couldn't execute `rustc {}` in `{}`", args.connect(" "), root.display()), Some(err.to_str()), 1)));
+        .map_err(|err| rustc_to_cargo_err(&args, root, err)));
 
     Ok(())
 }
@@ -73,4 +72,9 @@ fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
         dst.push("-L".to_owned());
         dst.push(dir.as_str().unwrap().to_owned());
     }
+}
+
+fn rustc_to_cargo_err(args: &Vec<~str>, cwd: &Path, err: io::IoError) -> CargoError {
+    other_error("failed to exec rustc")
+        .with_detail(format!("args={}; root={}; cause={}", args.connect(" "), cwd.display(), err.to_str()))
 }

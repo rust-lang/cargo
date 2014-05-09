@@ -1,5 +1,5 @@
 use core::{Summary,NameVer,Package};
-use core::errors::CargoResult;
+use util::CargoResult;
 
 /**
  * A Source finds and downloads remote packages based on names and
