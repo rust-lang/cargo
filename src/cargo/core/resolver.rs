@@ -5,7 +5,7 @@ use core::{
     Summary,
     Registry
 };
-use core::errors::CargoResult;
+use util::result::CargoResult;
 
 /* TODO:
  * - The correct input here is not a registry. Resolves should be performable

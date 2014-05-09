@@ -6,7 +6,7 @@ extern crate serialize;
 extern crate hammer;
 
 use hammer::FlagConfig;
-use cargo::{execute_main_without_stdin,CLIResult};
+use cargo::{execute_main_without_stdin,CLIResult,CLIError};
 use cargo::core::Package;
 use cargo::ops::cargo_read_manifest::read_manifest;
 
@@ -23,4 +23,9 @@ fn main() {
 
 fn execute(options: Options) -> CLIResult<Option<Package>> {
     read_manifest(options.manifest_path.as_slice()).map(|m| Some(m))
+        .map_err(|err| CLIError {
+            msg: err.get_desc().to_owned(),
+            detail: err.get_detail().map(|s| s.to_owned()),
+            exit_code: 1
+        })
 }

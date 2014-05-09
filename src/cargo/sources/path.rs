@@ -2,8 +2,8 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use core::{NameVer,Package,Summary};
 use core::source::Source;
-use core::errors::{CargoResult,CargoCLIError,ToResult};
 use cargo_read_manifest = ops::cargo_read_manifest::read_manifest;
+use util::{CargoResult};
 
 pub struct PathSource {
     paths: Vec<Path>
@@ -49,5 +49,5 @@ impl Source for PathSource {
 
 fn read_manifest(path: &Path) -> CargoResult<Package> {
     let joined = path.join("Cargo.toml");
-    cargo_read_manifest(joined.as_str().unwrap()).to_result(|err| CargoCLIError(err))
+    cargo_read_manifest(joined.as_str().unwrap())
 }

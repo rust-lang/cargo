@@ -16,42 +16,37 @@
 
 use std::os;
 use util::config;
-use util::config::{all_configs,ConfigValue};
+use util::config::{ConfigValue};
 use core::{PackageSet,Source};
 use core::resolver::resolve;
 use sources::path::PathSource;
 use ops::cargo_rustc;
 use ops::cargo_read_manifest::read_manifest;
-use core::errors::{CargoError,CLIError,CLIResult,ToResult};
+// use core::errors::{CargoError,CLIError,CLIResult,ToResult};
 use core::summary::SummaryVec;
+use util::{other_error, CargoError, CargoResult, Wrap};
 
-pub fn compile(manifest_path: &str) -> CLIResult<()> {
+pub fn compile(manifest_path: &str) -> CargoResult<()> {
     let root_dep = try!(read_manifest(manifest_path)).to_dependency();
 
-    let configs = try!(all_configs(os::getcwd()).to_result(|err: CargoError|
-        CLIError::new("Could not load configurations", Some(err.to_str()), 1)));
+    let configs = try!(config::all_configs(os::getcwd()));
 
     let config_paths = configs.find(&("paths".to_owned())).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
     let mut paths: Vec<Path> = match config_paths.get_value() {
-        &config::String(_) => return Err(CLIError::new("The path was configured as a String instead of a List", None, 1)),
+        &config::String(_) => return Err(other_error("The path was configured as a String instead of a List")),
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 
     paths.push(Path::new(manifest_path).dir_path());
 
     let source = PathSource::new(paths);
-    let summaries = try!(source.list().to_result(|err|
-        CLIError::new(format!("Unable to list packages from {}", source), Some(err.to_str()), 1)));
+    let summaries = try!(source.list().wrap("unable to list packages from source"));
+    let resolved = try!(resolve([root_dep], &summaries).wrap("unable to resolve dependencies"));
 
-    let resolved = try!(resolve([root_dep], &summaries).to_result(|err: CargoError|
-        CLIError::new("Unable to resolve dependencies", Some(err.to_str()), 1)));
+    try!(source.download(resolved.as_slice()).wrap("unable to download packages"));
 
-    try!(source.download(resolved.as_slice()).to_result(|err|
-        CLIError::new(format!("Unable to download packages from {}", source), Some(err.to_str()), 1)));
-
-    let packages = try!(source.get(resolved.as_slice()).to_result(|err|
-        CLIError::new(format!("Unable to get packages from {} for {}", source, summaries.names()), Some(err.to_str()), 1)));
+    let packages = try!(source.get(resolved.as_slice()).wrap("unable ot get packages from source"));
 
     let package_set = PackageSet::new(packages.as_slice());
 
