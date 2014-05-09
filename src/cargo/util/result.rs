@@ -1,5 +1,10 @@
 use std::io;
 
+/*
+ * CargoResult should be used in libcargo. CargoCliResult should be used in the
+ * various executables.
+ */
+
 pub type CargoResult<T> = Result<T, CargoError>;
 
 pub fn other_error(desc: &'static str) -> CargoError {
