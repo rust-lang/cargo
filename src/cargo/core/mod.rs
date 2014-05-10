@@ -26,6 +26,7 @@ pub use self::summary::{
 };
 
 pub use self::dependency::Dependency;
+pub use self::version_req::VersionReq;
 
 pub mod errors;
 pub mod namever;
@@ -36,3 +37,4 @@ pub mod manifest;
 pub mod resolver;
 pub mod summary;
 mod registry;
+mod version_req;
