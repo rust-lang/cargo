@@ -11,7 +11,7 @@ pub fn read_manifest(path: &str) -> CargoResult<Package> {
     let toml = try!(load_toml(root).map_err(|err: CargoError|
         human_error(format!("Cargo.toml is not a valid Cargo manifest"), format!("path={}", path), err)));
 
-    Ok(toml.to_package(path))
+    toml.to_package(path)
 }
 
 fn parse_from_file(path: &str) -> CargoResult<toml::Value> {

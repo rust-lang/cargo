@@ -62,7 +62,7 @@ mod test {
     macro_rules! pkg(
         ($name:expr => $($deps:expr),+) => (
             {
-            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::new(*s)).collect();
+            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::parse(*s, "1.0.0").unwrap()).collect();
             Summary::new(&NameVer::new($name, "1.0.0"), d.as_slice())
             }
         );
@@ -77,7 +77,7 @@ mod test {
     }
 
     fn dep(name: &str) -> Dependency {
-        Dependency::new(name)
+        Dependency::parse(name, "1.0.0").unwrap()
     }
 
     fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {

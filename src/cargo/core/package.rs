@@ -9,6 +9,7 @@ use core::{
     Target,
     Summary
 };
+use core::dependency::SerializedDependency;
 use util::graph;
 use serialize::{Encoder,Encodable};
 
@@ -24,7 +25,7 @@ pub struct Package {
 struct SerializedPackage {
     name: ~str,
     version: ~str,
-    dependencies: Vec<Dependency>,
+    dependencies: Vec<SerializedDependency>,
     authors: Vec<~str>,
     targets: Vec<Target>,
     root: ~str
@@ -39,7 +40,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
         SerializedPackage {
             name: name_ver.get_name().to_owned(),
             version: name_ver.get_version().to_str(),
-            dependencies: Vec::from_slice(summary.get_dependencies()),
+            dependencies: summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: Vec::from_slice(manifest.get_authors()),
             targets: Vec::from_slice(manifest.get_targets()),
             root: self.root.as_str().unwrap().to_owned()
@@ -56,7 +57,7 @@ impl Package {
     }
 
     pub fn to_dependency(&self) -> Dependency {
-        Dependency::with_namever(self.manifest.get_summary().get_name_ver())
+        Dependency::exact(self.manifest.get_name(), self.manifest.get_version())
     }
 
     pub fn get_manifest<'a>(&'a self) -> &'a Manifest {

@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use collections::HashMap;
+use semver::Version;
 use serialize::{Encoder,Encodable};
 use core::{
     Dependency,
@@ -8,6 +9,8 @@ use core::{
     Package,
     Summary
 };
+use core::dependency::SerializedDependency;
+use util::CargoResult;
 
 #[deriving(Eq,Clone)]
 pub struct Manifest {
@@ -25,7 +28,9 @@ impl Show for Manifest {
 
 #[deriving(Eq,Clone,Encodable)]
 pub struct SerializedManifest {
-    summary: Summary,
+    name: ~str,
+    version: ~str,
+    dependencies: Vec<SerializedDependency>,
     authors: Vec<~str>,
     targets: Vec<Target>,
     target_dir: ~str
@@ -34,7 +39,9 @@ pub struct SerializedManifest {
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         SerializedManifest {
-            summary: self.summary.clone(),
+            name: self.summary.get_name().to_owned(),
+            version: self.summary.get_version().to_str(),
+            dependencies: self.summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: self.authors.clone(),
             targets: self.targets.clone(),
             target_dir: self.target_dir.as_str().unwrap().to_owned()
@@ -99,6 +106,10 @@ impl Manifest {
 
     pub fn get_name<'a>(&'a self) -> &'a str {
         self.get_summary().get_name_ver().get_name()
+    }
+
+    pub fn get_version<'a>(&'a self) -> &'a Version {
+        self.get_summary().get_name_ver().get_version()
     }
 
     pub fn get_authors<'a>(&'a self) -> &'a [~str] {
@@ -176,30 +187,34 @@ pub struct TomlManifest {
 }
 
 impl TomlManifest {
-    pub fn to_package(&self, path: &str) -> Package {
+    pub fn to_package(&self, path: &str) -> CargoResult<Package> {
         // TODO: Convert hte argument to take a Path
         let path = Path::new(path);
 
         // Get targets
         let targets = normalize(&self.lib, &self.bin);
-        // Get deps
-        let deps = self.dependencies.clone().map(|deps| {
-            deps.iter().map(|(k,v)| {
-                // This can produce an invalid version, but it's temporary because this needs
-                // to be replaced with Dependency, not NameVer
-                Dependency::with_namever(&NameVer::new(k.clone(), v.clone()))
-            }).collect()
-        }).unwrap_or_else(|| vec!());
+
+        let mut deps = Vec::new();
+
+        // Collect the deps
+        match self.dependencies {
+            Some(ref dependencies) => {
+                for (n, v) in dependencies.iter() {
+                    deps.push(try!(Dependency::parse(*n, *v)));
+                }
+            }
+            None => ()
+        }
 
         // TODO: https://github.com/mozilla/rust/issues/14049
         let root = Path::new(path.dirname());
 
-        Package::new(
+        Ok(Package::new(
             &Manifest::new(
                 &Summary::new(&self.project.to_name_ver(), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target")),
-            &root)
+            &root))
     }
 }
 
