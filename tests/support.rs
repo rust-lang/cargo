@@ -8,7 +8,8 @@ use std::str;
 use std::vec::Vec;
 use std::fmt::Show;
 use ham = hamcrest;
-use cargo::util::{process,ProcessBuilder};
+use cargo::util::{process,ProcessBuilder,CargoError};
+use cargo::util::result::ProcessError;
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
 
@@ -230,6 +231,7 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 
     match res {
       Ok(out) => self.match_output(&out),
+      Err(CargoError { kind: ProcessError(_, ref out), .. }) => self.match_output(out.get_ref()),
       Err(_) => Err(format!("could not exec process {}", process))
     }
   }

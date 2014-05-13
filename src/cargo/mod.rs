@@ -60,7 +60,7 @@ pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Enc
         exec(flags)
     }
 
-    process_executed(call(exec))
+    process_executed(call(exec));
 }
 
 pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CLIResult<Option<T>>) {
@@ -76,8 +76,11 @@ pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result
 }
 
 pub fn handle_error(err: CLIError) {
-    let _ = write!(&mut std::io::stderr(), "{}", err.msg);
-    std::os::set_exit_status(err.exit_code as int);
+    let CLIError { msg, exit_code, .. } = err;
+    let _ = write!(&mut std::io::stderr(), "{}", msg);
+    //detail.map(|d| write!(&mut std::io::stderr(), ":\n{}", d));
+
+    std::os::set_exit_status(exit_code as int);
 }
 
 fn flags_from_args<T: RepresentsFlags>() -> CLIResult<T> {

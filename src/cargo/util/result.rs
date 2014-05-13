@@ -1,4 +1,8 @@
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use std::io;
+use std::io::IoError;
+use std::io::process::{ProcessOutput,ProcessExit};
 use core::errors::{CLIError,CLIResult};
 use toml;
 
@@ -13,6 +17,26 @@ pub fn other_error(desc: &'static str) -> CargoError {
     CargoError {
         kind: OtherCargoError,
         desc: StaticDescription(desc),
+        detail: None,
+        cause: None
+    }
+}
+
+pub fn io_error(err: IoError) -> CargoError {
+    let desc = err.desc;
+
+    CargoError {
+        kind: IoError(err),
+        desc: StaticDescription(desc),
+        detail: None,
+        cause: None
+    }
+}
+
+pub fn process_error(detail: ~str, exit: ProcessExit, output: Option<ProcessOutput>) -> CargoError {
+    CargoError {
+        kind: ProcessError(exit, output),
+        desc: BoxedDescription(detail),
         detail: None,
         cause: None
     }
@@ -38,7 +62,7 @@ pub fn toml_error(desc: &'static str, error: toml::Error) -> CargoError {
 
 #[deriving(Show,Clone)]
 pub struct CargoError {
-    kind: CargoErrorKind,
+    pub kind: CargoErrorKind,
     desc: CargoErrorDescription,
     detail: Option<~str>,
     cause: Option<Box<CargoError>>
@@ -85,13 +109,43 @@ impl CargoError {
     }
 }
 
-#[deriving(Show,Clone)]
 pub enum CargoErrorKind {
     HumanReadableError,
     InternalError,
+    ProcessError(ProcessExit, Option<ProcessOutput>),
     IoError(io::IoError),
     TomlError(toml::Error),
     OtherCargoError
+}
+
+impl Show for CargoErrorKind {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            &ProcessError(ref exit, _) => write!(f.buf, "ProcessError({})", exit),
+            &HumanReadableError => write!(f.buf, "HumanReadableError"),
+            &InternalError => write!(f.buf, "InternalError"),
+            &IoError(ref err) => write!(f.buf, "IoError({})", err),
+            &TomlError(ref err) => write!(f.buf, "TomlError({})", err),
+            &OtherCargoError => write!(f.buf, "OtherCargoError")
+        }
+    }
+}
+
+impl Clone for CargoErrorKind {
+    fn clone(&self) -> CargoErrorKind {
+        match self {
+            &ProcessError(ref exit, ref output) => {
+                ProcessError(exit.clone(), output.as_ref().map(|output| ProcessOutput {
+                    status: output.status.clone(), output: output.output.clone(), error: output.error.clone()
+                }))
+            },
+            &HumanReadableError => HumanReadableError,
+            &InternalError => InternalError,
+            &IoError(ref err) => IoError(err.clone()),
+            &TomlError(ref err) => TomlError(err.clone()),
+            &OtherCargoError => OtherCargoError
+        }
+    }
 }
 
 type CargoCliResult<T> = Result<T, CargoCliError>;
