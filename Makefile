@@ -34,7 +34,7 @@ $(HAMCREST): $(shell find libs/hamcrest-rust/src/hamcrest -name '*.rs')
 
 $(LIBCARGO): $(SRC) $(HAMMER)
 	mkdir -p target
-	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir target src/cargo/mod.rs
+	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir target src/cargo/lib.rs
 	touch $(LIBCARGO)
 
 libcargo: $(LIBCARGO)
@@ -54,7 +54,7 @@ target/tests/test-integration: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
 
 target/tests/test-unit: $(HAMCREST) $(SRC) $(HAMMER)
 	mkdir -p target/tests
-	$(RUSTC) --test $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/mod.rs
+	$(RUSTC) --test $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/lib.rs
 
 test-unit: target/tests/test-unit
 	target/tests/test-unit $(only)
