@@ -1,27 +1,34 @@
 use std::os::args;
 use std::io;
 use std::path::Path;
+use std::str;
 use core;
 use util;
-use util::{other_error,CargoResult,CargoError};
+use util::{other_error,human_error,CargoResult,CargoError,ProcessBuilder};
+use util::result::ProcessError;
 
 type Args = Vec<~str>;
 
 pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
-    let sorted = match pkgs.sort() {
+    let mut sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
         None => return Err(other_error("circular dependency detected"))
     };
 
+    let root = sorted.pop();
+
     for pkg in sorted.iter() {
         println!("Compiling {}", pkg);
-        try!(compile_pkg(pkg, pkgs));
+        try!(compile_pkg(pkg, pkgs, |rustc| rustc.exec_with_output()));
     }
+
+    println!("Compiling {}", root);
+    try!(compile_pkg(&root, pkgs, |rustc| rustc.exec()));
 
     Ok(())
 }
 
-fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CargoResult<()> {
+fn compile_pkg<T>(pkg: &core::Package, pkgs: &core::PackageSet, exec: |&ProcessBuilder| -> CargoResult<T>) -> CargoResult<()> {
     // Build up the destination
     // let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
     let target_dir = pkg.get_absolute_target_dir();
@@ -31,7 +38,7 @@ fn compile_pkg(pkg: &core::Package, pkgs: &core::PackageSet) -> CargoResult<()> 
 
     // compile
     for target in pkg.get_targets().iter() {
-        try!(rustc(pkg.get_root(), target, &target_dir, pkgs.get_packages()))
+        try!(rustc(pkg.get_root(), target, &target_dir, pkgs.get_packages(), |rustc| exec(rustc)))
     }
 
     Ok(())
@@ -41,19 +48,24 @@ fn mk_target(target: &Path) -> io::IoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
-fn rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]) -> CargoResult<()> {
+fn rustc<T>(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package], exec: |&ProcessBuilder| -> CargoResult<T>) -> CargoResult<()> {
+    let rustc = prepare_rustc(root, target, dest, deps);
+
+    try!(exec(&rustc)
+        .map_err(|err| rustc_to_cargo_err(rustc.get_args(), root, err)));
+
+    Ok(())
+}
+
+fn prepare_rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]) -> ProcessBuilder {
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, dest);
     build_deps_args(&mut args, deps);
 
-    try!(util::process("rustc")
+    util::process("rustc")
         .cwd(root.clone())
         .args(args.as_slice())
-        .exec()
-        .map_err(|err| rustc_to_cargo_err(&args, root, err)));
-
-    Ok(())
 }
 
 fn build_base_args(into: &mut Args, target: &core::Target, dest: &Path) {
@@ -73,7 +85,17 @@ fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
     }
 }
 
-fn rustc_to_cargo_err(args: &Vec<~str>, cwd: &Path, err: io::IoError) -> CargoError {
-    other_error("failed to exec rustc")
-        .with_detail(format!("args={}; root={}; cause={}", args.connect(" "), cwd.display(), err.to_str()))
+fn rustc_to_cargo_err(args: &[~str], cwd: &Path, err: CargoError) -> CargoError {
+    let msg = {
+        let output = match err {
+            CargoError { kind: ProcessError(_, ref output), .. } => output,
+            _ => fail!("Bug! exec() returned an error other than a ProcessError")
+        };
+
+        let mut msg = StrBuf::from_str(format!("failed to execute: `rustc {}`", args.connect(" ")));
+        output.as_ref().map(|o| msg.push_str(format!("; Error:\n{}", str::from_utf8_lossy(o.error.as_slice()))));
+        msg
+    };
+
+    human_error(msg.to_owned(), format!("root={}", cwd.display()), err)
 }

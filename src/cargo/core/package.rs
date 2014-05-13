@@ -105,7 +105,16 @@ pub struct PackageSet {
 
 impl PackageSet {
     pub fn new(packages: &[Package]) -> PackageSet {
+        assert!(packages.len() > 0, "PackageSet must be created with at least one package")
         PackageSet { packages: Vec::from_slice(packages) }
+    }
+
+    pub fn len(&self) -> uint {
+        self.packages.len()
+    }
+
+    pub fn pop(&mut self) -> Package {
+        self.packages.pop().unwrap()
     }
 
     /**

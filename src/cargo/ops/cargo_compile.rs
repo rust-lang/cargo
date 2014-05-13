@@ -44,7 +44,7 @@ pub fn compile(manifest_path: &str) -> CargoResult<()> {
 
     try!(source.download(resolved.as_slice()).wrap("unable to download packages"));
 
-    let packages = try!(source.get(resolved.as_slice()).wrap("unable ot get packages from source"));
+    let packages = try!(source.get(resolved.as_slice()).wrap("unable to get packages from source"));
 
     let package_set = PackageSet::new(packages.as_slice());
 

@@ -6,19 +6,23 @@ use cargo::util::process;
 fn setup() {
 }
 
+fn basic_bin_manifest(name: &str) -> ~str {
+    format!(r#"
+        [project]
+
+        name = "{}"
+        version = "0.5.0"
+        authors = ["wycats@example.com"]
+
+        [[bin]]
+
+        name = "{}"
+    "#, name, name)
+}
+
 test!(cargo_compile {
     let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [[bin]]
-
-            name = "foo"
-        "#)
+        .file("Cargo.toml", basic_bin_manifest("foo"))
         .file("src/foo.rs", main_file(r#""i am foo""#, []));
 
     assert_that(p.cargo_process("cargo-compile"), execs());
@@ -48,6 +52,84 @@ test!(cargo_compile_without_manifest {
         execs()
         .with_status(102)
         .with_stderr("Could not find Cargo.toml in this directory or any parent directory"));
+})
+
+test!(cargo_compile_with_invalid_code {
+    let p = project("foo")
+        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("src/foo.rs", "invalid rust code!");
+
+    let target = p.root().join("target");
+
+    assert_that(p.cargo_process("cargo-compile"),
+        execs()
+        .with_status(101)
+        .with_stderr(format!("src/foo.rs:1:1: 1:8 error: expected item but found `invalid`\nsrc/foo.rs:1 invalid rust code!\n             ^~~~~~~\nfailed to execute: `rustc src/foo.rs --crate-type bin --out-dir {} -L {}`", target.display(), target.display())));
+})
+
+test!(cargo_compile_with_warnings_in_the_root_package {
+    let p = project("foo")
+        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("src/foo.rs", "fn main() {} fn dead() {}");
+
+    assert_that(p.cargo_process("cargo-compile"),
+        execs()
+        .with_stderr("src/foo.rs:1:14: 1:26 warning: code is never used: `dead`, #[warn(dead_code)] on by default\nsrc/foo.rs:1 fn main() {} fn dead() {}\n                          ^~~~~~~~~~~~\n"));
+})
+
+test!(cargo_compile_with_warnings_in_a_dep_package {
+    let mut p = project("foo");
+    let bar = p.root().join("bar");
+
+    p = p
+        .file(".cargo/config", format!(r#"
+            paths = ["{}"]
+        "#, bar.display()))
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies]
+
+            bar = "0.5.0"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]))
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "bar"
+        "#)
+        .file("bar/src/bar.rs", r#"
+            pub fn gimme() -> ~str {
+                "test passed".to_owned()
+            }
+
+            fn dead() {}
+        "#);
+
+    assert_that(p.cargo_process("cargo-compile"),
+        execs()
+        .with_stdout("Compiling bar v0.5.0\nCompiling foo v0.5.0\n")
+        .with_stderr(""));
+
+    assert_that(&p.root().join("target/foo"), existing_file());
+
+    assert_that(
+      cargo::util::process("foo").extra_path(p.root().join("target")),
+      execs().with_stdout("test passed\n"));
 })
 
 test!(cargo_compile_with_nested_deps {

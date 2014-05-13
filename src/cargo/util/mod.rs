@@ -1,5 +1,5 @@
 pub use self::process_builder::{process,ProcessBuilder};
-pub use self::result::{CargoError,CargoResult,Wrap,Require,ToCLI,other_error,human_error,toml_error};
+pub use self::result::{CargoError,CargoResult,Wrap,Require,ToCLI,other_error,human_error,toml_error,io_error,process_error};
 
 pub mod graph;
 pub mod process_builder;
