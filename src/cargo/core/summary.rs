@@ -1,9 +1,10 @@
+use semver::Version;
 use core::{
     Dependency,
     NameVer
 };
 
-#[deriving(Show,Clone,Eq,Encodable)]
+#[deriving(Show,Clone,Eq)]
 pub struct Summary {
     name_ver: NameVer,
     dependencies: Vec<Dependency>
@@ -25,6 +26,10 @@ impl Summary {
         self.get_name_ver().get_name()
     }
 
+    pub fn get_version<'a>(&'a self) -> &'a Version {
+        self.get_name_ver().get_version()
+    }
+
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
         self.dependencies.as_slice()
     }
@@ -43,6 +48,6 @@ impl SummaryVec for Vec<Summary> {
 
     // TODO: Delete
     fn deps(&self) -> Vec<Dependency> {
-        self.iter().map(|summary| Dependency::with_namever(summary.get_name_ver())).collect()
+        self.iter().map(|summary| Dependency::exact(summary.get_name(), summary.get_version())).collect()
     }
 }

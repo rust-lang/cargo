@@ -1,38 +1,55 @@
-use core::NameVer;
+use semver::Version;
+use core::{NameVer,VersionReq};
+use util::CargoResult;
 
-#[deriving(Eq,Clone,Show,Encodable,Decodable)]
+#[deriving(Eq,Clone,Show)]
 pub struct Dependency {
-    name: NameVer
+    name: ~str,
+    req: VersionReq
 }
 
 impl Dependency {
-    pub fn new(name: &str) -> Dependency {
-        Dependency { name: NameVer::new(name.to_owned(), "1.0.0") }
+    pub fn new(name: &str, req: &VersionReq) -> Dependency {
+        Dependency {
+            name: name.to_owned(),
+            req: req.clone()
+        }
     }
 
-    pub fn with_namever(name: &NameVer) -> Dependency {
-        Dependency { name: name.clone() }
+    pub fn parse(name: &str, version: &str) -> CargoResult<Dependency> {
+        Ok(Dependency {
+            name: name.to_owned(),
+            req: try!(VersionReq::parse(version))
+        })
     }
 
-    pub fn with_name_and_version(name: &str, version: &str) -> Dependency {
-        Dependency { name: NameVer::new(name, version) }
+    pub fn exact(name: &str, version: &Version) -> Dependency {
+        Dependency {
+            name: name.to_owned(),
+            req: VersionReq::exact(version)
+        }
     }
 
-    pub fn get_namever<'a>(&'a self) -> &'a NameVer {
-        &self.name
+    pub fn get_version_req<'a>(&'a self) -> &'a VersionReq {
+        &self.req
     }
 
     pub fn get_name<'a>(&'a self) -> &'a str {
-        self.name.get_name()
+        self.name.as_slice()
     }
 }
 
-pub trait DependencyNameVers {
-    fn namevers(&self) -> Vec<NameVer>;
+#[deriving(Eq,Clone,Encodable)]
+pub struct SerializedDependency {
+    name: ~str,
+    req: ~str
 }
 
-impl DependencyNameVers for Vec<Dependency> {
-    fn namevers(&self) -> Vec<NameVer> {
-        self.iter().map(|dep| dep.get_namever().clone()).collect()
+impl SerializedDependency {
+    pub fn from_dependency(dep: &Dependency) -> SerializedDependency {
+        SerializedDependency {
+            name: dep.get_name().to_owned(),
+            req: dep.get_version_req().to_str()
+        }
     }
 }

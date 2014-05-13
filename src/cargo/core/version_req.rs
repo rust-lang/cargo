@@ -6,11 +6,12 @@ use std::str::CharOffsets;
 use semver::Version;
 use util::{other_error,CargoResult};
 
+#[deriving(Eq,Clone)]
 pub struct VersionReq {
     predicates: Vec<Predicate>
 }
 
-#[deriving(Eq)]
+#[deriving(Eq,Clone)]
 enum Op {
     Ex,   // Exact
     Gt,   // Greater than
@@ -19,6 +20,7 @@ enum Op {
     LtEq  // Less than or equal to
 }
 
+#[deriving(Eq,Clone)]
 struct Predicate {
     op: Op,
     major: uint,
@@ -58,12 +60,25 @@ impl VersionReq {
         Ok(VersionReq { predicates: predicates })
     }
 
+    pub fn exact(version: &Version) -> VersionReq {
+        VersionReq { predicates: vec!(Predicate::exact(version)) }
+    }
+
     pub fn matches(&self, version: &Version) -> bool {
         self.predicates.iter().all(|p| p.matches(version))
     }
 }
 
 impl Predicate {
+    pub fn exact(version: &Version) -> Predicate {
+        Predicate {
+            op: Ex,
+            major: version.major,
+            minor: Some(version.minor),
+            patch: Some(version.patch)
+        }
+    }
+
     pub fn matches(&self, ver: &Version) -> bool {
         match self.op {
             Ex => self.is_exact(ver),
