@@ -55,6 +55,7 @@ struct ProjectBuilder {
 
 impl ProjectBuilder {
     pub fn new(name: &str, root: Path) -> ProjectBuilder {
+        let root = realpath(&root).unwrap();
         ProjectBuilder {
             name: name.to_owned(),
             root: root,
@@ -117,6 +118,48 @@ pub fn project(name: &str) -> ProjectBuilder {
 }
 
 // === Helpers ===
+
+/// Temporary hack until mozilla/rust #11857 is resolved
+/// Copyright 2014 The Rust Project Developers under the Apache License, Version
+/// 2.0 or the MIT License.
+/// Returns an absolute path in the filesystem that `path` points to. The
+/// returned path does not contain any symlinks in its hierarchy.
+pub fn realpath(original: &Path) -> io::IoResult<Path> {
+    static MAX_LINKS_FOLLOWED: uint = 256;
+    let original = os::make_absolute(original);
+
+    // Right now lstat on windows doesn't work quite well
+    if cfg!(windows) {
+        return Ok(original)
+    }
+
+    let result = original.root_path();
+    let mut result = result.expect("make_absolute has no root_path");
+    let mut followed = 0;
+
+    for part in original.components() {
+        result.push(part);
+
+        loop {
+            if followed == MAX_LINKS_FOLLOWED {
+                return Err(io::standard_error(io::InvalidInput))
+            }
+
+            match fs::lstat(&result) {
+                Err(..) => break,
+                Ok(ref stat) if stat.kind != io::TypeSymlink => break,
+                Ok(..) => {
+                    followed += 1;
+                    let path = try!(fs::readlink(&result));
+                    result.pop();
+                    result.push(path);
+                }
+            }
+        }
+    }
+
+    return Ok(result);
+}
 
 pub fn mkdir_recursive(path: &Path) -> Result<(), ~str> {
     fs::mkdir_recursive(path, io::UserDir)

@@ -1,5 +1,5 @@
 use semver::Version;
-use core::{NameVer,VersionReq};
+use core::VersionReq;
 use util::CargoResult;
 
 #[deriving(Eq,Clone,Show)]
