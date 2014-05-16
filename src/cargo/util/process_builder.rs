@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::os;
 use std::path::Path;
-use std::io::process::{Process,ProcessConfig,ProcessOutput,InheritFd};
+use std::io::process::{Command,ProcessOutput,InheritFd};
 use util::{CargoResult,io_error,process_error};
 use collections::HashMap;
 
@@ -53,16 +53,16 @@ impl ProcessBuilder {
 
     // TODO: should InheritFd be hardcoded?
     pub fn exec(&self) -> CargoResult<()> {
-        let mut config = try!(self.build_config());
+        let mut command = try!(self.build_command());
         let env = self.build_env();
 
         // Set where the output goes
-        config.env = Some(env.as_slice());
-        config.stdout = InheritFd(1);
-        config.stderr = InheritFd(2);
+        command.env(env.as_slice())
+            .stdout(InheritFd(1))
+            .stderr(InheritFd(2));
 
-        let mut process = try!(Process::configure(config).map_err(io_error));
-        let exit = process.wait();
+        let mut process = try!(command.spawn().map_err(io_error));
+        let exit = process.wait().unwrap();
 
         if exit.success() {
             Ok(())
@@ -73,12 +73,13 @@ impl ProcessBuilder {
     }
 
     pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {
-        let mut config = try!(self.build_config());
+        let mut command = try!(self.build_command());
         let env = self.build_env();
 
-        config.env = Some(env.as_slice());
+        // Set the environment
+        command.env(env.as_slice());
 
-        let output = try!(Process::configure(config).map(|mut ok| ok.wait_with_output()).map_err(io_error));
+        let output = try!(command.spawn().map(|ok| ok.wait_with_output()).map_err(io_error)).unwrap();
 
         if output.status.success() {
             Ok(output)
@@ -88,14 +89,13 @@ impl ProcessBuilder {
         }
     }
 
-    fn build_config<'a>(&'a self) -> CargoResult<ProcessConfig<'a>> {
-        let mut config = ProcessConfig::new();
+    fn build_command(&self) -> CargoResult<Command> {
+        let mut command = Command::new(self.program.as_slice());
 
-        config.program = self.program.as_slice();
-        config.args = self.args.as_slice();
-        config.cwd = Some(&self.cwd);
+        command.args(self.args.as_slice())
+            .cwd(&self.cwd);
 
-        Ok(config)
+        Ok(command)
     }
 
     fn debug_string(&self) -> ~str {
