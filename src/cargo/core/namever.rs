@@ -10,13 +10,13 @@ use serialize::{
 
 #[deriving(Clone,Eq,Ord)]
 pub struct NameVer {
-    name: ~str,
+    name: StrBuf,
     version: semver::Version
 }
 
 impl NameVer {
     pub fn new(name: &str, version: &str) -> NameVer {
-        NameVer { name: name.to_owned(), version: semver::parse(version.to_owned()).unwrap() }
+        NameVer { name: name.to_strbuf(), version: semver::parse(version.to_owned()).unwrap() }
     }
 
     pub fn get_name<'a>(&'a self) -> &'a str {
@@ -30,19 +30,19 @@ impl NameVer {
 
 impl Show for NameVer {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f.buf, "{} v{}", self.name, self.version)
+        write!(f, "{} v{}", self.name, self.version)
     }
 }
 
 impl<E, D: Decoder<E>> Decodable<D,E> for NameVer {
     fn decode(d: &mut D) -> Result<NameVer, E> {
-        let vector: Vec<~str> = try!(Decodable::decode(d));
-        Ok(NameVer { name: vector.get(0).clone(), version: semver::parse(vector.get(1).clone()).unwrap() })
+        let vector: Vec<StrBuf> = try!(Decodable::decode(d));
+        Ok(NameVer { name: vector.get(0).clone(), version: semver::parse(vector.get(1).as_slice()).unwrap() })
     }
 }
 
 impl<E, S: Encoder<E>> Encodable<S,E> for NameVer {
     fn encode(&self, e: &mut S) -> Result<(), E> {
-        (vec!(self.name.clone(), self.version.to_str())).encode(e)
+        (vec!(self.name.clone(), format_strbuf!("{}", self.version))).encode(e)
     }
 }

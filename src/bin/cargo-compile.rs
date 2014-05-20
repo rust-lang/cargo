@@ -14,7 +14,7 @@ use std::os;
 
 #[deriving(Eq,Clone,Decodable,Encodable)]
 pub struct Options {
-    manifest_path: Option<~str>
+    manifest_path: Option<StrBuf>
 }
 
 impl FlagConfig for Options {}

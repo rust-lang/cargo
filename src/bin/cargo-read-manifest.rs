@@ -12,7 +12,7 @@ use cargo::ops::cargo_read_manifest::read_manifest;
 
 #[deriving(Eq,Clone,Decodable)]
 struct Options {
-    manifest_path: ~str
+    manifest_path: StrBuf
 }
 
 impl FlagConfig for Options {}

@@ -29,7 +29,7 @@ pub fn compile(manifest_path: &str) -> CargoResult<()> {
 
     let configs = try!(config::all_configs(os::getcwd()));
 
-    let config_paths = configs.find(&("paths".to_owned())).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
+    let config_paths = configs.find(&"paths".to_strbuf()).map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
     let mut paths: Vec<Path> = match config_paths.get_value() {
         &config::String(_) => return Err(other_error("The path was configured as a String instead of a List")),

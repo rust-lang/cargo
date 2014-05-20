@@ -17,7 +17,7 @@ impl PathSource {
 
 impl Show for PathSource {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f.buf, "the paths source")
+        write!(f, "the paths source")
     }
 }
 

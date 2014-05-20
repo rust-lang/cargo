@@ -420,15 +420,15 @@ fn is_sigil(c: char) -> bool {
 impl fmt::Show for VersionReq {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         if self.predicates.is_empty() {
-            try!(write!(fmt.buf, "*"));
+            try!(write!(fmt, "*"));
         }
         else {
             for (i, ref pred) in self.predicates.iter().enumerate() {
                 if i == 0 {
-                    try!(write!(fmt.buf, "{}", pred));
+                    try!(write!(fmt, "{}", pred));
                 }
                 else {
-                    try!(write!(fmt.buf, ", {}", pred));
+                    try!(write!(fmt, ", {}", pred));
                 }
             }
         }
@@ -439,15 +439,15 @@ impl fmt::Show for VersionReq {
 
 impl fmt::Show for Predicate {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt.buf, "{} {}", self.op, self.major));
+        try!(write!(fmt, "{} {}", self.op, self.major));
 
         match self.minor {
-            Some(v) => try!(write!(fmt.buf, ".{}", v)),
+            Some(v) => try!(write!(fmt, ".{}", v)),
             None => ()
         }
 
         match self.patch {
-            Some(v) => try!(write!(fmt.buf, ".{}", v)),
+            Some(v) => try!(write!(fmt, ".{}", v)),
             None => ()
         }
 
@@ -458,11 +458,11 @@ impl fmt::Show for Predicate {
 impl fmt::Show for Op {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Ex => try!(write!(fmt.buf, "=")),
-            Gt => try!(write!(fmt.buf, ">")),
-            GtEq => try!(write!(fmt.buf, ">=")),
-            Lt => try!(write!(fmt.buf, "<")),
-            LtEq => try!(write!(fmt.buf, "<="))
+            Ex => try!(write!(fmt, "=")),
+            Gt => try!(write!(fmt, ">")),
+            GtEq => try!(write!(fmt, ">=")),
+            Lt => try!(write!(fmt, "<")),
+            LtEq => try!(write!(fmt, "<="))
         }
         Ok(())
     }

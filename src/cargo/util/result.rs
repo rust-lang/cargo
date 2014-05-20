@@ -121,12 +121,12 @@ pub enum CargoErrorKind {
 impl Show for CargoErrorKind {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            &ProcessError(ref exit, _) => write!(f.buf, "ProcessError({})", exit),
-            &HumanReadableError => write!(f.buf, "HumanReadableError"),
-            &InternalError => write!(f.buf, "InternalError"),
-            &IoError(ref err) => write!(f.buf, "IoError({})", err),
-            &TomlError(ref err) => write!(f.buf, "TomlError({})", err),
-            &OtherCargoError => write!(f.buf, "OtherCargoError")
+            &ProcessError(ref exit, _) => write!(f, "ProcessError({})", exit),
+            &HumanReadableError => write!(f, "HumanReadableError"),
+            &InternalError => write!(f, "InternalError"),
+            &IoError(ref err) => write!(f, "IoError({})", err),
+            &TomlError(ref err) => write!(f, "TomlError({})", err),
+            &OtherCargoError => write!(f, "OtherCargoError")
         }
     }
 }

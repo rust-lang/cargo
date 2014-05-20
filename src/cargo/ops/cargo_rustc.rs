@@ -7,7 +7,7 @@ use util;
 use util::{other_error,human_error,CargoResult,CargoError,ProcessBuilder};
 use util::result::ProcessError;
 
-type Args = Vec<~str>;
+type Args = Vec<StrBuf>;
 
 pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
     let mut sorted = match pkgs.sort() {
@@ -52,7 +52,7 @@ fn rustc<T>(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Packa
     let rustc = prepare_rustc(root, target, dest, deps);
 
     try!(exec(&rustc)
-        .map_err(|err| rustc_to_cargo_err(rustc.get_args(), root, err)));
+        .map_err(|err| rustc_to_cargo_err(rustc.get_args().as_slice(), root, err)));
 
     Ok(())
 }
@@ -69,23 +69,23 @@ fn prepare_rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::
 }
 
 fn build_base_args(into: &mut Args, target: &core::Target, dest: &Path) {
-    into.push(target.get_path().as_str().unwrap().to_owned());
-    into.push("--crate-type".to_owned());
-    into.push(target.rustc_crate_type().to_owned());
-    into.push("--out-dir".to_owned());
-    into.push(dest.as_str().unwrap().to_owned());
+    into.push(target.get_path().as_str().unwrap().to_strbuf());
+    into.push("--crate-type".to_strbuf());
+    into.push(target.rustc_crate_type().to_strbuf());
+    into.push("--out-dir".to_strbuf());
+    into.push(dest.as_str().unwrap().to_strbuf());
 }
 
 fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
     for dep in deps.iter() {
         let dir = dep.get_absolute_target_dir();
 
-        dst.push("-L".to_owned());
-        dst.push(dir.as_str().unwrap().to_owned());
+        dst.push("-L".to_strbuf());
+        dst.push(dir.as_str().unwrap().to_strbuf());
     }
 }
 
-fn rustc_to_cargo_err(args: &[~str], cwd: &Path, err: CargoError) -> CargoError {
+fn rustc_to_cargo_err(args: &[StrBuf], cwd: &Path, err: CargoError) -> CargoError {
     let msg = {
         let output = match err {
             CargoError { kind: ProcessError(_, ref output), .. } => output,
