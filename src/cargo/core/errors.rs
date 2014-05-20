@@ -17,8 +17,8 @@ pub enum CargoError {
 impl Show for CargoError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            &CargoInternalError(ref err) => write!(f.buf, "{}", err),
-            &CargoCLIError(ref err) => write!(f.buf, "{}", err)
+            &CargoInternalError(ref err) => write!(f, "{}", err),
+            &CargoCLIError(ref err) => write!(f, "{}", err)
         }
     }
 }
@@ -37,7 +37,7 @@ impl CLIError {
 
 impl Show for CLIError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f.buf, "{}", self.msg)
+        write!(f, "{}", self.msg)
     }
 }
 
@@ -54,18 +54,18 @@ impl Show for InternalError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             &StringConversionError(ref string, ref type_name) => {
-                write!(f.buf, "Couldn't convert `{}` into {}", string, type_name)
+                write!(f, "Couldn't convert `{}` into {}", string, type_name)
             },
             &MissingManifest(ref path, ref file) => {
-                write!(f.buf, "Couldn't find a {} in the project (`{}` or any parent directory", file, path.display())
+                write!(f, "Couldn't find a {} in the project (`{}` or any parent directory", file, path.display())
             },
             &WrappedIoError(ref io_error) => {
-                write!(f.buf, "{}", io_error)
+                write!(f, "{}", io_error)
             },
             &PathError(ref s) | &Described(ref s) => {
-                write!(f.buf, "{}", s)
+                write!(f, "{}", s)
             },
-            &Other => write!(f.buf, "Other internal error")
+            &Other => write!(f, "Other internal error")
         }
     }
 }

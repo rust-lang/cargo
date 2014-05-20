@@ -47,12 +47,12 @@ fn process(mut args: Vec<~str>) -> CLIResult<(~str, Vec<~str>)> {
 
 #[deriving(Encodable)]
 struct ConfigOut {
-    values: collections::HashMap<~str, config::ConfigValue>
+    values: collections::HashMap<StrBuf, config::ConfigValue>
 }
 
 #[deriving(Decodable)]
 struct ConfigForKeyFlags {
-    key: ~str,
+    key: StrBuf,
     human: bool
 }
 

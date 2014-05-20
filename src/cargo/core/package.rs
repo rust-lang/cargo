@@ -26,7 +26,7 @@ struct SerializedPackage {
     name: ~str,
     version: ~str,
     dependencies: Vec<SerializedDependency>,
-    authors: Vec<~str>,
+    authors: Vec<StrBuf>,
     targets: Vec<Target>,
     root: ~str
 }
@@ -95,7 +95,7 @@ impl Package {
 
 impl Show for Package {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f.buf, "{}", self.get_summary().get_name_ver())
+        write!(f, "{}", self.get_summary().get_name_ver())
     }
 }
 

@@ -68,7 +68,7 @@ pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result
         Err(e) => handle_error(e),
         Ok(encodable) => {
             encodable.map(|encodable| {
-                let encoded: ~str = json::Encoder::str_encode(&encodable);
+                let encoded = json::Encoder::str_encode(&encodable);
                 println!("{}", encoded);
             });
         }
@@ -83,8 +83,12 @@ pub fn handle_error(err: CLIError) {
     std::os::set_exit_status(exit_code as int);
 }
 
+fn args() -> Vec<StrBuf> {
+    std::os::args().iter().map(|a| a.to_strbuf()).collect()
+}
+
 fn flags_from_args<T: RepresentsFlags>() -> CLIResult<T> {
-    let mut decoder = FlagDecoder::new::<T>(std::os::args().tail());
+    let mut decoder = FlagDecoder::new::<T>(args().tail());
     Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None, 1))
 }
 

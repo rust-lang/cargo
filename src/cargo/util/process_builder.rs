@@ -2,28 +2,28 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::os;
 use std::path::Path;
-use std::io::process::{Process,ProcessConfig,ProcessOutput,InheritFd};
+use std::io::process::{Command,ProcessOutput,InheritFd};
 use util::{CargoResult,io_error,process_error};
 use collections::HashMap;
 
 #[deriving(Clone,Eq)]
 pub struct ProcessBuilder {
-    program: ~str,
-    args: Vec<~str>,
-    path: Vec<~str>,
-    env: HashMap<~str, ~str>,
+    program: StrBuf,
+    args: Vec<StrBuf>,
+    path: Vec<StrBuf>,
+    env: HashMap<StrBuf, StrBuf>,
     cwd: Path
 }
 
 impl Show for ProcessBuilder {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f.buf, "`{}", self.program));
+        try!(write!(f, "`{}", self.program));
 
         if self.args.len() > 0 {
-            try!(write!(f.buf, " {}", self.args.connect(" ")));
+            try!(write!(f, " {}", self.args.connect(" ")));
         }
 
-        write!(f.buf, "`")
+        write!(f, "`")
     }
 }
 
@@ -31,18 +31,18 @@ impl Show for ProcessBuilder {
 static PATH_SEP : &'static str = ":";
 
 impl ProcessBuilder {
-    pub fn args(mut self, arguments: &[~str]) -> ProcessBuilder {
+    pub fn args(mut self, arguments: &[StrBuf]) -> ProcessBuilder {
         self.args = Vec::from_slice(arguments);
         self
     }
 
-    pub fn get_args<'a>(&'a self) -> &'a [~str] {
+    pub fn get_args<'a>(&'a self) -> &'a [StrBuf] {
         self.args.as_slice()
     }
 
     pub fn extra_path(mut self, path: Path) -> ProcessBuilder {
         // For now, just convert to a string, but we should do something better
-        self.path.push(format!("{}", path.display()));
+        self.path.push(format_strbuf!("{}", path.display()));
         self
     }
 
@@ -53,16 +53,13 @@ impl ProcessBuilder {
 
     // TODO: should InheritFd be hardcoded?
     pub fn exec(&self) -> CargoResult<()> {
-        let mut config = try!(self.build_config());
-        let env = self.build_env();
+        let mut command = self.build_command();
+        command
+            .env(self.build_env())
+            .stdout(InheritFd(1))
+            .stderr(InheritFd(2));
 
-        // Set where the output goes
-        config.env = Some(env.as_slice());
-        config.stdout = InheritFd(1);
-        config.stderr = InheritFd(2);
-
-        let mut process = try!(Process::configure(config).map_err(io_error));
-        let exit = process.wait();
+        let exit = try!(command.status().map_err(io_error));
 
         if exit.success() {
             Ok(())
@@ -73,12 +70,10 @@ impl ProcessBuilder {
     }
 
     pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {
-        let mut config = try!(self.build_config());
-        let env = self.build_env();
+        let mut command = self.build_command();
+        command.env(self.build_env());
 
-        config.env = Some(env.as_slice());
-
-        let output = try!(Process::configure(config).map(|mut ok| ok.wait_with_output()).map_err(io_error));
+        let output = try!(command.output().map_err(io_error));
 
         if output.status.success() {
             Ok(output)
@@ -88,21 +83,17 @@ impl ProcessBuilder {
         }
     }
 
-    fn build_config<'a>(&'a self) -> CargoResult<ProcessConfig<'a>> {
-        let mut config = ProcessConfig::new();
-
-        config.program = self.program.as_slice();
-        config.args = self.args.as_slice();
-        config.cwd = Some(&self.cwd);
-
-        Ok(config)
+    fn build_command(&self) -> Command {
+        let mut command = Command::new(self.program.as_slice());
+        command.args(self.args.as_slice()).cwd(&self.cwd);
+        command
     }
 
-    fn debug_string(&self) -> ~str {
-        format!("{} {}", self.program, self.args.connect(" "))
+    fn debug_string(&self) -> StrBuf {
+        format_strbuf!("{} {}", self.program, self.args.connect(" "))
     }
 
-    fn build_env(&self) -> ~[(~str, ~str)] {
+    fn build_env(&self) -> ~[(StrBuf, StrBuf)] {
         let mut ret = Vec::new();
 
         for (key, val) in self.env.iter() {
@@ -113,31 +104,29 @@ impl ProcessBuilder {
         }
 
         match self.build_path() {
-            Some(path) => ret.push(("PATH".to_owned(), path)),
+            Some(path) => ret.push(("PATH".to_strbuf(), path)),
             _ => ()
         }
 
         ret.as_slice().to_owned()
     }
 
-    fn build_path(&self) -> Option<~str> {
+    fn build_path(&self) -> Option<StrBuf> {
         let path = self.path.connect(PATH_SEP);
 
         match self.env.find_equiv(&("PATH")) {
             Some(existing) => {
                 if self.path.is_empty() {
-                    Some(existing.to_owned())
+                    Some(existing.clone())
+                } else {
+                    Some(format_strbuf!("{}{}{}", existing, PATH_SEP, path))
                 }
-                else {
-                    Some(existing.as_slice() + PATH_SEP + path)
-                }
-            }
+            },
             None => {
                 if self.path.is_empty() {
                     None
-                }
-                else {
-                    Some(path)
+                } else {
+                    Some(path.to_strbuf())
                 }
             }
         }
@@ -146,7 +135,7 @@ impl ProcessBuilder {
 
 pub fn process(cmd: &str) -> ProcessBuilder {
     ProcessBuilder {
-        program: cmd.to_owned(),
+        program: cmd.to_strbuf(),
         args: vec!(),
         path: vec!(),
         cwd: os::getcwd(),
@@ -154,11 +143,11 @@ pub fn process(cmd: &str) -> ProcessBuilder {
     }
 }
 
-fn system_env() -> HashMap<~str, ~str> {
+fn system_env() -> HashMap<StrBuf, StrBuf> {
     let mut ret = HashMap::new();
 
     for &(ref key, ref val) in os::env().iter() {
-        ret.insert(key.clone(), val.clone());
+        ret.insert(key.to_strbuf(), val.to_strbuf());
     }
 
     ret
