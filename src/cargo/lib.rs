@@ -89,15 +89,15 @@ fn args() -> Vec<StrBuf> {
 
 fn flags_from_args<T: RepresentsFlags>() -> CLIResult<T> {
     let mut decoder = FlagDecoder::new::<T>(args().tail());
-    Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None, 1))
+    Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None::<&str>, 1))
 }
 
 fn json_from_stdin<T: RepresentsJSON>() -> CLIResult<T> {
     let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().to_result(|_| CLIError::new("Standard in did not exist or was not UTF-8", None, 1)));
+    let input = try!(reader.read_to_str().to_result(|_| CLIError::new("Standard in did not exist or was not UTF-8", None::<&str>, 1)));
 
-    let json = try!(json::from_str(input).to_result(|_| CLIError::new("Could not parse standard in as JSON", Some(input.clone()), 1)));
+    let json = try!(json::from_str(input).to_result(|_| CLIError::new("Could not parse standard in as JSON", Some(input.to_strbuf()), 1)));
     let mut decoder = json::Decoder::new(json);
 
-    Decodable::decode(&mut decoder).to_result(|e: json::DecoderError| CLIError::new("Could not process standard in as input", Some(e.to_str()), 1))
+    Decodable::decode(&mut decoder).to_result(|e: json::DecoderError| CLIError::new("Could not process standard in as input", Some(e), 1))
 }

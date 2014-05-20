@@ -14,11 +14,11 @@ use getopts::{reqopt,getopts};
 fn main() {
     let arguments: Vec<StrBuf> = args().iter().map(|a| a.to_strbuf()).collect();
 
-    let opts = ~[
+    let opts = vec!(
         reqopt("m", "manifest", "the location of the manifest", "MANIFEST")
-    ];
+    );
 
-    let matches = match getopts(arguments.tail(), opts) {
+    let matches = match getopts(arguments.tail(), opts.as_slice()) {
         Ok(m) => m,
         Err(_) => {
             fail("missing-argument", "manifest");

@@ -24,14 +24,15 @@ impl Show for CargoError {
 }
 
 pub struct CLIError {
-    pub msg: ~str,
-    pub detail: Option<~str>,
+    pub msg: StrBuf,
+    pub detail: Option<StrBuf>,
     pub exit_code: uint
 }
 
 impl CLIError {
-    pub fn new<T: ToStr>(msg: T, detail: Option<~str>, exit_code: uint) -> CLIError {
-        CLIError { msg: msg.to_str(), detail: detail, exit_code: exit_code }
+    pub fn new<T: Show, U: Show>(msg: T, detail: Option<U>, exit_code: uint) -> CLIError {
+        let detail = detail.map(|d| format_strbuf!("{}", d));
+        CLIError { msg: format_strbuf!("{}", msg), detail: detail, exit_code: exit_code }
     }
 }
 
@@ -42,11 +43,11 @@ impl Show for CLIError {
 }
 
 pub enum InternalError {
-    StringConversionError(~str, &'static str),
-    MissingManifest(Path, ~str),
+    StringConversionError(StrBuf, &'static str),
+    MissingManifest(Path, StrBuf),
     WrappedIoError(IoError),
-    PathError(~str),
-    Described(~str),
+    PathError(StrBuf),
+    Described(StrBuf),
     Other
 }
 
@@ -71,7 +72,7 @@ impl Show for InternalError {
 }
 
 impl CargoError {
-    pub fn cli(msg: ~str, detail: Option<~str>, exit_code: uint) -> CargoError {
+    pub fn cli(msg: StrBuf, detail: Option<StrBuf>, exit_code: uint) -> CargoError {
         CargoCLIError(CLIError::new(msg, detail, exit_code))
     }
 
@@ -79,8 +80,8 @@ impl CargoError {
         CargoInternalError(error)
     }
 
-    pub fn described<T: ToStr>(description: T) -> CargoError {
-        CargoInternalError(Described(description.to_str()))
+    pub fn described<T: Show>(description: T) -> CargoError {
+        CargoInternalError(Described(format_strbuf!("{}", description)))
     }
 
     pub fn other() -> CargoError {
@@ -90,7 +91,7 @@ impl CargoError {
     pub fn cli_error(self) -> CLIError {
         match self {
             CargoInternalError(err) =>
-                CLIError::new("An unexpected error occurred", Some(err.to_str()), 100),
+                CLIError::new("An unexpected error occurred", Some(err), 100),
             CargoCLIError(err) => err
         }
     }

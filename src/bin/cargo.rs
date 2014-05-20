@@ -18,7 +18,7 @@ fn main() {
 
 #[deriving(Encodable)]
 struct ProjectLocation {
-    root: ~str
+    root: StrBuf
 }
 
 /**
@@ -32,17 +32,17 @@ fn execute() {
         Err(err) => return handle_error(err)
     };
 
-    if cmd == "config-for-key".to_owned() { execute_main_without_stdin(config_for_key) }
-    else if cmd == "config-list".to_owned() { execute_main_without_stdin(config_list) }
-    else if cmd == "locate-project".to_owned() { execute_main_without_stdin(locate_project) }
+    if cmd == "config-for-key".to_strbuf() { execute_main_without_stdin(config_for_key) }
+    else if cmd == "config-list".to_strbuf() { execute_main_without_stdin(config_list) }
+    else if cmd == "locate-project".to_strbuf() { execute_main_without_stdin(locate_project) }
 }
 
-fn process(mut args: Vec<~str>) -> CLIResult<(~str, Vec<~str>)> {
-    args = Vec::from_slice(args.tail());
-    let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None, 1))).to_owned();
+fn process(args: Vec<~str>) -> CLIResult<(StrBuf, Vec<StrBuf>)> {
+    let args: Vec<StrBuf> = args.tail().iter().map(|a| a.to_strbuf()).collect();
+    let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None::<&str>, 1))).to_owned();
     let tail = Vec::from_slice(args.tail());
 
-    Ok((head, tail))
+    Ok((head.to_strbuf(), tail))
 }
 
 #[deriving(Encodable)]
@@ -64,7 +64,7 @@ impl FlagConfig for ConfigForKeyFlags {
 
 fn config_for_key(args: ConfigForKeyFlags) -> CLIResult<Option<ConfigOut>> {
     let value = try!(config::get_config(os::getcwd(), args.key.as_slice()).to_result(|err|
-        CLIError::new("Couldn't load configuration", Some(err.to_str()), 1)));
+        CLIError::new("Couldn't load configuration", Some(err), 1)));
 
     if args.human {
         println!("{}", value);
@@ -89,7 +89,7 @@ impl FlagConfig for ConfigListFlags {
 
 fn config_list(args: ConfigListFlags) -> CLIResult<Option<ConfigOut>> {
     let configs = try!(config::all_configs(os::getcwd()).to_result(|err|
-        CLIError::new("Couldn't load conifguration", Some(err.to_str()), 1)));
+        CLIError::new("Couldn't load conifguration", Some(err), 1)));
 
     if args.human {
         for (key, value) in configs.iter() {
@@ -102,11 +102,11 @@ fn config_list(args: ConfigListFlags) -> CLIResult<Option<ConfigOut>> {
 }
 
 fn locate_project(_: NoFlags) -> CLIResult<Option<ProjectLocation>> {
-    let root = try!(find_project(os::getcwd(), "Cargo.toml".to_owned()).to_result(|err|
-        CLIError::new(err.to_str(), None, 1)));
+    let root = try!(find_project(os::getcwd(), "Cargo.toml").to_result(|err|
+        CLIError::new(err.to_str(), None::<&str>, 1)));
 
     let string = try!(root.as_str().to_result(|_|
-        CLIError::new(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), None, 1)));
+        CLIError::new(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), None::<&str>, 1)));
 
-    Ok(Some(ProjectLocation { root: string.to_owned() }))
+    Ok(Some(ProjectLocation { root: string.to_strbuf() }))
 }
