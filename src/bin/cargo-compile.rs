@@ -29,7 +29,7 @@ fn execute(options: Options) -> CLIResult<Option<()>> {
         None => try!(find_project(os::getcwd(), "Cargo.toml".to_owned())
                     .map(|path| path.join("Cargo.toml"))
                     .to_result(|err|
-                        CLIError::new("Could not find Cargo.toml in this directory or any parent directory", Some(err.to_str()), 102)))
+                        CLIError::new("Could not find Cargo.toml in this directory or any parent directory", Some(err), 102)))
     };
 
     compile(root.as_str().unwrap().as_slice()).map(|_| None).to_cli(101)

@@ -97,5 +97,5 @@ fn rustc_to_cargo_err(args: &[StrBuf], cwd: &Path, err: CargoError) -> CargoErro
         msg
     };
 
-    human_error(msg.to_owned(), format!("root={}", cwd.display()), err)
+    human_error(msg, format_strbuf!("root={}", cwd.display()), err)
 }

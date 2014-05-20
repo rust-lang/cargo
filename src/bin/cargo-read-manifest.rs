@@ -24,8 +24,8 @@ fn main() {
 fn execute(options: Options) -> CLIResult<Option<Package>> {
     read_manifest(options.manifest_path.as_slice()).map(|m| Some(m))
         .map_err(|err| CLIError {
-            msg: err.get_desc().to_owned(),
-            detail: err.get_detail().map(|s| s.to_owned()),
+            msg: err.get_desc().to_strbuf(),
+            detail: err.get_detail().map(|s| s.to_strbuf()),
             exit_code: 1
         })
 }

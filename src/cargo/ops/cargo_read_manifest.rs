@@ -6,10 +6,10 @@ use util::{toml_error,human_error,CargoResult,CargoError};
 
 pub fn read_manifest(path: &str) -> CargoResult<Package> {
     let root = try!(parse_from_file(path).map_err(|err: CargoError|
-        human_error(format!("Cargo.toml is not valid Toml"), format!("path={}", path), err)));
+        human_error("Cargo.toml is not valid Toml".to_strbuf(), format_strbuf!("path={}", path), err)));
 
     let toml = try!(load_toml(root).map_err(|err: CargoError|
-        human_error(format!("Cargo.toml is not a valid Cargo manifest"), format!("path={}", path), err)));
+        human_error("Cargo.toml is not a valid Cargo manifest".to_strbuf(), format_strbuf!("path={}", path), err)));
 
     toml.to_package(path)
 }

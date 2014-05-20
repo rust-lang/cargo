@@ -1,6 +1,6 @@
 use util::{other_error,CargoResult,CargoError};
 
-pub fn find_project(pwd: Path, file: ~str) -> CargoResult<Path> {
+pub fn find_project(pwd: Path, file: &str) -> CargoResult<Path> {
     let mut current = pwd.clone();
 
     loop {

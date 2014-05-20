@@ -36,14 +36,14 @@ impl Summary {
 }
 
 pub trait SummaryVec {
-    fn names(&self) -> Vec<~str>;
+    fn names(&self) -> Vec<StrBuf>;
     fn deps(&self) -> Vec<Dependency>;
 }
 
 impl SummaryVec for Vec<Summary> {
     // TODO: Move to Registery
-    fn names(&self) -> Vec<~str> {
-        self.iter().map(|summary| summary.name_ver.get_name().to_owned()).collect()
+    fn names(&self) -> Vec<StrBuf> {
+        self.iter().map(|summary| summary.name_ver.get_name().to_strbuf()).collect()
     }
 
     // TODO: Delete

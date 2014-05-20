@@ -64,7 +64,7 @@ impl ProcessBuilder {
         if exit.success() {
             Ok(())
         } else {
-            let msg = format!("Could not execute process `{}`", self.debug_string());
+            let msg = format_strbuf!("Could not execute process `{}`", self.debug_string());
             Err(process_error(msg, exit, None))
         }
     }
@@ -78,7 +78,7 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
-            let msg = format!("Could not execute process `{}`", self.debug_string());
+            let msg = format_strbuf!("Could not execute process `{}`", self.debug_string());
             Err(process_error(msg, output.status.clone(), Some(output)))
         }
     }
