@@ -3,10 +3,11 @@ RUSTC_FLAGS ?=
 
 # Link flags to pull in dependencies
 BINS = cargo \
-		   cargo-compile \
+	     cargo-compile \
 	     cargo-read-manifest \
 	     cargo-rustc \
-	     cargo-verify-project
+	     cargo-verify-project \
+	     cargo-git-checkout \
 
 SRC = $(shell find src -name '*.rs')
 
