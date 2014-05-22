@@ -26,9 +26,15 @@ use util::{other_error, CargoResult, Wrap};
 pub fn compile(manifest_path: &str) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path);
 
-    let root_dep = try!(ops::read_manifest(manifest_path)).to_dependency();
+    let manifest = try!(ops::read_manifest(manifest_path));
+
+    debug!("loaded manifest; manifest={}", manifest);
+
+    let root_dep = manifest.to_dependency();
 
     let configs = try!(config::all_configs(os::getcwd()));
+
+    debug!("loaded config; configs={}", configs);
 
     let config_paths = configs.find_equiv(&"paths").map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
