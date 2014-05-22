@@ -1,19 +1,27 @@
 use url::Url;
 use util::{CargoResult,ProcessBuilder,io_error,human_error,process};
 use std::str;
-use std::io::UserDir;
-use std::io::fs::mkdir_recursive;
+use std::io::{UserDir,AllPermissions};
+use std::io::fs::{mkdir_recursive,rmdir_recursive,chmod};
 use serialize::{Encodable,Encoder};
 
 macro_rules! git(
     ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_inherit($config, format_strbuf!($str, $($rest),*)))
+        try!(git_inherit(&$config, format_strbuf!($str, $($rest),*)))
+    );
+
+    ($config:expr, $str:expr) => (
+        try!(git_inherit(&$config, format_strbuf!($str)))
     );
 )
 
 macro_rules! git_output(
     ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_output($config, format_strbuf!($str, $($rest),*)))
+        try!(git_output(&$config, format_strbuf!($str, $($rest),*)))
+    );
+
+    ($config:expr, $str:expr) => (
+        try!(git_output(&$config, format_strbuf!($str)))
     );
 )
 
@@ -61,7 +69,7 @@ impl GitCommand {
         let config = &self.config;
 
         if config.path.exists() {
-            git!(config, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", config.uri);
+            git!(*config, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", config.uri);
         } else {
             let dirname = Path::new(config.path.dirname());
             let mut checkout_config = self.config.clone();
@@ -70,15 +78,37 @@ impl GitCommand {
             try!(mkdir_recursive(&checkout_config.path, UserDir).map_err(|err|
                 human_error(format_strbuf!("Couldn't recursively create `{}`", checkout_config.path.display()), format_strbuf!("path={}", checkout_config.path.display()), io_error(err))));
 
-            git!(&checkout_config, "clone {} {} --bare --no-hardlinks --quiet", config.uri, config.path.display());
+            git!(checkout_config, "clone {} {} --bare --no-hardlinks --quiet", config.uri, config.path.display());
         }
 
         Ok(GitRepo { config: config.clone(), revision: try!(rev_for(config)) })
     }
 }
 
+impl GitRepo {
+    fn copy_to(destination: &Path) -> CargoResult<()> {
+        Ok(())
+    }
+
+    fn clone_to(&self, destination: &Path) -> CargoResult<()> {
+        try!(mkdir_recursive(&Path::new(destination.dirname()), UserDir).map_err(io_error));
+        try!(rmdir_recursive(destination).map_err(io_error));
+        git!(self.config, "clone --no-checkout --quiet {} {}", self.config.path.display(), destination.display());
+        try!(chmod(destination, AllPermissions).map_err(io_error));
+
+        let mut dest_config = self.config.clone();
+        dest_config.path = destination.clone();
+
+        git!(dest_config, "fetch --force --quiet --tags {}", self.config.path.display());
+        git!(dest_config, "reset --hard {}", self.revision);
+        git!(dest_config, "submodule update --init --recursive");
+
+        Ok(())
+    }
+}
+
 fn rev_for(config: &GitConfig) -> CargoResult<StrBuf> {
-    Ok(git_output!(config, "rev-parse {}", config.reference))
+    Ok(git_output!(*config, "rev-parse {}", config.reference))
 }
 
 fn git(config: &GitConfig, str: &str) -> ProcessBuilder {
