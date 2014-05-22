@@ -5,6 +5,7 @@
 #![feature(macro_rules)]
 
 extern crate collections;
+extern crate url;
 extern crate hammer;
 extern crate serialize;
 extern crate semver;

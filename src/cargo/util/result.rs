@@ -42,12 +42,21 @@ pub fn process_error(detail: StrBuf, exit: ProcessExit, output: Option<ProcessOu
     }
 }
 
-pub fn human_error(desc: StrBuf, detail: StrBuf, cause: CargoError) -> CargoError {
+pub fn human_error<T: ToStr, U: ToStr>(desc: T, detail: U, cause: CargoError) -> CargoError {
     CargoError {
         kind: HumanReadableError,
-        desc: BoxedDescription(desc),
-        detail: Some(detail),
+        desc: BoxedDescription(desc.to_str().to_strbuf()),
+        detail: Some(detail.to_str().to_strbuf()),
         cause: Some(box cause)
+    }
+}
+
+pub fn simple_human<T: Show>(desc: T) -> CargoError {
+    CargoError {
+        kind: HumanReadableError,
+        desc: BoxedDescription(format_strbuf!("{}", desc)),
+        detail: None,
+        cause: None
     }
 }
 

@@ -31,8 +31,8 @@ impl Show for ProcessBuilder {
 static PATH_SEP : &'static str = ":";
 
 impl ProcessBuilder {
-    pub fn args(mut self, arguments: &[StrBuf]) -> ProcessBuilder {
-        self.args = Vec::from_slice(arguments);
+    pub fn args<T: Show>(mut self, arguments: &[T]) -> ProcessBuilder {
+        self.args = arguments.iter().map(|a| format_strbuf!("{}", a)).collect();
         self
     }
 
