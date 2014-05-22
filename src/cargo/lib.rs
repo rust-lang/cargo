@@ -2,7 +2,7 @@
 #![crate_type="rlib"]
 
 #![allow(deprecated_owned_vector)]
-#![feature(macro_rules)]
+#![feature(macro_rules,phase)]
 
 extern crate collections;
 extern crate url;
@@ -10,6 +10,9 @@ extern crate hammer;
 extern crate serialize;
 extern crate semver;
 extern crate toml;
+
+#[phase(syntax, link)]
+extern crate log;
 
 #[cfg(test)]
 extern crate hamcrest;
@@ -77,6 +80,8 @@ pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result
 }
 
 pub fn handle_error(err: CLIError) {
+    log!(4, "handle_error; err={}", err);
+
     let CLIError { msg, exit_code, .. } = err;
     let _ = write!(&mut std::io::stderr(), "{}", msg);
     //detail.map(|d| write!(&mut std::io::stderr(), ":\n{}", d));

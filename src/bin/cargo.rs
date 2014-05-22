@@ -1,8 +1,12 @@
+#![feature(phase)]
+
 extern crate cargo;
 extern crate toml;
 extern crate hammer;
 extern crate serialize;
 extern crate collections;
+#[phase(syntax, link)]
+extern crate log;
 
 use hammer::{FlagConfig,FlagConfiguration};
 use std::os;
@@ -27,14 +31,30 @@ struct ProjectLocation {
   on this top-level information.
 */
 fn execute() {
+    debug!("executing; cmd=cargo; args={}", os::args());
+
     let (cmd, _) = match process(os::args()) {
         Ok((cmd, args)) => (cmd, args),
         Err(err) => return handle_error(err)
     };
 
-    if cmd == "config-for-key".to_strbuf() { execute_main_without_stdin(config_for_key) }
-    else if cmd == "config-list".to_strbuf() { execute_main_without_stdin(config_list) }
-    else if cmd == "locate-project".to_strbuf() { execute_main_without_stdin(locate_project) }
+    if cmd == "config-for-key".to_strbuf() {
+        log!(4, "cmd == config-for-key");
+        execute_main_without_stdin(config_for_key)
+    }
+    else if cmd == "config-list".to_strbuf() {
+        log!(4, "cmd == config-list");
+        execute_main_without_stdin(config_list)
+    }
+    else if cmd == "locate-project".to_strbuf() {
+        log!(4, "cmd == locate-project");
+        execute_main_without_stdin(locate_project)
+    }
+    else {
+        // TODO: Handle automatic dispatching to cargo-*
+        debug!("unknown command");
+        println!("Automatic execing of cargo-* commands has not yet been implemented. Call cargo-* commands directly for now");
+    }
 }
 
 fn process(args: Vec<~str>) -> CLIResult<(StrBuf, Vec<StrBuf>)> {
