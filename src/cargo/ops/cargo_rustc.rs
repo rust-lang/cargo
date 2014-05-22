@@ -10,6 +10,8 @@ use util::result::ProcessError;
 type Args = Vec<String>;
 
 pub fn compile_packages(pkgs: &core::PackageSet) -> CargoResult<()> {
+    debug!("compiling; pkgs={}", pkgs);
+
     let mut sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
         None => return Err(other_error("circular dependency detected"))
@@ -29,9 +31,12 @@ pub fn compile_packages(pkgs: &core::PackageSet) -> CargoResult<()> {
 }
 
 fn compile_pkg<T>(pkg: &core::Package, pkgs: &core::PackageSet, exec: |&ProcessBuilder| -> CargoResult<T>) -> CargoResult<()> {
+    debug!("compiling; pkg={}; targets={}; deps={}", pkg, pkg.get_targets(), pkg.get_dependencies());
     // Build up the destination
     // let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
     let target_dir = pkg.get_absolute_target_dir();
+
+    debug!("creating target dir; path={}", target_dir.display());
 
     // First ensure that the directory exists
     try!(mk_target(&target_dir).map_err(|_| other_error("could not create target directory")));

@@ -194,6 +194,10 @@ impl TomlManifest {
         // Get targets
         let targets = normalize(&self.lib, &self.bin);
 
+        if targets.is_empty() {
+            debug!("manifest has no build targets; project={}", self.project);
+        }
+
         let mut deps = Vec::new();
 
         // Collect the deps
