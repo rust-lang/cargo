@@ -8,7 +8,7 @@ extern crate hammer;
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError};
 use cargo::core::Package;
-use cargo::ops::cargo_read_manifest::read_manifest;
+use cargo::ops;
 
 #[deriving(Eq,Clone,Decodable)]
 struct Options {
@@ -22,7 +22,7 @@ fn main() {
 }
 
 fn execute(options: Options) -> CLIResult<Option<Package>> {
-    read_manifest(options.manifest_path.as_slice()).map(|m| Some(m))
+    ops::read_manifest(options.manifest_path.as_slice()).map(|m| Some(m))
         .map_err(|err| CLIError {
             msg: err.get_desc().to_strbuf(),
             detail: err.get_detail().map(|s| s.to_strbuf()),

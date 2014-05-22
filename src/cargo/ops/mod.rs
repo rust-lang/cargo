@@ -1,3 +1,7 @@
-pub mod cargo_compile;
-pub mod cargo_read_manifest;
-pub mod cargo_rustc;
+pub use self::cargo_compile::compile;
+pub use self::cargo_read_manifest::read_manifest;
+pub use self::cargo_rustc::compile_packages;
+
+mod cargo_compile;
+mod cargo_read_manifest;
+mod cargo_rustc;

@@ -9,7 +9,7 @@ use util::result::ProcessError;
 
 type Args = Vec<StrBuf>;
 
-pub fn compile(pkgs: &core::PackageSet) -> CargoResult<()> {
+pub fn compile_packages(pkgs: &core::PackageSet) -> CargoResult<()> {
     let mut sorted = match pkgs.sort() {
         Some(pkgs) => pkgs,
         None => return Err(other_error("circular dependency detected"))
