@@ -20,12 +20,13 @@ use util::config::{ConfigValue};
 use core::{PackageSet,Source};
 use core::resolver::resolve;
 use sources::path::PathSource;
-use ops::cargo_rustc;
-use ops::cargo_read_manifest::read_manifest;
+use ops;
 use util::{other_error, CargoResult, Wrap};
 
 pub fn compile(manifest_path: &str) -> CargoResult<()> {
-    let root_dep = try!(read_manifest(manifest_path)).to_dependency();
+    log!(4, "compile; manifest-path={}", manifest_path);
+
+    let root_dep = try!(ops::read_manifest(manifest_path)).to_dependency();
 
     let configs = try!(config::all_configs(os::getcwd()));
 
@@ -48,7 +49,7 @@ pub fn compile(manifest_path: &str) -> CargoResult<()> {
 
     let package_set = PackageSet::new(packages.as_slice());
 
-    try!(cargo_rustc::compile(&package_set));
+    try!(ops::compile_packages(&package_set));
 
     Ok(())
 }
