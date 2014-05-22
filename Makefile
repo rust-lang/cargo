@@ -53,7 +53,7 @@ TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
 target/tests/test-integration: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
 	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget -o $@  tests/tests.rs
 
-target/tests/test-unit: $(HAMCREST) $(SRC) $(HAMMER)
+target/tests/test-unit: $(HAMCREST) $(SRC) $(HAMMER) $(TOML)
 	mkdir -p target/tests
 	$(RUSTC) --test $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/lib.rs
 
