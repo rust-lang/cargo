@@ -7,7 +7,7 @@ use util;
 use util::{other_error,human_error,CargoResult,CargoError,ProcessBuilder};
 use util::result::ProcessError;
 
-type Args = Vec<StrBuf>;
+type Args = Vec<String>;
 
 pub fn compile_packages(pkgs: &core::PackageSet) -> CargoResult<()> {
     let mut sorted = match pkgs.sort() {
@@ -69,33 +69,39 @@ fn prepare_rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::
 }
 
 fn build_base_args(into: &mut Args, target: &core::Target, dest: &Path) {
-    into.push(target.get_path().as_str().unwrap().to_strbuf());
-    into.push("--crate-type".to_strbuf());
-    into.push(target.rustc_crate_type().to_strbuf());
-    into.push("--out-dir".to_strbuf());
-    into.push(dest.as_str().unwrap().to_strbuf());
+    // TODO: Handle errors in converting paths into args
+    into.push(target.get_path().display().to_str());
+    into.push("--crate-type".to_str());
+    into.push(target.rustc_crate_type().to_str());
+    into.push("--out-dir".to_str());
+    into.push(dest.display().to_str());
 }
 
 fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
     for dep in deps.iter() {
         let dir = dep.get_absolute_target_dir();
 
-        dst.push("-L".to_strbuf());
-        dst.push(dir.as_str().unwrap().to_strbuf());
+        dst.push("-L".to_str());
+        dst.push(dir.display().to_str());
     }
 }
 
-fn rustc_to_cargo_err(args: &[StrBuf], cwd: &Path, err: CargoError) -> CargoError {
+fn rustc_to_cargo_err(args: &[String], cwd: &Path, err: CargoError) -> CargoError {
     let msg = {
         let output = match err {
             CargoError { kind: ProcessError(_, ref output), .. } => output,
             _ => fail!("Bug! exec() returned an error other than a ProcessError")
         };
 
-        let mut msg = StrBuf::from_str(format!("failed to execute: `rustc {}`", args.connect(" ")));
-        output.as_ref().map(|o| msg.push_str(format!("; Error:\n{}", str::from_utf8_lossy(o.error.as_slice()))));
+        let mut msg = format!("failed to execute: `rustc {}`", args.connect(" "));
+
+        output.as_ref().map(|o| {
+            let second = format!("; Error:\n{}", str::from_utf8_lossy(o.error.as_slice()));
+            msg.push_str(second.as_slice());
+        });
+
         msg
     };
 
-    human_error(msg, format_strbuf!("root={}", cwd.display()), err)
+    human_error(msg, format!("root={}", cwd.display()), err)
 }

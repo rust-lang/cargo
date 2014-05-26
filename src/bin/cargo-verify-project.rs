@@ -12,7 +12,7 @@ use getopts::{reqopt,getopts};
 */
 
 fn main() {
-    let arguments: Vec<StrBuf> = args().iter().map(|a| a.to_strbuf()).collect();
+    let arguments = args();
 
     let opts = vec!(
         reqopt("m", "manifest", "the location of the manifest", "MANIFEST")

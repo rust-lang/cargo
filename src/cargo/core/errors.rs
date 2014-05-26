@@ -24,15 +24,15 @@ impl Show for CargoError {
 }
 
 pub struct CLIError {
-    pub msg: StrBuf,
-    pub detail: Option<StrBuf>,
+    pub msg: String,
+    pub detail: Option<String>,
     pub exit_code: uint
 }
 
 impl CLIError {
     pub fn new<T: Show, U: Show>(msg: T, detail: Option<U>, exit_code: uint) -> CLIError {
-        let detail = detail.map(|d| format_strbuf!("{}", d));
-        CLIError { msg: format_strbuf!("{}", msg), detail: detail, exit_code: exit_code }
+        let detail = detail.map(|d| d.to_str());
+        CLIError { msg: msg.to_str(), detail: detail, exit_code: exit_code }
     }
 }
 
@@ -43,11 +43,11 @@ impl Show for CLIError {
 }
 
 pub enum InternalError {
-    StringConversionError(StrBuf, &'static str),
-    MissingManifest(Path, StrBuf),
+    StringConversionError(String, &'static str),
+    MissingManifest(Path, String),
     WrappedIoError(IoError),
-    PathError(StrBuf),
-    Described(StrBuf),
+    PathError(String),
+    Described(String),
     Other
 }
 
@@ -72,7 +72,7 @@ impl Show for InternalError {
 }
 
 impl CargoError {
-    pub fn cli(msg: StrBuf, detail: Option<StrBuf>, exit_code: uint) -> CargoError {
+    pub fn cli(msg: String, detail: Option<String>, exit_code: uint) -> CargoError {
         CargoCLIError(CLIError::new(msg, detail, exit_code))
     }
 
@@ -81,7 +81,7 @@ impl CargoError {
     }
 
     pub fn described<T: Show>(description: T) -> CargoError {
-        CargoInternalError(Described(format_strbuf!("{}", description)))
+        CargoInternalError(Described(description.to_str()))
     }
 
     pub fn other() -> CargoError {

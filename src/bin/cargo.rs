@@ -22,7 +22,7 @@ fn main() {
 
 #[deriving(Encodable)]
 struct ProjectLocation {
-    root: StrBuf
+    root: String
 }
 
 /**
@@ -38,15 +38,15 @@ fn execute() {
         Err(err) => return handle_error(err)
     };
 
-    if cmd == "config-for-key".to_strbuf() {
+    if cmd == "config-for-key".to_str() {
         log!(4, "cmd == config-for-key");
         execute_main_without_stdin(config_for_key)
     }
-    else if cmd == "config-list".to_strbuf() {
+    else if cmd == "config-list".to_str() {
         log!(4, "cmd == config-list");
         execute_main_without_stdin(config_list)
     }
-    else if cmd == "locate-project".to_strbuf() {
+    else if cmd == "locate-project".to_str() {
         log!(4, "cmd == locate-project");
         execute_main_without_stdin(locate_project)
     }
@@ -57,22 +57,22 @@ fn execute() {
     }
 }
 
-fn process(args: Vec<~str>) -> CLIResult<(StrBuf, Vec<StrBuf>)> {
-    let args: Vec<StrBuf> = args.tail().iter().map(|a| a.to_strbuf()).collect();
+fn process(args: Vec<String>) -> CLIResult<(String, Vec<String>)> {
+    let args: Vec<String> = Vec::from_slice(args.tail());
     let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None::<&str>, 1))).to_owned();
     let tail = Vec::from_slice(args.tail());
 
-    Ok((head.to_strbuf(), tail))
+    Ok((head, tail))
 }
 
 #[deriving(Encodable)]
 struct ConfigOut {
-    values: collections::HashMap<StrBuf, config::ConfigValue>
+    values: collections::HashMap<String, config::ConfigValue>
 }
 
 #[deriving(Decodable)]
 struct ConfigForKeyFlags {
-    key: StrBuf,
+    key: String,
     human: bool
 }
 
@@ -128,5 +128,5 @@ fn locate_project(_: NoFlags) -> CLIResult<Option<ProjectLocation>> {
     let string = try!(root.as_str().to_result(|_|
         CLIError::new(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), None::<&str>, 1)));
 
-    Ok(Some(ProjectLocation { root: string.to_strbuf() }))
+    Ok(Some(ProjectLocation { root: string.to_str() }))
 }

@@ -89,8 +89,8 @@ pub fn handle_error(err: CLIError) {
     std::os::set_exit_status(exit_code as int);
 }
 
-fn args() -> Vec<StrBuf> {
-    std::os::args().iter().map(|a| a.to_strbuf()).collect()
+fn args() -> Vec<String> {
+    std::os::args()
 }
 
 fn flags_from_args<T: RepresentsFlags>() -> CLIResult<T> {
@@ -102,7 +102,7 @@ fn json_from_stdin<T: RepresentsJSON>() -> CLIResult<T> {
     let mut reader = io::stdin();
     let input = try!(reader.read_to_str().to_result(|_| CLIError::new("Standard in did not exist or was not UTF-8", None::<&str>, 1)));
 
-    let json = try!(json::from_str(input).to_result(|_| CLIError::new("Could not parse standard in as JSON", Some(input.to_strbuf()), 1)));
+    let json = try!(json::from_str(input.as_slice()).to_result(|_| CLIError::new("Could not parse standard in as JSON", Some(input.clone()), 1)));
     let mut decoder = json::Decoder::new(json);
 
     Decodable::decode(&mut decoder).to_result(|e: json::DecoderError| CLIError::new("Could not process standard in as input", Some(e), 1))

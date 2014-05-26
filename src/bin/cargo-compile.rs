@@ -18,7 +18,7 @@ use cargo::util::ToCLI;
 
 #[deriving(Eq,Clone,Decodable,Encodable)]
 pub struct Options {
-    manifest_path: Option<StrBuf>
+    manifest_path: Option<String>
 }
 
 impl FlagConfig for Options {}
@@ -32,7 +32,7 @@ fn execute(options: Options) -> CLIResult<Option<()>> {
 
     let root = match options.manifest_path {
         Some(path) => Path::new(path),
-        None => try!(find_project(os::getcwd(), "Cargo.toml".to_owned())
+        None => try!(find_project(os::getcwd(), "Cargo.toml")
                     .map(|path| path.join("Cargo.toml"))
                     .to_result(|err|
                         CLIError::new("Could not find Cargo.toml in this directory or any parent directory", Some(err), 102)))

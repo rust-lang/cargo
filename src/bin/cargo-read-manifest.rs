@@ -12,7 +12,7 @@ use cargo::ops;
 
 #[deriving(Eq,Clone,Decodable)]
 struct Options {
-    manifest_path: StrBuf
+    manifest_path: String
 }
 
 impl FlagConfig for Options {}
@@ -23,9 +23,5 @@ fn main() {
 
 fn execute(options: Options) -> CLIResult<Option<Package>> {
     ops::read_manifest(options.manifest_path.as_slice()).map(|m| Some(m))
-        .map_err(|err| CLIError {
-            msg: err.get_desc().to_strbuf(),
-            detail: err.get_detail().map(|s| s.to_strbuf()),
-            exit_code: 1
-        })
+        .map_err(|err| CLIError::new(err.get_desc(), Some(err.get_detail()), 1))
 }
