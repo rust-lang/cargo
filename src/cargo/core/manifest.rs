@@ -15,7 +15,7 @@ use util::CargoResult;
 #[deriving(Eq,Clone)]
 pub struct Manifest {
     summary: Summary,
-    authors: Vec<StrBuf>,
+    authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: Path,
 }
@@ -28,23 +28,23 @@ impl Show for Manifest {
 
 #[deriving(Eq,Clone,Encodable)]
 pub struct SerializedManifest {
-    name: StrBuf,
-    version: StrBuf,
+    name: String,
+    version: String,
     dependencies: Vec<SerializedDependency>,
-    authors: Vec<StrBuf>,
+    authors: Vec<String>,
     targets: Vec<Target>,
-    target_dir: StrBuf
+    target_dir: String
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         SerializedManifest {
-            name: self.summary.get_name().to_strbuf(),
-            version: format_strbuf!("{}", self.summary.get_version()),
+            name: self.summary.get_name().to_str(),
+            version: self.summary.get_version().to_str(),
             dependencies: self.summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: self.authors.clone(),
             targets: self.targets.clone(),
-            target_dir: self.target_dir.as_str().unwrap().to_strbuf()
+            target_dir: self.target_dir.display().to_str()
         }.encode(s)
     }
 }
@@ -58,15 +58,15 @@ pub enum TargetKind {
 #[deriving(Clone,Eq)]
 pub struct Target {
     kind: TargetKind,
-    name: StrBuf,
+    name: String,
     path: Path
 }
 
 #[deriving(Encodable)]
 pub struct SerializedTarget {
     kind: &'static str,
-    name: StrBuf,
-    path: StrBuf
+    name: String,
+    path: String
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Target {
@@ -79,7 +79,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
         SerializedTarget {
             kind: kind,
             name: self.name.clone(),
-            path: self.path.as_str().unwrap().to_strbuf()
+            path: self.path.display().to_str()
         }.encode(s)
     }
 }
@@ -112,7 +112,7 @@ impl Manifest {
         self.get_summary().get_name_ver().get_version()
     }
 
-    pub fn get_authors<'a>(&'a self) -> &'a [StrBuf] {
+    pub fn get_authors<'a>(&'a self) -> &'a [String] {
         self.authors.as_slice()
     }
 
@@ -133,7 +133,7 @@ impl Target {
     pub fn lib_target(name: &str, path: &Path) -> Target {
         Target {
             kind: LibTarget,
-            name: name.to_strbuf(),
+            name: name.to_str(),
             path: path.clone()
         }
     }
@@ -141,7 +141,7 @@ impl Target {
     pub fn bin_target(name: &str, path: &Path) -> Target {
         Target {
             kind: BinTarget,
-            name: name.to_strbuf(),
+            name: name.to_str(),
             path: path.clone()
         }
     }
@@ -169,9 +169,9 @@ type TomlExecTarget = TomlTarget;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct Project {
-    pub name: StrBuf,
-    pub version: StrBuf,
-    pub authors: Vec<StrBuf>
+    pub name: String,
+    pub version: String,
+    pub authors: Vec<String>
 }
 
 /*
@@ -183,7 +183,7 @@ pub struct TomlManifest {
     project: Box<Project>,
     lib: Option<~[TomlLibTarget]>,
     bin: Option<~[TomlExecTarget]>,
-    dependencies: Option<HashMap<StrBuf, StrBuf>>
+    dependencies: Option<HashMap<String, String>>
 }
 
 impl TomlManifest {
@@ -226,18 +226,18 @@ impl Project {
 
 #[deriving(Decodable,Encodable,Eq,Clone)]
 struct TomlTarget {
-    name: StrBuf,
-    path: Option<StrBuf>
+    name: String,
+    path: Option<String>
 }
 
 fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlExecTarget]>) -> Vec<Target> {
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
         let l = &libs[0];
-        let path = l.path.clone().unwrap_or_else(|| format_strbuf!("src/{}.rs", l.name));
+        let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         dst.push(Target::lib_target(l.name.as_slice(), &Path::new(path)));
     }
 
-    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlExecTarget], default: |&TomlExecTarget| -> StrBuf) {
+    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlExecTarget], default: |&TomlExecTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
             dst.push(Target::bin_target(bin.name.as_slice(), &Path::new(path)));
@@ -249,13 +249,13 @@ fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlExecTarget]>) ->
     match (lib, bin) {
         (&Some(ref libs), &Some(ref bins)) => {
             lib_targets(&mut ret, libs.as_slice());
-            bin_targets(&mut ret, bins.as_slice(), |bin| format_strbuf!("src/bin/{}.rs", bin.name));
+            bin_targets(&mut ret, bins.as_slice(), |bin| format!("src/bin/{}.rs", bin.name));
         },
         (&Some(ref libs), &None) => {
             lib_targets(&mut ret, libs.as_slice());
         },
         (&None, &Some(ref bins)) => {
-            bin_targets(&mut ret, bins.as_slice(), |bin| format_strbuf!("src/{}.rs", bin.name));
+            bin_targets(&mut ret, bins.as_slice(), |bin| format!("src/{}.rs", bin.name));
         },
         (&None, &None) => ()
     }

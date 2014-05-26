@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use url::Url;
 use util::{CargoResult,ProcessBuilder,io_error,human_error,process};
 use std::str;
@@ -7,21 +9,21 @@ use serialize::{Encodable,Encoder};
 
 macro_rules! git(
     ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_inherit(&$config, format_strbuf!($str, $($rest),*)))
+        try!(git_inherit(&$config, format!($str, $($rest),*)))
     );
 
     ($config:expr, $str:expr) => (
-        try!(git_inherit(&$config, format_strbuf!($str)))
+        try!(git_inherit(&$config, format!($str)))
     );
 )
 
 macro_rules! git_output(
     ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_output(&$config, format_strbuf!($str, $($rest),*)))
+        try!(git_output(&$config, format!($str, $($rest),*)))
     );
 
     ($config:expr, $str:expr) => (
-        try!(git_output(&$config, format_strbuf!($str)))
+        try!(git_output(&$config, format!($str)))
     );
 )
 
@@ -29,21 +31,21 @@ macro_rules! git_output(
 struct GitConfig {
     path: Path,
     uri: Url,
-    reference: StrBuf
+    reference: String
 }
 
 #[deriving(Eq,Clone,Encodable)]
 struct EncodableGitConfig {
-    path: StrBuf,
-    uri: StrBuf,
-    reference: StrBuf
+    path: String,
+    uri: String,
+    reference: String
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for GitConfig {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitConfig {
-            path: format_strbuf!("{}", self.path.display()),
-            uri: format_strbuf!("{}", self.uri),
+            path: self.path.display().to_str(),
+            uri: self.uri.to_str(),
             reference: self.reference.clone()
         }.encode(s)
     }
@@ -57,11 +59,11 @@ pub struct GitCommand {
 #[deriving(Eq,Clone,Encodable)]
 pub struct GitRepo {
     config: GitConfig,
-    revision: StrBuf
+    revision: String
 }
 
 impl GitCommand {
-    pub fn new(path: Path, uri: Url, reference: StrBuf) -> GitCommand {
+    pub fn new(path: Path, uri: Url, reference: String) -> GitCommand {
         GitCommand { config: GitConfig { path: path, uri: uri, reference: reference } }
     }
 
@@ -76,7 +78,7 @@ impl GitCommand {
             checkout_config.path = dirname;
 
             try!(mkdir_recursive(&checkout_config.path, UserDir).map_err(|err|
-                human_error(format_strbuf!("Couldn't recursively create `{}`", checkout_config.path.display()), format_strbuf!("path={}", checkout_config.path.display()), io_error(err))));
+                human_error(format!("Couldn't recursively create `{}`", checkout_config.path.display()), format!("path={}", checkout_config.path.display()), io_error(err))));
 
             git!(checkout_config, "clone {} {} --bare --no-hardlinks --quiet", config.uri, config.path.display());
         }
@@ -86,6 +88,7 @@ impl GitCommand {
 }
 
 impl GitRepo {
+    #[allow(unused_variable)]
     fn copy_to(destination: &Path) -> CargoResult<()> {
         Ok(())
     }
@@ -107,7 +110,7 @@ impl GitRepo {
     }
 }
 
-fn rev_for(config: &GitConfig) -> CargoResult<StrBuf> {
+fn rev_for(config: &GitConfig) -> CargoResult<String> {
     Ok(git_output!(*config, "rev-parse {}", config.reference))
 }
 
@@ -116,18 +119,18 @@ fn git(config: &GitConfig, str: &str) -> ProcessBuilder {
     process("git").args(str.split(' ').collect::<Vec<&str>>().as_slice()).cwd(config.path.clone())
 }
 
-fn git_inherit(config: &GitConfig, str: StrBuf) -> CargoResult<()> {
+fn git_inherit(config: &GitConfig, str: String) -> CargoResult<()> {
     git(config, str.as_slice()).exec().map_err(|err|
-        human_error(format_strbuf!("Couldn't execute `git {}`: {}", str, err), None::<&str>, err))
+        human_error(format!("Couldn't execute `git {}`: {}", str, err), None::<&str>, err))
 }
 
-fn git_output(config: &GitConfig, str: StrBuf) -> CargoResult<StrBuf> {
+fn git_output(config: &GitConfig, str: String) -> CargoResult<String> {
     let output = try!(git(config, str.as_slice()).exec_with_output().map_err(|err|
-        human_error(format_strbuf!("Couldn't execute `git {}`", str), None::<&str>, err)));
+        human_error(format!("Couldn't execute `git {}`", str), None::<&str>, err)));
 
     Ok(to_str(output.output.as_slice()))
 }
 
-fn to_str(vec: &[u8]) -> StrBuf {
-    format_strbuf!("{}", str::from_utf8_lossy(vec))
+fn to_str(vec: &[u8]) -> String {
+    str::from_utf8_lossy(vec).to_str()
 }

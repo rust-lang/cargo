@@ -8,10 +8,10 @@ use collections::HashMap;
 
 #[deriving(Clone,Eq)]
 pub struct ProcessBuilder {
-    program: StrBuf,
-    args: Vec<StrBuf>,
-    path: Vec<StrBuf>,
-    env: HashMap<StrBuf, StrBuf>,
+    program: String,
+    args: Vec<String>,
+    path: Vec<String>,
+    env: HashMap<String, String>,
     cwd: Path
 }
 
@@ -32,17 +32,17 @@ static PATH_SEP : &'static str = ":";
 
 impl ProcessBuilder {
     pub fn args<T: Show>(mut self, arguments: &[T]) -> ProcessBuilder {
-        self.args = arguments.iter().map(|a| format_strbuf!("{}", a)).collect();
+        self.args = arguments.iter().map(|a| a.to_str()).collect();
         self
     }
 
-    pub fn get_args<'a>(&'a self) -> &'a [StrBuf] {
+    pub fn get_args<'a>(&'a self) -> &'a [String] {
         self.args.as_slice()
     }
 
     pub fn extra_path(mut self, path: Path) -> ProcessBuilder {
         // For now, just convert to a string, but we should do something better
-        self.path.push(format_strbuf!("{}", path.display()));
+        self.path.push(path.display().to_str());
         self
     }
 
@@ -64,7 +64,7 @@ impl ProcessBuilder {
         if exit.success() {
             Ok(())
         } else {
-            let msg = format_strbuf!("Could not execute process `{}`", self.debug_string());
+            let msg = format!("Could not execute process `{}`", self.debug_string());
             Err(process_error(msg, exit, None))
         }
     }
@@ -78,7 +78,7 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
-            let msg = format_strbuf!("Could not execute process `{}`", self.debug_string());
+            let msg = format!("Could not execute process `{}`", self.debug_string());
             Err(process_error(msg, output.status.clone(), Some(output)))
         }
     }
@@ -89,11 +89,11 @@ impl ProcessBuilder {
         command
     }
 
-    fn debug_string(&self) -> StrBuf {
-        format_strbuf!("{} {}", self.program, self.args.connect(" "))
+    fn debug_string(&self) -> String {
+        format!("{} {}", self.program, self.args.connect(" "))
     }
 
-    fn build_env(&self) -> ~[(StrBuf, StrBuf)] {
+    fn build_env(&self) -> ~[(String, String)] {
         let mut ret = Vec::new();
 
         for (key, val) in self.env.iter() {
@@ -104,14 +104,14 @@ impl ProcessBuilder {
         }
 
         match self.build_path() {
-            Some(path) => ret.push(("PATH".to_strbuf(), path)),
+            Some(path) => ret.push(("PATH".to_str(), path)),
             _ => ()
         }
 
         ret.as_slice().to_owned()
     }
 
-    fn build_path(&self) -> Option<StrBuf> {
+    fn build_path(&self) -> Option<String> {
         let path = self.path.connect(PATH_SEP);
 
         match self.env.find_equiv(&("PATH")) {
@@ -119,14 +119,14 @@ impl ProcessBuilder {
                 if self.path.is_empty() {
                     Some(existing.clone())
                 } else {
-                    Some(format_strbuf!("{}{}{}", existing, PATH_SEP, path))
+                    Some(format!("{}{}{}", existing, PATH_SEP, path))
                 }
             },
             None => {
                 if self.path.is_empty() {
                     None
                 } else {
-                    Some(path.to_strbuf())
+                    Some(path)
                 }
             }
         }
@@ -135,7 +135,7 @@ impl ProcessBuilder {
 
 pub fn process(cmd: &str) -> ProcessBuilder {
     ProcessBuilder {
-        program: cmd.to_strbuf(),
+        program: cmd.to_str(),
         args: vec!(),
         path: vec!(),
         cwd: os::getcwd(),
@@ -143,11 +143,11 @@ pub fn process(cmd: &str) -> ProcessBuilder {
     }
 }
 
-fn system_env() -> HashMap<StrBuf, StrBuf> {
+fn system_env() -> HashMap<String, String> {
     let mut ret = HashMap::new();
 
     for &(ref key, ref val) in os::env().iter() {
-        ret.insert(key.to_strbuf(), val.to_strbuf());
+        ret.insert(key.to_str(), val.to_str());
     }
 
     ret

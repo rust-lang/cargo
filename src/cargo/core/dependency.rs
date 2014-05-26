@@ -4,28 +4,28 @@ use util::CargoResult;
 
 #[deriving(Eq,Clone,Show)]
 pub struct Dependency {
-    name: StrBuf,
+    name: String,
     req: VersionReq
 }
 
 impl Dependency {
     pub fn new(name: &str, req: &VersionReq) -> Dependency {
         Dependency {
-            name: name.to_strbuf(),
+            name: name.to_str(),
             req: req.clone()
         }
     }
 
     pub fn parse(name: &str, version: &str) -> CargoResult<Dependency> {
         Ok(Dependency {
-            name: name.to_strbuf(),
+            name: name.to_str(),
             req: try!(VersionReq::parse(version))
         })
     }
 
     pub fn exact(name: &str, version: &Version) -> Dependency {
         Dependency {
-            name: name.to_strbuf(),
+            name: name.to_str(),
             req: VersionReq::exact(version)
         }
     }
@@ -41,15 +41,15 @@ impl Dependency {
 
 #[deriving(Eq,Clone,Encodable)]
 pub struct SerializedDependency {
-    name: StrBuf,
-    req: StrBuf
+    name: String,
+    req: String
 }
 
 impl SerializedDependency {
     pub fn from_dependency(dep: &Dependency) -> SerializedDependency {
         SerializedDependency {
-            name: dep.get_name().to_strbuf(),
-            req: format_strbuf!("{}", dep.get_version_req())
+            name: dep.get_name().to_str(),
+            req: dep.get_version_req().to_str()
         }
     }
 }

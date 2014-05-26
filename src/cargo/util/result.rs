@@ -33,7 +33,7 @@ pub fn io_error(err: IoError) -> CargoError {
     }
 }
 
-pub fn process_error(detail: StrBuf, exit: ProcessExit, output: Option<ProcessOutput>) -> CargoError {
+pub fn process_error(detail: String, exit: ProcessExit, output: Option<ProcessOutput>) -> CargoError {
     CargoError {
         kind: ProcessError(exit, output),
         desc: BoxedDescription(detail),
@@ -45,8 +45,8 @@ pub fn process_error(detail: StrBuf, exit: ProcessExit, output: Option<ProcessOu
 pub fn human_error<T: ToStr, U: ToStr>(desc: T, detail: U, cause: CargoError) -> CargoError {
     CargoError {
         kind: HumanReadableError,
-        desc: BoxedDescription(desc.to_str().to_strbuf()),
-        detail: Some(detail.to_str().to_strbuf()),
+        desc: BoxedDescription(desc.to_str()),
+        detail: Some(detail.to_str()),
         cause: Some(box cause)
     }
 }
@@ -54,7 +54,7 @@ pub fn human_error<T: ToStr, U: ToStr>(desc: T, detail: U, cause: CargoError) ->
 pub fn simple_human<T: Show>(desc: T) -> CargoError {
     CargoError {
         kind: HumanReadableError,
-        desc: BoxedDescription(format_strbuf!("{}", desc)),
+        desc: BoxedDescription(desc.to_str()),
         detail: None,
         cause: None
     }
@@ -73,14 +73,14 @@ pub fn toml_error(desc: &'static str, error: toml::Error) -> CargoError {
 pub struct CargoError {
     pub kind: CargoErrorKind,
     desc: CargoErrorDescription,
-    detail: Option<StrBuf>,
+    detail: Option<String>,
     cause: Option<Box<CargoError>>
 }
 
 #[deriving(Show,Clone)]
 enum CargoErrorDescription {
     StaticDescription(&'static str),
-    BoxedDescription(StrBuf)
+    BoxedDescription(String)
 }
 
 impl CargoError {
@@ -96,20 +96,20 @@ impl CargoError {
     }
 
     pub fn with_detail<T: Show>(mut self, detail: T) -> CargoError {
-        self.detail = Some(format_strbuf!("{}", detail));
+        self.detail = Some(detail.to_str());
         self
     }
 
     pub fn to_cli(self, exit_code: uint) -> CLIError {
         match self {
             CargoError { kind: HumanReadableError, desc: BoxedDescription(desc), detail: detail, .. } => {
-                CLIError::new(desc, detail.map(|d| d.to_strbuf()), exit_code)
+                CLIError::new(desc, detail, exit_code)
             },
             CargoError { kind: InternalError, desc: StaticDescription(desc), detail: None, .. } => {
                 CLIError::new("An unexpected error occurred", Some(desc), exit_code)
             },
             CargoError { kind: InternalError, desc: StaticDescription(desc), detail: Some(detail), .. } => {
-                CLIError::new("An unexpected error occurred", Some(format_strbuf!("{}\n{}", desc, detail)), exit_code)
+                CLIError::new("An unexpected error occurred", Some(format!("{}\n{}", desc, detail)), exit_code)
             },
             _ => {
                 CLIError::new("An unexpected error occurred", None::<&str>, exit_code)
@@ -164,7 +164,7 @@ pub struct CargoCliError {
     kind: CargoCliErrorKind,
     exit_status: uint,
     desc: &'static str,
-    detail: Option<StrBuf>,
+    detail: Option<String>,
     cause: Option<CargoError>
 }
 

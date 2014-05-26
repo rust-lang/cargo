@@ -7,16 +7,15 @@ extern crate url;
 
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError,ToResult};
-use cargo::core::Package;
-use cargo::util::{Require,ToCLI,simple_human};
+use cargo::util::ToCLI;
 use cargo::sources::git::{GitCommand,GitRepo};
 use url::Url;
 
 #[deriving(Eq,Clone,Decodable)]
 struct Options {
-    directory: StrBuf,
-    url: StrBuf,
-    reference: StrBuf
+    directory: String,
+    url: String,
+    reference: String
 }
 
 impl FlagConfig for Options {}

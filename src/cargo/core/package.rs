@@ -23,12 +23,12 @@ pub struct Package {
 
 #[deriving(Encodable)]
 struct SerializedPackage {
-    name: StrBuf,
-    version: StrBuf,
+    name: String,
+    version: String,
     dependencies: Vec<SerializedDependency>,
-    authors: Vec<StrBuf>,
+    authors: Vec<String>,
     targets: Vec<Target>,
-    root: StrBuf
+    root: String
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Package {
@@ -38,12 +38,12 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
         let name_ver = summary.get_name_ver();
 
         SerializedPackage {
-            name: name_ver.get_name().to_strbuf(),
-            version: format_strbuf!("{}", name_ver.get_version()),
+            name: name_ver.get_name().to_str(),
+            version: name_ver.get_version().to_str(),
             dependencies: summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: Vec::from_slice(manifest.get_authors()),
             targets: Vec::from_slice(manifest.get_targets()),
-            root: self.root.as_str().unwrap().to_strbuf()
+            root: self.root.display().to_str()
         }.encode(s)
     }
 }
