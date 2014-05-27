@@ -6,7 +6,7 @@ use cargo::util::process;
 fn setup() {
 }
 
-fn basic_bin_manifest(name: &str) -> ~str {
+fn basic_bin_manifest(name: &str) -> String {
     format!(r#"
         [project]
 
@@ -22,8 +22,8 @@ fn basic_bin_manifest(name: &str) -> ~str {
 
 test!(cargo_compile {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo"))
-        .file("src/foo.rs", main_file(r#""i am foo""#, []));
+        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice());
 
     assert_that(p.cargo_process("cargo-compile"), execs());
     assert_that(&p.root().join("target/foo"), existing_file());
@@ -56,7 +56,7 @@ test!(cargo_compile_without_manifest {
 
 test!(cargo_compile_with_invalid_code {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", "invalid rust code!");
 
     let target = p.root().join("target");
@@ -64,12 +64,12 @@ test!(cargo_compile_with_invalid_code {
     assert_that(p.cargo_process("cargo-compile"),
         execs()
         .with_status(101)
-        .with_stderr(format!("src/foo.rs:1:1: 1:8 error: expected item but found `invalid`\nsrc/foo.rs:1 invalid rust code!\n             ^~~~~~~\nfailed to execute: `rustc src/foo.rs --crate-type bin --out-dir {} -L {}`", target.display(), target.display())));
+        .with_stderr(format!("src/foo.rs:1:1: 1:8 error: expected item but found `invalid`\nsrc/foo.rs:1 invalid rust code!\n             ^~~~~~~\nfailed to execute: `rustc src/foo.rs --crate-type bin --out-dir {} -L {}`", target.display(), target.display()).as_slice()));
 })
 
 test!(cargo_compile_with_warnings_in_the_root_package {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", "fn main() {} fn dead() {}");
 
     assert_that(p.cargo_process("cargo-compile"),
@@ -84,7 +84,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}"]
-        "#, bar.display()))
+        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -100,7 +100,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
             name = "foo"
         "#)
-        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]))
+        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -113,7 +113,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             name = "bar"
         "#)
         .file("bar/src/bar.rs", r#"
-            pub fn gimme() -> ~str {
+            pub fn gimme() -> String {
                 "test passed".to_owned()
             }
 
@@ -140,7 +140,7 @@ test!(cargo_compile_with_nested_deps {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}", "{}"]
-        "#, bar.display(), baz.display()))
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -156,7 +156,7 @@ test!(cargo_compile_with_nested_deps {
 
             name = "foo"
         "#)
-        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]))
+        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -175,7 +175,7 @@ test!(cargo_compile_with_nested_deps {
         .file("bar/src/bar.rs", r#"
             extern crate baz;
 
-            pub fn gimme() -> ~str {
+            pub fn gimme() -> String {
                 baz::gimme()
             }
         "#)
@@ -191,7 +191,7 @@ test!(cargo_compile_with_nested_deps {
             name = "baz"
         "#)
         .file("baz/src/baz.rs", r#"
-            pub fn gimme() -> ~str {
+            pub fn gimme() -> String {
                 "test passed".to_owned()
             }
         "#);
@@ -207,11 +207,11 @@ test!(cargo_compile_with_nested_deps {
       execs().with_stdout("test passed\n"));
 })
 
-fn main_file(println: &str, deps: &[&str]) -> ~str {
-    let mut buf = StrBuf::new();
+fn main_file(println: &str, deps: &[&str]) -> String {
+    let mut buf = String::new();
 
     for dep in deps.iter() {
-        buf.push_str(format!("extern crate {};\n", dep));
+        buf.push_str(format!("extern crate {};\n", dep).as_slice());
     }
 
     buf.push_str("fn main() { println!(");
