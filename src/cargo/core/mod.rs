@@ -36,5 +36,6 @@ pub mod dependency;
 pub mod manifest;
 pub mod resolver;
 pub mod summary;
+pub mod shell;
 mod registry;
 mod version_req;
