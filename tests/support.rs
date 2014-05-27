@@ -22,7 +22,7 @@ static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
 #[deriving(Eq,Clone)]
 struct FileBuilder {
     path: Path,
-    body: ~str
+    body: String
 }
 
 impl FileBuilder {
@@ -30,7 +30,7 @@ impl FileBuilder {
         FileBuilder { path: path, body: body.to_owned() }
     }
 
-    fn mk(&self) -> Result<(), ~str> {
+    fn mk(&self) -> Result<(), String> {
         try!(mkdir_recursive(&self.dirname()));
 
         let mut file = try!(
@@ -48,7 +48,7 @@ impl FileBuilder {
 
 #[deriving(Eq,Clone)]
 struct ProjectBuilder {
-    name: ~str,
+    name: String,
     root: Path,
     files: Vec<FileBuilder>
 }
@@ -87,7 +87,7 @@ impl ProjectBuilder {
         }
     }
 
-    pub fn build_with_result(&self) -> Result<(), ~str> {
+    pub fn build_with_result(&self) -> Result<(), String> {
         // First, clean the directory if it already exists
         try!(self.rm_root());
 
@@ -101,7 +101,7 @@ impl ProjectBuilder {
         Ok(())
     }
 
-    fn rm_root(&self) -> Result<(), ~str> {
+    fn rm_root(&self) -> Result<(), String> {
         if self.root.exists() {
             rmdir_recursive(&self.root)
         }
@@ -118,22 +118,22 @@ pub fn project(name: &str) -> ProjectBuilder {
 
 // === Helpers ===
 
-pub fn mkdir_recursive(path: &Path) -> Result<(), ~str> {
+pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
     fs::mkdir_recursive(path, io::UserDir)
         .with_err_msg(format!("could not create directory; path={}", path.display()))
 }
 
-pub fn rmdir_recursive(path: &Path) -> Result<(), ~str> {
+pub fn rmdir_recursive(path: &Path) -> Result<(), String> {
     fs::rmdir_recursive(path)
         .with_err_msg(format!("could not rm directory; path={}", path.display()))
 }
 
 trait ErrMsg<T> {
-    fn with_err_msg(self, val: ~str) -> Result<T, ~str>;
+    fn with_err_msg(self, val: String) -> Result<T, String>;
 }
 
 impl<T, E: Show> ErrMsg<T> for Result<T, E> {
-    fn with_err_msg(self, val: ~str) -> Result<T, ~str> {
+    fn with_err_msg(self, val: String) -> Result<T, String> {
         match self {
             Ok(val) => Ok(val),
             Err(err) => Err(format!("{}; original={}", val, err))
@@ -156,9 +156,9 @@ pub fn cargo_dir() -> Path {
 
 #[deriving(Clone,Eq)]
 struct Execs {
-    expect_stdout: Option<~str>,
-    expect_stdin: Option<~str>,
-    expect_stderr: Option<~str>,
+    expect_stdout: Option<String>,
+    expect_stdin: Option<String>,
+    expect_stderr: Option<String>,
     expect_exit_code: Option<int>
 }
 
@@ -204,7 +204,7 @@ impl Execs {
       self.match_std(&self.expect_stderr, actual, "stderr")
   }
 
-  fn match_std(&self, expected: &Option<~str>, actual: &Vec<u8>, description: &str) -> ham::MatchResult {
+  fn match_std(&self, expected: &Option<String>, actual: &Vec<u8>, description: &str) -> ham::MatchResult {
     match expected.as_ref().map(|s| s.as_slice()) {
       None => ham::success(),
       Some(out) => {
@@ -220,7 +220,7 @@ impl Execs {
 }
 
 impl ham::SelfDescribing for Execs {
-  fn describe(&self) -> ~str {
+  fn describe(&self) -> String {
     "execs".to_owned()
   }
 }
