@@ -5,10 +5,11 @@
 #![feature(macro_rules,phase)]
 
 extern crate collections;
+extern crate term;
 extern crate url;
-extern crate hammer;
 extern crate serialize;
 extern crate semver;
+extern crate hammer;
 extern crate toml;
 
 #[phase(syntax, link)]
