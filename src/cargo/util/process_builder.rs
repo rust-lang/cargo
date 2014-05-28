@@ -51,6 +51,19 @@ impl ProcessBuilder {
         self
     }
 
+    pub fn env(mut self, key: &str, val: Option<&str>) -> ProcessBuilder {
+        match val {
+            Some(v) => {
+                self.env.insert(key.to_strbuf(), v.to_strbuf());
+            },
+            None => {
+                self.env.remove(&key.to_strbuf());
+            }
+        }
+
+        self
+    }
+
     // TODO: should InheritFd be hardcoded?
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();

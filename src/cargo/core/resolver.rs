@@ -26,7 +26,7 @@ pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<Name
 
         let opts = registry.query(curr.get_name());
 
-        //assert!(!resolve.contains_key_equiv(&curr.get_name()), "already traversed {}", curr.get_name());
+        assert!(opts.len() > 0, "no matches for {}", curr.get_name());
         // Temporary, but we must have exactly one option to satisfy the dep
         assert!(opts.len() == 1, "invalid num of results {}", opts.len());
 

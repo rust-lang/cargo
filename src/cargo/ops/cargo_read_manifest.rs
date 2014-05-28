@@ -23,5 +23,6 @@ fn load_toml(root: toml::Value) -> CargoResult<TomlManifest> {
 }
 
 fn to_cargo_err(err: toml::Error) -> CargoError {
+    debug!("toml; err={}", err);
     toml_error("Problem loading manifest", err)
 }

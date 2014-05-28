@@ -165,7 +165,7 @@ impl Target {
  */
 
 type TomlLibTarget = TomlTarget;
-type TomlExecTarget = TomlTarget;
+type TomlBinTarget = TomlTarget;
 
 #[deriving(Decodable,Encodable,Eq,Clone,Show)]
 pub struct Project {
@@ -182,8 +182,8 @@ pub struct Project {
 pub struct TomlManifest {
     project: Box<Project>,
     lib: Option<~[TomlLibTarget]>,
-    bin: Option<~[TomlExecTarget]>,
-    dependencies: Option<HashMap<String, String>>
+    bin: Option<~[TomlBinTarget]>,
+    dependencies: Option<HashMap<String, String>>,
 }
 
 impl TomlManifest {
@@ -228,20 +228,22 @@ impl Project {
     }
 }
 
-#[deriving(Decodable,Encodable,Eq,Clone)]
+#[deriving(Decodable,Encodable,Eq,Clone,Show)]
 struct TomlTarget {
     name: String,
     path: Option<String>
 }
 
-fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlExecTarget]>) -> Vec<Target> {
+fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlBinTarget]>) -> Vec<Target> {
+    log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
+
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         dst.push(Target::lib_target(l.name.as_slice(), &Path::new(path)));
     }
 
-    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlExecTarget], default: |&TomlExecTarget| -> String) {
+    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget], default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
             dst.push(Target::bin_target(bin.name.as_slice(), &Path::new(path)));

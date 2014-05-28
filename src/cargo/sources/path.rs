@@ -11,6 +11,7 @@ pub struct PathSource {
 
 impl PathSource {
     pub fn new(paths: Vec<Path>) -> PathSource {
+        log!(4, "new; paths={}", display(paths.as_slice()));
         PathSource { paths: paths }
     }
 }
@@ -28,7 +29,10 @@ impl Source for PathSource {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
                 Ok(ref pkg) => Some(pkg.get_summary().clone()),
-                Err(_) => None
+                Err(e) => {
+                    log!(4, "failed to read manifest; path={}; err={}", path.display(), e);
+                    None
+                }
             }
         }).collect())
     }
@@ -50,4 +54,8 @@ impl Source for PathSource {
 fn read_manifest(path: &Path) -> CargoResult<Package> {
     let joined = path.join("Cargo.toml");
     ops::read_manifest(joined.as_str().unwrap())
+}
+
+fn display(paths: &[Path]) -> Vec<String> {
+    paths.iter().map(|p| p.display().to_str()).collect()
 }

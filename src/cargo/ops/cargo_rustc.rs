@@ -71,6 +71,7 @@ fn prepare_rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::
     util::process("rustc")
         .cwd(root.clone())
         .args(args.as_slice())
+        .env("RUST_LOG", None) // rustc is way too noisy
 }
 
 fn build_base_args(into: &mut Args, target: &core::Target, dest: &Path) {
