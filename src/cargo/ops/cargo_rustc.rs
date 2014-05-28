@@ -2,35 +2,29 @@ use std::os::args;
 use std::io;
 use std::path::Path;
 use std::str;
-use core;
+use core::{Package,PackageSet,Target};
 use util;
 use util::{other_error,human_error,CargoResult,CargoError,ProcessBuilder};
 use util::result::ProcessError;
 
 type Args = Vec<String>;
 
-pub fn compile_packages(pkgs: &core::PackageSet) -> CargoResult<()> {
-    debug!("compiling; pkgs={}", pkgs);
+pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
+    debug!("compiling; pkg={}; deps={}", pkg, deps);
 
-    let mut sorted = match pkgs.sort() {
-        Some(pkgs) => pkgs,
-        None => return Err(other_error("circular dependency detected"))
-    };
-
-    let root = sorted.pop();
-
-    for pkg in sorted.iter() {
+    // Traverse the dependencies in topological order
+    for dep in try!(topsort(deps)).iter() {
         println!("Compiling {}", pkg);
-        try!(compile_pkg(pkg, pkgs, |rustc| rustc.exec_with_output()));
+        try!(compile_pkg(dep, deps, false));
     }
 
-    println!("Compiling {}", root);
-    try!(compile_pkg(&root, pkgs, |rustc| rustc.exec()));
+    println!("Compiling {}", pkg);
+    try!(compile_pkg(pkg, deps, true));
 
     Ok(())
 }
 
-fn compile_pkg<T>(pkg: &core::Package, pkgs: &core::PackageSet, exec: |&ProcessBuilder| -> CargoResult<T>) -> CargoResult<()> {
+fn compile_pkg(pkg: &Package, pkgs: &PackageSet, verbose: bool) -> CargoResult<()> {
     debug!("compiling; pkg={}; targets={}; deps={}", pkg, pkg.get_targets(), pkg.get_dependencies());
     // Build up the destination
     // let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
@@ -43,7 +37,7 @@ fn compile_pkg<T>(pkg: &core::Package, pkgs: &core::PackageSet, exec: |&ProcessB
 
     // compile
     for target in pkg.get_targets().iter() {
-        try!(rustc(pkg.get_root(), target, &target_dir, pkgs.get_packages(), |rustc| exec(rustc)))
+        try!(rustc(pkg.get_root(), target, &target_dir, pkgs.get_packages(), verbose))
     }
 
     Ok(())
@@ -53,16 +47,19 @@ fn mk_target(target: &Path) -> io::IoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
-fn rustc<T>(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package], exec: |&ProcessBuilder| -> CargoResult<T>) -> CargoResult<()> {
+fn rustc(root: &Path, target: &Target, dest: &Path, deps: &[Package], verbose: bool) -> CargoResult<()> {
     let rustc = prepare_rustc(root, target, dest, deps);
 
-    try!(exec(&rustc)
-        .map_err(|err| rustc_to_cargo_err(rustc.get_args().as_slice(), root, err)));
+    try!((if verbose {
+        rustc.exec()
+    } else {
+        rustc.exec_with_output().and(Ok(()))
+    }).map_err(|e| rustc_to_cargo_err(rustc.get_args().as_slice(), root, e)));
 
     Ok(())
 }
 
-fn prepare_rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::Package]) -> ProcessBuilder {
+fn prepare_rustc(root: &Path, target: &Target, dest: &Path, deps: &[Package]) -> ProcessBuilder {
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, dest);
@@ -74,7 +71,7 @@ fn prepare_rustc(root: &Path, target: &core::Target, dest: &Path, deps: &[core::
         .env("RUST_LOG", None) // rustc is way too noisy
 }
 
-fn build_base_args(into: &mut Args, target: &core::Target, dest: &Path) {
+fn build_base_args(into: &mut Args, target: &Target, dest: &Path) {
     // TODO: Handle errors in converting paths into args
     into.push(target.get_path().display().to_str());
     into.push("--crate-type".to_str());
@@ -83,7 +80,7 @@ fn build_base_args(into: &mut Args, target: &core::Target, dest: &Path) {
     into.push(dest.display().to_str());
 }
 
-fn build_deps_args(dst: &mut Args, deps: &[core::Package]) {
+fn build_deps_args(dst: &mut Args, deps: &[Package]) {
     for dep in deps.iter() {
         let dir = dep.get_absolute_target_dir();
 
@@ -110,4 +107,11 @@ fn rustc_to_cargo_err(args: &[String], cwd: &Path, err: CargoError) -> CargoErro
     };
 
     human_error(msg, format!("root={}", cwd.display()), err)
+}
+
+fn topsort(deps: &PackageSet) -> CargoResult<PackageSet> {
+    match deps.sort() {
+        Some(deps) => Ok(deps),
+        None => return Err(other_error("circular dependency detected"))
+    }
 }
