@@ -1,4 +1,5 @@
 // use std::io::fs::{mkdir_recursive,rmdir_recursive};
+use std;
 use std::io;
 use std::io::fs;
 use std::io::process::{ProcessOutput,ProcessExit};
@@ -8,6 +9,7 @@ use std::str;
 use std::vec::Vec;
 use std::fmt::Show;
 use ham = hamcrest;
+use cargo::core::shell;
 use cargo::util::{process,ProcessBuilder,CargoError};
 use cargo::util::result::ProcessError;
 
@@ -246,6 +248,30 @@ pub fn execs() -> Box<Execs> {
     }
 }
 
+#[deriving(Clone,Eq)]
+struct ShellWrites {
+    expected: String
+}
+
+impl ham::SelfDescribing for ShellWrites {
+    fn describe(&self) -> String {
+        format!("`{}` written to the shell", self.expected)
+    }
+}
+
+impl<'a> ham::Matcher<&'a mut shell::Shell<std::io::MemWriter>> for ShellWrites {
+    fn matches(&self, actual: &mut shell::Shell<std::io::MemWriter>) -> ham::MatchResult {
+        use term::Terminal;
+
+        let actual = std::str::from_utf8_lossy(actual.get_ref().get_ref()).to_str();
+        ham::expect(actual == self.expected, actual)
+    }
+}
+
+pub fn shell_writes<T: Show>(string: T) -> Box<ShellWrites> {
+    box ShellWrites { expected: string.to_str() }
+}
+
 pub trait ResultTest<T,E> {
     fn assert(self) -> T;
 }
@@ -256,5 +282,25 @@ impl<T,E: Show> ResultTest<T,E> for Result<T,E> {
             Ok(val) => val,
             Err(err) => fail!("Result was error: {}", err)
         }
+    }
+}
+
+impl<T> ResultTest<T,()> for Option<T> {
+    fn assert(self) -> T {
+        match self {
+            Some(val) => val,
+            None => fail!("Option was None")
+        }
+    }
+}
+
+pub trait Tap {
+    fn tap(mut self, callback: |&mut Self|) -> Self;
+}
+
+impl<T> Tap for T {
+    fn tap(mut self, callback: |&mut T|) -> T {
+        callback(&mut self);
+        self
     }
 }
