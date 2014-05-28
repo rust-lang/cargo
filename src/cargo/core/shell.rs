@@ -3,7 +3,6 @@ use term::{Terminal,color};
 use term::color::Color;
 use term::attr::Attr;
 use std::io::IoResult;
-use std::io::stdio::StdWriter;
 
 pub struct ShellConfig {
     pub color: bool,
@@ -23,7 +22,7 @@ pub struct Shell<T> {
 
 impl<T: Writer + Send> Shell<T> {
     pub fn create(out: T, config: ShellConfig) -> Option<Shell<T>> {
-        if config.tty {
+        if config.tty && config.color {
             let term: Option<term::TerminfoTerminal<T>> = Terminal::new(out);
             term.map(|t| Shell { terminal: Color(box t as Box<Terminal<T>>), config: config })
         } else {
