@@ -14,7 +14,7 @@ SRC = $(shell find src -name '*.rs')
 DEPS = -L libs/hammer.rs/target -L libs/rust-toml/lib
 TOML = libs/rust-toml/lib/$(shell rustc --crate-file-name libs/rust-toml/src/toml/lib.rs)
 HAMMER = libs/hammer.rs/target/$(shell rustc --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
-HAMCREST = libs/hamcrest-rust/target/timestamp
+HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
 LIBCARGO = target/libcargo.timestamp
 BIN_TARGETS = $(patsubst %,target/%,$(BINS))
 
@@ -61,7 +61,7 @@ test-unit: target/tests/test-unit
 	target/tests/test-unit $(only)
 
 test-integration: target/tests/test-integration
-	RUST_TEST_TASKS=1 CARGO_BIN_PATH=$(PWD)/target/ $<
+	RUST_TEST_TASKS=1 CARGO_BIN_PATH=$(PWD)/target/ $< $(only)
 
 test: test-unit test-integration
 
