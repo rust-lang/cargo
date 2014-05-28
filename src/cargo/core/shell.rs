@@ -6,33 +6,32 @@ use std::io::IoResult;
 use std::io::stdio::StdWriter;
 
 pub struct ShellConfig {
-    color: bool,
-    verbose: bool
+    pub color: bool,
+    pub verbose: bool,
+    pub tty: bool
 }
 
-enum AdequateTerminal {
-    NoColor(BasicTerminal<StdWriter>),
-    Color(Box<Terminal<StdWriter>>)
+enum AdequateTerminal<T> {
+    NoColor(BasicTerminal<T>),
+    Color(Box<Terminal<T>>)
 }
 
-pub struct Shell {
-    terminal: AdequateTerminal,
+pub struct Shell<T> {
+    terminal: AdequateTerminal<T>,
     config: ShellConfig
 }
 
-impl Shell {
-    fn create(out: StdWriter, config: ShellConfig) -> Option<Shell> {
-        let term = if out.isatty() {
-            let term: Option<term::TerminfoTerminal<StdWriter>> = Terminal::new(out);
-            term.map(|t| Color(box t))
+impl<T: Writer + Send> Shell<T> {
+    pub fn create(out: T, config: ShellConfig) -> Option<Shell<T>> {
+        if config.tty {
+            let term: Option<term::TerminfoTerminal<T>> = Terminal::new(out);
+            term.map(|t| Shell { terminal: Color(box t as Box<Terminal<T>>), config: config })
         } else {
-            Some(NoColor(BasicTerminal { writer: out }))
-        };
-
-        term.map(|term| Shell { terminal: term, config: config })
+            Some(Shell { terminal: NoColor(BasicTerminal { writer: out }), config: config })
+        }
     }
 
-    pub fn verbose(&mut self, callback: |&mut Shell| -> IoResult<()>) -> IoResult<()> {
+    pub fn verbose(&mut self, callback: |&mut Shell<T>| -> IoResult<()>) -> IoResult<()> {
         if self.config.verbose {
             return callback(self)
         }
@@ -50,9 +49,9 @@ impl Shell {
     }
 }
 
-impl Terminal<StdWriter> for Shell {
-    fn new(out: StdWriter) -> Option<Shell> {
-        Shell::create(out, ShellConfig { color: true, verbose: false })
+impl<T: Writer + Send> Terminal<T> for Shell<T> {
+    fn new(out: T) -> Option<Shell<T>> {
+        Shell::create(out, ShellConfig { color: true, verbose: false, tty: false })
     }
 
     fn fg(&mut self, color: color::Color) -> IoResult<bool> {
@@ -90,18 +89,18 @@ impl Terminal<StdWriter> for Shell {
         }
     }
 
-    fn unwrap(self) -> StdWriter {
-        fail!("Can't unwrap a Shell")
+    fn unwrap(self) -> T {
+        fail!("Can't unwrap a Shell");
     }
 
-    fn get_ref<'a>(&'a self) -> &'a StdWriter {
+    fn get_ref<'a>(&'a self) -> &'a T {
         match self.terminal {
             Color(ref c) => c.get_ref(),
             NoColor(ref n) => n.get_ref()
         }
     }
 
-    fn get_mut<'a>(&'a mut self) -> &'a mut StdWriter {
+    fn get_mut<'a>(&'a mut self) -> &'a mut T {
         match self.terminal {
             Color(ref mut c) => c.get_mut(),
             NoColor(ref mut n) => n.get_mut()
@@ -109,7 +108,7 @@ impl Terminal<StdWriter> for Shell {
     }
 }
 
-impl Writer for Shell {
+impl<T: Writer + Send> Writer for Shell<T> {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
         match self.terminal {
             Color(ref mut c) => c.write(buf),
@@ -129,7 +128,7 @@ pub struct BasicTerminal<T> {
     writer: T
 }
 
-impl<T: Writer> Terminal<T> for BasicTerminal<T> {
+impl<T: Writer + Send> Terminal<T> for BasicTerminal<T> {
     fn new(out: T) -> Option<BasicTerminal<T>> {
         Some(BasicTerminal { writer: out })
     }
@@ -167,7 +166,7 @@ impl<T: Writer> Terminal<T> for BasicTerminal<T> {
     }
 }
 
-impl<T: Writer> Writer for BasicTerminal<T> {
+impl<T: Writer + Send> Writer for BasicTerminal<T> {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
         self.writer.write(buf)
     }
