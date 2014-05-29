@@ -213,7 +213,7 @@ impl Execs {
         match str::from_utf8(actual) {
           None => Err(format!("{} was not utf8 encoded", description)),
           Some(actual) => {
-            ham::expect(actual == out, format!("{} was `{}`\n other output:\n{}", description, actual, str::from_utf8(extra)))
+            ham::expect(actual == out, format!("{} was:\n`{}`\n\nexpected:\n`{}`\n\nother output:\n`{}`", description, actual, out, str::from_utf8(extra)))
           }
         }
       }

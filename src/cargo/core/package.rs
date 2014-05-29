@@ -2,7 +2,9 @@ use std::slice;
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::path::Path;
+use semver::Version;
 use core::{
+    NameVer,
     Dependency,
     Manifest,
     Registry,
@@ -72,6 +74,10 @@ impl Package {
         self.get_manifest().get_name()
     }
 
+    pub fn get_version<'a>(&'a self) -> &'a Version {
+        self.get_manifest().get_version()
+    }
+
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
         self.get_manifest().get_dependencies()
     }
@@ -91,6 +97,10 @@ impl Package {
     pub fn get_absolute_target_dir(&self) -> Path {
         self.get_root().join(self.get_target_dir())
     }
+
+    pub fn is_for_name_ver(&self, name_ver: &NameVer) -> bool {
+        self.get_name() == name_ver.get_name() && self.get_version() == name_ver.get_version()
+    }
 }
 
 impl Show for Package {
@@ -106,7 +116,7 @@ pub struct PackageSet {
 
 impl PackageSet {
     pub fn new(packages: &[Package]) -> PackageSet {
-        assert!(packages.len() > 0, "PackageSet must be created with at least one package")
+        //assert!(packages.len() > 0, "PackageSet must be created with at least one package")
         PackageSet { packages: Vec::from_slice(packages) }
     }
 
