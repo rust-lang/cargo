@@ -35,7 +35,7 @@ fn execute(options: Options) -> CLIResult<Option<GitRepo>> {
     let local = try!(repo.checkout().map_err(|e|
         CLIError::new(format!("Couldn't check out repository: {}", e), None::<&str>, 1)));
 
-    try!(local.copy_to(Path::new(checkout_path)).map_err(|e|
+    try!(local.copy_to(&Path::new(checkout_path)).map_err(|e|
         CLIError::new(format!("Couldn't copy repository: {}", e), None::<&str>, 1)));
 
     Ok(Some(local))

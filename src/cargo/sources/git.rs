@@ -2,11 +2,68 @@
 
 use url::Url;
 use util::{CargoResult,ProcessBuilder,io_error,human_error,process};
-use std::fmt::Show;
+use std::fmt;
+use std::fmt::{Show,Formatter};
 use std::str;
 use std::io::{UserDir,AllPermissions};
 use std::io::fs::{mkdir_recursive,rmdir_recursive,chmod};
 use serialize::{Encodable,Encoder};
+use core::source::Source;
+use core::{NameVer,Package,Summary};
+use ops;
+
+pub struct GitSource {
+    config: GitConfig,
+    dest: Path
+}
+
+impl GitSource {
+    pub fn new(config: GitConfig, dest: Path) -> GitSource {
+        GitSource { config: config, dest: dest }
+    }
+}
+
+impl Show for GitSource {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        try!(write!(f, "git repo at {}", self.config.url));
+
+        if self.config.reference.as_slice() != "master" {
+            try!(write!(f, " ({})", self.config.reference));
+        }
+
+        Ok(())
+    }
+}
+
+impl Source for GitSource {
+    fn update(&self) -> CargoResult<()> {
+        let remote = GitRemoteRepo::from_config(self.config.clone());
+        let repo = try!(remote.checkout());
+
+        try!(repo.copy_to(&self.dest));
+
+        Ok(())
+    }
+
+    fn list(&self) -> CargoResult<Vec<Summary>> {
+        let pkg = try!(read_manifest(&self.dest));
+        Ok(vec!(pkg.get_summary().clone()))
+    }
+
+    fn download(&self, _: &[NameVer]) -> CargoResult<()> {
+        Ok(())
+    }
+
+    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
+        let pkg = try!(read_manifest(&self.dest));
+
+        if packages.iter().any(|nv| pkg.is_for_name_ver(nv)) {
+            Ok(vec!(pkg))
+        } else {
+            Ok(vec!())
+        }
+    }
+}
 
 macro_rules! git(
     ($config:expr, $verbose:expr, $str:expr, $($rest:expr),*) => (
@@ -39,9 +96,9 @@ macro_rules! errln(
  */
 
 #[deriving(Eq,Clone)]
-struct GitConfig {
+pub struct GitConfig {
     path: Path,
-    uri: Url,
+    url: Url,
     reference: String,
     verbose: bool
 }
@@ -49,7 +106,7 @@ struct GitConfig {
 #[deriving(Eq,Clone,Encodable)]
 struct EncodableGitConfig {
     path: String,
-    uri: String,
+    url: String,
     reference: String
 }
 
@@ -93,15 +150,19 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitConfig {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitConfig {
             path: self.path.display().to_str(),
-            uri: self.uri.to_str(),
+            url: self.url.to_str(),
             reference: self.reference.clone()
         }.encode(s)
     }
 }
 
 impl GitRemoteRepo {
-    pub fn new(path: Path, uri: Url, reference: String, verbose: bool) -> GitRemoteRepo {
-        GitRemoteRepo { config: GitConfig { path: path, uri: uri, reference: reference, verbose: verbose } }
+    pub fn new(path: Path, url: Url, reference: String, verbose: bool) -> GitRemoteRepo {
+        GitRemoteRepo { config: GitConfig { path: path, url: url, reference: reference, verbose: verbose } }
+    }
+
+    pub fn from_config(config: GitConfig) -> GitRemoteRepo {
+        GitRemoteRepo { config: config }
     }
 
     pub fn get_cwd<'a>(&'a self) -> &'a Path {
@@ -120,7 +181,7 @@ impl GitRemoteRepo {
     }
 
     fn fetch(&self) -> CargoResult<()> {
-        Ok(git!(self.config.path, self.config.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.config.uri))
+        Ok(git!(self.config.path, self.config.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.config.url))
     }
 
     fn clone(&self) -> CargoResult<()> {
@@ -129,7 +190,7 @@ impl GitRemoteRepo {
         try!(mkdir_recursive(&self.config.path, UserDir).map_err(|err|
             human_error(format!("Couldn't recursively create `{}`", dirname.display()), format!("path={}", dirname.display()), io_error(err))));
 
-        Ok(git!(dirname, self.config.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.config.uri, self.config.path.display()))
+        Ok(git!(dirname, self.config.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.config.url, self.config.path.display()))
     }
 }
 
@@ -138,7 +199,7 @@ impl GitRepo {
         &self.config.path
     }
 
-    pub fn copy_to<'a>(&'a self, dest: Path) -> CargoResult<GitCheckout<'a>> {
+    pub fn copy_to<'a>(&'a self, dest: &Path) -> CargoResult<GitCheckout<'a>> {
         let checkout = try!(GitCheckout::clone(dest, self));
 
         try!(checkout.fetch());
@@ -150,8 +211,8 @@ impl GitRepo {
 }
 
 impl<'a> GitCheckout<'a> {
-    fn clone<'a>(into: Path, repo: &'a GitRepo) -> CargoResult<GitCheckout<'a>> {
-        let checkout = GitCheckout { location: into, repo: repo };
+    fn clone<'a>(into: &Path, repo: &'a GitRepo) -> CargoResult<GitCheckout<'a>> {
+        let checkout = GitCheckout { location: into.clone(), repo: repo };
 
         // If the git checkout already exists, we don't need to clone it again
         if !checkout.location.join(".git").exists() {
@@ -230,4 +291,9 @@ fn git_output(path: &Path, verbose: bool, str: String) -> CargoResult<String> {
 
 fn to_str(vec: &[u8]) -> String {
     str::from_utf8_lossy(vec).to_str()
+}
+
+fn read_manifest(path: &Path) -> CargoResult<Package> {
+    let joined = path.join("Cargo.toml");
+    ops::read_manifest(joined.as_str().unwrap())
 }
