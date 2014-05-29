@@ -183,8 +183,8 @@ impl Execs {
 
   fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
     self.match_status(actual.status)
-      .and(self.match_stdout(&actual.output))
-      .and(self.match_stderr(&actual.error))
+      .and(self.match_stdout(actual))
+      .and(self.match_stderr(actual))
   }
 
   fn match_status(&self, actual: ProcessExit) -> ham::MatchResult {
@@ -198,22 +198,22 @@ impl Execs {
     }
   }
 
-  fn match_stdout(&self, actual: &Vec<u8>) -> ham::MatchResult {
-      self.match_std(&self.expect_stdout, actual, "stdout")
+  fn match_stdout(&self, actual: &ProcessOutput) -> ham::MatchResult {
+      self.match_std(self.expect_stdout.as_ref(), actual.output.as_slice(), "stdout", actual.error.as_slice())
   }
 
-  fn match_stderr(&self, actual: &Vec<u8>) -> ham::MatchResult {
-      self.match_std(&self.expect_stderr, actual, "stderr")
+  fn match_stderr(&self, actual: &ProcessOutput) -> ham::MatchResult {
+      self.match_std(self.expect_stderr.as_ref(), actual.error.as_slice(), "stderr", actual.output.as_slice())
   }
 
-  fn match_std(&self, expected: &Option<String>, actual: &Vec<u8>, description: &str) -> ham::MatchResult {
+  fn match_std(&self, expected: Option<&String>, actual: &[u8], description: &str, extra: &[u8]) -> ham::MatchResult {
     match expected.as_ref().map(|s| s.as_slice()) {
       None => ham::success(),
       Some(out) => {
-        match str::from_utf8(actual.as_slice()) {
+        match str::from_utf8(actual) {
           None => Err(format!("{} was not utf8 encoded", description)),
           Some(actual) => {
-            ham::expect(actual == out, format!("{} was `{}`", description, actual))
+            ham::expect(actual == out, format!("{} was `{}`\n other output:\n{}", description, actual, str::from_utf8(extra)))
           }
         }
       }

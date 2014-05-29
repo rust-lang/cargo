@@ -150,6 +150,20 @@ impl Target {
         &self.path
     }
 
+    pub fn is_lib(&self) -> bool {
+        match self.kind {
+            LibTarget => true,
+            _ => false
+        }
+    }
+
+    pub fn is_bin(&self) -> bool {
+        match self.kind {
+            BinTarget => true,
+            _ => false
+        }
+    }
+
     pub fn rustc_crate_type(&self) -> &'static str {
         match self.kind {
             LibTarget => "lib",
