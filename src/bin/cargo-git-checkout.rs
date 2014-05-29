@@ -7,7 +7,6 @@ extern crate url;
 
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError,ToResult};
-use cargo::util::ToCLI;
 use cargo::sources::git::{GitRemoteRepo,GitRepo};
 use url::Url;
 

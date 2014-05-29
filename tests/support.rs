@@ -29,7 +29,7 @@ struct FileBuilder {
 
 impl FileBuilder {
     pub fn new(path: Path, body: &str) -> FileBuilder {
-        FileBuilder { path: path, body: body.to_owned() }
+        FileBuilder { path: path, body: body.to_str() }
     }
 
     fn mk(&self) -> Result<(), String> {
@@ -58,7 +58,7 @@ struct ProjectBuilder {
 impl ProjectBuilder {
     pub fn new(name: &str, root: Path) -> ProjectBuilder {
         ProjectBuilder {
-            name: name.to_owned(),
+            name: name.to_str(),
             root: root,
             files: vec!()
         }
@@ -167,12 +167,12 @@ struct Execs {
 impl Execs {
 
   pub fn with_stdout(mut ~self, expected: &str) -> Box<Execs> {
-    self.expect_stdout = Some(expected.to_owned());
+    self.expect_stdout = Some(expected.to_str());
     self
   }
 
   pub fn with_stderr(mut ~self, expected: &str) -> Box<Execs> {
-      self.expect_stderr = Some(expected.to_owned());
+      self.expect_stderr = Some(expected.to_str());
       self
   }
 
@@ -223,7 +223,7 @@ impl Execs {
 
 impl ham::SelfDescribing for Execs {
   fn describe(&self) -> String {
-    "execs".to_owned()
+    "execs".to_str()
   }
 }
 

@@ -54,10 +54,10 @@ impl ProcessBuilder {
     pub fn env(mut self, key: &str, val: Option<&str>) -> ProcessBuilder {
         match val {
             Some(v) => {
-                self.env.insert(key.to_strbuf(), v.to_strbuf());
+                self.env.insert(key.to_str(), v.to_str());
             },
             None => {
-                self.env.remove(&key.to_strbuf());
+                self.env.remove(&key.to_str());
             }
         }
 

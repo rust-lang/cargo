@@ -17,7 +17,7 @@
 use std::os;
 use util::config;
 use util::config::{ConfigValue};
-use core::{Package,PackageSet,Source};
+use core::{PackageSet,Source};
 use core::resolver::resolve;
 use sources::path::PathSource;
 use ops;

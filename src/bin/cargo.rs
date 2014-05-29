@@ -59,7 +59,7 @@ fn execute() {
 
 fn process(args: Vec<String>) -> CLIResult<(String, Vec<String>)> {
     let args: Vec<String> = Vec::from_slice(args.tail());
-    let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None::<&str>, 1))).to_owned();
+    let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None::<&str>, 1))).to_str();
     let tail = Vec::from_slice(args.tail());
 
     Ok((head, tail))

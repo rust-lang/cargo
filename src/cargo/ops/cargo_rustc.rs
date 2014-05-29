@@ -1,4 +1,3 @@
-use std::os;
 use std::os::args;
 use std::io;
 use std::path::Path;

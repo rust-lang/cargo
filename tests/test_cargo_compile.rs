@@ -114,7 +114,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_owned()
+                "test passed".to_str()
             }
 
             fn dead() {}
