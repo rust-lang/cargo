@@ -41,10 +41,16 @@ impl Source for PathSource {
         Ok(())
     }
 
-    fn get(&self, _: &[NameVer]) -> CargoResult<Vec<Package>> {
+    fn get(&self, name_vers: &[NameVer]) -> CargoResult<Vec<Package>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
-                Ok(pkg) => Some(pkg),
+                Ok(pkg) => {
+                    if name_vers.iter().any(|nv| pkg.is_for_name_ver(nv)) {
+                        Some(pkg)
+                    } else {
+                        None
+                    }
+                }
                 Err(_) => None
             }
         }).collect())

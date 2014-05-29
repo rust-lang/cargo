@@ -22,7 +22,7 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
 
     // Traverse the dependencies in topological order
     for dep in try!(topsort(deps)).iter() {
-        println!("Compiling {}", pkg);
+        println!("Compiling {}", dep);
         try!(compile_pkg(dep, &deps_target_dir, &deps_target_dir, false));
     }
 
