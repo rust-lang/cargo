@@ -1,3 +1,4 @@
+use std::os;
 use std::os::args;
 use std::io;
 use std::path::Path;
@@ -12,42 +13,46 @@ type Args = Vec<String>;
 pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
     debug!("compiling; pkg={}; deps={}", pkg, deps);
 
+    let target_dir = pkg.get_absolute_target_dir();
+    let deps_target_dir = target_dir.join("deps");
+
+    // First ensure that the destination directory exists
+    debug!("creating target dir; path={}", target_dir.display());
+    try!(mk_target(&target_dir));
+    try!(mk_target(&deps_target_dir));
+
     // Traverse the dependencies in topological order
     for dep in try!(topsort(deps)).iter() {
         println!("Compiling {}", pkg);
-        try!(compile_pkg(dep, deps, false));
+        try!(compile_pkg(dep, &deps_target_dir, &deps_target_dir, false));
     }
 
     println!("Compiling {}", pkg);
-    try!(compile_pkg(pkg, deps, true));
+    try!(compile_pkg(pkg, &target_dir, &deps_target_dir, true));
 
     Ok(())
 }
 
-fn compile_pkg(pkg: &Package, pkgs: &PackageSet, verbose: bool) -> CargoResult<()> {
-    debug!("compiling; pkg={}; targets={}; deps={}", pkg, pkg.get_targets(), pkg.get_dependencies());
-    // Build up the destination
-    // let src = pkg.get_root().join(Path::new(pkg.get_source().path.as_slice()));
-    let target_dir = pkg.get_absolute_target_dir();
-
-    debug!("creating target dir; path={}", target_dir.display());
-
-    // First ensure that the directory exists
-    try!(mk_target(&target_dir).map_err(|_| other_error("could not create target directory")));
+fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> CargoResult<()> {
+    debug!("compiling; pkg={}; targets={}", pkg, pkg.get_targets());
 
     // compile
     for target in pkg.get_targets().iter() {
-        try!(rustc(pkg.get_root(), target, &target_dir, pkgs.get_packages(), verbose))
+        // Only compile lib targets for dependencies
+        if primary || target.is_lib() {
+            try!(rustc(pkg.get_root(), target, dest, deps_dir, primary))
+        }
     }
 
     Ok(())
 }
 
-fn mk_target(target: &Path) -> io::IoResult<()> {
+fn mk_target(target: &Path) -> CargoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
+      .map_err(|_| other_error("could not create target directory"))
 }
 
-fn rustc(root: &Path, target: &Target, dest: &Path, deps: &[Package], verbose: bool) -> CargoResult<()> {
+fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) -> CargoResult<()> {
     let rustc = prepare_rustc(root, target, dest, deps);
 
     try!((if verbose {
@@ -59,7 +64,7 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &[Package], verbose: b
     Ok(())
 }
 
-fn prepare_rustc(root: &Path, target: &Target, dest: &Path, deps: &[Package]) -> ProcessBuilder {
+fn prepare_rustc(root: &Path, target: &Target, dest: &Path, deps: &Path) -> ProcessBuilder {
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, dest);
@@ -80,13 +85,9 @@ fn build_base_args(into: &mut Args, target: &Target, dest: &Path) {
     into.push(dest.display().to_str());
 }
 
-fn build_deps_args(dst: &mut Args, deps: &[Package]) {
-    for dep in deps.iter() {
-        let dir = dep.get_absolute_target_dir();
-
-        dst.push("-L".to_str());
-        dst.push(dir.display().to_str());
-    }
+fn build_deps_args(dst: &mut Args, deps: &Path) {
+    dst.push("-L".to_str());
+    dst.push(deps.display().to_str());
 }
 
 fn rustc_to_cargo_err(args: &[String], cwd: &Path, err: CargoError) -> CargoError {

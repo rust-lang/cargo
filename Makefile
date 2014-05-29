@@ -50,10 +50,10 @@ $(BIN_TARGETS): target/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
 TEST_SRC = $(wildcard tests/*.rs)
 TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
 
-target/tests/test-integration: $(BIN_TARGETS) $(HAMCREST) $(TEST_SRC)
+target/tests/test-integration: $(HAMCREST) $(TEST_SRC) $(BIN_TARGETS)
 	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget -o $@  tests/tests.rs
 
-target/tests/test-unit: $(HAMCREST) $(SRC) $(HAMMER) $(TOML)
+target/tests/test-unit: $(TOML) $(HAMCREST) $(SRC) $(HAMMER)
 	mkdir -p target/tests
 	$(RUSTC) --test $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/lib.rs
 
