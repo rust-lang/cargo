@@ -192,7 +192,7 @@ test!(cargo_compile_with_nested_deps {
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_owned()
+                "test passed".to_str()
             }
         "#);
 
@@ -218,7 +218,7 @@ fn main_file(println: &str, deps: &[&str]) -> String {
     buf.push_str(println);
     buf.push_str("); }\n");
 
-    buf.to_owned()
+    buf.to_str()
 }
 
 // test!(compiling_project_with_invalid_manifest)
