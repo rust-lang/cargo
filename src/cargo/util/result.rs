@@ -69,7 +69,7 @@ pub fn toml_error(desc: &'static str, error: toml::Error) -> CargoError {
     }
 }
 
-#[deriving(Show,Clone)]
+#[deriving(Eq,Clone)]
 pub struct CargoError {
     pub kind: CargoErrorKind,
     desc: CargoErrorDescription,
@@ -77,7 +77,16 @@ pub struct CargoError {
     cause: Option<Box<CargoError>>
 }
 
-#[deriving(Show,Clone)]
+impl Show for CargoError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self.desc {
+            StaticDescription(string) => write!(f, "{}", string),
+            BoxedDescription(ref string) => write!(f, "{}", string)
+        }
+    }
+}
+
+#[deriving(Eq,Show,Clone)]
 enum CargoErrorDescription {
     StaticDescription(&'static str),
     BoxedDescription(String)
@@ -118,6 +127,7 @@ impl CargoError {
     }
 }
 
+#[deriving(Eq)]
 pub enum CargoErrorKind {
     HumanReadableError,
     InternalError,
