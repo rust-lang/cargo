@@ -12,41 +12,72 @@ use core::source::Source;
 use core::{NameVer,Package,Summary};
 use ops;
 
+#[deriving(Eq,Clone,Encodable)]
+enum GitReference {
+    Master,
+    Other(String)
+}
+
+impl GitReference {
+    pub fn for_str<S: Str>(string: S) -> GitReference {
+        if string.as_slice() == "master" {
+            Master
+        } else {
+            Other(string.as_slice().to_str())
+        }
+    }
+}
+
+impl Str for GitReference {
+    fn as_slice<'a>(&'a self) -> &'a str {
+        match *self {
+            Master => "master",
+            Other(ref string) => string.as_slice()
+        }
+    }
+}
+
+impl Show for GitReference {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.as_slice().fmt(f)
+    }
+}
+
 pub struct GitSource {
-    config: GitConfig,
-    dest: Path
+    remote: GitRemote,
+    reference: GitReference,
+    db_path: Path,
+    checkout_path: Path,
+    verbose: bool
 }
 
 impl GitSource {
-    pub fn new(config: GitConfig, dest: Path) -> GitSource {
-        GitSource { config: config, dest: dest }
+    pub fn new(remote: GitRemote, reference: String, db: Path, checkout: Path, verbose: bool) -> GitSource {
+        GitSource { remote: remote, reference: GitReference::for_str(reference), db_path: db, checkout_path: checkout, verbose: verbose }
     }
 }
 
 impl Show for GitSource {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.config.url));
+        try!(write!(f, "git repo at {}", self.remote.url));
 
-        if self.config.reference.as_slice() != "master" {
-            try!(write!(f, " ({})", self.config.reference));
+        match self.reference {
+            Master => Ok(()),
+            Other(ref reference) => write!(f, " ({})", reference)
         }
-
-        Ok(())
     }
 }
 
 impl Source for GitSource {
     fn update(&self) -> CargoResult<()> {
-        let remote = GitRemoteRepo::from_config(self.config.clone());
-        let repo = try!(remote.checkout());
-
-        try!(repo.copy_to(&self.dest));
+        let repo = try!(self.remote.checkout(&self.db_path));
+        try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
 
         Ok(())
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        let pkg = try!(read_manifest(&self.dest));
+        let pkg = try!(read_manifest(&self.checkout_path));
         Ok(vec!(pkg.get_summary().clone()))
     }
 
@@ -55,7 +86,7 @@ impl Source for GitSource {
     }
 
     fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
-        let pkg = try!(read_manifest(&self.dest));
+        let pkg = try!(read_manifest(&self.checkout_path));
 
         if packages.iter().any(|nv| pkg.is_for_name_ver(nv)) {
             Ok(vec!(pkg))
@@ -90,129 +121,147 @@ macro_rules! errln(
 )
 
 /**
- * GitConfig represents the information about a git location for code determined from
- * a Cargo manifest, as well as a location to store the git database for a remote
- * repository.
+ * GitRemote represents a remote repository. It gets cloned into a local GitDatabase.
  */
 
 #[deriving(Eq,Clone)]
-pub struct GitConfig {
-    path: Path,
+pub struct GitRemote {
     url: Url,
-    reference: String,
     verbose: bool
 }
 
 #[deriving(Eq,Clone,Encodable)]
-struct EncodableGitConfig {
-    path: String,
-    url: String,
-    reference: String
+struct EncodableGitRemote {
+    url: String
 }
 
-/**
- * GitRemoteRepo is responsible for taking a GitConfig and bringing the local database up
- * to date with the remote repository, returning a GitRepo.
- *
- * A GitRemoteRepo has a `reference` in its config, which may not resolve to a valid revision.
- * Its `checkout` method returns a `GitRepo` which is guaranteed to have a resolved
- * revision for the supplied reference.
- */
-
-#[deriving(Eq,Clone)]
-pub struct GitRemoteRepo {
-    config: GitConfig
-}
-
-/**
- * GitRepo is a local clone of a remote repository's database. The supplied reference is
- * guaranteed to resolve to a valid `revision`, so all code run from this point forward
- * can assume that the requested code exists.
- */
-
-#[deriving(Eq,Clone,Encodable)]
-pub struct GitRepo {
-    config: GitConfig,
-    revision: String
-}
-
-/**
- * GitCheckout is a local checkout of a particular revision. A single GitRepo can
- * have multiple GitCheckouts.
- */
-
-pub struct GitCheckout<'a> {
-    location: Path,
-    repo: &'a GitRepo
-}
-
-impl<E, S: Encoder<E>> Encodable<S, E> for GitConfig {
+impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
     fn encode(&self, s: &mut S) -> Result<(), E> {
-        EncodableGitConfig {
-            path: self.path.display().to_str(),
-            url: self.url.to_str(),
-            reference: self.reference.clone()
+        EncodableGitRemote {
+            url: self.url.to_str()
         }.encode(s)
     }
 }
 
-impl GitRemoteRepo {
-    pub fn new(path: Path, url: Url, reference: String, verbose: bool) -> GitRemoteRepo {
-        GitRemoteRepo { config: GitConfig { path: path, url: url, reference: reference, verbose: verbose } }
-    }
+/**
+ * GitDatabase is a local clone of a remote repository's database. Multiple GitCheckouts
+ * can be cloned from this GitDatabase.
+ */
 
-    pub fn from_config(config: GitConfig) -> GitRemoteRepo {
-        GitRemoteRepo { config: config }
-    }
+#[deriving(Eq,Clone)]
+pub struct GitDatabase {
+    remote: GitRemote,
+    path: Path,
+    verbose: bool
+}
 
-    pub fn get_cwd<'a>(&'a self) -> &'a Path {
-        &self.config.path
-    }
+#[deriving(Encodable)]
+pub struct EncodableGitDatabase {
+    remote: GitRemote,
+    path: String
+}
 
-    pub fn checkout(&self) -> CargoResult<GitRepo> {
-        if self.config.path.exists() {
-            // TODO: If the revision we have is a rev, avoid unnecessarily fetching if we have the rev already
-            try!(self.fetch());
-        } else {
-            try!(self.clone());
-        }
-
-        Ok(GitRepo { config: self.config.clone(), revision: try!(rev_for(&self.config)) })
-    }
-
-    fn fetch(&self) -> CargoResult<()> {
-        Ok(git!(self.config.path, self.config.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.config.url))
-    }
-
-    fn clone(&self) -> CargoResult<()> {
-        let dirname = Path::new(self.config.path.dirname());
-
-        try!(mkdir_recursive(&self.config.path, UserDir).map_err(|err|
-            human_error(format!("Couldn't recursively create `{}`", dirname.display()), format!("path={}", dirname.display()), io_error(err))));
-
-        Ok(git!(dirname, self.config.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.config.url, self.config.path.display()))
+impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        EncodableGitDatabase {
+            remote: self.remote.clone(),
+            path: self.path.display().to_str()
+        }.encode(s)
     }
 }
 
-impl GitRepo {
-    fn get_path<'a>(&'a self) -> &'a Path {
-        &self.config.path
+/**
+ * GitCheckout is a local checkout of a particular revision. Calling `clone_into` with
+ * a reference will resolve the reference into a revision, and return a CargoError
+ * if no revision for that reference was found.
+ */
+
+pub struct GitCheckout {
+    database: GitDatabase,
+    location: Path,
+    reference: GitReference,
+    revision: String,
+    verbose: bool
+}
+
+#[deriving(Encodable)]
+pub struct EncodableGitCheckout {
+    database: GitDatabase,
+    location: String,
+    reference: String,
+    revision: String
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        EncodableGitCheckout {
+            database: self.database.clone(),
+            location: self.location.display().to_str(),
+            reference: self.reference.to_str(),
+            revision: self.revision.to_str()
+        }.encode(s)
+    }
+}
+
+/**
+ * Implementations
+ */
+
+impl GitRemote {
+    pub fn new(url: Url, verbose: bool) -> GitRemote {
+        GitRemote { url: url, verbose: verbose }
     }
 
-    pub fn copy_to<'a>(&'a self, dest: &Path) -> CargoResult<GitCheckout<'a>> {
-        let checkout = try!(GitCheckout::clone(dest, self));
+    pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
+        if into.exists() {
+            // TODO: If the revision we have is a rev, avoid unnecessarily fetching if we have the rev already
+            try!(self.fetch_into(into));
+        } else {
+            try!(self.clone_into(into));
+        }
+
+        Ok(GitDatabase { remote: self.clone(), path: into.clone(), verbose: self.verbose })
+    }
+
+    fn fetch_into(&self, path: &Path) -> CargoResult<()> {
+        Ok(git!(*path, self.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.url))
+    }
+
+    fn clone_into(&self, path: &Path) -> CargoResult<()> {
+        let dirname = Path::new(path.dirname());
+
+        try!(mkdir_recursive(path, UserDir).map_err(|err|
+            human_error(format!("Couldn't recursively create `{}`", dirname.display()), format!("path={}", dirname.display()), io_error(err))));
+
+        Ok(git!(dirname, self.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.url, path.display()))
+    }
+}
+
+impl GitDatabase {
+    fn get_path<'a>(&'a self) -> &'a Path {
+        &self.path
+    }
+
+    pub fn copy_to<S: Str>(&self, reference: S, dest: &Path) -> CargoResult<GitCheckout> {
+        let verbose = self.verbose;
+        let checkout = try!(GitCheckout::clone_into(dest, self.clone(), GitReference::for_str(reference.as_slice()), verbose));
 
         try!(checkout.fetch());
-        try!(checkout.reset(self.revision.as_slice()));
         try!(checkout.update_submodules());
 
         Ok(checkout)
     }
+
+    pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<String> {
+        Ok(git_output!(self.path, self.verbose, "rev-parse {}", reference.as_slice()))
+    }
+
 }
 
-impl<'a> GitCheckout<'a> {
-    fn clone<'a>(into: &Path, repo: &'a GitRepo) -> CargoResult<GitCheckout<'a>> {
-        let checkout = GitCheckout { location: into.clone(), repo: repo };
+impl GitCheckout {
+    fn clone_into(into: &Path, database: GitDatabase, reference: GitReference, verbose: bool) -> CargoResult<GitCheckout> {
+        let revision = try!(database.rev_for(reference.as_slice()));
+        let checkout = GitCheckout { location: into.clone(), database: database, reference: reference, revision: revision, verbose: verbose };
 
         // If the git checkout already exists, we don't need to clone it again
         if !checkout.location.join(".git").exists() {
@@ -223,11 +272,7 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn get_source<'a>(&'a self) -> &'a Path {
-        self.repo.get_path()
-    }
-
-    fn get_verbose(&self) -> bool {
-        self.repo.config.verbose
+        self.database.get_path()
     }
 
     fn clone_repo(&self) -> CargoResult<()> {
@@ -241,32 +286,25 @@ impl<'a> GitCheckout<'a> {
                 human_error(format!("Couldn't rmdir {}", Path::new(&self.location).display()), None::<&str>, io_error(e))));
         }
 
-        git!(dirname, self.get_verbose(), "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
+        git!(dirname, self.verbose, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
         try!(chmod(&self.location, AllPermissions).map_err(io_error));
 
         Ok(())
     }
 
     fn fetch(&self) -> CargoResult<()> {
-        Ok(git!(self.location, self.get_verbose(), "fetch --force --quiet --tags {}", self.get_source().display()))
+        git!(self.location, self.verbose, "fetch --force --quiet --tags {}", self.get_source().display());
+        try!(self.reset(self.revision.as_slice()));
+        Ok(())
     }
 
     fn reset<T: Show>(&self, revision: T) -> CargoResult<()> {
-        Ok(git!(self.location, self.get_verbose(), "reset -q --hard {}", revision))
+        Ok(git!(self.location, self.verbose, "reset -q --hard {}", revision))
     }
 
     fn update_submodules(&self) -> CargoResult<()> {
-        Ok(git!(self.location, self.get_verbose(), "submodule update --init --recursive --quiet"))
+        Ok(git!(self.location, self.verbose, "submodule update --init --recursive --quiet"))
     }
-}
-
-fn rev_for(config: &GitConfig) -> CargoResult<String> {
-    Ok(git_output!(config.path, config.verbose, "rev-parse {}", config.reference))
-}
-
-#[allow(dead_code)]
-fn has_rev<T: Show>(path: &Path, rev: T) -> bool {
-    git_output(path, false, format!("cat-file -e {}", rev)).is_ok()
 }
 
 fn git(path: &Path, verbose: bool, str: &str) -> ProcessBuilder {
