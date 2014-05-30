@@ -317,12 +317,12 @@ fn git(path: &Path, verbose: bool, str: &str) -> ProcessBuilder {
 
 fn git_inherit(path: &Path, verbose: bool, str: String) -> CargoResult<()> {
     git(path, verbose, str.as_slice()).exec().map_err(|err|
-        human_error(format!("Couldn't execute `git {}`: {}", str, err), None::<&str>, err))
+        human_error(format!("Executing `git {}` failed: {}", str, err), None::<&str>, err))
 }
 
 fn git_output(path: &Path, verbose: bool, str: String) -> CargoResult<String> {
     let output = try!(git(path, verbose, str.as_slice()).exec_with_output().map_err(|err|
-        human_error(format!("Couldn't execute `git {}`", str), None::<&str>, err)));
+        human_error(format!("Executing `git {}` failed", str), None::<&str>, err)));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())
 }
