@@ -7,7 +7,8 @@ extern crate url;
 
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError,ToResult};
-use cargo::sources::git::{GitRemote,GitCheckout};
+use cargo::core::source::Source;
+use cargo::sources::git::{GitSource,GitRemote};
 use url::Url;
 
 #[deriving(Eq,Clone,Decodable)]
@@ -25,18 +26,17 @@ fn main() {
     execute_main_without_stdin(execute);
 }
 
-fn execute(options: Options) -> CLIResult<Option<GitCheckout>> {
+fn execute(options: Options) -> CLIResult<Option<()>> {
     let Options { database_path, checkout_path, url, reference, verbose } = options;
 
     let url: Url = try!(from_str(url.as_slice()).to_result(|_|
         CLIError::new(format!("The URL `{}` you passed was not a valid URL", url), None::<&str>, 1)));
 
-    let repo = GitRemote::new(url, verbose);
-    let local = try!(repo.checkout(&Path::new(database_path)).map_err(|e|
-        CLIError::new(format!("Couldn't check out repository: {}", e), None::<&str>, 1)));
+    let remote = GitRemote::new(url, verbose);
+    let source = GitSource::new(remote, reference, Path::new(database_path), Path::new(checkout_path), verbose);
+    try!(source.update().map_err(|e| {
+        CLIError::new(format!("Couldn't update {}: {}", source, e), None::<&str>, 1)
+    }));
 
-    let checkout = try!(local.copy_to(reference, &Path::new(checkout_path)).map_err(|e|
-        CLIError::new(format!("Couldn't copy repository: {}", e), None::<&str>, 1)));
-
-    Ok(Some(checkout))
+    Ok(None)
 }
