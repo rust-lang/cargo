@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use url::Url;
 use util::{CargoResult,ProcessBuilder,io_error,human_error,process};
 use std::fmt;
@@ -8,12 +6,9 @@ use std::str;
 use std::io::{UserDir,AllPermissions};
 use std::io::fs::{mkdir_recursive,rmdir_recursive,chmod};
 use serialize::{Encodable,Encoder};
-use core::source::Source;
-use core::{NameVer,Package,Summary};
-use ops;
 
 #[deriving(Eq,Clone,Encodable)]
-enum GitReference {
+pub enum GitReference {
     Master,
     Other(String)
 }
@@ -43,58 +38,6 @@ impl Show for GitReference {
     }
 }
 
-pub struct GitSource {
-    remote: GitRemote,
-    reference: GitReference,
-    db_path: Path,
-    checkout_path: Path,
-    verbose: bool
-}
-
-impl GitSource {
-    pub fn new(remote: GitRemote, reference: String, db: Path, checkout: Path, verbose: bool) -> GitSource {
-        GitSource { remote: remote, reference: GitReference::for_str(reference), db_path: db, checkout_path: checkout, verbose: verbose }
-    }
-}
-
-impl Show for GitSource {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.url));
-
-        match self.reference {
-            Master => Ok(()),
-            Other(ref reference) => write!(f, " ({})", reference)
-        }
-    }
-}
-
-impl Source for GitSource {
-    fn update(&self) -> CargoResult<()> {
-        let repo = try!(self.remote.checkout(&self.db_path));
-        try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
-
-        Ok(())
-    }
-
-    fn list(&self) -> CargoResult<Vec<Summary>> {
-        let pkg = try!(read_manifest(&self.checkout_path));
-        Ok(vec!(pkg.get_summary().clone()))
-    }
-
-    fn download(&self, _: &[NameVer]) -> CargoResult<()> {
-        Ok(())
-    }
-
-    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
-        let pkg = try!(read_manifest(&self.checkout_path));
-
-        if packages.iter().any(|nv| pkg.is_for_name_ver(nv)) {
-            Ok(vec!(pkg))
-        } else {
-            Ok(vec!())
-        }
-    }
-}
 
 macro_rules! git(
     ($config:expr, $verbose:expr, $str:expr, $($rest:expr),*) => (
@@ -212,9 +155,12 @@ impl GitRemote {
         GitRemote { url: url, verbose: verbose }
     }
 
+    pub fn get_url<'a>(&'a self) -> &'a Url {
+        &self.url
+    }
+
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
         if into.exists() {
-            // TODO: If the revision we have is a rev, avoid unnecessarily fetching if we have the rev already
             try!(self.fetch_into(into));
         } else {
             try!(self.clone_into(into));
@@ -331,7 +277,3 @@ fn to_str(vec: &[u8]) -> String {
     str::from_utf8_lossy(vec).to_str()
 }
 
-fn read_manifest(path: &Path) -> CargoResult<Package> {
-    let joined = path.join("Cargo.toml");
-    ops::read_manifest(joined.as_str().unwrap())
-}
