@@ -21,7 +21,7 @@ static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
  *
  */
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 struct FileBuilder {
     path: Path,
     body: String
@@ -48,7 +48,7 @@ impl FileBuilder {
     }
 }
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 struct ProjectBuilder {
     name: String,
     root: Path,
@@ -156,7 +156,7 @@ pub fn cargo_dir() -> Path {
  *
  */
 
-#[deriving(Clone,Eq)]
+#[deriving(Clone,PartialEq)]
 struct Execs {
     expect_stdout: Option<String>,
     expect_stdin: Option<String>,
@@ -248,7 +248,7 @@ pub fn execs() -> Box<Execs> {
     }
 }
 
-#[deriving(Clone,Eq)]
+#[deriving(Clone,PartialEq)]
 struct ShellWrites {
     expected: String
 }
