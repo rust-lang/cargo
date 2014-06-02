@@ -4,7 +4,7 @@ use core::{
     NameVer
 };
 
-#[deriving(Show,Clone,Eq)]
+#[deriving(Show,Clone,PartialEq)]
 pub struct Summary {
     name_ver: NameVer,
     dependencies: Vec<Dependency>

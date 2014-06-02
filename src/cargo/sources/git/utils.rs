@@ -7,7 +7,7 @@ use std::io::{UserDir,AllPermissions};
 use std::io::fs::{mkdir_recursive,rmdir_recursive,chmod};
 use serialize::{Encodable,Encoder};
 
-#[deriving(Eq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,Encodable)]
 pub enum GitReference {
     Master,
     Other(String)
@@ -67,13 +67,13 @@ macro_rules! errln(
  * GitRemote represents a remote repository. It gets cloned into a local GitDatabase.
  */
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 pub struct GitRemote {
     url: Url,
     verbose: bool
 }
 
-#[deriving(Eq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,Encodable)]
 struct EncodableGitRemote {
     url: String
 }
@@ -91,7 +91,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
  * can be cloned from this GitDatabase.
  */
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 pub struct GitDatabase {
     remote: GitRemote,
     path: Path,

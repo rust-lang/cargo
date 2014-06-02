@@ -69,7 +69,7 @@ pub fn toml_error(desc: &'static str, error: toml::Error) -> CargoError {
     }
 }
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 pub struct CargoError {
     pub kind: CargoErrorKind,
     desc: CargoErrorDescription,
@@ -86,7 +86,7 @@ impl Show for CargoError {
     }
 }
 
-#[deriving(Eq,Show,Clone)]
+#[deriving(PartialEq,Show,Clone)]
 enum CargoErrorDescription {
     StaticDescription(&'static str),
     BoxedDescription(String)
@@ -127,7 +127,7 @@ impl CargoError {
     }
 }
 
-#[deriving(Eq)]
+#[deriving(PartialEq)]
 pub enum CargoErrorKind {
     HumanReadableError,
     InternalError,

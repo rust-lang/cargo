@@ -6,7 +6,7 @@ use std::io::process::{Command,ProcessOutput,InheritFd};
 use util::{CargoResult,io_error,process_error};
 use collections::HashMap;
 
-#[deriving(Clone,Eq)]
+#[deriving(Clone,PartialEq)]
 pub struct ProcessBuilder {
     program: String,
     args: Vec<String>,

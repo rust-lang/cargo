@@ -8,7 +8,7 @@ use serialize::{
     Decoder
 };
 
-#[deriving(Clone,Eq,Ord)]
+#[deriving(Clone,PartialEq,PartialOrd)]
 pub struct NameVer {
     name: String,
     version: semver::Version

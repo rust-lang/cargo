@@ -4,13 +4,13 @@ use serialize::{Encodable,Encoder};
 use toml;
 use util::{other_error,CargoResult,Require};
 
-#[deriving(Eq,TotalEq,Clone,Encodable,Decodable)]
+#[deriving(PartialEq,Eq,Clone,Encodable,Decodable)]
 pub enum Location {
     Project,
     Global
 }
 
-#[deriving(Eq,TotalEq,Clone,Decodable)]
+#[deriving(PartialEq,Eq,Clone,Decodable)]
 pub enum ConfigValueValue {
     String(String),
     List(Vec<String>)
@@ -40,7 +40,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValueValue {
     }
 }
 
-#[deriving(Eq,TotalEq,Clone,Decodable)]
+#[deriving(PartialEq,Eq,Clone,Decodable)]
 pub struct ConfigValue {
     value: ConfigValueValue,
     path: Vec<Path>
