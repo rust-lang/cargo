@@ -11,7 +11,7 @@ use cargo::core::source::Source;
 use cargo::sources::git::{GitSource,GitRemote};
 use url::Url;
 
-#[deriving(Eq,Clone,Decodable)]
+#[deriving(PartialEq,Clone,Decodable)]
 struct Options {
     database_path: String,
     checkout_path: String,

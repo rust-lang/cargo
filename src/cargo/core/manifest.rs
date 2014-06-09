@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use collections::HashMap;
+use std::collections::HashMap;
 use semver::Version;
 use serialize::{Encoder,Encodable};
 use core::{
@@ -12,7 +12,7 @@ use core::{
 use core::dependency::SerializedDependency;
 use util::CargoResult;
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 pub struct Manifest {
     summary: Summary,
     authors: Vec<String>,
@@ -26,7 +26,7 @@ impl Show for Manifest {
     }
 }
 
-#[deriving(Eq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,Encodable)]
 pub struct SerializedManifest {
     name: String,
     version: String,
@@ -49,13 +49,13 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     }
 }
 
-#[deriving(Show,Clone,Eq,Encodable)]
+#[deriving(Show,Clone,PartialEq,Encodable)]
 pub enum TargetKind {
     LibTarget,
     BinTarget
 }
 
-#[deriving(Clone,Eq)]
+#[deriving(Clone,PartialEq)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -181,7 +181,7 @@ impl Target {
 type TomlLibTarget = TomlTarget;
 type TomlBinTarget = TomlTarget;
 
-#[deriving(Decodable,Encodable,Eq,Clone,Show)]
+#[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
 pub struct Project {
     pub name: String,
     pub version: String,
@@ -192,7 +192,7 @@ pub struct Project {
  * TODO: Make all struct fields private
  */
 
-#[deriving(Decodable,Encodable,Eq,Clone)]
+#[deriving(Decodable,Encodable,PartialEq,Clone)]
 pub struct TomlManifest {
     project: Box<Project>,
     lib: Option<~[TomlLibTarget]>,
@@ -242,7 +242,7 @@ impl Project {
     }
 }
 
-#[deriving(Decodable,Encodable,Eq,Clone,Show)]
+#[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
 struct TomlTarget {
     name: String,
     path: Option<String>

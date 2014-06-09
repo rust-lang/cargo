@@ -15,7 +15,7 @@ use core::dependency::SerializedDependency;
 use util::graph;
 use serialize::{Encoder,Encodable};
 
-#[deriving(Clone,Eq)]
+#[deriving(Clone,PartialEq)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
@@ -109,7 +109,7 @@ impl Show for Package {
     }
 }
 
-#[deriving(Eq,Clone,Show)]
+#[deriving(PartialEq,Clone,Show)]
 pub struct PackageSet {
     packages: Vec<Package>
 }

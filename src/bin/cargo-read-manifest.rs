@@ -10,7 +10,7 @@ use cargo::{execute_main_without_stdin,CLIResult,CLIError};
 use cargo::core::Package;
 use cargo::ops;
 
-#[deriving(Eq,Clone,Decodable)]
+#[deriving(PartialEq,Clone,Decodable)]
 struct Options {
     manifest_path: String
 }

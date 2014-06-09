@@ -2,7 +2,7 @@ use semver::Version;
 use core::{VersionReq};
 use util::CargoResult;
 
-#[deriving(Eq,Clone,Show)]
+#[deriving(PartialEq,Clone,Show)]
 pub struct Dependency {
     name: String,
     req: VersionReq
@@ -39,7 +39,7 @@ impl Dependency {
     }
 }
 
-#[deriving(Eq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,Encodable)]
 pub struct SerializedDependency {
     name: String,
     req: String

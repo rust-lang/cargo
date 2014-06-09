@@ -16,7 +16,7 @@ use cargo::ops;
 use cargo::util::important_paths::find_project;
 use cargo::util::ToCLI;
 
-#[deriving(Eq,Clone,Decodable,Encodable)]
+#[deriving(PartialEq,Clone,Decodable,Encodable)]
 pub struct Options {
     manifest_path: Option<String>
 }
