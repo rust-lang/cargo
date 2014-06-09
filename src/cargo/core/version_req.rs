@@ -6,12 +6,12 @@ use std::str::CharOffsets;
 use semver::Version;
 use util::{other_error,CargoResult};
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 pub struct VersionReq {
     predicates: Vec<Predicate>
 }
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 enum Op {
     Ex,   // Exact
     Gt,   // Greater than
@@ -20,7 +20,7 @@ enum Op {
     LtEq  // Less than or equal to
 }
 
-#[deriving(Eq,Clone)]
+#[deriving(PartialEq,Clone)]
 struct Predicate {
     op: Op,
     major: uint,
@@ -225,7 +225,7 @@ struct Lexer<'a> {
     state: LexState
 }
 
-#[deriving(Show,Eq)]
+#[deriving(Show,PartialEq)]
 enum LexState {
     LexInit,
     LexStart,

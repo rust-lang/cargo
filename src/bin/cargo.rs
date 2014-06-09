@@ -4,7 +4,6 @@ extern crate cargo;
 extern crate toml;
 extern crate hammer;
 extern crate serialize;
-extern crate collections;
 #[phase(syntax, link)]
 extern crate log;
 
@@ -67,7 +66,7 @@ fn process(args: Vec<String>) -> CLIResult<(String, Vec<String>)> {
 
 #[deriving(Encodable)]
 struct ConfigOut {
-    values: collections::HashMap<String, config::ConfigValue>
+    values: std::collections::HashMap<String, config::ConfigValue>
 }
 
 #[deriving(Decodable)]
@@ -90,7 +89,7 @@ fn config_for_key(args: ConfigForKeyFlags) -> CLIResult<Option<ConfigOut>> {
         println!("{}", value);
         Ok(None)
     } else {
-        let mut map = collections::HashMap::new();
+        let mut map = std::collections::HashMap::new();
         map.insert(args.key.clone(), value);
         Ok(Some(ConfigOut { values: map }))
     }

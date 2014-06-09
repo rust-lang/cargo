@@ -1,5 +1,5 @@
 use std::hash::Hash;
-use collections::HashMap;
+use std::collections::HashMap;
 
 pub struct Graph<N> {
     nodes: HashMap<N, ~[N]>
@@ -10,7 +10,7 @@ enum Mark {
     Done
 }
 
-impl<N: TotalEq + Hash + Clone> Graph<N> {
+impl<N: Eq + Hash + Clone> Graph<N> {
     pub fn new() -> Graph<N> {
         Graph { nodes: HashMap::new() }
     }
