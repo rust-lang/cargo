@@ -1,7 +1,7 @@
 #![crate_id="cargo-verify-project"]
 #![allow(deprecated_owned_vector)]
 
-extern crate toml;
+extern crate toml = "github.com/mneumann/rust-toml#toml";
 extern crate getopts;
 
 use std::os::{args,set_exit_status};

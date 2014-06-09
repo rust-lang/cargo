@@ -1,4 +1,4 @@
-use support::{ResultTest,project,execs};
+use support::{ResultTest,project,execs,realpath};
 use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::process;
@@ -59,7 +59,7 @@ test!(cargo_compile_with_invalid_code {
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", "invalid rust code!");
 
-    let target = p.root().join("target");
+    let target = realpath(&p.root().join("target")).assert();
 
     assert_that(p.cargo_process("cargo-compile"),
         execs()
