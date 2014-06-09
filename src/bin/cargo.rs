@@ -1,7 +1,7 @@
 #![feature(phase)]
 
 extern crate cargo;
-extern crate toml;
+extern crate toml = "github.com/mneumann/rust-toml#toml";
 extern crate hammer;
 extern crate serialize;
 #[phase(syntax, link)]
