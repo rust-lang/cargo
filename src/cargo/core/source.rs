@@ -1,4 +1,4 @@
-use core::{Summary,NameVer,Package};
+use core::{Summary,Package,PackageId};
 use util::CargoResult;
 
 /**
@@ -25,7 +25,7 @@ pub trait Source {
      * The download method fetches the full package for each name and
      * version specified.
      */
-    fn download(&self, packages: &[NameVer]) -> CargoResult<()>;
+    fn download(&self, packages: &[PackageId]) -> CargoResult<()>;
 
     /**
      * The get method returns the Path of each specified package on the
@@ -33,7 +33,7 @@ pub trait Source {
      * and that the packages are already locally available on the file
      * system.
      */
-    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>>;
+    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
 }
 
 impl Source for Vec<Box<Source>> {
@@ -56,7 +56,7 @@ impl Source for Vec<Box<Source>> {
         Ok(ret)
     }
 
-    fn download(&self, packages: &[NameVer]) -> CargoResult<()> {
+    fn download(&self, packages: &[PackageId]) -> CargoResult<()> {
         for source in self.iter() {
             try!(source.download(packages));
         }
@@ -64,7 +64,7 @@ impl Source for Vec<Box<Source>> {
         Ok(())
     }
 
-    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
+    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
         let mut ret = Vec::new();
 
         for source in self.iter() {

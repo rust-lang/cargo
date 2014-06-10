@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use core::{NameVer,Package,Summary};
+use core::{Package,PackageId,Summary};
 use core::source::Source;
 use ops;
 use util::{CargoResult};
@@ -37,15 +37,15 @@ impl Source for PathSource {
         }).collect())
     }
 
-    fn download(&self, _: &[NameVer])  -> CargoResult<()>{
+    fn download(&self, _: &[PackageId])  -> CargoResult<()>{
         Ok(())
     }
 
-    fn get(&self, name_vers: &[NameVer]) -> CargoResult<Vec<Package>> {
+    fn get(&self, name_vers: &[PackageId]) -> CargoResult<Vec<Package>> {
         Ok(self.paths.iter().filter_map(|path| {
             match read_manifest(path) {
                 Ok(pkg) => {
-                    if name_vers.iter().any(|nv| pkg.is_for_name_ver(nv)) {
+                    if name_vers.iter().any(|pkg_id| pkg.get_package_id() == pkg_id) {
                         Some(pkg)
                     } else {
                         None

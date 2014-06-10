@@ -4,9 +4,9 @@ use std::fmt::{Show,Formatter};
 use std::path::Path;
 use semver::Version;
 use core::{
-    NameVer,
     Dependency,
     Manifest,
+    PackageId,
     Registry,
     Target,
     Summary
@@ -37,11 +37,11 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         let manifest = self.get_manifest();
         let summary = manifest.get_summary();
-        let name_ver = summary.get_name_ver();
+        let package_id = summary.get_package_id();
 
         SerializedPackage {
-            name: name_ver.get_name().to_str(),
-            version: name_ver.get_version().to_str(),
+            name: package_id.get_name().to_str(),
+            version: package_id.get_version().to_str(),
             dependencies: summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: Vec::from_slice(manifest.get_authors()),
             targets: Vec::from_slice(manifest.get_targets()),
@@ -70,12 +70,16 @@ impl Package {
         self.manifest.get_summary()
     }
 
+    pub fn get_package_id<'a>(&'a self) -> &'a PackageId {
+        self.manifest.get_package_id()
+    }
+
     pub fn get_name<'a>(&'a self) -> &'a str {
-        self.get_manifest().get_name()
+        self.get_package_id().get_name()
     }
 
     pub fn get_version<'a>(&'a self) -> &'a Version {
-        self.get_manifest().get_version()
+        self.get_package_id().get_version()
     }
 
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
@@ -97,15 +101,11 @@ impl Package {
     pub fn get_absolute_target_dir(&self) -> Path {
         self.get_root().join(self.get_target_dir())
     }
-
-    pub fn is_for_name_ver(&self, name_ver: &NameVer) -> bool {
-        self.get_name() == name_ver.get_name() && self.get_version() == name_ver.get_version()
-    }
 }
 
 impl Show for Package {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", self.get_summary().get_name_ver())
+        write!(f, "{}", self.get_summary().get_package_id())
     }
 }
 
