@@ -1,5 +1,4 @@
 #![crate_id="cargo-read-manifest"]
-#![allow(deprecated_owned_vector)]
 
 extern crate cargo;
 extern crate serialize;

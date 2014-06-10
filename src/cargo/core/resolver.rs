@@ -11,7 +11,6 @@ use util::result::CargoResult;
  * - The correct input here is not a registry. Resolves should be performable
  * on package summaries vs. the packages themselves.
  */
-#[allow(dead_code)]
 pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<NameVer>> {
     let mut remaining = Vec::from_slice(deps);
     let mut resolve = HashMap::<&str, &Summary>::new();

@@ -1,12 +1,11 @@
 #![crate_id="cargo-compile"]
-#![allow(deprecated_owned_vector)]
 #![feature(phase)]
 
 extern crate cargo;
 extern crate hammer;
 extern crate serialize;
 
-#[phase(syntax, link)]
+#[phase(plugin, link)]
 extern crate log;
 
 use std::os;

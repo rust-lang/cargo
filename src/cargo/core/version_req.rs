@@ -1,6 +1,3 @@
-// Work in progress
-#![allow(dead_code)]
-
 use std::fmt;
 use std::str::CharOffsets;
 use semver::Version;
@@ -140,14 +137,6 @@ impl Predicate {
 
         false
     }
-
-    fn get_minor(&self) -> uint {
-        self.minor.unwrap()
-    }
-
-    fn get_patch(&self) -> uint {
-        self.patch.unwrap()
-    }
 }
 
 impl PredBuilder {
@@ -253,14 +242,6 @@ impl<'a> Lexer<'a> {
             input: input,
             state: LexInit
         }
-    }
-
-    fn is_marked(&self) -> bool {
-        self.mark.is_some()
-    }
-
-    fn is_success(&self) -> bool {
-        self.state == LexWin
     }
 
     fn is_error(&self) -> bool {
