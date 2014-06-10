@@ -23,13 +23,12 @@ use sources::path::PathSource;
 use ops;
 use util::{other_error, CargoResult, Wrap};
 
-// TODO: manifest_path should be Path
-pub fn compile(manifest_path: &str) -> CargoResult<()> {
-    log!(4, "compile; manifest-path={}", manifest_path);
+pub fn compile(manifest_path: &Path) -> CargoResult<()> {
+    log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    let manifest = try!(ops::read_manifest(manifest_path));
+    let package = try!(ops::read_package(manifest_path));
 
-    debug!("loaded manifest; manifest={}", manifest);
+    debug!("loaded package; package={}", package);
 
     let configs = try!(config::all_configs(os::getcwd()));
 
@@ -46,7 +45,7 @@ pub fn compile(manifest_path: &str) -> CargoResult<()> {
 
     let source = PathSource::new(paths);
     let summaries = try!(source.list().wrap("unable to list packages from source"));
-    let resolved = try!(resolve(manifest.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
+    let resolved = try!(resolve(package.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
 
     try!(source.download(resolved.as_slice()).wrap("unable to download packages"));
 
@@ -54,7 +53,7 @@ pub fn compile(manifest_path: &str) -> CargoResult<()> {
 
     let package_set = PackageSet::new(packages.as_slice());
 
-    try!(ops::compile_packages(&manifest, &package_set));
+    try!(ops::compile_packages(&package, &package_set));
 
     Ok(())
 }

@@ -1,5 +1,5 @@
 pub use self::cargo_compile::compile;
-pub use self::cargo_read_manifest::read_manifest;
+pub use self::cargo_read_manifest::{read_manifest,read_package};
 pub use self::cargo_rustc::compile_packages;
 
 mod cargo_compile;

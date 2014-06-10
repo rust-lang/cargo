@@ -58,8 +58,8 @@ impl Source for PathSource {
 }
 
 fn read_manifest(path: &Path) -> CargoResult<Package> {
-    let joined = path.join("Cargo.toml");
-    ops::read_manifest(joined.as_str().unwrap())
+    let path = path.join("Cargo.toml");
+    ops::read_package(&path)
 }
 
 fn display(paths: &[Path]) -> Vec<String> {

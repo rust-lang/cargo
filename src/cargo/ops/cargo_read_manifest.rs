@@ -1,16 +1,16 @@
-use toml;
-use core::Package;
-use util::toml::toml_to_package;
-use util::{CargoResult,human_error,toml_error};
+use std::io::File;
+use util;
+use core::{Package,Manifest};
+use util::{CargoResult,io_error};
 
-pub fn read_manifest(path: &str) -> CargoResult<Package> {
-    let root = try!(parse_from_file(path));
-    toml_to_package(root, &Path::new(path))
+pub fn read_manifest(contents: &[u8]) -> CargoResult<Manifest> {
+    util::toml::to_manifest(contents)
 }
 
-fn parse_from_file(path: &str) -> CargoResult<toml::Value> {
-    toml::parse_from_file(path.clone()).map_err(|err| {
-        let err = toml_error("Couldn't parse Toml", err);
-        human_error("Cargo.toml is not valid Toml".to_str(), format!("path={}", path), err)
-    })
+pub fn read_package(path: &Path) -> CargoResult<Package> {
+    let mut file = try!(File::open(path).map_err(io_error));
+    let data = try!(file.read_to_end().map_err(io_error));
+    let manifest = try!(read_manifest(data.as_slice()));
+
+    Ok(Package::new(&manifest, &path.dir_path()))
 }
