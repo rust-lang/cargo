@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use core::{
     Dependency,
-    NameVer,
+    PackageId,
     Summary,
     Registry
 };
@@ -11,7 +11,7 @@ use util::result::CargoResult;
  * - The correct input here is not a registry. Resolves should be performable
  * on package summaries vs. the packages themselves.
  */
-pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<NameVer>> {
+pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<PackageId>> {
     let mut remaining = Vec::from_slice(deps);
     let mut resolve = HashMap::<&str, &Summary>::new();
 
@@ -19,7 +19,7 @@ pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<Name
         let curr = match remaining.pop() {
             Some(curr) => curr,
             None => {
-                return Ok(resolve.values().map(|summary| summary.get_name_ver().clone()).collect());
+                return Ok(resolve.values().map(|summary| summary.get_package_id().clone()).collect());
             }
         };
 
@@ -50,7 +50,7 @@ mod test {
 
     use core::{
         Dependency,
-        NameVer,
+        PackageId,
         Summary
     };
 
@@ -62,17 +62,17 @@ mod test {
         ($name:expr => $($deps:expr),+) => (
             {
             let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::parse(*s, "1.0.0").unwrap()).collect();
-            Summary::new(&NameVer::new($name, "1.0.0"), d.as_slice())
+            Summary::new(&PackageId::new($name, "1.0.0"), d.as_slice())
             }
         );
 
         ($name:expr) => (
-            Summary::new(&NameVer::new($name, "1.0.0"), [])
+            Summary::new(&PackageId::new($name, "1.0.0"), [])
         )
     )
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&NameVer::new(name, "1.0.0"), &[])
+        Summary::new(&PackageId::new(name, "1.0.0"), &[])
     }
 
     fn dep(name: &str) -> Dependency {
@@ -83,9 +83,9 @@ mod test {
         pkgs
     }
 
-    fn names(names: &[&'static str]) -> Vec<NameVer> {
+    fn names(names: &[&'static str]) -> Vec<PackageId> {
         names.iter()
-            .map(|name| NameVer::new(*name, "1.0.0"))
+            .map(|name| PackageId::new(*name, "1.0.0"))
             .collect()
     }
 

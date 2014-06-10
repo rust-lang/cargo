@@ -1,7 +1,3 @@
-pub use self::namever::{
-    NameVer
-};
-
 pub use self::registry::{
     Registry,
 };
@@ -18,6 +14,10 @@ pub use self::package::{
     PackageSet
 };
 
+pub use self::package_id::{
+    PackageId
+};
+
 pub use self::source::{
     Source
 };
@@ -30,9 +30,9 @@ pub use self::dependency::Dependency;
 pub use self::version_req::VersionReq;
 
 pub mod errors;
-pub mod namever;
 pub mod source;
 pub mod package;
+pub mod package_id;
 pub mod dependency;
 pub mod manifest;
 pub mod resolver;

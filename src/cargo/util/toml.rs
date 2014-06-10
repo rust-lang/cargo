@@ -124,7 +124,7 @@ impl TomlManifest {
         }
 
         Ok(Manifest::new(
-                &Summary::new(&self.project.to_name_ver(), deps.as_slice()),
+                &Summary::new(&self.project.to_package_id(), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target")))
     }

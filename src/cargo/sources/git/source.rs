@@ -1,6 +1,6 @@
 use ops;
 use core::source::Source;
-use core::{NameVer,Package,Summary};
+use core::{Package,PackageId,Summary};
 use util::CargoResult;
 use sources::git::utils::{GitReference,GitRemote,Master,Other};
 use std::fmt;
@@ -44,15 +44,15 @@ impl Source for GitSource {
         Ok(vec!(pkg.get_summary().clone()))
     }
 
-    fn download(&self, _: &[NameVer]) -> CargoResult<()> {
+    fn download(&self, _: &[PackageId]) -> CargoResult<()> {
         Ok(())
     }
 
-    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
+    fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         // TODO: Support multiple manifests per repo
         let pkg = try!(read_manifest(&self.checkout_path));
 
-        if packages.iter().any(|nv| pkg.is_for_name_ver(nv)) {
+        if package_ids.iter().any(|pkg_id| pkg_id == pkg.get_package_id()) {
             Ok(vec!(pkg))
         } else {
             Ok(vec!())

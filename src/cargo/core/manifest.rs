@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
+use semver;
 use semver::Version;
 use serialize::{Encoder,Decoder,Encodable};
 use core::{
     Dependency,
-    NameVer,
+    PackageId,
     Summary
 };
 use core::dependency::SerializedDependency;
@@ -101,12 +102,16 @@ impl Manifest {
         &self.summary
     }
 
+    pub fn get_package_id<'a>(&'a self) -> &'a PackageId {
+        self.get_summary().get_package_id()
+    }
+
     pub fn get_name<'a>(&'a self) -> &'a str {
-        self.get_summary().get_name_ver().get_name()
+        self.get_package_id().get_name()
     }
 
     pub fn get_version<'a>(&'a self) -> &'a Version {
-        self.get_summary().get_name_ver().get_version()
+        self.get_summary().get_package_id().get_version()
     }
 
     pub fn get_authors<'a>(&'a self) -> &'a [String] {
@@ -169,6 +174,9 @@ impl Target {
     }
 }
 
+/* TODO:
+ * - Figure out if this is needed and/or if it should be moved somewhere else
+ */
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
 pub struct Project {
     pub name: String,
@@ -177,8 +185,8 @@ pub struct Project {
 }
 
 impl Project {
-    pub fn to_name_ver(&self) -> NameVer {
-        NameVer::new(self.name.as_slice(), self.version.as_slice())
+    pub fn to_package_id(&self) -> PackageId {
+        PackageId::new(self.name.as_slice(), semver::parse(self.version.as_slice()).unwrap())
     }
 }
 

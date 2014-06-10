@@ -1,33 +1,33 @@
 use semver::Version;
 use core::{
     Dependency,
-    NameVer
+    PackageId
 };
 
 #[deriving(Show,Clone,PartialEq)]
 pub struct Summary {
-    name_ver: NameVer,
+    package_id: PackageId,
     dependencies: Vec<Dependency>
 }
 
 impl Summary {
-    pub fn new(name_ver: &NameVer, dependencies: &[Dependency]) -> Summary {
+    pub fn new(pkg_id: &PackageId, dependencies: &[Dependency]) -> Summary {
         Summary {
-            name_ver: name_ver.clone(),
+            package_id: pkg_id.clone(),
             dependencies: Vec::from_slice(dependencies)
         }
     }
 
-    pub fn get_name_ver<'a>(&'a self) -> &'a NameVer {
-        &self.name_ver
+    pub fn get_package_id<'a>(&'a self) -> &'a PackageId {
+        &self.package_id
     }
 
     pub fn get_name<'a>(&'a self) -> &'a str {
-        self.get_name_ver().get_name()
+        self.get_package_id().get_name()
     }
 
     pub fn get_version<'a>(&'a self) -> &'a Version {
-        self.get_name_ver().get_version()
+        self.get_package_id().get_version()
     }
 
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
@@ -43,7 +43,7 @@ pub trait SummaryVec {
 impl SummaryVec for Vec<Summary> {
     // TODO: Move to Registry
     fn names(&self) -> Vec<String> {
-        self.iter().map(|summary| summary.name_ver.get_name().to_str()).collect()
+        self.iter().map(|summary| summary.get_name().to_str()).collect()
     }
 
     // TODO: Delete
