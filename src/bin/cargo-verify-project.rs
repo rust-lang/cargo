@@ -1,5 +1,4 @@
 #![crate_id="cargo-verify-project"]
-#![allow(deprecated_owned_vector)]
 
 extern crate toml = "github.com/mneumann/rust-toml#toml";
 extern crate getopts;

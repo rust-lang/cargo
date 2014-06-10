@@ -1,12 +1,11 @@
 #![feature(macro_rules)]
-#![allow(deprecated_owned_vector)]
 #![feature(phase)]
 
 extern crate term;
 extern crate cargo;
 extern crate hamcrest;
 
-#[phase(syntax, link)]
+#[phase(plugin, link)]
 extern crate log;
 
 macro_rules! test(

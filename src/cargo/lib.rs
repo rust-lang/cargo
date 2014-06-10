@@ -1,7 +1,6 @@
 #![crate_id="cargo"]
 #![crate_type="rlib"]
 
-#![allow(deprecated_owned_vector)]
 #![feature(macro_rules,phase)]
 
 extern crate debug;
@@ -12,7 +11,7 @@ extern crate semver;
 extern crate hammer;
 extern crate toml = "github.com/mneumann/rust-toml#toml";
 
-#[phase(syntax, link)]
+#[phase(plugin, link)]
 extern crate log;
 
 #[cfg(test)]

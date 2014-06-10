@@ -1,5 +1,4 @@
 #![crate_id="cargo-rustc"]
-#![allow(deprecated_owned_vector)]
 
 extern crate cargo;
 

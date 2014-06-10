@@ -88,11 +88,6 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     Ok(map)
 }
 
-#[allow(unused_variable)]
-pub fn set_config(key: String, value: String, location: Location) -> CargoResult<()> {
-    Ok(())
-}
-
 fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoResult<T> {
     let mut current = pwd.clone();
 

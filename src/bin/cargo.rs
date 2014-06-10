@@ -4,7 +4,7 @@ extern crate cargo;
 extern crate toml = "github.com/mneumann/rust-toml#toml";
 extern crate hammer;
 extern crate serialize;
-#[phase(syntax, link)]
+#[phase(plugin, link)]
 extern crate log;
 
 use hammer::{FlagConfig,FlagConfiguration};
