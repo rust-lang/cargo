@@ -9,7 +9,8 @@ pub use self::registry::{
 pub use self::manifest::{
     Manifest,
     Target,
-    TargetKind
+    TargetKind,
+    Project
 };
 
 pub use self::package::{
