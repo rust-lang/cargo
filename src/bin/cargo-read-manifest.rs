@@ -21,6 +21,6 @@ fn main() {
 }
 
 fn execute(options: Options) -> CLIResult<Option<Package>> {
-    ops::read_manifest(options.manifest_path.as_slice()).map(|m| Some(m))
+    ops::read_package(&Path::new(options.manifest_path.as_slice())).map(|m| Some(m))
         .map_err(|err| CLIError::new(err.get_desc(), Some(err.get_detail()), 1))
 }

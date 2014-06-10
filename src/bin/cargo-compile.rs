@@ -37,5 +37,5 @@ fn execute(options: Options) -> CLIResult<Option<()>> {
                         CLIError::new("Could not find Cargo.toml in this directory or any parent directory", Some(err), 102)))
     };
 
-    ops::compile(root.as_str().unwrap().as_slice()).map(|_| None).to_cli(101)
+    ops::compile(&root).map(|_| None).to_cli(101)
 }
