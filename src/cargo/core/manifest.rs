@@ -197,7 +197,13 @@ pub struct Project {
 #[deriving(Encodable,PartialEq,Clone,Show)]
 pub enum TomlDependency {
     SimpleDep(String),
-    DetailedDep(HashMap<String, String>)
+    DetailedDep(DetailedTomlDependency)
+}
+
+#[deriving(Encodable,PartialEq,Clone,Show)]
+pub struct DetailedTomlDependency {
+    version: String,
+    other: HashMap<String, String>
 }
 
 #[deriving(Encodable,PartialEq,Clone)]
@@ -243,7 +249,13 @@ impl TomlManifest {
                                 details.insert(k.clone(), v.clone());
                             }
 
-                            deps.insert(k.clone(), DetailedDep(details));
+                            let version = try!(details.find_equiv(&"version")
+                                               .require(simple_human("dependencies must include a version"))).clone();
+
+                            deps.insert(k.clone(), DetailedDep(DetailedTomlDependency {
+                                version: version,
+                                other: details
+                            }));
                         },
                         _ => ()
                     }
@@ -275,9 +287,8 @@ impl TomlManifest {
             Some(ref dependencies) => {
                 for (n, v) in dependencies.iter() {
                     let version = match *v {
-                        SimpleDep(ref string) => string,
-                        DetailedDep(ref map) => try!(map.find_equiv(&"version")
-                                                     .require(simple_human("dependencies must include a version")))
+                        SimpleDep(ref string) => string.clone(),
+                        DetailedDep(ref details) => details.version.clone()
                     };
 
                     deps.push(try!(Dependency::parse(n.as_slice(), version.as_slice())))
