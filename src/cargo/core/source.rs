@@ -35,3 +35,42 @@ pub trait Source {
      */
     fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>>;
 }
+
+impl Source for Vec<Box<Source>> {
+
+    fn update(&self) -> CargoResult<()> {
+        for source in self.iter() {
+            try!(source.update());
+        }
+
+        Ok(())
+    }
+
+    fn list(&self) -> CargoResult<Vec<Summary>> {
+        let mut ret = Vec::new();
+
+        for source in self.iter() {
+            ret.push_all(try!(source.list()).as_slice());
+        }
+
+        Ok(ret)
+    }
+
+    fn download(&self, packages: &[NameVer]) -> CargoResult<()> {
+        for source in self.iter() {
+            try!(source.download(packages));
+        }
+
+        Ok(())
+    }
+
+    fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
+        let mut ret = Vec::new();
+
+        for source in self.iter() {
+            ret.push_all(try!(source.get(packages)).as_slice());
+        }
+
+        Ok(ret)
+    }
+}
