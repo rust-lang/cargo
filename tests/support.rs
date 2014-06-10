@@ -273,7 +273,7 @@ impl ham::Matcher<ProcessBuilder> for Execs {
     match res {
       Ok(out) => self.match_output(&out),
       Err(CargoError { kind: ProcessError(_, ref out), .. }) => self.match_output(out.get_ref()),
-      Err(_) => Err(format!("could not exec process {}", process))
+      Err(e) => Err(format!("could not exec process {}: {}", process, e))
     }
   }
 }

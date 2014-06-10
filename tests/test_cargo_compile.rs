@@ -207,6 +207,79 @@ test!(cargo_compile_with_nested_deps {
       execs().with_stdout("test passed\n"));
 })
 
+test!(cargo_compile_with_nested_deps_longhand {
+    let mut p = project("foo");
+    let bar = p.root().join("bar");
+    let baz = p.root().join("baz");
+
+    p = p
+        .file(".cargo/config", format!(r#"
+            paths = ["{}", "{}"]
+        "#, bar.display(), baz.display()).as_slice())
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+
+            version = "0.5.0"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.baz]
+
+            version = "0.5.0"
+
+            [[lib]]
+
+            name = "bar"
+        "#)
+        .file("bar/src/bar.rs", r#"
+            extern crate baz;
+
+            pub fn gimme() -> String {
+                baz::gimme()
+            }
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+
+            name = "baz"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "baz"
+        "#)
+        .file("baz/src/baz.rs", r#"
+            pub fn gimme() -> String {
+                "test passed".to_str()
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-compile"), execs());
+
+    assert_that(&p.root().join("target/foo"), existing_file());
+
+    assert_that(
+      cargo::util::process("foo").extra_path(p.root().join("target")),
+      execs().with_stdout("test passed\n"));
+})
+
 fn main_file(println: &str, deps: &[&str]) -> String {
     let mut buf = String::new();
 

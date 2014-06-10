@@ -4,6 +4,7 @@
 #![allow(deprecated_owned_vector)]
 #![feature(macro_rules,phase)]
 
+extern crate debug;
 extern crate term;
 extern crate url;
 extern crate serialize;
