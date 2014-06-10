@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::collections::HashMap;
 use semver::Version;
-use serialize::{Encoder,Encodable};
+use serialize::{Encoder,Decoder,Encodable,Decodable};
 use core::{
     Dependency,
     NameVer,
@@ -10,7 +10,9 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
-use util::CargoResult;
+use util::{CargoResult,Require,toml_error,simple_human};
+use toml;
+use toml::{Table, ParseError};
 
 #[deriving(PartialEq,Clone)]
 pub struct Manifest {
@@ -192,21 +194,75 @@ pub struct Project {
  * TODO: Make all struct fields private
  */
 
-#[deriving(Decodable,Encodable,PartialEq,Clone)]
+#[deriving(Encodable,PartialEq,Clone,Show)]
+pub enum TomlDependency {
+    SimpleDep(String),
+    DetailedDep(HashMap<String, String>)
+}
+
+#[deriving(Encodable,PartialEq,Clone)]
 pub struct TomlManifest {
     project: Box<Project>,
-    lib: Option<~[TomlLibTarget]>,
-    bin: Option<~[TomlBinTarget]>,
-    dependencies: Option<HashMap<String, String>>,
+    lib: Option<Vec<TomlLibTarget>>,
+    bin: Option<Vec<TomlBinTarget>>,
+    dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
 impl TomlManifest {
+    pub fn from_toml(root: toml::Value) -> CargoResult<TomlManifest> {
+        fn decode<T: Decodable<toml::Decoder,toml::Error>>(root: &toml::Value, path: &str) -> Result<T, toml::Error> {
+            let root = match root.lookup(path) {
+                Some(val) => val,
+                None => return Err(toml::ParseError)
+            };
+            toml::from_toml(root.clone())
+        }
+
+        let project = try!(decode(&root, "project").map_err(|e| toml_error("ZOMG", e)));
+        let lib = decode(&root, "lib").ok();
+        let bin = decode(&root, "bin").ok();
+
+        let deps = root.lookup("dependencies");
+
+        let deps = match deps {
+            Some(deps) => {
+                let table = try!(deps.get_table().require(simple_human("dependencies must be a table"))).clone();
+
+                let mut deps: HashMap<String, TomlDependency> = HashMap::new();
+
+                for (k, v) in table.iter() {
+                    match v {
+                        &toml::String(ref string) => { deps.insert(k.clone(), SimpleDep(string.clone())); },
+                        &toml::Table(ref table) => {
+                            let mut details = HashMap::<String, String>::new();
+
+                            for (k, v) in table.iter() {
+                                let v = try!(v.get_str()
+                                             .require(simple_human("dependency values must be string")));
+
+                                details.insert(k.clone(), v.clone());
+                            }
+
+                            deps.insert(k.clone(), DetailedDep(details));
+                        },
+                        _ => ()
+                    }
+                }
+
+                Some(deps)
+            },
+            None => None
+        };
+
+        Ok(TomlManifest { project: box project, lib: lib, bin: bin, dependencies: deps })
+    }
+
     pub fn to_package(&self, path: &str) -> CargoResult<Package> {
         // TODO: Convert hte argument to take a Path
         let path = Path::new(path);
 
         // Get targets
-        let targets = normalize(&self.lib, &self.bin);
+        let targets = normalize(self.lib.as_ref().map(|l| l.as_slice()), self.bin.as_ref().map(|b| b.as_slice()));
 
         if targets.is_empty() {
             debug!("manifest has no build targets; project={}", self.project);
@@ -218,7 +274,13 @@ impl TomlManifest {
         match self.dependencies {
             Some(ref dependencies) => {
                 for (n, v) in dependencies.iter() {
-                    deps.push(try!(Dependency::parse(n.as_slice(), v.as_slice())));
+                    let version = match *v {
+                        SimpleDep(ref string) => string,
+                        DetailedDep(ref map) => try!(map.find_equiv(&"version")
+                                                     .require(simple_human("dependencies must include a version")))
+                    };
+
+                    deps.push(try!(Dependency::parse(n.as_slice(), version.as_slice())))
                 }
             }
             None => ()
@@ -248,7 +310,7 @@ struct TomlTarget {
     path: Option<String>
 }
 
-fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlBinTarget]>) -> Vec<Target> {
+fn normalize(lib: Option<&[TomlLibTarget]>, bin: Option<&[TomlBinTarget]>) -> Vec<Target> {
     log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
 
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
@@ -267,17 +329,17 @@ fn normalize(lib: &Option<~[TomlLibTarget]>, bin: &Option<~[TomlBinTarget]>) -> 
     let mut ret = Vec::new();
 
     match (lib, bin) {
-        (&Some(ref libs), &Some(ref bins)) => {
+        (Some(ref libs), Some(ref bins)) => {
             lib_targets(&mut ret, libs.as_slice());
             bin_targets(&mut ret, bins.as_slice(), |bin| format!("src/bin/{}.rs", bin.name));
         },
-        (&Some(ref libs), &None) => {
+        (Some(ref libs), None) => {
             lib_targets(&mut ret, libs.as_slice());
         },
-        (&None, &Some(ref bins)) => {
+        (None, Some(ref bins)) => {
             bin_targets(&mut ret, bins.as_slice(), |bin| format!("src/{}.rs", bin.name));
         },
-        (&None, &None) => ()
+        (None, None) => ()
     }
 
     ret

@@ -19,7 +19,7 @@ fn parse_from_file(path: &str) -> CargoResult<toml::Value> {
 }
 
 fn load_toml(root: toml::Value) -> CargoResult<TomlManifest> {
-    from_toml::<TomlManifest>(root).map_err(to_cargo_err)
+    TomlManifest::from_toml(root)
 }
 
 fn to_cargo_err(err: toml::Error) -> CargoError {

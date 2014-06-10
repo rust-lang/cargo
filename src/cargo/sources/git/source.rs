@@ -49,6 +49,7 @@ impl Source for GitSource {
     }
 
     fn get(&self, packages: &[NameVer]) -> CargoResult<Vec<Package>> {
+        // TODO: Support multiple manifests per repo
         let pkg = try!(read_manifest(&self.checkout_path));
 
         if packages.iter().any(|nv| pkg.is_for_name_ver(nv)) {

@@ -23,14 +23,14 @@ into Rust structs that are used throughout the built-in commands.
 
 ## The `[project]` Section
 
-* `name`: the name of the project (`~str`)
-* `version`: the version of the project, (`~str` that can be parsed
+* `name`: the name of the project (`String`)
+* `version`: the version of the project, (`String` that can be parsed
   via `semver::parse`)
 * `readme`: a Markdown-formatted file in the project that can be used as
   a description of the document in indexes (`Option<Path>`, relative to
   the project root, defaults to "./README.md", if found).
-* `tags`: an array of tags that can be used in indexes (`~[~str]`) 
-* `authors`: a list of authors in `name <email>` format (`~[~str]`). At
+* `tags`: an array of tags that can be used in indexes (`Vec<String>`) 
+* `authors`: a list of authors in `name <email>` format (`Vec<String>`). At
   least one `author` with email will probably be required to submit to
   the Cargo repository.
 * `src`: the root directory containing source files (`Option<Path>`,
@@ -45,7 +45,7 @@ We only plan to support a single lib at the moment because if you have
 multiple libs, you would want projects to be able to depend on them
 separately. If you don't care about that, why do you have separate libs?
 
-* `name`: the name of the library (`~str`, `hammer` would create a `libhammer`)
+* `name`: the name of the library (`String`, `hammer` would create a `libhammer`)
 * `path`: the location of the main crate file (`Option<Path>`, defaults to
   `src/<name>.rs`)
 
@@ -64,12 +64,26 @@ main library, it should be shipped as a separate package with a
 dependency on the main library to keep the usage requirements of the
 standalone library limited to the bare minimum requirements.
 
-* `name`: the name of the executable (`~str`, `hammer` would create a
+* `name`: the name of the executable (`String`, `hammer` would create a
   `hammer` executable)
 * `path`: the location of the main crate file for the executable
   (`Option<Path>`, defaults to `src/<name>.rs` if the project has only
   an executable, `src/bin/<name>.rs` if the project has both a lib and
   executable, see below)
+
+## The `[dependencies]` Section
+
+```toml
+[dependencies]
+
+rust-http = "1.x"
+hammer = ["> 1.2", "< 1.3.5"]
+
+[dependencies.hamcrest]
+
+version = "1.2.x"
+git = "http://github.com/carllerche/hamcrest"
+```
 
 ## Projects Containing Both `lib` and `executable`
 
