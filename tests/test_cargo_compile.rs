@@ -1,7 +1,7 @@
-use support::{ResultTest,project,execs,realpath};
+use support::{ResultTest,project,execs};
 use hamcrest::{assert_that,existing_file};
 use cargo;
-use cargo::util::process;
+use cargo::util::{process,realpath};
 
 fn setup() {
 }
@@ -120,9 +120,13 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             fn dead() {}
         "#);
 
+    let bar = realpath(&p.root().join("bar")).assert();
+    let main = realpath(&p.root()).assert();
+
     assert_that(p.cargo_process("cargo-compile"),
         execs()
-        .with_stdout("Compiling bar v0.5.0\nCompiling foo v0.5.0\n")
+        .with_stdout(format!("Compiling bar v0.5.0 (file:{})\nCompiling foo v0.5.0 (file:{})\n",
+                             bar.display(), main.display()))
         .with_stderr(""));
 
     assert_that(&p.root().join("target/foo"), existing_file());
@@ -132,7 +136,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
       execs().with_stdout("test passed\n"));
 })
 
-test!(cargo_compile_with_nested_deps {
+test!(cargo_compile_with_nested_deps_shorthand {
     let mut p = project("foo");
     let bar = p.root().join("bar");
     let baz = p.root().join("baz");

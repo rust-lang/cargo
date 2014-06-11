@@ -26,7 +26,8 @@ use util::{other_error, CargoResult, Wrap};
 pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    let package = try!(ops::read_package(manifest_path));
+    // TODO: Move this into PathSource
+    let package = try!(PathSource::read_package(manifest_path));
 
     debug!("loaded package; package={}", package);
 
@@ -50,6 +51,8 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     try!(source.download(resolved.as_slice()).wrap("unable to download packages"));
 
     let packages = try!(source.get(resolved.as_slice()).wrap("unable to get packages from source"));
+
+    log!(5, "fetch packages from source; packages={}; ids={}", packages, resolved);
 
     let package_set = PackageSet::new(packages.as_slice());
 

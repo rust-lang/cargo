@@ -42,6 +42,12 @@ impl ToUrl for Url {
     }
 }
 
+impl<'a> ToUrl for &'a Url {
+    fn to_url(self) -> Option<Url> {
+        Some(self.clone())
+    }
+}
+
 #[deriving(Clone,PartialEq)]
 pub struct PackageId {
     name: String,

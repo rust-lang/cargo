@@ -3,16 +3,30 @@ use std::fmt::{Show,Formatter};
 use core::{Package,PackageId,Summary};
 use core::source::Source;
 use ops;
-use util::{CargoResult};
+use url;
+use util::{CargoResult,simple_human,io_error,realpath};
 
-pub struct PathSource {
-    paths: Vec<Path>
-}
+/* 
+ * TODO: Consider whether it may be more appropriate for a PathSource to only
+ * take in a single path vs. a vec of paths. The pros / cons are unknown at
+ * this point.
+ */
+pub struct PathSource { paths: Vec<Path> }
 
 impl PathSource {
     pub fn new(paths: Vec<Path>) -> PathSource {
-        log!(4, "new; paths={}", display(paths.as_slice()));
+        log!(5, "new; paths={}", display(paths.as_slice()));
         PathSource { paths: paths }
+    }
+
+    pub fn read_package(path: &Path) -> CargoResult<Package> {
+        log!(5, "read_package; path={}", path.display());
+
+        // TODO: Use a realpath fn
+        let dir = path.dir_path();
+        let namespace = try!(namespace(&dir));
+
+        ops::read_package(path, &namespace)
     }
 }
 
@@ -27,10 +41,10 @@ impl Source for PathSource {
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
         Ok(self.paths.iter().filter_map(|path| {
-            match read_manifest(path) {
+            match PathSource::read_package(&path.join("Cargo.toml")) {
                 Ok(ref pkg) => Some(pkg.get_summary().clone()),
                 Err(e) => {
-                    log!(4, "failed to read manifest; path={}; err={}", path.display(), e);
+                    debug!("failed to read manifest; path={}; err={}", path.display(), e);
                     None
                 }
             }
@@ -41,11 +55,15 @@ impl Source for PathSource {
         Ok(())
     }
 
-    fn get(&self, name_vers: &[PackageId]) -> CargoResult<Vec<Package>> {
+    fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
+        log!(5, "getting packages; ids={}", ids);
+
         Ok(self.paths.iter().filter_map(|path| {
-            match read_manifest(path) {
+            match PathSource::read_package(&path.join("Cargo.toml")) {
                 Ok(pkg) => {
-                    if name_vers.iter().any(|pkg_id| pkg.get_package_id() == pkg_id) {
+                    log!(5, "comparing; pkg={}", pkg);
+
+                    if ids.iter().any(|pkg_id| pkg.get_package_id() == pkg_id) {
                         Some(pkg)
                     } else {
                         None
@@ -57,11 +75,12 @@ impl Source for PathSource {
     }
 }
 
-fn read_manifest(path: &Path) -> CargoResult<Package> {
-    let path = path.join("Cargo.toml");
-    ops::read_package(&path)
-}
-
 fn display(paths: &[Path]) -> Vec<String> {
     paths.iter().map(|p| p.display().to_str()).collect()
+}
+
+fn namespace(path: &Path) -> CargoResult<url::Url> {
+    let real = try!(realpath(path).map_err(io_error));
+    url::from_str(format!("file://{}", real.display()).as_slice()).map_err(|err|
+        simple_human(err.as_slice()))
 }

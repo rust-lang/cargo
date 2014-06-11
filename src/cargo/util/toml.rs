@@ -1,18 +1,19 @@
 use toml;
+use url::Url;
 use std::collections::HashMap;
 use serialize::Decodable;
 
 use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
 
-pub fn to_manifest(contents: &[u8]) -> CargoResult<Manifest> {
+pub fn to_manifest(contents: &[u8], namespace: &Url) -> CargoResult<Manifest> {
     let root = try!(toml::parse_from_bytes(contents).map_err(|_|
         simple_human("Cargo.toml is not valid Toml")));
 
     let toml = try!(toml_to_manifest(root).map_err(|_|
         simple_human("Cargo.toml is not a valid Cargo manifest")));
 
-    toml.to_manifest()
+    toml.to_manifest(namespace)
 }
 
 fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
@@ -104,13 +105,13 @@ pub struct TomlProject {
 }
 
 impl TomlProject {
-    pub fn to_package_id(&self, namespace: &str) -> PackageId {
+    pub fn to_package_id(&self, namespace: &Url) -> PackageId {
         PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
     }
 }
 
 impl TomlManifest {
-    pub fn to_manifest(&self) -> CargoResult<Manifest> {
+    pub fn to_manifest(&self, namespace: &Url) -> CargoResult<Manifest> {
 
         // Get targets
         let targets = normalize(self.lib.as_ref().map(|l| l.as_slice()), self.bin.as_ref().map(|b| b.as_slice()));
@@ -137,7 +138,7 @@ impl TomlManifest {
         }
 
         Ok(Manifest::new(
-                &Summary::new(&self.project.to_package_id("http://rust-lang.org/central-repo"), deps.as_slice()),
+                &Summary::new(&self.project.to_package_id(namespace), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target")))
     }

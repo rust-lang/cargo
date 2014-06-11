@@ -7,7 +7,7 @@ extern crate hammer;
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError};
 use cargo::core::Package;
-use cargo::ops;
+use cargo::sources::{PathSource};
 
 #[deriving(PartialEq,Clone,Decodable)]
 struct Options {
@@ -21,6 +21,6 @@ fn main() {
 }
 
 fn execute(options: Options) -> CLIResult<Option<Package>> {
-    ops::read_package(&Path::new(options.manifest_path.as_slice())).map(|m| Some(m))
+    PathSource::read_package(&Path::new(options.manifest_path.as_slice())).map(|m| Some(m))
         .map_err(|err| CLIError::new(err.get_desc(), Some(err.get_detail()), 1))
 }

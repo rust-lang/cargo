@@ -152,43 +152,6 @@ pub fn cargo_dir() -> Path {
 
 /// Returns an absolute path in the filesystem that `path` points to. The
 /// returned path does not contain any symlinks in its hierarchy.
-pub fn realpath(original: &Path) -> io::IoResult<Path> {
-    static MAX_LINKS_FOLLOWED: uint = 256;
-    let original = os::make_absolute(original);
-
-    // Right now lstat on windows doesn't work quite well
-    if cfg!(windows) {
-        return Ok(original)
-    }
-
-    let result = original.root_path();
-    let mut result = result.expect("make_absolute has no root_path");
-    let mut followed = 0;
-
-    for part in original.components() {
-        result.push(part);
-
-        loop {
-            if followed == MAX_LINKS_FOLLOWED {
-                return Err(io::standard_error(io::InvalidInput))
-            }
-
-            match fs::lstat(&result) {
-                Err(..) => break,
-                Ok(ref stat) if stat.kind != io::TypeSymlink => break,
-                Ok(..) => {
-                    followed += 1;
-                    let path = try!(fs::readlink(&result));
-                    result.pop();
-                    result.push(path);
-                }
-            }
-        }
-    }
-
-    return Ok(result);
-}
-
 /*
  *
  * ===== Matchers =====
@@ -205,12 +168,12 @@ struct Execs {
 
 impl Execs {
 
-  pub fn with_stdout(mut ~self, expected: &str) -> Box<Execs> {
+  pub fn with_stdout<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
     self.expect_stdout = Some(expected.to_str());
     self
   }
 
-  pub fn with_stderr(mut ~self, expected: &str) -> Box<Execs> {
+  pub fn with_stderr<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
       self.expect_stderr = Some(expected.to_str());
       self
   }
@@ -252,7 +215,7 @@ impl Execs {
         match str::from_utf8(actual) {
           None => Err(format!("{} was not utf8 encoded", description)),
           Some(actual) => {
-            ham::expect(actual == out, format!("{} was:\n`{}`\n\nexpected:\n`{}`\n\nother output:\n`{}`", description, actual, out, str::from_utf8(extra)))
+            ham::expect(actual == out, format!("{} was:\n`{}`\n\nexpected:\n`{}`\n\nother output:\n`{}`", description, actual, out, str::from_utf8_lossy(extra)))
           }
         }
       }
