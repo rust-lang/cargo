@@ -6,7 +6,6 @@ pub use self::manifest::{
     Manifest,
     Target,
     TargetKind,
-    Project
 };
 
 pub use self::package::{

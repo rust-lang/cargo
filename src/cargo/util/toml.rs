@@ -2,7 +2,7 @@ use toml;
 use std::collections::HashMap;
 use serialize::Decodable;
 
-use core::{Summary,Manifest,Target,Project,Dependency};
+use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
 
 pub fn to_manifest(contents: &[u8]) -> CargoResult<Manifest> {
@@ -90,10 +90,23 @@ pub struct DetailedTomlDependency {
 
 #[deriving(Encodable,PartialEq,Clone)]
 pub struct TomlManifest {
-    project: Box<Project>,
+    project: Box<TomlProject>,
     lib: Option<Vec<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
+}
+
+#[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
+pub struct TomlProject {
+    pub name: String,
+    pub version: String,
+    pub authors: Vec<String>
+}
+
+impl TomlProject {
+    pub fn to_package_id(&self, namespace: &str) -> PackageId {
+        PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
+    }
 }
 
 impl TomlManifest {
@@ -124,7 +137,7 @@ impl TomlManifest {
         }
 
         Ok(Manifest::new(
-                &Summary::new(&self.project.to_package_id(), deps.as_slice()),
+                &Summary::new(&self.project.to_package_id("http://rust-lang.org/central-repo"), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target")))
     }

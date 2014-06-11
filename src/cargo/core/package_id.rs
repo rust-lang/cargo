@@ -1,4 +1,6 @@
 use semver;
+use url;
+use url::Url;
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use serialize::{
@@ -24,17 +26,35 @@ impl<'a> ToVersion for &'a str {
     }
 }
 
-#[deriving(Clone,PartialEq,PartialOrd)]
+trait ToUrl {
+    fn to_url(self) -> Option<Url>;
+}
+
+impl<'a> ToUrl for &'a str {
+    fn to_url(self) -> Option<Url> {
+        url::from_str(self).ok()
+    }
+}
+
+impl ToUrl for Url {
+    fn to_url(self) -> Option<Url> {
+        Some(self)
+    }
+}
+
+#[deriving(Clone,PartialEq)]
 pub struct PackageId {
     name: String,
-    version: semver::Version
+    version: semver::Version,
+    namespace: Url
 }
 
 impl PackageId {
-    pub fn new<T: ToVersion>(name: &str, version: T) -> PackageId {
+    pub fn new<T: ToVersion, U: ToUrl>(name: &str, version: T, namespace: U) -> PackageId {
         PackageId {
             name: name.to_str(),
-            version: version.to_version().unwrap()
+            version: version.to_version().unwrap(),
+            namespace: namespace.to_url().unwrap()
         }
     }
 
@@ -45,11 +65,23 @@ impl PackageId {
     pub fn get_version<'a>(&'a self) -> &'a semver::Version {
         &self.version
     }
+
+    pub fn get_namespace<'a>(&'a self) -> &'a Url {
+        &self.namespace
+    }
 }
+
+static central_repo: &'static str = "http://rust-lang.org/central-repo";
 
 impl Show for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{} v{}", self.name, self.version)
+        try!(write!(f, "{} v{}", self.name, self.version));
+
+        if self.namespace.to_str().as_slice() != central_repo {
+            try!(write!(f, " ({})", self.namespace));
+        }
+
+        Ok(())
     }
 }
 
@@ -59,12 +91,13 @@ impl<E, D: Decoder<E>> Decodable<D,E> for PackageId {
 
         Ok(PackageId::new(
             vector.get(0).as_slice(),
-            semver::parse(vector.get(1).as_slice()).unwrap()))
+            vector.get(1).as_slice(),
+            vector.get(2).as_slice()))
     }
 }
 
 impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
     fn encode(&self, e: &mut S) -> Result<(), E> {
-        (vec!(self.name.clone(), self.version.to_str())).encode(e)
+        (vec!(self.name.clone(), self.version.to_str()), self.namespace.to_str()).encode(e)
     }
 }
