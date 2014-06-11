@@ -62,17 +62,17 @@ mod test {
         ($name:expr => $($deps:expr),+) => (
             {
             let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::parse(*s, "1.0.0").unwrap()).collect();
-            Summary::new(&PackageId::new($name, "1.0.0"), d.as_slice())
+            Summary::new(&PackageId::new($name, "1.0.0", "http://www.example.com/"), d.as_slice())
             }
         );
 
         ($name:expr) => (
-            Summary::new(&PackageId::new($name, "1.0.0"), [])
+            Summary::new(&PackageId::new($name, "1.0.0", "http://www.example.com/"), [])
         )
     )
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&PackageId::new(name, "1.0.0"), &[])
+        Summary::new(&PackageId::new(name, "1.0.0", "http://www.example.com/"), &[])
     }
 
     fn dep(name: &str) -> Dependency {
@@ -85,7 +85,7 @@ mod test {
 
     fn names(names: &[&'static str]) -> Vec<PackageId> {
         names.iter()
-            .map(|name| PackageId::new(*name, "1.0.0"))
+            .map(|name| PackageId::new(*name, "1.0.0", "http://www.example.com/"))
             .collect()
     }
 

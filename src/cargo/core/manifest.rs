@@ -1,8 +1,7 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use semver;
 use semver::Version;
-use serialize::{Encoder,Decoder,Encodable};
+use serialize::{Encoder,Encodable};
 use core::{
     Dependency,
     PackageId,
@@ -173,20 +172,3 @@ impl Target {
         }
     }
 }
-
-/* TODO:
- * - Figure out if this is needed and/or if it should be moved somewhere else
- */
-#[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
-pub struct Project {
-    pub name: String,
-    pub version: String,
-    pub authors: Vec<String>
-}
-
-impl Project {
-    pub fn to_package_id(&self) -> PackageId {
-        PackageId::new(self.name.as_slice(), semver::parse(self.version.as_slice()).unwrap())
-    }
-}
-
