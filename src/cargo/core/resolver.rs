@@ -1,3 +1,4 @@
+use std::fmt::Show;
 use std::collections::HashMap;
 use core::{
     Dependency,
@@ -11,7 +12,9 @@ use util::result::CargoResult;
  * - The correct input here is not a registry. Resolves should be performable
  * on package summaries vs. the packages themselves.
  */
-pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<PackageId>> {
+pub fn resolve<R: Registry + Show>(deps: &[Dependency], registry: &R) -> CargoResult<Vec<PackageId>> {
+    log!(5, "resolve; deps={}; registry={}", deps, registry);
+
     let mut remaining = Vec::from_slice(deps);
     let mut resolve = HashMap::<&str, &Summary>::new();
 
@@ -19,7 +22,9 @@ pub fn resolve(deps: &[Dependency], registry: &Registry) -> CargoResult<Vec<Pack
         let curr = match remaining.pop() {
             Some(curr) => curr,
             None => {
-                return Ok(resolve.values().map(|summary| summary.get_package_id().clone()).collect());
+                let ret = resolve.values().map(|summary| summary.get_package_id().clone()).collect();
+                log!(5, "resolve complete; ret={}", ret);
+                return Ok(ret);
             }
         };
 

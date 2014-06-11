@@ -10,7 +10,7 @@ use util::result::ProcessError;
 type Args = Vec<String>;
 
 pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
-    debug!("compiling; pkg={}; deps={}", pkg, deps);
+    debug!("compile_packages; pkg={}; deps={}", pkg, deps);
 
     let target_dir = pkg.get_absolute_target_dir();
     let deps_target_dir = target_dir.join("deps");
@@ -33,7 +33,7 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
 }
 
 fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> CargoResult<()> {
-    debug!("compiling; pkg={}; targets={}", pkg, pkg.get_targets());
+    debug!("compile_pkg; pkg={}; targets={}", pkg, pkg.get_targets());
 
     // compile
     for target in pkg.get_targets().iter() {

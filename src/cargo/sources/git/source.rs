@@ -1,4 +1,5 @@
 use ops;
+use url;
 use core::source::Source;
 use core::{Package,PackageId,Summary};
 use util::CargoResult;
@@ -17,6 +18,10 @@ pub struct GitSource {
 impl GitSource {
     pub fn new(remote: GitRemote, reference: String, db: Path, checkout: Path, verbose: bool) -> GitSource {
         GitSource { remote: remote, reference: GitReference::for_str(reference), db_path: db, checkout_path: checkout, verbose: verbose }
+    }
+
+    pub fn get_namespace<'a>(&'a self) -> &'a url::Url {
+        self.remote.get_url()
     }
 }
 
@@ -40,7 +45,7 @@ impl Source for GitSource {
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        let pkg = try!(read_manifest(&self.checkout_path));
+        let pkg = try!(read_manifest(&self.checkout_path, self.get_namespace()));
         Ok(vec!(pkg.get_summary().clone()))
     }
 
@@ -50,7 +55,7 @@ impl Source for GitSource {
 
     fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         // TODO: Support multiple manifests per repo
-        let pkg = try!(read_manifest(&self.checkout_path));
+        let pkg = try!(read_manifest(&self.checkout_path, self.remote.get_url()));
 
         if package_ids.iter().any(|pkg_id| pkg_id == pkg.get_package_id()) {
             Ok(vec!(pkg))
@@ -60,7 +65,7 @@ impl Source for GitSource {
     }
 }
 
-fn read_manifest(path: &Path) -> CargoResult<Package> {
+fn read_manifest(path: &Path, url: &url::Url) -> CargoResult<Package> {
     let path = path.join("Cargo.toml");
-    ops::read_package(&path)
+    ops::read_package(&path, url)
 }

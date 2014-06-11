@@ -82,7 +82,9 @@ impl Show for CargoError {
         match self.desc {
             StaticDescription(string) => write!(f, "{}", string),
             BoxedDescription(ref string) => write!(f, "{}", string)
-        }
+        };
+
+        write!(f, "; kind={}", self.kind)
     }
 }
 
