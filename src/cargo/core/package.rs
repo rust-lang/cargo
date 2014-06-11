@@ -20,7 +20,7 @@ pub struct Package {
     // The package's manifest
     manifest: Manifest,
     // The root of the package
-    root: Path,
+    manifest_path: Path,
 }
 
 #[deriving(Encodable)]
@@ -30,7 +30,7 @@ struct SerializedPackage {
     dependencies: Vec<SerializedDependency>,
     authors: Vec<String>,
     targets: Vec<Target>,
-    root: String
+    manifest_path: String
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Package {
@@ -45,16 +45,16 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
             dependencies: summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: Vec::from_slice(manifest.get_authors()),
             targets: Vec::from_slice(manifest.get_targets()),
-            root: self.root.display().to_str()
+            manifest_path: self.manifest_path.display().to_str()
         }.encode(s)
     }
 }
 
 impl Package {
-    pub fn new(manifest: &Manifest, root: &Path) -> Package {
+    pub fn new(manifest: &Manifest, manifest_path: &Path) -> Package {
         Package {
             manifest: manifest.clone(),
-            root: root.clone()
+            manifest_path: manifest_path.clone()
         }
     }
 
@@ -90,8 +90,12 @@ impl Package {
         self.get_manifest().get_targets()
     }
 
-    pub fn get_root<'a>(&'a self) -> &'a Path {
-        &self.root
+    pub fn get_manifest_path<'a>(&'a self) -> &'a Path {
+        &self.manifest_path
+    }
+
+    pub fn get_root<'a>(&'a self) -> Path {
+        self.manifest_path.dir_path()
     }
 
     pub fn get_target_dir<'a>(&'a self) -> &'a Path {

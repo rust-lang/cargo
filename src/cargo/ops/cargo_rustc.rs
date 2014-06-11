@@ -39,7 +39,7 @@ fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> Ca
     for target in pkg.get_targets().iter() {
         // Only compile lib targets for dependencies
         if primary || target.is_lib() {
-            try!(rustc(pkg.get_root(), target, dest, deps_dir, primary))
+            try!(rustc(&pkg.get_root(), target, dest, deps_dir, primary))
         }
     }
 
@@ -52,6 +52,8 @@ fn mk_target(target: &Path) -> CargoResult<()> {
 }
 
 fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) -> CargoResult<()> {
+    log!(5, "root={}; target={}; dest={}; deps={}; verbose={}", root.display(), target, dest.display(), deps.display(), verbose);
+
     let rustc = prepare_rustc(root, target, dest, deps);
 
     try!((if verbose {

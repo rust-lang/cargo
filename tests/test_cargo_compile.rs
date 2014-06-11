@@ -20,7 +20,7 @@ fn basic_bin_manifest(name: &str) -> String {
     "#, name, name)
 }
 
-test!(cargo_compile {
+test!(cargo_compile_simple {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice());

@@ -17,7 +17,7 @@
 use std::os;
 use util::config;
 use util::config::{ConfigValue};
-use core::{PackageSet,Source};
+use core::{Package,PackageSet,Source,SourceSet};
 use core::resolver::resolve;
 use sources::path::PathSource;
 use ops;
@@ -28,9 +28,32 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
 
     // TODO: Move this into PathSource
     let package = try!(PathSource::read_package(manifest_path));
-
     debug!("loaded package; package={}", package);
 
+    let sources = try!(sources_for(&package));
+
+    let summaries = try!(sources.list().wrap("unable to list packages from source"));
+    let resolved = try!(resolve(package.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
+
+    try!(sources.download(resolved.as_slice()).wrap("unable to download packages"));
+
+    let packages = try!(sources.get(resolved.as_slice()).wrap("unable to get packages from source"));
+
+    log!(5, "fetch packages from source; packages={}; ids={}", packages, resolved);
+
+    let package_set = PackageSet::new(packages.as_slice());
+
+    try!(ops::compile_packages(&package, &package_set));
+
+    Ok(())
+}
+
+fn sources_for(package: &Package) -> CargoResult<SourceSet> {
+    let sources = try!(sources_from_config([package.get_manifest_path().dir_path()]));
+    Ok(SourceSet::new(sources))
+}
+
+fn sources_from_config(additional: &[Path]) -> CargoResult<Vec<Box<Source>>> {
     let configs = try!(config::all_configs(os::getcwd()));
 
     debug!("loaded config; configs={}", configs);
@@ -42,21 +65,7 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 
-    paths.push(Path::new(manifest_path).dir_path());
+    paths.push_all(additional);
 
-    let source = PathSource::new(paths);
-    let summaries = try!(source.list().wrap("unable to list packages from source"));
-    let resolved = try!(resolve(package.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
-
-    try!(source.download(resolved.as_slice()).wrap("unable to download packages"));
-
-    let packages = try!(source.get(resolved.as_slice()).wrap("unable to get packages from source"));
-
-    log!(5, "fetch packages from source; packages={}; ids={}", packages, resolved);
-
-    let package_set = PackageSet::new(packages.as_slice());
-
-    try!(ops::compile_packages(&package, &package_set));
-
-    Ok(())
+    Ok(vec!(box PathSource::new(paths) as Box<Source>))
 }
