@@ -18,7 +18,8 @@ pub use self::package_id::{
 };
 
 pub use self::source::{
-    Source
+    Source,
+    SourceSet
 };
 
 pub use self::summary::{

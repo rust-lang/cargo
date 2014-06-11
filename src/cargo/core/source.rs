@@ -36,10 +36,19 @@ pub trait Source {
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
 }
 
-impl Source for Vec<Box<Source>> {
+pub struct SourceSet {
+    sources: Vec<Box<Source>>
+}
 
+impl SourceSet {
+    pub fn new(sources: Vec<Box<Source>>) -> SourceSet {
+        SourceSet { sources: sources }
+    }
+}
+
+impl Source for SourceSet {
     fn update(&self) -> CargoResult<()> {
-        for source in self.iter() {
+        for source in self.sources.iter() {
             try!(source.update());
         }
 
@@ -49,7 +58,7 @@ impl Source for Vec<Box<Source>> {
     fn list(&self) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
 
-        for source in self.iter() {
+        for source in self.sources.iter() {
             ret.push_all(try!(source.list()).as_slice());
         }
 
@@ -57,7 +66,7 @@ impl Source for Vec<Box<Source>> {
     }
 
     fn download(&self, packages: &[PackageId]) -> CargoResult<()> {
-        for source in self.iter() {
+        for source in self.sources.iter() {
             try!(source.download(packages));
         }
 
@@ -67,7 +76,7 @@ impl Source for Vec<Box<Source>> {
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
         let mut ret = Vec::new();
 
-        for source in self.iter() {
+        for source in self.sources.iter() {
             ret.push_all(try!(source.get(packages)).as_slice());
         }
 
