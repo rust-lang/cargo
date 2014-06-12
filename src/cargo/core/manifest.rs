@@ -2,9 +2,11 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use semver::Version;
 use serialize::{Encoder,Encodable};
+use core::source::SourceId;
 use core::{
     Dependency,
     PackageId,
+    Source,
     Summary
 };
 use core::dependency::SerializedDependency;
@@ -15,6 +17,7 @@ pub struct Manifest {
     authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: Path,
+    sources: Vec<SourceId>
 }
 
 impl Show for Manifest {
@@ -88,12 +91,13 @@ impl Show for Target {
 }
 
 impl Manifest {
-    pub fn new(summary: &Summary, targets: &[Target], target_dir: &Path) -> Manifest {
+    pub fn new(summary: &Summary, targets: &[Target], target_dir: &Path, sources: Vec<SourceId>) -> Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
             targets: Vec::from_slice(targets),
-            target_dir: target_dir.clone()
+            target_dir: target_dir.clone(),
+            sources: sources
         }
     }
 
@@ -127,6 +131,10 @@ impl Manifest {
 
     pub fn get_target_dir<'a>(&'a self) -> &'a Path {
         &self.target_dir
+    }
+
+    pub fn get_sources<'a>(&'a self) -> &'a [SourceId] {
+        self.sources.as_slice()
     }
 }
 
