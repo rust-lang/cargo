@@ -1,9 +1,11 @@
 use toml;
+use url;
 use url::Url;
 use std::collections::HashMap;
 use serialize::Decodable;
 
-use core::{Summary,Manifest,Target,Dependency,PackageId};
+use core::source::{SourceId,GitKind};
+use core::{Summary,Manifest,Target,Dependency,PackageId,Source};
 use util::{CargoResult,Require,simple_human,toml_error};
 
 pub fn to_manifest(contents: &[u8], namespace: &Url) -> CargoResult<Manifest> {
@@ -112,6 +114,7 @@ impl TomlProject {
 
 impl TomlManifest {
     pub fn to_manifest(&self, namespace: &Url) -> CargoResult<Manifest> {
+        let mut sources = vec!();
 
         // Get targets
         let targets = normalize(self.lib.as_ref().map(|l| l.as_slice()), self.bin.as_ref().map(|b| b.as_slice()));
@@ -128,7 +131,15 @@ impl TomlManifest {
                 for (n, v) in dependencies.iter() {
                     let version = match *v {
                         SimpleDep(ref string) => string.clone(),
-                        DetailedDep(ref details) => details.version.clone()
+                        DetailedDep(ref details) => {
+                            details.other.find_equiv(&"git").map(|git| {
+                                // TODO: Don't unwrap here
+                                let kind = GitKind("master".to_str());
+                                let url = url::from_str(git.as_slice()).unwrap();
+                                sources.push(SourceId::new(kind, url));
+                            });
+                            details.version.clone()
+                        }
                     };
 
                     deps.push(try!(Dependency::parse(n.as_slice(), version.as_slice())))
@@ -140,7 +151,8 @@ impl TomlManifest {
         Ok(Manifest::new(
                 &Summary::new(&self.project.to_package_id(namespace), deps.as_slice()),
                 targets.as_slice(),
-                &Path::new("target")))
+                &Path::new("target"),
+                sources))
     }
 }
 

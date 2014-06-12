@@ -14,5 +14,5 @@ pub fn read_package(path: &Path, namespace: &Url) -> CargoResult<Package> {
     let data = try!(file.read_to_end().map_err(io_error));
     let manifest = try!(read_manifest(data.as_slice(), namespace));
 
-    Ok(Package::new(&manifest, path))
+    Ok(Package::new(manifest, path))
 }

@@ -14,6 +14,7 @@ use core::{
 use core::dependency::SerializedDependency;
 use util::graph;
 use serialize::{Encoder,Encodable};
+use core::source::SourceId;
 
 #[deriving(Clone,PartialEq)]
 pub struct Package {
@@ -51,9 +52,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
 }
 
 impl Package {
-    pub fn new(manifest: &Manifest, manifest_path: &Path) -> Package {
+    pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
-            manifest: manifest.clone(),
+            manifest: manifest,
             manifest_path: manifest_path.clone()
         }
     }
@@ -104,6 +105,10 @@ impl Package {
 
     pub fn get_absolute_target_dir(&self) -> Path {
         self.get_root().join(self.get_target_dir())
+    }
+
+    pub fn get_sources<'a>(&'a self) -> &'a [SourceId] {
+        self.manifest.get_sources()
     }
 }
 

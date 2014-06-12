@@ -1,5 +1,7 @@
+use url::Url;
 use core::{Summary,Package,PackageId};
 use util::CargoResult;
+use sources::GitSource;
 
 /**
  * A Source finds and downloads remote packages based on names and
@@ -34,6 +36,23 @@ pub trait Source {
      * system.
      */
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
+}
+
+#[deriving(Clone,PartialEq)]
+pub enum SourceKind {
+    GitKind(String)
+}
+
+#[deriving(Clone,PartialEq)]
+pub struct SourceId {
+    pub kind: SourceKind,
+    pub url: Url
+}
+
+impl SourceId {
+    pub fn new(kind: SourceKind, url: Url) -> SourceId {
+        SourceId { kind: kind, url: url }
+    }
 }
 
 pub struct SourceSet {
