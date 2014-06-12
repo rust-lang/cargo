@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serialize::Decodable;
 
 use core::source::{SourceId,GitKind};
-use core::{Summary,Manifest,Target,Dependency,PackageId,Source};
+use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
 
 pub fn to_manifest(contents: &[u8], namespace: &Url) -> CargoResult<Manifest> {

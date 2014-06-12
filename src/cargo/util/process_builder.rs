@@ -68,7 +68,7 @@ impl ProcessBuilder {
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
         command
-            .env(self.build_env())
+            .env(self.build_env().as_slice())
             .stdout(InheritFd(1))
             .stderr(InheritFd(2));
 
@@ -84,7 +84,7 @@ impl ProcessBuilder {
 
     pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {
         let mut command = self.build_command();
-        command.env(self.build_env());
+        command.env(self.build_env().as_slice());
 
         let output = try!(command.output().map_err(io_error));
 
@@ -106,7 +106,7 @@ impl ProcessBuilder {
         format!("{} {}", self.program, self.args.connect(" "))
     }
 
-    fn build_env(&self) -> ~[(String, String)] {
+    fn build_env(&self) -> Vec<(String, String)> {
         let mut ret = Vec::new();
 
         for (key, val) in self.env.iter() {

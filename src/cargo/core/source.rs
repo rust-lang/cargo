@@ -1,7 +1,6 @@
 use url::Url;
 use core::{Summary,Package,PackageId};
 use util::CargoResult;
-use sources::GitSource;
 
 /**
  * A Source finds and downloads remote packages based on names and

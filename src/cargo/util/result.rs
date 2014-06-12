@@ -80,8 +80,8 @@ pub struct CargoError {
 impl Show for CargoError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self.desc {
-            StaticDescription(string) => write!(f, "{}", string),
-            BoxedDescription(ref string) => write!(f, "{}", string)
+            StaticDescription(string) => try!(write!(f, "{}", string)),
+            BoxedDescription(ref string) => try!(write!(f, "{}", string))
         };
 
         write!(f, "; kind={}", self.kind)

@@ -64,7 +64,7 @@ fn sources_for(package: &Package) -> CargoResult<SourceSet> {
                 // .cargo/git/checkouts
                 let db_path = git.join("db").join(source_id.url.to_str());
                 let checkout_path = git.join("checkouts").join(source_id.url.to_str()).join(reference.as_slice());
-                Ok(box GitSource::new(remote, reference.clone(), db_path, checkout_path, false) as Box<Source>)
+                Ok(box GitSource::new(remote, reference.clone(), db_path, checkout_path) as Box<Source>)
             }
         }
     })));
