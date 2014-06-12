@@ -13,7 +13,7 @@ use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError,ToResult};
 use cargo::ops;
 use cargo::util::important_paths::find_project;
-use cargo::util::ToCLI;
+use cargo::util::{ToCLI,simple_human};
 
 #[deriving(PartialEq,Clone,Decodable,Encodable)]
 pub struct Options {

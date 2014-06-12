@@ -35,6 +35,7 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
 
     let sources = try!(sources_for(&package));
 
+    try!(sources.update().wrap("unable to update sources"));
     let summaries = try!(sources.list().wrap("unable to list packages from source"));
     let resolved = try!(resolve(package.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
 

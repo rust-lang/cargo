@@ -8,16 +8,18 @@ extern crate hamcrest;
 #[phase(plugin, link)]
 extern crate log;
 
+mod support;
 macro_rules! test(
     ($name:ident $expr:expr) => (
         #[test]
         fn $name() {
+            ::support::paths::setup();
             setup();
             $expr;
         }
     )
 )
 
-mod support;
 mod test_cargo_compile;
+mod test_cargo_compile_git_deps;
 mod test_shell;

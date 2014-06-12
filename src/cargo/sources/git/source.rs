@@ -37,6 +37,7 @@ impl Show for GitSource {
 
 impl Source for GitSource {
     fn update(&self) -> CargoResult<()> {
+        log!(5, "updating git source `{}`", self.remote);
         let repo = try!(self.remote.checkout(&self.db_path));
         try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
 
@@ -44,6 +45,7 @@ impl Source for GitSource {
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
+        log!(5, "listing summaries in git source `{}`", self.remote);
         let pkg = try!(read_manifest(&self.checkout_path, self.get_namespace()));
         Ok(vec!(pkg.get_summary().clone()))
     }
@@ -53,6 +55,7 @@ impl Source for GitSource {
     }
 
     fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
+        log!(5, "getting packages for package ids `{}` from `{}`", package_ids, self.remote);
         // TODO: Support multiple manifests per repo
         let pkg = try!(read_manifest(&self.checkout_path, self.remote.get_url()));
 

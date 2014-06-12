@@ -13,7 +13,7 @@ use cargo::core::shell;
 use cargo::util::{process,ProcessBuilder,CargoError};
 use cargo::util::result::ProcessError;
 
-static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
+pub mod paths;
 
 /*
  *
@@ -49,7 +49,7 @@ impl FileBuilder {
 }
 
 #[deriving(PartialEq,Clone)]
-struct ProjectBuilder {
+pub struct ProjectBuilder {
     name: String,
     root: Path,
     files: Vec<FileBuilder>
@@ -64,20 +64,32 @@ impl ProjectBuilder {
         }
     }
 
+    pub fn join<T: Str>(&self, name: &str, path: T) -> ProjectBuilder {
+        ProjectBuilder {
+            name: name.as_slice().to_str(),
+            root: self.root.join(path.as_slice()).clone(),
+            files: vec!()
+        }
+    }
+
     pub fn root(&self) -> Path {
       self.root.clone()
     }
 
-    pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
-        self.build();
-
+    pub fn process(&self, program: &str) -> ProcessBuilder {
         process(program)
             .cwd(self.root())
+            .env("HOME", Some(paths::home().display().to_str().as_slice()))
+    }
+
+    pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
+        self.build();
+        self.process(program)
             .extra_path(cargo_dir())
     }
 
-    pub fn file<B: BytesContainer>(mut self, path: B, body: &str) -> ProjectBuilder {
-        self.files.push(FileBuilder::new(self.root.join(path), body));
+    pub fn file<B: BytesContainer, S: Str>(mut self, path: B, body: S) -> ProjectBuilder { 
+        self.files.push(FileBuilder::new(self.root.join(path), body.as_slice()));
         self
     }
 
@@ -115,7 +127,7 @@ impl ProjectBuilder {
 
 // Generates a project layout
 pub fn project(name: &str) -> ProjectBuilder {
-    ProjectBuilder::new(name, os::tmpdir().join(CARGO_INTEGRATION_TEST_DIR))
+    ProjectBuilder::new(name, paths::root().join(name))
 }
 
 // === Helpers ===
@@ -128,6 +140,20 @@ pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
 pub fn rmdir_recursive(path: &Path) -> Result<(), String> {
     fs::rmdir_recursive(path)
         .with_err_msg(format!("could not rm directory; path={}", path.display()))
+}
+
+pub fn main_file<T: Str>(println: T, deps: &[&str]) -> String {
+    let mut buf = String::new();
+
+    for dep in deps.iter() {
+        buf.push_str(format!("extern crate {};\n", dep).as_slice());
+    }
+
+    buf.push_str("fn main() { println!(");
+    buf.push_str(println.as_slice());
+    buf.push_str("); }\n");
+
+    buf.to_str()
 }
 
 trait ErrMsg<T> {

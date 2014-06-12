@@ -47,7 +47,7 @@ $(BIN_TARGETS): target/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
 
 # === Tests
 
-TEST_SRC = $(wildcard tests/*.rs)
+TEST_SRC = $(shell find tests -name '*.rs')
 TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
 
 target/tests/test-integration: $(HAMCREST) $(TEST_SRC) $(BIN_TARGETS)
