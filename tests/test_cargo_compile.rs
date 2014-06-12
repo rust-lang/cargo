@@ -1,4 +1,4 @@
-use support::{ResultTest,project,execs};
+use support::{ResultTest,project,execs,main_file};
 use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::{process,realpath};
@@ -283,19 +283,5 @@ test!(cargo_compile_with_nested_deps_longhand {
       cargo::util::process("foo").extra_path(p.root().join("target")),
       execs().with_stdout("test passed\n"));
 })
-
-fn main_file(println: &str, deps: &[&str]) -> String {
-    let mut buf = String::new();
-
-    for dep in deps.iter() {
-        buf.push_str(format!("extern crate {};\n", dep).as_slice());
-    }
-
-    buf.push_str("fn main() { println!(");
-    buf.push_str(println);
-    buf.push_str("); }\n");
-
-    buf.to_str()
-}
 
 // test!(compiling_project_with_invalid_manifest)

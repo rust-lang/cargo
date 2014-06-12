@@ -67,7 +67,7 @@ macro_rules! errln(
  * GitRemote represents a remote repository. It gets cloned into a local GitDatabase.
  */
 
-#[deriving(PartialEq,Clone)]
+#[deriving(PartialEq,Clone,Show)]
 pub struct GitRemote {
     url: Url,
     verbose: bool
@@ -170,7 +170,7 @@ impl GitRemote {
     }
 
     fn fetch_into(&self, path: &Path) -> CargoResult<()> {
-        Ok(git!(*path, self.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.url))
+        Ok(git!(*path, self.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.fetch_location()))
     }
 
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
@@ -179,7 +179,14 @@ impl GitRemote {
         try!(mkdir_recursive(path, UserDir).map_err(|err|
             human_error(format!("Couldn't recursively create `{}`", dirname.display()), format!("path={}", dirname.display()), io_error(err))));
 
-        Ok(git!(dirname, self.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.url, path.display()))
+        Ok(git!(dirname, self.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.fetch_location(), path.display()))
+    }
+
+    fn fetch_location(&self) -> String {
+        match self.url.scheme.as_slice() {
+            "file" => self.url.path.clone(),
+            _ => self.url.to_str()
+        }
     }
 }
 
@@ -254,9 +261,7 @@ impl GitCheckout {
 }
 
 fn git(path: &Path, verbose: bool, str: &str) -> ProcessBuilder {
-    if verbose {
-        errln!("Executing git {} @ {}", str, path.display());
-    }
+    debug!("Executing git {} @ {}", str, path.display());
 
     process("git").args(str.split(' ').collect::<Vec<&str>>().as_slice()).cwd(path.clone())
 }

@@ -116,14 +116,14 @@ impl CargoError {
             CargoError { kind: HumanReadableError, desc: BoxedDescription(desc), detail: detail, .. } => {
                 CLIError::new(desc, detail, exit_code)
             },
-            CargoError { kind: InternalError, desc: StaticDescription(desc), detail: None, .. } => {
-                CLIError::new("An unexpected error occurred", Some(desc), exit_code)
+            ref err @ CargoError { kind: InternalError, desc: StaticDescription(desc), detail: None, .. } => {
+                CLIError::new(format!("An unexpected error occurred: {}", err), Some(desc), exit_code)
             },
-            CargoError { kind: InternalError, desc: StaticDescription(desc), detail: Some(detail), .. } => {
-                CLIError::new("An unexpected error occurred", Some(format!("{}\n{}", desc, detail)), exit_code)
+            ref err @ CargoError { kind: InternalError, desc: StaticDescription(desc), detail: Some(ref detail), .. } => {
+                CLIError::new(format!("An unexpected error occurred: {}", err), Some(format!("{}\n{}", desc, detail)), exit_code)
             },
-            _ => {
-                CLIError::new("An unexpected error occurred", None::<&str>, exit_code)
+            ref err @ _ => {
+                CLIError::new(format!("An unexpected error occurred: {}", err), None::<&str>, exit_code)
             }
         }
     }
