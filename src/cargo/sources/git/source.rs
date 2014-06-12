@@ -11,13 +11,12 @@ pub struct GitSource {
     remote: GitRemote,
     reference: GitReference,
     db_path: Path,
-    checkout_path: Path,
-    verbose: bool
+    checkout_path: Path
 }
 
 impl GitSource {
-    pub fn new(remote: GitRemote, reference: String, db: Path, checkout: Path, verbose: bool) -> GitSource {
-        GitSource { remote: remote, reference: GitReference::for_str(reference), db_path: db, checkout_path: checkout, verbose: verbose }
+    pub fn new(remote: GitRemote, reference: String, db: Path, checkout: Path) -> GitSource {
+        GitSource { remote: remote, reference: GitReference::for_str(reference), db_path: db, checkout_path: checkout }
     }
 
     pub fn get_namespace<'a>(&'a self) -> &'a url::Url {

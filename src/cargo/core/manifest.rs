@@ -6,7 +6,6 @@ use core::source::SourceId;
 use core::{
     Dependency,
     PackageId,
-    Source,
     Summary
 };
 use core::dependency::SerializedDependency;

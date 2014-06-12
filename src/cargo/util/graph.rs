@@ -2,7 +2,7 @@ use std::hash::Hash;
 use std::collections::HashMap;
 
 pub struct Graph<N> {
-    nodes: HashMap<N, ~[N]>
+    nodes: HashMap<N, Vec<N>>
 }
 
 enum Mark {

@@ -33,7 +33,7 @@ fn execute(options: Options) -> CLIResult<Option<()>> {
         CLIError::new(format!("The URL `{}` you passed was not a valid URL", url), None::<&str>, 1)));
 
     let remote = GitRemote::new(url, verbose);
-    let source = GitSource::new(remote, reference, Path::new(database_path), Path::new(checkout_path), verbose);
+    let source = GitSource::new(remote, reference, Path::new(database_path), Path::new(checkout_path));
     try!(source.update().map_err(|e| {
         CLIError::new(format!("Couldn't update {}: {}", source, e), None::<&str>, 1)
     }));
