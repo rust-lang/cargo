@@ -1,3 +1,4 @@
+use std::result;
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use semver::Version;
@@ -9,6 +10,7 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
+use util::{CargoResult,simple_human};
 
 #[deriving(PartialEq,Clone)]
 pub struct Manifest {
@@ -49,8 +51,41 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
 }
 
 #[deriving(Show,Clone,PartialEq,Encodable)]
+pub enum LibKind {
+    Lib,
+    Rlib,
+    Dylib,
+    StaticLib
+}
+
+impl LibKind {
+    pub fn from_str(string: &str) -> CargoResult<LibKind> {
+        match string {
+            "lib" => Ok(Lib),
+            "rlib" => Ok(Rlib),
+            "dylib" => Ok(Dylib),
+            "staticlib" => Ok(StaticLib),
+            _ => Err(simple_human(format!("{} was not one of lib|rlib|dylib|staticlib", string)))
+        }
+    }
+
+    pub fn from_strs<S: Str>(strings: Vec<S>) -> CargoResult<Vec<LibKind>> {
+        result::collect(strings.iter().map(|s| LibKind::from_str(s.as_slice())))
+    }
+
+    pub fn crate_type(&self) -> &'static str {
+        match *self {
+            Lib => "lib",
+            Rlib => "rlib",
+            Dylib => "dylib",
+            StaticLib => "staticlib"
+        }
+    }
+}
+
+#[deriving(Show,Clone,PartialEq,Encodable)]
 pub enum TargetKind {
-    LibTarget,
+    LibTarget(Vec<LibKind>),
     BinTarget
 }
 
@@ -63,7 +98,7 @@ pub struct Target {
 
 #[deriving(Encodable)]
 pub struct SerializedTarget {
-    kind: &'static str,
+    kind: Vec<&'static str>,
     name: String,
     path: String
 }
@@ -71,8 +106,8 @@ pub struct SerializedTarget {
 impl<E, S: Encoder<E>> Encodable<S, E> for Target {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         let kind = match self.kind {
-            LibTarget => "lib",
-            BinTarget => "bin"
+            LibTarget(ref kinds) => kinds.iter().map(|k| k.crate_type()).collect(),
+            BinTarget => vec!("bin")
         };
 
         SerializedTarget {
@@ -138,9 +173,9 @@ impl Manifest {
 }
 
 impl Target {
-    pub fn lib_target(name: &str, path: &Path) -> Target {
+    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>, path: &Path) -> Target {
         Target {
-            kind: LibTarget,
+            kind: LibTarget(crate_targets),
             name: name.to_str(),
             path: path.clone()
         }
@@ -160,7 +195,7 @@ impl Target {
 
     pub fn is_lib(&self) -> bool {
         match self.kind {
-            LibTarget => true,
+            LibTarget(_) => true,
             _ => false
         }
     }
@@ -172,10 +207,12 @@ impl Target {
         }
     }
 
-    pub fn rustc_crate_type(&self) -> &'static str {
+    pub fn rustc_crate_types(&self) -> Vec<&'static str> {
         match self.kind {
-            LibTarget => "lib",
-            BinTarget => "bin"
+            LibTarget(ref kinds) => {
+                kinds.iter().map(|kind| kind.crate_type()).collect()
+            },
+            BinTarget => vec!("bin")
         }
     }
 }
