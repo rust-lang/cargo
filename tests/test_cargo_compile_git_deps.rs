@@ -67,8 +67,8 @@ test!(cargo_compile_simple_git_dep {
 
     assert_that(project.cargo_process("cargo-compile"),
         execs()
-        .with_stdout(format!("Compiling dep1 v0.5.0 (file:{})\nCompiling foo v0.5.0 (file:{})\n",
-                             git_root.display(), root.display()))
+        .with_stdout(format!("Updating git repository `file:{}`\nCompiling dep1 v0.5.0 (file:{})\nCompiling foo v0.5.0 (file:{})\n",
+                             git_root.display(), git_root.display(), root.display()))
         .with_stderr(""));
 
     assert_that(&project.root().join("target/foo"), existing_file());
