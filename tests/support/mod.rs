@@ -64,14 +64,6 @@ impl ProjectBuilder {
         }
     }
 
-    pub fn join<T: Str>(&self, name: &str, path: T) -> ProjectBuilder {
-        ProjectBuilder {
-            name: name.as_slice().to_str(),
-            root: self.root.join(path.as_slice()).clone(),
-            files: vec!()
-        }
-    }
-
     pub fn root(&self) -> Path {
       self.root.clone()
     }
