@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use serialize::Decodable;
 
 use core::source::{SourceId,GitKind};
+use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
 
@@ -159,6 +160,7 @@ impl TomlManifest {
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
 struct TomlTarget {
     name: String,
+    crate_type: Option<Vec<String>>,
     path: Option<String>
 }
 
@@ -168,7 +170,8 @@ fn normalize(lib: Option<&[TomlLibTarget]>, bin: Option<&[TomlBinTarget]>) -> Ve
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
-        dst.push(Target::lib_target(l.name.as_slice(), &Path::new(path)));
+        let crate_types = l.crate_type.clone().and_then(|kinds| LibKind::from_strs(kinds).ok()).unwrap_or_else(|| vec!(Lib));
+        dst.push(Target::lib_target(l.name.as_slice(), crate_types, &Path::new(path)));
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget], default: |&TomlBinTarget| -> String) {
