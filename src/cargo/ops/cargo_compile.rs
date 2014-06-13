@@ -14,8 +14,13 @@
  *    b. Compile each dependency in order, passing in the -L's pointing at each previously compiled dependency
  */
 
+use std::io::MemWriter;
 use std::os;
 use std::result;
+use std::hash::sip::SipHasher;
+use std::hash::Hasher;
+use serialize::hex::ToHex;
+use url::Url;
 use util::config;
 use util::config::{ConfigValue};
 use core::{Package,PackageSet,Source,SourceSet};
@@ -61,10 +66,12 @@ fn sources_for(package: &Package) -> CargoResult<SourceSet> {
                 let remote = GitRemote::new(source_id.url.clone(), false);
                 let home = try!(os::homedir().require(simple_human("Cargo couldn't find a home directory")));
                 let git = home.join(".cargo").join("git");
+                let ident = url_to_path_ident(&source_id.url);
+
                 // .cargo/git/db
                 // .cargo/git/checkouts
-                let db_path = git.join("db").join(source_id.url.to_str());
-                let checkout_path = git.join("checkouts").join(source_id.url.to_str()).join(reference.as_slice());
+                let db_path = git.join("db").join(ident.as_slice());
+                let checkout_path = git.join("checkouts").join(ident.as_slice()).join(reference.as_slice());
                 Ok(box GitSource::new(remote, reference.clone(), db_path, checkout_path) as Box<Source>)
             }
         }
@@ -90,4 +97,48 @@ fn sources_from_config(additional: &[Path]) -> CargoResult<Vec<Box<Source>>> {
     paths.push_all(additional);
 
     Ok(vec!(box PathSource::new(paths) as Box<Source>))
+}
+
+fn url_to_path_ident(url: &Url) -> String {
+    let hasher = SipHasher::new_with_keys(0,0);
+
+    let mut ident = url.path.as_slice().split('/').last().unwrap();
+
+    ident = if ident == "" {
+        "_empty"
+    } else {
+        ident
+    };
+
+    format!("{}-{}", ident, to_hex(hasher.hash(&url.to_str())))
+}
+
+fn to_hex(num: u64) -> String {
+    let mut writer = MemWriter::with_capacity(8);
+    writer.write_le_u64(num).unwrap(); // this should never fail
+    writer.get_ref().to_hex()
+}
+
+#[cfg(test)]
+mod test {
+    use url;
+    use url::Url;
+    use super::url_to_path_ident;
+
+    #[test]
+    pub fn test_url_to_path_ident_with_path() {
+        let ident = url_to_path_ident(&url("https://github.com/carlhuda/cargo"));
+        assert_eq!(ident.as_slice(), "cargo-0eed735c8ffd7c88");
+    }
+
+    #[test]
+    pub fn test_url_to_path_ident_without_path() {
+        let ident = url_to_path_ident(&url("https://github.com"));
+        assert_eq!(ident.as_slice(), "_empty-fc065c9b6b16fc00");
+    }
+
+
+    fn url(s: &str) -> Url {
+        url::from_str(s).unwrap()
+    }
 }
