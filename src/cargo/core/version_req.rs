@@ -286,7 +286,12 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
                         c = n_char;
                         idx = n_idx;
                     }
-                    _ => return self.flush(idx + 1, self.state)
+                    _ => {
+                      // work around https://github.com/mozilla/rust/issues/6268
+                      // by assigning self.state to local state variable.
+                      let state = self.state;
+                      return self.flush(idx + 1, state)
+                    }
                 }
             ))
 
