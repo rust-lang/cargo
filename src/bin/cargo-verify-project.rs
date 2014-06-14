@@ -50,6 +50,7 @@ fn main() {
 }
 
 fn fail(reason: &str, value: &str) {
-    println!(r#"\{ "{:s}", "{:s}" \}"#, reason, value);
+    // the double { is to escape
+    println!(r#"{{ "{:s}", "{:s}" }}"#, reason, value);
     set_exit_status(1);
 }
