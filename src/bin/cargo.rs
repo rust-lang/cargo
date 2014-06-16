@@ -9,11 +9,12 @@ extern crate log;
 
 use hammer::{FlagConfig,FlagConfiguration};
 use std::os;
+use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
 use cargo::{NoFlags,execute_main_without_stdin,handle_error};
 use cargo::core::errors::{CLIError,CLIResult,ToResult};
 use cargo::util::important_paths::find_project;
-use cargo::util::config;
+use cargo::util::{ToCLI,Wrap,config,io_error,simple_human};
 
 fn main() {
     execute();
@@ -32,7 +33,7 @@ struct ProjectLocation {
 fn execute() {
     debug!("executing; cmd=cargo; args={}", os::args());
 
-    let (cmd, _) = match process(os::args()) {
+    let (cmd, args) = match process(os::args()) {
         Ok((cmd, args)) => (cmd, args),
         Err(err) => return handle_error(err)
     };
@@ -50,9 +51,18 @@ fn execute() {
         execute_main_without_stdin(locate_project)
     }
     else {
-        // TODO: Handle automatic dispatching to cargo-*
-        debug!("unknown command");
-        println!("Automatic execing of cargo-* commands has not yet been implemented. Call cargo-* commands directly for now");
+        let command = Command::new(format!("cargo-{}", cmd))
+            .args(args.as_slice())
+            .stdin(InheritFd(0))
+            .stdout(InheritFd(1))
+            .stderr(InheritFd(2))
+            .status();
+
+        match command.map_err(|_| simple_human("No such subcommand")) {
+            Ok(ExitStatus(0)) => (),
+            Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => handle_error(simple_human("").to_cli(i as uint)),
+            Err(err) => handle_error(err.to_cli(127))
+        }
     }
 }
 
