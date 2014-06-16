@@ -286,7 +286,10 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
                         c = n_char;
                         idx = n_idx;
                     }
-                    _ => return self.flush(idx + 1, self.state)
+                    _ => {
+                      let s = self.state;
+                      return self.flush(idx + 1, s)
+                    }
                 }
             ))
 
