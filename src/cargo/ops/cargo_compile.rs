@@ -26,6 +26,7 @@ use util::config::{ConfigValue};
 use core::{Package,PackageSet,Source,SourceSet};
 use core::resolver::resolve;
 use core::source::{GitKind,SourceId};
+use core::registry::PackageRegistry;
 use sources::{PathSource,GitSource};
 use sources::git::GitRemote;
 use ops;
@@ -38,27 +39,33 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     let package = try!(PathSource::read_package(manifest_path));
     debug!("loaded package; package={}", package);
 
+    let overrides = try!(sources_from_config());
     let sources = try!(sources_for(&package));
 
-    try!(sources.update().wrap("unable to update sources"));
-    let summaries = try!(sources.list().wrap("unable to list packages from source"));
-    let resolved = try!(resolve(package.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
+    let registry = PackageRegistry::new(sources, overrides);
 
-    try!(sources.download(resolved.as_slice()).wrap("unable to download packages"));
+    //try!(sources.update().wrap("unable to update sources"));
+    //let summaries = try!(sources.list().wrap("unable to list packages from source"));
 
-    let packages = try!(sources.get(resolved.as_slice()).wrap("unable to get packages from source"));
+    //let registry = PackageRegistry::new(&summaries, &overrides);
 
-    log!(5, "fetch packages from source; packages={}; ids={}", packages, resolved);
+    //let resolved = try!(resolve(package.get_dependencies(), &summaries).wrap("unable to resolve dependencies"));
 
-    let package_set = PackageSet::new(packages.as_slice());
+    //try!(sources.download(resolved.as_slice()).wrap("unable to download packages"));
 
-    try!(ops::compile_packages(&package, &package_set));
+    //let packages = try!(sources.get(resolved.as_slice()).wrap("unable to get packages from source"));
+
+    //log!(5, "fetch packages from source; packages={}; ids={}", packages, resolved);
+
+    //let package_set = PackageSet::new(packages.as_slice());
+
+    //try!(ops::compile_packages(&package, &package_set));
 
     Ok(())
 }
 
-fn sources_for(package: &Package) -> CargoResult<SourceSet> {
-    let mut sources = try!(sources_from_config([package.get_manifest_path().dir_path()]));
+fn sources_for(package: &Package) -> CargoResult<Vec<Box<Source>>> {
+    let mut sources = vec!(box PathSource::new(vec!(package.get_manifest_path().dir_path())) as Box<Source>);
 
     let git_sources: Vec<Box<Source>> = try!(result::collect(package.get_sources().iter().map(|source_id: &SourceId| {
         match source_id.kind {
@@ -73,16 +80,17 @@ fn sources_for(package: &Package) -> CargoResult<SourceSet> {
                 let db_path = git.join("db").join(ident.as_slice());
                 let checkout_path = git.join("checkouts").join(ident.as_slice()).join(reference.as_slice());
                 Ok(box GitSource::new(remote, reference.clone(), db_path, checkout_path) as Box<Source>)
-            }
+            },
+            ref PathKind => fail!("Cannot occur")
         }
     })));
 
     sources.push_all_move(git_sources);
 
-    Ok(SourceSet::new(sources))
+    Ok(sources)
 }
 
-fn sources_from_config(additional: &[Path]) -> CargoResult<Vec<Box<Source>>> {
+fn sources_from_config() -> CargoResult<SourceSet> {
     let configs = try!(config::all_configs(os::getcwd()));
 
     debug!("loaded config; configs={}", configs);
@@ -94,9 +102,7 @@ fn sources_from_config(additional: &[Path]) -> CargoResult<Vec<Box<Source>>> {
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 
-    paths.push_all(additional);
-
-    Ok(vec!(box PathSource::new(paths) as Box<Source>))
+    Ok(SourceSet::new(vec!(box PathSource::new(paths) as Box<Source>)))
 }
 
 fn url_to_path_ident(url: &Url) -> String {

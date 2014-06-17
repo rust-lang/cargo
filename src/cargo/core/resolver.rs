@@ -12,11 +12,11 @@ use util::result::CargoResult;
  * - The correct input here is not a registry. Resolves should be performable
  * on package summaries vs. the packages themselves.
  */
-pub fn resolve<R: Registry + Show>(deps: &[Dependency], registry: &R) -> CargoResult<Vec<PackageId>> {
+pub fn resolve<R: Registry + Show>(deps: &[Dependency], registry: &mut R) -> CargoResult<Vec<PackageId>> {
     log!(5, "resolve; deps={}; registry={}", deps, registry);
 
     let mut remaining = Vec::from_slice(deps);
-    let mut resolve = HashMap::<&str, &Summary>::new();
+    let mut resolve = HashMap::<String, Summary>::new();
 
     loop {
         let curr = match remaining.pop() {
@@ -28,14 +28,14 @@ pub fn resolve<R: Registry + Show>(deps: &[Dependency], registry: &R) -> CargoRe
             }
         };
 
-        let opts = registry.query(curr.get_name());
+        let opts = try!(registry.query(&curr));
 
         assert!(opts.len() > 0, "no matches for {}", curr.get_name());
         // Temporary, but we must have exactly one option to satisfy the dep
         assert!(opts.len() == 1, "invalid num of results {}", opts.len());
 
-        let pkg = opts.get(0);
-        resolve.insert(pkg.get_name(), *pkg);
+        let pkg = opts.get(0).clone();
+        resolve.insert(pkg.get_name().to_str(), pkg.clone());
 
         for dep in pkg.get_dependencies().iter() {
             if !resolve.contains_key_equiv(&dep.get_name()) {
@@ -47,10 +47,17 @@ pub fn resolve<R: Registry + Show>(deps: &[Dependency], registry: &R) -> CargoRe
 
 #[cfg(test)]
 mod test {
+    use url;
+
     use hamcrest::{
         assert_that,
         equal_to,
         contains
+    };
+
+    use core::source::{
+        SourceId,
+        RegistryKind
     };
 
     use core::{
@@ -66,7 +73,8 @@ mod test {
     macro_rules! pkg(
         ($name:expr => $($deps:expr),+) => (
             {
-            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::parse(*s, "1.0.0").unwrap()).collect();
+            let source_id = SourceId::new(RegistryKind, url::from_str("http://example.com").unwrap());
+            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::parse(*s, "1.0.0", &source_id).unwrap()).collect();
             Summary::new(&PackageId::new($name, "1.0.0", "http://www.example.com/"), d.as_slice())
             }
         );
@@ -81,7 +89,8 @@ mod test {
     }
 
     fn dep(name: &str) -> Dependency {
-        Dependency::parse(name, "1.0.0").unwrap()
+        let source_id = SourceId::new(RegistryKind, url::from_str("http://example.com").unwrap());
+        Dependency::parse(name, "1.0.0", &source_id).unwrap()
     }
 
     fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
@@ -96,47 +105,47 @@ mod test {
 
     #[test]
     pub fn test_resolving_empty_dependency_list() {
-        let res = resolve([], &registry(vec!())).unwrap();
+        let res = resolve([], &mut registry(vec!())).unwrap();
 
         assert_that(&res, equal_to(&names([])));
     }
 
     #[test]
     pub fn test_resolving_only_package() {
-        let reg = registry(vec!(pkg("foo")));
-        let res = resolve([dep("foo")], &reg);
+        let mut reg = registry(vec!(pkg("foo")));
+        let res = resolve([dep("foo")], &mut reg);
 
         assert_that(&res.unwrap(), equal_to(&names(["foo"])));
     }
 
     #[test]
     pub fn test_resolving_one_dep() {
-        let reg = registry(vec!(pkg("foo"), pkg("bar")));
-        let res = resolve([dep("foo")], &reg);
+        let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
+        let res = resolve([dep("foo")], &mut reg);
 
         assert_that(&res.unwrap(), equal_to(&names(["foo"])));
     }
 
     #[test]
     pub fn test_resolving_multiple_deps() {
-        let reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
-        let res = resolve([dep("foo"), dep("baz")], &reg).unwrap();
+        let mut reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
+        let res = resolve([dep("foo"), dep("baz")], &mut reg).unwrap();
 
         assert_that(&res, contains(names(["foo", "baz"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_transitive_deps() {
-        let reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
-        let res = resolve([dep("bar")], &reg).unwrap();
+        let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
+        let res = resolve([dep("bar")], &mut reg).unwrap();
 
         assert_that(&res, contains(names(["foo", "bar"])));
     }
 
     #[test]
     pub fn test_resolving_common_transitive_deps() {
-        let reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
-        let res = resolve([dep("foo"), dep("bar")], &reg).unwrap();
+        let mut reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
+        let res = resolve([dep("foo"), dep("bar")], &mut reg).unwrap();
 
         assert_that(&res, contains(names(["foo", "bar"])));
     }

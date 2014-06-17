@@ -4,7 +4,7 @@ use url::Url;
 use std::collections::HashMap;
 use serialize::Decodable;
 
-use core::source::{SourceId,GitKind};
+use core::{SourceId,GitKind,RegistryKind};
 use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
@@ -130,20 +130,26 @@ impl TomlManifest {
         match self.dependencies {
             Some(ref dependencies) => {
                 for (n, v) in dependencies.iter() {
-                    let version = match *v {
-                        SimpleDep(ref string) => string.clone(),
+                    let (version, source_id) = match *v {
+                        SimpleDep(ref string) => {
+                            let source_id = SourceId::new(RegistryKind, url::from_str("http://example.com").unwrap());
+                            (string.clone(), source_id)
+                        },
                         DetailedDep(ref details) => {
-                            details.other.find_equiv(&"git").map(|git| {
+                            let source_id = details.other.find_equiv(&"git").map(|git| {
                                 // TODO: Don't unwrap here
                                 let kind = GitKind("master".to_str());
                                 let url = url::from_str(git.as_slice()).unwrap();
-                                sources.push(SourceId::new(kind, url));
+                                let source_id = SourceId::new(kind, url);
+                                sources.push(source_id.clone());
+                                source_id
                             });
-                            details.version.clone()
+
+                            (details.version.clone(), try!(source_id.require(simple_human("Dependencies must supply a git location"))))
                         }
                     };
 
-                    deps.push(try!(Dependency::parse(n.as_slice(), version.as_slice())))
+                    deps.push(try!(Dependency::parse(n.as_slice(), version.as_slice(), &source_id)))
                 }
             }
             None => ()

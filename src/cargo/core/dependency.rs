@@ -1,31 +1,35 @@
 use semver::Version;
-use core::{VersionReq};
+use core::{VersionReq,SourceId};
 use util::CargoResult;
 
 #[deriving(PartialEq,Clone,Show)]
 pub struct Dependency {
     name: String,
+    namespace: SourceId,
     req: VersionReq
 }
 
 impl Dependency {
-    pub fn new(name: &str, req: &VersionReq) -> Dependency {
+    pub fn new(name: &str, req: &VersionReq, namespace: &SourceId) -> Dependency {
         Dependency {
             name: name.to_str(),
+            namespace: namespace.clone(),
             req: req.clone()
         }
     }
 
-    pub fn parse(name: &str, version: &str) -> CargoResult<Dependency> {
+    pub fn parse(name: &str, version: &str, namespace: &SourceId) -> CargoResult<Dependency> {
         Ok(Dependency {
             name: name.to_str(),
-            req: try!(VersionReq::parse(version))
+            namespace: namespace.clone(),
+            req: try!(VersionReq::parse(version)),
         })
     }
 
-    pub fn exact(name: &str, version: &Version) -> Dependency {
+    pub fn exact(name: &str, version: &Version, namespace: &SourceId) -> Dependency {
         Dependency {
             name: name.to_str(),
+            namespace: namespace.clone(),
             req: VersionReq::exact(version)
         }
     }
@@ -36,6 +40,10 @@ impl Dependency {
 
     pub fn get_name<'a>(&'a self) -> &'a str {
         self.name.as_slice()
+    }
+
+    pub fn get_namespace<'a>(&'a self) -> &'a SourceId {
+        &self.namespace
     }
 }
 
