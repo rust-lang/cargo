@@ -167,7 +167,7 @@ impl Manifest {
         &self.target_dir
     }
 
-    pub fn get_sources<'a>(&'a self) -> &'a [SourceId] {
+    pub fn get_source_ids<'a>(&'a self) -> &'a [SourceId] {
         self.sources.as_slice()
     }
 }

@@ -14,7 +14,7 @@ use serialize::Encodable;
 use cargo::{NoFlags,execute_main_without_stdin,handle_error};
 use cargo::core::errors::{CLIError,CLIResult,ToResult};
 use cargo::util::important_paths::find_project;
-use cargo::util::{ToCLI,Wrap,config,io_error,simple_human};
+use cargo::util::{ToCLI,config,simple_human};
 
 fn main() {
     execute();

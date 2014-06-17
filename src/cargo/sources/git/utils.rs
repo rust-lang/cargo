@@ -40,22 +40,22 @@ impl Show for GitReference {
 
 
 macro_rules! git(
-    ($config:expr, $verbose:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_inherit(&$config, $verbose, format!($str, $($rest),*)))
+    ($config:expr, $str:expr, $($rest:expr),*) => (
+        try!(git_inherit(&$config, format!($str, $($rest),*)))
     );
 
-    ($config:expr, $verbose:expr, $str:expr) => (
-        try!(git_inherit(&$config, $verbose, format!($str)))
+    ($config:expr, $str:expr) => (
+        try!(git_inherit(&$config, format!($str)))
     );
 )
 
 macro_rules! git_output(
-    ($config:expr, $verbose:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_output(&$config, $verbose, format!($str, $($rest),*)))
+    ($config:expr, $str:expr, $($rest:expr),*) => (
+        try!(git_output(&$config, format!($str, $($rest),*)))
     );
 
-    ($config:expr, $verbose:expr, $str:expr) => (
-        try!(git_output(&$config, $verbose, format!($str)))
+    ($config:expr, $str:expr) => (
+        try!(git_output(&$config, format!($str)))
     );
 )
 
@@ -70,7 +70,6 @@ macro_rules! errln(
 #[deriving(PartialEq,Clone,Show)]
 pub struct GitRemote {
     url: Url,
-    verbose: bool
 }
 
 #[deriving(PartialEq,Clone,Encodable)]
@@ -95,7 +94,6 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
 pub struct GitDatabase {
     remote: GitRemote,
     path: Path,
-    verbose: bool
 }
 
 #[deriving(Encodable)]
@@ -124,7 +122,6 @@ pub struct GitCheckout {
     location: Path,
     reference: GitReference,
     revision: String,
-    verbose: bool
 }
 
 #[deriving(Encodable)]
@@ -151,8 +148,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
  */
 
 impl GitRemote {
-    pub fn new(url: Url, verbose: bool) -> GitRemote {
-        GitRemote { url: url, verbose: verbose }
+    pub fn new(url: &Url) -> GitRemote {
+        GitRemote { url: url.clone() }
     }
 
     pub fn get_url<'a>(&'a self) -> &'a Url {
@@ -166,11 +163,11 @@ impl GitRemote {
             try!(self.clone_into(into));
         }
 
-        Ok(GitDatabase { remote: self.clone(), path: into.clone(), verbose: self.verbose })
+        Ok(GitDatabase { remote: self.clone(), path: into.clone() })
     }
 
     fn fetch_into(&self, path: &Path) -> CargoResult<()> {
-        Ok(git!(*path, self.verbose, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.fetch_location()))
+        Ok(git!(*path, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.fetch_location()))
     }
 
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
@@ -179,7 +176,7 @@ impl GitRemote {
         try!(mkdir_recursive(path, UserDir).map_err(|err|
             human_error(format!("Couldn't recursively create `{}`", dirname.display()), format!("path={}", dirname.display()), io_error(err))));
 
-        Ok(git!(dirname, self.verbose, "clone {} {} --bare --no-hardlinks --quiet", self.fetch_location(), path.display()))
+        Ok(git!(dirname, "clone {} {} --bare --no-hardlinks --quiet", self.fetch_location(), path.display()))
     }
 
     fn fetch_location(&self) -> String {
@@ -196,8 +193,7 @@ impl GitDatabase {
     }
 
     pub fn copy_to<S: Str>(&self, reference: S, dest: &Path) -> CargoResult<GitCheckout> {
-        let verbose = self.verbose;
-        let checkout = try!(GitCheckout::clone_into(dest, self.clone(), GitReference::for_str(reference.as_slice()), verbose));
+        let checkout = try!(GitCheckout::clone_into(dest, self.clone(), GitReference::for_str(reference.as_slice())));
 
         try!(checkout.fetch());
         try!(checkout.update_submodules());
@@ -206,15 +202,15 @@ impl GitDatabase {
     }
 
     pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<String> {
-        Ok(git_output!(self.path, self.verbose, "rev-parse {}", reference.as_slice()))
+        Ok(git_output!(self.path, "rev-parse {}", reference.as_slice()))
     }
 
 }
 
 impl GitCheckout {
-    fn clone_into(into: &Path, database: GitDatabase, reference: GitReference, verbose: bool) -> CargoResult<GitCheckout> {
+    fn clone_into(into: &Path, database: GitDatabase, reference: GitReference) -> CargoResult<GitCheckout> {
         let revision = try!(database.rev_for(reference.as_slice()));
-        let checkout = GitCheckout { location: into.clone(), database: database, reference: reference, revision: revision, verbose: verbose };
+        let checkout = GitCheckout { location: into.clone(), database: database, reference: reference, revision: revision };
 
         // If the git checkout already exists, we don't need to clone it again
         if !checkout.location.join(".git").exists() {
@@ -239,40 +235,40 @@ impl GitCheckout {
                 human_error(format!("Couldn't rmdir {}", Path::new(&self.location).display()), None::<&str>, io_error(e))));
         }
 
-        git!(dirname, self.verbose, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
+        git!(dirname, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
         try!(chmod(&self.location, AllPermissions).map_err(io_error));
 
         Ok(())
     }
 
     fn fetch(&self) -> CargoResult<()> {
-        git!(self.location, self.verbose, "fetch --force --quiet --tags {}", self.get_source().display());
+        git!(self.location, "fetch --force --quiet --tags {}", self.get_source().display());
         try!(self.reset(self.revision.as_slice()));
         Ok(())
     }
 
     fn reset<T: Show>(&self, revision: T) -> CargoResult<()> {
-        Ok(git!(self.location, self.verbose, "reset -q --hard {}", revision))
+        Ok(git!(self.location, "reset -q --hard {}", revision))
     }
 
     fn update_submodules(&self) -> CargoResult<()> {
-        Ok(git!(self.location, self.verbose, "submodule update --init --recursive --quiet"))
+        Ok(git!(self.location, "submodule update --init --recursive --quiet"))
     }
 }
 
-fn git(path: &Path, verbose: bool, str: &str) -> ProcessBuilder {
+fn git(path: &Path, str: &str) -> ProcessBuilder {
     debug!("Executing git {} @ {}", str, path.display());
 
     process("git").args(str.split(' ').collect::<Vec<&str>>().as_slice()).cwd(path.clone())
 }
 
-fn git_inherit(path: &Path, verbose: bool, str: String) -> CargoResult<()> {
-    git(path, verbose, str.as_slice()).exec().map_err(|err|
+fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
+    git(path, str.as_slice()).exec().map_err(|err|
         human_error(format!("Executing `git {}` failed: {}", str, err), None::<&str>, err))
 }
 
-fn git_output(path: &Path, verbose: bool, str: String) -> CargoResult<String> {
-    let output = try!(git(path, verbose, str.as_slice()).exec_with_output().map_err(|err|
+fn git_output(path: &Path, str: String) -> CargoResult<String> {
+    let output = try!(git(path, str.as_slice()).exec_with_output().map_err(|err|
         human_error(format!("Executing `git {}` failed", str), None::<&str>, err)));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())

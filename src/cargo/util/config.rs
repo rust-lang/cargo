@@ -1,8 +1,29 @@
-use std::{io,fmt};
+use std::{io,fmt,os};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
-use util::{other_error,CargoResult,Require};
+use util::{CargoResult,Require,other_error,simple_human};
+
+pub struct Config {
+    home_path: Path
+}
+
+impl Config {
+    pub fn new() -> CargoResult<Config> {
+        Ok(Config {
+            home_path: try!(os::homedir()
+                            .require(simple_human("Couldn't find the home directory")))
+        })
+    }
+
+    pub fn git_db_path(&self) -> Path {
+        self.home_path.join(".cargo").join("git").join("db")
+    }
+
+    pub fn git_checkout_path(&self) -> Path {
+        self.home_path.join(".cargo").join("git").join("checkouts")
+    }
+}
 
 #[deriving(Eq,PartialEq,Clone,Encodable,Decodable)]
 pub enum Location {
