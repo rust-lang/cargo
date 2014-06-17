@@ -37,7 +37,6 @@ impl Summary {
 
 pub trait SummaryVec {
     fn names(&self) -> Vec<String>;
-    fn deps(&self) -> Vec<Dependency>;
 }
 
 impl SummaryVec for Vec<Summary> {
@@ -46,8 +45,4 @@ impl SummaryVec for Vec<Summary> {
         self.iter().map(|summary| summary.get_name().to_str()).collect()
     }
 
-    // TODO: Delete
-    fn deps(&self) -> Vec<Dependency> {
-        self.iter().map(|summary| Dependency::exact(summary.get_name(), summary.get_version())).collect()
-    }
 }

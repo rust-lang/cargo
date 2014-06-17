@@ -19,7 +19,11 @@ pub use self::package_id::{
 
 pub use self::source::{
     Source,
-    SourceSet
+    SourceId,
+    SourceSet,
+    GitKind,
+    PathKind,
+    RegistryKind
 };
 
 pub use self::summary::{
@@ -38,5 +42,5 @@ pub mod manifest;
 pub mod resolver;
 pub mod summary;
 pub mod shell;
-mod registry;
+pub mod registry;
 mod version_req;

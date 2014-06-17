@@ -12,7 +12,7 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
-use util::graph;
+use util::{CargoResult, graph};
 use serialize::{Encoder,Encodable};
 use core::source::SourceId;
 
@@ -57,10 +57,6 @@ impl Package {
             manifest: manifest,
             manifest_path: manifest_path.clone()
         }
-    }
-
-    pub fn to_dependency(&self) -> Dependency {
-        Dependency::exact(self.manifest.get_name(), self.manifest.get_version())
     }
 
     pub fn get_manifest<'a>(&'a self) -> &'a Manifest {
@@ -120,7 +116,7 @@ impl Show for Package {
 
 #[deriving(PartialEq,Clone,Show)]
 pub struct PackageSet {
-    packages: Vec<Package>
+    packages: Vec<Package>,
 }
 
 impl PackageSet {
@@ -178,10 +174,10 @@ impl PackageSet {
 }
 
 impl Registry for PackageSet {
-  fn query<'a>(&'a self, name: &str) -> Vec<&'a Summary> {
-    self.packages.iter()
-      .filter(|pkg| name == pkg.get_name())
-      .map(|pkg| pkg.get_summary())
-      .collect()
-  }
+    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
+        Ok(self.packages.iter()
+            .filter(|pkg| name.get_name() == pkg.get_name())
+            .map(|pkg| pkg.get_summary().clone())
+            .collect())
+    }
 }

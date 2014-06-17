@@ -37,12 +37,17 @@ pub trait Source {
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
 }
 
-#[deriving(Clone,PartialEq)]
+#[deriving(Show,Clone,PartialEq)]
 pub enum SourceKind {
-    GitKind(String)
+    /// GitKind(<git reference>) represents a git repository
+    GitKind(String),
+    /// represents a local path
+    PathKind,
+    /// represents the central registry
+    RegistryKind
 }
 
-#[deriving(Clone,PartialEq)]
+#[deriving(Show,Clone,PartialEq)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub url: Url
@@ -51,6 +56,13 @@ pub struct SourceId {
 impl SourceId {
     pub fn new(kind: SourceKind, url: Url) -> SourceId {
         SourceId { kind: kind, url: url }
+    }
+
+    pub fn load(&self) -> Box<Source> {
+        match self.kind {
+            GitKind(ref reference) => unimplemented!(),
+            _ => unimplemented!()
+        }
     }
 }
 
