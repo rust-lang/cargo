@@ -1,6 +1,8 @@
+use url;
 use url::Url;
 use core::{Summary,Package,PackageId};
-use util::CargoResult;
+use sources::{PathSource,GitSource};
+use util::{Config,CargoResult};
 
 /**
  * A Source finds and downloads remote packages based on names and
@@ -58,10 +60,43 @@ impl SourceId {
         SourceId { kind: kind, url: url }
     }
 
-    pub fn load(&self) -> Box<Source> {
+    // Pass absolute path
+    pub fn for_path(path: &Path) -> SourceId {
+        // TODO: use proper path -> URL
+        SourceId::new(PathKind, url::from_str(format!("file://{}", path.display()).as_slice()).unwrap())
+    }
+
+    pub fn for_central() -> SourceId {
+        SourceId::new(RegistryKind, url::from_str(format!("https://example.com").as_slice()).unwrap())
+    }
+
+    /*
+    let git_sources: Vec<Box<Source>> = try!(result::collect(package.get_sources().iter().map(|source_id: &SourceId| {
+        match source_id.kind {
+            GitKind(ref reference) => {
+                let remote = GitRemote::new(source_id.url.clone(), false);
+                let home = try!(os::homedir().require(simple_human("Cargo couldn't find a home directory")));
+                let git = home.join(".cargo").join("git");
+                let ident = url_to_path_ident(&source_id.url);
+
+                // .cargo/git/db
+                // .cargo/git/checkouts
+                let db_path = git.join("db").join(ident.as_slice());
+                let checkout_path = git.join("checkouts").join(ident.as_slice()).join(reference.as_slice());
+                Ok(box GitSource::new(remote, reference.clone(), db_path, checkout_path) as Box<Source>)
+            },
+            ref PathKind => fail!("Cannot occur")
+        }
+    })));
+     */
+
+    pub fn load(&self, config: &Config) -> Box<Source> {
         match self.kind {
-            GitKind(ref reference) => unimplemented!(),
-            _ => unimplemented!()
+            GitKind(ref reference) => {
+                box GitSource::new(&self.url, reference.as_slice(), config) as Box<Source>
+            },
+            PathKind => box PathSource::new(&Path::new(self.url.path.as_slice())) as Box<Source>,
+            RegistryKind => unimplemented!()
         }
     }
 }

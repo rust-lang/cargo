@@ -103,8 +103,10 @@ impl Package {
         self.get_root().join(self.get_target_dir())
     }
 
-    pub fn get_sources<'a>(&'a self) -> &'a [SourceId] {
-        self.manifest.get_sources()
+    pub fn get_source_ids(&self) -> Vec<SourceId> {
+        let mut ret = vec!(SourceId::for_path(&self.get_root()));
+        ret.push_all(self.manifest.get_source_ids());
+        ret
     }
 }
 

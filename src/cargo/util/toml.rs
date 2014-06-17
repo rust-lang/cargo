@@ -4,7 +4,7 @@ use url::Url;
 use std::collections::HashMap;
 use serialize::Decodable;
 
-use core::{SourceId,GitKind,RegistryKind};
+use core::{SourceId,GitKind};
 use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
@@ -132,8 +132,7 @@ impl TomlManifest {
                 for (n, v) in dependencies.iter() {
                     let (version, source_id) = match *v {
                         SimpleDep(ref string) => {
-                            let source_id = SourceId::new(RegistryKind, url::from_str("http://example.com").unwrap());
-                            (string.clone(), source_id)
+                            (string.clone(), SourceId::for_central())
                         },
                         DetailedDep(ref details) => {
                             let source_id = details.other.find_equiv(&"git").map(|git| {
@@ -141,11 +140,17 @@ impl TomlManifest {
                                 let kind = GitKind("master".to_str());
                                 let url = url::from_str(git.as_slice()).unwrap();
                                 let source_id = SourceId::new(kind, url);
+                                // TODO: Don't do this for path
                                 sources.push(source_id.clone());
                                 source_id
                             });
 
-                            (details.version.clone(), try!(source_id.require(simple_human("Dependencies must supply a git location"))))
+                            // TODO: Convert relative path dependencies to namespace
+
+                            match source_id {
+                                Some(source_id) => (details.version.clone(), source_id),
+                                None => (details.version.clone(), SourceId::for_central())
+                            }
                         }
                     };
 

@@ -11,12 +11,20 @@ use util::{CargoResult,simple_human,io_error,realpath};
  * take in a single path vs. a vec of paths. The pros / cons are unknown at
  * this point.
  */
-pub struct PathSource { paths: Vec<Path> }
+pub struct PathSource {
+    path: Path
+}
 
 impl PathSource {
-    pub fn new(paths: Vec<Path>) -> PathSource {
-        log!(5, "new; paths={}", display(paths.as_slice()));
-        PathSource { paths: paths }
+
+    /**
+     * Invoked with an absolute path to a directory that contains a Cargo.toml.
+     * The source will read the manifest and find any other packages contained
+     * in the directory structure reachable by the root manifest.
+     */
+    pub fn new(path: &Path) -> PathSource {
+        log!(5, "new; path={}", path.display());
+        PathSource { path: path.clone() }
     }
 
     pub fn read_package(path: &Path) -> CargoResult<Package> {
@@ -37,46 +45,42 @@ impl Show for PathSource {
 }
 
 impl Source for PathSource {
-    fn update(&self) -> CargoResult<()> { Ok(()) }
+    fn update(&self) -> CargoResult<()> {
+        Ok(())
+    }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        Ok(self.paths.iter().filter_map(|path| {
-            match PathSource::read_package(&path.join("Cargo.toml")) {
-                Ok(ref pkg) => Some(pkg.get_summary().clone()),
-                Err(e) => {
-                    debug!("failed to read manifest; path={}; err={}", path.display(), e);
-                    None
-                }
+        // TODO: Recursively find manifests
+
+        match PathSource::read_package(&self.path.join("Cargo.toml")) {
+            Ok(ref pkg) => Ok(vec!(pkg.get_summary().clone())),
+            Err(e) => {
+                debug!("failed to read manifest; path={}; err={}", self.path.display(), e);
+                Err(e)
             }
-        }).collect())
+        }
     }
 
     fn download(&self, _: &[PackageId])  -> CargoResult<()>{
+        // TODO: assert! that the PackageId is contained by the source
         Ok(())
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packages; ids={}", ids);
 
-        Ok(self.paths.iter().filter_map(|path| {
-            match PathSource::read_package(&path.join("Cargo.toml")) {
-                Ok(pkg) => {
-                    log!(5, "comparing; pkg={}", pkg);
+        PathSource::read_package(&self.path.join("Cargo.toml")).and_then(|pkg| {
+            log!(5, "comparing; pkg={}", pkg);
 
-                    if ids.iter().any(|pkg_id| pkg.get_package_id() == pkg_id) {
-                        Some(pkg)
-                    } else {
-                        None
-                    }
-                }
-                Err(_) => None
+            if ids.iter().any(|pkg_id| pkg.get_package_id() == pkg_id) {
+                Ok(vec!(pkg))
+            } else {
+                // TODO: Be smarter
+                // Err(simple_human(format!("Couldn't find `{}` in path source", ids)))
+                Ok(vec!())
             }
-        }).collect())
+        })
     }
-}
-
-fn display(paths: &[Path]) -> Vec<String> {
-    paths.iter().map(|p| p.display().to_str()).collect()
 }
 
 fn namespace(path: &Path) -> CargoResult<url::Url> {

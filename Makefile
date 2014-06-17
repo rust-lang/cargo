@@ -9,7 +9,7 @@ BINS = cargo \
 	     cargo-verify-project \
 	     cargo-git-checkout \
 
-SRC = $(shell find src -name '*.rs')
+SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
 DEPS = -L libs/hammer.rs/target -L libs/rust-toml/lib
 TOML = libs/rust-toml/lib/$(shell rustc --crate-file-name libs/rust-toml/src/toml/lib.rs)

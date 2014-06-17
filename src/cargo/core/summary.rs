@@ -4,6 +4,10 @@ use core::{
     PackageId
 };
 
+/**
+ * Summaries are cloned, and should not be mutated after creation
+ */
+
 #[deriving(Show,Clone,PartialEq)]
 pub struct Summary {
     package_id: PackageId,
