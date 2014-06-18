@@ -61,7 +61,7 @@ test-unit: target/tests/test-unit
 	target/tests/test-unit $(only)
 
 test-integration: target/tests/test-integration
-	RUST_TEST_TASKS=1 $< $(only)
+	$< $(only)
 
 test: test-unit test-integration
 
