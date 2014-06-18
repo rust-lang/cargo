@@ -14,7 +14,7 @@ pub trait Source {
      * get the entire list of all names, versions and dependencies of
      * packages managed by the Source.
      */
-    fn update(&self) -> CargoResult<()>;
+    fn update(&mut self) -> CargoResult<()>;
 
     /**
      * The list method lists all names, versions and dependencies of
@@ -111,8 +111,8 @@ impl SourceSet {
 }
 
 impl Source for SourceSet {
-    fn update(&self) -> CargoResult<()> {
-        for source in self.sources.iter() {
+    fn update(&mut self) -> CargoResult<()> {
+        for source in self.sources.mut_iter() {
             try!(source.update());
         }
 

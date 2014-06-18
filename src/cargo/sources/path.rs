@@ -53,7 +53,7 @@ impl Show for PathSource {
 }
 
 impl Source for PathSource {
-    fn update(&self) -> CargoResult<()> {
+    fn update(&mut self) -> CargoResult<()> {
         Ok(())
     }
 

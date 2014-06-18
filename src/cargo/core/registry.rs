@@ -72,7 +72,7 @@ impl PackageRegistry {
     }
 
     fn load(&mut self, namespace: &SourceId, override: bool) -> CargoResult<()> {
-        let source = namespace.load(&try!(Config::new()));
+        let mut source = namespace.load(&try!(Config::new()));
         let dst = if override { &mut self.overrides } else { &mut self.summaries };
 
         // Ensure the source has fetched all necessary remote data.
