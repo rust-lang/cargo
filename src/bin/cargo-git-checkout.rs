@@ -33,7 +33,7 @@ fn execute(options: Options) -> CLIResult<Option<()>> {
 
     let source_id = SourceId::for_git(&url, reference.as_slice());
 
-    let source = GitSource::new(&source_id, &try!(Config::new().to_cli(1)));
+    let mut source = GitSource::new(&source_id, &try!(Config::new().to_cli(1)));
 
     try!(source.update().map_err(|e| {
         CLIError::new(format!("Couldn't update {}: {}", source, e), None::<&str>, 1)

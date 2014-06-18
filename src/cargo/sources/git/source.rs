@@ -91,7 +91,7 @@ impl Show for GitSource {
 }
 
 impl Source for GitSource {
-    fn update(&self) -> CargoResult<()> {
+    fn update(&mut self) -> CargoResult<()> {
         println!("Updating git repository `{}`", self.remote.get_url());
         log!(5, "updating git source `{}`", self.remote);
         let repo = try!(self.remote.checkout(&self.db_path));
