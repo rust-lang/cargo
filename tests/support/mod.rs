@@ -2,7 +2,7 @@
 use std;
 use std::io;
 use std::io::fs;
-use std::io::process::{ProcessOutput,ProcessExit};
+use std::io::process::{ProcessOutput};
 use std::os;
 use std::path::{Path,BytesContainer};
 use std::str;
@@ -80,7 +80,7 @@ impl ProjectBuilder {
             .extra_path(cargo_dir())
     }
 
-    pub fn file<B: BytesContainer, S: Str>(mut self, path: B, body: S) -> ProjectBuilder { 
+    pub fn file<B: BytesContainer, S: Str>(mut self, path: B, body: S) -> ProjectBuilder {
         self.files.push(FileBuilder::new(self.root.join(path), body.as_slice()));
         self
     }
@@ -202,18 +202,21 @@ impl Execs {
   }
 
   fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
-    self.match_status(actual.status)
+    self.match_status(actual)
       .and(self.match_stdout(actual))
       .and(self.match_stderr(actual))
   }
 
-  fn match_status(&self, actual: ProcessExit) -> ham::MatchResult {
+  fn match_status(&self, actual: &ProcessOutput) -> ham::MatchResult {
     match self.expect_exit_code {
       None => ham::success(),
       Some(code) => {
         ham::expect(
-          actual.matches_exit_status(code),
-          format!("exited with {}", actual))
+          actual.status.matches_exit_status(code),
+          format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
+                  actual.status,
+                  str::from_utf8(actual.output.as_slice()),
+                  str::from_utf8(actual.error.as_slice())))
       }
     }
   }

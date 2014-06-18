@@ -3,7 +3,7 @@ use std::io;
 use std::path::Path;
 use core::{Package,PackageSet,Target};
 use util;
-use util::{CargoResult, ChainError, ProcessBuilder, internal, human};
+use util::{CargoResult, ChainError, ProcessBuilder, internal, human, CargoError};
 
 type Args = Vec<String>;
 
@@ -33,6 +33,11 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
 fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, pkg.get_targets());
 
+    match pkg.get_manifest().get_build() {
+        Some(cmd) => try!(compile_custom(pkg, cmd, dest, deps_dir, primary)),
+        None => {}
+    }
+
     // compile
     for target in pkg.get_targets().iter() {
         // Only compile lib targets for dependencies
@@ -46,6 +51,20 @@ fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> Ca
 
 fn mk_target(target: &Path) -> CargoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX).chain_error(|| internal("could not create target directory"))
+}
+
+fn compile_custom(pkg: &Package, cmd: &str, dest: &Path, deps_dir: &Path,
+                  _primary: bool) -> CargoResult<()> {
+    // FIXME: this needs to be smarter about splitting
+    let mut cmd = cmd.split(' ');
+    let mut p = util::process(cmd.next().unwrap())
+                     .cwd(pkg.get_root())
+                     .env("OUT_DIR", Some(dest.as_str().unwrap()))
+                     .env("DEPS_DIR", Some(dest.join(deps_dir).as_str().unwrap()));
+    for arg in cmd {
+        p = p.arg(arg);
+    }
+    p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
 }
 
 fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) -> CargoResult<()> {
@@ -72,7 +91,7 @@ fn prepare_rustc(root: &Path, target: &Target, crate_type: &'static str, dest: &
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, crate_type, dest);
-    build_deps_args(&mut args, deps);
+    build_deps_args(&mut args, dest, deps);
 
     util::process("rustc")
         .cwd(root.clone())
@@ -89,9 +108,11 @@ fn build_base_args(into: &mut Args, target: &Target, crate_type: &'static str, d
     into.push(dest.display().to_str());
 }
 
-fn build_deps_args(dst: &mut Args, deps: &Path) {
+fn build_deps_args(dst: &mut Args, deps: &Path, dest: &Path) {
     dst.push("-L".to_str());
     dst.push(deps.display().to_str());
+    dst.push("-L".to_str());
+    dst.push(dest.display().to_str());
 }
 
 fn topsort(deps: &PackageSet) -> CargoResult<PackageSet> {

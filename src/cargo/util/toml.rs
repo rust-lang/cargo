@@ -101,7 +101,8 @@ pub struct TomlManifest {
 pub struct TomlProject {
     pub name: String,
     pub version: String,
-    pub authors: Vec<String>
+    pub authors: Vec<String>,
+    build: Option<String>,
 }
 
 impl TomlProject {
@@ -159,10 +160,13 @@ impl TomlManifest {
         }
 
         Ok((Manifest::new(
-                &Summary::new(&self.project.to_package_id(source_id.get_url()), deps.as_slice()),
+                &Summary::new(&self.project.to_package_id(source_id.get_url()),
+                              deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target"),
-                sources), nested_paths))
+                sources,
+                self.project.build.clone()),
+           nested_paths))
     }
 }
 

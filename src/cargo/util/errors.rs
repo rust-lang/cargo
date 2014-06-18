@@ -2,6 +2,7 @@ use std::io::process::{Command,ProcessOutput,ProcessExit,ExitStatus,ExitSignal};
 use std::io::IoError;
 use std::fmt;
 use std::fmt::{Show, Formatter};
+use std::str;
 
 use TomlError = toml::Error;
 
