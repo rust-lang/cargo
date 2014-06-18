@@ -163,9 +163,11 @@ impl<T, E: Show> ErrMsg<T> for Result<T, E> {
 
 // Path to cargo executables
 pub fn cargo_dir() -> Path {
-    os::getenv("CARGO_BIN_PATH")
-        .map(|s| Path::new(s))
-        .unwrap_or_else(|| fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
+    os::getenv("CARGO_BIN_PATH").map(Path::new)
+        .or_else(|| os::self_exe_path().map(|p| p.dir_path()))
+        .unwrap_or_else(|| {
+            fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
+        })
 }
 
 /// Returns an absolute path in the filesystem that `path` points to. The
