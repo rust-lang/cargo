@@ -31,8 +31,13 @@ impl Show for ProcessBuilder {
 static PATH_SEP : &'static str = ":";
 
 impl ProcessBuilder {
-    pub fn args<T: Show>(mut self, arguments: &[T]) -> ProcessBuilder {
-        self.args = arguments.iter().map(|a| a.to_str()).collect();
+    pub fn arg<T: Str>(mut self, arg: T) -> ProcessBuilder {
+        self.args.push(arg.as_slice().to_str());
+        self
+    }
+
+    pub fn args<T: Str>(mut self, arguments: &[T]) -> ProcessBuilder {
+        self.args = arguments.iter().map(|a| a.as_slice().to_str()).collect();
         self
     }
 
@@ -98,14 +103,18 @@ impl ProcessBuilder {
         }
     }
 
-    fn build_command(&self) -> Command {
+    pub fn build_command(&self) -> Command {
         let mut command = Command::new(self.program.as_slice());
         command.args(self.args.as_slice()).cwd(&self.cwd);
         command
     }
 
     fn debug_string(&self) -> String {
-        format!("{} {}", self.program, self.args.connect(" "))
+        if self.args.len() == 0 {
+            self.program.to_str()
+        } else {
+            format!("{} {}", self.program, self.args.connect(" "))
+        }
     }
 
     fn build_env(&self) -> Vec<(String, String)> {
