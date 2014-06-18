@@ -22,4 +22,5 @@ macro_rules! test(
 
 mod test_cargo_compile;
 mod test_cargo_compile_git_deps;
+mod test_cargo_compile_path_deps;
 mod test_shell;

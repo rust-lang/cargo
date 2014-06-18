@@ -9,14 +9,14 @@ use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
 use util::{CargoResult,Require,simple_human,toml_error};
 
-pub fn to_manifest(contents: &[u8], namespace: &Url) -> CargoResult<Manifest> {
+pub fn to_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
     let root = try!(toml::parse_from_bytes(contents).map_err(|_|
         simple_human("Cargo.toml is not valid Toml")));
 
     let toml = try!(toml_to_manifest(root).map_err(|_|
         simple_human("Cargo.toml is not a valid Cargo manifest")));
 
-    toml.to_manifest(namespace)
+    toml.to_manifest(source_id)
 }
 
 fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
@@ -114,8 +114,9 @@ impl TomlProject {
 }
 
 impl TomlManifest {
-    pub fn to_manifest(&self, namespace: &Url) -> CargoResult<Manifest> {
+    pub fn to_manifest(&self, source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
         let mut sources = vec!();
+        let mut nested_paths = vec!();
 
         // Get targets
         let targets = normalize(self.lib.as_ref().map(|l| l.as_slice()), self.bin.as_ref().map(|b| b.as_slice()));
@@ -135,7 +136,7 @@ impl TomlManifest {
                             (string.clone(), SourceId::for_central())
                         },
                         DetailedDep(ref details) => {
-                            let source_id = details.other.find_equiv(&"git").map(|git| {
+                            let new_source_id = details.other.find_equiv(&"git").map(|git| {
                                 // TODO: Don't unwrap here
                                 let kind = GitKind("master".to_str());
                                 let url = url::from_str(git.as_slice()).unwrap();
@@ -143,14 +144,14 @@ impl TomlManifest {
                                 // TODO: Don't do this for path
                                 sources.push(source_id.clone());
                                 source_id
-                            });
+                            }).or_else(|| {
+                                details.other.find_equiv(&"path").map(|path| {
+                                    nested_paths.push(Path::new(path.as_slice()));
+                                    source_id.clone()
+                                })
+                            }).unwrap_or(SourceId::for_central());
 
-                            // TODO: Convert relative path dependencies to namespace
-
-                            match source_id {
-                                Some(source_id) => (details.version.clone(), source_id),
-                                None => (details.version.clone(), SourceId::for_central())
-                            }
+                            (details.version.clone(), new_source_id)
                         }
                     };
 
@@ -160,11 +161,11 @@ impl TomlManifest {
             None => ()
         }
 
-        Ok(Manifest::new(
-                &Summary::new(&self.project.to_package_id(namespace), deps.as_slice()),
+        Ok((Manifest::new(
+                &Summary::new(&self.project.to_package_id(source_id.get_url()), deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target"),
-                sources))
+                sources), nested_paths))
     }
 }
 

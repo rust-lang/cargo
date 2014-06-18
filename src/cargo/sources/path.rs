@@ -1,20 +1,19 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use core::{Package,PackageId,Summary};
-use core::source::Source;
+use core::{Package,PackageId,Summary,SourceId,Source};
 use ops;
 use url;
 use util::{CargoResult,simple_human,io_error,realpath};
 
-/* 
- * TODO: Consider whether it may be more appropriate for a PathSource to only
- * take in a single path vs. a vec of paths. The pros / cons are unknown at
- * this point.
- */
 pub struct PathSource {
-    path: Path
+    id: SourceId,
+    path: Path,
 }
 
+/**
+ * TODO: Figure out if packages should be discovered in new or self should be
+ * mut and packages are discovered in update
+ */
 impl PathSource {
 
     /**
@@ -22,20 +21,42 @@ impl PathSource {
      * The source will read the manifest and find any other packages contained
      * in the directory structure reachable by the root manifest.
      */
-    pub fn new(path: &Path) -> PathSource {
-        log!(5, "new; path={}", path.display());
-        PathSource { path: path.clone() }
+    pub fn new(id: &SourceId) -> PathSource {
+        log!(5, "new; id={}", id);
+        assert!(id.is_path(), "does not represent a path source; id={}", id);
+
+        let path = Path::new(id.get_url().path.as_slice());
+
+        PathSource {
+            id: id.clone(),
+            path: path
+        }
     }
 
-    pub fn read_package(path: &Path) -> CargoResult<Package> {
-        log!(5, "read_package; path={}", path.display());
-
-        // TODO: Use a realpath fn
-        let dir = path.dir_path();
-        let namespace = try!(namespace(&dir));
-
-        ops::read_package(path, &namespace)
+    /*
+    pub fn get_path<'a>(&'a self) -> &'a Path {
+        &self.path
     }
+    */
+
+    pub fn get_root_package(&self) -> CargoResult<Package> {
+        log!(5, "get_root_package; source={}", self);
+
+        match (try!(self.packages())).as_slice().head() {
+            Some(pkg) => Ok(pkg.clone()),
+            None => Err(simple_human("no package found in source"))
+        }
+    }
+
+    fn packages(&self) -> CargoResult<Vec<Package>> {
+        find_packages(&self.path, &self.id)
+    }
+
+    /*
+    fn get_root_manifest_path(&self) -> Path {
+        self.path.join("Cargo.toml")
+    }
+    */
 }
 
 impl Show for PathSource {
@@ -50,15 +71,8 @@ impl Source for PathSource {
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        // TODO: Recursively find manifests
-
-        match PathSource::read_package(&self.path.join("Cargo.toml")) {
-            Ok(ref pkg) => Ok(vec!(pkg.get_summary().clone())),
-            Err(e) => {
-                debug!("failed to read manifest; path={}; err={}", self.path.display(), e);
-                Err(e)
-            }
-        }
+        let pkgs = try!(self.packages());
+        Ok(pkgs.iter().map(|p| p.get_summary().clone()).collect())
     }
 
     fn download(&self, _: &[PackageId])  -> CargoResult<()>{
@@ -69,18 +83,24 @@ impl Source for PathSource {
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packages; ids={}", ids);
 
-        PathSource::read_package(&self.path.join("Cargo.toml")).and_then(|pkg| {
-            log!(5, "comparing; pkg={}", pkg);
+        let pkgs = try!(self.packages());
 
-            if ids.iter().any(|pkg_id| pkg.get_package_id() == pkg_id) {
-                Ok(vec!(pkg))
-            } else {
-                // TODO: Be smarter
-                // Err(simple_human(format!("Couldn't find `{}` in path source", ids)))
-                Ok(vec!())
-            }
-        })
+        Ok(pkgs.iter()
+           .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
+           .map(|pkg| pkg.clone())
+           .collect())
     }
+}
+
+fn find_packages(path: &Path, source_id: &SourceId) -> CargoResult<Vec<Package>> {
+    let (pkg, nested) = try!(ops::read_package(&path.join("Cargo.toml"), source_id));
+    let mut ret = vec!(pkg);
+
+    for path in nested.iter() {
+        ret.push_all(try!(find_packages(path, source_id)).as_slice());
+    }
+
+    Ok(ret)
 }
 
 fn namespace(path: &Path) -> CargoResult<url::Url> {

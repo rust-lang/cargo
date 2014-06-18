@@ -7,7 +7,7 @@ extern crate url;
 
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError,ToResult};
-use cargo::core::source::Source;
+use cargo::core::source::{Source,SourceId};
 use cargo::sources::git::{GitSource};
 use cargo::util::{Config,ToCLI};
 use url::Url;
@@ -31,7 +31,9 @@ fn execute(options: Options) -> CLIResult<Option<()>> {
     let url: Url = try!(from_str(url.as_slice()).to_result(|_|
         CLIError::new(format!("The URL `{}` you passed was not a valid URL", url), None::<&str>, 1)));
 
-    let source = GitSource::new(&url, reference.as_slice(), &try!(Config::new().to_cli(1)));
+    let source_id = SourceId::for_git(&url, reference.as_slice());
+
+    let source = GitSource::new(&source_id, &try!(Config::new().to_cli(1)));
 
     try!(source.update().map_err(|e| {
         CLIError::new(format!("Couldn't update {}: {}", source, e), None::<&str>, 1)
