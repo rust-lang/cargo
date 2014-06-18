@@ -77,3 +77,77 @@ test!(cargo_compile_simple_git_dep {
       cargo::util::process("foo").extra_path(project.root().join("target")),
       execs().with_stdout("hello world\n"));
 })
+
+test!(cargo_compile_with_nested_paths {
+    let git_project = git_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [dependencies.dep2]
+
+                version = "0.5.0"
+                path = "vendor/dep2"
+
+                [[lib]]
+
+                name = "dep1"
+            "#)
+            .file("src/dep1.rs", r#"
+                extern crate dep2;
+
+                pub fn hello() -> &'static str {
+                    dep2::hello()
+                }
+            "#)
+            .file("vendor/dep2/Cargo.toml", r#"
+                [project]
+
+                name = "dep2"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]]
+
+                name = "dep2"
+            "#)
+            .file("vendor/dep2/src/dep2.rs", r#"
+                pub fn hello() -> &'static str {
+                    "hello world"
+                }
+            "#)
+    }).assert();
+
+    let p = project("parent")
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "parent"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            version = "0.5.0"
+            git = "file://{}"
+
+            [[bin]]
+
+            name = "parent"
+        "#, git_project.root().display()))
+        .file("src/parent.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
+
+    p.cargo_process("cargo-compile")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.root().join("target/parent"), existing_file());
+
+    assert_that(
+      cargo::util::process("parent").extra_path(p.root().join("target")),
+      execs().with_stdout("hello world\n"));
+})
