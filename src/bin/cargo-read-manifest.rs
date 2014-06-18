@@ -6,7 +6,7 @@ extern crate hammer;
 
 use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin,CLIResult,CLIError};
-use cargo::core::{Package,SourceId};
+use cargo::core::{Package,Source,SourceId};
 use cargo::sources::{PathSource};
 
 #[deriving(PartialEq,Clone,Decodable)]
@@ -22,8 +22,11 @@ fn main() {
 
 fn execute(options: Options) -> CLIResult<Option<Package>> {
     let source_id = SourceId::for_path(&Path::new(options.manifest_path.as_slice()));
+    let mut source = PathSource::new(&source_id);
 
-    PathSource::new(&source_id)
+    try!(source.update().map_err(|err| CLIError::new(err.get_desc(), Some(err.get_detail()), 1)));
+
+    source
         .get_root_package()
         .map(|pkg| Some(pkg))
         .map_err(|err| CLIError::new(err.get_desc(), Some(err.get_detail()), 1))

@@ -6,7 +6,8 @@ use util::{CargoResult,simple_human};
 
 pub struct PathSource {
     id: SourceId,
-    path: Path,
+    updated: bool,
+    packages: Vec<Package>
 }
 
 /**
@@ -24,25 +25,28 @@ impl PathSource {
         log!(5, "new; id={}", id);
         assert!(id.is_path(), "does not represent a path source; id={}", id);
 
-        let path = Path::new(id.get_url().path.as_slice());
-
         PathSource {
             id: id.clone(),
-            path: path
+            updated: false,
+            packages: Vec::new()
         }
+    }
+
+    fn path(&self) -> Path {
+        Path::new(self.id.get_url().path.as_slice())
     }
 
     pub fn get_root_package(&self) -> CargoResult<Package> {
         log!(5, "get_root_package; source={}", self);
 
-        match (try!(self.packages())).as_slice().head() {
+        if !self.updated {
+            return Err(simple_human("source has not been updated"))
+        }
+
+        match self.packages.as_slice().head() {
             Some(pkg) => Ok(pkg.clone()),
             None => Err(simple_human("no package found in source"))
         }
-    }
-
-    fn packages(&self) -> CargoResult<Vec<Package>> {
-        ops::read_packages(&self.path, &self.id)
     }
 }
 
@@ -54,12 +58,19 @@ impl Show for PathSource {
 
 impl Source for PathSource {
     fn update(&mut self) -> CargoResult<()> {
+        if !self.updated {
+          let pkgs = try!(ops::read_packages(&self.path(), &self.id));
+          self.packages.push_all_move(pkgs);
+          self.updated = true;
+        }
+
         Ok(())
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        let pkgs = try!(self.packages());
-        Ok(pkgs.iter().map(|p| p.get_summary().clone()).collect())
+        Ok(self.packages.iter()
+           .map(|p| p.get_summary().clone())
+           .collect())
     }
 
     fn download(&self, _: &[PackageId])  -> CargoResult<()>{
@@ -70,9 +81,7 @@ impl Source for PathSource {
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packages; ids={}", ids);
 
-        let pkgs = try!(self.packages());
-
-        Ok(pkgs.iter()
+        Ok(self.packages.iter()
            .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
            .map(|pkg| pkg.clone())
            .collect())
