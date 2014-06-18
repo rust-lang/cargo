@@ -1,6 +1,5 @@
 use std::io::File;
 use util;
-use url::Url;
 use core::{Package,Manifest,SourceId};
 use util::{CargoResult,io_error};
 
@@ -15,4 +14,15 @@ pub fn read_package(path: &Path, source_id: &SourceId) -> CargoResult<(Package, 
     let (manifest, nested) = try!(read_manifest(data.as_slice(), source_id));
 
     Ok((Package::new(manifest, path), nested))
+}
+
+pub fn read_packages(path: &Path, source_id: &SourceId) -> CargoResult<Vec<Package>> {
+    let (pkg, nested) = try!(read_package(&path.join("Cargo.toml"), source_id));
+    let mut ret = vec!(pkg);
+
+    for p in nested.iter() {
+        ret.push_all(try!(read_packages(&path.join(p), source_id)).as_slice());
+    }
+
+    Ok(ret)
 }

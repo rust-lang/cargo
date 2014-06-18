@@ -89,29 +89,9 @@ impl SourceId {
         }
     }
 
-    /*
-    let git_sources: Vec<Box<Source>> = try!(result::collect(package.get_sources().iter().map(|source_id: &SourceId| {
-        match source_id.kind {
-            GitKind(ref reference) => {
-                let remote = GitRemote::new(source_id.url.clone(), false);
-                let home = try!(os::homedir().require(simple_human("Cargo couldn't find a home directory")));
-                let git = home.join(".cargo").join("git");
-                let ident = url_to_path_ident(&source_id.url);
-
-                // .cargo/git/db
-                // .cargo/git/checkouts
-                let db_path = git.join("db").join(ident.as_slice());
-                let checkout_path = git.join("checkouts").join(ident.as_slice()).join(reference.as_slice());
-                Ok(box GitSource::new(remote, reference.clone(), db_path, checkout_path) as Box<Source>)
-            },
-            ref PathKind => fail!("Cannot occur")
-        }
-    })));
-     */
-
     pub fn load(&self, config: &Config) -> Box<Source> {
         match self.kind {
-            GitKind(ref reference) => {
+            GitKind(..) => {
                 box GitSource::new(self, config) as Box<Source>
             },
             PathKind => box PathSource::new(self) as Box<Source>,

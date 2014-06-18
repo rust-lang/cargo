@@ -2,8 +2,7 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use core::{Package,PackageId,Summary,SourceId,Source};
 use ops;
-use url;
-use util::{CargoResult,simple_human,io_error,realpath};
+use util::{CargoResult,simple_human};
 
 pub struct PathSource {
     id: SourceId,
@@ -33,12 +32,6 @@ impl PathSource {
         }
     }
 
-    /*
-    pub fn get_path<'a>(&'a self) -> &'a Path {
-        &self.path
-    }
-    */
-
     pub fn get_root_package(&self) -> CargoResult<Package> {
         log!(5, "get_root_package; source={}", self);
 
@@ -49,14 +42,8 @@ impl PathSource {
     }
 
     fn packages(&self) -> CargoResult<Vec<Package>> {
-        find_packages(&self.path, &self.id)
+        ops::read_packages(&self.path, &self.id)
     }
-
-    /*
-    fn get_root_manifest_path(&self) -> Path {
-        self.path.join("Cargo.toml")
-    }
-    */
 }
 
 impl Show for PathSource {
@@ -90,21 +77,4 @@ impl Source for PathSource {
            .map(|pkg| pkg.clone())
            .collect())
     }
-}
-
-fn find_packages(path: &Path, source_id: &SourceId) -> CargoResult<Vec<Package>> {
-    let (pkg, nested) = try!(ops::read_package(&path.join("Cargo.toml"), source_id));
-    let mut ret = vec!(pkg);
-
-    for path in nested.iter() {
-        ret.push_all(try!(find_packages(path, source_id)).as_slice());
-    }
-
-    Ok(ret)
-}
-
-fn namespace(path: &Path) -> CargoResult<url::Url> {
-    let real = try!(realpath(path).map_err(io_error));
-    url::from_str(format!("file://{}", real.display()).as_slice()).map_err(|err|
-        simple_human(err.as_slice()))
 }

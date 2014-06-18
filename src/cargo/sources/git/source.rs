@@ -13,6 +13,8 @@ use core::{Package,PackageId,Summary};
 use util::{CargoResult,Config};
 use sources::git::utils::{GitReference,GitRemote,Master,Other};
 
+/* TODO: Refactor GitSource to delegate to a PathSource
+ */
 pub struct GitSource {
     id: SourceId,
     remote: GitRemote,
@@ -52,6 +54,9 @@ impl GitSource {
         self.remote.get_url()
     }
 
+    fn packages(&self) -> CargoResult<Vec<Package>> {
+        ops::read_packages(&self.checkout_path, &self.id)
+    }
 }
 
 fn ident(url: &Url) -> String {
@@ -97,32 +102,25 @@ impl Source for GitSource {
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
         log!(5, "listing summaries in git source `{}`", self.remote);
-        let pkg = try!(read_manifest(&self.checkout_path, &self.id));
-        Ok(vec!(pkg.get_summary().clone()))
+        let pkgs = try!(self.packages());
+        Ok(pkgs.iter().map(|p| p.get_summary().clone()).collect())
     }
 
     fn download(&self, _: &[PackageId]) -> CargoResult<()> {
         Ok(())
     }
 
-    fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages for package ids `{}` from `{}`", package_ids, self.remote);
+    fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
+        log!(5, "getting packages for package ids `{}` from `{}`", ids, self.remote);
+
         // TODO: Support multiple manifests per repo
-        let pkg = try!(read_manifest(&self.checkout_path, &self.id));
+        let pkgs = try!(self.packages());
 
-        if package_ids.iter().any(|pkg_id| pkg_id == pkg.get_package_id()) {
-            Ok(vec!(pkg))
-        } else {
-            Ok(vec!())
-        }
+        Ok(pkgs.iter()
+           .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
+           .map(|pkg| pkg.clone())
+           .collect())
     }
-}
-
-fn read_manifest(path: &Path, source_id: &SourceId) -> CargoResult<Package> {
-    let path = path.join("Cargo.toml");
-    // TODO: recurse
-    let (pkg, _) = try!(ops::read_package(&path, source_id));
-    Ok(pkg)
 }
 
 #[cfg(test)]

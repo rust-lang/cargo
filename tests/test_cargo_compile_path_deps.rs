@@ -1,17 +1,13 @@
-use support::{ProjectBuilder,ResultTest,project,execs,main_file};
+use support::{ResultTest,project,execs,main_file};
 use hamcrest::{assert_that,existing_file};
 use cargo;
-use cargo::util::{CargoResult,process};
+use cargo::util::{process};
 
 fn setup() {
 }
 
 test!(cargo_compile_with_nested_deps_shorthand {
-    let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
-
-    p = p
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -52,7 +48,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
                 baz::gimme()
             }
         "#)
-        .file("baz/Cargo.toml", r#"
+        .file("bar/baz/Cargo.toml", r#"
             [project]
 
             name = "baz"
@@ -63,7 +59,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
             name = "baz"
         "#)
-        .file("baz/src/baz.rs", r#"
+        .file("bar/baz/src/baz.rs", r#"
             pub fn gimme() -> String {
                 "test passed".to_str()
             }
