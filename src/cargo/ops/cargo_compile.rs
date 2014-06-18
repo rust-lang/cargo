@@ -16,7 +16,7 @@
 
 use std::os;
 use util::config::{ConfigValue};
-use core::{SourceId,PackageSet,resolver};
+use core::{Source,SourceId,PackageSet,resolver};
 use core::registry::PackageRegistry;
 use ops;
 use sources::{PathSource};
@@ -25,8 +25,12 @@ use util::{CargoResult,Wrap,config,other_error};
 pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
+    let mut source = PathSource::new(&SourceId::for_path(&manifest_path.dir_path()));
+
+    try!(source.update());
+
     // TODO: Move this into PathSource
-    let package = try!(PathSource::new(&SourceId::for_path(&manifest_path.dir_path())).get_root_package());
+    let package = try!(source.get_root_package());
     debug!("loaded package; package={}", package);
 
     let override_ids = try!(source_ids_from_config());
