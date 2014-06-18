@@ -66,8 +66,27 @@ impl SourceId {
         SourceId::new(PathKind, url::from_str(format!("file://{}", path.display()).as_slice()).unwrap())
     }
 
+    pub fn for_git(url: &Url, reference: &str) -> SourceId {
+        SourceId::new(GitKind(reference.to_str()), url.clone())
+    }
+
     pub fn for_central() -> SourceId {
         SourceId::new(RegistryKind, url::from_str(format!("https://example.com").as_slice()).unwrap())
+    }
+
+    pub fn get_url<'a>(&'a self) -> &'a Url {
+        &self.url
+    }
+
+    pub fn is_path(&self) -> bool {
+        self.kind == PathKind
+    }
+
+    pub fn is_git(&self) -> bool {
+        match self.kind {
+            GitKind(_) => true,
+            _ => false
+        }
     }
 
     /*
@@ -93,9 +112,9 @@ impl SourceId {
     pub fn load(&self, config: &Config) -> Box<Source> {
         match self.kind {
             GitKind(ref reference) => {
-                box GitSource::new(&self.url, reference.as_slice(), config) as Box<Source>
+                box GitSource::new(self, config) as Box<Source>
             },
-            PathKind => box PathSource::new(&Path::new(self.url.path.as_slice())) as Box<Source>,
+            PathKind => box PathSource::new(self) as Box<Source>,
             RegistryKind => unimplemented!()
         }
     }

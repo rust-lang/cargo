@@ -26,7 +26,7 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
     // TODO: Move this into PathSource
-    let package = try!(PathSource::read_package(manifest_path));
+    let package = try!(PathSource::new(&SourceId::for_path(&manifest_path.dir_path())).get_root_package());
     debug!("loaded package; package={}", package);
 
     let override_ids = try!(source_ids_from_config());

@@ -8,12 +8,13 @@ use url;
 use url::Url;
 
 use ops;
-use core::source::Source;
+use core::source::{Source,SourceId,GitKind};
 use core::{Package,PackageId,Summary};
 use util::{CargoResult,Config};
 use sources::git::utils::{GitReference,GitRemote,Master,Other};
 
 pub struct GitSource {
+    id: SourceId,
     remote: GitRemote,
     reference: GitReference,
     db_path: Path,
@@ -21,19 +22,27 @@ pub struct GitSource {
 }
 
 impl GitSource {
-    pub fn new(url: &Url, reference: &str, config: &Config) -> GitSource {
-        let remote = GitRemote::new(url);
-        let ident = ident(url);
+    pub fn new(source_id: &SourceId, config: &Config) -> GitSource {
+        assert!(source_id.is_git(), "id is not git, id={}", source_id);
+
+        let reference = match source_id.kind {
+            GitKind(ref reference) => reference,
+            _ => fail!("Not a git source; id={}", source_id)
+        };
+
+        let remote = GitRemote::new(source_id.get_url());
+        let ident = ident(&source_id.url);
 
         let db_path = config.git_db_path()
             .join(ident.as_slice());
 
         let checkout_path = config.git_checkout_path()
-            .join(ident.as_slice()).join(reference);
+            .join(ident.as_slice()).join(reference.as_slice());
 
         GitSource {
+            id: source_id.clone(),
             remote: remote,
-            reference: GitReference::for_str(reference),
+            reference: GitReference::for_str(reference.as_slice()),
             db_path: db_path,
             checkout_path: checkout_path
         }
@@ -88,7 +97,7 @@ impl Source for GitSource {
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
         log!(5, "listing summaries in git source `{}`", self.remote);
-        let pkg = try!(read_manifest(&self.checkout_path, self.get_namespace()));
+        let pkg = try!(read_manifest(&self.checkout_path, &self.id));
         Ok(vec!(pkg.get_summary().clone()))
     }
 
@@ -99,7 +108,7 @@ impl Source for GitSource {
     fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packages for package ids `{}` from `{}`", package_ids, self.remote);
         // TODO: Support multiple manifests per repo
-        let pkg = try!(read_manifest(&self.checkout_path, self.remote.get_url()));
+        let pkg = try!(read_manifest(&self.checkout_path, &self.id));
 
         if package_ids.iter().any(|pkg_id| pkg_id == pkg.get_package_id()) {
             Ok(vec!(pkg))
@@ -109,9 +118,11 @@ impl Source for GitSource {
     }
 }
 
-fn read_manifest(path: &Path, url: &url::Url) -> CargoResult<Package> {
+fn read_manifest(path: &Path, source_id: &SourceId) -> CargoResult<Package> {
     let path = path.join("Cargo.toml");
-    ops::read_package(&path, url)
+    // TODO: recurse
+    let (pkg, _) = try!(ops::read_package(&path, source_id));
+    Ok(pkg)
 }
 
 #[cfg(test)]

@@ -16,6 +16,7 @@ use util::{CargoResult, graph};
 use serialize::{Encoder,Encodable};
 use core::source::SourceId;
 
+// TODO: Is manifest_path a relic?
 #[deriving(Clone,PartialEq)]
 pub struct Package {
     // The package's manifest
