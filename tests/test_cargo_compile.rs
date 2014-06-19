@@ -64,7 +64,15 @@ test!(cargo_compile_with_invalid_code {
     assert_that(p.cargo_process("cargo-compile"),
         execs()
         .with_status(101)
-        .with_stderr(format!("src/foo.rs:1:1: 1:8 error: expected item but found `invalid`\nsrc/foo.rs:1 invalid rust code!\n             ^~~~~~~\nCould not execute process `rustc src/foo.rs --crate-type bin --out-dir {} -L {}` (status=101)", target.display(), target.join("deps").display()).as_slice()));
+        .with_stderr(format!("\
+src/foo.rs:1:1: 1:8 error: expected item but found `invalid`
+src/foo.rs:1 invalid rust code!
+             ^~~~~~~
+Could not execute process \
+`rustc src/foo.rs --crate-type bin --out-dir {} -L {} -L {}` (status=101)",
+            target.display(),
+            target.display(),
+            target.join("deps").display()).as_slice()));
 })
 
 test!(cargo_compile_with_warnings_in_the_root_package {
@@ -285,3 +293,188 @@ test!(cargo_compile_with_nested_deps_longhand {
 })
 
 // test!(compiling_project_with_invalid_manifest)
+
+test!(custom_build {
+    let mut build = project("builder");
+    build = build
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() { println!("Hello!"); }
+        "#);
+    assert_that(build.cargo_process("cargo-compile"),
+                execs().with_status(0));
+
+
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "{}"
+
+            [[bin]] name = "foo"
+        "#, build.root().join("target/foo").display()))
+        .file("src/foo.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("cargo-compile"),
+                execs().with_status(0)
+                       .with_stdout(format!("Compiling foo v0.5.0 (file:{})\n",
+                                            p.root().display()))
+                       .with_stderr(""));
+})
+
+test!(custom_build_failure {
+    let mut build = project("builder");
+    build = build
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() { fail!("nope") }
+        "#);
+    assert_that(build.cargo_process("cargo-compile"), execs().with_status(0));
+
+
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "{}"
+
+            [[bin]] name = "foo"
+        "#, build.root().join("target/foo").display()))
+        .file("src/foo.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("cargo-compile"),
+                execs().with_status(101).with_stderr(format!("\
+Could not execute process `{}` (status=101)
+--- stderr
+task '<main>' failed at 'nope', src/foo.rs:2
+", build.root().join("target/foo").display())));
+})
+
+test!(custom_build_env_vars {
+    let mut p = project("foo");
+    let mut build = project("builder");
+    build = build
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", format!(r#"
+            use std::os;
+            fn main() {{
+                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_str());
+                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_str());
+            }}
+        "#,
+        p.root().join("target").display(),
+        p.root().join("target/deps").display()));
+    assert_that(build.cargo_process("cargo-compile"), execs().with_status(0));
+
+
+    p = p
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "{}"
+
+            [[bin]] name = "foo"
+        "#, build.root().join("target/foo").display()))
+        .file("src/foo.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("cargo-compile"), execs().with_status(0));
+})
+
+test!(custom_build_in_dependency {
+    let mut p = project("foo");
+    let bar = p.root().join("bar");
+    let mut build = project("builder");
+    build = build
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", format!(r#"
+            use std::os;
+            fn main() {{
+                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_str());
+                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_str());
+            }}
+        "#,
+        p.root().join("target/deps").display(),
+        p.root().join("target/deps").display()));
+    assert_that(build.cargo_process("cargo-compile"), execs().with_status(0));
+
+
+    p = p
+        .file(".cargo/config", format!(r#"
+            paths = ["{}"]
+        "#, bar.display()).as_slice())
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+            [dependencies.bar] version = "0.5.0"
+        "#)
+        .file("src/foo.rs", r#"
+            extern crate bar;
+            fn main() { bar::bar() }
+        "#)
+        .file("bar/Cargo.toml", format!(r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "{}"
+
+            [[lib]] name = "bar"
+        "#, build.root().join("target/foo").display()))
+        .file("bar/src/bar.rs", r#"
+            pub fn bar() {}
+        "#);
+    assert_that(p.cargo_process("cargo-compile"),
+                execs().with_status(0));
+})

@@ -23,17 +23,17 @@ all: $(BIN_TARGETS)
 # === Dependencies
 
 $(HAMMER): $(wildcard libs/hammer.rs/src/*.rs)
-	cd libs/hammer.rs && make
+	$(MAKE) -C libs/hammer.rs
 
 $(TOML): $(wildcard libs/rust-toml/src/toml/*.rs)
-	cd libs/rust-toml && make
+	$(MAKE) -C libs/rust-toml
 
 $(HAMCREST): $(shell find libs/hamcrest-rust/src/hamcrest -name '*.rs')
-	cd libs/hamcrest-rust && make
+	$(MAKE) -C libs/hamcrest-rust
 
 # === Cargo
 
-$(LIBCARGO): $(SRC) $(HAMMER)
+$(LIBCARGO): $(SRC) $(HAMMER) $(TOML)
 	mkdir -p target
 	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir target src/cargo/lib.rs
 	touch $(LIBCARGO)
@@ -61,7 +61,7 @@ test-unit: target/tests/test-unit
 	target/tests/test-unit $(only)
 
 test-integration: target/tests/test-integration
-	RUST_TEST_TASKS=1 CARGO_BIN_PATH=$(PWD)/target/ $< $(only)
+	$< $(only)
 
 test: test-unit test-integration
 
