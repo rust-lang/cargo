@@ -75,28 +75,26 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path,
 
     let crate_types = target.rustc_crate_types();
 
-    for crate_type in crate_types.iter() {
-        log!(5, "root={}; target={}; crate_type={}; dest={}; deps={}; verbose={}",
-             root.display(), target, crate_type, dest.display(), deps.display(),
-             verbose);
+    log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; verbose={}",
+         root.display(), target, crate_types, dest.display(), deps.display(),
+         verbose);
 
-        let rustc = prepare_rustc(root, target, *crate_type, dest, deps);
+    let rustc = prepare_rustc(root, target, crate_types, dest, deps);
 
-        try!(if verbose {
-            rustc.exec().map_err(|err| human(err.to_str()))
-        } else {
-            rustc.exec_with_output().and(Ok(())).map_err(|err| human(err.to_str()))
-        });
-    }
+    try!(if verbose {
+        rustc.exec().map_err(|err| human(err.to_str()))
+    } else {
+        rustc.exec_with_output().and(Ok(())).map_err(|err| human(err.to_str()))
+    });
 
     Ok(())
 }
 
-fn prepare_rustc(root: &Path, target: &Target, crate_type: &'static str,
+fn prepare_rustc(root: &Path, target: &Target, crate_types: Vec<&str>,
                  dest: &Path, deps: &Path) -> ProcessBuilder {
     let mut args = Vec::new();
 
-    build_base_args(&mut args, target, crate_type, dest);
+    build_base_args(&mut args, target, crate_types, dest);
     build_deps_args(&mut args, dest, deps);
 
     util::process("rustc")
@@ -105,12 +103,14 @@ fn prepare_rustc(root: &Path, target: &Target, crate_type: &'static str,
         .env("RUST_LOG", None) // rustc is way too noisy
 }
 
-fn build_base_args(into: &mut Args, target: &Target, crate_type: &'static str,
+fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
                    dest: &Path) {
     // TODO: Handle errors in converting paths into args
     into.push(target.get_path().display().to_str());
-    into.push("--crate-type".to_str());
-    into.push(crate_type.to_str());
+    for crate_type in crate_types.iter() {
+        into.push("--crate-type".to_str());
+        into.push(crate_type.to_str());
+    }
     into.push("--out-dir".to_str());
     into.push(dest.display().to_str());
 }
