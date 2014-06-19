@@ -32,8 +32,8 @@ macro_rules! some(
 
 macro_rules! cargo_try (
     ($expr:expr) => ({
-        use util::BoxError;
-        try!($expr.box_error())
+        use util::CargoError;
+        try!($expr.map_err(|err| err.to_error()))
     })
 )
 
