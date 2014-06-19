@@ -1,5 +1,5 @@
 use url::Url;
-use util::{CargoResult, ProcessBuilder, process, box_error};
+use util::{CargoResult, ChainError, ProcessBuilder, process};
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::str;
@@ -41,21 +41,21 @@ impl Show for GitReference {
 
 macro_rules! git(
     ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_inherit(&$config, format!($str, $($rest),*)))
+        cargo_try!(git_inherit(&$config, format!($str, $($rest),*)))
     );
 
     ($config:expr, $str:expr) => (
-        try!(git_inherit(&$config, format!($str)))
+        cargo_try!(git_inherit(&$config, format!($str)))
     );
 )
 
 macro_rules! git_output(
     ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_output(&$config, format!($str, $($rest),*)))
+        cargo_try!(git_output(&$config, format!($str, $($rest),*)))
     );
 
     ($config:expr, $str:expr) => (
-        try!(git_output(&$config, format!($str)))
+        cargo_try!(git_output(&$config, format!($str)))
     );
 )
 
@@ -158,9 +158,9 @@ impl GitRemote {
 
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
         if into.exists() {
-            try!(self.fetch_into(into));
+            cargo_try!(self.fetch_into(into));
         } else {
-            try!(self.clone_into(into));
+            cargo_try!(self.clone_into(into));
         }
 
         Ok(GitDatabase { remote: self.clone(), path: into.clone() })
@@ -173,7 +173,7 @@ impl GitRemote {
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
         let dirname = Path::new(path.dirname());
 
-        try!(mkdir_recursive(path, UserDir).map_err(box_error));
+        cargo_try!(mkdir_recursive(path, UserDir));
 
         Ok(git!(dirname, "clone {} {} --bare --no-hardlinks --quiet", self.fetch_location(), path.display()))
     }
@@ -192,10 +192,10 @@ impl GitDatabase {
     }
 
     pub fn copy_to<S: Str>(&self, reference: S, dest: &Path) -> CargoResult<GitCheckout> {
-        let checkout = try!(GitCheckout::clone_into(dest, self.clone(), GitReference::for_str(reference.as_slice())));
+        let checkout = cargo_try!(GitCheckout::clone_into(dest, self.clone(), GitReference::for_str(reference.as_slice())));
 
-        try!(checkout.fetch());
-        try!(checkout.update_submodules());
+        cargo_try!(checkout.fetch());
+        cargo_try!(checkout.update_submodules());
 
         Ok(checkout)
     }
@@ -208,12 +208,12 @@ impl GitDatabase {
 
 impl GitCheckout {
     fn clone_into(into: &Path, database: GitDatabase, reference: GitReference) -> CargoResult<GitCheckout> {
-        let revision = try!(database.rev_for(reference.as_slice()));
+        let revision = cargo_try!(database.rev_for(reference.as_slice()));
         let checkout = GitCheckout { location: into.clone(), database: database, reference: reference, revision: revision };
 
         // If the git checkout already exists, we don't need to clone it again
         if !checkout.location.join(".git").exists() {
-            try!(checkout.clone_repo());
+            cargo_try!(checkout.clone_repo());
         }
 
         Ok(checkout)
@@ -226,23 +226,23 @@ impl GitCheckout {
     fn clone_repo(&self) -> CargoResult<()> {
         let dirname = Path::new(self.location.dirname());
 
-        try!(mkdir_recursive(&dirname, UserDir).map_err(|_|
-            box_error(format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display()))));
+        cargo_try!(mkdir_recursive(&dirname, UserDir).chain_error(||
+            format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display())));
 
         if self.location.exists() {
-            try!(rmdir_recursive(&self.location).map_err(|_|
-                box_error(format!("Couldn't rmdir {}", Path::new(&self.location).display()))));
+            cargo_try!(rmdir_recursive(&self.location).chain_error(||
+                format!("Couldn't rmdir {}", Path::new(&self.location).display())));
         }
 
         git!(dirname, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
-        try!(chmod(&self.location, AllPermissions).map_err(box_error));
+        cargo_try!(chmod(&self.location, AllPermissions));
 
         Ok(())
     }
 
     fn fetch(&self) -> CargoResult<()> {
         git!(self.location, "fetch --force --quiet --tags {}", self.get_source().display());
-        try!(self.reset(self.revision.as_slice()));
+        cargo_try!(self.reset(self.revision.as_slice()));
         Ok(())
     }
 
@@ -262,13 +262,12 @@ fn git(path: &Path, str: &str) -> ProcessBuilder {
 }
 
 fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
-    git(path, str.as_slice()).exec().map_err(|err|
-        box_error(format!("Executing `git {}` failed: {}", str, err)))
+    git(path, str.as_slice()).exec().chain_error(|| format!("Executing `git {}` failed", str))
 }
 
 fn git_output(path: &Path, str: String) -> CargoResult<String> {
-    let output = try!(git(path, str.as_slice()).exec_with_output().map_err(|_|
-        box_error(format!("Executing `git {}` failed", str))));
+    let output = cargo_try!(git(path, str.as_slice()).exec_with_output().chain_error(||
+        format!("Executing `git {}` failed", str)));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())
 }

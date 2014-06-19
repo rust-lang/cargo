@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use core::{Package,PackageId,Summary,SourceId,Source};
 use ops;
-use util::{CargoResult, box_error};
+use util::{CargoResult, error};
 
 pub struct PathSource {
     id: SourceId,
@@ -40,12 +40,12 @@ impl PathSource {
         log!(5, "get_root_package; source={}", self);
 
         if !self.updated {
-            return Err(box_error("source has not been updated"))
+            return Err(error("source has not been updated"))
         }
 
         match self.packages.as_slice().head() {
             Some(pkg) => Ok(pkg.clone()),
-            None => Err(box_error("no package found in source"))
+            None => Err(error("no package found in source"))
         }
     }
 }

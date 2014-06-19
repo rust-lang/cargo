@@ -11,6 +11,10 @@ pub trait CargoError {
     fn cause<'a>(&'a self) -> Option<&'a CargoError> { None }
     fn is_human(&self) -> bool { false }
 
+    fn box_error(self) -> Box<CargoError> {
+        box self as Box<CargoError>
+    }
+
     fn concrete(&self) -> ConcreteCargoError {
         ConcreteCargoError {
             description: self.description(),
@@ -45,9 +49,37 @@ impl CargoError for Box<CargoError> {
     fn is_human(&self) -> bool {
         (*self).is_human()
     }
+
+    fn box_error(self) -> Box<CargoError> {
+        self
+    }
 }
 
 pub type CargoResult<T> = Result<T, Box<CargoError>>;
+
+pub trait BoxError<T> {
+    fn box_error(self) -> CargoResult<T>;
+}
+
+pub trait ChainError<T> {
+    fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T> ;
+}
+
+impl<T, E: CargoError> BoxError<T> for Result<T, E> {
+    fn box_error(self) -> CargoResult<T> {
+        self.map_err(|err| err.box_error())
+    }
+}
+
+impl<T, E: CargoError> ChainError<T> for Result<T, E> {
+    fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T>  {
+        self.map_err(|err| {
+            let mut update = callback().concrete();
+            update.cause = Some(err.box_error());
+            box update as Box<CargoError>
+        })
+    }
+}
 
 impl CargoError for &'static str {
     fn description(&self) -> String { self.to_str() }
@@ -199,8 +231,4 @@ pub fn chain<E: CargoError>(original: Box<CargoError>, update: E) -> Box<CargoEr
     let mut concrete = update.concrete();
     concrete.cause = Some(original);
     box concrete as Box<CargoError>
-}
-
-pub fn box_error<S: CargoError + 'static>(err: S) -> Box<CargoError> {
-    box err as Box<CargoError>
 }
