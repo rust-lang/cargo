@@ -201,6 +201,11 @@ impl CargoError for ConcreteCargoError {
         box self as Box<CargoError>
     }
 
+    fn mark_human(mut self) -> Box<CargoError> {
+        self.is_human = true;
+        box self as Box<CargoError>
+    }
+
     fn is_human(&self) -> bool {
         self.is_human
     }
