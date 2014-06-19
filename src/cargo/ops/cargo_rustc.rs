@@ -3,7 +3,7 @@ use std::io;
 use std::path::Path;
 use core::{Package,PackageSet,Target};
 use util;
-use util::{CargoResult, ProcessBuilder, error, human};
+use util::{CargoResult, ChainError, ProcessBuilder, internal, human};
 
 type Args = Vec<String>;
 
@@ -45,8 +45,7 @@ fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> Ca
 }
 
 fn mk_target(target: &Path) -> CargoResult<()> {
-    io::fs::mkdir_recursive(target, io::UserRWX)
-      .map_err(|_| error("could not create target directory"))
+    io::fs::mkdir_recursive(target, io::UserRWX).chain_error(|| internal("could not create target directory"))
 }
 
 fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) -> CargoResult<()> {
@@ -98,6 +97,6 @@ fn build_deps_args(dst: &mut Args, deps: &Path) {
 fn topsort(deps: &PackageSet) -> CargoResult<PackageSet> {
     match deps.sort() {
         Some(deps) => Ok(deps),
-        None => return Err(error("circular dependency detected"))
+        None => return Err(internal("circular dependency detected"))
     }
 }

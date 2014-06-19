@@ -7,11 +7,11 @@ use serialize::Decodable;
 use core::{SourceId,GitKind};
 use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
-use util::{CargoResult, Require, error, human};
+use util::{CargoResult, Require, human};
 
 pub fn to_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
-    let root = try!(toml::parse_from_bytes(contents).map_err(|_| error("Cargo.toml is not valid Toml")));
-    let toml = try!(toml_to_manifest(root).map_err(|_| error("Cargo.toml is not a valid manifest")));
+    let root = try!(toml::parse_from_bytes(contents).map_err(|_| human("Cargo.toml is not valid Toml")));
+    let toml = try!(toml_to_manifest(root).map_err(|_| human("Cargo.toml is not a valid manifest")));
 
     toml.to_manifest(source_id)
 }
