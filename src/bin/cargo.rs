@@ -13,7 +13,7 @@ use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
 use cargo::{NoFlags,execute_main_without_stdin,handle_error};
 use cargo::util::important_paths::find_project;
-use cargo::util::{CliError, CliResult, CargoResult, CargoError, Require, config, box_error};
+use cargo::util::{CliError, CliResult, Require, config};
 
 fn main() {
     execute();
@@ -91,7 +91,7 @@ impl FlagConfig for ConfigForKeyFlags {
 }
 
 fn config_for_key(args: ConfigForKeyFlags) -> CliResult<Option<ConfigOut>> {
-    let value = try!(config::get_config(os::getcwd(), args.key.as_slice()).map_err(|err|
+    let value = try!(config::get_config(os::getcwd(), args.key.as_slice()).map_err(|_|
         CliError::new("Couldn't load configuration",  1)));
 
     if args.human {
@@ -116,7 +116,7 @@ impl FlagConfig for ConfigListFlags {
 }
 
 fn config_list(args: ConfigListFlags) -> CliResult<Option<ConfigOut>> {
-    let configs = try!(config::all_configs(os::getcwd()).map_err(|e|
+    let configs = try!(config::all_configs(os::getcwd()).map_err(|_|
         CliError::new("Couldn't load configuration", 1)));
 
     if args.human {

@@ -21,6 +21,7 @@ pub trait CargoError {
     }
 }
 
+
 impl Show for Box<CargoError> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.description()));
@@ -67,6 +68,7 @@ impl CargoError for TomlError {
 }
 
 pub struct ProcessError {
+    pub msg: String,
     pub command: String,
     pub exit: Option<ProcessExit>,
     pub output: Option<ProcessOutput>,
@@ -90,7 +92,7 @@ impl CargoError for ProcessError {
             Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
             None => "never executed".to_str()
         };
-        format!("Executing `{}` failed (status={})", self.command, exit)
+        format!("{} (status={})", self.msg, exit)
     }
 
     fn detail(&self) -> Option<String> {
@@ -102,7 +104,7 @@ impl CargoError for ProcessError {
     }
 }
 
-struct ConcreteCargoError {
+pub struct ConcreteCargoError {
     description: String,
     detail: Option<String>,
     cause: Option<Box<CargoError>>,
@@ -160,6 +162,7 @@ impl CliError {
 
 pub fn process_error<S: Str>(msg: S, command: &Command, status: Option<&ProcessExit>, output: Option<&ProcessOutput>) -> ProcessError {
     ProcessError {
+        msg: msg.as_slice().to_str(),
         command: command.to_str(),
         exit: status.map(|o| o.clone()),
         output: output.map(|o| o.clone()),

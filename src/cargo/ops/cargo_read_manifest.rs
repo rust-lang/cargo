@@ -1,7 +1,7 @@
 use std::io::File;
 use util;
 use core::{Package,Manifest,SourceId};
-use util::{CargoResult, CargoError, box_error, human};
+use util::{CargoResult, box_error, human};
 
 pub fn read_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
     util::toml::to_manifest(contents, source_id).map_err(human)

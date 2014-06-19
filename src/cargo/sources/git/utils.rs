@@ -226,11 +226,11 @@ impl GitCheckout {
     fn clone_repo(&self) -> CargoResult<()> {
         let dirname = Path::new(self.location.dirname());
 
-        try!(mkdir_recursive(&dirname, UserDir).map_err(|e|
+        try!(mkdir_recursive(&dirname, UserDir).map_err(|_|
             box_error(format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display()))));
 
         if self.location.exists() {
-            try!(rmdir_recursive(&self.location).map_err(|e|
+            try!(rmdir_recursive(&self.location).map_err(|_|
                 box_error(format!("Couldn't rmdir {}", Path::new(&self.location).display()))));
         }
 
@@ -267,7 +267,7 @@ fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
 }
 
 fn git_output(path: &Path, str: String) -> CargoResult<String> {
-    let output = try!(git(path, str.as_slice()).exec_with_output().map_err(|err|
+    let output = try!(git(path, str.as_slice()).exec_with_output().map_err(|_|
         box_error(format!("Executing `git {}` failed", str))));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())

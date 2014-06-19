@@ -101,10 +101,10 @@ fn flags_from_args<T: RepresentsFlags>() -> CliResult<T> {
 
 fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
     let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().map_err(|e| CliError::new("Standard in did not exist or was not UTF-8", 1)));
+    let input = try!(reader.read_to_str().map_err(|_| CliError::new("Standard in did not exist or was not UTF-8", 1)));
 
-    let json = try!(json::from_str(input.as_slice()).map_err(|e| CliError::new("Could not parse standard in as JSON", 1)));
+    let json = try!(json::from_str(input.as_slice()).map_err(|_| CliError::new("Could not parse standard in as JSON", 1)));
     let mut decoder = json::Decoder::new(json);
 
-    Decodable::decode(&mut decoder).map_err(|e: json::DecoderError| CliError::new("Could not process standard in as input", 1))
+    Decodable::decode(&mut decoder).map_err(|_| CliError::new("Could not process standard in as input", 1))
 }
