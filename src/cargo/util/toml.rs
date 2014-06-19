@@ -7,7 +7,7 @@ use serialize::Decodable;
 use core::{SourceId,GitKind};
 use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
-use util::{CargoResult, Require, error, box_error};
+use util::{CargoResult, Require, error};
 
 pub fn to_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
     let root = try!(toml::parse_from_bytes(contents).map_err(|_| error("Cargo.toml is not valid Toml")));
@@ -25,7 +25,7 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
         toml::from_toml(root.clone())
     }
 
-    let project = try!(decode(&root, "project").map_err(box_error));
+    let project = cargo_try!(decode(&root, "project"));
     let lib = decode(&root, "lib").ok();
     let bin = decode(&root, "bin").ok();
 

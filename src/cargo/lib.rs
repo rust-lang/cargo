@@ -30,6 +30,13 @@ macro_rules! some(
     }
   ))
 
+macro_rules! cargo_try (
+    ($expr:expr) => ({
+        use util::BoxError;
+        try!($expr.box_error())
+    })
+)
+
 pub mod core;
 pub mod ops;
 pub mod sources;

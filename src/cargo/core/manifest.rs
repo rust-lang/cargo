@@ -10,7 +10,7 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
-use util::{CargoResult, box_error};
+use util::{CargoResult, human};
 
 #[deriving(PartialEq,Clone)]
 pub struct Manifest {
@@ -65,7 +65,7 @@ impl LibKind {
             "rlib" => Ok(Rlib),
             "dylib" => Ok(Dylib),
             "staticlib" => Ok(StaticLib),
-            _ => Err(box_error(format!("{} was not one of lib|rlib|dylib|staticlib", string)))
+            _ => Err(human(format!("{} was not one of lib|rlib|dylib|staticlib", string)))
         }
     }
 

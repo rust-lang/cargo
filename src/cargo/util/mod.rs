@@ -1,8 +1,8 @@
 pub use self::config::Config;
 pub use self::process_builder::{process,ProcessBuilder};
 pub use self::result::{Wrap, Require};
-pub use self::errors::{CargoResult, CargoError, CliResult, CliError, ProcessError};
-pub use self::errors::{process_error, box_error, internal_error, error, human, chain};
+pub use self::errors::{CargoResult, CargoError, BoxError, ChainError, CliResult, CliError, ProcessError};
+pub use self::errors::{process_error, internal_error, error, human, chain};
 pub use self::paths::realpath;
 
 pub mod graph;

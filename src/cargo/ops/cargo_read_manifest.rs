@@ -1,7 +1,7 @@
 use std::io::File;
 use util;
 use core::{Package,Manifest,SourceId};
-use util::{CargoResult, box_error, human};
+use util::{CargoResult, human};
 
 pub fn read_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
     util::toml::to_manifest(contents, source_id).map_err(human)
@@ -9,9 +9,9 @@ pub fn read_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Mani
 
 pub fn read_package(path: &Path, source_id: &SourceId) -> CargoResult<(Package, Vec<Path>)> {
     log!(5, "read_package; path={}; source-id={}", path.display(), source_id);
-    let mut file = try!(File::open(path).map_err(box_error));
-    let data = try!(file.read_to_end().map_err(box_error));
-    let (manifest, nested) = try!(read_manifest(data.as_slice(), source_id));
+    let mut file = cargo_try!(File::open(path));
+    let data = cargo_try!(file.read_to_end());
+    let (manifest, nested) = cargo_try!(read_manifest(data.as_slice(), source_id));
 
     Ok((Package::new(manifest, path), nested))
 }
