@@ -11,6 +11,10 @@ pub trait CargoError {
     fn cause<'a>(&'a self) -> Option<&'a CargoError> { None }
     fn is_human(&self) -> bool { false }
 
+    fn to_error<E: FromError<Self>>(self) -> E {
+        FromError::from_error(self)
+    }
+
     fn box_error(self) -> Box<CargoError> {
         box self as Box<CargoError>
     }
@@ -25,6 +29,25 @@ pub trait CargoError {
     }
 }
 
+pub trait FromError<E> {
+    fn from_error(error: E) -> Self;
+}
+
+impl<E: CargoError> FromError<E> for Box<CargoError> {
+    fn from_error(error: E) -> Box<CargoError> {
+        error.box_error()
+    }
+}
+
+macro_rules! from_error (
+    ($ty:ty) => {
+        impl FromError<$ty> for $ty {
+            fn from_error(error: $ty) -> $ty {
+                error
+            }
+        }
+    }
+)
 
 impl Show for Box<CargoError> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -95,9 +118,13 @@ impl CargoError for IoError {
     fn description(&self) -> String { self.to_str() }
 }
 
+from_error!(IoError)
+
 impl CargoError for TomlError {
     fn description(&self) -> String { self.to_str() }
 }
+
+from_error!(TomlError)
 
 pub struct ProcessError {
     pub msg: String,
@@ -107,6 +134,8 @@ pub struct ProcessError {
     pub detail: Option<String>,
     pub cause: Option<Box<CargoError>>
 }
+
+from_error!(ProcessError)
 
 impl Show for ProcessError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {

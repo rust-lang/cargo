@@ -2,7 +2,7 @@ use std::{io,fmt,os};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
-use util::{CargoResult, Require, error, internal_error};
+use util::{CargoResult, ChainError, Require, error, internal_error};
 
 pub struct Config {
     home_path: Path
@@ -11,7 +11,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> CargoResult<Config> {
         Ok(Config {
-            home_path: try!(os::homedir()
+            home_path: cargo_try!(os::homedir()
                             .require(|| "Couldn't find the home directory"))
         })
     }
@@ -102,7 +102,7 @@ pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
 pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     let mut map = HashMap::new();
 
-    try!(walk_tree(&pwd, |file| {
+    cargo_try!(walk_tree(&pwd, |file| {
         extract_all_configs(file, &mut map)
     }));
 
@@ -115,7 +115,7 @@ fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoR
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible).map_err(|_| error("could not open file")));
+            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| error("could not open file")));
             match walk(file) {
                 Ok(res) => return Ok(res),
                 _ => ()
@@ -135,7 +135,7 @@ fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible).map_err(|_| error("could not open file")));
+            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| error("could not open file")));
             match walk(file) {
                 Err(_) => err = false,
                 _ => ()
@@ -152,8 +152,8 @@ fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult
 fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf).map_err(|_| error("")));
-    let val = try!(root.lookup(key).require(|| error("")));
+    let root = cargo_try!(toml::parse_from_buffer(&mut buf));
+    let val = cargo_try!(root.lookup(key).require(|| error("")));
 
     let v = match val {
         &toml::String(ref val) => String(val.clone()),
@@ -167,11 +167,11 @@ fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
 fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue>) -> CargoResult<()> {
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf).map_err(|err|
-        internal_error("could not parse Toml manifest", format!("path={}; err={}", path.display(), err.to_str()))));
+    let root = cargo_try!(toml::parse_from_buffer(&mut buf).chain_error(||
+        error(format!("could not parse Toml manifest; path={}", path.display()))));
 
-    let table = try!(root.get_table()
-        .require(|| internal_error("could not parse Toml manifest", format!("path={}", path.display()))));
+    let table = cargo_try!(root.get_table().require(||
+        error(format!("could not parse Toml manifest; path={}", path.display()))));
 
     for (key, value) in table.iter() {
         match value {
@@ -181,8 +181,8 @@ fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue
                     ConfigValue { path: vec!(), value: List(vec!()) }
                 });
 
-                try!(merge_array(config, val.as_slice(), &path).map_err(|err|
-                    error(format!("The `{}` key in your config {}", key, err))));
+                cargo_try!(merge_array(config, val.as_slice(), &path).chain_error(||
+                    error(format!("The `{}` key in your config", key))));
             },
             _ => ()
         }
