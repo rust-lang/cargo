@@ -254,7 +254,10 @@ impl CliError {
     }
 }
 
-pub fn process_error<S: Str>(msg: S, command: &Command, status: Option<&ProcessExit>, output: Option<&ProcessOutput>) -> ProcessError {
+pub fn process_error<S: Str>(msg: S,
+                             command: &Command,
+                             status: Option<&ProcessExit>,
+                             output: Option<&ProcessOutput>) -> ProcessError {
     ProcessError {
         msg: msg.as_slice().to_str(),
         command: command.to_str(),
@@ -265,7 +268,8 @@ pub fn process_error<S: Str>(msg: S, command: &Command, status: Option<&ProcessE
     }
 }
 
-pub fn internal_error<S1: Str, S2: Str>(error: S1, detail: S2) -> Box<CargoError> {
+pub fn internal_error<S1: Str, S2: Str>(error: S1,
+                                        detail: S2) -> Box<CargoError> {
     box ConcreteCargoError {
         description: error.as_slice().to_str(),
         detail: Some(detail.as_slice().to_str()),

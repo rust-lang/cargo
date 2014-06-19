@@ -164,7 +164,8 @@ impl PredBuilder {
 
     fn set_version_part(&mut self, part: &str) -> CargoResult<()> {
         if self.op.is_none() {
-            // If no op is specified, then the predicate is an exact match on the version
+            // If no op is specified, then the predicate is an exact match on
+            // the version
             self.op = Some(Ex);
         }
 
@@ -181,10 +182,8 @@ impl PredBuilder {
         Ok(())
     }
 
-    /**
-     * Validates that a version predicate can be created given the present
-     * information.
-     */
+    /// Validates that a version predicate can be created given the present
+    /// information.
     fn build(&self) -> CargoResult<Predicate> {
         let op = match self.op {
             Some(x) => x,

@@ -37,10 +37,12 @@ impl FileBuilder {
 
         let mut file = try!(
             fs::File::create(&self.path)
-                .with_err_msg(format!("Could not create file; path={}", self.path.display())));
+                .with_err_msg(format!("Could not create file; path={}",
+                                      self.path.display())));
 
         file.write_str(self.body.as_slice())
-            .with_err_msg(format!("Could not write to file; path={}", self.path.display()))
+            .with_err_msg(format!("Could not write to file; path={}",
+                                  self.path.display()))
     }
 
     fn dirname(&self) -> Path {
@@ -80,7 +82,8 @@ impl ProjectBuilder {
             .extra_path(cargo_dir())
     }
 
-    pub fn file<B: BytesContainer, S: Str>(mut self, path: B, body: S) -> ProjectBuilder {
+    pub fn file<B: BytesContainer, S: Str>(mut self, path: B,
+                                           body: S) -> ProjectBuilder {
         self.files.push(FileBuilder::new(self.root.join(path), body.as_slice()));
         self
     }
@@ -126,12 +129,14 @@ pub fn project(name: &str) -> ProjectBuilder {
 
 pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
     fs::mkdir_recursive(path, io::UserDir)
-        .with_err_msg(format!("could not create directory; path={}", path.display()))
+        .with_err_msg(format!("could not create directory; path={}",
+                              path.display()))
 }
 
 pub fn rmdir_recursive(path: &Path) -> Result<(), String> {
     fs::rmdir_recursive(path)
-        .with_err_msg(format!("could not rm directory; path={}", path.display()))
+        .with_err_msg(format!("could not rm directory; path={}",
+                              path.display()))
 }
 
 pub fn main_file<T: Str>(println: T, deps: &[&str]) -> String {
@@ -188,80 +193,92 @@ struct Execs {
 
 impl Execs {
 
-  pub fn with_stdout<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
-    self.expect_stdout = Some(expected.to_str());
-    self
-  }
-
-  pub fn with_stderr<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
-      self.expect_stderr = Some(expected.to_str());
-      self
-  }
-
-  pub fn with_status(mut ~self, expected: int) -> Box<Execs> {
-       self.expect_exit_code = Some(expected);
-       self
-  }
-
-  fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
-    self.match_status(actual)
-      .and(self.match_stdout(actual))
-      .and(self.match_stderr(actual))
-  }
-
-  fn match_status(&self, actual: &ProcessOutput) -> ham::MatchResult {
-    match self.expect_exit_code {
-      None => ham::success(),
-      Some(code) => {
-        ham::expect(
-          actual.status.matches_exit_status(code),
-          format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
-                  actual.status,
-                  str::from_utf8(actual.output.as_slice()),
-                  str::from_utf8(actual.error.as_slice())))
-      }
+    pub fn with_stdout<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
+        self.expect_stdout = Some(expected.to_str());
+        self
     }
-  }
 
-  fn match_stdout(&self, actual: &ProcessOutput) -> ham::MatchResult {
-      self.match_std(self.expect_stdout.as_ref(), actual.output.as_slice(), "stdout", actual.error.as_slice())
-  }
+    pub fn with_stderr<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
+        self.expect_stderr = Some(expected.to_str());
+        self
+    }
 
-  fn match_stderr(&self, actual: &ProcessOutput) -> ham::MatchResult {
-      self.match_std(self.expect_stderr.as_ref(), actual.error.as_slice(), "stderr", actual.output.as_slice())
-  }
+    pub fn with_status(mut ~self, expected: int) -> Box<Execs> {
+        self.expect_exit_code = Some(expected);
+        self
+    }
 
-  fn match_std(&self, expected: Option<&String>, actual: &[u8], description: &str, extra: &[u8]) -> ham::MatchResult {
-    match expected.as_ref().map(|s| s.as_slice()) {
-      None => ham::success(),
-      Some(out) => {
-        match str::from_utf8(actual) {
-          None => Err(format!("{} was not utf8 encoded", description)),
-          Some(actual) => {
-            ham::expect(actual == out, format!("{} was:\n`{}`\n\nexpected:\n`{}`\n\nother output:\n`{}`", description, actual, out, str::from_utf8_lossy(extra)))
-          }
+    fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
+        self.match_status(actual)
+            .and(self.match_stdout(actual))
+            .and(self.match_stderr(actual))
+    }
+
+    fn match_status(&self, actual: &ProcessOutput) -> ham::MatchResult {
+        match self.expect_exit_code {
+            None => ham::success(),
+            Some(code) => {
+                ham::expect(
+                    actual.status.matches_exit_status(code),
+                    format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
+                            actual.status,
+                            str::from_utf8(actual.output.as_slice()),
+                            str::from_utf8(actual.error.as_slice())))
+            }
         }
-      }
     }
-  }
+
+    fn match_stdout(&self, actual: &ProcessOutput) -> ham::MatchResult {
+        self.match_std(self.expect_stdout.as_ref(), actual.output.as_slice(),
+        "stdout", actual.error.as_slice())
+    }
+
+    fn match_stderr(&self, actual: &ProcessOutput) -> ham::MatchResult {
+        self.match_std(self.expect_stderr.as_ref(), actual.error.as_slice(),
+        "stderr", actual.output.as_slice())
+    }
+
+    fn match_std(&self, expected: Option<&String>, actual: &[u8],
+                 description: &str, extra: &[u8]) -> ham::MatchResult {
+        match expected.as_ref().map(|s| s.as_slice()) {
+            None => ham::success(),
+            Some(out) => {
+                match str::from_utf8(actual) {
+                    None => Err(format!("{} was not utf8 encoded", description)),
+                    Some(actual) => {
+                        ham::expect(actual == out,
+                                    format!("{} was:\n\
+                                            `{}`\n\n\
+                                            expected:\n\
+                                            `{}`\n\n\
+                                            other output:\n\
+                                            `{}`", description, actual, out,
+                                            str::from_utf8_lossy(extra)))
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl ham::SelfDescribing for Execs {
-  fn describe(&self) -> String {
-    "execs".to_str()
-  }
+    fn describe(&self) -> String {
+        "execs".to_str()
+    }
 }
 
 impl ham::Matcher<ProcessBuilder> for Execs {
-  fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
-    let res = process.exec_with_output();
+    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
+        let res = process.exec_with_output();
 
-    match res {
-      Ok(out) => self.match_output(&out),
-      Err(ProcessError { output: Some(ref out), .. }) => self.match_output(out),
-      Err(e) => Err(format!("could not exec process {}: {}", process, e))
+        match res {
+            Ok(out) => self.match_output(&out),
+            Err(ProcessError { output: Some(ref out), .. }) => {
+                self.match_output(out)
+            }
+            Err(e) => Err(format!("could not exec process {}: {}", process, e))
+        }
     }
-  }
 }
 
 pub fn execs() -> Box<Execs> {
@@ -285,10 +302,13 @@ impl ham::SelfDescribing for ShellWrites {
 }
 
 impl<'a> ham::Matcher<&'a mut shell::Shell<std::io::MemWriter>> for ShellWrites {
-    fn matches(&self, actual: &mut shell::Shell<std::io::MemWriter>) -> ham::MatchResult {
+    fn matches(&self, actual: &mut shell::Shell<std::io::MemWriter>)
+        -> ham::MatchResult
+    {
         use term::Terminal;
 
-        let actual = std::str::from_utf8_lossy(actual.get_ref().get_ref()).to_str();
+        let actual = std::str::from_utf8_lossy(actual.get_ref().get_ref());
+        let actual = actual.to_str();
         ham::expect(actual == self.expected, actual)
     }
 }

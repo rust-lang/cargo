@@ -22,7 +22,8 @@ fn main() {
 }
 
 fn execute(options: Options) -> CliResult<Option<Package>> {
-    let source_id = SourceId::for_path(&Path::new(options.manifest_path.as_slice()));
+    let path = Path::new(options.manifest_path.as_slice());
+    let source_id = SourceId::for_path(&path);
     let mut source = PathSource::new(&source_id);
 
     try!(source.update().map_err(|err| CliError::new(err.description(), 1)));

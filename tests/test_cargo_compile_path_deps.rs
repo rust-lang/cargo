@@ -24,7 +24,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
             name = "foo"
         "#)
-        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 

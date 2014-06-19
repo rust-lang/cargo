@@ -23,7 +23,8 @@ pub struct PackageRegistry {
 }
 
 impl PackageRegistry {
-    pub fn new(source_ids: Vec<SourceId>, override_ids: Vec<SourceId>) -> CargoResult<PackageRegistry> {
+    pub fn new(source_ids: Vec<SourceId>,
+               override_ids: Vec<SourceId>) -> CargoResult<PackageRegistry> {
         let mut reg = PackageRegistry::empty();
 
         for id in source_ids.iter() {
@@ -47,9 +48,11 @@ impl PackageRegistry {
     }
 
     pub fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packags; sources={}; ids={}", self.sources.len(), package_ids);
+        log!(5, "getting packags; sources={}; ids={}", self.sources.len(),
+             package_ids);
 
-        // TODO: Only call source with package ID if the package came from the source
+        // TODO: Only call source with package ID if the package came from the
+        // source
         let mut ret = Vec::new();
 
         for source in self.sources.iter() {
@@ -60,7 +63,8 @@ impl PackageRegistry {
         }
 
         // TODO: Return earlier if fail
-        assert!(package_ids.len() == ret.len(), "could not get packages from registry; ids={}", package_ids);
+        assert!(package_ids.len() == ret.len(),
+                "could not get packages from registry; ids={}", package_ids);
 
         Ok(ret)
     }
@@ -71,9 +75,10 @@ impl PackageRegistry {
         Ok(())
     }
 
-    fn load(&mut self, namespace: &SourceId, override: bool) -> CargoResult<()> {
+    fn load(&mut self, namespace: &SourceId,
+            override: bool) -> CargoResult<()> {
         let mut source = namespace.load(&try!(Config::new()));
-        let dst = if override { &mut self.overrides } else { &mut self.summaries };
+        let dst = if override {&mut self.overrides} else {&mut self.summaries};
 
         // Ensure the source has fetched all necessary remote data.
         try!(source.update());

@@ -63,10 +63,8 @@ macro_rules! errln(
     ($($arg:tt)*) => (let _ = writeln!(::std::io::stdio::stderr(), $($arg)*))
 )
 
-/**
- * GitRemote represents a remote repository. It gets cloned into a local GitDatabase.
- */
-
+/// GitRemote represents a remote repository. It gets cloned into a local
+/// GitDatabase.
 #[deriving(PartialEq,Clone,Show)]
 pub struct GitRemote {
     url: Url,
@@ -74,7 +72,7 @@ pub struct GitRemote {
 
 #[deriving(PartialEq,Clone,Encodable)]
 struct EncodableGitRemote {
-    url: String
+    url: String,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
@@ -85,11 +83,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
     }
 }
 
-/**
- * GitDatabase is a local clone of a remote repository's database. Multiple GitCheckouts
- * can be cloned from this GitDatabase.
- */
-
+/// GitDatabase is a local clone of a remote repository's database. Multiple
+/// GitCheckouts can be cloned from this GitDatabase.
 #[deriving(PartialEq,Clone)]
 pub struct GitDatabase {
     remote: GitRemote,
@@ -99,7 +94,7 @@ pub struct GitDatabase {
 #[deriving(Encodable)]
 pub struct EncodableGitDatabase {
     remote: GitRemote,
-    path: String
+    path: String,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
@@ -111,12 +106,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
     }
 }
 
-/**
- * GitCheckout is a local checkout of a particular revision. Calling `clone_into` with
- * a reference will resolve the reference into a revision, and return a CargoError
- * if no revision for that reference was found.
- */
-
+/// GitCheckout is a local checkout of a particular revision. Calling
+/// `clone_into` with a reference will resolve the reference into a revision,
+/// and return a CargoError if no revision for that reference was found.
 pub struct GitCheckout {
     database: GitDatabase,
     location: Path,
@@ -129,7 +121,7 @@ pub struct EncodableGitCheckout {
     database: GitDatabase,
     location: String,
     reference: String,
-    revision: String
+    revision: String,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
@@ -143,9 +135,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
     }
 }
 
-/**
- * Implementations
- */
+// Implementations
 
 impl GitRemote {
     pub fn new(url: &Url) -> GitRemote {
@@ -167,7 +157,8 @@ impl GitRemote {
     }
 
     fn fetch_into(&self, path: &Path) -> CargoResult<()> {
-        Ok(git!(*path, "fetch --force --quiet --tags {} refs/heads/*:refs/heads/*", self.fetch_location()))
+        Ok(git!(*path, "fetch --force --quiet --tags {} \
+                        refs/heads/*:refs/heads/*", self.fetch_location()))
     }
 
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
@@ -175,7 +166,8 @@ impl GitRemote {
 
         cargo_try!(mkdir_recursive(path, UserDir));
 
-        Ok(git!(dirname, "clone {} {} --bare --no-hardlinks --quiet", self.fetch_location(), path.display()))
+        Ok(git!(dirname, "clone {} {} --bare --no-hardlinks --quiet",
+                self.fetch_location(), path.display()))
     }
 
     fn fetch_location(&self) -> String {
@@ -191,8 +183,10 @@ impl GitDatabase {
         &self.path
     }
 
-    pub fn copy_to<S: Str>(&self, reference: S, dest: &Path) -> CargoResult<GitCheckout> {
-        let checkout = cargo_try!(GitCheckout::clone_into(dest, self.clone(), GitReference::for_str(reference.as_slice())));
+    pub fn copy_to<S: Str>(&self, reference: S,
+    dest: &Path) -> CargoResult<GitCheckout> {
+        let checkout = cargo_try!(GitCheckout::clone_into(dest, self.clone(),
+                                  GitReference::for_str(reference.as_slice())));
 
         cargo_try!(checkout.fetch());
         cargo_try!(checkout.update_submodules());
@@ -207,9 +201,15 @@ impl GitDatabase {
 }
 
 impl GitCheckout {
-    fn clone_into(into: &Path, database: GitDatabase, reference: GitReference) -> CargoResult<GitCheckout> {
+    fn clone_into(into: &Path, database: GitDatabase,
+                  reference: GitReference) -> CargoResult<GitCheckout> {
         let revision = cargo_try!(database.rev_for(reference.as_slice()));
-        let checkout = GitCheckout { location: into.clone(), database: database, reference: reference, revision: revision };
+        let checkout = GitCheckout {
+            location: into.clone(),
+            database: database,
+            reference: reference,
+            revision: revision,
+        };
 
         // If the git checkout already exists, we don't need to clone it again
         if !checkout.location.join(".git").exists() {
@@ -226,22 +226,28 @@ impl GitCheckout {
     fn clone_repo(&self) -> CargoResult<()> {
         let dirname = Path::new(self.location.dirname());
 
-        cargo_try!(mkdir_recursive(&dirname, UserDir).chain_error(||
-            human(format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display()))));
+        cargo_try!(mkdir_recursive(&dirname, UserDir).chain_error(|| {
+            human(format!("Couldn't mkdir {}",
+                          Path::new(self.location.dirname()).display()))
+        }));
 
         if self.location.exists() {
-            cargo_try!(rmdir_recursive(&self.location).chain_error(||
-                human(format!("Couldn't rmdir {}", Path::new(&self.location).display()))));
+            cargo_try!(rmdir_recursive(&self.location).chain_error(|| {
+                human(format!("Couldn't rmdir {}",
+                              Path::new(&self.location).display()))
+            }));
         }
 
-        git!(dirname, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
+        git!(dirname, "clone --no-checkout --quiet {} {}",
+             self.get_source().display(), self.location.display());
         cargo_try!(chmod(&self.location, AllPermissions));
 
         Ok(())
     }
 
     fn fetch(&self) -> CargoResult<()> {
-        git!(self.location, "fetch --force --quiet --tags {}", self.get_source().display());
+        git!(self.location, "fetch --force --quiet --tags {}",
+             self.get_source().display());
         cargo_try!(self.reset(self.revision.as_slice()));
         Ok(())
     }
@@ -258,15 +264,19 @@ impl GitCheckout {
 fn git(path: &Path, str: &str) -> ProcessBuilder {
     debug!("Executing git {} @ {}", str, path.display());
 
-    process("git").args(str.split(' ').collect::<Vec<&str>>().as_slice()).cwd(path.clone())
+    process("git").args(str.split(' ').collect::<Vec<&str>>().as_slice())
+                  .cwd(path.clone())
 }
 
 fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
-    git(path, str.as_slice()).exec().chain_error(|| human(format!("Executing `git {}` failed", str)))
+    git(path, str.as_slice()).exec().chain_error(|| {
+        human(format!("Executing `git {}` failed", str))
+    })
 }
 
 fn git_output(path: &Path, str: String) -> CargoResult<String> {
-    let output = cargo_try!(git(path, str.as_slice()).exec_with_output().chain_error(||
+    let output = cargo_try!(git(path, str.as_slice()).exec_with_output()
+                                                     .chain_error(||
         human(format!("Executing `git {}` failed", str))));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())

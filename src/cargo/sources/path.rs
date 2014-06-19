@@ -10,17 +10,13 @@ pub struct PathSource {
     packages: Vec<Package>
 }
 
-/**
- * TODO: Figure out if packages should be discovered in new or self should be
- * mut and packages are discovered in update
- */
+// TODO: Figure out if packages should be discovered in new or self should be
+// mut and packages are discovered in update
 impl PathSource {
 
-    /**
-     * Invoked with an absolute path to a directory that contains a Cargo.toml.
-     * The source will read the manifest and find any other packages contained
-     * in the directory structure reachable by the root manifest.
-     */
+    /// Invoked with an absolute path to a directory that contains a Cargo.toml.
+    /// The source will read the manifest and find any other packages contained
+    /// in the directory structure reachable by the root manifest.
     pub fn new(id: &SourceId) -> PathSource {
         log!(5, "new; id={}", id);
         assert!(id.is_path(), "does not represent a path source; id={}", id);

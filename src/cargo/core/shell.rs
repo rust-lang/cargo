@@ -24,13 +24,17 @@ impl<T: Writer + Send> Shell<T> {
     pub fn create(out: T, config: ShellConfig) -> Option<Shell<T>> {
         if config.tty && config.color {
             let term: Option<term::TerminfoTerminal<T>> = Terminal::new(out);
-            term.map(|t| Shell { terminal: Color(box t as Box<Terminal<T>>), config: config })
+            term.map(|t| Shell {
+                terminal: Color(box t as Box<Terminal<T>>),
+                config: config
+            })
         } else {
             Some(Shell { terminal: NoColor(out), config: config })
         }
     }
 
-    pub fn verbose(&mut self, callback: |&mut Shell<T>| -> IoResult<()>) -> IoResult<()> {
+    pub fn verbose(&mut self,
+                   callback: |&mut Shell<T>| -> IoResult<()>) -> IoResult<()> {
         if self.config.verbose {
             return callback(self)
         }
@@ -50,7 +54,11 @@ impl<T: Writer + Send> Shell<T> {
 
 impl<T: Writer + Send> Terminal<T> for Shell<T> {
     fn new(out: T) -> Option<Shell<T>> {
-        Shell::create(out, ShellConfig { color: true, verbose: false, tty: false })
+        Shell::create(out, ShellConfig {
+            color: true,
+            verbose: false,
+            tty: false,
+        })
     }
 
     fn fg(&mut self, color: color::Color) -> IoResult<bool> {

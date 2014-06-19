@@ -56,7 +56,8 @@ pub struct PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToVersion, U: ToUrl>(name: &str, version: T, namespace: U) -> PackageId {
+    pub fn new<T: ToVersion, U: ToUrl>(name: &str, version: T,
+                                       namespace: U) -> PackageId {
         PackageId {
             name: name.to_str(),
             version: version.to_version().unwrap(),
@@ -104,6 +105,7 @@ impl<E, D: Decoder<E>> Decodable<D,E> for PackageId {
 
 impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
     fn encode(&self, e: &mut S) -> Result<(), E> {
-        (vec!(self.name.clone(), self.version.to_str()), self.namespace.to_str()).encode(e)
+        (vec!(self.name.clone(), self.version.to_str()),
+              self.namespace.to_str()).encode(e)
     }
 }

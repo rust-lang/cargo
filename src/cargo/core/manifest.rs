@@ -47,7 +47,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
         SerializedManifest {
             name: self.summary.get_name().to_str(),
             version: self.summary.get_version().to_str(),
-            dependencies: self.summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
+            dependencies: self.summary.get_dependencies().iter().map(|d| {
+                SerializedDependency::from_dependency(d)
+            }).collect(),
             authors: self.authors.clone(),
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_str(),
@@ -71,7 +73,8 @@ impl LibKind {
             "rlib" => Ok(Rlib),
             "dylib" => Ok(Dylib),
             "staticlib" => Ok(StaticLib),
-            _ => Err(human(format!("{} was not one of lib|rlib|dylib|staticlib", string)))
+            _ => Err(human(format!("{} was not one of lib|rlib|dylib|staticlib",
+                                   string)))
         }
     }
 
@@ -126,7 +129,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
 
 impl Show for Target {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}(name={}, path={})", self.kind, self.name, self.path.display())
+        write!(f, "{}(name={}, path={})", self.kind, self.name,
+               self.path.display())
     }
 }
 
@@ -186,7 +190,8 @@ impl Manifest {
 }
 
 impl Target {
-    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>, path: &Path) -> Target {
+    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
+                      path: &Path) -> Target {
         Target {
             kind: LibTarget(crate_targets),
             name: name.to_str(),
