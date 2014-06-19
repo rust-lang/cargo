@@ -2,7 +2,7 @@ use std::{io,fmt,os};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
-use util::{CargoResult, ChainError, Require, error, internal_error};
+use util::{CargoResult, ChainError, Require, error, internal_error, human};
 
 pub struct Config {
     home_path: Path
@@ -12,7 +12,7 @@ impl Config {
     pub fn new() -> CargoResult<Config> {
         Ok(Config {
             home_path: cargo_try!(os::homedir()
-                            .require(|| "Couldn't find the home directory"))
+                            .require(|| human("Couldn't find the home directory")))
         })
     }
 

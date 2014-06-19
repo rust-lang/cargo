@@ -7,7 +7,7 @@ use serialize::Decodable;
 use core::{SourceId,GitKind};
 use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
-use util::{CargoResult, Require, error};
+use util::{CargoResult, Require, error, human};
 
 pub fn to_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
     let root = try!(toml::parse_from_bytes(contents).map_err(|_| error("Cargo.toml is not valid Toml")));
@@ -33,7 +33,7 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
 
     let deps = match deps {
         Some(deps) => {
-            let table = try!(deps.get_table().require(|| "dependencies must be a table")).clone();
+            let table = try!(deps.get_table().require(|| human("dependencies must be a table"))).clone();
 
             let mut deps: HashMap<String, TomlDependency> = HashMap::new();
 
@@ -45,13 +45,13 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
 
                         for (k, v) in table.iter() {
                             let v = try!(v.get_str()
-                                         .require(|| "dependency values must be string"));
+                                         .require(|| human("dependency values must be string")));
 
                             details.insert(k.clone(), v.clone());
                         }
 
                         let version = try!(details.find_equiv(&"version")
-                                           .require(|| "dependencies must include a version")).clone();
+                                           .require(|| human("dependencies must include a version"))).clone();
 
                         deps.insert(k.clone(), DetailedDep(DetailedTomlDependency {
                             version: version,

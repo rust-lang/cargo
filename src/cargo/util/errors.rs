@@ -104,16 +104,6 @@ impl<T, E: CargoError> ChainError<T> for Result<T, E> {
     }
 }
 
-impl CargoError for &'static str {
-    fn description(&self) -> String { self.to_str() }
-    fn is_human(&self) -> bool { true }
-}
-
-impl CargoError for String {
-    fn description(&self) -> String { self.to_str() }
-    fn is_human(&self) -> bool { true }
-}
-
 impl CargoError for IoError {
     fn description(&self) -> String { self.to_str() }
 }
@@ -143,7 +133,7 @@ impl Show for ProcessError {
             Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
             None => "never executed".to_str()
         };
-        write!(f, "process failed: `{}` (status={})", self.command, exit)
+        write!(f, "{} (status={})", self.msg, exit)
     }
 }
 
@@ -205,7 +195,12 @@ pub struct CliError {
 }
 
 impl CliError {
-    pub fn new<E: CargoError + 'static>(error: E, code: uint) -> CliError {
+    pub fn new<S: Str>(error: S, code: uint) -> CliError {
+        let error = human(error.as_slice().to_str());
+        CliError::from_boxed(error, code)
+    }
+
+    pub fn from_error<E: CargoError + 'static>(error: E, code: uint) -> CliError {
         let error = box error as Box<CargoError>;
         CliError::from_boxed(error, code)
     }
@@ -214,7 +209,7 @@ impl CliError {
         let error = if error.is_human() {
             error
         } else {
-            chain(error, "An unknown error occurred")
+            chain(error, human("An unknown error occurred"))
         };
 
         CliError { error: error, exit_code: code }
@@ -250,10 +245,13 @@ pub fn error<S1: Str>(error: S1) -> Box<CargoError> {
     } as Box<CargoError>
 }
 
-pub fn human<E: CargoError>(error: E) -> Box<CargoError> {
-    let mut concrete = error.concrete();
-    concrete.is_human = true;
-    box concrete as Box<CargoError>
+pub fn human<S: Str>(error: S) -> Box<CargoError> {
+    box ConcreteCargoError {
+        description: error.as_slice().to_str(),
+        detail: None,
+        cause: None,
+        is_human: true
+    } as Box<CargoError>
 }
 
 pub fn chain<E: CargoError>(original: Box<CargoError>, update: E) -> Box<CargoError> {

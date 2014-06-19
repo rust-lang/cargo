@@ -1,5 +1,5 @@
 use url::Url;
-use util::{CargoResult, ChainError, ProcessBuilder, process};
+use util::{CargoResult, ChainError, ProcessBuilder, process, human};
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::str;
@@ -227,11 +227,11 @@ impl GitCheckout {
         let dirname = Path::new(self.location.dirname());
 
         cargo_try!(mkdir_recursive(&dirname, UserDir).chain_error(||
-            format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display())));
+            human(format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display()))));
 
         if self.location.exists() {
             cargo_try!(rmdir_recursive(&self.location).chain_error(||
-                format!("Couldn't rmdir {}", Path::new(&self.location).display())));
+                human(format!("Couldn't rmdir {}", Path::new(&self.location).display()))));
         }
 
         git!(dirname, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
@@ -262,12 +262,12 @@ fn git(path: &Path, str: &str) -> ProcessBuilder {
 }
 
 fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
-    git(path, str.as_slice()).exec().chain_error(|| format!("Executing `git {}` failed", str))
+    git(path, str.as_slice()).exec().chain_error(|| human(format!("Executing `git {}` failed", str)))
 }
 
 fn git_output(path: &Path, str: String) -> CargoResult<String> {
     let output = cargo_try!(git(path, str.as_slice()).exec_with_output().chain_error(||
-        format!("Executing `git {}` failed", str)));
+        human(format!("Executing `git {}` failed", str))));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())
 }
