@@ -10,7 +10,7 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
-use util::{CargoResult, CargoError, box_error};
+use util::{CargoResult, box_error};
 
 #[deriving(PartialEq,Clone)]
 pub struct Manifest {

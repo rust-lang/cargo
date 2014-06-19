@@ -10,7 +10,7 @@ use std::vec::Vec;
 use std::fmt::Show;
 use ham = hamcrest;
 use cargo::core::shell;
-use cargo::util::{process,ProcessBuilder,CargoError};
+use cargo::util::{process,ProcessBuilder};
 use cargo::util::ProcessError;
 
 pub mod paths;

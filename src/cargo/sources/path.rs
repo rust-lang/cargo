@@ -40,7 +40,7 @@ impl PathSource {
         log!(5, "get_root_package; source={}", self);
 
         if !self.updated {
-            return Err(simple_human("source has not been updated"))
+            return Err(box_error("source has not been updated"))
         }
 
         match self.packages.as_slice().head() {

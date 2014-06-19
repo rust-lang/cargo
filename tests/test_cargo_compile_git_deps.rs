@@ -3,7 +3,7 @@ use std::io::File;
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use hamcrest::{assert_that,existing_file};
 use cargo;
-use cargo::util::{CargoResult, ProcessError, process};
+use cargo::util::{ProcessError, process};
 
 fn setup() {
 }

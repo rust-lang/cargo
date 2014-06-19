@@ -3,7 +3,7 @@ use std::fmt::{Show,Formatter};
 use std::os;
 use std::path::Path;
 use std::io::process::{Command,ProcessOutput,InheritFd};
-use util::{CargoResult, CargoError, ProcessError, process_error, box_error};
+use util::{ProcessError, process_error};
 use std::collections::HashMap;
 
 #[deriving(Clone,PartialEq)]
@@ -74,7 +74,7 @@ impl ProcessBuilder {
 
         let msg = || format!("Could not execute process `{}`", self.debug_string());
 
-        let exit = try!(command.status().map_err(|e| process_error(msg(), &command, None, None)));
+        let exit = try!(command.status().map_err(|_| process_error(msg(), &command, None, None)));
 
         if exit.success() {
             Ok(())
@@ -89,7 +89,7 @@ impl ProcessBuilder {
 
         let msg = || format!("Could not execute process `{}`", self.debug_string());
 
-        let output = try!(command.output().map_err(|e| process_error(msg(), &command, None, None)));
+        let output = try!(command.output().map_err(|_| process_error(msg(), &command, None, None)));
 
         if output.status.success() {
             Ok(output)

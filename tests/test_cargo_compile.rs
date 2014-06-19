@@ -64,7 +64,7 @@ test!(cargo_compile_with_invalid_code {
     assert_that(p.cargo_process("cargo-compile"),
         execs()
         .with_status(101)
-        .with_stderr(format!("src/foo.rs:1:1: 1:8 error: expected item but found `invalid`\nsrc/foo.rs:1 invalid rust code!\n             ^~~~~~~\nExecuting `rustc 'src/foo.rs' '--crate-type' 'bin' '--out-dir' '{}' '-L' '{}'` failed (status=101)", target.display(), target.join("deps").display()).as_slice()));
+        .with_stderr(format!("src/foo.rs:1:1: 1:8 error: expected item but found `invalid`\nsrc/foo.rs:1 invalid rust code!\n             ^~~~~~~\nCould not execute process `rustc src/foo.rs --crate-type bin --out-dir {} -L {}` (status=101)", target.display(), target.join("deps").display()).as_slice()));
 })
 
 test!(cargo_compile_with_warnings_in_the_root_package {

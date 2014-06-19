@@ -1,10 +1,9 @@
 use std::os::args;
 use std::io;
 use std::path::Path;
-use std::str;
 use core::{Package,PackageSet,Target};
 use util;
-use util::{CargoResult, CargoError, ProcessBuilder, error, human, box_error};
+use util::{CargoResult, CargoError, ProcessBuilder, error, human};
 
 type Args = Vec<String>;
 
@@ -60,7 +59,7 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) 
 
         let rustc = prepare_rustc(root, target, *crate_type, dest, deps);
 
-        try!((if verbose {
+        try!(if verbose {
             rustc.exec().map_err(|err| {
                 log!(5, "exec failed; error={}", err.description());
                 human(err)
@@ -70,7 +69,7 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) 
                 log!(5, "exec_with_output failed; error={}", err.description());
                 human(err)
             })
-        }));
+        });
     }
 
     Ok(())
