@@ -1,9 +1,13 @@
 set -ex
 
-# Install a 32-bit compiler for linux
-sudo apt-get update
-sudo apt-get install gcc-multilib
-target=unknown-linux-gnu
+if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+    target=apple-darwin
+else
+    # Install a 32-bit compiler for linux
+    sudo apt-get update
+    sudo apt-get install gcc-multilib
+    target=unknown-linux-gnu
+fi
 
 # Install both 64 and 32 bit libraries. Apparently travis barfs if you try to
 # just install the right ones? This should enable cross compilation in the
@@ -18,4 +22,8 @@ cp -r rust-nightly-i686-$target/lib/rustlib/i686-$target \
  find lib/rustlib/i686-$target/lib -type f >> \
  lib/rustlib/manifest.in)
 sudo ./rust-nightly-x86_64-$target/install.sh
+
+export RUSTC="rustc --target=${ARCH}-${target}"
+
+set +ex
 
