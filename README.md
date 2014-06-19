@@ -7,7 +7,7 @@ $ git clone --recursive https://github.com/carlhuda/cargo
 or
 ```
 $ git submodule init
-$ git submodule upgrade
+$ git submodule update
 ```
 Then it's as simple as ```make``` and you're ready to go.
 
