@@ -3,7 +3,7 @@ use std::io;
 use std::path::Path;
 use core::{Package,PackageSet,Target};
 use util;
-use util::{CargoResult, CargoError, ProcessBuilder, error, human};
+use util::{CargoResult, ProcessBuilder, error, human};
 
 type Args = Vec<String>;
 
@@ -60,15 +60,9 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) 
         let rustc = prepare_rustc(root, target, *crate_type, dest, deps);
 
         try!(if verbose {
-            rustc.exec().map_err(|err| {
-                log!(5, "exec failed; error={}", err.description());
-                human(err)
-            })
+            rustc.exec().map_err(|err| human(err.to_str()))
         } else {
-            rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                log!(5, "exec_with_output failed; error={}", err.description());
-                human(err)
-            })
+            rustc.exec_with_output().and(Ok(())).map_err(|err| human(err.to_str()))
         });
     }
 

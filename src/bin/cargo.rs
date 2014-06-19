@@ -13,7 +13,7 @@ use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
 use cargo::{NoFlags,execute_main_without_stdin,handle_error};
 use cargo::util::important_paths::find_project;
-use cargo::util::{CliError, CliResult, Require, config};
+use cargo::util::{CliError, CliResult, Require, config, human};
 
 fn main() {
     execute();
@@ -67,7 +67,7 @@ fn execute() {
 
 fn process(args: Vec<String>) -> CliResult<(String, Vec<String>)> {
     let args: Vec<String> = Vec::from_slice(args.tail());
-    let head = try!(args.iter().nth(0).require(|| "No subcommand found").map_err(|err| CliError::from_boxed(err, 1))).to_str();
+    let head = try!(args.iter().nth(0).require(|| human("No subcommand found")).map_err(|err| CliError::from_boxed(err, 1))).to_str();
     let tail = Vec::from_slice(args.tail());
 
     Ok((head, tail))
@@ -133,7 +133,7 @@ fn locate_project(_: NoFlags) -> CliResult<Option<ProjectLocation>> {
     let root = try!(find_project(os::getcwd(), "Cargo.toml").map_err(|e| CliError::from_boxed(e, 1)));
 
     let string = try!(root.as_str()
-                      .require(|| "Your project path contains characters not representable in Unicode")
+                      .require(|| human("Your project path contains characters not representable in Unicode"))
                       .map_err(|e| CliError::from_boxed(e, 1)));
 
     Ok(Some(ProjectLocation { root: string.to_str() }))

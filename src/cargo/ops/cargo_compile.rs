@@ -20,7 +20,7 @@ use core::{Source,SourceId,PackageSet,resolver};
 use core::registry::PackageRegistry;
 use ops;
 use sources::{PathSource};
-use util::{CargoResult, Wrap, config, error};
+use util::{CargoResult, Wrap, config, error, human};
 
 pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
@@ -37,9 +37,9 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     let source_ids = package.get_source_ids();
 
     let mut registry = try!(PackageRegistry::new(source_ids, override_ids));
-    let resolved = try!(resolver::resolve(package.get_dependencies(), &mut registry).wrap("unable to resolve dependencies"));
+    let resolved = try!(resolver::resolve(package.get_dependencies(), &mut registry).wrap(human("unable to resolve dependencies")));
 
-    let packages = try!(registry.get(resolved.as_slice()).wrap("unable to get packages from source"));
+    let packages = try!(registry.get(resolved.as_slice()).wrap(human("unable to get packages from source")));
 
     debug!("packages={}", packages);
 

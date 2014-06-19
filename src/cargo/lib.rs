@@ -20,7 +20,7 @@ extern crate hamcrest;
 use serialize::{Decoder,Encoder,Decodable,Encodable,json};
 use std::io;
 use hammer::{FlagDecoder,FlagConfig,HammerError};
-pub use util::{CliError, CliResult};
+pub use util::{CliError, CliResult, human};
 
 macro_rules! some(
   ($e:expr) => (
