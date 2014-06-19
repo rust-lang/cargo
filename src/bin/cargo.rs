@@ -12,9 +12,8 @@ use std::os;
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
 use cargo::{NoFlags,execute_main_without_stdin,handle_error};
-use cargo::core::errors::{CLIError,CLIResult,ToResult};
 use cargo::util::important_paths::find_project;
-use cargo::util::{ToCLI,config,simple_human};
+use cargo::util::{CliError, CliResult, CargoResult, CargoError, Require, config, box_error};
 
 fn main() {
     execute();
@@ -58,17 +57,17 @@ fn execute() {
             .stderr(InheritFd(2))
             .status();
 
-        match command.map_err(|_| simple_human("No such subcommand")) {
+        match command {
             Ok(ExitStatus(0)) => (),
-            Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => handle_error(simple_human("").to_cli(i as uint)),
-            Err(err) => handle_error(err.to_cli(127))
+            Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => handle_error(CliError::new("", i as uint)),
+            Err(_) => handle_error(CliError::new("No such subcommand", 127))
         }
     }
 }
 
-fn process(args: Vec<String>) -> CLIResult<(String, Vec<String>)> {
+fn process(args: Vec<String>) -> CliResult<(String, Vec<String>)> {
     let args: Vec<String> = Vec::from_slice(args.tail());
-    let head = try!(args.iter().nth(0).to_result(|_| CLIError::new("No subcommand found", None::<&str>, 1))).to_str();
+    let head = try!(args.iter().nth(0).require(|| "No subcommand found").map_err(|err| CliError::from_boxed(err, 1))).to_str();
     let tail = Vec::from_slice(args.tail());
 
     Ok((head, tail))
@@ -91,9 +90,9 @@ impl FlagConfig for ConfigForKeyFlags {
     }
 }
 
-fn config_for_key(args: ConfigForKeyFlags) -> CLIResult<Option<ConfigOut>> {
-    let value = try!(config::get_config(os::getcwd(), args.key.as_slice()).to_result(|err|
-        CLIError::new("Couldn't load configuration", Some(err), 1)));
+fn config_for_key(args: ConfigForKeyFlags) -> CliResult<Option<ConfigOut>> {
+    let value = try!(config::get_config(os::getcwd(), args.key.as_slice()).map_err(|err|
+        CliError::new("Couldn't load configuration",  1)));
 
     if args.human {
         println!("{}", value);
@@ -116,9 +115,9 @@ impl FlagConfig for ConfigListFlags {
     }
 }
 
-fn config_list(args: ConfigListFlags) -> CLIResult<Option<ConfigOut>> {
-    let configs = try!(config::all_configs(os::getcwd()).to_result(|err|
-        CLIError::new("Couldn't load conifguration", Some(err), 1)));
+fn config_list(args: ConfigListFlags) -> CliResult<Option<ConfigOut>> {
+    let configs = try!(config::all_configs(os::getcwd()).map_err(|e|
+        CliError::new("Couldn't load configuration", 1)));
 
     if args.human {
         for (key, value) in configs.iter() {
@@ -130,12 +129,12 @@ fn config_list(args: ConfigListFlags) -> CLIResult<Option<ConfigOut>> {
     }
 }
 
-fn locate_project(_: NoFlags) -> CLIResult<Option<ProjectLocation>> {
-    let root = try!(find_project(os::getcwd(), "Cargo.toml").to_result(|err|
-        CLIError::new(err.to_str(), None::<&str>, 1)));
+fn locate_project(_: NoFlags) -> CliResult<Option<ProjectLocation>> {
+    let root = try!(find_project(os::getcwd(), "Cargo.toml").map_err(|e| CliError::from_boxed(e, 1)));
 
-    let string = try!(root.as_str().to_result(|_|
-        CLIError::new(format!("Your project path contains characters not representable in Unicode: {}", os::getcwd().display()), None::<&str>, 1)));
+    let string = try!(root.as_str()
+                      .require(|| "Your project path contains characters not representable in Unicode")
+                      .map_err(|e| CliError::from_boxed(e, 1)));
 
     Ok(Some(ProjectLocation { root: string.to_str() }))
 }

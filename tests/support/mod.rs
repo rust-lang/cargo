@@ -11,7 +11,7 @@ use std::fmt::Show;
 use ham = hamcrest;
 use cargo::core::shell;
 use cargo::util::{process,ProcessBuilder,CargoError};
-use cargo::util::result::ProcessError;
+use cargo::util::ProcessError;
 
 pub mod paths;
 
@@ -253,7 +253,7 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 
     match res {
       Ok(out) => self.match_output(&out),
-      Err(CargoError { kind: ProcessError(_, ref out), .. }) => self.match_output(out.get_ref()),
+      Err(ProcessError { output: Some(ref out), .. }) => self.match_output(out),
       Err(e) => Err(format!("could not exec process {}: {}", process, e))
     }
   }

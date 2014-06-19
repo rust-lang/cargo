@@ -1,12 +1,25 @@
-use support::{ProjectBuilder,ResultTest,project,execs,main_file};
+use std::io::File;
+
+use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use hamcrest::{assert_that,existing_file};
 use cargo;
-use cargo::util::{CargoResult,process};
+use cargo::util::{CargoResult, ProcessError, process};
 
 fn setup() {
 }
 
-fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder) -> CargoResult<ProjectBuilder> {
+fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder) -> Result<ProjectBuilder, ProcessError> {
+    let gitconfig = paths::home().join(".gitconfig");
+
+    if !gitconfig.exists() {
+        File::create(&gitconfig).write(r"
+            [user]
+
+            email = foo@bar.com
+            name = Foo Bar
+        ".as_bytes()).assert()
+    }
+
     let mut git_project = project(name);
     git_project = callback(git_project);
     git_project.build();

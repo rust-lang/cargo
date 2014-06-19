@@ -3,7 +3,7 @@ use std::fmt::{Show,Formatter};
 use std::os;
 use std::path::Path;
 use std::io::process::{Command,ProcessOutput,InheritFd};
-use util::{CargoResult,io_error,process_error};
+use util::{CargoResult, CargoError, ProcessError, process_error, box_error};
 use std::collections::HashMap;
 
 #[deriving(Clone,PartialEq)]
@@ -65,34 +65,36 @@ impl ProcessBuilder {
     }
 
     // TODO: should InheritFd be hardcoded?
-    pub fn exec(&self) -> CargoResult<()> {
+    pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
         command
             .env(self.build_env().as_slice())
             .stdout(InheritFd(1))
             .stderr(InheritFd(2));
 
-        let exit = try!(command.status().map_err(io_error));
+        let msg = || format!("Could not execute process `{}`", self.debug_string());
+
+        let exit = try!(command.status().map_err(|e| process_error(msg(), &command, None, None)));
 
         if exit.success() {
             Ok(())
         } else {
-            let msg = format!("Could not execute process `{}`", self.debug_string());
-            Err(process_error(msg, exit, None))
+            Err(process_error(msg(), &command, Some(&exit), None))
         }
     }
 
-    pub fn exec_with_output(&self) -> CargoResult<ProcessOutput> {
+    pub fn exec_with_output(&self) -> Result<ProcessOutput, ProcessError> {
         let mut command = self.build_command();
         command.env(self.build_env().as_slice());
 
-        let output = try!(command.output().map_err(io_error));
+        let msg = || format!("Could not execute process `{}`", self.debug_string());
+
+        let output = try!(command.output().map_err(|e| process_error(msg(), &command, None, None)));
 
         if output.status.success() {
             Ok(output)
         } else {
-            let msg = format!("Could not execute process `{}`", self.debug_string());
-            Err(process_error(msg, output.status.clone(), Some(output)))
+            Err(process_error(msg(), &command, Some(&output.status), Some(&output)))
         }
     }
 

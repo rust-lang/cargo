@@ -4,8 +4,7 @@ use std::path::Path;
 use std::str;
 use core::{Package,PackageSet,Target};
 use util;
-use util::{other_error,human_error,CargoResult,CargoError,ProcessBuilder};
-use util::result::ProcessError;
+use util::{CargoResult, CargoError, ProcessBuilder, error, human, box_error};
 
 type Args = Vec<String>;
 
@@ -48,7 +47,7 @@ fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> Ca
 
 fn mk_target(target: &Path) -> CargoResult<()> {
     io::fs::mkdir_recursive(target, io::UserRWX)
-      .map_err(|_| other_error("could not create target directory"))
+      .map_err(|_| error("could not create target directory"))
 }
 
 fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) -> CargoResult<()> {
@@ -62,10 +61,16 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) 
         let rustc = prepare_rustc(root, target, *crate_type, dest, deps);
 
         try!((if verbose {
-            rustc.exec()
+            rustc.exec().map_err(|err| {
+                log!(5, "exec failed; error={}", err.description());
+                human(err)
+            })
         } else {
-            rustc.exec_with_output().and(Ok(()))
-        }).map_err(|e| rustc_to_cargo_err(rustc.get_args().as_slice(), root, e)));
+            rustc.exec_with_output().and(Ok(())).map_err(|err| {
+                log!(5, "exec_with_output failed; error={}", err.description());
+                human(err)
+            })
+        }));
     }
 
     Ok(())
@@ -97,29 +102,9 @@ fn build_deps_args(dst: &mut Args, deps: &Path) {
     dst.push(deps.display().to_str());
 }
 
-fn rustc_to_cargo_err(args: &[String], cwd: &Path, err: CargoError) -> CargoError {
-    let msg = {
-        let output = match err {
-            CargoError { kind: ProcessError(_, ref output), .. } => output,
-            _ => fail!("Bug! exec() returned an error other than a ProcessError")
-        };
-
-        let mut msg = format!("failed to execute: `rustc {}`", args.connect(" "));
-
-        output.as_ref().map(|o| {
-            let second = format!("; Error:\n{}", str::from_utf8_lossy(o.error.as_slice()));
-            msg.push_str(second.as_slice());
-        });
-
-        msg
-    };
-
-    human_error(msg, format!("root={}", cwd.display()), err)
-}
-
 fn topsort(deps: &PackageSet) -> CargoResult<PackageSet> {
     match deps.sort() {
         Some(deps) => Ok(deps),
-        None => return Err(other_error("circular dependency detected"))
+        None => return Err(error("circular dependency detected"))
     }
 }
