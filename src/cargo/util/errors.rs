@@ -28,6 +28,12 @@ pub trait CargoError {
         }
     }
 
+    fn with_cause<E: CargoError>(self, cause: E) -> Box<CargoError> {
+        let mut concrete = self.concrete();
+        concrete.cause = Some(cause.box_error());
+        box concrete as Box<CargoError>
+    }
+
     fn mark_human(self) -> Box<CargoError> {
         let mut concrete = self.concrete();
         concrete.is_human = true;
@@ -103,9 +109,7 @@ impl<T, E: CargoError> BoxError<T> for Result<T, E> {
 impl<T, E: CargoError> ChainError<T> for Result<T, E> {
     fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T>  {
         self.map_err(|err| {
-            let mut update = callback().concrete();
-            update.cause = Some(err.box_error());
-            box update as Box<CargoError>
+            callback().with_cause(err)
         })
     }
 }
@@ -159,6 +163,11 @@ impl CargoError for ProcessError {
     fn cause<'a>(&'a self) -> Option<&'a CargoError> {
         self.cause.as_ref().map(|c| { let err: &CargoError = *c; err })
     }
+
+    fn with_cause<E: CargoError>(mut self, err: E) -> Box<CargoError> {
+        self.cause = Some(err.box_error());
+        box self as Box<CargoError>
+    }
 }
 
 pub struct ConcreteCargoError {
@@ -185,6 +194,11 @@ impl CargoError for ConcreteCargoError {
 
     fn cause<'a>(&'a self) -> Option<&'a CargoError> {
         self.cause.as_ref().map(|c| { let err: &CargoError = *c; err })
+    }
+
+    fn with_cause<E: CargoError>(mut self, err: E) -> Box<CargoError> {
+        self.cause = Some(err.box_error());
+        box self as Box<CargoError>
     }
 
     fn is_human(&self) -> bool {
@@ -215,7 +229,7 @@ impl CliError {
         let error = if error.is_human() {
             error
         } else {
-            chain(error, human("An unknown error occurred"))
+            human("An unknown error occurred").with_cause(error)
         };
 
         CliError { error: error, exit_code: code }
@@ -258,10 +272,4 @@ pub fn human<S: Str>(error: S) -> Box<CargoError> {
         cause: None,
         is_human: true
     } as Box<CargoError>
-}
-
-pub fn chain<E: CargoError>(original: Box<CargoError>, update: E) -> Box<CargoError> {
-    let mut concrete = update.concrete();
-    concrete.cause = Some(original);
-    box concrete as Box<CargoError>
 }

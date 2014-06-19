@@ -1,4 +1,4 @@
-use util::errors::{CargoResult, CargoError, chain};
+use util::errors::{CargoResult, CargoError};
 
 pub trait Wrap {
     fn wrap<E: CargoError>(self, error: E) -> Self;
@@ -8,7 +8,7 @@ impl<T> Wrap for Result<T, Box<CargoError>> {
     fn wrap<E: CargoError>(self, error: E) -> CargoResult<T> {
         match self {
             Ok(x) => Ok(x),
-            Err(e) => Err(chain(e, error))
+            Err(e) => Err(error.with_cause(e))
         }
     }
 }
