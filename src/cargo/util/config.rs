@@ -2,7 +2,7 @@ use std::{io,fmt,os};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
-use util::{CargoResult, ChainError, Require, error, internal_error, human};
+use util::{CargoResult, ChainError, Require, internal, human};
 
 pub struct Config {
     home_path: Path
@@ -95,8 +95,8 @@ impl fmt::Show for ConfigValue {
 }
 
 pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
-    find_in_tree(&pwd, |file| extract_config(file, key))
-        .map_err(|_| internal_error("config key not found", format!("key={}", key)))
+    find_in_tree(&pwd, |file| extract_config(file, key)).map_err(|_|
+        internal(format!("config key not found; key={}", key)))
 }
 
 pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
@@ -115,7 +115,7 @@ fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoR
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| error("could not open file")));
+            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| internal("could not open file")));
             match walk(file) {
                 Ok(res) => return Ok(res),
                 _ => ()
@@ -125,7 +125,7 @@ fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoR
         if !current.pop() { break; }
     }
 
-    Err(error(""))
+    Err(internal(""))
 }
 
 fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult<()> {
@@ -135,14 +135,14 @@ fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| error("could not open file")));
+            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| internal("could not open file")));
             match walk(file) {
                 Err(_) => err = false,
                 _ => ()
             }
         }
 
-        if err { return Err(error("")); }
+        if err { return Err(internal("")); }
         if !current.pop() { break; }
     }
 
@@ -153,12 +153,12 @@ fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
     let root = cargo_try!(toml::parse_from_buffer(&mut buf));
-    let val = cargo_try!(root.lookup(key).require(|| error("")));
+    let val = cargo_try!(root.lookup(key).require(|| internal("")));
 
     let v = match val {
         &toml::String(ref val) => String(val.clone()),
         &toml::Array(ref val) => List(val.iter().map(|s: &toml::Value| s.to_str()).collect()),
-        _ => return Err(error(""))
+        _ => return Err(internal(""))
     };
 
     Ok(ConfigValue{ value: v, path: vec!(path) })
@@ -168,10 +168,10 @@ fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
     let root = cargo_try!(toml::parse_from_buffer(&mut buf).chain_error(||
-        error(format!("could not parse Toml manifest; path={}", path.display()))));
+        internal(format!("could not parse Toml manifest; path={}", path.display()))));
 
     let table = cargo_try!(root.get_table().require(||
-        error(format!("could not parse Toml manifest; path={}", path.display()))));
+        internal(format!("could not parse Toml manifest; path={}", path.display()))));
 
     for (key, value) in table.iter() {
         match value {
@@ -182,7 +182,7 @@ fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue
                 });
 
                 cargo_try!(merge_array(config, val.as_slice(), &path).chain_error(||
-                    error(format!("The `{}` key in your config", key))));
+                    internal(format!("The `{}` key in your config", key))));
             },
             _ => ()
         }
@@ -193,11 +193,11 @@ fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue
 
 fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &Path) -> CargoResult<()> {
     match existing.value {
-        String(_) => return Err(error("should be an Array, but it was a String")),
+        String(_) => return Err(internal("should be an Array, but it was a String")),
         List(ref mut list) => {
             let new_list: Vec<CargoResult<String>> = val.iter().map(|s: &toml::Value| toml_string(s)).collect();
             if new_list.iter().any(|v| v.is_err()) {
-                return Err(error("should be an Array of Strings, but was an Array of other values"));
+                return Err(internal("should be an Array of Strings, but was an Array of other values"));
             } else {
                 let new_list: Vec<String> = new_list.move_iter().map(|v| v.unwrap()).collect();
                 list.push_all(new_list.as_slice());
@@ -211,6 +211,6 @@ fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &Path) -> 
 fn toml_string(val: &toml::Value) -> CargoResult<String> {
     match val {
         &toml::String(ref str) => Ok(str.clone()),
-        _ => Err(error(""))
+        _ => Err(internal(""))
     }
 }

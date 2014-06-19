@@ -20,7 +20,7 @@ use core::{Source,SourceId,PackageSet,resolver};
 use core::registry::PackageRegistry;
 use ops;
 use sources::{PathSource};
-use util::{CargoResult, Wrap, config, error, human};
+use util::{CargoResult, Wrap, config, internal, human};
 
 pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
@@ -56,7 +56,7 @@ fn source_ids_from_config() -> CargoResult<Vec<SourceId>> {
     let config_paths = configs.find_equiv(&"paths").map(|v| v.clone()).unwrap_or_else(|| ConfigValue::new());
 
     let paths: Vec<Path> = match config_paths.get_value() {
-        &config::String(_) => return Err(error("The path was configured as a String instead of a List")),
+        &config::String(_) => return Err(internal("The path was configured as a String instead of a List")),
         &config::List(ref list) => list.iter().map(|path| Path::new(path.as_slice())).collect()
     };
 

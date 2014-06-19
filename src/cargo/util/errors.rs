@@ -236,7 +236,7 @@ pub fn internal_error<S1: Str, S2: Str>(error: S1, detail: S2) -> Box<CargoError
     } as Box<CargoError>
 }
 
-pub fn error<S1: Str>(error: S1) -> Box<CargoError> {
+pub fn internal<S1: Str>(error: S1) -> Box<CargoError> {
     box ConcreteCargoError {
         description: error.as_slice().to_str(),
         detail: None,
