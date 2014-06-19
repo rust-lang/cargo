@@ -34,7 +34,7 @@ fn execute() {
 
     let (cmd, args) = match process(os::args()) {
         Ok((cmd, args)) => (cmd, args),
-        Err(err) => return handle_error(err)
+        Err(err) => return handle_error(err, false)
     };
 
     if cmd == "config-for-key".to_str() {
@@ -59,8 +59,8 @@ fn execute() {
 
         match command {
             Ok(ExitStatus(0)) => (),
-            Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => handle_error(CliError::new("", i as uint)),
-            Err(_) => handle_error(CliError::new("No such subcommand", 127))
+            Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => handle_error(CliError::new("", i as uint), false),
+            Err(_) => handle_error(CliError::new("No such subcommand", 127), false)
         }
     }
 }
