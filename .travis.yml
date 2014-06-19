@@ -1,0 +1,16 @@
+language: rust
+
+install:
+  - ./.travis.install.deps.sh
+
+script:
+  - make CC="$CC" RUSTC="$RUSTC" -j4
+  - make CC="$CC" RUSTC="$RUSTC" test -j4
+
+env:
+  - ARCH=i686 CC='cc -m32' RUSTC='rustc --target=i686-unknown-linux-gnu'
+  - ARCH=x86_64 CC=cc RUSTC='rustc --target=x86_64-unknown-linux-gnu'
+
+os:
+  - linux
+  - osx

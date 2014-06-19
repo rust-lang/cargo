@@ -2,6 +2,7 @@ use std::io::process::{Command,ProcessOutput,ProcessExit,ExitStatus,ExitSignal};
 use std::io::IoError;
 use std::fmt;
 use std::fmt::{Show, Formatter};
+use std::str;
 
 use TomlError = toml::Error;
 
@@ -143,18 +144,30 @@ impl Show for ProcessError {
             Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
             None => "never executed".to_str()
         };
-        write!(f, "{} (status={})", self.msg, exit)
+        try!(write!(f, "{} (status={})", self.msg, exit));
+        match self.output {
+            Some(ref out) => {
+                match str::from_utf8(out.output.as_slice()) {
+                    Some(s) if s.trim().len() > 0 => {
+                        try!(write!(f, "\n--- stdout\n{}", s));
+                    }
+                    Some(..) | None => {}
+                }
+                match str::from_utf8(out.error.as_slice()) {
+                    Some(s) if s.trim().len() > 0 => {
+                        try!(write!(f, "\n--- stderr\n{}", s));
+                    }
+                    Some(..) | None => {}
+                }
+            }
+            None => {}
+        }
+        Ok(())
     }
 }
 
 impl CargoError for ProcessError {
-    fn description(&self) -> String {
-        let exit = match self.exit {
-            Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
-            None => "never executed".to_str()
-        };
-        format!("{} (status={})", self.msg, exit)
-    }
+    fn description(&self) -> String { self.to_str() }
 
     fn detail(&self) -> Option<String> {
         self.detail.clone()

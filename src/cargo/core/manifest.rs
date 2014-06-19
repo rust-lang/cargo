@@ -18,12 +18,16 @@ pub struct Manifest {
     authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: Path,
-    sources: Vec<SourceId>
+    sources: Vec<SourceId>,
+    build: Option<String>,
 }
 
 impl Show for Manifest {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "Manifest({}, authors={}, targets={}, target_dir={})", self.summary, self.authors, self.targets, self.target_dir.display())
+        write!(f, "Manifest({}, authors={}, targets={}, target_dir={}, \
+                   build={})",
+               self.summary, self.authors, self.targets,
+               self.target_dir.display(), self.build)
     }
 }
 
@@ -34,7 +38,8 @@ pub struct SerializedManifest {
     dependencies: Vec<SerializedDependency>,
     authors: Vec<String>,
     targets: Vec<Target>,
-    target_dir: String
+    target_dir: String,
+    build: Option<String>,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
@@ -45,7 +50,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
             dependencies: self.summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
             authors: self.authors.clone(),
             targets: self.targets.clone(),
-            target_dir: self.target_dir.display().to_str()
+            target_dir: self.target_dir.display().to_str(),
+            build: self.build.clone(),
         }.encode(s)
     }
 }
@@ -125,13 +131,16 @@ impl Show for Target {
 }
 
 impl Manifest {
-    pub fn new(summary: &Summary, targets: &[Target], target_dir: &Path, sources: Vec<SourceId>) -> Manifest {
+    pub fn new(summary: &Summary, targets: &[Target],
+               target_dir: &Path, sources: Vec<SourceId>,
+               build: Option<String>) -> Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
             targets: Vec::from_slice(targets),
             target_dir: target_dir.clone(),
-            sources: sources
+            sources: sources,
+            build: build,
         }
     }
 
@@ -169,6 +178,10 @@ impl Manifest {
 
     pub fn get_source_ids<'a>(&'a self) -> &'a [SourceId] {
         self.sources.as_slice()
+    }
+
+    pub fn get_build<'a>(&'a self) -> Option<&'a str> {
+        self.build.as_ref().map(|s| s.as_slice())
     }
 }
 
