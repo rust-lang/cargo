@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::{Show,Formatter};
 use core::{Package,PackageId,Summary,SourceId,Source};
 use ops;
-use util::{CargoResult,simple_human};
+use util::{CargoResult, box_error};
 
 pub struct PathSource {
     id: SourceId,
@@ -45,7 +45,7 @@ impl PathSource {
 
         match self.packages.as_slice().head() {
             Some(pkg) => Ok(pkg.clone()),
-            None => Err(simple_human("no package found in source"))
+            None => Err(box_error("no package found in source"))
         }
     }
 }

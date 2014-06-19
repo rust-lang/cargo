@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::CharOffsets;
 use semver::Version;
-use util::{other_error,CargoResult};
+use util::{CargoResult, error};
 
 #[deriving(PartialEq,Clone)]
 pub struct VersionReq {
@@ -49,7 +49,7 @@ impl VersionReq {
         }
 
         if lexer.is_error() {
-            return Err(other_error("invalid version requirement"));
+            return Err(error("invalid version requirement"));
         }
 
         predicates.push(try!(builder.build()));
@@ -151,12 +151,12 @@ impl PredBuilder {
 
     fn set_sigil(&mut self, sigil: &str) -> CargoResult<()> {
         if self.op.is_some() {
-            return Err(other_error("op already set"));
+            return Err(error("op already set"));
         }
 
         match Op::from_sigil(sigil) {
             Some(op) => self.op = Some(op),
-            _ => return Err(other_error("invalid sigil"))
+            _ => return Err(error("invalid sigil"))
         }
 
         Ok(())
@@ -188,12 +188,12 @@ impl PredBuilder {
     fn build(&self) -> CargoResult<Predicate> {
         let op = match self.op {
             Some(x) => x,
-            None => return Err(other_error("op required"))
+            None => return Err(error("op required"))
         };
 
         let major = match self.major {
             Some(x) => x,
-            None => return Err(other_error("major version required"))
+            None => return Err(error("major version required"))
         };
 
         Ok(Predicate {
@@ -384,7 +384,7 @@ fn parse_version_part(s: &str) -> CargoResult<uint> {
         let n = (c as uint) - ('0' as uint);
 
         if n > 9 {
-            return Err(other_error("version components must be numeric"));
+            return Err(error("version components must be numeric"));
         }
 
         ret *= 10;

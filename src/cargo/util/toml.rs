@@ -7,14 +7,11 @@ use serialize::Decodable;
 use core::{SourceId,GitKind};
 use core::manifest::{LibKind,Lib};
 use core::{Summary,Manifest,Target,Dependency,PackageId};
-use util::{CargoResult,Require,simple_human,toml_error};
+use util::{CargoResult, Require, error, box_error};
 
 pub fn to_manifest(contents: &[u8], source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
-    let root = try!(toml::parse_from_bytes(contents).map_err(|_|
-        simple_human("Cargo.toml is not valid Toml")));
-
-    let toml = try!(toml_to_manifest(root).map_err(|_|
-        simple_human("Cargo.toml is not a valid Cargo manifest")));
+    let root = try!(toml::parse_from_bytes(contents).map_err(|_| error("Cargo.toml is not valid Toml")));
+    let toml = try!(toml_to_manifest(root).map_err(|_| error("Cargo.toml is not a valid manifest")));
 
     toml.to_manifest(source_id)
 }
@@ -28,7 +25,7 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
         toml::from_toml(root.clone())
     }
 
-    let project = try!(decode(&root, "project").map_err(|e| toml_error("ZOMG", e)));
+    let project = try!(decode(&root, "project").map_err(box_error));
     let lib = decode(&root, "lib").ok();
     let bin = decode(&root, "bin").ok();
 
@@ -36,7 +33,7 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
 
     let deps = match deps {
         Some(deps) => {
-            let table = try!(deps.get_table().require(simple_human("dependencies must be a table"))).clone();
+            let table = try!(deps.get_table().require(|| "dependencies must be a table")).clone();
 
             let mut deps: HashMap<String, TomlDependency> = HashMap::new();
 
@@ -48,13 +45,13 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
 
                         for (k, v) in table.iter() {
                             let v = try!(v.get_str()
-                                         .require(simple_human("dependency values must be string")));
+                                         .require(|| "dependency values must be string"));
 
                             details.insert(k.clone(), v.clone());
                         }
 
                         let version = try!(details.find_equiv(&"version")
-                                           .require(simple_human("dependencies must include a version"))).clone();
+                                           .require(|| "dependencies must include a version")).clone();
 
                         deps.insert(k.clone(), DetailedDep(DetailedTomlDependency {
                             version: version,

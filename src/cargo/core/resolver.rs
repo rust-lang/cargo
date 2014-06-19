@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+
 use core::{
     Dependency,
     PackageId,
     Summary,
     Registry
 };
-use util::result::CargoResult;
+use util::errors::CargoResult;
 
 /* TODO:
  * - The correct input here is not a registry. Resolves should be performable

@@ -1,5 +1,5 @@
 use url::Url;
-use util::{CargoResult,ProcessBuilder,io_error,human_error,process};
+use util::{CargoResult, ProcessBuilder, process, box_error};
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::str;
@@ -173,8 +173,7 @@ impl GitRemote {
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
         let dirname = Path::new(path.dirname());
 
-        try!(mkdir_recursive(path, UserDir).map_err(|err|
-            human_error(format!("Couldn't recursively create `{}`", dirname.display()), format!("path={}", dirname.display()), io_error(err))));
+        try!(mkdir_recursive(path, UserDir).map_err(box_error));
 
         Ok(git!(dirname, "clone {} {} --bare --no-hardlinks --quiet", self.fetch_location(), path.display()))
     }
@@ -228,15 +227,15 @@ impl GitCheckout {
         let dirname = Path::new(self.location.dirname());
 
         try!(mkdir_recursive(&dirname, UserDir).map_err(|e|
-            human_error(format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display()), None::<&str>, io_error(e))));
+            box_error(format!("Couldn't mkdir {}", Path::new(self.location.dirname()).display()))));
 
         if self.location.exists() {
             try!(rmdir_recursive(&self.location).map_err(|e|
-                human_error(format!("Couldn't rmdir {}", Path::new(&self.location).display()), None::<&str>, io_error(e))));
+                box_error(format!("Couldn't rmdir {}", Path::new(&self.location).display()))));
         }
 
         git!(dirname, "clone --no-checkout --quiet {} {}", self.get_source().display(), self.location.display());
-        try!(chmod(&self.location, AllPermissions).map_err(io_error));
+        try!(chmod(&self.location, AllPermissions).map_err(box_error));
 
         Ok(())
     }
@@ -264,12 +263,12 @@ fn git(path: &Path, str: &str) -> ProcessBuilder {
 
 fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
     git(path, str.as_slice()).exec().map_err(|err|
-        human_error(format!("Executing `git {}` failed: {}", str, err), None::<&str>, err))
+        box_error(format!("Executing `git {}` failed: {}", str, err)))
 }
 
 fn git_output(path: &Path, str: String) -> CargoResult<String> {
     let output = try!(git(path, str.as_slice()).exec_with_output().map_err(|err|
-        human_error(format!("Executing `git {}` failed", str), None::<&str>, err)));
+        box_error(format!("Executing `git {}` failed", str))));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())
 }

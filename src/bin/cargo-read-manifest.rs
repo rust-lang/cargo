@@ -5,8 +5,9 @@ extern crate serialize;
 extern crate hammer;
 
 use hammer::FlagConfig;
-use cargo::{execute_main_without_stdin,CLIResult,CLIError};
-use cargo::core::{Package,Source,SourceId};
+use cargo::{execute_main_without_stdin};
+use cargo::core::{Package, Source, SourceId};
+use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 
 #[deriving(PartialEq,Clone,Decodable)]
@@ -20,7 +21,7 @@ fn main() {
     execute_main_without_stdin(execute);
 }
 
-fn execute(options: Options) -> CLIResult<Option<Package>> {
+fn execute(options: Options) -> CliResult<Option<Package>> {
     let source_id = SourceId::for_path(&Path::new(options.manifest_path.as_slice()));
     let mut source = PathSource::new(&source_id);
 
@@ -29,5 +30,5 @@ fn execute(options: Options) -> CLIResult<Option<Package>> {
     source
         .get_root_package()
         .map(|pkg| Some(pkg))
-        .map_err(|err| CLIError::new(err.get_desc(), Some(err.get_detail()), 1))
+        .map_err(|err| CliError::from_boxed(err, 1))
 }

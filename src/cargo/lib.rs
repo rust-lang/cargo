@@ -20,7 +20,7 @@ extern crate hamcrest;
 use serialize::{Decoder,Encoder,Decodable,Encodable,json};
 use std::io;
 use hammer::{FlagDecoder,FlagConfig,HammerError};
-pub use core::errors::{CLIError,CLIResult,ToResult};
+pub use util::{CliError, CliResult};
 
 macro_rules! some(
   ($e:expr) => (
@@ -46,8 +46,8 @@ pub struct NoFlags;
 
 impl FlagConfig for NoFlags {}
 
-pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CLIResult<Option<V>>) {
-    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CLIResult<Option<V>>) -> CLIResult<Option<V>> {
+pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CliResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T, U) -> CliResult<Option<V>>) -> CliResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
         let json = try!(json_from_stdin::<U>());
 
@@ -57,8 +57,8 @@ pub fn execute_main<'a, T: RepresentsFlags, U: RepresentsJSON, V: Encodable<json
     process_executed(call(exec))
 }
 
-pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CLIResult<Option<V>>) {
-    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CLIResult<Option<V>>) -> CLIResult<Option<V>> {
+pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CliResult<Option<V>>) {
+    fn call<'a, T: RepresentsFlags, V: Encodable<json::Encoder<'a>, io::IoError>>(exec: fn(T) -> CliResult<Option<V>>) -> CliResult<Option<V>> {
         let flags = try!(flags_from_args::<T>());
 
         exec(flags)
@@ -67,7 +67,7 @@ pub fn execute_main_without_stdin<'a, T: RepresentsFlags, V: Encodable<json::Enc
     process_executed(call(exec));
 }
 
-pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CLIResult<Option<T>>) {
+pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result: CliResult<Option<T>>) {
     match result {
         Err(e) => handle_error(e),
         Ok(encodable) => {
@@ -79,11 +79,12 @@ pub fn process_executed<'a, T: Encodable<json::Encoder<'a>, io::IoError>>(result
     }
 }
 
-pub fn handle_error(err: CLIError) {
+pub fn handle_error(err: CliError) {
     log!(4, "handle_error; err={}", err);
 
-    let CLIError { msg, exit_code, .. } = err;
-    let _ = write!(&mut std::io::stderr(), "{}", msg);
+    let CliError { error, exit_code, .. } = err;
+    let _ = write!(&mut std::io::stderr(), "{}", error);
+    // TODO: Cause chains
     //detail.map(|d| write!(&mut std::io::stderr(), ":\n{}", d));
 
     std::os::set_exit_status(exit_code as int);
@@ -93,17 +94,17 @@ fn args() -> Vec<String> {
     std::os::args()
 }
 
-fn flags_from_args<T: RepresentsFlags>() -> CLIResult<T> {
+fn flags_from_args<T: RepresentsFlags>() -> CliResult<T> {
     let mut decoder = FlagDecoder::new::<T>(args().tail());
-    Decodable::decode(&mut decoder).to_result(|e: HammerError| CLIError::new(e.message, None::<&str>, 1))
+    Decodable::decode(&mut decoder).map_err(|e: HammerError| CliError::new(e.message, 1))
 }
 
-fn json_from_stdin<T: RepresentsJSON>() -> CLIResult<T> {
+fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
     let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().to_result(|_| CLIError::new("Standard in did not exist or was not UTF-8", None::<&str>, 1)));
+    let input = try!(reader.read_to_str().map_err(|e| CliError::new("Standard in did not exist or was not UTF-8", 1)));
 
-    let json = try!(json::from_str(input.as_slice()).to_result(|_| CLIError::new("Could not parse standard in as JSON", Some(input.clone()), 1)));
+    let json = try!(json::from_str(input.as_slice()).map_err(|e| CliError::new("Could not parse standard in as JSON", 1)));
     let mut decoder = json::Decoder::new(json);
 
-    Decodable::decode(&mut decoder).to_result(|e: json::DecoderError| CLIError::new("Could not process standard in as input", Some(e), 1))
+    Decodable::decode(&mut decoder).map_err(|e: json::DecoderError| CliError::new("Could not process standard in as input", 1))
 }
