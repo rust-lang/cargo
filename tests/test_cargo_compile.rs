@@ -51,7 +51,8 @@ test!(cargo_compile_without_manifest {
     assert_that(p.cargo_process("cargo-compile"),
         execs()
         .with_status(102)
-        .with_stderr("Could not find Cargo.toml in this directory or any parent directory"));
+        .with_stderr("Could not find Cargo.toml in this directory or any \
+                      parent directory"));
 })
 
 test!(cargo_compile_with_invalid_code {
@@ -82,7 +83,12 @@ test!(cargo_compile_with_warnings_in_the_root_package {
 
     assert_that(p.cargo_process("cargo-compile"),
         execs()
-        .with_stderr("src/foo.rs:1:14: 1:26 warning: code is never used: `dead`, #[warn(dead_code)] on by default\nsrc/foo.rs:1 fn main() {} fn dead() {}\n                          ^~~~~~~~~~~~\n"));
+        .with_stderr("\
+src/foo.rs:1:14: 1:26 warning: code is never used: `dead`, #[warn(dead_code)] \
+on by default
+src/foo.rs:1 fn main() {} fn dead() {}
+                          ^~~~~~~~~~~~
+"));
 })
 
 test!(cargo_compile_with_warnings_in_a_dep_package {
@@ -108,7 +114,8 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
             name = "foo"
         "#)
-        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -133,7 +140,8 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     assert_that(p.cargo_process("cargo-compile"),
         execs()
-        .with_stdout(format!("Compiling bar v0.5.0 (file:{})\nCompiling foo v0.5.0 (file:{})\n",
+        .with_stdout(format!("Compiling bar v0.5.0 (file:{})\n\
+                              Compiling foo v0.5.0 (file:{})\n",
                              bar.display(), main.display()))
         .with_stderr(""));
 
@@ -168,7 +176,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
             name = "foo"
         "#)
-        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -243,7 +252,8 @@ test!(cargo_compile_with_nested_deps_longhand {
 
             name = "foo"
         "#)
-        .file("src/foo.rs", main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 

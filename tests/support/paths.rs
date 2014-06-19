@@ -45,9 +45,7 @@ impl PathExt for Path {
     }
 }
 
-/**
- * Ensure required test directories exist and are empty
- */
+/// Ensure required test directories exist and are empty
 pub fn setup() {
     let my_id = unsafe { NEXT_ID.fetch_add(1, atomics::SeqCst) };
     task_id.replace(Some(my_id));

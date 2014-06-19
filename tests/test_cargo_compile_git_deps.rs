@@ -8,7 +8,9 @@ use cargo::util::{ProcessError, process};
 fn setup() {
 }
 
-fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder) -> Result<ProjectBuilder, ProcessError> {
+fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder)
+    -> Result<ProjectBuilder, ProcessError>
+{
     let gitconfig = paths::home().join(".gitconfig");
 
     if !gitconfig.exists() {
@@ -30,7 +32,8 @@ fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder) -> Result<
     log!(5, "git add .");
     try!(git_project.process("git").args(["add", "."]).exec_with_output());
     log!(5, "git commit");
-    try!(git_project.process("git").args(["commit", "-m", "Initial commit"]).exec_with_output());
+    try!(git_project.process("git").args(["commit", "-m", "Initial commit"])
+                    .exec_with_output());
     Ok(git_project)
 }
 
@@ -80,8 +83,11 @@ test!(cargo_compile_simple_git_dep {
 
     assert_that(project.cargo_process("cargo-compile"),
         execs()
-        .with_stdout(format!("Updating git repository `file:{}`\nCompiling dep1 v0.5.0 (file:{})\nCompiling foo v0.5.0 (file:{})\n",
-                             git_root.display(), git_root.display(), root.display()))
+        .with_stdout(format!("Updating git repository `file:{}`\n\
+                              Compiling dep1 v0.5.0 (file:{})\n\
+                              Compiling foo v0.5.0 (file:{})\n",
+                             git_root.display(), git_root.display(),
+                             root.display()))
         .with_stderr(""));
 
     assert_that(&project.root().join("target/foo"), existing_file());
@@ -152,7 +158,8 @@ test!(cargo_compile_with_nested_paths {
 
             name = "parent"
         "#, git_project.root().display()))
-        .file("src/parent.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
+        .file("src/parent.rs",
+              main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
 
     p.cargo_process("cargo-compile")
         .exec_with_output()

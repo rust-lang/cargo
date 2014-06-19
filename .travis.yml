@@ -4,6 +4,7 @@ install:
   - . ./.travis.install.deps.sh
 
 script:
+  - ./.travis.check.style.sh
   - make CC="$CC" RUSTC="$RUSTC" -j4
   - make CC="$CC" RUSTC="$RUSTC" test -j4
 

@@ -30,7 +30,8 @@ pub struct CLIError {
 }
 
 impl CLIError {
-    pub fn new<T: Show, U: Show>(msg: T, detail: Option<U>, exit_code: uint) -> CLIError {
+    pub fn new<T: Show, U: Show>(msg: T, detail: Option<U>,
+                                 exit_code: uint) -> CLIError {
         let detail = detail.map(|d| d.to_str());
         CLIError { msg: msg.to_str(), detail: detail, exit_code: exit_code }
     }
@@ -58,7 +59,8 @@ impl Show for InternalError {
                 write!(f, "Couldn't convert `{}` into {}", string, type_name)
             },
             &MissingManifest(ref path, ref file) => {
-                write!(f, "Couldn't find a {} in the project (`{}` or any parent directory", file, path.display())
+                write!(f, "Couldn't find a {} in the project (`{}` or any \
+                           parent directory", file, path.display())
             },
             &WrappedIoError(ref io_error) => {
                 write!(f, "{}", io_error)
@@ -72,7 +74,8 @@ impl Show for InternalError {
 }
 
 impl CargoError {
-    pub fn cli(msg: String, detail: Option<String>, exit_code: uint) -> CargoError {
+    pub fn cli(msg: String, detail: Option<String>,
+               exit_code: uint) -> CargoError {
         CargoCLIError(CLIError::new(msg, detail, exit_code))
     }
 

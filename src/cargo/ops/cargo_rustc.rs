@@ -30,7 +30,8 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
     Ok(())
 }
 
-fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> CargoResult<()> {
+fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path,
+               primary: bool) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, pkg.get_targets());
 
     match pkg.get_manifest().get_build() {
@@ -50,7 +51,9 @@ fn compile_pkg(pkg: &Package, dest: &Path, deps_dir: &Path, primary: bool) -> Ca
 }
 
 fn mk_target(target: &Path) -> CargoResult<()> {
-    io::fs::mkdir_recursive(target, io::UserRWX).chain_error(|| internal("could not create target directory"))
+    io::fs::mkdir_recursive(target, io::UserRWX).chain_error(|| {
+        internal("could not create target directory")
+    })
 }
 
 fn compile_custom(pkg: &Package, cmd: &str, dest: &Path, deps_dir: &Path,
@@ -67,13 +70,15 @@ fn compile_custom(pkg: &Package, cmd: &str, dest: &Path, deps_dir: &Path,
     p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
 }
 
-fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) -> CargoResult<()> {
+fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path,
+         verbose: bool) -> CargoResult<()> {
 
     let crate_types = target.rustc_crate_types();
 
     for crate_type in crate_types.iter() {
         log!(5, "root={}; target={}; crate_type={}; dest={}; deps={}; verbose={}",
-                root.display(), target, crate_type, dest.display(), deps.display(), verbose);
+             root.display(), target, crate_type, dest.display(), deps.display(),
+             verbose);
 
         let rustc = prepare_rustc(root, target, *crate_type, dest, deps);
 
@@ -87,7 +92,8 @@ fn rustc(root: &Path, target: &Target, dest: &Path, deps: &Path, verbose: bool) 
     Ok(())
 }
 
-fn prepare_rustc(root: &Path, target: &Target, crate_type: &'static str, dest: &Path, deps: &Path) -> ProcessBuilder {
+fn prepare_rustc(root: &Path, target: &Target, crate_type: &'static str,
+                 dest: &Path, deps: &Path) -> ProcessBuilder {
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, crate_type, dest);
@@ -99,7 +105,8 @@ fn prepare_rustc(root: &Path, target: &Target, crate_type: &'static str, dest: &
         .env("RUST_LOG", None) // rustc is way too noisy
 }
 
-fn build_base_args(into: &mut Args, target: &Target, crate_type: &'static str, dest: &Path) {
+fn build_base_args(into: &mut Args, target: &Target, crate_type: &'static str,
+                   dest: &Path) {
     // TODO: Handle errors in converting paths into args
     into.push(target.get_path().display().to_str());
     into.push("--crate-type".to_str());

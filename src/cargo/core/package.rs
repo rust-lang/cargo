@@ -44,7 +44,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
         SerializedPackage {
             name: package_id.get_name().to_str(),
             version: package_id.get_version().to_str(),
-            dependencies: summary.get_dependencies().iter().map(|d| SerializedDependency::from_dependency(d)).collect(),
+            dependencies: summary.get_dependencies().iter().map(|d| {
+                SerializedDependency::from_dependency(d)
+            }).collect(),
             authors: Vec::from_slice(manifest.get_authors()),
             targets: Vec::from_slice(manifest.get_targets()),
             manifest_path: self.manifest_path.display().to_str()
@@ -124,7 +126,8 @@ pub struct PackageSet {
 
 impl PackageSet {
     pub fn new(packages: &[Package]) -> PackageSet {
-        //assert!(packages.len() > 0, "PackageSet must be created with at least one package")
+        //assert!(packages.len() > 0,
+        //        "PackageSet must be created with at least one package")
         PackageSet { packages: Vec::from_slice(packages) }
     }
 
@@ -136,9 +139,7 @@ impl PackageSet {
         self.packages.pop().unwrap()
     }
 
-    /**
-     * Get a package by name out of the set
-     */
+    /// Get a package by name out of the set
     pub fn get<'a>(&'a self, name: &str) -> &'a Package {
         self.packages.iter().find(|pkg| name == pkg.get_name()).unwrap()
     }
@@ -164,7 +165,9 @@ impl PackageSet {
             graph.add(pkg.get_name(), deps.as_slice());
         }
 
-        let pkgs = some!(graph.sort()).iter().map(|name| self.get(*name).clone()).collect();
+        let pkgs = some!(graph.sort()).iter().map(|name| {
+            self.get(*name).clone()
+        }).collect();
 
         Some(PackageSet {
             packages: pkgs

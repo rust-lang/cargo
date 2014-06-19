@@ -4,38 +4,28 @@ use core::{Summary,Package,PackageId};
 use sources::{PathSource,GitSource};
 use util::{Config,CargoResult};
 
-/**
- * A Source finds and downloads remote packages based on names and
- * versions.
- */
+/// A Source finds and downloads remote packages based on names and
+/// versions.
 pub trait Source {
-    /**
-     * The update method performs any network operations required to
-     * get the entire list of all names, versions and dependencies of
-     * packages managed by the Source.
-     */
+    /// The update method performs any network operations required to
+    /// get the entire list of all names, versions and dependencies of
+    /// packages managed by the Source.
     fn update(&mut self) -> CargoResult<()>;
 
-    /**
-     * The list method lists all names, versions and dependencies of
-     * packages managed by the source. It assumes that `update` has
-     * already been called and no additional network operations are
-     * required.
-     */
+    /// The list method lists all names, versions and dependencies of
+    /// packages managed by the source. It assumes that `update` has
+    /// already been called and no additional network operations are
+    /// required.
     fn list(&self) -> CargoResult<Vec<Summary>>;
 
-    /**
-     * The download method fetches the full package for each name and
-     * version specified.
-     */
+    /// The download method fetches the full package for each name and
+    /// version specified.
     fn download(&self, packages: &[PackageId]) -> CargoResult<()>;
 
-    /**
-     * The get method returns the Path of each specified package on the
-     * local file system. It assumes that `download` was already called,
-     * and that the packages are already locally available on the file
-     * system.
-     */
+    /// The get method returns the Path of each specified package on the
+    /// local file system. It assumes that `download` was already called,
+    /// and that the packages are already locally available on the file
+    /// system.
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
 }
 
@@ -63,7 +53,8 @@ impl SourceId {
     // Pass absolute path
     pub fn for_path(path: &Path) -> SourceId {
         // TODO: use proper path -> URL
-        SourceId::new(PathKind, url::from_str(format!("file://{}", path.display()).as_slice()).unwrap())
+        let url = format!("file://{}", path.display());
+        SourceId::new(PathKind, url::from_str(url.as_slice()).unwrap())
     }
 
     pub fn for_git(url: &Url, reference: &str) -> SourceId {
@@ -71,7 +62,8 @@ impl SourceId {
     }
 
     pub fn for_central() -> SourceId {
-        SourceId::new(RegistryKind, url::from_str(format!("https://example.com").as_slice()).unwrap())
+        SourceId::new(RegistryKind,
+                      url::from_str("https://example.com").unwrap())
     }
 
     pub fn get_url<'a>(&'a self) -> &'a Url {
