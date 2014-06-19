@@ -27,6 +27,12 @@ pub trait CargoError {
             is_human: self.is_human()
         }
     }
+
+    fn mark_human(self) -> Box<CargoError> {
+        let mut concrete = self.concrete();
+        concrete.is_human = true;
+        box concrete as Box<CargoError>
+    }
 }
 
 pub trait FromError<E> {
