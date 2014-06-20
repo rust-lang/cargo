@@ -1,3 +1,6 @@
+use std::io::fs;
+use std::os;
+
 use support::{ResultTest,project,execs,main_file};
 use hamcrest::{assert_that,existing_file};
 use cargo;
@@ -487,4 +490,40 @@ test!(custom_build_in_dependency {
         "#);
     assert_that(p.cargo_process("cargo-compile"),
                 execs().with_status(0));
+})
+
+test!(many_crate_types {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "foo"
+            crate_type = ["rlib", "dylib"]
+        "#)
+        .file("src/foo.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("cargo-compile"),
+                execs().with_status(0));
+
+    let files = fs::readdir(&p.root().join("target")).assert();
+    let mut files: Vec<String> = files.iter().filter_map(|f| {
+        match f.filename_str().unwrap() {
+            "deps" => None,
+            s => Some(s.to_str())
+        }
+    }).collect();
+    files.sort();
+    let file0 = files.get(0).as_slice();
+    let file1 = files.get(1).as_slice();
+    assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
+    assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
+            file1.ends_with(os::consts::DLL_SUFFIX));
 })
