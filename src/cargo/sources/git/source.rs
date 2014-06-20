@@ -122,6 +122,11 @@ impl Source for GitSource {
            .map(|pkg| pkg.clone())
            .collect())
     }
+
+    fn fingerprint(&self) -> CargoResult<String> {
+        let db = self.remote.db_at(&self.db_path);
+        db.rev_for(self.reference.as_slice())
+    }
 }
 
 #[cfg(test)]
