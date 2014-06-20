@@ -12,7 +12,8 @@ use util::errors::CargoResult;
  * - The correct input here is not a registry. Resolves should be performable
  * on package summaries vs. the packages themselves.
  */
-pub fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Vec<PackageId>> {
+pub fn resolve<R: Registry>(deps: &[Dependency],
+                            registry: &mut R) -> CargoResult<Vec<PackageId>> {
     log!(5, "resolve; deps={}", deps);
 
     let mut remaining = Vec::from_slice(deps);
@@ -22,7 +23,9 @@ pub fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResul
         let curr = match remaining.pop() {
             Some(curr) => curr,
             None => {
-                let ret = resolve.values().map(|summary| summary.get_package_id().clone()).collect();
+                let ret = resolve.values().map(|summary| {
+                    summary.get_package_id().clone()
+                }).collect();
                 log!(5, "resolve complete; ret={}", ret);
                 return Ok(ret);
             }
@@ -73,23 +76,31 @@ mod test {
     macro_rules! pkg(
         ($name:expr => $($deps:expr),+) => (
             {
-            let source_id = SourceId::new(RegistryKind, url::from_str("http://example.com").unwrap());
-            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| Dependency::parse(*s, "1.0.0", &source_id).unwrap()).collect();
-            Summary::new(&PackageId::new($name, "1.0.0", "http://www.example.com/"), d.as_slice())
+            let url = url::from_str("http://example.com").unwrap();
+            let source_id = SourceId::new(RegistryKind, url);
+            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| {
+                Dependency::parse(*s, "1.0.0", &source_id).unwrap()
+            }).collect();
+            Summary::new(&PackageId::new($name, "1.0.0",
+                                         "http://www.example.com/"),
+                         d.as_slice())
             }
         );
 
         ($name:expr) => (
-            Summary::new(&PackageId::new($name, "1.0.0", "http://www.example.com/"), [])
+            Summary::new(&PackageId::new($name, "1.0.0",
+                                         "http://www.example.com/"), [])
         )
     )
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&PackageId::new(name, "1.0.0", "http://www.example.com/"), &[])
+        Summary::new(&PackageId::new(name, "1.0.0", "http://www.example.com/"),
+                     &[])
     }
 
     fn dep(name: &str) -> Dependency {
-        let source_id = SourceId::new(RegistryKind, url::from_str("http://example.com").unwrap());
+        let url = url::from_str("http://example.com").unwrap();
+        let source_id = SourceId::new(RegistryKind, url);
         Dependency::parse(name, "1.0.0", &source_id).unwrap()
     }
 

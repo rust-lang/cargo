@@ -33,9 +33,14 @@ fn execute(options: Options) -> CliResult<Option<()>> {
         Some(path) => Path::new(path),
         None => try!(find_project(os::getcwd(), "Cargo.toml")
                     .map(|path| path.join("Cargo.toml"))
-                    .map_err(|_|
-                        CliError::new("Could not find Cargo.toml in this directory or any parent directory", 102)))
+                    .map_err(|_| {
+                        CliError::new("Could not find Cargo.toml in this \
+                                       directory or any parent directory",
+                                      102)
+                    }))
     };
 
-    ops::compile(&root).map(|_| None).map_err(|err| CliError::from_boxed(err, 101))
+    ops::compile(&root).map(|_| None).map_err(|err| {
+        CliError::from_boxed(err, 101)
+    })
 }

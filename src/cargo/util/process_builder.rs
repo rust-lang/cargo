@@ -1,8 +1,8 @@
 use std::fmt;
-use std::fmt::{Show,Formatter};
+use std::fmt::{Show, Formatter};
 use std::os;
 use std::path::Path;
-use std::io::process::{Command,ProcessOutput,InheritFd};
+use std::io::process::{Command, ProcessOutput, InheritFd};
 use util::{ProcessError, process_error};
 use std::collections::HashMap;
 
@@ -77,9 +77,12 @@ impl ProcessBuilder {
             .stdout(InheritFd(1))
             .stderr(InheritFd(2));
 
-        let msg = || format!("Could not execute process `{}`", self.debug_string());
+        let msg = || format!("Could not execute process `{}`",
+                             self.debug_string());
 
-        let exit = try!(command.status().map_err(|_| process_error(msg(), &command, None, None)));
+        let exit = try!(command.status().map_err(|_| {
+            process_error(msg(), &command, None, None)
+        }));
 
         if exit.success() {
             Ok(())
@@ -92,14 +95,18 @@ impl ProcessBuilder {
         let mut command = self.build_command();
         command.env(self.build_env().as_slice());
 
-        let msg = || format!("Could not execute process `{}`", self.debug_string());
+        let msg = || format!("Could not execute process `{}`",
+                             self.debug_string());
 
-        let output = try!(command.output().map_err(|_| process_error(msg(), &command, None, None)));
+        let output = try!(command.output().map_err(|_| {
+            process_error(msg(), &command, None, None)
+        }));
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(msg(), &command, Some(&output.status), Some(&output)))
+            Err(process_error(msg(), &command, Some(&output.status),
+                              Some(&output)))
         }
     }
 

@@ -29,14 +29,18 @@ fn execute(options: Options) -> CliResult<Option<()>> {
     let Options { url, reference, .. } = options;
 
     let url: Url = try!(from_str(url.as_slice())
-                        .require(|| human(format!("The URL `{}` you passed was not a valid URL", url)))
+                        .require(|| human(format!("The URL `{}` you passed was \
+                                                   not a valid URL", url)))
                         .map_err(|e| CliError::from_boxed(e, 1)));
 
     let source_id = SourceId::for_git(&url, reference.as_slice());
 
-    let mut source = GitSource::new(&source_id, &try!(Config::new().map_err(|e| CliError::from_boxed(e, 1))));
+    let config = try!(Config::new().map_err(|e| CliError::from_boxed(e, 1)));
+    let mut source = GitSource::new(&source_id, &config);
 
-    try!(source.update().map_err(|e| CliError::new(format!("Couldn't update {}: {}", source, e), 1)));
+    try!(source.update().map_err(|e| {
+        CliError::new(format!("Couldn't update {}: {}", source, e), 1)
+    }));
 
     Ok(None)
 }
