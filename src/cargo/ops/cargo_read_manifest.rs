@@ -20,7 +20,7 @@ pub fn read_package(path: &Path, source_id: &SourceId)
     let (manifest, nested) = cargo_try!(read_manifest(data.as_slice(),
                                                       source_id));
 
-    Ok((Package::new(manifest, path), nested))
+    Ok((Package::new(manifest, path, source_id), nested))
 }
 
 pub fn read_packages(path: &Path, source_id: &SourceId)

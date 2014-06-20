@@ -171,3 +171,83 @@ test!(cargo_compile_with_nested_paths {
       cargo::util::process("parent").extra_path(p.root().join("target")),
       execs().with_stdout("hello world\n"));
 })
+
+test!(recompilation {
+    let git_project = git_repo("bar", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "bar"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]] name = "bar"
+            "#)
+            .file("src/bar.rs", r#"
+                pub fn bar() {}
+            "#)
+    }).assert();
+
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+
+            version = "0.5.0"
+            git = "file://{}"
+
+            [[bin]]
+
+            name = "foo"
+        "#, git_project.root().display()))
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
+
+    // First time around we should compile both foo and bar
+    assert_that(p.cargo_process("cargo-compile"),
+                execs().with_stdout(format!("Updating git repository `file:{}`\n\
+                                             Compiling bar v0.5.0 (file:{})\n\
+                                             Compiling foo v0.5.0 (file:{})\n",
+                                            git_project.root().display(),
+                                            git_project.root().display(),
+                                            p.root().display())));
+    // Don't recompile the second time
+    assert_that(p.process("cargo-compile"),
+                execs().with_stdout(format!("Updating git repository `file:{}`\n\
+                                             Skipping fresh bar v0.5.0 (file:{})\n\
+                                             Skipping fresh foo v0.5.0 (file:{})\n",
+                                            git_project.root().display(),
+                                            git_project.root().display(),
+                                            p.root().display())));
+    // Modify a file manually, shouldn't trigger a recompile
+    File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
+        pub fn bar() { println!("hello!"); }
+    "#).assert();
+    assert_that(p.process("cargo-compile"),
+                execs().with_stdout(format!("Updating git repository `file:{}`\n\
+                                             Skipping fresh bar v0.5.0 (file:{})\n\
+                                             Skipping fresh foo v0.5.0 (file:{})\n",
+                                            git_project.root().display(),
+                                            git_project.root().display(),
+                                            p.root().display())));
+    // Commit the changes and make sure we trigger a recompile
+    File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
+        pub fn bar() { println!("hello!"); }
+    "#).assert();
+    git_project.process("git").args(["add", "."]).exec_with_output().assert();
+    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
+               .assert();
+    assert_that(p.process("cargo-compile"),
+                execs().with_stdout(format!("Updating git repository `file:{}`\n\
+                                             Compiling bar v0.5.0 (file:{})\n\
+                                             Compiling foo v0.5.0 (file:{})\n",
+                                            git_project.root().display(),
+                                            git_project.root().display(),
+                                            p.root().display())));
+})

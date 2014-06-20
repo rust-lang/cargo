@@ -1,6 +1,9 @@
+use std::cmp;
+use std::fmt::{Show, Formatter};
 use std::fmt;
-use std::fmt::{Show,Formatter};
-use core::{Package,PackageId,Summary,SourceId,Source};
+use std::io::fs;
+
+use core::{Package, PackageId, Summary, SourceId, Source};
 use ops;
 use util::{CargoResult, internal};
 
@@ -81,5 +84,19 @@ impl Source for PathSource {
            .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
            .map(|pkg| pkg.clone())
            .collect())
+    }
+
+    fn fingerprint(&self) -> CargoResult<String> {
+        let mut max = None;
+        let target_dir = self.path().join("target");
+        for child in cargo_try!(fs::walk_dir(&self.path())) {
+            if target_dir.is_ancestor_of(&child) { continue }
+            let stat = cargo_try!(fs::stat(&child));
+            max = cmp::max(max, Some(stat.modified));
+        }
+        match max {
+            None => Ok(String::new()),
+            Some(time) => Ok(time.to_str()),
+        }
     }
 }
