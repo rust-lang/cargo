@@ -1,8 +1,9 @@
-use std::slice;
-use std::fmt;
+use std::cmp;
 use std::fmt::{Show,Formatter};
-use std::path::Path;
+use std::fmt;
+use std::slice;
 use semver::Version;
+
 use core::{
     Dependency,
     Manifest,
@@ -12,9 +13,9 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
-use util::{CargoResult, graph};
+use util::{CargoResult, graph, Config};
 use serialize::{Encoder,Encodable};
-use core::source::SourceId;
+use core::source::{SourceId, SourceSet, Source};
 
 // TODO: Is manifest_path a relic?
 #[deriving(Clone,PartialEq)]
@@ -23,6 +24,8 @@ pub struct Package {
     manifest: Manifest,
     // The root of the package
     manifest_path: Path,
+    // Where this package came from
+    source_id: SourceId,
 }
 
 #[deriving(Encodable)]
@@ -32,7 +35,7 @@ struct SerializedPackage {
     dependencies: Vec<SerializedDependency>,
     authors: Vec<String>,
     targets: Vec<Target>,
-    manifest_path: String
+    manifest_path: String,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Package {
@@ -55,10 +58,13 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
 }
 
 impl Package {
-    pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
+    pub fn new(manifest: Manifest,
+               manifest_path: &Path,
+               source_id: &SourceId) -> Package {
         Package {
             manifest: manifest,
-            manifest_path: manifest_path.clone()
+            manifest_path: manifest_path.clone(),
+            source_id: source_id.clone(),
         }
     }
 
@@ -107,9 +113,22 @@ impl Package {
     }
 
     pub fn get_source_ids(&self) -> Vec<SourceId> {
-        let mut ret = vec!(SourceId::for_path(&self.get_root()));
+        let mut ret = vec!(self.source_id.clone());
         ret.push_all(self.manifest.get_source_ids());
         ret
+    }
+
+    pub fn get_fingerprint(&self, config: &Config) -> CargoResult<String> {
+        let mut sources = self.get_source_ids();
+        // Sort the sources just to make sure we have a consistent fingerprint.
+        sources.sort_by(|a, b| {
+            cmp::lexical_ordering(a.kind.cmp(&b.kind),
+                                  a.url.to_str().cmp(&b.url.to_str()))
+        });
+        let sources = sources.iter().map(|source_id| {
+            source_id.load(config)
+        }).collect::<Vec<_>>();
+        SourceSet::new(sources).fingerprint()
     }
 }
 
