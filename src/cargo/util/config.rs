@@ -11,8 +11,9 @@ pub struct Config {
 impl Config {
     pub fn new() -> CargoResult<Config> {
         Ok(Config {
-            home_path: cargo_try!(os::homedir()
-                            .require(|| human("Couldn't find the home directory")))
+            home_path: cargo_try!(os::homedir().require(|| {
+                human("Couldn't find the home directory")
+            }))
         })
     }
 
@@ -89,7 +90,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
 
 impl fmt::Show for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let paths: Vec<String> = self.path.iter().map(|p| p.display().to_str()).collect();
+        let paths: Vec<String> = self.path.iter().map(|p| {
+            p.display().to_str()
+        }).collect();
         write!(f, "{} (from {})", self.value, paths)
     }
 }
@@ -109,13 +112,16 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     Ok(map)
 }
 
-fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoResult<T> {
+fn find_in_tree<T>(pwd: &Path,
+                   walk: |io::fs::File| -> CargoResult<T>) -> CargoResult<T> {
     let mut current = pwd.clone();
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| internal("could not open file")));
+            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| {
+                internal("could not open file")
+            }));
             match walk(file) {
                 Ok(res) => return Ok(res),
                 _ => ()
@@ -128,14 +134,17 @@ fn find_in_tree<T>(pwd: &Path, walk: |io::fs::File| -> CargoResult<T>) -> CargoR
     Err(internal(""))
 }
 
-fn walk_tree(pwd: &Path, walk: |io::fs::File| -> CargoResult<()>) -> CargoResult<()> {
+fn walk_tree(pwd: &Path,
+             walk: |io::fs::File| -> CargoResult<()>) -> CargoResult<()> {
     let mut current = pwd.clone();
     let mut err = false;
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| internal("could not open file")));
+            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| {
+                internal("could not open file")
+            }));
             match walk(file) {
                 Err(_) => err = false,
                 _ => ()
@@ -155,34 +164,48 @@ fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
     let root = cargo_try!(toml::parse_from_buffer(&mut buf));
     let val = cargo_try!(root.lookup(key).require(|| internal("")));
 
-    let v = match val {
-        &toml::String(ref val) => String(val.clone()),
-        &toml::Array(ref val) => List(val.iter().map(|s: &toml::Value| s.to_str()).collect()),
+    let v = match *val {
+        toml::String(ref val) => String(val.clone()),
+        toml::Array(ref val) => {
+            List(val.iter().map(|s: &toml::Value| s.to_str()).collect())
+        }
         _ => return Err(internal(""))
     };
 
     Ok(ConfigValue{ value: v, path: vec!(path) })
 }
 
-fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue>) -> CargoResult<()> {
+fn extract_all_configs(file: io::fs::File,
+                       map: &mut HashMap<String, ConfigValue>) -> CargoResult<()> {
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
-    let root = cargo_try!(toml::parse_from_buffer(&mut buf).chain_error(||
-        internal(format!("could not parse Toml manifest; path={}", path.display()))));
+    let root = cargo_try!(toml::parse_from_buffer(&mut buf).chain_error(|| {
+        internal(format!("could not parse Toml manifest; path={}",
+                         path.display()))
+    }));
 
-    let table = cargo_try!(root.get_table().require(||
-        internal(format!("could not parse Toml manifest; path={}", path.display()))));
+    let table = cargo_try!(root.get_table().require(|| {
+        internal(format!("could not parse Toml manifest; path={}",
+                         path.display()))
+    }));
 
     for (key, value) in table.iter() {
         match value {
-            &toml::String(ref val) => { map.insert(key.clone(), ConfigValue { value: String(val.clone()), path: vec!(path.clone()) }); }
+            &toml::String(ref val) => {
+                map.insert(key.clone(), ConfigValue {
+                    value: String(val.clone()),
+                    path: vec!(path.clone())
+                });
+            }
             &toml::Array(ref val) => {
                 let config = map.find_or_insert_with(key.clone(), |_| {
                     ConfigValue { path: vec!(), value: List(vec!()) }
                 });
 
-                cargo_try!(merge_array(config, val.as_slice(), &path).chain_error(||
-                    internal(format!("The `{}` key in your config", key))));
+                cargo_try!(merge_array(config, val.as_slice(),
+                                       &path).chain_error(|| {
+                    internal(format!("The `{}` key in your config", key))
+                }));
             },
             _ => ()
         }
@@ -191,15 +214,19 @@ fn extract_all_configs(file: io::fs::File, map: &mut HashMap<String, ConfigValue
     Ok(())
 }
 
-fn merge_array(existing: &mut ConfigValue, val: &[toml::Value], path: &Path) -> CargoResult<()> {
+fn merge_array(existing: &mut ConfigValue, val: &[toml::Value],
+               path: &Path) -> CargoResult<()> {
     match existing.value {
-        String(_) => return Err(internal("should be an Array, but it was a String")),
+        String(_) => Err(internal("should be an Array, but it was a String")),
         List(ref mut list) => {
-            let new_list: Vec<CargoResult<String>> = val.iter().map(|s: &toml::Value| toml_string(s)).collect();
+            let new_list: Vec<CargoResult<String>> =
+                val.iter().map(toml_string).collect();
             if new_list.iter().any(|v| v.is_err()) {
-                return Err(internal("should be an Array of Strings, but was an Array of other values"));
+                return Err(internal("should be an Array of Strings, but \
+                                     was an Array of other values"));
             } else {
-                let new_list: Vec<String> = new_list.move_iter().map(|v| v.unwrap()).collect();
+                let new_list: Vec<String> =
+                    new_list.move_iter().map(|v| v.unwrap()).collect();
                 list.push_all(new_list.as_slice());
                 existing.path.push(path.clone());
                 Ok(())

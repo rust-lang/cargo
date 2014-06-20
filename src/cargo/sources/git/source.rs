@@ -111,7 +111,8 @@ impl Source for GitSource {
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages for package ids `{}` from `{}`", ids, self.remote);
+        log!(5, "getting packages for package ids `{}` from `{}`", ids,
+             self.remote);
 
         // TODO: Support multiple manifests per repo
         let pkgs = try!(self.packages());

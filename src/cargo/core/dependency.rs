@@ -10,7 +10,8 @@ pub struct Dependency {
 }
 
 impl Dependency {
-    pub fn new(name: &str, req: &VersionReq, namespace: &SourceId) -> Dependency {
+    pub fn new(name: &str, req: &VersionReq,
+               namespace: &SourceId) -> Dependency {
         Dependency {
             name: name.to_str(),
             namespace: namespace.clone(),
@@ -18,7 +19,8 @@ impl Dependency {
         }
     }
 
-    pub fn parse(name: &str, version: &str, namespace: &SourceId) -> CargoResult<Dependency> {
+    pub fn parse(name: &str, version: &str,
+                 namespace: &SourceId) -> CargoResult<Dependency> {
         Ok(Dependency {
             name: name.to_str(),
             namespace: namespace.clone(),
@@ -26,7 +28,8 @@ impl Dependency {
         })
     }
 
-    pub fn exact(name: &str, version: &Version, namespace: &SourceId) -> Dependency {
+    pub fn exact(name: &str, version: &Version,
+                 namespace: &SourceId) -> Dependency {
         Dependency {
             name: name.to_str(),
             namespace: namespace.clone(),
