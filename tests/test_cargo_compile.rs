@@ -517,12 +517,14 @@ test!(many_crate_types {
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
             "deps" => None,
+            s if !s.starts_with("lib") => None,
             s => Some(s.to_str())
         }
     }).collect();
     files.sort();
     let file0 = files.get(0).as_slice();
     let file1 = files.get(1).as_slice();
+    println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
     assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
             file1.ends_with(os::consts::DLL_SUFFIX));

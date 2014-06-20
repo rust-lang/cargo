@@ -156,6 +156,10 @@ impl GitRemote {
         Ok(GitDatabase { remote: self.clone(), path: into.clone() })
     }
 
+    pub fn db_at(&self, db_path: &Path) -> GitDatabase {
+        GitDatabase { remote: self.clone(), path: db_path.clone() }
+    }
+
     fn fetch_into(&self, path: &Path) -> CargoResult<()> {
         Ok(git!(*path, "fetch --force --quiet --tags {} \
                         refs/heads/*:refs/heads/*", self.fetch_location()))
@@ -184,7 +188,7 @@ impl GitDatabase {
     }
 
     pub fn copy_to<S: Str>(&self, reference: S,
-    dest: &Path) -> CargoResult<GitCheckout> {
+                           dest: &Path) -> CargoResult<GitCheckout> {
         let checkout = cargo_try!(GitCheckout::clone_into(dest, self.clone(),
                                   GitReference::for_str(reference.as_slice())));
 
@@ -246,6 +250,19 @@ impl GitCheckout {
     }
 
     fn fetch(&self) -> CargoResult<()> {
+        // In git 1.8, apparently --tags explicitly *only* fetches tags, it does
+        // not fetch anything else. In git 1.9, however, git apparently fetches
+        // everything when --tags is passed.
+        //
+        // This means that if we want to fetch everything we need to execute
+        // both with and without --tags on 1.8 (apparently), and only with
+        // --tags on 1.9. For simplicity, we execute with and without --tags for
+        // all gits.
+        //
+        // FIXME: This is suspicious. I have been informated that, for example,
+        //        bundler does not do this, yet bundler appears to work!
+        git!(self.location, "fetch --force --quiet {}",
+             self.get_source().display());
         git!(self.location, "fetch --force --quiet --tags {}",
              self.get_source().display());
         cargo_try!(self.reset(self.revision.as_slice()));

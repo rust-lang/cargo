@@ -27,9 +27,17 @@ pub trait Source {
     /// and that the packages are already locally available on the file
     /// system.
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
+
+    /// Generates a unique string which represents the fingerprint of the
+    /// current state of the source.
+    ///
+    /// This fingerprint is used to determine the "fresheness" of the source
+    /// later on. It must be guaranteed that the fingerprint of a source is
+    /// constant if and only if the output product will remain constant.
+    fn fingerprint(&self) -> CargoResult<String>;
 }
 
-#[deriving(Show,Clone,PartialEq)]
+#[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SourceKind {
     /// GitKind(<git reference>) represents a git repository
     GitKind(String),
@@ -137,5 +145,13 @@ impl Source for SourceSet {
         }
 
         Ok(ret)
+    }
+
+    fn fingerprint(&self) -> CargoResult<String> {
+        let mut ret = String::new();
+        for source in self.sources.iter() {
+            ret.push_str(try!(source.fingerprint()).as_slice());
+        }
+        return Ok(ret);
     }
 }
