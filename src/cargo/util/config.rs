@@ -12,7 +12,8 @@ impl Config {
     pub fn new() -> CargoResult<Config> {
         Ok(Config {
             home_path: try!(os::homedir().require(|| {
-                human("Couldn't find the home directory")
+                human("Cargo couldn't find your home directory. \
+                      This probably means that $HOME was not set.")
             }))
         })
     }
@@ -99,15 +100,15 @@ impl fmt::Show for ConfigValue {
 
 pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
     find_in_tree(&pwd, |file| extract_config(file, key)).map_err(|_|
-        internal(format!("config key not found; key={}", key)))
+        human(format!("`{}` not found in your configuration", key)))
 }
 
 pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     let mut map = HashMap::new();
 
-    try!(walk_tree(&pwd, |file| {
-        extract_all_configs(file, &mut map)
-    }));
+    try!(walk_tree(&pwd, |file| extract_all_configs(file, &mut map)).map_err(|_|
+        human("Couldn't load Cargo configuration")));
+
 
     Ok(map)
 }
@@ -119,9 +120,8 @@ fn find_in_tree<T>(pwd: &Path,
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible).chain_error(|| {
-                internal("could not open file")
-            }));
+            let file = try!(io::fs::File::open(&possible));
+
             match walk(file) {
                 Ok(res) => return Ok(res),
                 _ => ()
@@ -142,9 +142,8 @@ fn walk_tree(pwd: &Path,
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible).chain_error(|| {
-                internal("could not open file")
-            }));
+            let file = try!(io::fs::File::open(&possible));
+
             match walk(file) {
                 Err(_) => err = false,
                 _ => ()

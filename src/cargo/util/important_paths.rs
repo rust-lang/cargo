@@ -1,4 +1,4 @@
-use util::{CargoResult, CargoError, internal_error};
+use util::{CargoResult, human};
 
 pub fn find_project(pwd: Path, file: &str) -> CargoResult<Path> {
     let mut current = pwd.clone();
@@ -11,10 +11,5 @@ pub fn find_project(pwd: Path, file: &str) -> CargoResult<Path> {
         if !current.pop() { break; }
     }
 
-    Err(manifest_missing_err(&pwd, file.as_slice()))
-}
-
-fn manifest_missing_err(pwd: &Path, file: &str) -> Box<CargoError> {
-    internal_error("manifest not found",
-                   format!("pwd={}; file={}", pwd.display(), file))
+    Err(human(format!("no manifest found in `{}`", pwd.display())))
 }
