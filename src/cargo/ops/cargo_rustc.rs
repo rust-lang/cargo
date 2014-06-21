@@ -26,7 +26,7 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
     let target_dir = pkg.get_absolute_target_dir();
     let deps_target_dir = target_dir.join("deps");
 
-    let output = cargo_try!(util::process("rustc").arg("-v").exec_with_output());
+    let output = try!(util::process("rustc").arg("-v").exec_with_output());
     let rustc_version = str::from_utf8(output.output.as_slice()).unwrap();
 
     // First ensure that the destination directory exists
@@ -97,7 +97,7 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
 
     // Now that everything has successfully compiled, write our new fingerprint
     // to the relevant location to prevent recompilations in the future.
-    cargo_try!(File::create(&fingerprint_loc).write_str(fingerprint.as_slice()));
+    try!(File::create(&fingerprint_loc).write_str(fingerprint.as_slice()));
     cx.compiled_anything = true;
 
     Ok(())
@@ -111,7 +111,7 @@ fn is_fresh(dep: &Package, loc: &Path,
         Ok(file) => file,
         Err(..) => return Ok((false, new_fingerprint)),
     };
-    let old_fingerprint = cargo_try!(file.read_to_str());
+    let old_fingerprint = try!(file.read_to_str());
 
     log!(5, "old fingerprint: {}", old_fingerprint);
     log!(5, "new fingerprint: {}", new_fingerprint);

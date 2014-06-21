@@ -64,7 +64,7 @@ macro_rules! from_error (
 
 impl Show for Box<CargoError> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        cargo_try!(write!(f, "{}", self.description()));
+        try!(write!(f, "{}", self.description()));
         Ok(())
     }
 }
@@ -156,18 +156,18 @@ impl Show for ProcessError {
             Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
             None => "never executed".to_str()
         };
-        cargo_try!(write!(f, "{} (status={})", self.msg, exit));
+        try!(write!(f, "{} (status={})", self.msg, exit));
         match self.output {
             Some(ref out) => {
                 match str::from_utf8(out.output.as_slice()) {
                     Some(s) if s.trim().len() > 0 => {
-                        cargo_try!(write!(f, "\n--- stdout\n{}", s));
+                        try!(write!(f, "\n--- stdout\n{}", s));
                     }
                     Some(..) | None => {}
                 }
                 match str::from_utf8(out.error.as_slice()) {
                     Some(s) if s.trim().len() > 0 => {
-                        cargo_try!(write!(f, "\n--- stderr\n{}", s));
+                        try!(write!(f, "\n--- stderr\n{}", s));
                     }
                     Some(..) | None => {}
                 }
