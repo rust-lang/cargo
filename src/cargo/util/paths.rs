@@ -27,7 +27,7 @@ pub fn realpath(original: &Path) -> io::IoResult<Path> {
                 Ok(ref stat) if stat.kind != io::TypeSymlink => break,
                 Ok(..) => {
                     followed += 1;
-                    let path = try!(fs::readlink(&result));
+                    let path = cargo_try!(fs::readlink(&result));
                     result.pop();
                     result.push(path);
                 }

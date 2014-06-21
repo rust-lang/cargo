@@ -2,7 +2,7 @@ use std::{io,fmt,os};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
-use util::{CargoResult, ChainError, Require, internal, human};
+use util::{CargoResult, CargoError, ChainError, Require, internal, human};
 
 pub struct Config {
     home_path: Path

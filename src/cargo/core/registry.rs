@@ -1,6 +1,6 @@
 use std::vec::Vec;
 use core::{Source, SourceId, Summary, Dependency, PackageId, Package};
-use util::{CargoResult,Config};
+use util::{CargoResult, ChainError, Config, human};
 
 pub trait Registry {
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
@@ -77,32 +77,35 @@ impl PackageRegistry {
 
     fn load(&mut self, namespace: &SourceId,
             override: bool) -> CargoResult<()> {
-        let mut source = namespace.load(&try!(Config::new()));
-        let dst = if override {&mut self.overrides} else {&mut self.summaries};
 
-        // Ensure the source has fetched all necessary remote data.
-        try!(source.update());
+        (|| {
+            let mut source = namespace.load(&try!(Config::new()));
+            let dst = if override {&mut self.overrides} else {&mut self.summaries};
 
-        // Get the summaries
-        for summary in (try!(source.list())).iter() {
-            assert!(!dst.contains(summary), "duplicate summaries");
-            dst.push(summary.clone());
-            // self.summaries.push(summary.clone());
-        }
+            // Ensure the source has fetched all necessary remote data.
+            try!(source.update());
 
-        // Save off the source
-        self.sources.push(source);
+            // Get the summaries
+            for summary in (try!(source.list())).iter() {
+                assert!(!dst.contains(summary), "duplicate summaries");
+                dst.push(summary.clone());
+                // self.summaries.push(summary.clone());
+            }
 
-        // Track that the source has been searched
-        self.searched.push(namespace.clone());
+            // Save off the source
+            self.sources.push(source);
 
-        Ok(())
+            // Track that the source has been searched
+            self.searched.push(namespace.clone());
+
+            Ok(())
+        }).chain_error(|| human(format!("Unable to update {}", namespace)))
     }
 }
 
 impl Registry for PackageRegistry {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let overrides = try!(self.overrides.query(dep));
+        let overrides = try!(self.overrides.query(dep)); // this can never fail in practice
 
         if overrides.is_empty() {
             // Ensure the requested namespace is loaded
