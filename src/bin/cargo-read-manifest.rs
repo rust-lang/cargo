@@ -1,10 +1,12 @@
 #![crate_id="cargo-read-manifest"]
+#![feature(phase)]
 
 extern crate cargo;
 extern crate serialize;
+
+#[phase(plugin, link)]
 extern crate hammer;
 
-use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin};
 use cargo::core::{Package, Source, SourceId};
 use cargo::util::{CliResult, CliError};
@@ -15,7 +17,7 @@ struct Options {
     manifest_path: String
 }
 
-impl FlagConfig for Options {}
+hammer_config!(Options)
 
 fn main() {
     execute_main_without_stdin(execute);

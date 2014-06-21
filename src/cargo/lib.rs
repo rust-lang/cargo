@@ -8,8 +8,10 @@ extern crate term;
 extern crate url;
 extern crate serialize;
 extern crate semver;
-extern crate hammer;
 extern crate toml = "github.com/mneumann/rust-toml#toml";
+
+#[phase(plugin, link)]
+extern crate hammer;
 
 #[phase(plugin, link)]
 extern crate log;
@@ -19,7 +21,7 @@ extern crate hamcrest;
 
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
 use std::io;
-use hammer::{FlagDecoder, FlagConfig, HammerError, FlagConfiguration};
+use hammer::{FlagDecoder, FlagConfig, UsageDecoder, HammerError, FlagConfiguration};
 
 pub use util::{CargoError, CliError, CliResult, human};
 
@@ -56,28 +58,50 @@ pub mod ops;
 pub mod sources;
 pub mod util;
 
-trait RepresentsFlags : FlagConfig + Decodable<FlagDecoder, HammerError> {}
-impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> RepresentsFlags for T {}
+trait FlagParse : FlagConfig {
+    fn decode_flags(d: &mut FlagDecoder) -> Result<Self, HammerError>;
+}
+
+trait FlagUsage : FlagConfig {
+    fn decode_usage(d: &mut UsageDecoder) -> Result<Self, HammerError>;
+}
+
+//impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> FlagParse for T {}
+//impl<T: FlagConfig + Decodable<UsageDecoder, HammerError>> FlagUsage for T {}
+
+impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> FlagParse for T {
+    fn decode_flags(d: &mut FlagDecoder) -> Result<T, HammerError> {
+        Decodable::decode(d)
+    }
+}
+
+impl<T: FlagConfig + Decodable<UsageDecoder, HammerError>> FlagUsage for T {
+    fn decode_usage(d: &mut UsageDecoder) -> Result<T, HammerError> {
+        Decodable::decode(d)
+    }
+}
+
+trait RepresentsFlags : FlagParse + Decodable<UsageDecoder, HammerError> {}
+impl<T: FlagParse + Decodable<UsageDecoder, HammerError>> RepresentsFlags for T {}
 
 trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
-impl <T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
+impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
 #[deriving(Decodable)]
 pub struct NoFlags;
 
-impl FlagConfig for NoFlags {}
+hammer_config!(NoFlags)
 
 #[deriving(Decodable)]
 pub struct GlobalFlags {
     verbose: bool,
+    help: bool,
     rest: Vec<String>
 }
 
-impl FlagConfig for GlobalFlags {
-    fn config(_: Option<GlobalFlags>, c: FlagConfiguration) -> FlagConfiguration {
-        c.short("verbose", 'v')
-    }
-}
+hammer_config!(GlobalFlags |c| {
+    c.short("verbose", 'v').short("help", 'h')
+})
 
 pub fn execute_main<'a,
                     T: RepresentsFlags,
@@ -124,7 +148,16 @@ pub fn execute_main_without_stdin<'a,
 
     match global_flags() {
         Err(e) => handle_error(e, true),
-        Ok(val) => process_executed(call(exec, val.rest.as_slice()), val)
+        Ok(val) => {
+            if val.help {
+                println!("Usage:\n");
+
+                print!("{}", hammer::usage::<T>(true));
+                print!("{}", hammer::usage::<GlobalFlags>(false));
+            } else {
+                process_executed(call(exec, val.rest.as_slice()), val)
+            }
+        }
     }
 }
 
@@ -170,7 +203,7 @@ fn args() -> Vec<String> {
 
 fn flags_from_args<T: RepresentsFlags>(args: &[String]) -> CliResult<T> {
     let mut decoder = FlagDecoder::new::<T>(args);
-    Decodable::decode(&mut decoder).map_err(|e: HammerError| {
+    FlagParse::decode_flags(&mut decoder).map_err(|e: HammerError| {
         CliError::new(e.message, 1)
     })
 }
