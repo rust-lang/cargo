@@ -1,5 +1,9 @@
+use std::fmt;
+use std::fmt::{Show, Formatter};
+
 use url;
 use url::Url;
+
 use core::{Summary,Package,PackageId};
 use sources::{PathSource,GitSource};
 use util::{Config,CargoResult};
@@ -47,10 +51,32 @@ pub enum SourceKind {
     RegistryKind
 }
 
-#[deriving(Show,Clone,PartialEq)]
+#[deriving(Clone,PartialEq)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub url: Url
+}
+
+impl Show for SourceId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match *self {
+            SourceId { kind: PathKind, ref url } => {
+                try!(write!(f, "{}", url))
+            },
+            SourceId { kind: GitKind(ref reference), ref url } => {
+                try!(write!(f, "{}", url));
+                if reference.as_slice() != "master" {
+                    try!(write!(f, " (ref={})", reference));
+                }
+            },
+            SourceId { kind: RegistryKind, .. } => {
+                // TODO: Central registry vs. alternates
+                try!(write!(f, "the package registry"));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl SourceId {

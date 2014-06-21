@@ -1,7 +1,7 @@
 use std::io::process::{Command,ProcessOutput,ProcessExit,ExitStatus,ExitSignal};
 use std::io::IoError;
 use std::fmt;
-use std::fmt::{Show, Formatter};
+use std::fmt::{Show, Formatter, FormatError};
 use std::str;
 
 use TomlError = toml::Error;
@@ -64,7 +64,7 @@ macro_rules! from_error (
 
 impl Show for Box<CargoError> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "{}", self.description()));
+        cargo_try!(write!(f, "{}", self.description()));
         Ok(())
     }
 }
@@ -101,6 +101,12 @@ pub trait ChainError<T> {
     fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T> ;
 }
 
+impl<'a, T> ChainError<T> for ||:'a -> CargoResult<T> {
+    fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T> {
+        self().map_err(|err| callback().with_cause(err))
+    }
+}
+
 impl<T, E: CargoError> BoxError<T> for Result<T, E> {
     fn box_error(self) -> CargoResult<T> {
         self.map_err(|err| err.box_error())
@@ -109,9 +115,7 @@ impl<T, E: CargoError> BoxError<T> for Result<T, E> {
 
 impl<T, E: CargoError> ChainError<T> for Result<T, E> {
     fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T>  {
-        self.map_err(|err| {
-            callback().with_cause(err)
-        })
+        self.map_err(|err| callback().with_cause(err))
     }
 }
 
@@ -126,6 +130,14 @@ impl CargoError for TomlError {
 }
 
 from_error!(TomlError)
+
+impl CargoError for FormatError {
+    fn description(&self) -> String {
+        "formatting failed".to_str()
+    }
+}
+
+from_error!(FormatError)
 
 pub struct ProcessError {
     pub msg: String,
@@ -144,18 +156,18 @@ impl Show for ProcessError {
             Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
             None => "never executed".to_str()
         };
-        try!(write!(f, "{} (status={})", self.msg, exit));
+        cargo_try!(write!(f, "{} (status={})", self.msg, exit));
         match self.output {
             Some(ref out) => {
                 match str::from_utf8(out.output.as_slice()) {
                     Some(s) if s.trim().len() > 0 => {
-                        try!(write!(f, "\n--- stdout\n{}", s));
+                        cargo_try!(write!(f, "\n--- stdout\n{}", s));
                     }
                     Some(..) | None => {}
                 }
                 match str::from_utf8(out.error.as_slice()) {
                     Some(s) if s.trim().len() > 0 => {
-                        try!(write!(f, "\n--- stderr\n{}", s));
+                        cargo_try!(write!(f, "\n--- stderr\n{}", s));
                     }
                     Some(..) | None => {}
                 }
@@ -231,6 +243,14 @@ pub struct CliError {
     pub error: Box<CargoError>,
     pub exit_code: uint
 }
+
+impl CargoError for CliError {
+    fn description(&self) -> String {
+        self.error.to_str()
+    }
+}
+
+from_error!(CliError)
 
 impl CliError {
     pub fn new<S: Str>(error: S, code: uint) -> CliError {

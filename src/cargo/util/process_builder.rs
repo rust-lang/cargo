@@ -17,10 +17,10 @@ pub struct ProcessBuilder {
 
 impl Show for ProcessBuilder {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", self.program));
+        cargo_try!(write!(f, "`{}", self.program));
 
         if self.args.len() > 0 {
-            try!(write!(f, " {}", self.args.connect(" ")));
+            cargo_try!(write!(f, " {}", self.args.connect(" ")));
         }
 
         write!(f, "`")
@@ -80,7 +80,7 @@ impl ProcessBuilder {
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
 
-        let exit = try!(command.status().map_err(|_| {
+        let exit = cargo_try!(command.status().map_err(|_| {
             process_error(msg(), &command, None, None)
         }));
 
@@ -98,7 +98,7 @@ impl ProcessBuilder {
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
 
-        let output = try!(command.output().map_err(|_| {
+        let output = cargo_try!(command.output().map_err(|_| {
             process_error(msg(), &command, None, None)
         }));
 
