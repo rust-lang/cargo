@@ -10,6 +10,8 @@ use serialize::{
     Decoder
 };
 
+use util::{CargoError, FromError};
+
 trait ToVersion {
     fn to_version(self) -> Option<semver::Version>;
 }
@@ -92,7 +94,7 @@ impl Show for PackageId {
     }
 }
 
-impl<E, D: Decoder<E>> Decodable<D,E> for PackageId {
+impl<E: CargoError + FromError<E>, D: Decoder<E>> Decodable<D,E> for PackageId {
     fn decode(d: &mut D) -> Result<PackageId, E> {
         let vector: Vec<String> = try!(Decodable::decode(d));
 

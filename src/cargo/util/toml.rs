@@ -11,10 +11,10 @@ use util::{CargoResult, Require, human};
 
 pub fn to_manifest(contents: &[u8],
                    source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
-    let root = cargo_try!(toml::parse_from_bytes(contents).map_err(|_| {
+    let root = try!(toml::parse_from_bytes(contents).map_err(|_| {
         human("Cargo.toml is not valid Toml")
     }));
-    let toml = cargo_try!(toml_to_manifest(root).map_err(|_| {
+    let toml = try!(toml_to_manifest(root).map_err(|_| {
         human("Cargo.toml is not a valid manifest")
     }));
 
@@ -33,7 +33,7 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
         toml::from_toml(root.clone())
     }
 
-    let project = cargo_try!(decode(&root, "project"));
+    let project = try!(decode(&root, "project"));
     let lib = decode(&root, "lib").ok();
     let bin = decode(&root, "bin").ok();
 
@@ -41,7 +41,7 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
 
     let deps = match deps {
         Some(deps) => {
-            let table = cargo_try!(deps.get_table().require(|| {
+            let table = try!(deps.get_table().require(|| {
                 human("dependencies must be a table")
             })).clone();
 
@@ -56,14 +56,14 @@ fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
                         let mut details = HashMap::<String, String>::new();
 
                         for (k, v) in table.iter() {
-                            let v = cargo_try!(v.get_str().require(|| {
+                            let v = try!(v.get_str().require(|| {
                                 human("dependency values must be string")
                             }));
 
                             details.insert(k.clone(), v.clone());
                         }
 
-                        let version = cargo_try!(details.find_equiv(&"version")
+                        let version = try!(details.find_equiv(&"version")
                                            .require(|| {
                             human("dependencies must include a version")
                         })).clone();
@@ -178,7 +178,7 @@ impl TomlManifest {
                         }
                     };
 
-                    deps.push(cargo_try!(Dependency::parse(n.as_slice(),
+                    deps.push(try!(Dependency::parse(n.as_slice(),
                                                      version.as_slice(),
                                                      &source_id)))
                 }

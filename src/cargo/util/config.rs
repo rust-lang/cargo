@@ -11,7 +11,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> CargoResult<Config> {
         Ok(Config {
-            home_path: cargo_try!(os::homedir().require(|| {
+            home_path: try!(os::homedir().require(|| {
                 human("Couldn't find the home directory")
             }))
         })
@@ -51,10 +51,10 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValueValue {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         match self {
             &String(ref string) => {
-                try!(string.encode(s));
+                raw_try!(string.encode(s));
             },
             &List(ref list) => {
-                try!(list.encode(s));
+                raw_try!(list.encode(s));
             }
         }
 
@@ -81,8 +81,8 @@ impl ConfigValue {
 impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         s.emit_map(2, |s| {
-            try!(s.emit_map_elt_key(0, |s| "value".encode(s)));
-            try!(s.emit_map_elt_val(0, |s| self.value.encode(s)));
+            raw_try!(s.emit_map_elt_key(0, |s| "value".encode(s)));
+            raw_try!(s.emit_map_elt_val(0, |s| self.value.encode(s)));
             Ok(())
         })
     }
@@ -105,7 +105,7 @@ pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
 pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     let mut map = HashMap::new();
 
-    cargo_try!(walk_tree(&pwd, |file| {
+    try!(walk_tree(&pwd, |file| {
         extract_all_configs(file, &mut map)
     }));
 
@@ -119,7 +119,7 @@ fn find_in_tree<T>(pwd: &Path,
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| {
+            let file = try!(io::fs::File::open(&possible).chain_error(|| {
                 internal("could not open file")
             }));
             match walk(file) {
@@ -142,7 +142,7 @@ fn walk_tree(pwd: &Path,
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = cargo_try!(io::fs::File::open(&possible).chain_error(|| {
+            let file = try!(io::fs::File::open(&possible).chain_error(|| {
                 internal("could not open file")
             }));
             match walk(file) {
@@ -161,8 +161,8 @@ fn walk_tree(pwd: &Path,
 fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
-    let root = cargo_try!(toml::parse_from_buffer(&mut buf));
-    let val = cargo_try!(root.lookup(key).require(|| internal("")));
+    let root = try!(toml::parse_from_buffer(&mut buf));
+    let val = try!(root.lookup(key).require(|| internal("")));
 
     let v = match *val {
         toml::String(ref val) => String(val.clone()),
@@ -179,12 +179,12 @@ fn extract_all_configs(file: io::fs::File,
                        map: &mut HashMap<String, ConfigValue>) -> CargoResult<()> {
     let path = file.path().clone();
     let mut buf = io::BufferedReader::new(file);
-    let root = cargo_try!(toml::parse_from_buffer(&mut buf).chain_error(|| {
+    let root = try!(toml::parse_from_buffer(&mut buf).chain_error(|| {
         internal(format!("could not parse Toml manifest; path={}",
                          path.display()))
     }));
 
-    let table = cargo_try!(root.get_table().require(|| {
+    let table = try!(root.get_table().require(|| {
         internal(format!("could not parse Toml manifest; path={}",
                          path.display()))
     }));
@@ -202,7 +202,7 @@ fn extract_all_configs(file: io::fs::File,
                     ConfigValue { path: vec!(), value: List(vec!()) }
                 });
 
-                cargo_try!(merge_array(config, val.as_slice(),
+                try!(merge_array(config, val.as_slice(),
                                        &path).chain_error(|| {
                     internal(format!("The `{}` key in your config", key))
                 }));

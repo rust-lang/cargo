@@ -89,9 +89,9 @@ impl Source for PathSource {
     fn fingerprint(&self) -> CargoResult<String> {
         let mut max = None;
         let target_dir = self.path().join("target");
-        for child in cargo_try!(fs::walk_dir(&self.path())) {
+        for child in try!(fs::walk_dir(&self.path())) {
             if target_dir.is_ancestor_of(&child) { continue }
-            let stat = cargo_try!(fs::stat(&child));
+            let stat = try!(fs::stat(&child));
             max = cmp::max(max, Some(stat.modified));
         }
         match max {

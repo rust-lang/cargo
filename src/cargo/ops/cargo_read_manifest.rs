@@ -15,9 +15,9 @@ pub fn read_package(path: &Path, source_id: &SourceId)
     -> CargoResult<(Package, Vec<Path>)>
 {
     log!(5, "read_package; path={}; source-id={}", path.display(), source_id);
-    let mut file = cargo_try!(File::open(path));
-    let data = cargo_try!(file.read_to_end());
-    let (manifest, nested) = cargo_try!(read_manifest(data.as_slice(),
+    let mut file = try!(File::open(path));
+    let data = try!(file.read_to_end());
+    let (manifest, nested) = try!(read_manifest(data.as_slice(),
                                                       source_id));
 
     Ok((Package::new(manifest, path, source_id), nested))
