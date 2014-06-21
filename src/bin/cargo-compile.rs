@@ -2,14 +2,16 @@
 #![feature(phase)]
 
 extern crate cargo;
+
+#[phase(plugin, link)]
 extern crate hammer;
-extern crate serialize;
 
 #[phase(plugin, link)]
 extern crate log;
 
+extern crate serialize;
+
 use std::os;
-use hammer::FlagConfig;
 use cargo::{execute_main_without_stdin};
 use cargo::ops;
 use cargo::util::{CliResult, CliError};
@@ -20,7 +22,7 @@ pub struct Options {
     manifest_path: Option<String>
 }
 
-impl FlagConfig for Options {}
+hammer_config!(Options)
 
 fn main() {
     execute_main_without_stdin(execute);

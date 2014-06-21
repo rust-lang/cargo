@@ -1,11 +1,13 @@
 #![crate_id="cargo-git-checkout"]
+#![feature(phase)]
 
 extern crate cargo;
 extern crate serialize;
-extern crate hammer;
 extern crate url;
 
-use hammer::FlagConfig;
+#[phase(plugin, link)]
+extern crate hammer;
+
 use cargo::{execute_main_without_stdin};
 use cargo::core::source::{Source,SourceId};
 use cargo::sources::git::{GitSource};
@@ -15,11 +17,10 @@ use url::Url;
 #[deriving(PartialEq,Clone,Decodable)]
 struct Options {
     url: String,
-    reference: String,
-    verbose: bool
+    reference: String
 }
 
-impl FlagConfig for Options {}
+hammer_config!(Options)
 
 fn main() {
     execute_main_without_stdin(execute);
