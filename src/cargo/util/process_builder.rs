@@ -80,14 +80,13 @@ impl ProcessBuilder {
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
 
-        let exit = try!(command.status().map_err(|_| {
-            process_error(msg(), &command, None, None)
-        }));
+        let exit = try!(command.status().map_err(|e|
+            process_error(msg(), Some(e), None, None)));
 
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(msg(), &command, Some(&exit), None))
+            Err(process_error(msg(), None, Some(&exit), None))
         }
     }
 
@@ -98,14 +97,14 @@ impl ProcessBuilder {
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
 
-        let output = try!(command.output().map_err(|_| {
-            process_error(msg(), &command, None, None)
+        let output = try!(command.output().map_err(|e| {
+            process_error(msg(), Some(e), None, None)
         }));
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(msg(), &command, Some(&output.status),
+            Err(process_error(msg(), None, Some(&output.status),
                               Some(&output)))
         }
     }

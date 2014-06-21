@@ -1,4 +1,4 @@
-use std::io::process::{Command,ProcessOutput,ProcessExit,ExitStatus,ExitSignal};
+use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::io::IoError;
 use std::fmt;
 use std::fmt::{Show, Formatter, FormatError};
@@ -141,7 +141,6 @@ from_error!(FormatError)
 
 pub struct ProcessError {
     pub msg: String,
-    pub command: String,
     pub exit: Option<ProcessExit>,
     pub output: Option<ProcessOutput>,
     pub detail: Option<String>,
@@ -275,16 +274,15 @@ impl CliError {
 }
 
 pub fn process_error<S: Str>(msg: S,
-                             command: &Command,
+                             cause: Option<IoError>,
                              status: Option<&ProcessExit>,
                              output: Option<&ProcessOutput>) -> ProcessError {
     ProcessError {
         msg: msg.as_slice().to_str(),
-        command: command.to_str(),
         exit: status.map(|o| o.clone()),
         output: output.map(|o| o.clone()),
         detail: None,
-        cause: None
+        cause: cause.map(|c| box c as Box<CargoError>)
     }
 }
 
