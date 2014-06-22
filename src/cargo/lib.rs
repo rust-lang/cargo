@@ -144,11 +144,12 @@ fn process<'a,
            V: Encodable<json::Encoder<'a>, io::IoError>>(
                callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
 
-    let mut shell = shell();
 
     match global_flags() {
-        Err(e) => handle_error(e, &mut shell, true),
+        Err(e) => handle_error(e, &mut shell(false)),
         Ok(val) => {
+            let mut shell = shell(val.verbose);
+
             if val.help {
                 let (desc, options) = hammer::usage::<T>(true);
 
@@ -161,7 +162,7 @@ fn process<'a,
                 let (_, options) = hammer::usage::<GlobalFlags>(false);
                 print!("{}", options);
             } else {
-                process_executed(callback(val.rest.as_slice(), &mut shell), val, &mut shell)
+                process_executed(callback(val.rest.as_slice(), &mut shell), &mut shell)
             }
         }
     }
@@ -170,10 +171,10 @@ fn process<'a,
 pub fn process_executed<'a,
                         T: Encodable<json::Encoder<'a>, io::IoError>>(
                             result: CliResult<Option<T>>,
-                            flags: GlobalFlags, shell: &mut MultiShell)
+                            shell: &mut MultiShell)
 {
     match result {
-        Err(e) => handle_error(e, shell, flags.verbose),
+        Err(e) => handle_error(e, shell),
         Ok(encodable) => {
             encodable.map(|encodable| {
                 let encoded = json::Encoder::str_encode(&encodable);
@@ -183,23 +184,23 @@ pub fn process_executed<'a,
     }
 }
 
-pub fn shell() -> MultiShell {
+pub fn shell(verbose: bool) -> MultiShell {
     let tty = stderr_raw().isatty();
     let stderr = box stderr() as Box<Writer>;
 
-    let config = ShellConfig { color: true, verbose: false, tty: tty };
+    let config = ShellConfig { color: true, verbose: verbose, tty: tty };
     let err = Shell::create(stderr, config);
 
     let tty = stdout_raw().isatty();
     let stdout = box stdout() as Box<Writer>;
 
-    let config = ShellConfig { color: true, verbose: false, tty: tty };
+    let config = ShellConfig { color: true, verbose: verbose, tty: tty };
     let out = Shell::create(stdout, config);
 
-    MultiShell::new(out, err)
+    MultiShell::new(out, err, verbose)
 }
 
-pub fn handle_error(err: CliError, shell: &mut MultiShell, verbose: bool) {
+pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     log!(4, "handle_error; err={}", err);
 
     let CliError { error, exit_code, unknown, .. } = err;
@@ -210,13 +211,16 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell, verbose: bool) {
         let _ = shell.error(error.to_str());
     }
 
-    if unknown && !verbose {
-        let _ = shell.err().say("\nTo learn more, run the command again with --verbose.", BLACK);
+    if unknown {
+        let _ = shell.concise(|shell| {
+            shell.err().say("\nTo learn more, run the command again with --verbose.", BLACK)
+        });
     }
 
-    if verbose {
-        handle_cause(error, shell);
-    }
+    let _ = shell.verbose(|shell| {
+        let _ = handle_cause(error, shell);
+        Ok(())
+      });
 
     std::os::set_exit_status(exit_code as int);
 }
