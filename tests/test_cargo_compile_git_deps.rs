@@ -5,6 +5,10 @@ use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::{ProcessError, process};
 
+static COMPILING: &'static str = "   Compiling";
+static FRESH:     &'static str = "       Fresh";
+static UPDATING:  &'static str = "    Updating";
+
 fn setup() {
 }
 
@@ -83,11 +87,12 @@ test!(cargo_compile_simple_git_dep {
 
     assert_that(project.cargo_process("cargo-compile"),
         execs()
-        .with_stdout(format!("Updating git repository `file:{}`\n\
-                              Compiling dep1 v0.5.0 (file:{})\n\
-                              Compiling foo v0.5.0 (file:{})\n",
-                             git_root.display(), git_root.display(),
-                             root.display()))
+        .with_stdout(format!("{} git repository `file:{}`\n\
+                              {} dep1 v0.5.0 (file:{})\n\
+                              {} foo v0.5.0 (file:{})\n",
+                             UPDATING, git_root.display(),
+                             COMPILING, git_root.display(),
+                             COMPILING, root.display()))
         .with_stderr(""));
 
     assert_that(&project.root().join("target/foo"), existing_file());
@@ -211,31 +216,31 @@ test!(recompilation {
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("cargo-compile"),
-                execs().with_stdout(format!("Updating git repository `file:{}`\n\
-                                             Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            git_project.root().display(),
-                                            git_project.root().display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} git repository `file:{}`\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            UPDATING, git_project.root().display(),
+                                            COMPILING, git_project.root().display(),
+                                            COMPILING, p.root().display())));
     // Don't recompile the second time
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Updating git repository `file:{}`\n\
-                                             Skipping fresh bar v0.5.0 (file:{})\n\
-                                             Skipping fresh foo v0.5.0 (file:{})\n",
-                                            git_project.root().display(),
-                                            git_project.root().display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} git repository `file:{}`\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            UPDATING, git_project.root().display(),
+                                            FRESH, git_project.root().display(),
+                                            FRESH, p.root().display())));
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
     "#).assert();
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Updating git repository `file:{}`\n\
-                                             Skipping fresh bar v0.5.0 (file:{})\n\
-                                             Skipping fresh foo v0.5.0 (file:{})\n",
-                                            git_project.root().display(),
-                                            git_project.root().display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} git repository `file:{}`\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            UPDATING, git_project.root().display(),
+                                            FRESH, git_project.root().display(),
+                                            FRESH, p.root().display())));
     // Commit the changes and make sure we trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
@@ -244,10 +249,10 @@ test!(recompilation {
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Updating git repository `file:{}`\n\
-                                             Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            git_project.root().display(),
-                                            git_project.root().display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} git repository `file:{}`\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            UPDATING, git_project.root().display(),
+                                            COMPILING, git_project.root().display(),
+                                            COMPILING, p.root().display())));
 })

@@ -118,7 +118,7 @@ impl Package {
         ret
     }
 
-    pub fn get_fingerprint(&self, config: &Config) -> CargoResult<String> {
+    pub fn get_fingerprint(&self, config: &mut Config) -> CargoResult<String> {
         let mut sources = self.get_source_ids();
         // Sort the sources just to make sure we have a consistent fingerprint.
         sources.sort_by(|a, b| {

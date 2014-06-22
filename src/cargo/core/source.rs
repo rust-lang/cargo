@@ -115,7 +115,7 @@ impl SourceId {
         }
     }
 
-    pub fn load(&self, config: &Config) -> Box<Source> {
+    pub fn load(&self, config: &mut Config) -> Box<Source> {
         match self.kind {
             GitKind(..) => {
                 box GitSource::new(self, config) as Box<Source>

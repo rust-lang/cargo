@@ -15,16 +15,17 @@ use sources::git::utils::{GitReference,GitRemote,Master,Other};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
-pub struct GitSource {
+pub struct GitSource<'a, 'b> {
     id: SourceId,
     remote: GitRemote,
     reference: GitReference,
     db_path: Path,
-    checkout_path: Path
+    checkout_path: Path,
+    config: &'a mut Config<'b>
 }
 
-impl GitSource {
-    pub fn new(source_id: &SourceId, config: &Config) -> GitSource {
+impl<'a, 'b> GitSource<'a, 'b> {
+    pub fn new<'a, 'b>(source_id: &SourceId, config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let reference = match source_id.kind {
@@ -46,7 +47,8 @@ impl GitSource {
             remote: remote,
             reference: GitReference::for_str(reference.as_slice()),
             db_path: db_path,
-            checkout_path: checkout_path
+            checkout_path: checkout_path,
+            config: config
         }
     }
 
@@ -79,7 +81,7 @@ fn to_hex(num: u64) -> String {
     writer.get_ref().to_hex()
 }
 
-impl Show for GitSource {
+impl<'a, 'b> Show for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "git repo at {}", self.remote.get_url()));
 
@@ -90,9 +92,11 @@ impl Show for GitSource {
     }
 }
 
-impl Source for GitSource {
+impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
-        println!("Updating git repository `{}`", self.remote.get_url());
+        try!(self.config.shell().status("Updating",
+            format!("git repository `{}`", self.remote.get_url())));
+
         log!(5, "updating git source `{}`", self.remote);
         let repo = try!(self.remote.checkout(&self.db_path));
         try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));

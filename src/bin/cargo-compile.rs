@@ -14,6 +14,7 @@ extern crate serialize;
 use std::os;
 use cargo::{execute_main_without_stdin};
 use cargo::ops;
+use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_project;
 
@@ -28,7 +29,7 @@ fn main() {
     execute_main_without_stdin(execute);
 }
 
-fn execute(options: Options) -> CliResult<Option<()>> {
+fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-compile; args={}", os::args());
 
     let root = match options.manifest_path {
@@ -42,7 +43,7 @@ fn execute(options: Options) -> CliResult<Option<()>> {
                     }))
     };
 
-    ops::compile(&root).map(|_| None).map_err(|err| {
+    ops::compile(&root, shell).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

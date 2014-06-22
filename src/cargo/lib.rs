@@ -21,12 +21,12 @@ extern crate hamcrest;
 
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
 use std::io;
-use std::io::stderr;
-use std::io::stdio::stderr_raw;
+use std::io::{stdout, stderr};
+use std::io::stdio::{stdout_raw, stderr_raw};
 use hammer::{FlagDecoder, FlagConfig, UsageDecoder, HammerError};
 
-use core::{Shell, ShellConfig};
-use term::color::{RED, BLACK};
+use core::{Shell, MultiShell, ShellConfig};
+use term::color::{BLACK};
 
 pub use util::{CargoError, CliError, CliResult, human};
 
@@ -99,47 +99,55 @@ pub fn execute_main<'a,
                     T: RepresentsFlags,
                     U: RepresentsJSON,
                     V: Encodable<json::Encoder<'a>, io::IoError>>(
-                        exec: fn(T, U) -> CliResult<Option<V>>)
+                        exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>)
 {
     fn call<'a,
             T: RepresentsFlags,
             U: RepresentsJSON,
             V: Encodable<json::Encoder<'a>, io::IoError>>(
-                exec: fn(T, U) -> CliResult<Option<V>>,
+                exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
+                shell: &mut MultiShell,
                 args: &[String])
         -> CliResult<Option<V>>
     {
         let flags = try!(flags_from_args::<T>(args));
         let json = try!(json_from_stdin::<U>());
 
-        exec(flags, json)
+        exec(flags, json, shell)
     }
 
-    match global_flags() {
-        Err(e) => handle_error(e, true),
-        Ok(val) => process_executed(call(exec, val.rest.as_slice()), val)
-    }
+    process::<T, V>(|rest, shell| call(exec, shell, rest));
 }
 
 pub fn execute_main_without_stdin<'a,
                                   T: RepresentsFlags,
                                   V: Encodable<json::Encoder<'a>, io::IoError>>(
-                                      exec: fn(T) -> CliResult<Option<V>>)
+                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>)
 {
     fn call<'a,
             T: RepresentsFlags,
             V: Encodable<json::Encoder<'a>, io::IoError>>(
-                exec: fn(T) -> CliResult<Option<V>>,
+                exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
+                shell: &mut MultiShell,
                 args: &[String])
         -> CliResult<Option<V>>
     {
         let flags = try!(flags_from_args::<T>(args));
-
-        exec(flags)
+        exec(flags, shell)
     }
 
+    process::<T, V>(|rest, shell| call(exec, shell, rest));
+}
+
+fn process<'a,
+           T: RepresentsFlags,
+           V: Encodable<json::Encoder<'a>, io::IoError>>(
+               callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
+
+    let mut shell = shell();
+
     match global_flags() {
-        Err(e) => handle_error(e, true),
+        Err(e) => handle_error(e, &mut shell, true),
         Ok(val) => {
             if val.help {
                 let (desc, options) = hammer::usage::<T>(true);
@@ -153,7 +161,7 @@ pub fn execute_main_without_stdin<'a,
                 let (_, options) = hammer::usage::<GlobalFlags>(false);
                 print!("{}", options);
             } else {
-                process_executed(call(exec, val.rest.as_slice()), val)
+                process_executed(callback(val.rest.as_slice(), &mut shell), val, &mut shell)
             }
         }
     }
@@ -162,10 +170,10 @@ pub fn execute_main_without_stdin<'a,
 pub fn process_executed<'a,
                         T: Encodable<json::Encoder<'a>, io::IoError>>(
                             result: CliResult<Option<T>>,
-                            flags: GlobalFlags)
+                            flags: GlobalFlags, shell: &mut MultiShell)
 {
     match result {
-        Err(e) => handle_error(e, flags.verbose),
+        Err(e) => handle_error(e, shell, flags.verbose),
         Ok(encodable) => {
             encodable.map(|encodable| {
                 let encoded = json::Encoder::str_encode(&encodable);
@@ -175,38 +183,47 @@ pub fn process_executed<'a,
     }
 }
 
-pub fn handle_error(err: CliError, verbose: bool) {
-    log!(4, "handle_error; err={}", err);
-
-
-    let CliError { error, exit_code, unknown, .. } = err;
-
+pub fn shell() -> MultiShell {
     let tty = stderr_raw().isatty();
     let stderr = box stderr() as Box<Writer>;
 
     let config = ShellConfig { color: true, verbose: false, tty: tty };
-    let mut shell = Shell::create(stderr, config);
+    let err = Shell::create(stderr, config);
+
+    let tty = stdout_raw().isatty();
+    let stdout = box stdout() as Box<Writer>;
+
+    let config = ShellConfig { color: true, verbose: false, tty: tty };
+    let out = Shell::create(stdout, config);
+
+    MultiShell::new(out, err)
+}
+
+pub fn handle_error(err: CliError, shell: &mut MultiShell, verbose: bool) {
+    log!(4, "handle_error; err={}", err);
+
+    let CliError { error, exit_code, unknown, .. } = err;
 
     if unknown {
-        let _ = shell.say("An unknown error occurred", RED);
+        let _ = shell.error("An unknown error occurred");
     } else {
-        let _ = shell.say(error.to_str(), RED);
+        let _ = shell.error(error.to_str());
     }
 
     if unknown && !verbose {
-        let _ = shell.say("\nTo learn more, run the command again with --verbose.", BLACK);
+        let _ = shell.err().say("\nTo learn more, run the command again with --verbose.", BLACK);
     }
 
     if verbose {
-        handle_cause(error, &mut shell);
+        handle_cause(error, shell);
     }
 
     std::os::set_exit_status(exit_code as int);
 }
 
-fn handle_cause(err: &CargoError, shell: &mut Shell) {
-    let _ = shell.say("\nCaused by:", BLACK);
-    let _ = shell.say(format!("  {}", err.description()), BLACK);
+fn handle_cause(err: &CargoError, shell: &mut MultiShell) {
+    let _ = shell.err().say("\nCaused by:", BLACK);
+    let _ = shell.err().say(format!("  {}", err.description()), BLACK);
 
     err.cause().map(|e| handle_cause(e, shell));
 }

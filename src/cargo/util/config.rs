@@ -2,19 +2,22 @@ use std::{io,fmt,os};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
+use core::MultiShell;
 use util::{CargoResult, CargoError, ChainError, Require, internal, human};
 
-pub struct Config {
-    home_path: Path
+pub struct Config<'a> {
+    home_path: Path,
+    shell: &'a mut MultiShell
 }
 
-impl Config {
-    pub fn new() -> CargoResult<Config> {
+impl<'a> Config<'a> {
+    pub fn new<'a>(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
         Ok(Config {
             home_path: try!(os::homedir().require(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
-            }))
+            })),
+            shell: shell
         })
     }
 
@@ -24,6 +27,10 @@ impl Config {
 
     pub fn git_checkout_path(&self) -> Path {
         self.home_path.join(".cargo").join("git").join("checkouts")
+    }
+
+    pub fn shell<'a>(&'a mut self) -> &'a mut MultiShell {
+        &mut *self.shell
     }
 }
 
