@@ -6,7 +6,8 @@ use core::{
     Summary,
     Registry
 };
-use util::errors::CargoResult;
+
+use util::{CargoResult, human, internal};
 
 /* TODO:
  * - The correct input here is not a registry. Resolves should be performable
@@ -33,9 +34,13 @@ pub fn resolve<R: Registry>(deps: &[Dependency],
 
         let opts = try!(registry.query(&curr));
 
-        assert!(opts.len() > 0, "no matches for {}", curr.get_name());
-        // Temporary, but we must have exactly one option to satisfy the dep
-        assert!(opts.len() == 1, "invalid num of results {}", opts.len());
+        if opts.len() == 0 {
+            return Err(human(format!("No package named {} found", curr.get_name())));
+        }
+
+        if opts.len() > 1 {
+            return Err(internal("Temporarily, Cargo only supports a single result for a dependency"))
+        }
 
         let pkg = opts.get(0).clone();
         resolve.insert(pkg.get_name().to_str(), pkg.clone());

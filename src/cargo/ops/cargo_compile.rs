@@ -46,14 +46,14 @@ pub fn compile(manifest_path: &Path, shell: &mut MultiShell) -> CargoResult<()> 
     let source_ids = package.get_source_ids();
 
     let packages = {
-        let mut registry = try!(PackageRegistry::new(source_ids, override_ids, shell));
-        let resolved = try!(resolver::resolve(package.get_dependencies(),
-                                              &mut registry).wrap({
-            human("unable to resolve dependencies")
-        }));
+        let mut registry =
+            try!(PackageRegistry::new(source_ids, override_ids, shell));
+
+        let resolved =
+            try!(resolver::resolve(package.get_dependencies(), &mut registry));
 
         try!(registry.get(resolved.as_slice()).wrap({
-            human("unable to get packages from source")
+            human("Unable to get packages from source")
         }))
     };
 
