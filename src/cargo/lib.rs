@@ -23,7 +23,7 @@ use serialize::{Decoder, Encoder, Decodable, Encodable, json};
 use std::io;
 use std::io::{stdout, stderr};
 use std::io::stdio::{stdout_raw, stderr_raw};
-use hammer::{FlagDecoder, FlagConfig, UsageDecoder, HammerError};
+use hammer::{Flags, decode_args, usage};
 
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK};
@@ -63,19 +63,6 @@ pub mod ops;
 pub mod sources;
 pub mod util;
 
-trait FlagParse : FlagConfig {
-    fn decode_flags(d: &mut FlagDecoder) -> Result<Self, HammerError>;
-}
-
-impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> FlagParse for T {
-    fn decode_flags(d: &mut FlagDecoder) -> Result<T, HammerError> {
-        Decodable::decode(d)
-    }
-}
-
-trait RepresentsFlags : FlagParse + Decodable<UsageDecoder, HammerError> {}
-impl<T: FlagParse + Decodable<UsageDecoder, HammerError>> RepresentsFlags for T {}
-
 trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
 impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
@@ -96,13 +83,13 @@ hammer_config!(GlobalFlags |c| {
 })
 
 pub fn execute_main<'a,
-                    T: RepresentsFlags,
+                    T: Flags,
                     U: RepresentsJSON,
                     V: Encodable<json::Encoder<'a>, io::IoError>>(
                         exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>)
 {
     fn call<'a,
-            T: RepresentsFlags,
+            T: Flags,
             U: RepresentsJSON,
             V: Encodable<json::Encoder<'a>, io::IoError>>(
                 exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
@@ -120,12 +107,12 @@ pub fn execute_main<'a,
 }
 
 pub fn execute_main_without_stdin<'a,
-                                  T: RepresentsFlags,
+                                  T: Flags,
                                   V: Encodable<json::Encoder<'a>, io::IoError>>(
                                       exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>)
 {
     fn call<'a,
-            T: RepresentsFlags,
+            T: Flags,
             V: Encodable<json::Encoder<'a>, io::IoError>>(
                 exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
                 shell: &mut MultiShell,
@@ -140,7 +127,7 @@ pub fn execute_main_without_stdin<'a,
 }
 
 fn process<'a,
-           T: RepresentsFlags,
+           T: Flags,
            V: Encodable<json::Encoder<'a>, io::IoError>>(
                callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
 
@@ -151,7 +138,7 @@ fn process<'a,
             let mut shell = shell(val.verbose);
 
             if val.help {
-                let (desc, options) = hammer::usage::<T>(true);
+                let (desc, options) = usage::<T>(true);
 
                 desc.map(|d| println!("{}\n", d));
 
@@ -159,7 +146,7 @@ fn process<'a,
 
                 print!("{}", options);
 
-                let (_, options) = hammer::usage::<GlobalFlags>(false);
+                let (_, options) = usage::<GlobalFlags>(false);
                 print!("{}", options);
             } else {
                 process_executed(callback(val.rest.as_slice(), &mut shell), &mut shell)
@@ -236,16 +223,14 @@ fn args() -> Vec<String> {
     std::os::args()
 }
 
-fn flags_from_args<T: RepresentsFlags>(args: &[String]) -> CliResult<T> {
-    let mut decoder = FlagDecoder::new::<T>(args);
-    FlagParse::decode_flags(&mut decoder).map_err(|e: HammerError| {
+fn flags_from_args<T: Flags>(args: &[String]) -> CliResult<T> {
+    decode_args(args).map_err(|e| {
         CliError::new(e.message, 1)
     })
 }
 
 fn global_flags() -> CliResult<GlobalFlags> {
-    let mut decoder = FlagDecoder::new::<GlobalFlags>(args().tail());
-    Decodable::decode(&mut decoder).map_err(|e: HammerError| {
+    decode_args(args().tail()).map_err(|e| {
         CliError::new(e.message, 1)
     })
 }
