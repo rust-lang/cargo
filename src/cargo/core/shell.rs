@@ -1,8 +1,8 @@
 use term;
 use term::{Terminal,color};
-use term::color::Color;
+use term::color::{Color, BLACK};
 use term::attr::Attr;
-use std::io::IoResult;
+use std::io::{IoResult, stderr};
 
 pub struct ShellConfig {
     pub color: bool,
@@ -10,31 +10,33 @@ pub struct ShellConfig {
     pub tty: bool
 }
 
-enum AdequateTerminal<T> {
-    NoColor(T),
-    Color(Box<Terminal<T>>)
+enum AdequateTerminal {
+    NoColor(Box<Writer>),
+    Color(Box<Terminal<Box<Writer>>>)
 }
 
-pub struct Shell<T> {
-    terminal: AdequateTerminal<T>,
+pub struct Shell {
+    terminal: AdequateTerminal,
     config: ShellConfig
 }
 
-impl<T: Writer + Send> Shell<T> {
-    pub fn create(out: T, config: ShellConfig) -> Option<Shell<T>> {
+impl Shell {
+    pub fn create(out: Box<Writer>, config: ShellConfig) -> Shell {
         if config.tty && config.color {
-            let term: Option<term::TerminfoTerminal<T>> = Terminal::new(out);
+            let term: Option<term::TerminfoTerminal<Box<Writer>>> = Terminal::new(out);
             term.map(|t| Shell {
-                terminal: Color(box t as Box<Terminal<T>>),
+                terminal: Color(box t as Box<Terminal<Box<Writer>>>),
                 config: config
+            }).unwrap_or_else(|| {
+                Shell { terminal: NoColor(box stderr() as Box<Writer>), config: config }
             })
         } else {
-            Some(Shell { terminal: NoColor(out), config: config })
+            Shell { terminal: NoColor(out), config: config }
         }
     }
 
     pub fn verbose(&mut self,
-                   callback: |&mut Shell<T>| -> IoResult<()>) -> IoResult<()> {
+                   callback: |&mut Shell| -> IoResult<()>) -> IoResult<()> {
         if self.config.verbose {
             return callback(self)
         }
@@ -42,22 +44,25 @@ impl<T: Writer + Send> Shell<T> {
         Ok(())
     }
 
-    pub fn say<T: Str>(&mut self, message: T, color: Color) -> IoResult<()> {
+    pub fn say<T: ToStr>(&mut self, message: T, color: Color) -> IoResult<()> {
         try!(self.reset());
-        try!(self.fg(color));
-        try!(self.write_line(message.as_slice()));
+        if color != BLACK { try!(self.fg(color)); }
+        try!(self.write_line(message.to_str().as_slice()));
         try!(self.reset());
         try!(self.flush());
         Ok(())
     }
 }
 
-impl<T: Writer + Send> Terminal<T> for Shell<T> {
-    fn new(out: T) -> Option<Shell<T>> {
-        Shell::create(out, ShellConfig {
-            color: true,
-            verbose: false,
-            tty: false,
+impl Terminal<Box<Writer>> for Shell {
+    fn new(out: Box<Writer>) -> Option<Shell> {
+        Some(Shell {
+            terminal: NoColor(out),
+            config: ShellConfig {
+                color: true,
+                verbose: false,
+                tty: false,
+            }
         })
     }
 
@@ -96,18 +101,18 @@ impl<T: Writer + Send> Terminal<T> for Shell<T> {
         }
     }
 
-    fn unwrap(self) -> T {
+    fn unwrap(self) -> Box<Writer> {
         fail!("Can't unwrap a Shell");
     }
 
-    fn get_ref<'a>(&'a self) -> &'a T {
+    fn get_ref<'a>(&'a self) -> &'a Box<Writer> {
         match self.terminal {
             Color(ref c) => c.get_ref(),
             NoColor(ref w) => w
         }
     }
 
-    fn get_mut<'a>(&'a mut self) -> &'a mut T {
+    fn get_mut<'a>(&'a mut self) -> &'a mut Box<Writer> {
         match self.terminal {
             Color(ref mut c) => c.get_mut(),
             NoColor(ref mut w) => w
@@ -115,7 +120,7 @@ impl<T: Writer + Send> Terminal<T> for Shell<T> {
     }
 }
 
-impl<T: Writer + Send> Writer for Shell<T> {
+impl Writer for Shell {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
         match self.terminal {
             Color(ref mut c) => c.write(buf),

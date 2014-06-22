@@ -240,6 +240,7 @@ pub type CliResult<T> = Result<T, CliError>;
 #[deriving(Show)]
 pub struct CliError {
     pub error: Box<CargoError>,
+    pub unknown: bool,
     pub exit_code: uint
 }
 
@@ -263,13 +264,8 @@ impl CliError {
     }
 
     pub fn from_boxed(error: Box<CargoError>, code: uint) -> CliError {
-        let error = if error.is_human() {
-            error
-        } else {
-            human("An unknown error occurred").with_cause(error)
-        };
-
-        CliError { error: error, exit_code: code }
+        let human = error.is_human();
+        CliError { error: error, exit_code: code, unknown: !human }
     }
 }
 

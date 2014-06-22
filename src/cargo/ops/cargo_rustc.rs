@@ -1,6 +1,6 @@
 use std::os::args;
 use std::io;
-use std::io::File;
+use std::io::{File, IoError};
 use std::str;
 
 use core::{Package, PackageSet, Target};
@@ -31,8 +31,14 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
 
     // First ensure that the destination directory exists
     debug!("creating target dir; path={}", target_dir.display());
-    try!(mk_target(&target_dir));
-    try!(mk_target(&deps_target_dir));
+
+    try!(mk_target(&target_dir).chain_error(||
+        internal(format!("Couldn't create the target directory for {} at {}",
+                 pkg.get_name(), target_dir.display()))));
+
+    try!(mk_target(&deps_target_dir).chain_error(||
+        internal(format!("Couldn't create the directory for dependencies for {} at {}",
+                 pkg.get_name(), deps_target_dir.display()))));
 
     let mut cx = Context {
         dest: &deps_target_dir,
@@ -119,10 +125,8 @@ fn is_fresh(dep: &Package, loc: &Path,
     Ok((old_fingerprint == new_fingerprint, new_fingerprint))
 }
 
-fn mk_target(target: &Path) -> CargoResult<()> {
-    io::fs::mkdir_recursive(target, io::UserRWX).chain_error(|| {
-        internal("could not create target directory")
-    })
+fn mk_target(target: &Path) -> Result<(), IoError> {
+    io::fs::mkdir_recursive(target, io::UserRWX)
 }
 
 fn compile_custom(pkg: &Package, cmd: &str, cx: &Context) -> CargoResult<()> {

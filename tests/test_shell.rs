@@ -1,6 +1,6 @@
 use support::{ResultTest,Tap,shell_writes};
 use hamcrest::{assert_that};
-use std::io::{MemWriter,IoResult};
+use std::io::{MemWriter, BufWriter, IoResult};
 use std::str::from_utf8_lossy;
 use cargo::core::shell::{Shell,ShellConfig};
 use term::{Terminal,TerminfoTerminal,color};
@@ -8,27 +8,37 @@ use term::{Terminal,TerminfoTerminal,color};
 fn setup() {
 }
 
+fn writer(buf: &mut [u8]) -> Box<Writer> {
+    box BufWriter::new(buf) as Box<Writer>
+}
+
 test!(non_tty {
     let config = ShellConfig { color: true, verbose: true, tty: false };
-    Shell::create(MemWriter::new(), config).assert().tap(|shell| {
+    let mut buf: Vec<u8> = Vec::from_elem(9, 0 as u8);
+
+    Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
-        assert_that(shell, shell_writes("Hey Alex\n"));
+        assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
     });
 })
 
 test!(color_explicitly_disabled {
     let config = ShellConfig { color: false, verbose: true, tty: true };
-    Shell::create(MemWriter::new(), config).assert().tap(|shell| {
+    let mut buf: Vec<u8> = Vec::from_elem(9, 0 as u8);
+
+    Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
-        assert_that(shell, shell_writes("Hey Alex\n"));
+        assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
     });
 })
 
 test!(colored_shell {
     let config = ShellConfig { color: true, verbose: true, tty: true };
-    Shell::create(MemWriter::new(), config).assert().tap(|shell| {
+    let mut buf: Vec<u8> = Vec::from_elem(22, 0 as u8);
+
+    Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
-        assert_that(shell, shell_writes(colored_output("Hey Alex\n",
+        assert_that(buf.as_slice(), shell_writes(colored_output("Hey Alex\n",
                                                        color::RED).assert()));
     });
 })

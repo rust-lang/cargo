@@ -22,7 +22,7 @@ pub struct Options {
     manifest_path: Option<String>
 }
 
-hammer_config!(Options)
+hammer_config!(Options "Compile the current project")
 
 fn main() {
     execute_main_without_stdin(execute);
