@@ -35,7 +35,7 @@ fn execute() {
 
     let (cmd, args) = match process(os::args()) {
         Ok((cmd, args)) => (cmd, args),
-        Err(err) => return handle_error(err, &mut shell(), false)
+        Err(err) => return handle_error(err, &mut shell(false))
     };
 
     match cmd.as_slice() {
@@ -69,9 +69,9 @@ fn execute() {
             match command {
                 Ok(ExitStatus(0)) => (),
                 Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => {
-                    handle_error(CliError::new("", i as uint), &mut shell(), false)
+                    handle_error(CliError::new("", i as uint), &mut shell(false))
                 }
-                Err(_) => handle_error(CliError::new("No such subcommand", 127), &mut shell(), false)
+                Err(_) => handle_error(CliError::new("No such subcommand", 127), &mut shell(false))
             }
         }
     }
