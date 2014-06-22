@@ -21,7 +21,12 @@ extern crate hamcrest;
 
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
 use std::io;
-use hammer::{FlagDecoder, FlagConfig, UsageDecoder, HammerError, FlagConfiguration};
+use std::io::stderr;
+use std::io::stdio::stderr_raw;
+use hammer::{FlagDecoder, FlagConfig, UsageDecoder, HammerError};
+
+use core::{Shell, ShellConfig};
+use term::color::{RED, BLACK};
 
 pub use util::{CargoError, CliError, CliResult, human};
 
@@ -62,21 +67,8 @@ trait FlagParse : FlagConfig {
     fn decode_flags(d: &mut FlagDecoder) -> Result<Self, HammerError>;
 }
 
-trait FlagUsage : FlagConfig {
-    fn decode_usage(d: &mut UsageDecoder) -> Result<Self, HammerError>;
-}
-
-//impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> FlagParse for T {}
-//impl<T: FlagConfig + Decodable<UsageDecoder, HammerError>> FlagUsage for T {}
-
 impl<T: FlagConfig + Decodable<FlagDecoder, HammerError>> FlagParse for T {
     fn decode_flags(d: &mut FlagDecoder) -> Result<T, HammerError> {
-        Decodable::decode(d)
-    }
-}
-
-impl<T: FlagConfig + Decodable<UsageDecoder, HammerError>> FlagUsage for T {
-    fn decode_usage(d: &mut UsageDecoder) -> Result<T, HammerError> {
         Decodable::decode(d)
     }
 }
@@ -150,10 +142,16 @@ pub fn execute_main_without_stdin<'a,
         Err(e) => handle_error(e, true),
         Ok(val) => {
             if val.help {
-                println!("Usage:\n");
+                let (desc, options) = hammer::usage::<T>(true);
 
-                print!("{}", hammer::usage::<T>(true));
-                print!("{}", hammer::usage::<GlobalFlags>(false));
+                desc.map(|d| println!("{}\n", d));
+
+                println!("Options:\n");
+
+                print!("{}", options);
+
+                let (_, options) = hammer::usage::<GlobalFlags>(false);
+                print!("{}", options);
             } else {
                 process_executed(call(exec, val.rest.as_slice()), val)
             }
@@ -180,21 +178,37 @@ pub fn process_executed<'a,
 pub fn handle_error(err: CliError, verbose: bool) {
     log!(4, "handle_error; err={}", err);
 
-    let CliError { error, exit_code, .. } = err;
-    let _ = write!(&mut std::io::stderr(), "{}", error);
+
+    let CliError { error, exit_code, unknown, .. } = err;
+
+    let tty = stderr_raw().isatty();
+    let stderr = box stderr() as Box<Writer>;
+
+    let config = ShellConfig { color: true, verbose: false, tty: tty };
+    let mut shell = Shell::create(stderr, config);
+
+    if unknown {
+        let _ = shell.say("An unknown error occurred", RED);
+    } else {
+        let _ = shell.say(error.to_str(), RED);
+    }
+
+    if unknown && !verbose {
+        let _ = shell.say("\nTo learn more, run the command again with --verbose.", BLACK);
+    }
 
     if verbose {
-        error.cause().map(handle_cause);
+        handle_cause(error, &mut shell);
     }
 
     std::os::set_exit_status(exit_code as int);
 }
 
-fn handle_cause(err: &CargoError) {
-    println!("\nCaused by:");
-    println!("  {}", err.description());
+fn handle_cause(err: &CargoError, shell: &mut Shell) {
+    let _ = shell.say("\nCaused by:", BLACK);
+    let _ = shell.say(format!("  {}", err.description()), BLACK);
 
-    err.cause().map(handle_cause);
+    err.cause().map(|e| handle_cause(e, shell));
 }
 
 fn args() -> Vec<String> {

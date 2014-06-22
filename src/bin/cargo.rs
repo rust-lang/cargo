@@ -11,7 +11,7 @@ use hammer::{FlagConfig,FlagConfiguration};
 use std::os;
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
-use cargo::{NoFlags,execute_main_without_stdin,handle_error};
+use cargo::{GlobalFlags, NoFlags, execute_main_without_stdin, handle_error};
 use cargo::util::important_paths::find_project;
 use cargo::util::{CliError, CliResult, Require, config, human};
 
@@ -37,32 +37,41 @@ fn execute() {
         Err(err) => return handle_error(err, false)
     };
 
-    if cmd == "config-for-key".to_str() {
-        log!(4, "cmd == config-for-key");
-        execute_main_without_stdin(config_for_key)
-    }
-    else if cmd == "config-list".to_str() {
-        log!(4, "cmd == config-list");
-        execute_main_without_stdin(config_list)
-    }
-    else if cmd == "locate-project".to_str() {
-        log!(4, "cmd == locate-project");
-        execute_main_without_stdin(locate_project)
-    }
-    else {
-        let command = Command::new(format!("cargo-{}", cmd))
-            .args(args.as_slice())
-            .stdin(InheritFd(0))
-            .stdout(InheritFd(1))
-            .stderr(InheritFd(2))
-            .status();
+    match cmd.as_slice() {
+        "config-for-key" => {
+            log!(4, "cmd == config-for-key");
+            execute_main_without_stdin(config_for_key)
+        },
+        "config-list" => {
+            log!(4, "cmd == config-list");
+            execute_main_without_stdin(config_list)
+        },
+        "locate-project" => {
+            log!(4, "cmd == locate-project");
+            execute_main_without_stdin(locate_project)
+        },
+        "--help" | "-h" | "help" | "-?" => {
+            println!("Commands:");
+            println!("  compile          # compile the current project\n");
 
-        match command {
-            Ok(ExitStatus(0)) => (),
-            Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => {
-                handle_error(CliError::new("", i as uint), false)
+            let (_, options) = hammer::usage::<GlobalFlags>(false);
+            println!("Options (for all commands):\n\n{}", options);
+        },
+        _ => {
+            let command = Command::new(format!("cargo-{}", cmd))
+                .args(args.as_slice())
+                .stdin(InheritFd(0))
+                .stdout(InheritFd(1))
+                .stderr(InheritFd(2))
+                .status();
+
+            match command {
+                Ok(ExitStatus(0)) => (),
+                Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => {
+                    handle_error(CliError::new("", i as uint), false)
+                }
+                Err(_) => handle_error(CliError::new("No such subcommand", 127), false)
             }
-            Err(_) => handle_error(CliError::new("No such subcommand", 127), false)
         }
     }
 }

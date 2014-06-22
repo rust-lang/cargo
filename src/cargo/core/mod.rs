@@ -30,6 +30,11 @@ pub use self::summary::{
     Summary
 };
 
+pub use self::shell::{
+    Shell,
+    ShellConfig
+};
+
 pub use self::dependency::Dependency;
 pub use self::version_req::VersionReq;
 

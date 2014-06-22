@@ -45,7 +45,7 @@ test!(cargo_compile_with_invalid_manifest {
     assert_that(p.cargo_process("cargo-compile"),
         execs()
         .with_status(101)
-        .with_stderr("Cargo.toml is not a valid manifest"));
+        .with_stderr("Cargo.toml is not a valid manifest\n"));
 })
 
 test!(cargo_compile_without_manifest {
@@ -55,7 +55,7 @@ test!(cargo_compile_without_manifest {
         execs()
         .with_status(102)
         .with_stderr("Could not find Cargo.toml in this directory or any \
-                      parent directory"));
+                      parent directory\n"));
 })
 
 test!(cargo_compile_with_invalid_code {
@@ -73,7 +73,7 @@ src/foo.rs:1:1: 1:8 error: expected item but found `invalid`
 src/foo.rs:1 invalid rust code!
              ^~~~~~~
 Could not execute process \
-`rustc src/foo.rs --crate-type bin --out-dir {} -L {} -L {}` (status=101)",
+`rustc src/foo.rs --crate-type bin --out-dir {} -L {} -L {}` (status=101)\n",
             target.display(),
             target.display(),
             target.join("deps").display()).as_slice()));
@@ -386,6 +386,7 @@ test!(custom_build_failure {
 Could not execute process `{}` (status=101)
 --- stderr
 task '<main>' failed at 'nope', src/foo.rs:2
+
 ", build.root().join("target/foo").display())));
 })
 

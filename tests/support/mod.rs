@@ -301,13 +301,14 @@ impl ham::SelfDescribing for ShellWrites {
     }
 }
 
-impl<'a> ham::Matcher<&'a mut shell::Shell<std::io::MemWriter>> for ShellWrites {
-    fn matches(&self, actual: &mut shell::Shell<std::io::MemWriter>)
+impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
+    fn matches(&self, actual: &[u8])
         -> ham::MatchResult
     {
         use term::Terminal;
 
-        let actual = std::str::from_utf8_lossy(actual.get_ref().get_ref());
+        println!("{}", actual);
+        let actual = std::str::from_utf8_lossy(actual);
         let actual = actual.to_str();
         ham::expect(actual == self.expected, actual)
     }
