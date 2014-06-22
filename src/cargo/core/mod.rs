@@ -32,6 +32,7 @@ pub use self::summary::{
 
 pub use self::shell::{
     Shell,
+    MultiShell,
     ShellConfig
 };
 

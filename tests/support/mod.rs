@@ -9,7 +9,6 @@ use std::str;
 use std::vec::Vec;
 use std::fmt::Show;
 use ham = hamcrest;
-use cargo::core::shell;
 use cargo::util::{process,ProcessBuilder};
 use cargo::util::ProcessError;
 
@@ -305,8 +304,6 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
     fn matches(&self, actual: &[u8])
         -> ham::MatchResult
     {
-        use term::Terminal;
-
         println!("{}", actual);
         let actual = std::str::from_utf8_lossy(actual);
         let actual = actual.to_str();

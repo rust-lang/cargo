@@ -11,7 +11,8 @@ use hammer::{FlagConfig,FlagConfiguration};
 use std::os;
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
-use cargo::{GlobalFlags, NoFlags, execute_main_without_stdin, handle_error};
+use cargo::{GlobalFlags, NoFlags, execute_main_without_stdin, handle_error, shell};
+use cargo::core::MultiShell;
 use cargo::util::important_paths::find_project;
 use cargo::util::{CliError, CliResult, Require, config, human};
 
@@ -34,7 +35,7 @@ fn execute() {
 
     let (cmd, args) = match process(os::args()) {
         Ok((cmd, args)) => (cmd, args),
-        Err(err) => return handle_error(err, false)
+        Err(err) => return handle_error(err, &mut shell(), false)
     };
 
     match cmd.as_slice() {
@@ -68,9 +69,9 @@ fn execute() {
             match command {
                 Ok(ExitStatus(0)) => (),
                 Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => {
-                    handle_error(CliError::new("", i as uint), false)
+                    handle_error(CliError::new("", i as uint), &mut shell(), false)
                 }
-                Err(_) => handle_error(CliError::new("No such subcommand", 127), false)
+                Err(_) => handle_error(CliError::new("No such subcommand", 127), &mut shell(), false)
             }
         }
     }
@@ -104,7 +105,7 @@ impl FlagConfig for ConfigForKeyFlags {
     }
 }
 
-fn config_for_key(args: ConfigForKeyFlags) -> CliResult<Option<ConfigOut>> {
+fn config_for_key(args: ConfigForKeyFlags, _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
     let value = try!(config::get_config(os::getcwd(),
                                         args.key.as_slice()).map_err(|_| {
         CliError::new("Couldn't load configuration",  1)
@@ -132,7 +133,7 @@ impl FlagConfig for ConfigListFlags {
     }
 }
 
-fn config_list(args: ConfigListFlags) -> CliResult<Option<ConfigOut>> {
+fn config_list(args: ConfigListFlags, _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
     let configs = try!(config::all_configs(os::getcwd()).map_err(|_|
         CliError::new("Couldn't load configuration", 1)));
 
@@ -146,7 +147,7 @@ fn config_list(args: ConfigListFlags) -> CliResult<Option<ConfigOut>> {
     }
 }
 
-fn locate_project(_: NoFlags) -> CliResult<Option<ProjectLocation>> {
+fn locate_project(_: NoFlags, _: &mut MultiShell) -> CliResult<Option<ProjectLocation>> {
     let root = try!(find_project(os::getcwd(), "Cargo.toml").map_err(|e| {
         CliError::from_boxed(e, 1)
     }));

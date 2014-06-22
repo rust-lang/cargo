@@ -1,5 +1,5 @@
 use std::vec::Vec;
-use core::{Source, SourceId, Summary, Dependency, PackageId, Package};
+use core::{MultiShell, Source, SourceId, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human};
 
 pub trait Registry {
@@ -15,17 +15,20 @@ impl Registry for Vec<Summary> {
     }
 }
 
-pub struct PackageRegistry {
+pub struct PackageRegistry<'a> {
     sources: Vec<Box<Source>>,
     overrides: Vec<Summary>,
     summaries: Vec<Summary>,
-    searched: Vec<SourceId>
+    searched: Vec<SourceId>,
+    shell: &'a mut MultiShell
 }
 
-impl PackageRegistry {
-    pub fn new(source_ids: Vec<SourceId>,
-               override_ids: Vec<SourceId>) -> CargoResult<PackageRegistry> {
-        let mut reg = PackageRegistry::empty();
+impl<'a> PackageRegistry<'a> {
+    pub fn new<'a>(source_ids: Vec<SourceId>,
+               override_ids: Vec<SourceId>,
+               shell: &'a mut MultiShell) -> CargoResult<PackageRegistry<'a>> {
+
+        let mut reg = PackageRegistry::empty(shell);
 
         for id in source_ids.iter() {
             try!(reg.load(id, false));
@@ -38,12 +41,13 @@ impl PackageRegistry {
         Ok(reg)
     }
 
-    fn empty() -> PackageRegistry {
+    fn empty<'a>(shell: &'a mut MultiShell) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: vec!(),
             overrides: vec!(),
             summaries: vec!(),
-            searched: vec!()
+            searched: vec!(),
+            shell: shell
         }
     }
 
@@ -75,11 +79,10 @@ impl PackageRegistry {
         Ok(())
     }
 
-    fn load(&mut self, namespace: &SourceId,
-            override: bool) -> CargoResult<()> {
+    fn load(&mut self, namespace: &SourceId, override: bool) -> CargoResult<()> {
 
         (|| {
-            let mut source = namespace.load(&try!(Config::new()));
+            let mut source = namespace.load(&mut try!(Config::new(self.shell)));
             let dst = if override {&mut self.overrides} else {&mut self.summaries};
 
             // Ensure the source has fetched all necessary remote data.
@@ -103,7 +106,7 @@ impl PackageRegistry {
     }
 }
 
-impl Registry for PackageRegistry {
+impl<'a> Registry for PackageRegistry<'a> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let overrides = try!(self.overrides.query(dep)); // this can never fail in practice
 

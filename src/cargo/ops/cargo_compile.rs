@@ -24,13 +24,13 @@
 
 use std::os;
 use util::config::{ConfigValue};
-use core::{Source,SourceId,PackageSet,resolver};
+use core::{MultiShell, Source, SourceId, PackageSet, resolver};
 use core::registry::PackageRegistry;
 use ops;
 use sources::{PathSource};
 use util::{CargoResult, Wrap, config, internal, human};
 
-pub fn compile(manifest_path: &Path) -> CargoResult<()> {
+pub fn compile(manifest_path: &Path, shell: &mut MultiShell) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
     let id = SourceId::for_path(&manifest_path.dir_path());
@@ -45,19 +45,21 @@ pub fn compile(manifest_path: &Path) -> CargoResult<()> {
     let override_ids = try!(source_ids_from_config());
     let source_ids = package.get_source_ids();
 
-    let mut registry = try!(PackageRegistry::new(source_ids, override_ids));
-    let resolved = try!(resolver::resolve(package.get_dependencies(),
-                                          &mut registry).wrap({
-        human("unable to resolve dependencies")
-    }));
+    let packages = {
+        let mut registry = try!(PackageRegistry::new(source_ids, override_ids, shell));
+        let resolved = try!(resolver::resolve(package.get_dependencies(),
+                                              &mut registry).wrap({
+            human("unable to resolve dependencies")
+        }));
 
-    let packages = try!(registry.get(resolved.as_slice()).wrap({
-        human("unable to get packages from source")
-    }));
+        try!(registry.get(resolved.as_slice()).wrap({
+            human("unable to get packages from source")
+        }))
+    };
 
     debug!("packages={}", packages);
 
-    try!(ops::compile_packages(&package, &PackageSet::new(packages.as_slice())));
+    try!(ops::compile_packages(&package, &PackageSet::new(packages.as_slice()), shell));
 
     Ok(())
 }

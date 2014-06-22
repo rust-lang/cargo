@@ -3,7 +3,7 @@ use std::io;
 use std::io::{File, IoError};
 use std::str;
 
-use core::{Package, PackageSet, Target};
+use core::{MultiShell, Package, PackageSet, Target};
 use util;
 use util::{CargoResult, ChainError, ProcessBuilder, internal, human, CargoError};
 use util::{Config};
@@ -16,13 +16,13 @@ struct Context<'a> {
     primary: bool,
     rustc_version: &'a str,
     compiled_anything: bool,
-    config: &'a Config,
+    config: &'a mut Config<'a>
 }
 
-pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
+pub fn compile_packages(pkg: &Package, deps: &PackageSet, shell: &mut MultiShell) -> CargoResult<()> {
     debug!("compile_packages; pkg={}; deps={}", pkg, deps);
 
-    let config = try!(Config::new());
+    let mut config = try!(Config::new(shell));
     let target_dir = pkg.get_absolute_target_dir();
     let deps_target_dir = target_dir.join("deps");
 
@@ -46,7 +46,7 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet) -> CargoResult<()> {
         primary: false,
         rustc_version: rustc_version.as_slice(),
         compiled_anything: false,
-        config: &config,
+        config: &mut config
     };
 
     // Traverse the dependencies in topological order
@@ -78,14 +78,14 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
                                                pkg.get_name()));
     let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx));
     if !cx.compiled_anything && is_fresh {
-        println!("Skipping fresh {}", pkg);
+        try!(cx.config.shell().status("Fresh", pkg));
         return Ok(())
     }
 
     // Alright, so this package is not fresh and we need to compile it. Start
     // off by printing a nice helpful message and then run the custom build
     // command if one is present.
-    println!("Compiling {}", pkg);
+    try!(cx.config.shell().status("Compiling", pkg));
 
     match pkg.get_manifest().get_build() {
         Some(cmd) => try!(compile_custom(pkg, cmd, cx)),
@@ -110,7 +110,7 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
 }
 
 fn is_fresh(dep: &Package, loc: &Path,
-            cx: &Context) -> CargoResult<(bool, String)> {
+            cx: &mut Context) -> CargoResult<(bool, String)> {
     let new_fingerprint = format!("{}{}", cx.rustc_version,
                                   try!(dep.get_fingerprint(cx.config)));
     let mut file = match File::open(loc) {

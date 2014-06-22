@@ -1,8 +1,9 @@
 use term;
 use term::{Terminal,color};
-use term::color::{Color, BLACK};
-use term::attr::Attr;
+use term::color::{Color, BLACK, RED, GREEN};
+use term::attr::{Attr, Bold};
 use std::io::{IoResult, stderr};
+use std::fmt::Show;
 
 pub struct ShellConfig {
     pub color: bool,
@@ -19,6 +20,39 @@ pub struct Shell {
     terminal: AdequateTerminal,
     config: ShellConfig
 }
+
+pub struct MultiShell {
+    out: Shell,
+    err: Shell
+}
+
+impl MultiShell {
+    pub fn new(out: Shell, err: Shell) -> MultiShell {
+        MultiShell { out: out, err: err }
+    }
+
+    pub fn out<'a>(&'a mut self) -> &'a mut Shell {
+        &mut self.out
+    }
+
+    pub fn err<'a>(&'a mut self) -> &'a mut Shell {
+        &mut self.err
+    }
+
+    pub fn say<T: ToStr>(&mut self, message: T, color: Color) -> IoResult<()> {
+        self.out().say(message, color)
+    }
+
+    pub fn status<T: Show, U: Show>(&mut self, status: T, message: U) -> IoResult<()> {
+        self.out().say_status(status, message, GREEN)
+    }
+
+    pub fn error<T: ToStr>(&mut self, message: T) -> IoResult<()> {
+        self.err().say(message, RED)
+    }
+}
+
+
 
 impl Shell {
     pub fn create(out: Box<Writer>, config: ShellConfig) -> Shell {
@@ -49,6 +83,17 @@ impl Shell {
         if color != BLACK { try!(self.fg(color)); }
         try!(self.write_line(message.to_str().as_slice()));
         try!(self.reset());
+        try!(self.flush());
+        Ok(())
+    }
+
+    pub fn say_status<T: Show, U: Show>(&mut self, status: T, message: U, color: Color) -> IoResult<()> {
+        try!(self.reset());
+        if color != BLACK { try!(self.fg(color)); }
+        if self.supports_attr(Bold) { try!(self.attr(Bold)); }
+        try!(self.write_str(format!("{:>12}", status).as_slice()));
+        try!(self.reset());
+        try!(self.write_line(format!(" {}", message).as_slice()));
         try!(self.flush());
         Ok(())
     }

@@ -8,7 +8,7 @@ extern crate serialize;
 extern crate hammer;
 
 use cargo::{execute_main_without_stdin};
-use cargo::core::{Package, Source, SourceId};
+use cargo::core::{MultiShell, Package, Source, SourceId};
 use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 
@@ -23,7 +23,7 @@ fn main() {
     execute_main_without_stdin(execute);
 }
 
-fn execute(options: Options) -> CliResult<Option<Package>> {
+fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
     let path = Path::new(options.manifest_path.as_slice());
     let source_id = SourceId::for_path(&path);
     let mut source = PathSource::new(&source_id);

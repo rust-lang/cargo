@@ -9,6 +9,8 @@ use cargo::util::{process,realpath};
 fn setup() {
 }
 
+static COMPILING: &'static str = "   Compiling";
+
 fn basic_bin_manifest(name: &str) -> String {
     format!(r#"
         [project]
@@ -143,9 +145,10 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     assert_that(p.cargo_process("cargo-compile"),
         execs()
-        .with_stdout(format!("Compiling bar v0.5.0 (file:{})\n\
-                              Compiling foo v0.5.0 (file:{})\n",
-                             bar.display(), main.display()))
+        .with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                              {} foo v0.5.0 (file:{})\n",
+                             COMPILING, bar.display(),
+                             COMPILING, main.display()))
         .with_stderr(""));
 
     assert_that(&p.root().join("target/foo"), existing_file());
@@ -343,7 +346,7 @@ test!(custom_build {
         "#);
     assert_that(p.cargo_process("cargo-compile"),
                 execs().with_status(0)
-                       .with_stdout(format!("Compiling foo v0.5.0 (file:{})\n",
+                       .with_stdout(format!("   Compiling foo v0.5.0 (file:{})\n",
                                             p.root().display()))
                        .with_stderr(""));
 })

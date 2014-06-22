@@ -9,6 +9,9 @@ use cargo::util::{process};
 fn setup() {
 }
 
+static COMPILING: &'static str = "   Compiling";
+static FRESH:     &'static str = "       Fresh";
+
 test!(cargo_compile_with_nested_deps_shorthand {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -115,23 +118,23 @@ test!(no_rebuild_dependency {
         "#);
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("cargo-compile"),
-                execs().with_stdout(format!("Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
     // This time we shouldn't compile bar
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Skipping fresh bar v0.5.0 (file:{})\n\
-                                             Skipping fresh foo v0.5.0 (file:{})\n",
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            FRESH, bar.display(),
+                                            FRESH, p.root().display())));
 
     p.build(); // rebuild the files (rewriting them in the process)
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
 })
 
 test!(deep_dependencies_trigger_rebuild {
@@ -183,19 +186,19 @@ test!(deep_dependencies_trigger_rebuild {
             pub fn baz() {}
         "#);
     assert_that(p.cargo_process("cargo-compile"),
-                execs().with_stdout(format!("Compiling baz v0.5.0 (file:{})\n\
-                                             Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            baz.display(),
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            COMPILING, baz.display(),
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Skipping fresh baz v0.5.0 (file:{})\n\
-                                             Skipping fresh bar v0.5.0 (file:{})\n\
-                                             Skipping fresh foo v0.5.0 (file:{})\n",
-                                            baz.display(),
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            FRESH, baz.display(),
+                                            FRESH, bar.display(),
+                                            FRESH, p.root().display())));
 
     // Make sure an update to baz triggers a rebuild of bar
     //
@@ -206,12 +209,12 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn baz() { println!("hello!"); }
     "#).assert();
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Compiling baz v0.5.0 (file:{})\n\
-                                             Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            baz.display(),
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            COMPILING, baz.display(),
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
 
     // Make sure an update to bar doesn't trigger baz
     File::create(&p.root().join("bar/src/bar.rs")).write_str(r#"
@@ -219,12 +222,13 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).assert();
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Skipping fresh baz v0.5.0 (file:{})\n\
-                                             Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
+                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            FRESH,
                                             baz.display(),
-                                            bar.display(),
-                                            p.root().display())));
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
 })
 
 test!(no_rebuild_two_deps {
@@ -276,17 +280,17 @@ test!(no_rebuild_two_deps {
             pub fn baz() {}
         "#);
     assert_that(p.cargo_process("cargo-compile"),
-                execs().with_stdout(format!("Compiling baz v0.5.0 (file:{})\n\
-                                             Compiling bar v0.5.0 (file:{})\n\
-                                             Compiling foo v0.5.0 (file:{})\n",
-                                            baz.display(),
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            COMPILING, baz.display(),
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("Skipping fresh baz v0.5.0 (file:{})\n\
-                                             Skipping fresh bar v0.5.0 (file:{})\n\
-                                             Skipping fresh foo v0.5.0 (file:{})\n",
-                                            baz.display(),
-                                            bar.display(),
-                                            p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            FRESH, baz.display(),
+                                            FRESH, bar.display(),
+                                            FRESH, p.root().display())));
 })
