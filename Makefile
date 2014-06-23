@@ -1,5 +1,6 @@
 RUSTC ?= rustc
 RUSTC_FLAGS ?=
+DESTDIR ?= /usr/local
 
 # Link flags to pull in dependencies
 BINS = cargo \
@@ -72,6 +73,9 @@ distclean: clean
 	cd libs/hamcrest-rust && make clean
 	cd libs/hammer.rs && make clean
 	cd libs/toml-rs && make clean
+
+install:
+	cp target/cargo target/cargo-* $(DESTDIR)/bin
 
 # Setup phony tasks
 .PHONY: all clean distclean test test-unit test-integration libcargo
