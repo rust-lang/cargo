@@ -23,7 +23,9 @@ pub fn to_manifest(contents: &[u8],
                                             manifest\n\n{}", e)))
     };
 
-    toml_manifest.to_manifest(source_id)
+    toml_manifest.to_manifest(source_id).map_err(|err| {
+        human(format!("Cargo.toml is not a valid manifest\n\n{}", err))
+    })
 }
 
 pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
@@ -73,7 +75,8 @@ pub struct DetailedTomlDependency {
 
 #[deriving(Encodable,Decodable,PartialEq,Clone)]
 pub struct TomlManifest {
-    project: Box<TomlProject>,
+    package: Option<Box<TomlProject>>,
+    project: Option<Box<TomlProject>>,
     lib: Option<Vec<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
@@ -146,13 +149,16 @@ impl TomlManifest {
             None => ()
         }
 
+        let project = self.project.as_ref().or_else(|| self.package.as_ref());
+        let project = try!(project.require(|| human("No `package` or `project` section found.")));
+
         Ok((Manifest::new(
-                &Summary::new(&self.project.to_package_id(source_id.get_url()),
+                &Summary::new(&project.to_package_id(source_id.get_url()),
                               deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target"),
                 sources,
-                self.project.build.clone()),
+                project.build.clone()),
            nested_paths))
     }
 }

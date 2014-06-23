@@ -292,18 +292,18 @@ pub fn internal_error<S1: Str, S2: Str>(error: S1,
     } as Box<CargoError>
 }
 
-pub fn internal<S1: Str>(error: S1) -> Box<CargoError> {
+pub fn internal<S: Show>(error: S) -> Box<CargoError> {
     box ConcreteCargoError {
-        description: error.as_slice().to_str(),
+        description: error.to_str(),
         detail: None,
         cause: None,
         is_human: false
     } as Box<CargoError>
 }
 
-pub fn human<S: Str>(error: S) -> Box<CargoError> {
+pub fn human<S: Show>(error: S) -> Box<CargoError> {
     box ConcreteCargoError {
-        description: error.as_slice().to_str(),
+        description: error.to_str(),
         detail: None,
         cause: None,
         is_human: true

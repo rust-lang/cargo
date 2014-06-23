@@ -48,7 +48,7 @@ test!(cargo_compile_with_invalid_manifest {
         execs()
         .with_status(101)
         .with_stderr("Cargo.toml is not a valid manifest\n\n\
-                      expected a section for the key `project`\n"))
+                      No `package` or `project` section found.\n"))
 })
 
 test!(cargo_compile_with_invalid_manifest2 {
