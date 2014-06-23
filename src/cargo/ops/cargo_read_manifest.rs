@@ -6,9 +6,7 @@ use util::{CargoResult, human};
 pub fn read_manifest(contents: &[u8], source_id: &SourceId)
     -> CargoResult<(Manifest, Vec<Path>)>
 {
-    util::toml::to_manifest(contents, source_id).map_err(|err| {
-        human(err.to_str())
-    })
+    util::toml::to_manifest(contents, source_id).map_err(human)
 }
 
 pub fn read_package(path: &Path, source_id: &SourceId)
