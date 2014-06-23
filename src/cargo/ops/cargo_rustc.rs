@@ -19,7 +19,8 @@ struct Context<'a> {
     config: &'a mut Config<'a>
 }
 
-pub fn compile_packages(pkg: &Package, deps: &PackageSet, shell: &mut MultiShell) -> CargoResult<()> {
+pub fn compile_packages(pkg: &Package, deps: &PackageSet,
+                        shell: &mut MultiShell) -> CargoResult<()> {
     debug!("compile_packages; pkg={}; deps={}", pkg, deps);
 
     let mut config = try!(Config::new(shell));
