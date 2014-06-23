@@ -101,7 +101,8 @@ impl Shell {
         Ok(())
     }
 
-    pub fn say_status<T: Show, U: Show>(&mut self, status: T, message: U, color: Color) -> IoResult<()> {
+    pub fn say_status<T: Show, U: Show>(&mut self, status: T, message: U,
+                                        color: Color) -> IoResult<()> {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
         if self.supports_attr(Bold) { try!(self.attr(Bold)); }
