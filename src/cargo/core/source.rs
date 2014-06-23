@@ -117,10 +117,11 @@ impl SourceId {
 
     pub fn load(&self, config: &mut Config) -> Box<Source> {
         match self.kind {
-            GitKind(..) => {
-                box GitSource::new(self, config) as Box<Source>
+            GitKind(..) => box GitSource::new(self, config) as Box<Source>,
+            PathKind => {
+                let path = Path::new(self.url.path.as_slice());
+                box PathSource::new(&path, self) as Box<Source>
             },
-            PathKind => box PathSource::new(self) as Box<Source>,
             RegistryKind => unimplemented!()
         }
     }
