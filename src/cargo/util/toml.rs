@@ -1,8 +1,9 @@
-use toml;
-use url;
-use url::Url;
-use std::collections::HashMap;
 use serialize::Decodable;
+use std::collections::HashMap;
+use std::str;
+use toml;
+use url::Url;
+use url;
 
 use core::{SourceId,GitKind};
 use core::manifest::{LibKind,Lib};
@@ -11,84 +12,43 @@ use util::{CargoResult, Require, human};
 
 pub fn to_manifest(contents: &[u8],
                    source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
-    let root = try!(toml::parse_from_bytes(contents).map_err(|_| {
-        human("Cargo.toml is not valid Toml")
+    let contents = try!(str::from_utf8(contents).require(|| {
+        human("Cargo.toml is not valid UTF-8")
     }));
-    let toml = try!(toml_to_manifest(root).map_err(|_| {
-        human("Cargo.toml is not a valid manifest")
-    }));
-
-    toml.to_manifest(source_id)
-}
-
-fn toml_to_manifest(root: toml::Value) -> CargoResult<TomlManifest> {
-    fn decode<T: Decodable<toml::Decoder,toml::Error>>(root: &toml::Value,
-                                                       path: &str)
-        -> Result<T, toml::Error>
-    {
-        let root = match root.lookup(path) {
-            Some(val) => val,
-            None => return Err(toml::ParseError)
-        };
-        toml::from_toml(root.clone())
-    }
-
-    let project = try!(decode(&root, "project"));
-    let lib = decode(&root, "lib").ok();
-    let bin = decode(&root, "bin").ok();
-
-    let deps = root.lookup("dependencies");
-
-    let deps = match deps {
-        Some(deps) => {
-            let table = try!(deps.get_table().require(|| {
-                human("dependencies must be a table")
-            })).clone();
-
-            let mut deps: HashMap<String, TomlDependency> = HashMap::new();
-
-            for (k, v) in table.iter() {
-                match v {
-                    &toml::String(ref string) => {
-                        deps.insert(k.clone(), SimpleDep(string.clone()));
-                    },
-                    &toml::Table(ref table) => {
-                        let mut details = HashMap::<String, String>::new();
-
-                        for (k, v) in table.iter() {
-                            let v = try!(v.get_str().require(|| {
-                                human("dependency values must be string")
-                            }));
-
-                            details.insert(k.clone(), v.clone());
-                        }
-
-                        let version = try!(details.find_equiv(&"version")
-                                           .require(|| {
-                            human("dependencies must include a version")
-                        })).clone();
-
-                        deps.insert(k.clone(),
-                                    DetailedDep(DetailedTomlDependency {
-                            version: version,
-                            other: details
-                        }));
-                    },
-                    _ => ()
-                }
-            }
-
-            Some(deps)
-        },
-        None => None
+    let root = try!(parse(contents, "Cargo.toml"));
+    let mut d = toml::Decoder::new(toml::Table(root));
+    let toml_manifest: TomlManifest = match Decodable::decode(&mut d) {
+        Ok(t) => t,
+        Err(e) => return Err(human(format!("Cargo.toml is not a valid \
+                                            manifest\n\n{}", e)))
     };
 
-    Ok(TomlManifest {
-        project: box project,
-        lib: lib,
-        bin: bin,
-        dependencies: deps,
-    })
+    toml_manifest.to_manifest(source_id)
+}
+
+pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
+    let mut parser = toml::Parser::new(toml.as_slice());
+    match parser.parse() {
+        Some(toml) => Ok(toml),
+        None => {
+            let mut error_str = format!("could not parse input TOML\n");
+            for error in parser.errors.iter() {
+                let (loline, locol) = parser.to_linecol(error.lo);
+                let (hiline, hicol) = parser.to_linecol(error.hi);
+                error_str.push_str(format!("{}:{}:{}{} {}",
+                                           file,
+                                           loline + 1, locol + 1,
+                                           if loline != hiline || locol != hicol {
+                                               format!("-{}:{}", hiline + 1,
+                                                       hicol + 1)
+                                           } else {
+                                               "".to_string()
+                                           },
+                                           error.desc).as_slice());
+            }
+            Err(human(error_str))
+        }
+    }
 }
 
 type TomlLibTarget = TomlTarget;
@@ -98,19 +58,20 @@ type TomlBinTarget = TomlTarget;
  * TODO: Make all struct fields private
  */
 
-#[deriving(Encodable,PartialEq,Clone,Show)]
+#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
 pub enum TomlDependency {
     SimpleDep(String),
     DetailedDep(DetailedTomlDependency)
 }
 
-#[deriving(Encodable,PartialEq,Clone,Show)]
+#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
 pub struct DetailedTomlDependency {
     version: String,
-    other: HashMap<String, String>
+    path: Option<String>,
+    git: Option<String>,
 }
 
-#[deriving(Encodable,PartialEq,Clone)]
+#[deriving(Encodable,Decodable,PartialEq,Clone)]
 pub struct TomlManifest {
     project: Box<TomlProject>,
     lib: Option<Vec<TomlLibTarget>>,
@@ -158,8 +119,7 @@ impl TomlManifest {
                             (string.clone(), SourceId::for_central())
                         },
                         DetailedDep(ref details) => {
-                            let new_source_id = details.other.find_equiv(&"git");
-                            let new_source_id = new_source_id.map(|git| {
+                            let new_source_id = details.git.as_ref().map(|git| {
                                 // TODO: Don't unwrap here
                                 let kind = GitKind("master".to_str());
                                 let url = url::from_str(git.as_slice()).unwrap();
@@ -168,7 +128,7 @@ impl TomlManifest {
                                 sources.push(source_id.clone());
                                 source_id
                             }).or_else(|| {
-                                details.other.find_equiv(&"path").map(|path| {
+                                details.path.as_ref().map(|path| {
                                     nested_paths.push(Path::new(path.as_slice()));
                                     source_id.clone()
                                 })

@@ -98,7 +98,7 @@ test!(no_rebuild_dependency {
             authors = ["wycats@example.com"]
 
             [[bin]] name = "foo"
-            [dependencies.bar] version = "0.5.0"
+            [dependencies] bar = "0.5.0"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -152,8 +152,10 @@ test!(deep_dependencies_trigger_rebuild {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
-            [dependencies.bar] version = "0.5.0"
+            [[bin]]
+            name = "foo"
+            [dependencies]
+            bar = "0.5.0"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -166,8 +168,10 @@ test!(deep_dependencies_trigger_rebuild {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]] name = "bar"
-            [dependencies.baz] version = "0.5.0"
+            [[lib]]
+            name = "bar"
+            [dependencies]
+            baz = "0.5.0"
         "#)
         .file("bar/src/bar.rs", r#"
             extern crate baz;
@@ -180,7 +184,8 @@ test!(deep_dependencies_trigger_rebuild {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]] name = "baz"
+            [[lib]]
+            name = "baz"
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
@@ -246,9 +251,11 @@ test!(no_rebuild_two_deps {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
-            [dependencies.bar] version = "0.5.0"
-            [dependencies.baz] version = "0.5.0"
+            [[bin]]
+            name = "foo"
+            [dependencies]
+            bar = "0.5.0"
+            baz = "0.5.0"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -261,8 +268,10 @@ test!(no_rebuild_two_deps {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]] name = "bar"
-            [dependencies.baz] version = "0.5.0"
+            [[lib]]
+            name = "bar"
+            [dependencies]
+            baz = "0.5.0"
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
@@ -274,7 +283,8 @@ test!(no_rebuild_two_deps {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]] name = "baz"
+            [[lib]]
+            name = "baz"
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}

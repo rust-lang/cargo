@@ -1,9 +1,9 @@
-[submodule "libs/rust-toml"]
-	path = libs/rust-toml
-	url = https://github.com/wycats/rust-toml
 [submodule "libs/hammer.rs"]
 	path = libs/hammer.rs
 	url = https://github.com/wycats/hammer.rs.git
 [submodule "libs/hamcrest-rust"]
 	path = libs/hamcrest-rust
 	url = https://github.com/carllerche/hamcrest-rust/
+[submodule "libs/toml-rs"]
+	path = libs/toml-rs
+	url = https://github.com/alexcrichton/toml-rs
