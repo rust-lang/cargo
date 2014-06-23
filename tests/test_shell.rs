@@ -34,12 +34,13 @@ test!(color_explicitly_disabled {
 
 test!(colored_shell {
     let config = ShellConfig { color: true, verbose: true, tty: true };
-    let mut buf: Vec<u8> = Vec::from_elem(22, 0 as u8);
+    let mut buf: Vec<u8> = Vec::from_elem(100, 0 as u8);
 
     Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
-        assert_that(buf.as_slice(), shell_writes(colored_output("Hey Alex\n",
-                                                       color::RED).assert()));
+        let buf = buf.as_slice().slice_to(buf.iter().position(|a| *a == 0).unwrap());
+        assert_that(buf, shell_writes(colored_output("Hey Alex\n",
+                                                     color::RED).assert()));
     });
 })
 
