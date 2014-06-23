@@ -1,10 +1,11 @@
 #![crate_id="cargo-verify-project"]
 
-extern crate toml = "github.com/mneumann/rust-toml#toml";
+extern crate toml;
 extern crate getopts;
 
-use std::os::{args,set_exit_status};
-use getopts::{reqopt,getopts};
+use std::io::File;
+use std::os::{args, set_exit_status};
+use getopts::{reqopt, getopts};
 
 /**
     cargo-verify-project --manifest=LOCATION
@@ -32,18 +33,17 @@ fn main() {
 
     let manifest = matches.opt_str("m").unwrap();
     let file = Path::new(manifest);
-
-    if !file.exists() {
-        fail("invalid", "not-found");
-        return;
-    }
-
-    match toml::parse_from_file(file.as_str().unwrap()) {
-        Err(_) => {
+    let contents = match File::open(&file).read_to_str() {
+        Ok(s) => s,
+        Err(e) => return fail("invalid", format!("error reading file: {}",
+                                                 e).as_slice())
+    };
+    match toml::Parser::new(contents.as_slice()).parse() {
+        None => {
             fail("invalid", "invalid-format");
             return;
         },
-        Ok(r) => r
+        Some(..) => {}
     };
 
     println!("{}", "{ \"success\": \"true\" }");

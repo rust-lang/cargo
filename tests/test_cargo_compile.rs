@@ -47,7 +47,22 @@ test!(cargo_compile_with_invalid_manifest {
     assert_that(p.cargo_process("cargo-compile"),
         execs()
         .with_status(101)
-        .with_stderr("Cargo.toml is not a valid manifest\n"));
+        .with_stderr("Cargo.toml is not a valid manifest\n\n\
+                      expected a section for the key `project`\n"))
+})
+
+test!(cargo_compile_with_invalid_manifest2 {
+    let p = project("foo")
+        .file("Cargo.toml", r"
+            [project]
+            foo = bar
+        ");
+
+    assert_that(p.cargo_process("cargo-compile"),
+        execs()
+        .with_status(101)
+        .with_stderr("could not parse input TOML\n\
+                      Cargo.toml:3:19-3:20 expected a value\n"))
 })
 
 test!(cargo_compile_without_manifest {
@@ -250,9 +265,9 @@ test!(cargo_compile_with_nested_deps_longhand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies.bar]
+            [dependencies]
 
-            version = "0.5.0"
+            bar = "0.5.0"
 
             [[bin]]
 
@@ -473,7 +488,7 @@ test!(custom_build_in_dependency {
             authors = ["wycats@example.com"]
 
             [[bin]] name = "foo"
-            [dependencies.bar] version = "0.5.0"
+            [dependencies] bar = "0.5.0"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
