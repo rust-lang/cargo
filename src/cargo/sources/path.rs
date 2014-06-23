@@ -9,6 +9,7 @@ use util::{CargoResult, internal};
 
 pub struct PathSource {
     id: SourceId,
+    path: Path,
     updated: bool,
     packages: Vec<Package>
 }
@@ -17,22 +18,23 @@ pub struct PathSource {
 // mut and packages are discovered in update
 impl PathSource {
 
+    pub fn for_path(path: &Path) -> PathSource {
+        PathSource::new(path, &SourceId::for_path(path))
+    }
+
     /// Invoked with an absolute path to a directory that contains a Cargo.toml.
     /// The source will read the manifest and find any other packages contained
     /// in the directory structure reachable by the root manifest.
-    pub fn new(id: &SourceId) -> PathSource {
+    pub fn new(path: &Path, id: &SourceId) -> PathSource {
         log!(5, "new; id={}", id);
         assert!(id.is_path(), "does not represent a path source; id={}", id);
 
         PathSource {
             id: id.clone(),
+            path: path.clone(),
             updated: false,
             packages: Vec::new()
         }
-    }
-
-    fn path(&self) -> Path {
-        Path::new(self.id.get_url().path.as_slice())
     }
 
     pub fn get_root_package(&self) -> CargoResult<Package> {
@@ -58,7 +60,7 @@ impl Show for PathSource {
 impl Source for PathSource {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
-          let pkgs = try!(ops::read_packages(&self.path(), &self.id));
+          let pkgs = try!(ops::read_packages(&self.path, &self.id));
           self.packages.push_all_move(pkgs);
           self.updated = true;
         }
@@ -88,8 +90,8 @@ impl Source for PathSource {
 
     fn fingerprint(&self) -> CargoResult<String> {
         let mut max = None;
-        let target_dir = self.path().join("target");
-        for child in try!(fs::walk_dir(&self.path())) {
+        let target_dir = self.path.join("target");
+        for child in try!(fs::walk_dir(&self.path)) {
             if target_dir.is_ancestor_of(&child) { continue }
             let stat = try!(fs::stat(&child));
             max = cmp::max(max, Some(stat.modified));

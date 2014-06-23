@@ -33,8 +33,7 @@ use util::{CargoResult, Wrap, config, internal, human};
 pub fn compile(manifest_path: &Path, shell: &mut MultiShell) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    let id = SourceId::for_path(&manifest_path.dir_path());
-    let mut source = PathSource::new(&id);
+    let mut source = PathSource::for_path(&manifest_path.dir_path());
 
     try!(source.update());
 
