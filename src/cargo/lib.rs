@@ -8,7 +8,7 @@ extern crate term;
 extern crate url;
 extern crate serialize;
 extern crate semver;
-extern crate toml = "github.com/mneumann/rust-toml#toml";
+extern crate toml;
 
 #[phase(plugin, link)]
 extern crate hammer;

@@ -5,6 +5,8 @@ use toml;
 use core::MultiShell;
 use util::{CargoResult, CargoError, ChainError, Require, internal, human};
 
+use cargo_toml = util::toml;
+
 pub struct Config<'a> {
     home_path: Path,
     shell: &'a mut MultiShell
@@ -164,11 +166,12 @@ fn walk_tree(pwd: &Path,
     Ok(())
 }
 
-fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
-    let path = file.path().clone();
-    let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf));
-    let val = try!(root.lookup(key).require(|| internal("")));
+fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
+    let contents = try!(file.read_to_str());
+    let toml = try!(cargo_toml::parse(contents.as_slice(),
+                                      file.path().filename_display()
+                                          .to_str().as_slice()));
+    let val = try!(toml.find_equiv(&key).require(|| internal("")));
 
     let v = match *val {
         toml::String(ref val) => String(val.clone()),
@@ -178,19 +181,16 @@ fn extract_config(file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
         _ => return Err(internal(""))
     };
 
-    Ok(ConfigValue{ value: v, path: vec!(path) })
+    Ok(ConfigValue{ value: v, path: vec![file.path().clone()] })
 }
 
-fn extract_all_configs(file: io::fs::File,
+fn extract_all_configs(mut file: io::fs::File,
                        map: &mut HashMap<String, ConfigValue>) -> CargoResult<()> {
     let path = file.path().clone();
-    let mut buf = io::BufferedReader::new(file);
-    let root = try!(toml::parse_from_buffer(&mut buf).chain_error(|| {
-        internal(format!("could not parse Toml manifest; path={}",
-                         path.display()))
-    }));
-
-    let table = try!(root.get_table().require(|| {
+    let contents = try!(file.read_to_str());
+    let file = path.filename_display().to_str();
+    let table = try!(cargo_toml::parse(contents.as_slice(),
+                                       file.as_slice()).chain_error(|| {
         internal(format!("could not parse Toml manifest; path={}",
                          path.display()))
     }));

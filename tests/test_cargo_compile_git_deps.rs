@@ -187,7 +187,8 @@ test!(recompilation {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]] name = "bar"
+                [[lib]]
+                name = "bar"
             "#)
             .file("src/bar.rs", r#"
                 pub fn bar() {}
