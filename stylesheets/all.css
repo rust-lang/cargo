@@ -498,21 +498,22 @@ main {
   flex-direction: column;
   width: 900px;
   align-self: center;
+  margin-bottom: 10px;
   background-color: #f9f7ec;
   padding: 15px;
   border-radius: 5px;
   box-shadow: 0px 0px 5px 2px #3b6837; }
-  /* line 59, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 60, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main p {
     color: #3b6837;
     margin: 10px 0; }
 
-/* line 65, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 66, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 img.logo {
   align-self: center;
   margin-bottom: 10px; }
 
-/* line 70, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 71, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 pre {
   background: #eeecdd;
   padding: 10px;
