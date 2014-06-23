@@ -11,8 +11,8 @@ BINS = cargo \
 
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
-DEPS = -L libs/hammer.rs/target -L libs/rust-toml/lib
-TOML = libs/rust-toml/lib/$(shell rustc --crate-file-name libs/rust-toml/src/toml/lib.rs)
+DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
+TOML = libs/toml-rs/lib/$(shell rustc --crate-file-name libs/toml-rs/src/toml.rs)
 HAMMER = libs/hammer.rs/target/$(shell rustc --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
 HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
 LIBCARGO = target/libcargo.timestamp
@@ -25,8 +25,8 @@ all: $(BIN_TARGETS)
 $(HAMMER): $(wildcard libs/hammer.rs/src/*.rs)
 	$(MAKE) -C libs/hammer.rs
 
-$(TOML): $(wildcard libs/rust-toml/src/toml/*.rs)
-	$(MAKE) -C libs/rust-toml
+$(TOML): $(wildcard libs/toml-rs/src/*.rs)
+	$(MAKE) -C libs/toml-rs
 
 $(HAMCREST): $(shell find libs/hamcrest-rust/src/hamcrest -name '*.rs')
 	$(MAKE) -C libs/hamcrest-rust
@@ -71,7 +71,7 @@ clean:
 distclean: clean
 	cd libs/hamcrest-rust && make clean
 	cd libs/hammer.rs && make clean
-	cd libs/rust-toml && make clean
+	cd libs/toml-rs && make clean
 
 # Setup phony tasks
 .PHONY: all clean distclean test test-unit test-integration libcargo
