@@ -1,49 +1,49 @@
 @font-face {
-  src: url("/fonts/Consolas.woff");
+  src: url("../fonts/Consolas.woff");
   font-family: "Consolas"; }
 
 @font-face {
-  src: url("/fonts/Consolas-Bold.woff");
+  src: url("../fonts/Consolas-Bold.woff");
   font-family: "Consolas";
   font-weight: bold; }
 
 @font-face {
-  src: url("/fonts/Consolas-Italic.woff");
+  src: url("../fonts/Consolas-Italic.woff");
   font-family: "Consolas";
   font-style: italic; }
 
 @font-face {
-  src: url("/fonts/Consolas-Bold-Italic.woff");
+  src: url("../fonts/Consolas-Bold-Italic.woff");
   font-family: "Consolas";
   font-weight: bold;
   font-style: italic; }
 
 @font-face {
-  src: url("/fonts/Roboto/Roboto-Thin.woff");
+  src: url("../fonts/Roboto/Roboto-Thin.woff");
   font-family: "Roboto";
   font-weight: 100; }
 
 @font-face {
-  src: url("/fonts/Roboto/Roboto-Light.woff");
+  src: url("../fonts/Roboto/Roboto-Light.woff");
   font-family: "Roboto";
   font-weight: 200; }
 
 @font-face {
-  src: url("/fonts/Roboto/Roboto-Regular.woff");
+  src: url("../fonts/Roboto/Roboto-Regular.woff");
   font-family: "Roboto";
   font-weight: 400; }
 
 @font-face {
-  src: url("/fonts/Roboto/Roboto-Medium.woff");
+  src: url("../fonts/Roboto/Roboto-Medium.woff");
   font-family: "Roboto";
   font-weight: 500; }
 
 @font-face {
-  src: url("/fonts/Roboto/Roboto-Bold.woff");
+  src: url("../fonts/Roboto/Roboto-Bold.woff");
   font-family: "Roboto";
   font-weight: 700; }
 
 @font-face {
-  src: url("/fonts/Roboto/Roboto-Black.woff");
+  src: url("../fonts/Roboto/Roboto-Black.woff");
   font-family: "Roboto";
   font-weight: 800; }
