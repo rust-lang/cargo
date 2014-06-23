@@ -504,16 +504,24 @@ main {
   border-radius: 5px;
   box-shadow: 0px 0px 5px 2px #3b6837; }
   /* line 60, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  main p:first-child {
+    color: #199b5c;
+    font-weight: 500;
+    margin-top: 3px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #62865f;
+    text-align: center; }
+  /* line 69, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main p {
     color: #3b6837;
     margin: 10px 0; }
 
-/* line 66, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 75, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 img.logo {
   align-self: center;
   margin-bottom: 10px; }
 
-/* line 71, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 80, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 pre {
   background: #eeecdd;
   padding: 10px;
