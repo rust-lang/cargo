@@ -477,22 +477,32 @@ body {
   /*background-color: $dark-green;*/ }
 
 /* line 31, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+a {
+  color: #f3bb00; }
+  /* line 34, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  a:hover {
+    color: #b64790; }
+
+/* line 39, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 h1 {
   font-size: 24px;
   margin: 20px 0 10px 0;
   font-weight: bold;
   color: #b64790; }
+  /* line 45, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  h1 code:not(.highlight) {
+    color: #f3bb00; }
 
-/* line 38, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 50, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 h1:first-child {
   margin-top: 0; }
 
-/* line 42, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 54, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 code:not(.highlight) {
   font-family: Consolas;
   color: #b64790; }
 
-/* line 47, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 59, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 main {
   display: flex;
   flex-direction: column;
@@ -503,7 +513,7 @@ main {
   padding: 15px;
   border-radius: 5px;
   box-shadow: 0px 0px 5px 2px #3b6837; }
-  /* line 60, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 72, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main p:first-child {
     color: #199b5c;
     font-weight: 500;
@@ -511,17 +521,27 @@ main {
     padding-bottom: 15px;
     border-bottom: 1px solid #62865f;
     text-align: center; }
-  /* line 69, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
-  main p {
+  /* line 81, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  main p, main ul {
     color: #3b6837;
-    margin: 10px 0; }
+    margin: 10px 0;
+    line-height: 150%; }
+  /* line 87, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  main ul {
+    margin-left: 20px; }
+  /* line 91, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  main li {
+    list-style-type: disc; }
+  /* line 95, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  main strong {
+    font-weight: bold; }
 
-/* line 75, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 100, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 img.logo {
   align-self: center;
   margin-bottom: 10px; }
 
-/* line 80, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 105, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 pre {
   background: #eeecdd;
   padding: 10px;
