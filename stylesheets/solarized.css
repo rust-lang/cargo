@@ -1,6 +1,7 @@
 /* line 3, /home/wycats/Code/cargo-website/source/stylesheets/solarized.css.scss */
 .highlight {
-  background-color: #eeecdd; }
+  background-color: #eeecdd;
+  color: #586e75; }
 
 /* line 4, /home/wycats/Code/cargo-website/source/stylesheets/solarized.css.scss */
 .highlight .c {
@@ -29,7 +30,7 @@
 /* Literal */
 /* line 9, /home/wycats/Code/cargo-website/source/stylesheets/solarized.css.scss */
 .highlight .n {
-  color: #93a1a1; }
+  color: #cb4b16; }
 
 /* Name */
 /* line 10, /home/wycats/Code/cargo-website/source/stylesheets/solarized.css.scss */
@@ -44,7 +45,7 @@
 /* Other */
 /* line 12, /home/wycats/Code/cargo-website/source/stylesheets/solarized.css.scss */
 .highlight .p {
-  color: #93a1a1; }
+  color: #586e75; }
 
 /* Punctuation */
 /* line 13, /home/wycats/Code/cargo-website/source/stylesheets/solarized.css.scss */

@@ -17,9 +17,9 @@
     <img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" />
 
     <main>
-      <p>Cargo downloads your project&rsquo;s dependencies and compiles your project</p>
+      <p>Cargo downloads your <a href="https://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
 
-<h1>Let&rsquo;s Get Started</h1>
+      <h1>Let&rsquo;s Get Started</h1>
 
 <p>To start, add a <code>Cargo.toml</code> to the root of your project. Here&rsquo;s a
 simple one to get you started.</p>
@@ -42,7 +42,7 @@ simple one to get you started.</p>
 
 <p>And compile it:</p>
 
-<pre><code class="highlight"><span class="gp">$</span> cargo compile
+<pre><code class="highlight"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
 <pre><code class="highlight shell"><span class="gp">$ </span>./target/hello-world
@@ -64,7 +64,6 @@ Hello world!
 
 <span class="nn">[dependencies.color]</span>
 
-<span class="py">version</span> <span class="p">=</span> <span class="s">"1.0.0"</span>
 <span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/bjz/color-rs.git"</span>
 </code></pre>
 
@@ -75,35 +74,50 @@ between different color types.</p>
 <code>hello-world.rs</code>.</p>
 <pre><code class="highlight rust"><span class="k">extern</span> <span class="n">crate</span> <span class="n">color</span><span class="p">;</span>
 
-<span class="k">use</span> <span class="nn">color</span><span class="p">::{</span><span class="n">RGB</span><span class="p">,</span> <span class="n">ToHSL</span><span class="p">};</span>
+<span class="k">use</span> <span class="nn">color</span><span class="p">::{</span><span class="n">RGB</span><span class="p">,</span> <span class="n">ToHSV</span><span class="p">};</span>
 
 <span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nd">println!</span><span class="p">(</span><span class="s">"Converting RGB to HSL!"</span><span class="p">);</span>
-    <span class="k">let</span> <span class="n">red</span> <span class="o">=</span> <span class="nn">RGB</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-    <span class="nd">println!</span><span class="p">(</span><span class="s">"HSL: {}"</span><span class="p">,</span> <span class="n">red</span><span class="nf">.to_hsl</span><span class="p">());</span>
+    <span class="nd">println!</span><span class="p">(</span><span class="s">"Converting RGB to HSV!"</span><span class="p">);</span>
+    <span class="k">let</span> <span class="n">red</span> <span class="o">=</span> <span class="nn">RGB</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">255u8</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="nd">println!</span><span class="p">(</span><span class="s">"HSL: {}"</span><span class="p">,</span> <span class="n">red</span><span class="py">.to_hsv</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;</span><span class="p">());</span>
 <span class="p">}</span>
 </code></pre>
 
 <p>Compile it:</p>
 
-<pre><code class="highlight"><span class="gp">$</span> cargo compile
+<pre><code class="highlight"><span class="gp">$</span> cargo build
 <span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`
 <span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
 <span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
 <pre><code class="highlight shell"><span class="gp">$ </span>./target/hello-world
-Converting RGB to HSL!
-HSL: 0, 100, 50
+Converting RGB to HSV!
+HSV: HSV <span class="o">{</span> h: 0, s: 1, v: 1 <span class="o">}</span>
 </code></pre>
+
+<h1>Recompiling</h1>
 
 <p>If you modify <code>hello-world.rs</code> and recompile, Cargo will intelligently
 skip recompiling <code>color</code>, which is still fresh.</p>
 
 <pre><code class="highlight"><span class="gp">$</span> touch src/hello-world.rs
-<span class="gp">$</span> cargo compile
-<span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`
+<span class="gp">$</span> cargo build
 <span style="font-weight: bold" class="s1">       Fresh</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
 <span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
 
+<p>To update the repository from Github, pass the <code>--update-remotes</code> (or
+<code>-u</code>) flag to <code>cargo build</code>.</p>
+
+<pre><code class="highlight"><span class="gp">$</span> touch src/hello-world.rs
+<span class="gp">$</span> cargo build -u
+<span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`
+<span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
+<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
+
+
+      <footer>
+        <a href="/faq.html">Frequently Asked Questions</a>
+      </footer>
     </main>
+
   </body>
 </html>
