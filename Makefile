@@ -4,7 +4,7 @@ DESTDIR ?= /usr/local
 
 # Link flags to pull in dependencies
 BINS = cargo \
-	     cargo-compile \
+	     cargo-build \
 	     cargo-read-manifest \
 	     cargo-rustc \
 	     cargo-verify-project \

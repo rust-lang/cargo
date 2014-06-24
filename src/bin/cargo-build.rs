@@ -1,4 +1,4 @@
-#![crate_id="cargo-compile"]
+#![crate_id="cargo-build"]
 #![feature(phase)]
 
 extern crate cargo;
@@ -24,7 +24,7 @@ pub struct Options {
     update_remotes: bool
 }
 
-hammer_config!(Options "Compile the current project", |c| {
+hammer_config!(Options "Build the current project", |c| {
     c.short("update_remotes", 'u')
 })
 

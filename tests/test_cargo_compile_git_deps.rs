@@ -84,7 +84,7 @@ test!(cargo_compile_simple_git_dep {
     let root = project.root();
     let git_root = git_project.root();
 
-    assert_that(project.cargo_process("cargo-compile"),
+    assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
                               {} dep1 v0.5.0 (file:{})\n\
@@ -165,7 +165,7 @@ test!(cargo_compile_with_nested_paths {
         .file("src/parent.rs",
               main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
 
-    p.cargo_process("cargo-compile")
+    p.cargo_process("cargo-build")
         .exec_with_output()
         .assert();
 
@@ -215,7 +215,7 @@ test!(recompilation {
               main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
 
     // First time around we should compile both foo and bar
-    assert_that(p.cargo_process("cargo-compile"),
+    assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -224,7 +224,7 @@ test!(recompilation {
                                             COMPILING, p.root().display())));
 
     // Don't recompile the second time
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
@@ -235,13 +235,13 @@ test!(recompilation {
         pub fn bar() { println!("hello!"); }
     "#).assert();
 
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
-    assert_that(p.process("cargo-compile").arg("-u"),
+    assert_that(p.process("cargo-build").arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -257,7 +257,7 @@ test!(recompilation {
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
 
-    assert_that(p.process("cargo-compile").arg("-u"),
+    assert_that(p.process("cargo-build").arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
