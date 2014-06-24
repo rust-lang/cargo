@@ -6,7 +6,7 @@ Learn more at http://crates.io/.
 
 You'll want to clone cargo using --recursive on git, to clone in it's submodule dependencies.
 ```
-$ git clone --recursive https://github.com/carlhuda/cargo
+$ git clone --recursive https://github.com/rust-lang/cargo
 ```
 or
 ```
