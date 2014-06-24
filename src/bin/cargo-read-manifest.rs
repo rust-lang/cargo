@@ -8,7 +8,7 @@ extern crate serialize;
 extern crate hammer;
 
 use cargo::{execute_main_without_stdin};
-use cargo::core::{MultiShell, Package, Source, SourceId};
+use cargo::core::{MultiShell, Package, Source};
 use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 

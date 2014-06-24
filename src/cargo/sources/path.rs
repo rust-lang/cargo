@@ -27,7 +27,6 @@ impl PathSource {
     /// in the directory structure reachable by the root manifest.
     pub fn new(path: &Path, id: &SourceId) -> PathSource {
         log!(5, "new; id={}", id);
-        assert!(id.is_path(), "does not represent a path source; id={}", id);
 
         PathSource {
             id: id.clone(),
