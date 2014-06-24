@@ -1,6 +1,8 @@
 RUSTC ?= rustc
 RUSTC_FLAGS ?=
-DESTDIR ?= /usr/local
+DESTDIR ?=
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
 
 # Link flags to pull in dependencies
 BINS = cargo \
@@ -75,7 +77,8 @@ distclean: clean
 	cd libs/toml-rs && make clean
 
 install:
-	cp target/cargo target/cargo-* $(DESTDIR)/bin
+	install -d $(DESTDIR)$(BINDIR)
+	install target/cargo target/cargo-* $(DESTDIR)$(BINDIR)
 
 # Setup phony tasks
 .PHONY: all clean distclean test test-unit test-integration libcargo
