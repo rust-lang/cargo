@@ -17,3 +17,9 @@ $ git submodule update
 Then it's as simple as ```make``` followed by ```make install``` and you're
 ready to go.
 
+## License
+
+Cargo is primarily distributed under the terms of both the MIT license
+and the Apache License (Version 2.0).
+
+See LICENSE-APACHE and LICENSE-MIT for details.
