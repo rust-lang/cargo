@@ -62,7 +62,7 @@ test!(cargo_compile_with_invalid_manifest2 {
         execs()
         .with_status(101)
         .with_stderr("could not parse input TOML\n\
-                      Cargo.toml:3:19-3:20 expected a value\n"))
+                      Cargo.toml:3:19-3:20 expected a value\n\n"))
 })
 
 test!(cargo_compile_without_manifest {

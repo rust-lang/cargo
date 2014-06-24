@@ -87,7 +87,12 @@ impl SourceId {
     // Pass absolute path
     pub fn for_path(path: &Path) -> SourceId {
         // TODO: use proper path -> URL
-        let url = format!("file://{}", path.display());
+        let url = if cfg!(windows) {
+            let path = path.display().to_str();
+            format!("file://{}", path.as_slice().replace("\\", "/"))
+        } else {
+            format!("file://{}", path.display())
+        };
         SourceId::new(PathKind, url::from_str(url.as_slice()).unwrap())
     }
 
@@ -119,7 +124,11 @@ impl SourceId {
         match self.kind {
             GitKind(..) => box GitSource::new(self, config) as Box<Source>,
             PathKind => {
-                let path = Path::new(self.url.path.as_slice());
+                let mut path = self.url.path.clone();
+                if cfg!(windows) {
+                    path = path.replace("/", "\\");
+                }
+                let path = Path::new(path);
                 box PathSource::new(&path, self) as Box<Source>
             },
             RegistryKind => unimplemented!()
