@@ -28,7 +28,10 @@ impl Show for ProcessBuilder {
 }
 
 // TODO: Upstream a Windows/Posix branch to Rust proper
+#[cfg(unix)]
 static PATH_SEP : &'static str = ":";
+#[cfg(windows)]
+static PATH_SEP : &'static str = ";";
 
 impl ProcessBuilder {
     pub fn arg<T: Str>(mut self, arg: T) -> ProcessBuilder {
