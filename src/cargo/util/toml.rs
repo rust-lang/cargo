@@ -37,7 +37,7 @@ pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
             for error in parser.errors.iter() {
                 let (loline, locol) = parser.to_linecol(error.lo);
                 let (hiline, hicol) = parser.to_linecol(error.hi);
-                error_str.push_str(format!("{}:{}:{}{} {}",
+                error_str.push_str(format!("{}:{}:{}{} {}\n",
                                            file,
                                            loline + 1, locol + 1,
                                            if loline != hiline || locol != hicol {
