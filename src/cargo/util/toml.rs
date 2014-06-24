@@ -71,6 +71,9 @@ pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
     git: Option<String>,
+    branch: Option<String>,
+    tag: Option<String>,
+    rev: Option<String>
 }
 
 #[deriving(Encodable,Decodable,PartialEq,Clone)]
@@ -122,9 +125,14 @@ impl TomlManifest {
                             (Some(string.clone()), SourceId::for_central())
                         },
                         DetailedDep(ref details) => {
+                            let reference = details.branch.as_ref().map(|b| b.clone())
+                                .or_else(|| details.tag.as_ref().map(|t| t.clone()))
+                                .or_else(|| details.rev.as_ref().map(|t| t.clone()))
+                                .unwrap_or_else(|| "master".to_str());
+
                             let new_source_id = details.git.as_ref().map(|git| {
                                 // TODO: Don't unwrap here
-                                let kind = GitKind("master".to_str());
+                                let kind = GitKind(reference.clone());
                                 let url = url::from_str(git.as_slice()).unwrap();
                                 let source_id = SourceId::new(kind, url);
                                 // TODO: Don't do this for path
