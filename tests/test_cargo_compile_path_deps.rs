@@ -72,7 +72,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             }
         "#);
 
-    p.cargo_process("cargo-compile")
+    p.cargo_process("cargo-build")
         .exec_with_output()
         .assert();
 
@@ -117,20 +117,20 @@ test!(no_rebuild_dependency {
             pub fn bar() {}
         "#);
     // First time around we should compile both foo and bar
-    assert_that(p.cargo_process("cargo-compile"),
+    assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
     // This time we shouldn't compile bar
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, bar.display(),
                                             FRESH, p.root().display())));
 
     p.build(); // rebuild the files (rewriting them in the process)
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             COMPILING, bar.display(),
@@ -190,14 +190,14 @@ test!(deep_dependencies_trigger_rebuild {
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
         "#);
-    assert_that(p.cargo_process("cargo-compile"),
+    assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             COMPILING, baz.display(),
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -213,7 +213,7 @@ test!(deep_dependencies_trigger_rebuild {
     File::create(&p.root().join("baz/src/baz.rs")).write_str(r#"
         pub fn baz() { println!("hello!"); }
     "#).assert();
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -226,7 +226,7 @@ test!(deep_dependencies_trigger_rebuild {
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).assert();
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -289,14 +289,14 @@ test!(no_rebuild_two_deps {
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
         "#);
-    assert_that(p.cargo_process("cargo-compile"),
+    assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             COMPILING, baz.display(),
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
-    assert_that(p.process("cargo-compile"),
+    assert_that(p.process("cargo-build"),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",

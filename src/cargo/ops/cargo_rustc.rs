@@ -3,7 +3,7 @@ use std::io;
 use std::io::{File, IoError};
 use std::str;
 
-use core::{MultiShell, Package, PackageSet, Target};
+use core::{Package, PackageSet, Target};
 use util;
 use util::{CargoResult, ChainError, ProcessBuilder, internal, human, CargoError};
 use util::{Config};

@@ -32,10 +32,7 @@ struct ProjectLocation {
 fn execute() {
     debug!("executing; cmd=cargo; args={}", os::args());
 
-    let (cmd, args) = match process(os::args()) {
-        Ok((cmd, args)) => (cmd, args),
-        Err(err) => return handle_error(err, &mut shell(false))
-    };
+    let (cmd, args) = process(os::args());
 
     match cmd.as_slice() {
         "config-for-key" => {
@@ -52,7 +49,7 @@ fn execute() {
         },
         "--help" | "-h" | "help" | "-?" => {
             println!("Commands:");
-            println!("  compile          # compile the current project\n");
+            println!("  build          # compile the current project\n");
 
             let (_, options) = hammer::usage::<GlobalFlags>(false);
             println!("Options (for all commands):\n\n{}", options);
@@ -76,14 +73,11 @@ fn execute() {
     }
 }
 
-fn process(args: Vec<String>) -> CliResult<(String, Vec<String>)> {
-    let args: Vec<String> = Vec::from_slice(args.tail());
-    let head = try!(args.iter().nth(0).require(|| {
-        human("No subcommand found")
-    }).map_err(|err| CliError::from_boxed(err, 1))).to_str();
-    let tail = Vec::from_slice(args.tail());
+fn process(args: Vec<String>) -> (String, Vec<String>) {
+    let mut args = Vec::from_slice(args.tail());
+    let head = args.shift().unwrap_or("--help".to_str());
 
-    Ok((head, tail))
+    (head, args)
 }
 
 #[deriving(Encodable)]
