@@ -73,7 +73,6 @@ test!(cargo_compile_simple_git_dep {
 
             [dependencies.dep1]
 
-            version = "0.5.0"
             git = "file://{}"
 
             [[bin]]

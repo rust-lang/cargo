@@ -19,12 +19,18 @@ impl Dependency {
         }
     }
 
-    pub fn parse(name: &str, version: &str,
+    pub fn parse(name: &str, version: Option<&str>,
                  namespace: &SourceId) -> CargoResult<Dependency> {
+
+        let version = match version {
+            Some(v) => try!(VersionReq::parse(v)),
+            None => VersionReq::any()
+        };
+
         Ok(Dependency {
             name: name.to_str(),
             namespace: namespace.clone(),
-            req: try!(VersionReq::parse(version)),
+            req: version
         })
     }
 

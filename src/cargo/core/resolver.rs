@@ -85,7 +85,7 @@ mod test {
             let url = url::from_str("http://example.com").unwrap();
             let source_id = SourceId::new(RegistryKind, url);
             let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| {
-                Dependency::parse(*s, "1.0.0", &source_id).unwrap()
+                Dependency::parse(*s, Some("1.0.0"), &source_id).unwrap()
             }).collect();
             Summary::new(&PackageId::new($name, "1.0.0",
                                          "http://www.example.com/"),
@@ -107,7 +107,7 @@ mod test {
     fn dep(name: &str) -> Dependency {
         let url = url::from_str("http://example.com").unwrap();
         let source_id = SourceId::new(RegistryKind, url);
-        Dependency::parse(name, "1.0.0", &source_id).unwrap()
+        Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
 
     fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
