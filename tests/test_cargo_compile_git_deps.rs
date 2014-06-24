@@ -101,6 +101,134 @@ test!(cargo_compile_simple_git_dep {
       execs().with_stdout("hello world\n"));
 })
 
+test!(cargo_compile_git_dep_branch {
+    let project = project("foo");
+    let git_project = git_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]]
+
+                name = "dep1"
+            "#)
+            .file("src/dep1.rs", r#"
+                pub fn hello() -> &'static str {
+                    "hello world"
+                }
+            "#)
+    }).assert();
+
+    git_project.process("git").args(["checkout", "-b", "branchy"]).exec_with_output().assert();
+    git_project.process("git").args(["branch", "-d", "master"]).exec_with_output().assert();
+
+    let project = project
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            git = "file://{}"
+            branch = "branchy"
+
+            [[bin]]
+
+            name = "foo"
+        "#, git_project.root().display()))
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+
+    let root = project.root();
+    let git_root = git_project.root();
+
+    assert_that(project.cargo_process("cargo-build"),
+        execs()
+        .with_stdout(format!("{} git repository `file:{}`\n\
+                              {} dep1 v0.5.0 (file:{})\n\
+                              {} foo v0.5.0 (file:{})\n",
+                             UPDATING, git_root.display(),
+                             COMPILING, git_root.display(),
+                             COMPILING, root.display()))
+        .with_stderr(""));
+
+    assert_that(&project.root().join("target/foo"), existing_file());
+
+    assert_that(
+      cargo::util::process("foo").extra_path(project.root().join("target")),
+      execs().with_stdout("hello world\n"));
+})
+
+test!(cargo_compile_git_dep_tag {
+    let project = project("foo");
+    let git_project = git_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]]
+
+                name = "dep1"
+            "#)
+            .file("src/dep1.rs", r#"
+                pub fn hello() -> &'static str {
+                    "hello world"
+                }
+            "#)
+    }).assert();
+
+    git_project.process("git").args(["tag", "v0.1.0"]).exec_with_output().assert();
+    git_project.process("git").args(["checkout", "-b", "tmp"]).exec_with_output().assert();
+    git_project.process("git").args(["branch", "-d", "master"]).exec_with_output().assert();
+
+    let project = project
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            git = "file://{}"
+            tag = "v0.1.0"
+
+            [[bin]]
+
+            name = "foo"
+        "#, git_project.root().display()))
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+
+    let root = project.root();
+    let git_root = git_project.root();
+
+    assert_that(project.cargo_process("cargo-build"),
+        execs()
+        .with_stdout(format!("{} git repository `file:{}`\n\
+                              {} dep1 v0.5.0 (file:{})\n\
+                              {} foo v0.5.0 (file:{})\n",
+                             UPDATING, git_root.display(),
+                             COMPILING, git_root.display(),
+                             COMPILING, root.display()))
+        .with_stderr(""));
+
+    assert_that(&project.root().join("target/foo"), existing_file());
+
+    assert_that(
+      cargo::util::process("foo").extra_path(project.root().join("target")),
+      execs().with_stdout("hello world\n"));
+})
 test!(cargo_compile_with_nested_paths {
     let git_project = git_repo("dep1", |project| {
         project
