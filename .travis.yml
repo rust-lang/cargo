@@ -7,6 +7,7 @@ script:
   - ./.travis.check.style.sh
   - make CC="$CC" RUSTC="$RUSTC" -j4
   - make CC="$CC" RUSTC="$RUSTC" test -j4
+  - make install DESTDIR=${PWD}/destdir
 
 env:
   - ARCH=i686 CC='cc -m32'
