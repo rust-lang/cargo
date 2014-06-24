@@ -1,5 +1,5 @@
 use std::vec::Vec;
-use core::{MultiShell, Source, SourceId, Summary, Dependency, PackageId, Package};
+use core::{Source, SourceId, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human};
 
 pub trait Registry {
@@ -20,15 +20,15 @@ pub struct PackageRegistry<'a> {
     overrides: Vec<Summary>,
     summaries: Vec<Summary>,
     searched: Vec<SourceId>,
-    shell: &'a mut MultiShell
+    config: &'a mut Config<'a>
 }
 
 impl<'a> PackageRegistry<'a> {
     pub fn new<'a>(source_ids: Vec<SourceId>,
                override_ids: Vec<SourceId>,
-               shell: &'a mut MultiShell) -> CargoResult<PackageRegistry<'a>> {
+               config: &'a mut Config<'a>) -> CargoResult<PackageRegistry<'a>> {
 
-        let mut reg = PackageRegistry::empty(shell);
+        let mut reg = PackageRegistry::empty(config);
 
         for id in source_ids.iter() {
             try!(reg.load(id, false));
@@ -41,13 +41,13 @@ impl<'a> PackageRegistry<'a> {
         Ok(reg)
     }
 
-    fn empty<'a>(shell: &'a mut MultiShell) -> PackageRegistry<'a> {
+    fn empty<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: vec!(),
             overrides: vec!(),
             summaries: vec!(),
             searched: vec!(),
-            shell: shell
+            config: config
         }
     }
 
@@ -82,7 +82,7 @@ impl<'a> PackageRegistry<'a> {
     fn load(&mut self, namespace: &SourceId, override: bool) -> CargoResult<()> {
 
         (|| {
-            let mut source = namespace.load(&mut try!(Config::new(self.shell)));
+            let mut source = namespace.load(self.config);
             let dst = if override {&mut self.overrides} else {&mut self.summaries};
 
             // Ensure the source has fetched all necessary remote data.

@@ -10,20 +10,20 @@ use util::{Config};
 
 type Args = Vec<String>;
 
-struct Context<'a> {
+struct Context<'a, 'b> {
     dest: &'a Path,
     deps_dir: &'a Path,
     primary: bool,
     rustc_version: &'a str,
     compiled_anything: bool,
-    config: &'a mut Config<'a>
+    config: &'b mut Config<'b>
 }
 
-pub fn compile_packages(pkg: &Package, deps: &PackageSet,
-                        shell: &mut MultiShell) -> CargoResult<()> {
+pub fn compile_packages<'a>(pkg: &Package, deps: &PackageSet,
+                        config: &'a mut Config<'a>) -> CargoResult<()> {
+
     debug!("compile_packages; pkg={}; deps={}", pkg, deps);
 
-    let mut config = try!(Config::new(shell));
     let target_dir = pkg.get_absolute_target_dir();
     let deps_target_dir = target_dir.join("deps");
 
@@ -47,7 +47,7 @@ pub fn compile_packages(pkg: &Package, deps: &PackageSet,
         primary: false,
         rustc_version: rustc_version.as_slice(),
         compiled_anything: false,
-        config: &mut config
+        config: config
     };
 
     // Traverse the dependencies in topological order

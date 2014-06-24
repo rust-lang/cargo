@@ -92,11 +92,20 @@ impl<'a, 'b> Show for GitSource<'a, 'b> {
 
 impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
-        try!(self.config.shell().status("Updating",
-            format!("git repository `{}`", self.remote.get_url())));
+        let should_update = self.config.update_remotes() || {
+            !self.remote.has_ref(&self.db_path, self.reference.as_slice()).is_ok()
+        };
 
-        log!(5, "updating git source `{}`", self.remote);
-        let repo = try!(self.remote.checkout(&self.db_path));
+        let repo = if should_update {
+            try!(self.config.shell().status("Updating",
+                format!("git repository `{}`", self.remote.get_url())));
+
+            log!(5, "updating git source `{}`", self.remote);
+            try!(self.remote.checkout(&self.db_path))
+        } else {
+            self.remote.db_at(&self.db_path)
+        };
+
         try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
 
         self.path_source.update()
