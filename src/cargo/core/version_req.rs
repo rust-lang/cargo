@@ -34,6 +34,10 @@ struct PredBuilder {
 
 
 impl VersionReq {
+    pub fn any() -> VersionReq {
+        VersionReq { predicates: vec!() }
+    }
+
     pub fn parse(input: &str) -> CargoResult<VersionReq> {
         let mut lexer = Lexer::new(input);
         let mut builder = PredBuilder::new();

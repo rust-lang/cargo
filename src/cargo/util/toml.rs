@@ -68,7 +68,7 @@ pub enum TomlDependency {
 
 #[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
 pub struct DetailedTomlDependency {
-    version: String,
+    version: Option<String>,
     path: Option<String>,
     git: Option<String>,
 }
@@ -119,7 +119,7 @@ impl TomlManifest {
                 for (n, v) in dependencies.iter() {
                     let (version, source_id) = match *v {
                         SimpleDep(ref string) => {
-                            (string.clone(), SourceId::for_central())
+                            (Some(string.clone()), SourceId::for_central())
                         },
                         DetailedDep(ref details) => {
                             let new_source_id = details.git.as_ref().map(|git| {
@@ -142,7 +142,7 @@ impl TomlManifest {
                     };
 
                     deps.push(try!(Dependency::parse(n.as_slice(),
-                                                     version.as_slice(),
+                                                     version.as_ref().map(|v| v.as_slice()),
                                                      &source_id)))
                 }
             }
