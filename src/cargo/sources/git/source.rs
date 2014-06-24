@@ -7,20 +7,20 @@ use serialize::hex::ToHex;
 use url;
 use url::Url;
 
-use ops;
 use core::source::{Source,SourceId,GitKind};
 use core::{Package,PackageId,Summary};
 use util::{CargoResult,Config};
+use sources::PathSource;
 use sources::git::utils::{GitReference,GitRemote,Master,Other};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
 pub struct GitSource<'a, 'b> {
-    id: SourceId,
     remote: GitRemote,
     reference: GitReference,
     db_path: Path,
     checkout_path: Path,
+    path_source: PathSource,
     config: &'a mut Config<'b>
 }
 
@@ -42,22 +42,20 @@ impl<'a, 'b> GitSource<'a, 'b> {
         let checkout_path = config.git_checkout_path()
             .join(ident.as_slice()).join(reference.as_slice());
 
+        let path_source = PathSource::new(&checkout_path, source_id);
+
         GitSource {
-            id: source_id.clone(),
             remote: remote,
             reference: GitReference::for_str(reference.as_slice()),
             db_path: db_path,
             checkout_path: checkout_path,
+            path_source: path_source,
             config: config
         }
     }
 
     pub fn get_namespace<'a>(&'a self) -> &'a url::Url {
         self.remote.get_url()
-    }
-
-    fn packages(&self) -> CargoResult<Vec<Package>> {
-        ops::read_packages(&self.checkout_path, &self.id)
     }
 }
 
@@ -101,30 +99,21 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         let repo = try!(self.remote.checkout(&self.db_path));
         try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
 
-        Ok(())
+        self.path_source.update()
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        log!(5, "listing summaries in git source `{}`", self.remote);
-        let pkgs = try!(self.packages());
-        Ok(pkgs.iter().map(|p| p.get_summary().clone()).collect())
+        self.path_source.list()
     }
 
     fn download(&self, _: &[PackageId]) -> CargoResult<()> {
+        // TODO: assert! that the PackageId is contained by the source
         Ok(())
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages for package ids `{}` from `{}`", ids,
-             self.remote);
-
-        // TODO: Support multiple manifests per repo
-        let pkgs = try!(self.packages());
-
-        Ok(pkgs.iter()
-           .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
-           .map(|pkg| pkg.clone())
-           .collect())
+        log!(5, "getting packages for package ids `{}` from `{}`", ids, self.remote);
+        self.path_source.get(ids)
     }
 
     fn fingerprint(&self) -> CargoResult<String> {
