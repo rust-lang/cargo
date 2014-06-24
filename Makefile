@@ -71,7 +71,7 @@ test: test-unit test-integration
 clean:
 	rm -rf target
 
-distclean: clean
+clean-all: clean
 	cd libs/hamcrest-rust && make clean
 	cd libs/hammer.rs && make clean
 	cd libs/toml-rs && make clean
