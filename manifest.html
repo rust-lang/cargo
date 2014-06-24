@@ -2,17 +2,17 @@
 <html>
   <head>
     <meta charset="utf-8">
-    
+
     <!-- Always force latest IE rendering engine or request Chrome Frame -->
     <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
-    
+
     <!-- Use title if it's in the page YAML frontmatter -->
     <title>The Manifest Format</title>
-    
+
     <link href="stylesheets/all.css" rel="stylesheet" type="text/css" />
     <script src="javascripts/all.js" type="text/javascript"></script>
   </head>
-  
+
   <body class="manifest">
     <a href="/"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
 
@@ -106,7 +106,7 @@ ability to support multiple <code>lib</code> sections in the future.</p>
 <span class="py">name</span> <span class="p">=</span> <span class="s">"color"</span> <span class="c"># the name of the library, the same as the package name</span>
 </code></pre>
 
-<h2>The <code>crate-type</code> Field</h2>
+<h2>The <code>crate_type</code> Field</h2>
 
 <p>Top-level packages can specify the kind of library for Cargo to build:</p>
 <pre><code class="highlight toml"><span class="nn">[package]</span>
@@ -116,7 +116,7 @@ ability to support multiple <code>lib</code> sections in the future.</p>
 <span class="nn">[[lib]]</span>
 
 <span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">crate-type</span> <span class="p">=</span> <span class="p">[</span><span class="s">"dylib"</span><span class="p">,</span> <span class="s">"staticlib"</span><span class="p">]</span>
+<span class="py">crate_type</span> <span class="p">=</span> <span class="p">[</span><span class="s">"dylib"</span><span class="p">,</span> <span class="s">"staticlib"</span><span class="p">]</span>
 </code></pre>
 
 <p>This will produce a <code>.a</code> file and an <code>.so</code> (or <code>.dylib</code> on OSX).</p>
@@ -172,7 +172,7 @@ which will change this requirement.</p>
 
 <span class="py">name</span> <span class="p">=</span> <span class="s">"folks"</span>
 <span class="c"># you must specify a #[crate_id=folks] inside this file </span>
-<span class="py">path</span> <span class="p">=</span> <span class="s">"src/exe/folkster.rs"</span> 
+<span class="py">path</span> <span class="p">=</span> <span class="s">"src/exe/folkster.rs"</span>
 </code></pre>
 
 
