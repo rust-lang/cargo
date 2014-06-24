@@ -55,6 +55,34 @@ your Rust code, for example.</p>
 <span class="py">build</span> <span class="p">=</span> <span class="s">"make"</span>
 </code></pre>
 
+<h1>The <code>[dependencies.*]</code> Sections</h1>
+
+<p>You list dependencies using <code>[dependencies.&lt;name&gt;]</code>. For example, if you
+wanted to depend on both <code>hammer</code> and <code>color</code>:</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+
+<span class="c"># ...</span>
+
+<span class="nn">[dependencies.hammer]</span>
+
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.5.0"</span> <span class="c"># optional</span>
+<span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/wycats/hammer.rs"</span>
+
+<span class="nn">[dependencies.color]</span>
+
+<span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/bjz/color-rs"</span>
+</code></pre>
+
+<p>You can specify the source of a dependency in one of two ways at the moment:</p>
+
+<ul>
+<li><code>git = &quot;&lt;git-url&gt;&quot;</code>: A git repository with a <code>Cargo.toml</code> in its root.</li>
+<li><code>path = &quot;&lt;relative-path&gt;&quot;</code>: A path relative to the current <code>Cargo.toml</code>
+with a <code>Cargo.toml</code> in its root.</li>
+</ul>
+
+<p>Soon, you will be able to load packages from the Cargo registry as well.</p>
+
 <h1>The <code>[[lib]]</code> and <code>[[bin]]</code> Sections</h1>
 
 <p>A Cargo package can export at most one library, and can build as many
