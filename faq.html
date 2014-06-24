@@ -19,7 +19,7 @@
     <main>
       <p>Cargo downloads your <a href="https://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
 
-      <h1>Is the plan to use Github as a package repository?</h1>
+      <h1>Is the plan to use Github as a package repository? <a href="#github" id="github" class="headerlink">¶</a></h1>
 
 <p>No. The plan for Cargo is to have a central registry of packages, like
 npm or Rubygems.</p>
@@ -35,7 +35,7 @@ track the latest Rust. This makes downloading the latest <code>master</code> fro
 Github the best approach to getting packages at the current point in the
 community&rsquo;s lifecycle.</p>
 
-<h1>Why build a package registry rather than use Github as a registry?</h1>
+<h1>Why build a package registry rather than use Github as a registry? <a href="#why-not-github" id="why-not-github" class="headerlink">¶</a></h1>
 
 <p>We think that it&rsquo;s very important to support multiple ways to download
 packages, including downloading from Github and copying packages into
@@ -68,7 +68,7 @@ down fast. Also remember that not everybody has a high-speed,
 low-latency Internet connection.</li>
 </ul>
 
-<h1>Will Cargo work with C code (or other languages)?</h1>
+<h1>Will Cargo work with C code (or other languages)? <a href="#c" id="c" class="headerlink">¶</a></h1>
 
 <p>Yes!</p>
 
@@ -81,7 +81,7 @@ before invoking <code>rustc</code>. We plan to add support for platform-specific
 configuration, so you can use <code>make</code> on Linux and <code>cmake</code> on BSD, for
 example.</p>
 
-<h1>Can Cargo be used inside of <code>make</code> (or <code>ninja</code>, or &hellip;)</h1>
+<h1>Can Cargo be used inside of <code>make</code> (or <code>ninja</code>, or &hellip;) <a href="#make" id="make" class="headerlink">¶</a></h1>
 
 <p>Indeed. While we intend Cargo to be useful as a standalone way to
 compile Rust projects at the top-level, we know that some people will
@@ -93,7 +93,7 @@ have some work to do on those fronts, but using Cargo in the context of
 conventional scripts is something we designed for from the beginning and
 will continue to prioritize.</p>
 
-<h1>Does Cargo handle multi-platform projects or cross-compilation?</h1>
+<h1>Does Cargo handle multi-platform projects or cross-compilation? <a href="#multi-platform" id="multi-platform" class="headerlink">¶</a></h1>
 
 <p>Rust itself provides facilities for configuring sections of code based
 on the platform. We plan to support per-platform configuration in
@@ -103,7 +103,7 @@ future.</p>
 <p>In the longer-term, we&rsquo;re looking at ways to conveniently cross-compile
 projects using Cargo.</p>
 
-<h1>Does Cargo support environments, like <code>production</code> or <code>test</code>?</h1>
+<h1>Does Cargo support environments, like <code>production</code> or <code>test</code>? <a href="#environments" id="environments" class="headerlink">¶</a></h1>
 
 <p>We are planning on support environments in the near future, that can
 support:</p>
@@ -121,7 +121,7 @@ specify flags or dependencies for a combination of multiple environments
 and platforms (&ldquo;use <code>fsevents</code>, but only in OSX in <code>development</code> or
 <code>test</code>&rdquo;).</p>
 
-<h1>Does Cargo work on Windows?</h1>
+<h1>Does Cargo work on Windows? <a href="#windows" id="windows" class="headerlink">¶</a></h1>
 
 <p>We intend for Cargo to work on Windows, but Travis CI does not support
 Windows builds, so we aren&rsquo;t running continuous integration against
