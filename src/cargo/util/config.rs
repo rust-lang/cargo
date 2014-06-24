@@ -9,16 +9,18 @@ use cargo_toml = util::toml;
 
 pub struct Config<'a> {
     home_path: Path,
+    update_remotes: bool,
     shell: &'a mut MultiShell
 }
 
 impl<'a> Config<'a> {
-    pub fn new<'a>(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
+    pub fn new<'a>(shell: &'a mut MultiShell, update_remotes: bool) -> CargoResult<Config<'a>> {
         Ok(Config {
             home_path: try!(os::homedir().require(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
+            update_remotes: update_remotes,
             shell: shell
         })
     }
@@ -33,6 +35,10 @@ impl<'a> Config<'a> {
 
     pub fn shell<'a>(&'a mut self) -> &'a mut MultiShell {
         &mut *self.shell
+    }
+
+    pub fn update_remotes(&mut self) -> bool {
+        self.update_remotes
     }
 }
 

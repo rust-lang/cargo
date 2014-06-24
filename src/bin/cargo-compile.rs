@@ -20,10 +20,13 @@ use cargo::util::important_paths::find_project;
 
 #[deriving(PartialEq,Clone,Decodable,Encodable)]
 pub struct Options {
-    manifest_path: Option<String>
+    manifest_path: Option<String>,
+    update_remotes: bool
 }
 
-hammer_config!(Options "Compile the current project")
+hammer_config!(Options "Compile the current project", |c| {
+    c.short("update_remotes", 'u')
+})
 
 fn main() {
     execute_main_without_stdin(execute);
@@ -43,7 +46,9 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    ops::compile(&root, shell).map(|_| None).map_err(|err| {
+    let update = options.update_remotes;
+
+    ops::compile(&root, update, shell).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

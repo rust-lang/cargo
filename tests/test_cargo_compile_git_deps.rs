@@ -222,25 +222,33 @@ test!(recompilation {
                                             UPDATING, git_project.root().display(),
                                             COMPILING, git_project.root().display(),
                                             COMPILING, p.root().display())));
+
     // Don't recompile the second time
     assert_that(p.process("cargo-compile"),
-                execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{})\n\
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
-                                            UPDATING, git_project.root().display(),
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
+
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
     "#).assert();
+
     assert_that(p.process("cargo-compile"),
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            FRESH, git_project.root().display(),
+                                            FRESH, p.root().display())));
+
+    assert_that(p.process("cargo-compile").arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             UPDATING, git_project.root().display(),
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
+
     // Commit the changes and make sure we trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
@@ -248,7 +256,8 @@ test!(recompilation {
     git_project.process("git").args(["add", "."]).exec_with_output().assert();
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
-    assert_that(p.process("cargo-compile"),
+
+    assert_that(p.process("cargo-compile").arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",

@@ -50,13 +50,13 @@ macro_rules! git(
 )
 
 macro_rules! git_output(
-    ($config:expr, $str:expr, $($rest:expr),*) => (
+    ($config:expr, $str:expr, $($rest:expr),*) => ({
         try!(git_output(&$config, format!($str, $($rest),*)))
-    );
+    });
 
-    ($config:expr, $str:expr) => (
+    ($config:expr, $str:expr) => ({
         try!(git_output(&$config, format!($str)))
-    );
+    });
 )
 
 macro_rules! errln(
@@ -144,6 +144,11 @@ impl GitRemote {
 
     pub fn get_url<'a>(&'a self) -> &'a Url {
         &self.url
+    }
+
+    pub fn has_ref<S: Str>(&self, path: &Path, reference: S) -> CargoResult<()> {
+        git_output!(*path, "rev-parse {}", reference.as_slice());
+        Ok(())
     }
 
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {

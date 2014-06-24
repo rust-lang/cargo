@@ -23,14 +23,14 @@
 //!
 
 use std::os;
-use util::config::{ConfigValue};
+use util::config::{Config, ConfigValue};
 use core::{MultiShell, Source, SourceId, PackageSet, resolver};
 use core::registry::PackageRegistry;
 use ops;
 use sources::{PathSource};
 use util::{CargoResult, Wrap, config, internal, human};
 
-pub fn compile(manifest_path: &Path, shell: &mut MultiShell) -> CargoResult<()> {
+pub fn compile(manifest_path: &Path, update: bool, shell: &mut MultiShell) -> CargoResult<()> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
     let mut source = PathSource::for_path(&manifest_path.dir_path());
@@ -45,8 +45,10 @@ pub fn compile(manifest_path: &Path, shell: &mut MultiShell) -> CargoResult<()> 
     let source_ids = package.get_source_ids();
 
     let packages = {
+        let mut config = try!(Config::new(shell, update));
+
         let mut registry =
-            try!(PackageRegistry::new(source_ids, override_ids, shell));
+            try!(PackageRegistry::new(source_ids, override_ids, &mut config));
 
         let resolved =
             try!(resolver::resolve(package.get_dependencies(), &mut registry));
@@ -58,7 +60,8 @@ pub fn compile(manifest_path: &Path, shell: &mut MultiShell) -> CargoResult<()> 
 
     debug!("packages={}", packages);
 
-    try!(ops::compile_packages(&package, &PackageSet::new(packages.as_slice()), shell));
+    let mut config = try!(Config::new(shell, update));
+    try!(ops::compile_packages(&package, &PackageSet::new(packages.as_slice()), &mut config));
 
     Ok(())
 }
