@@ -1,0 +1,5 @@
+.headerlink { display: none; text-decoration: none; }
+h1:hover .headerlink { display: inline-block; }
+h2:hover .headerlink { display: inline-block; }
+h3:hover .headerlink { display: inline-block; }
+h4:hover .headerlink { display: inline-block; }
