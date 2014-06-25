@@ -128,7 +128,7 @@ impl Package {
         let sources = sources.iter().map(|source_id| {
             source_id.load(config)
         }).collect::<Vec<_>>();
-        SourceSet::new(sources).fingerprint()
+        SourceSet::new(sources).fingerprint(self)
     }
 }
 

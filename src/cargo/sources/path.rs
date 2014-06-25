@@ -48,6 +48,14 @@ impl PathSource {
             None => Err(internal("no package found in source"))
         }
     }
+
+    fn read_packages(&self) -> CargoResult<Vec<Package>> {
+        if self.updated {
+            Ok(self.packages.clone())
+        } else {
+            ops::read_packages(&self.path, &self.id)
+        }
+    }
 }
 
 impl Show for PathSource {
@@ -59,9 +67,9 @@ impl Show for PathSource {
 impl Source for PathSource {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
-          let pkgs = try!(ops::read_packages(&self.path, &self.id));
-          self.packages.push_all_move(pkgs);
-          self.updated = true;
+            let packages = try!(self.read_packages());
+            self.packages.push_all_move(packages);
+            self.updated = true;
         }
 
         Ok(())
@@ -87,17 +95,28 @@ impl Source for PathSource {
            .collect())
     }
 
-    fn fingerprint(&self) -> CargoResult<String> {
-        let mut max = None;
-        let target_dir = self.path.join("target");
-        for child in try!(fs::walk_dir(&self.path)) {
-            if target_dir.is_ancestor_of(&child) { continue }
-            let stat = try!(fs::stat(&child));
-            max = cmp::max(max, Some(stat.modified));
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
+        let packages = try!(self.read_packages());
+        let mut max = 0;
+        for pkg in packages.iter().filter(|p| *p == pkg) {
+            let loc = pkg.get_manifest_path().dir_path();
+            max = cmp::max(max, try!(walk(&loc, true)));
         }
-        match max {
-            None => Ok(String::new()),
-            Some(time) => Ok(time.to_str()),
+        return Ok(max.to_str());
+
+        fn walk(path: &Path, is_root: bool) -> CargoResult<u64> {
+            if !path.is_dir() {
+                return Ok(try!(fs::stat(path)).modified)
+            }
+            // Don't recurse into any sub-packages that we have
+            if !is_root && path.join("Cargo.toml").exists() { return Ok(0) }
+
+            let mut max = 0;
+            for dir in try!(fs::readdir(path)).iter() {
+                if is_root && dir.filename_str() == Some("target") { continue }
+                max = cmp::max(max, try!(walk(dir, false)));
+            }
+            return Ok(max)
         }
     }
 }

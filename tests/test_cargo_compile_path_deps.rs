@@ -303,3 +303,56 @@ test!(no_rebuild_two_deps {
                                             FRESH, bar.display(),
                                             FRESH, p.root().display())));
 })
+
+test!(nested_deps_recompile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+
+            version = "0.5.0"
+            path = "src/bar"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("src/bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "bar"
+        "#)
+        .file("src/bar/src/bar.rs", "pub fn gimme() {}");
+    let bar = p.root();
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            COMPILING, bar.display(),
+                                            COMPILING, p.root().display())));
+    // See comments for the above `sleep`
+    timer::sleep(1000);
+    File::create(&p.root().join("src/foo.rs")).write_str(r#"
+        fn main() {}
+    "#).assert();
+
+    // This shouldn't recompile `bar`
+    assert_that(p.process("cargo-build"),
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            FRESH, bar.display(),
+                                            COMPILING, p.root().display())));
+})
