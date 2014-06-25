@@ -10,7 +10,7 @@ use serialize::{
     Decoder
 };
 
-use util::{CargoResult, CargoError, FromError};
+use util::{CargoResult, CargoError};
 use core::source::Location;
 
 trait ToVersion {
@@ -125,7 +125,7 @@ impl<D: Decoder<Box<CargoError>>> Decodable<D,Box<CargoError>> for PackageId {
         PackageId::new(
             vector.get(0).as_slice(),
             vector.get(1).as_slice(),
-            &Location::parse(vector.get(2).as_slice()).unwrap())
+            &try!(Location::parse(vector.get(2).as_slice())))
     }
 }
 
@@ -139,12 +139,14 @@ impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
 #[cfg(test)]
 mod tests {
     use super::{PackageId, central_repo};
+    use core::source::Location;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        assert!(PackageId::new("foo", "1.0", central_repo).is_err());
-        assert!(PackageId::new("foo", "1", central_repo).is_err());
-        assert!(PackageId::new("foo", "bar", central_repo).is_err());
-        assert!(PackageId::new("foo", "", central_repo).is_err());
+        let repo = Location::parse(central_repo).unwrap();
+        assert!(PackageId::new("foo", "1.0", &repo).is_err());
+        assert!(PackageId::new("foo", "1", &repo).is_err());
+        assert!(PackageId::new("foo", "bar", &repo).is_err());
+        assert!(PackageId::new("foo", "", &repo).is_err());
     }
 }

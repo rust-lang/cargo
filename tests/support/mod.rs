@@ -66,10 +66,14 @@ impl ProjectBuilder {
     }
 
     pub fn root(&self) -> Path {
-      self.root.clone()
+        self.root.clone()
     }
 
-    pub fn process(&self, program: &str) -> ProcessBuilder {
+    pub fn bin(&self, b: &str) -> Path {
+        self.root.join("target").join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+    }
+
+    pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {
         process(program)
             .cwd(self.root())
             .env("HOME", Some(paths::home().display().to_str().as_slice()))
@@ -78,7 +82,7 @@ impl ProjectBuilder {
 
     pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
         self.build();
-        self.process(program)
+        self.process(cargo_dir().join(program))
     }
 
     pub fn file<B: BytesContainer, S: Str>(mut self, path: B,
@@ -346,4 +350,8 @@ impl<T> Tap for T {
         callback(&mut self);
         self
     }
+}
+
+pub fn escape_path(p: &Path) -> String {
+    p.display().to_str().as_slice().replace("\\", "\\\\")
 }

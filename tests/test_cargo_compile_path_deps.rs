@@ -1,8 +1,8 @@
 use std::io::File;
 use std::io::timer;
 
-use support::{ResultTest,project,execs,main_file};
-use hamcrest::{assert_that,existing_file};
+use support::{ResultTest, project, execs, main_file, escape_path, cargo_dir};
+use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};
 
@@ -76,10 +76,10 @@ test!(cargo_compile_with_nested_deps_shorthand {
         .exec_with_output()
         .assert();
 
-    assert_that(&p.root().join("target/foo"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(p.root().join("target")),
+      cargo::util::process(p.bin("foo")),
       execs().with_stdout("test passed\n"));
 })
 
@@ -89,7 +89,7 @@ test!(no_rebuild_dependency {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}"]
-        "#, bar.display()).as_slice())
+        "#, escape_path(&bar)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -123,14 +123,14 @@ test!(no_rebuild_dependency {
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
     // This time we shouldn't compile bar
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, bar.display(),
                                             FRESH, p.root().display())));
 
     p.build(); // rebuild the files (rewriting them in the process)
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             COMPILING, bar.display(),
@@ -144,7 +144,7 @@ test!(deep_dependencies_trigger_rebuild {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}", "{}"]
-        "#, bar.display(), baz.display()).as_slice())
+        "#, escape_path(&bar), escape_path(&baz)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -197,7 +197,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, baz.display(),
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -213,7 +213,7 @@ test!(deep_dependencies_trigger_rebuild {
     File::create(&p.root().join("baz/src/baz.rs")).write_str(r#"
         pub fn baz() { println!("hello!"); }
     "#).assert();
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -226,12 +226,11 @@ test!(deep_dependencies_trigger_rebuild {
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).assert();
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
-                                            FRESH,
-                                            baz.display(),
+                                            FRESH, baz.display(),
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
 })
@@ -243,7 +242,7 @@ test!(no_rebuild_two_deps {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}", "{}"]
-        "#, bar.display(), baz.display()).as_slice())
+        "#, escape_path(&bar), escape_path(&baz)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -296,7 +295,7 @@ test!(no_rebuild_two_deps {
                                             COMPILING, baz.display(),
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",

@@ -1,10 +1,11 @@
 use std::io::fs;
 use std::os;
+use std::path;
 
-use support::{ResultTest,project,execs,main_file};
-use hamcrest::{assert_that,existing_file};
+use support::{ResultTest, project, execs, main_file, escape_path};
+use hamcrest::{assert_that, existing_file};
 use cargo;
-use cargo::util::{process,realpath};
+use cargo::util::{process, realpath};
 
 fn setup() {
 }
@@ -31,12 +32,10 @@ test!(cargo_compile_simple {
         .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice());
 
     assert_that(p.cargo_process("cargo-build"), execs());
-    assert_that(&p.root().join("target/foo"), existing_file());
-
-    let target = p.root().join("target");
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process("foo").extra_path(target),
+      process(p.bin("foo")),
       execs().with_stdout("i am foo\n"));
 })
 
@@ -104,14 +103,15 @@ test!(cargo_compile_with_invalid_code {
         execs()
         .with_status(101)
         .with_stderr(format!("\
-src/foo.rs:1:1: 1:8 error: expected item but found `invalid`
-src/foo.rs:1 invalid rust code!
+{filename}:1:1: 1:8 error: expected item but found `invalid`
+{filename}:1 invalid rust code!
              ^~~~~~~
 Could not execute process \
-`rustc src/foo.rs --crate-type bin --out-dir {} -L {} -L {}` (status=101)\n",
+`rustc {filename} --crate-type bin --out-dir {} -L {} -L {}` (status=101)\n",
             target.display(),
             target.display(),
-            target.join("deps").display()).as_slice()));
+            target.join("deps").display(),
+            filename = format!("src{}foo.rs", path::SEP)).as_slice()));
 })
 
 test!(cargo_compile_with_warnings_in_the_root_package {
@@ -121,12 +121,12 @@ test!(cargo_compile_with_warnings_in_the_root_package {
 
     assert_that(p.cargo_process("cargo-build"),
         execs()
-        .with_stderr("\
-src/foo.rs:1:14: 1:26 warning: code is never used: `dead`, #[warn(dead_code)] \
+        .with_stderr(format!("\
+{filename}:1:14: 1:26 warning: code is never used: `dead`, #[warn(dead_code)] \
 on by default
-src/foo.rs:1 fn main() {} fn dead() {}
+{filename}:1 fn main() {{}} fn dead() {{}}
                           ^~~~~~~~~~~~
-"));
+", filename = format!("src{}foo.rs", path::SEP).as_slice())));
 })
 
 test!(cargo_compile_with_warnings_in_a_dep_package {
@@ -136,7 +136,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}"]
-        "#, bar.display()).as_slice())
+        "#, escape_path(&bar)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -184,10 +184,10 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
                              COMPILING, main.display()))
         .with_stderr(""));
 
-    assert_that(&p.root().join("target/foo"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(p.root().join("target")),
+      cargo::util::process(p.bin("foo")),
       execs().with_stdout("test passed\n"));
 })
 
@@ -199,7 +199,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}", "{}"]
-        "#, bar.display(), baz.display()).as_slice())
+        "#, escape_path(&bar), escape_path(&baz)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -260,10 +260,10 @@ test!(cargo_compile_with_nested_deps_shorthand {
         .exec_with_output()
         .assert();
 
-    assert_that(&p.root().join("target/foo"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(p.root().join("target")),
+      cargo::util::process(p.bin("foo")),
       execs().with_stdout("test passed\n"));
 })
 
@@ -275,7 +275,7 @@ test!(cargo_compile_with_nested_deps_longhand {
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}", "{}"]
-        "#, bar.display(), baz.display()).as_slice())
+        "#, escape_path(&bar), escape_path(&baz)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -334,10 +334,10 @@ test!(cargo_compile_with_nested_deps_longhand {
 
     assert_that(p.cargo_process("cargo-build"), execs());
 
-    assert_that(&p.root().join("target/foo"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(p.root().join("target")),
+      cargo::util::process(p.bin("foo")),
       execs().with_stdout("test passed\n"));
 })
 
@@ -373,7 +373,7 @@ test!(custom_build {
             build = "{}"
 
             [[bin]] name = "foo"
-        "#, build.root().join("target/foo").display()))
+        "#, escape_path(&build.bin("foo"))))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -394,7 +394,8 @@ test!(custom_build_failure {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
+            [[bin]]
+            name = "foo"
         "#)
         .file("src/foo.rs", r#"
             fn main() { fail!("nope") }
@@ -412,18 +413,19 @@ test!(custom_build_failure {
             authors = ["wycats@example.com"]
             build = "{}"
 
-            [[bin]] name = "foo"
-        "#, build.root().join("target/foo").display()))
+            [[bin]]
+            name = "foo"
+        "#, escape_path(&build.bin("foo"))))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(101).with_stderr(format!("\
-Could not execute process `{}` (status=101)
---- stderr
-task '<main>' failed at 'nope', src/foo.rs:2
-
-", build.root().join("target/foo").display())));
+Could not execute process `{}` (status=101)\n\
+--- stderr\n\
+task '<main>' failed at 'nope', {filename}:2\n\
+\n\
+", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP))));
 })
 
 test!(custom_build_env_vars {
@@ -437,7 +439,8 @@ test!(custom_build_env_vars {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
+            [[bin]]
+            name = "foo"
         "#)
         .file("src/foo.rs", format!(r#"
             use std::os;
@@ -446,8 +449,8 @@ test!(custom_build_env_vars {
                 assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_str());
             }}
         "#,
-        p.root().join("target").display(),
-        p.root().join("target/deps").display()));
+        escape_path(&p.root().join("target")),
+        escape_path(&p.root().join("target").join("deps"))));
     assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
 
 
@@ -460,8 +463,9 @@ test!(custom_build_env_vars {
             authors = ["wycats@example.com"]
             build = "{}"
 
-            [[bin]] name = "foo"
-        "#, build.root().join("target/foo").display()))
+            [[bin]]
+            name = "foo"
+        "#, escape_path(&build.bin("foo"))))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -480,7 +484,8 @@ test!(custom_build_in_dependency {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
+            [[bin]]
+            name = "foo"
         "#)
         .file("src/foo.rs", format!(r#"
             use std::os;
@@ -489,15 +494,15 @@ test!(custom_build_in_dependency {
                 assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_str());
             }}
         "#,
-        p.root().join("target/deps").display(),
-        p.root().join("target/deps").display()));
+        escape_path(&p.root().join("target/deps")),
+        escape_path(&p.root().join("target/deps"))));
     assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
 
 
     p = p
         .file(".cargo/config", format!(r#"
             paths = ["{}"]
-        "#, bar.display()).as_slice())
+        "#, escape_path(&bar)).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -505,8 +510,10 @@ test!(custom_build_in_dependency {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
-            [dependencies] bar = "0.5.0"
+            [[bin]]
+            name = "foo"
+            [dependencies]
+            bar = "0.5.0"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -520,8 +527,9 @@ test!(custom_build_in_dependency {
             authors = ["wycats@example.com"]
             build = "{}"
 
-            [[lib]] name = "bar"
-        "#, build.root().join("target/foo").display()))
+            [[lib]]
+            name = "bar"
+        "#, escape_path(&build.bin("foo"))))
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
         "#);
@@ -554,7 +562,7 @@ test!(many_crate_types {
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
             "deps" => None,
-            s if !s.starts_with("lib") => None,
+            s if s.contains("fingerprint") => None,
             s => Some(s.to_str())
         }
     }).collect();
