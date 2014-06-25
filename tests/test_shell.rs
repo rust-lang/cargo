@@ -1,7 +1,3 @@
-#![cfg(not(windows))] // getting the actual colored output is a little different
-                      // on windows, so it's tough to get a reference copy of all
-                      // the color
-
 use support::{ResultTest,Tap,shell_writes};
 use hamcrest::{assert_that};
 use std::io::{MemWriter, BufWriter, IoResult};
@@ -37,6 +33,10 @@ test!(color_explicitly_disabled {
 })
 
 test!(colored_shell {
+    let term: Option<TerminfoTerminal<MemWriter>> =
+        Terminal::new(MemWriter::new());
+    if term.is_none() { return }
+
     let config = ShellConfig { color: true, verbose: true, tty: true };
     let mut buf: Vec<u8> = Vec::from_elem(100, 0 as u8);
 
