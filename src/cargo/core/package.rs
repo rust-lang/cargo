@@ -123,7 +123,7 @@ impl Package {
         // Sort the sources just to make sure we have a consistent fingerprint.
         sources.sort_by(|a, b| {
             cmp::lexical_ordering(a.kind.cmp(&b.kind),
-                                  a.url.to_str().cmp(&b.url.to_str()))
+                                  a.location.to_str().cmp(&b.location.to_str()))
         });
         let sources = sources.iter().map(|source_id| {
             source_id.load(config)

@@ -1,13 +1,12 @@
-use std::fmt;
-use std::hash::sip::SipHasher;
-use std::hash::Hasher;
 use std::fmt::{Show,Formatter};
+use std::fmt;
+use std::hash::Hasher;
+use std::hash::sip::SipHasher;
 use std::io::MemWriter;
+use std::str;
 use serialize::hex::ToHex;
-use url;
-use url::Url;
 
-use core::source::{Source,SourceId,GitKind};
+use core::source::{Source, SourceId, GitKind, Location, Remote, Local};
 use core::{Package,PackageId,Summary};
 use util::{CargoResult,Config};
 use sources::PathSource;
@@ -33,8 +32,8 @@ impl<'a, 'b> GitSource<'a, 'b> {
             _ => fail!("Not a git source; id={}", source_id)
         };
 
-        let remote = GitRemote::new(source_id.get_url());
-        let ident = ident(&source_id.url);
+        let remote = GitRemote::new(source_id.get_location());
+        let ident = ident(source_id.get_location());
 
         let db_path = config.git_db_path()
             .join(ident.as_slice());
@@ -54,23 +53,32 @@ impl<'a, 'b> GitSource<'a, 'b> {
         }
     }
 
-    pub fn get_namespace<'a>(&'a self) -> &'a url::Url {
-        self.remote.get_url()
+    pub fn get_namespace<'a>(&'a self) -> &'a Location {
+        self.remote.get_location()
     }
 }
 
-fn ident(url: &Url) -> String {
+fn ident(location: &Location) -> String {
     let hasher = SipHasher::new_with_keys(0,0);
 
-    let mut ident = url.path.as_slice().split('/').last().unwrap();
+    // FIXME: this really should be able to not use to_str() everywhere, but the
+    //        compiler seems to currently ask for static lifetimes spuriously.
+    //        Perhaps related to rust-lang/rust#15144
+    let ident = match *location {
+        Local(ref path) => {
+            let last = path.components().last().unwrap();
+            str::from_utf8(last).unwrap().to_str()
+        }
+        Remote(ref url) => url.path.as_slice().split('/').last().unwrap().to_str()
+    };
 
-    ident = if ident == "" {
-        "_empty"
+    let ident = if ident.as_slice() == "" {
+        "_empty".to_string()
     } else {
         ident
     };
 
-    format!("{}-{}", ident, to_hex(hasher.hash(&url.to_str())))
+    format!("{}-{}", ident, to_hex(hasher.hash(&location.to_str())))
 }
 
 fn to_hex(num: u64) -> String {
@@ -81,7 +89,7 @@ fn to_hex(num: u64) -> String {
 
 impl<'a, 'b> Show for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.get_url()));
+        try!(write!(f, "git repo at {}", self.remote.get_location()));
 
         match self.reference {
             Master => Ok(()),
@@ -98,7 +106,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
         let repo = if should_update {
             try!(self.config.shell().status("Updating",
-                format!("git repository `{}`", self.remote.get_url())));
+                format!("git repository `{}`", self.remote.get_location())));
 
             log!(5, "updating git source `{}`", self.remote);
             try!(self.remote.checkout(&self.db_path))
@@ -135,17 +143,18 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 mod test {
     use url;
     use url::Url;
+    use core::source::Remote;
     use super::ident;
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {
-        let ident = ident(&url("https://github.com/carlhuda/cargo"));
+        let ident = ident(&Remote(url("https://github.com/carlhuda/cargo")));
         assert_eq!(ident.as_slice(), "cargo-0eed735c8ffd7c88");
     }
 
     #[test]
     pub fn test_url_to_path_ident_without_path() {
-        let ident = ident(&url("https://github.com"));
+        let ident = ident(&Remote(url("https://github.com")));
         assert_eq!(ident.as_slice(), "_empty-fc065c9b6b16fc00");
     }
 

@@ -10,7 +10,8 @@ use serialize::{
     Decoder
 };
 
-use util::{CargoResult, CargoError};
+use util::{CargoResult, CargoError, FromError};
+use core::source::Location;
 
 trait ToVersion {
     fn to_version(self) -> Result<semver::Version, String>;
@@ -57,7 +58,7 @@ impl<'a> ToUrl for &'a Url {
 pub struct PackageId {
     name: String,
     version: semver::Version,
-    namespace: Url
+    namespace: Location,
 }
 
 #[deriving(Clone, Show, PartialEq)]
@@ -77,14 +78,13 @@ impl CargoError for PackageIdError {
 }
 
 impl PackageId {
-    pub fn new<T: ToVersion, U: ToUrl>(name: &str, version: T,
-                                       namespace: U) -> CargoResult<PackageId> {
+    pub fn new<T: ToVersion>(name: &str, version: T,
+                             ns: &Location) -> CargoResult<PackageId> {
         let v = try!(version.to_version().map_err(InvalidVersion));
-        let ns = try!(namespace.to_url().map_err(InvalidNamespace));
         Ok(PackageId {
             name: name.to_str(),
             version: v,
-            namespace: ns
+            namespace: ns.clone()
         })
     }
 
@@ -96,7 +96,7 @@ impl PackageId {
         &self.version
     }
 
-    pub fn get_namespace<'a>(&'a self) -> &'a Url {
+    pub fn get_namespace<'a>(&'a self) -> &'a Location {
         &self.namespace
     }
 }
@@ -125,7 +125,7 @@ impl<D: Decoder<Box<CargoError>>> Decodable<D,Box<CargoError>> for PackageId {
         PackageId::new(
             vector.get(0).as_slice(),
             vector.get(1).as_slice(),
-            vector.get(2).as_slice())
+            &Location::parse(vector.get(2).as_slice()).unwrap())
     }
 }
 
