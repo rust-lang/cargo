@@ -249,7 +249,9 @@ impl Execs {
                 match str::from_utf8(actual) {
                     None => Err(format!("{} was not utf8 encoded", description)),
                     Some(actual) => {
-                        ham::expect(actual == out,
+                        // Let's not deal with \r\n vs \n on windows...
+                        let actual = actual.replace("\r", "");
+                        ham::expect(actual.as_slice() == out,
                                     format!("{} was:\n\
                                             `{}`\n\n\
                                             expected:\n\
