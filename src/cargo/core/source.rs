@@ -39,7 +39,10 @@ pub trait Source {
     /// This fingerprint is used to determine the "fresheness" of the source
     /// later on. It must be guaranteed that the fingerprint of a source is
     /// constant if and only if the output product will remain constant.
-    fn fingerprint(&self) -> CargoResult<String>;
+    ///
+    /// The `pkg` argument is the package which this fingerprint should only be
+    /// interested in for when this source may contain multiple packages.
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
 #[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -203,10 +206,10 @@ impl Source for SourceSet {
         Ok(ret)
     }
 
-    fn fingerprint(&self) -> CargoResult<String> {
+    fn fingerprint(&self, id: &Package) -> CargoResult<String> {
         let mut ret = String::new();
         for source in self.sources.iter() {
-            ret.push_str(try!(source.fingerprint()).as_slice());
+            ret.push_str(try!(source.fingerprint(id)).as_slice());
         }
         return Ok(ret);
     }
