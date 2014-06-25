@@ -62,7 +62,10 @@ impl PackageId {
                                        namespace: U) -> PackageId {
         PackageId {
             name: name.to_str(),
-            version: version.to_version().unwrap(),
+            version: match version.to_version() {
+                         Some(v) => v,
+                         None => { fail!("config package.version is not in semver format"); }
+                     },
             namespace: namespace.to_url().unwrap()
         }
     }
