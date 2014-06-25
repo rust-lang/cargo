@@ -1,3 +1,7 @@
+#![cfg(not(windows))] // getting the actual colored output is a little different
+                      // on windows, so it's tough to get a reference copy of all
+                      // the color
+
 use support::{ResultTest,Tap,shell_writes};
 use hamcrest::{assert_that};
 use std::io::{MemWriter, BufWriter, IoResult};
