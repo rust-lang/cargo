@@ -133,7 +133,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         self.path_source.get(ids)
     }
 
-    fn fingerprint(&self) -> CargoResult<String> {
+    fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
         let db = self.remote.db_at(&self.db_path);
         db.rev_for(self.reference.as_slice())
     }
