@@ -1,6 +1,7 @@
 use std::io::File;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
+use support::{escape_path, cargo_dir};
 use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::{ProcessError, process};
@@ -73,18 +74,18 @@ test!(cargo_compile_simple_git_dep {
 
             [dependencies.dep1]
 
-            git = "file://{}"
+            git = "file:{}"
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, escape_path(&git_project.root())))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("cargo-build").arg("--verbose"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
                               {} dep1 v0.5.0 (file:{})\n\
@@ -94,10 +95,10 @@ test!(cargo_compile_simple_git_dep {
                              COMPILING, root.display()))
         .with_stderr(""));
 
-    assert_that(&project.root().join("target/foo"), existing_file());
+    assert_that(&project.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(project.root().join("target")),
+      cargo::util::process(project.bin("foo")),
       execs().with_stdout("hello world\n"));
 })
 
@@ -136,13 +137,13 @@ test!(cargo_compile_git_dep_branch {
 
             [dependencies.dep1]
 
-            git = "file://{}"
+            git = "file:{}"
             branch = "branchy"
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, escape_path(&git_project.root())))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -158,10 +159,10 @@ test!(cargo_compile_git_dep_branch {
                              COMPILING, root.display()))
         .with_stderr(""));
 
-    assert_that(&project.root().join("target/foo"), existing_file());
+    assert_that(&project.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(project.root().join("target")),
+      cargo::util::process(project.bin("foo")),
       execs().with_stdout("hello world\n"));
 })
 
@@ -201,13 +202,13 @@ test!(cargo_compile_git_dep_tag {
 
             [dependencies.dep1]
 
-            git = "file://{}"
+            git = "file:{}"
             tag = "v0.1.0"
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, escape_path(&git_project.root())))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -223,10 +224,10 @@ test!(cargo_compile_git_dep_tag {
                              COMPILING, root.display()))
         .with_stderr(""));
 
-    assert_that(&project.root().join("target/foo"), existing_file());
+    assert_that(&project.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process("foo").extra_path(project.root().join("target")),
+      cargo::util::process(project.bin("foo")),
       execs().with_stdout("hello world\n"));
 })
 test!(cargo_compile_with_nested_paths {
@@ -284,12 +285,12 @@ test!(cargo_compile_with_nested_paths {
             [dependencies.dep1]
 
             version = "0.5.0"
-            git = "file://{}"
+            git = "file:{}"
 
             [[bin]]
 
             name = "parent"
-        "#, git_project.root().display()))
+        "#, escape_path(&git_project.root())))
         .file("src/parent.rs",
               main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
 
@@ -297,10 +298,10 @@ test!(cargo_compile_with_nested_paths {
         .exec_with_output()
         .assert();
 
-    assert_that(&p.root().join("target/parent"), existing_file());
+    assert_that(&p.bin("parent"), existing_file());
 
     assert_that(
-      cargo::util::process("parent").extra_path(p.root().join("target")),
+      cargo::util::process(p.bin("parent")),
       execs().with_stdout("hello world\n"));
 })
 
@@ -333,12 +334,12 @@ test!(recompilation {
             [dependencies.bar]
 
             version = "0.5.0"
-            git = "file://{}"
+            git = "file:{}"
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, escape_path(&git_project.root())))
         .file("src/foo.rs",
               main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
 
@@ -352,7 +353,7 @@ test!(recompilation {
                                             COMPILING, p.root().display())));
 
     // Don't recompile the second time
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
@@ -363,13 +364,13 @@ test!(recompilation {
         pub fn bar() { println!("hello!"); }
     "#).assert();
 
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
-    assert_that(p.process("cargo-build").arg("-u"),
+    assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
@@ -385,7 +386,7 @@ test!(recompilation {
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
 
-    assert_that(p.process("cargo-build").arg("-u"),
+    assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
