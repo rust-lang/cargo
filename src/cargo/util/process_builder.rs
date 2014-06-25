@@ -1,14 +1,15 @@
 use std::fmt;
 use std::fmt::{Show, Formatter};
 use std::os;
-use std::path::Path;
+use std::c_str::CString;
 use std::io::process::{Command, ProcessOutput, InheritFd};
-use util::{ProcessError, process_error};
 use std::collections::HashMap;
+
+use util::{ProcessError, process_error};
 
 #[deriving(Clone,PartialEq)]
 pub struct ProcessBuilder {
-    program: String,
+    program: CString,
     args: Vec<String>,
     path: Vec<String>,
     env: HashMap<String, String>,
@@ -17,7 +18,7 @@ pub struct ProcessBuilder {
 
 impl Show for ProcessBuilder {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", self.program));
+        try!(write!(f, "`{}", self.program.as_str().unwrap_or("<not-utf8>")));
 
         if self.args.len() > 0 {
             try!(write!(f, " {}", self.args.connect(" ")));
@@ -113,16 +114,17 @@ impl ProcessBuilder {
     }
 
     pub fn build_command(&self) -> Command {
-        let mut command = Command::new(self.program.as_slice());
+        let mut command = Command::new(self.program.as_bytes_no_nul());
         command.args(self.args.as_slice()).cwd(&self.cwd);
         command
     }
 
     fn debug_string(&self) -> String {
+        let program = self.program.as_str().unwrap_or("<not-utf8>");
         if self.args.len() == 0 {
-            self.program.to_str()
+            program.to_string()
         } else {
-            format!("{} {}", self.program, self.args.connect(" "))
+            format!("{} {}", program, self.args.connect(" "))
         }
     }
 
@@ -166,22 +168,12 @@ impl ProcessBuilder {
     }
 }
 
-pub fn process(cmd: &str) -> ProcessBuilder {
+pub fn process<T: ToCStr>(cmd: T) -> ProcessBuilder {
     ProcessBuilder {
-        program: cmd.to_str(),
+        program: cmd.to_c_str(),
         args: vec!(),
         path: vec!(),
         cwd: os::getcwd(),
-        env: system_env()
+        env: os::env().move_iter().collect()
     }
-}
-
-fn system_env() -> HashMap<String, String> {
-    let mut ret = HashMap::new();
-
-    for &(ref key, ref val) in os::env().iter() {
-        ret.insert(key.to_str(), val.to_str());
-    }
-
-    ret
 }
