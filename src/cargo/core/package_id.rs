@@ -11,6 +11,7 @@ use serialize::{
 };
 
 use util::{CargoResult, CargoError};
+use core::source::Location;
 
 trait ToVersion {
     fn to_version(self) -> Result<semver::Version, String>;
@@ -57,7 +58,7 @@ impl<'a> ToUrl for &'a Url {
 pub struct PackageId {
     name: String,
     version: semver::Version,
-    namespace: Url
+    namespace: Location,
 }
 
 #[deriving(Clone, Show, PartialEq)]
@@ -77,14 +78,13 @@ impl CargoError for PackageIdError {
 }
 
 impl PackageId {
-    pub fn new<T: ToVersion, U: ToUrl>(name: &str, version: T,
-                                       namespace: U) -> CargoResult<PackageId> {
+    pub fn new<T: ToVersion>(name: &str, version: T,
+                             ns: &Location) -> CargoResult<PackageId> {
         let v = try!(version.to_version().map_err(InvalidVersion));
-        let ns = try!(namespace.to_url().map_err(InvalidNamespace));
         Ok(PackageId {
             name: name.to_str(),
             version: v,
-            namespace: ns
+            namespace: ns.clone()
         })
     }
 
@@ -96,7 +96,7 @@ impl PackageId {
         &self.version
     }
 
-    pub fn get_namespace<'a>(&'a self) -> &'a Url {
+    pub fn get_namespace<'a>(&'a self) -> &'a Location {
         &self.namespace
     }
 }
@@ -125,7 +125,7 @@ impl<D: Decoder<Box<CargoError>>> Decodable<D,Box<CargoError>> for PackageId {
         PackageId::new(
             vector.get(0).as_slice(),
             vector.get(1).as_slice(),
-            vector.get(2).as_slice())
+            &try!(Location::parse(vector.get(2).as_slice())))
     }
 }
 
@@ -139,12 +139,14 @@ impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
 #[cfg(test)]
 mod tests {
     use super::{PackageId, central_repo};
+    use core::source::Location;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        assert!(PackageId::new("foo", "1.0", central_repo).is_err());
-        assert!(PackageId::new("foo", "1", central_repo).is_err());
-        assert!(PackageId::new("foo", "bar", central_repo).is_err());
-        assert!(PackageId::new("foo", "", central_repo).is_err());
+        let repo = Location::parse(central_repo).unwrap();
+        assert!(PackageId::new("foo", "1.0", &repo).is_err());
+        assert!(PackageId::new("foo", "1", &repo).is_err());
+        assert!(PackageId::new("foo", "bar", &repo).is_err());
+        assert!(PackageId::new("foo", "", &repo).is_err());
     }
 }

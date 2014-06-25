@@ -15,7 +15,7 @@ BINS = cargo \
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
 DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
-TOML = libs/toml-rs/lib/$(shell rustc --crate-file-name libs/toml-rs/src/toml.rs)
+TOML = libs/toml-rs/build/$(shell rustc --crate-file-name libs/toml-rs/src/toml.rs)
 HAMMER = libs/hammer.rs/target/$(shell rustc --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
 HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
 LIBCARGO = target/libcargo.timestamp

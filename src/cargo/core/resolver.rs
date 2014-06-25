@@ -57,56 +57,43 @@ pub fn resolve<R: Registry>(deps: &[Dependency],
 #[cfg(test)]
 mod test {
     use url;
+    use hamcrest::{assert_that, equal_to, contains};
 
-    use hamcrest::{
-        assert_that,
-        equal_to,
-        contains
-    };
-
-    use core::source::{
-        SourceId,
-        RegistryKind
-    };
-
-    use core::{
-        Dependency,
-        PackageId,
-        Summary
-    };
-
-    use super::{
-        resolve
-    };
+    use core::source::{SourceId, RegistryKind, Location, Remote};
+    use core::{Dependency, PackageId, Summary};
+    use super::resolve;
 
     macro_rules! pkg(
         ($name:expr => $($deps:expr),+) => (
             {
             let url = url::from_str("http://example.com").unwrap();
-            let source_id = SourceId::new(RegistryKind, url);
+            let source_id = SourceId::new(RegistryKind, Remote(url));
             let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| {
                 Dependency::parse(*s, Some("1.0.0"), &source_id).unwrap()
             }).collect();
-            Summary::new(&PackageId::new($name, "1.0.0",
-                                         "http://www.example.com/").unwrap(),
+            Summary::new(&PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
                          d.as_slice())
             }
         );
 
         ($name:expr) => (
-            Summary::new(&PackageId::new($name, "1.0.0",
-                                         "http://www.example.com/").unwrap(), [])
+            Summary::new(&PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
+                         [])
         )
     )
 
+    fn registry_loc() -> Location {
+        Location::parse("http://www.example.com/").unwrap()
+    }
+
     fn pkg(name: &str) -> Summary {
-        Summary::new(&PackageId::new(name, "1.0.0", "http://www.example.com/").unwrap(),
+        Summary::new(&PackageId::new(name, "1.0.0", &registry_loc()).unwrap(),
                      &[])
     }
 
     fn dep(name: &str) -> Dependency {
         let url = url::from_str("http://example.com").unwrap();
-        let source_id = SourceId::new(RegistryKind, url);
+        let source_id = SourceId::new(RegistryKind, Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
 
@@ -116,7 +103,7 @@ mod test {
 
     fn names(names: &[&'static str]) -> Vec<PackageId> {
         names.iter()
-            .map(|name| PackageId::new(*name, "1.0.0", "http://www.example.com/").unwrap())
+            .map(|name| PackageId::new(*name, "1.0.0", &registry_loc()).unwrap())
             .collect()
     }
 

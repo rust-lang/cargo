@@ -33,9 +33,23 @@ impl PathExt for Path {
      */
     fn rm_rf(&self) -> IoResult<()> {
         if self.exists() {
+            // On windows, apparently git checks out the database with objects
+            // set to the permission 444, and apparently you can't unlink a file
+            // with permissions 444 because you don't have write permissions.
+            // Whow knew!
+            //
+            // If the rmdir fails due to a permission denied error, then go back
+            // and change everything to have write permissions, then remove
+            // everything.
+            match fs::rmdir_recursive(self) {
+                Err(io::IoError { kind: io::PermissionDenied, .. }) => {}
+                e => return e,
+            }
+            for path in try!(fs::walk_dir(self)) {
+                try!(fs::chmod(&path, io::UserRWX));
+            }
             fs::rmdir_recursive(self)
-        }
-        else {
+        } else {
             Ok(())
         }
     }
