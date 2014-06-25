@@ -88,13 +88,14 @@ pub struct TomlManifest {
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
 pub struct TomlProject {
     pub name: String,
+    // FIXME #54: should be a Version to be able to be Decodable'd directly.
     pub version: String,
     pub authors: Vec<String>,
     build: Option<String>,
 }
 
 impl TomlProject {
-    pub fn to_package_id(&self, namespace: &Url) -> PackageId {
+    pub fn to_package_id(&self, namespace: &Url) -> CargoResult<PackageId> {
         PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
     }
 }
@@ -161,7 +162,7 @@ impl TomlManifest {
         let project = try!(project.require(|| human("No `package` or `project` section found.")));
 
         Ok((Manifest::new(
-                &Summary::new(&project.to_package_id(source_id.get_url()),
+                &Summary::new(&try!(project.to_package_id(source_id.get_url())),
                               deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target"),

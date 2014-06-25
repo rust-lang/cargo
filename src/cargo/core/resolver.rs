@@ -88,19 +88,19 @@ mod test {
                 Dependency::parse(*s, Some("1.0.0"), &source_id).unwrap()
             }).collect();
             Summary::new(&PackageId::new($name, "1.0.0",
-                                         "http://www.example.com/"),
+                                         "http://www.example.com/").unwrap(),
                          d.as_slice())
             }
         );
 
         ($name:expr) => (
             Summary::new(&PackageId::new($name, "1.0.0",
-                                         "http://www.example.com/"), [])
+                                         "http://www.example.com/").unwrap(), [])
         )
     )
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&PackageId::new(name, "1.0.0", "http://www.example.com/"),
+        Summary::new(&PackageId::new(name, "1.0.0", "http://www.example.com/").unwrap(),
                      &[])
     }
 
@@ -116,7 +116,7 @@ mod test {
 
     fn names(names: &[&'static str]) -> Vec<PackageId> {
         names.iter()
-            .map(|name| PackageId::new(*name, "1.0.0", "http://www.example.com/"))
+            .map(|name| PackageId::new(*name, "1.0.0", "http://www.example.com/").unwrap())
             .collect()
     }
 

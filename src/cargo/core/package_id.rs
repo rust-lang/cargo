@@ -10,43 +10,46 @@ use serialize::{
     Decoder
 };
 
-use util::{CargoError, FromError};
+use util::{CargoResult, CargoError};
 
 trait ToVersion {
-    fn to_version(self) -> Option<semver::Version>;
+    fn to_version(self) -> Result<semver::Version, String>;
 }
 
 impl ToVersion for semver::Version {
-    fn to_version(self) -> Option<semver::Version> {
-        Some(self)
+    fn to_version(self) -> Result<semver::Version, String> {
+        Ok(self)
     }
 }
 
 impl<'a> ToVersion for &'a str {
-    fn to_version(self) -> Option<semver::Version> {
-        semver::parse(self)
+    fn to_version(self) -> Result<semver::Version, String> {
+        match semver::parse(self) {
+            Some(v) => Ok(v),
+            None => Err(format!("cannot parse '{}' as a semver", self)),
+        }
     }
 }
 
 trait ToUrl {
-    fn to_url(self) -> Option<Url>;
+    fn to_url(self) -> Result<Url, String>;
 }
 
 impl<'a> ToUrl for &'a str {
-    fn to_url(self) -> Option<Url> {
-        url::from_str(self).ok()
+    fn to_url(self) -> Result<Url, String> {
+        url::from_str(self)
     }
 }
 
 impl ToUrl for Url {
-    fn to_url(self) -> Option<Url> {
-        Some(self)
+    fn to_url(self) -> Result<Url, String> {
+        Ok(self)
     }
 }
 
 impl<'a> ToUrl for &'a Url {
-    fn to_url(self) -> Option<Url> {
-        Some(self.clone())
+    fn to_url(self) -> Result<Url, String> {
+        Ok(self.clone())
     }
 }
 
@@ -57,14 +60,32 @@ pub struct PackageId {
     namespace: Url
 }
 
+#[deriving(Clone, Show, PartialEq)]
+pub enum PackageIdError {
+    InvalidVersion(String),
+    InvalidNamespace(String)
+}
+
+impl CargoError for PackageIdError {
+    fn description(&self) -> String {
+        match *self {
+            InvalidVersion(ref v) => format!("invalid version: {}", *v),
+            InvalidNamespace(ref ns) => format!("invalid namespace: {}", *ns),
+        }
+    }
+    fn is_human(&self) -> bool { true }
+}
+
 impl PackageId {
     pub fn new<T: ToVersion, U: ToUrl>(name: &str, version: T,
-                                       namespace: U) -> PackageId {
-        PackageId {
+                                       namespace: U) -> CargoResult<PackageId> {
+        let v = try!(version.to_version().map_err(InvalidVersion));
+        let ns = try!(namespace.to_url().map_err(InvalidNamespace));
+        Ok(PackageId {
             name: name.to_str(),
-            version: version.to_version().unwrap(),
-            namespace: namespace.to_url().unwrap()
-        }
+            version: v,
+            namespace: ns
+        })
     }
 
     pub fn get_name<'a>(&'a self) -> &'a str {
@@ -94,14 +115,17 @@ impl Show for PackageId {
     }
 }
 
-impl<E: CargoError + FromError<E>, D: Decoder<E>> Decodable<D,E> for PackageId {
-    fn decode(d: &mut D) -> Result<PackageId, E> {
-        let vector: Vec<String> = try!(Decodable::decode(d));
+impl<D: Decoder<Box<CargoError>>> Decodable<D,Box<CargoError>> for PackageId {
+    fn decode(d: &mut D) -> Result<PackageId, Box<CargoError>> {
+        let vector: Vec<String> = match Decodable::decode(d) {
+            Ok(v) => v,
+            Err(e) => return Err(e.to_error())
+        };
 
-        Ok(PackageId::new(
+        PackageId::new(
             vector.get(0).as_slice(),
             vector.get(1).as_slice(),
-            vector.get(2).as_slice()))
+            vector.get(2).as_slice())
     }
 }
 
@@ -109,5 +133,18 @@ impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
     fn encode(&self, e: &mut S) -> Result<(), E> {
         (vec!(self.name.clone(), self.version.to_str()),
               self.namespace.to_str()).encode(e)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PackageId, central_repo};
+
+    #[test]
+    fn invalid_version_handled_nicely() {
+        assert!(PackageId::new("foo", "1.0", central_repo).is_err());
+        assert!(PackageId::new("foo", "1", central_repo).is_err());
+        assert!(PackageId::new("foo", "bar", central_repo).is_err());
+        assert!(PackageId::new("foo", "", central_repo).is_err());
     }
 }

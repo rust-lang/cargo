@@ -51,6 +51,7 @@ test!(cargo_compile_with_invalid_manifest {
                       No `package` or `project` section found.\n"))
 })
 
+
 test!(cargo_compile_with_invalid_manifest2 {
     let p = project("foo")
         .file("Cargo.toml", r"
@@ -63,6 +64,23 @@ test!(cargo_compile_with_invalid_manifest2 {
         .with_status(101)
         .with_stderr("could not parse input TOML\n\
                       Cargo.toml:3:19-3:20 expected a value\n\n"))
+})
+
+test!(cargo_compile_with_invalid_version {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "1.0"
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs()
+                .with_status(101)
+                .with_stderr("Cargo.toml is not a valid manifest\n\n\
+                              invalid version: cannot parse '1.0' as a semver\n"))
+
 })
 
 test!(cargo_compile_without_manifest {
