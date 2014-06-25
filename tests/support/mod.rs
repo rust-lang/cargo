@@ -66,10 +66,14 @@ impl ProjectBuilder {
     }
 
     pub fn root(&self) -> Path {
-      self.root.clone()
+        self.root.clone()
     }
 
-    pub fn process(&self, program: &str) -> ProcessBuilder {
+    pub fn bin(&self, b: &str) -> Path {
+        self.root.join("target").join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+    }
+
+    pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {
         process(program)
             .cwd(self.root())
             .env("HOME", Some(paths::home().display().to_str().as_slice()))
@@ -78,7 +82,7 @@ impl ProjectBuilder {
 
     pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
         self.build();
-        self.process(program)
+        self.process(cargo_dir().join(program))
     }
 
     pub fn file<B: BytesContainer, S: Str>(mut self, path: B,
@@ -245,7 +249,9 @@ impl Execs {
                 match str::from_utf8(actual) {
                     None => Err(format!("{} was not utf8 encoded", description)),
                     Some(actual) => {
-                        ham::expect(actual == out,
+                        // Let's not deal with \r\n vs \n on windows...
+                        let actual = actual.replace("\r", "");
+                        ham::expect(actual.as_slice() == out,
                                     format!("{} was:\n\
                                             `{}`\n\n\
                                             expected:\n\
@@ -346,4 +352,8 @@ impl<T> Tap for T {
         callback(&mut self);
         self
     }
+}
+
+pub fn escape_path(p: &Path) -> String {
+    p.display().to_str().as_slice().replace("\\", "\\\\")
 }
