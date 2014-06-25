@@ -1,11 +1,12 @@
-use url::Url;
-use util::{CargoResult, ChainError, ProcessBuilder, process, human};
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::str;
 use std::io::{UserDir,AllPermissions};
 use std::io::fs::{mkdir_recursive,rmdir_recursive,chmod};
 use serialize::{Encodable,Encoder};
+
+use core::source::{Location, Local, Remote};
+use util::{CargoResult, ChainError, ProcessBuilder, process, human};
 
 #[deriving(PartialEq,Clone,Encodable)]
 pub enum GitReference {
@@ -67,18 +68,18 @@ macro_rules! errln(
 /// GitDatabase.
 #[deriving(PartialEq,Clone,Show)]
 pub struct GitRemote {
-    url: Url,
+    location: Location,
 }
 
 #[deriving(PartialEq,Clone,Encodable)]
 struct EncodableGitRemote {
-    url: String,
+    location: String,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitRemote {
-            url: self.url.to_str()
+            location: self.location.to_str()
         }.encode(s)
     }
 }
@@ -138,12 +139,12 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
 // Implementations
 
 impl GitRemote {
-    pub fn new(url: &Url) -> GitRemote {
-        GitRemote { url: url.clone() }
+    pub fn new(location: &Location) -> GitRemote {
+        GitRemote { location: location.clone() }
     }
 
-    pub fn get_url<'a>(&'a self) -> &'a Url {
-        &self.url
+    pub fn get_location<'a>(&'a self) -> &'a Location {
+        &self.location
     }
 
     pub fn has_ref<S: Str>(&self, path: &Path, reference: S) -> CargoResult<()> {
@@ -180,9 +181,9 @@ impl GitRemote {
     }
 
     fn fetch_location(&self) -> String {
-        match self.url.scheme.as_slice() {
-            "file" => self.url.path.clone(),
-            _ => self.url.to_str()
+        match self.location {
+            Local(ref p) => p.display().to_str(),
+            Remote(ref u) => u.to_str(),
         }
     }
 }

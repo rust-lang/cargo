@@ -2,12 +2,12 @@ use serialize::Decodable;
 use std::collections::HashMap;
 use std::str;
 use toml;
-use url::Url;
 use url;
 
-use core::{SourceId,GitKind};
-use core::manifest::{LibKind,Lib};
-use core::{Summary,Manifest,Target,Dependency,PackageId};
+use core::{SourceId, GitKind};
+use core::manifest::{LibKind, Lib};
+use core::{Summary, Manifest, Target, Dependency, PackageId};
+use core::source::{Location, Local, Remote};
 use util::{CargoResult, Require, human};
 
 pub fn to_manifest(contents: &[u8],
@@ -95,7 +95,7 @@ pub struct TomlProject {
 }
 
 impl TomlProject {
-    pub fn to_package_id(&self, namespace: &Url) -> CargoResult<PackageId> {
+    pub fn to_package_id(&self, namespace: &Location) -> CargoResult<PackageId> {
         PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
     }
 }
@@ -117,6 +117,15 @@ impl TomlManifest {
 
         let mut deps = Vec::new();
 
+        fn to_location(s: &str) -> Location {
+            if s.starts_with("file:") {
+                Local(Path::new(s.slice_from(5)))
+            } else {
+                // TODO: Don't unwrap here
+                Remote(url::from_str(s).unwrap())
+            }
+        }
+
         // Collect the deps
         match self.dependencies {
             Some(ref dependencies) => {
@@ -132,10 +141,9 @@ impl TomlManifest {
                                 .unwrap_or_else(|| "master".to_str());
 
                             let new_source_id = details.git.as_ref().map(|git| {
-                                // TODO: Don't unwrap here
                                 let kind = GitKind(reference.clone());
-                                let url = url::from_str(git.as_slice()).unwrap();
-                                let source_id = SourceId::new(kind, url);
+                                let loc = to_location(git.as_slice());
+                                let source_id = SourceId::new(kind, loc);
                                 // TODO: Don't do this for path
                                 sources.push(source_id.clone());
                                 source_id
@@ -162,7 +170,7 @@ impl TomlManifest {
         let project = try!(project.require(|| human("No `package` or `project` section found.")));
 
         Ok((Manifest::new(
-                &Summary::new(&try!(project.to_package_id(source_id.get_url())),
+                &Summary::new(&try!(project.to_package_id(source_id.get_location())),
                               deps.as_slice()),
                 targets.as_slice(),
                 &Path::new("target"),

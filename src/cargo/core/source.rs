@@ -4,9 +4,10 @@ use std::fmt::{Show, Formatter};
 use url;
 use url::Url;
 
-use core::{Summary,Package,PackageId};
-use sources::{PathSource,GitSource};
-use util::{Config,CargoResult};
+use core::{Summary, Package, PackageId};
+use sources::{PathSource, GitSource};
+use util::{Config, CargoResult};
+use util::errors::human;
 
 /// A Source finds and downloads remote packages based on names and
 /// versions.
@@ -51,20 +52,47 @@ pub enum SourceKind {
     RegistryKind
 }
 
+#[deriving(Clone, PartialEq, Eq)]
+pub enum Location {
+    Local(Path),
+    Remote(Url),
+}
+
 #[deriving(Clone,PartialEq)]
 pub struct SourceId {
     pub kind: SourceKind,
-    pub url: Url
+    pub location: Location,
+}
+
+impl Show for Location {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match *self {
+            Local(ref p) => write!(f, "file:{}", p.display()),
+            Remote(ref u) => write!(f, "{}", u),
+        }
+    }
+}
+
+impl Location {
+    pub fn parse(s: &str) -> CargoResult<Location> {
+        if s.starts_with("file:") {
+            Ok(Local(Path::new(s.slice_from(5))))
+        } else {
+            url::from_str(s).map(Remote).map_err(|e| {
+                human(format!("invalid url `{}`: `{}", s, e))
+            })
+        }
+    }
 }
 
 impl Show for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
-            SourceId { kind: PathKind, ref url } => {
-                try!(write!(f, "{}", url))
+            SourceId { kind: PathKind, ref location } => {
+                try!(write!(f, "{}", location))
             },
-            SourceId { kind: GitKind(ref reference), ref url } => {
-                try!(write!(f, "{}", url));
+            SourceId { kind: GitKind(ref reference), ref location } => {
+                try!(write!(f, "{}", location));
                 if reference.as_slice() != "master" {
                     try!(write!(f, " (ref={})", reference));
                 }
@@ -80,33 +108,26 @@ impl Show for SourceId {
 }
 
 impl SourceId {
-    pub fn new(kind: SourceKind, url: Url) -> SourceId {
-        SourceId { kind: kind, url: url }
+    pub fn new(kind: SourceKind, location: Location) -> SourceId {
+        SourceId { kind: kind, location: location }
     }
 
     // Pass absolute path
     pub fn for_path(path: &Path) -> SourceId {
-        // TODO: use proper path -> URL
-        let url = if cfg!(windows) {
-            let path = path.display().to_str();
-            format!("file://{}", path.as_slice().replace("\\", "/"))
-        } else {
-            format!("file://{}", path.display())
-        };
-        SourceId::new(PathKind, url::from_str(url.as_slice()).unwrap())
+        SourceId::new(PathKind, Local(path.clone()))
     }
 
     pub fn for_git(url: &Url, reference: &str) -> SourceId {
-        SourceId::new(GitKind(reference.to_str()), url.clone())
+        SourceId::new(GitKind(reference.to_str()), Remote(url.clone()))
     }
 
     pub fn for_central() -> SourceId {
         SourceId::new(RegistryKind,
-                      url::from_str("https://example.com").unwrap())
+                      Remote(url::from_str("https://example.com").unwrap()))
     }
 
-    pub fn get_url<'a>(&'a self) -> &'a Url {
-        &self.url
+    pub fn get_location<'a>(&'a self) -> &'a Location {
+        &self.location
     }
 
     pub fn is_path(&self) -> bool {
@@ -124,12 +145,11 @@ impl SourceId {
         match self.kind {
             GitKind(..) => box GitSource::new(self, config) as Box<Source>,
             PathKind => {
-                let mut path = self.url.path.clone();
-                if cfg!(windows) {
-                    path = path.replace("/", "\\");
-                }
-                let path = Path::new(path);
-                box PathSource::new(&path, self) as Box<Source>
+                let path = match self.location {
+                    Local(ref p) => p,
+                    Remote(..) => fail!("path sources cannot be remote"),
+                };
+                box PathSource::new(path, self) as Box<Source>
             },
             RegistryKind => unimplemented!()
         }
