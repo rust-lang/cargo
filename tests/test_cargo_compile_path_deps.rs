@@ -350,7 +350,7 @@ test!(nested_deps_recompile {
     "#).assert();
 
     // This shouldn't recompile `bar`
-    assert_that(p.process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, bar.display(),

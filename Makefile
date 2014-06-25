@@ -1,8 +1,15 @@
-RUSTC ?= rustc
 RUSTC_FLAGS ?=
 DESTDIR ?=
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
+
+ifeq ($(wildcard rustc/bin),)
+export RUSTC := rustc
+else
+export RUSTC := $(CURDIR)/rustc/bin/rustc
+endif
+
+export PATH := $(PATH):$(CURDIR)/rustc/bin
 
 # Link flags to pull in dependencies
 BINS = cargo \
@@ -15,8 +22,8 @@ BINS = cargo \
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
 DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
-TOML = libs/toml-rs/build/$(shell rustc --crate-file-name libs/toml-rs/src/toml.rs)
-HAMMER = libs/hammer.rs/target/$(shell rustc --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
+TOML = libs/toml-rs/build/$(shell $(RUSTC) --crate-file-name libs/toml-rs/src/toml.rs)
+HAMMER = libs/hammer.rs/target/$(shell $(RUSTC) --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
 HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
 LIBCARGO = target/libcargo.timestamp
 BIN_TARGETS = $(patsubst %,target/%,$(BINS))
@@ -66,7 +73,10 @@ test-unit: target/tests/test-unit
 test-integration: target/tests/test-integration
 	$< $(only)
 
-test: test-unit test-integration
+test: test-unit test-integration style
+
+style:
+	sh tests/check-style.sh
 
 clean:
 	rm -rf target
@@ -81,8 +91,9 @@ install:
 	install target/cargo target/cargo-* $(DESTDIR)$(BINDIR)
 
 # Setup phony tasks
-.PHONY: all clean distclean test test-unit test-integration libcargo
+.PHONY: all clean distclean test test-unit test-integration libcargo style
 
 # Disable unnecessary built-in rules
 .SUFFIXES:
+
 

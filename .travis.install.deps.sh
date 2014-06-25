@@ -1,29 +1,50 @@
-set -ex
+set -x
 
-if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${PLATFORM}" = "mac" ]; then
     target=apple-darwin
-else
+elif [ "${TRAVIS_OS_NAME}" = "linux" ] || [ "${PLATFORM}" = "linux" ]; then
+    target=unknown-linux-gnu
+elif [ "${OS}" = "Windows_NT" ] || [ "${PLATFORM}" = "win" ]; then
+    target=pc-mingw32
+    windows=1
+fi
+
+if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     # Install a 32-bit compiler for linux
     sudo apt-get update
-    sudo apt-get install gcc-multilib
-    target=unknown-linux-gnu
+    sudo apt-get install gcc-multilib lib32stdc++6
 fi
 
 # Install both 64 and 32 bit libraries. Apparently travis barfs if you try to
 # just install the right ones? This should enable cross compilation in the
 # future anyway.
-curl -O http://static.rust-lang.org/dist/rust-nightly-x86_64-$target.tar.gz
-curl -O http://static.rust-lang.org/dist/rust-nightly-i686-$target.tar.gz
-tar xfz rust-nightly-x86_64-$target.tar.gz
-tar xfz rust-nightly-i686-$target.tar.gz
-cp -r rust-nightly-i686-$target/lib/rustlib/i686-$target \
-      rust-nightly-x86_64-$target/lib/rustlib
-(cd rust-nightly-x86_64-$target && \
- find lib/rustlib/i686-$target/lib -type f >> \
- lib/rustlib/manifest.in)
-sudo ./rust-nightly-x86_64-$target/install.sh
+if [ -z "${windows}" ]; then
+    curl -O http://static.rust-lang.org/dist/rust-nightly-i686-$target.tar.gz
+    tar xfz rust-nightly-i686-$target.tar.gz
+    curl -O http://static.rust-lang.org/dist/rust-nightly-x86_64-$target.tar.gz
+    tar xfz rust-nightly-x86_64-$target.tar.gz
 
-export RUSTC="rustc --target=${ARCH}-${target}"
+    if [ "${BITS}" = "32" ]; then
+        src=x86_64
+        dst=i686
+    else
+        src=i686
+        dst=x86_64
+    fi
+    cp -r rust-nightly-$src-$target/lib/rustlib/$src-$target \
+          rust-nightly-$dst-$target/lib/rustlib
+    (cd rust-nightly-$dst-$target && \
+     find lib/rustlib/$src-$target/lib -type f >> \
+     lib/rustlib/manifest.in)
 
-set +ex
+    ./rust-nightly-$dst-$target/install.sh --prefix=rustc
+    rm -rf rust-nightly-$src-$target
+    rm -rf rust-nightly-$dst-$target
+else
+    rm -rf *.exe rustc
+    curl -O http://static.rust-lang.org/dist/rust-nightly-install.exe
+    innounp -y -x rust-nightly-install.exe
+    mv '{app}' rustc
+fi
 
+set +x

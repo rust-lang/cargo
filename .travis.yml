@@ -1,17 +1,16 @@
 language: rust
 
 install:
-  - . ./.travis.install.deps.sh
+  - sh ./.travis.install.deps.sh
 
 script:
-  - ./.travis.check.style.sh
-  - make CC="$CC" RUSTC="$RUSTC" -j4
-  - make CC="$CC" RUSTC="$RUSTC" test -j4
+  - make
+  - make test -j4
   - make install DESTDIR=${PWD}/destdir
 
 env:
-  - ARCH=i686 CC='cc -m32'
-  - ARCH=x86_64 CC=cc
+  - BITS=32
+  - BITS=64
 
 os:
   - linux
