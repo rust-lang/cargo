@@ -1,8 +1,8 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
 use std::str;
-use std::io::{UserDir,AllPermissions};
-use std::io::fs::{mkdir_recursive,rmdir_recursive,chmod};
+use std::io::{UserDir};
+use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use serialize::{Encodable,Encoder};
 
 use core::source::{Location, Local, Remote};
@@ -250,7 +250,6 @@ impl GitCheckout {
 
         git!(dirname, "clone --no-checkout --quiet {} {}",
              self.get_source().display(), self.location.display());
-        try!(chmod(&self.location, AllPermissions));
 
         Ok(())
     }
