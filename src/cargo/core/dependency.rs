@@ -1,4 +1,3 @@
-use semver::Version;
 use core::{VersionReq,SourceId};
 use util::CargoResult;
 
@@ -6,22 +5,14 @@ use util::CargoResult;
 pub struct Dependency {
     name: String,
     namespace: SourceId,
-    req: VersionReq
+    req: VersionReq,
+    envs: Option<Vec<String>>
 }
 
 impl Dependency {
-    pub fn new(name: &str, req: &VersionReq,
-               namespace: &SourceId) -> Dependency {
-        Dependency {
-            name: name.to_str(),
-            namespace: namespace.clone(),
-            req: req.clone()
-        }
-    }
-
     pub fn parse(name: &str, version: Option<&str>,
-                 namespace: &SourceId) -> CargoResult<Dependency> {
-
+                 namespace: &SourceId, envs: Option<Vec<String>>) -> CargoResult<Dependency>
+    {
         let version = match version {
             Some(v) => try!(VersionReq::parse(v)),
             None => VersionReq::any()
@@ -30,17 +21,9 @@ impl Dependency {
         Ok(Dependency {
             name: name.to_str(),
             namespace: namespace.clone(),
-            req: version
+            req: version,
+            envs: envs
         })
-    }
-
-    pub fn exact(name: &str, version: &Version,
-                 namespace: &SourceId) -> Dependency {
-        Dependency {
-            name: name.to_str(),
-            namespace: namespace.clone(),
-            req: VersionReq::exact(version)
-        }
     }
 
     pub fn get_version_req<'a>(&'a self) -> &'a VersionReq {

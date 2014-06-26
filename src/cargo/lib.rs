@@ -39,9 +39,14 @@ macro_rules! some(
     )
 )
 
+mod cargo {
+    pub use super::util;
+}
+
+#[macro_export]
 macro_rules! try (
     ($expr:expr) => ({
-        use util::CargoError;
+        use cargo::util::CargoError;
         match $expr.map_err(|err| err.to_error()) {
             Ok(val) => val,
             Err(err) => return Err(err)

@@ -2,13 +2,11 @@ use std::fmt::{Show,Formatter};
 use std::fmt;
 use std::hash::Hasher;
 use std::hash::sip::SipHasher;
-use std::io::MemWriter;
 use std::str;
-use serialize::hex::ToHex;
 
 use core::source::{Source, SourceId, GitKind, Location, Remote, Local};
 use core::{Package,PackageId,Summary};
-use util::{CargoResult,Config};
+use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
 use sources::git::utils::{GitReference,GitRemote,Master,Other};
 
@@ -79,12 +77,6 @@ fn ident(location: &Location) -> String {
     };
 
     format!("{}-{}", ident, to_hex(hasher.hash(&location.to_str())))
-}
-
-fn to_hex(num: u64) -> String {
-    let mut writer = MemWriter::with_capacity(8);
-    writer.write_le_u64(num).unwrap(); // this should never fail
-    writer.get_ref().to_hex()
 }
 
 impl<'a, 'b> Show for GitSource<'a, 'b> {
