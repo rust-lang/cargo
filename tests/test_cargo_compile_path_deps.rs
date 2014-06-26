@@ -2,15 +2,13 @@ use std::io::File;
 use std::io::timer;
 
 use support::{ResultTest, project, execs, main_file, escape_path, cargo_dir};
+use support::{COMPILING, FRESH};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};
 
 fn setup() {
 }
-
-static COMPILING: &'static str = "   Compiling";
-static FRESH:     &'static str = "       Fresh";
 
 test!(cargo_compile_with_nested_deps_shorthand {
     let p = project("foo")

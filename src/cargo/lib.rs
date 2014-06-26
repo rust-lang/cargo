@@ -39,6 +39,10 @@ macro_rules! some(
     )
 )
 
+// Added so that the try! macro below can refer to cargo::util, while
+// other external importers of this macro can use it as well.
+//
+// "Hygiene strikes again" - @acrichton
 mod cargo {
     pub use super::util;
 }

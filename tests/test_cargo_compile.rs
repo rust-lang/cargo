@@ -2,28 +2,13 @@ use std::io::fs;
 use std::os;
 use std::path;
 
-use support::{ResultTest, project, execs, main_file, escape_path};
+use support::{ResultTest, project, execs, main_file, escape_path, basic_bin_manifest};
+use support::COMPILING;
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process, realpath};
 
 fn setup() {
-}
-
-static COMPILING: &'static str = "   Compiling";
-
-fn basic_bin_manifest(name: &str) -> String {
-    format!(r#"
-        [project]
-
-        name = "{}"
-        version = "0.5.0"
-        authors = ["wycats@example.com"]
-
-        [[bin]]
-
-        name = "{}"
-    "#, name, name)
 }
 
 test!(cargo_compile_simple {
