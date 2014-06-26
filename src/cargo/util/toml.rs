@@ -5,7 +5,7 @@ use toml;
 use url;
 
 use core::{SourceId, GitKind};
-use core::manifest::{LibKind, Lib};
+use core::manifest::{LibKind, Lib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::source::{Location, Local, Remote};
 use util::{CargoResult, Require, human};
@@ -65,6 +65,7 @@ pub enum TomlDependency {
     SimpleDep(String),
     DetailedDep(DetailedTomlDependency)
 }
+
 
 #[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
 pub struct DetailedTomlDependency {
@@ -184,12 +185,24 @@ impl TomlManifest {
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
-    path: Option<String>
+    path: Option<String>,
+    test: Option<bool>
 }
 
 fn normalize(lib: Option<&[TomlLibTarget]>,
              bin: Option<&[TomlBinTarget]>) -> Vec<Target> {
     log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
+
+    fn target_profiles(target: &TomlTarget) -> Vec<Profile> {
+        let mut ret = vec!(Profile::default("compile"));
+
+        match target.test {
+            Some(true) | None => ret.push(Profile::default("test").test(true)),
+            _ => {}
+        };
+
+        ret
+    }
 
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
         let l = &libs[0];
@@ -197,15 +210,21 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             LibKind::from_strs(kinds).ok()
         }).unwrap_or_else(|| vec!(Lib));
-        dst.push(Target::lib_target(l.name.as_slice(), crate_types,
-                                    &Path::new(path)));
+
+        for profile in target_profiles(l).iter() {
+            dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
+                                        &Path::new(path.as_slice()), profile));
+        }
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
                    default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
-            dst.push(Target::bin_target(bin.name.as_slice(), &Path::new(path)));
+
+            for profile in target_profiles(bin).iter() {
+                dst.push(Target::bin_target(bin.name.as_slice(), &Path::new(path.as_slice()), profile));
+            }
         }
     }
 

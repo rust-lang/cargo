@@ -6,6 +6,7 @@ pub use self::manifest::{
     Manifest,
     Target,
     TargetKind,
+    Profile
 };
 
 pub use self::package::{
@@ -36,7 +37,10 @@ pub use self::shell::{
     ShellConfig
 };
 
-pub use self::dependency::Dependency;
+pub use self::dependency::{
+    Dependency
+};
+
 pub use self::version_req::VersionReq;
 
 pub mod errors;

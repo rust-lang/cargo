@@ -58,7 +58,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     }
 }
 
-#[deriving(Show,Clone,PartialEq,Encodable)]
+#[deriving(Show, Clone, PartialEq, Hash, Encodable)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -92,17 +92,64 @@ impl LibKind {
     }
 }
 
-#[deriving(Show,Clone,PartialEq,Encodable)]
+#[deriving(Show, Clone, Hash, PartialEq, Encodable)]
 pub enum TargetKind {
     LibTarget(Vec<LibKind>),
     BinTarget
 }
 
-#[deriving(Clone,PartialEq)]
+#[deriving(Clone, Hash, PartialEq)]
+pub struct Profile {
+    env: String, // compile, test, dev, bench, etc.
+    opt_level: uint,
+    debug: bool,
+    test: bool
+}
+
+impl Profile {
+    pub fn default(env: &str) -> Profile {
+        Profile {
+            env: env.to_str(), // run in the default environment only
+            opt_level: 0,
+            debug: true,
+            test: false // whether or not to pass --test
+        }
+    }
+
+    pub fn is_compile(&self) -> bool {
+        self.env.as_slice() == "compile"
+    }
+
+    pub fn is_test(&self) -> bool {
+        self.test
+    }
+
+    pub fn get_env<'a>(&'a self) -> &'a str {
+        self.env.as_slice()
+    }
+
+    pub fn opt_level(mut self, level: uint) -> Profile {
+        self.opt_level = level;
+        self
+    }
+
+    pub fn debug(mut self, debug: bool) -> Profile {
+        self.debug = debug;
+        self
+    }
+
+    pub fn test(mut self, test: bool) -> Profile {
+        self.test = test;
+        self
+    }
+}
+
+#[deriving(Clone, Hash, PartialEq)]
 pub struct Target {
     kind: TargetKind,
     name: String,
-    path: Path
+    path: Path,
+    profile: Profile
 }
 
 #[deriving(Encodable)]
@@ -191,19 +238,21 @@ impl Manifest {
 
 impl Target {
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
-                      path: &Path) -> Target {
+                      path: &Path, profile: &Profile) -> Target {
         Target {
             kind: LibTarget(crate_targets),
             name: name.to_str(),
-            path: path.clone()
+            path: path.clone(),
+            profile: profile.clone()
         }
     }
 
-    pub fn bin_target(name: &str, path: &Path) -> Target {
+    pub fn bin_target(name: &str, path: &Path, profile: &Profile) -> Target {
         Target {
             kind: BinTarget,
             name: name.to_str(),
-            path: path.clone()
+            path: path.clone(),
+            profile: profile.clone()
         }
     }
 
@@ -223,6 +272,10 @@ impl Target {
             BinTarget => true,
             _ => false
         }
+    }
+
+    pub fn get_profile<'a>(&'a self) -> &'a Profile {
+        &self.profile
     }
 
     pub fn rustc_crate_types(&self) -> Vec<&'static str> {

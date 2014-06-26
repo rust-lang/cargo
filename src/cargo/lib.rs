@@ -39,9 +39,18 @@ macro_rules! some(
     )
 )
 
+// Added so that the try! macro below can refer to cargo::util, while
+// other external importers of this macro can use it as well.
+//
+// "Hygiene strikes again" - @acrichton
+mod cargo {
+    pub use super::util;
+}
+
+#[macro_export]
 macro_rules! try (
     ($expr:expr) => ({
-        use util::CargoError;
+        use cargo::util::CargoError;
         match $expr.map_err(|err| err.to_error()) {
             Ok(val) => val,
             Err(err) => return Err(err)

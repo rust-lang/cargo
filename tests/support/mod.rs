@@ -357,3 +357,21 @@ impl<T> Tap for T {
 pub fn escape_path(p: &Path) -> String {
     p.display().to_str().as_slice().replace("\\", "\\\\")
 }
+
+pub fn basic_bin_manifest(name: &str) -> String {
+    format!(r#"
+        [project]
+
+        name = "{}"
+        version = "0.5.0"
+        authors = ["wycats@example.com"]
+
+        [[bin]]
+
+        name = "{}"
+    "#, name, name)
+}
+
+pub static COMPILING: &'static str = "   Compiling";
+pub static FRESH:     &'static str = "       Fresh";
+pub static UPDATING:  &'static str = "    Updating";

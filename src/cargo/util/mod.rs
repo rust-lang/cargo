@@ -5,6 +5,7 @@ pub use self::errors::{CargoResult, CargoError, BoxError, ChainError, CliResult}
 pub use self::errors::{CliError, FromError, ProcessError};
 pub use self::errors::{process_error, internal_error, internal, human};
 pub use self::paths::realpath;
+pub use self::hex::to_hex;
 
 pub mod graph;
 pub mod process_builder;
@@ -14,3 +15,4 @@ pub mod result;
 pub mod toml;
 pub mod paths;
 pub mod errors;
+pub mod hex;
