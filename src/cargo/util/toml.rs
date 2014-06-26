@@ -223,7 +223,8 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
 
             for profile in target_profiles(bin).iter() {
-                dst.push(Target::bin_target(bin.name.as_slice(), &Path::new(path.as_slice()), profile));
+                dst.push(Target::bin_target(bin.name.as_slice(),
+                                            &Path::new(path.as_slice()), profile));
             }
         }
     }
