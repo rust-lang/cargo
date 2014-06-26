@@ -51,7 +51,7 @@ impl ProcessBuilder {
 
     pub fn extra_path(mut self, path: Path) -> ProcessBuilder {
         // For now, just convert to a string, but we should do something better
-        self.path.push(path.display().to_str());
+        self.path.unshift(path.display().to_str());
         self
     }
 

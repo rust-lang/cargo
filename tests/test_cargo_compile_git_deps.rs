@@ -2,13 +2,10 @@ use std::io::File;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{escape_path, cargo_dir};
+use support::{COMPILING, FRESH, UPDATING};
 use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::{ProcessError, process};
-
-static COMPILING: &'static str = "   Compiling";
-static FRESH:     &'static str = "       Fresh";
-static UPDATING:  &'static str = "    Updating";
 
 fn setup() {
 }

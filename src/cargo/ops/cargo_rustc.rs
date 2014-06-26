@@ -2,6 +2,8 @@ use std::os::args;
 use std::io;
 use std::io::{File, IoError};
 use std::str;
+use std::hash::sip::SipHasher;
+use std::hash::Hasher;
 
 use core::{Package, PackageSet, Target};
 use util;
@@ -19,13 +21,14 @@ struct Context<'a, 'b> {
     config: &'b mut Config<'b>
 }
 
-pub fn compile_packages<'a>(pkg: &Package, deps: &PackageSet,
-                        config: &'a mut Config<'a>) -> CargoResult<()> {
+pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet,
+                           config: &'a mut Config<'a>) -> CargoResult<()> {
 
-    debug!("compile_packages; pkg={}; deps={}", pkg, deps);
+    debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
     let target_dir = pkg.get_absolute_target_dir();
     let deps_target_dir = target_dir.join("deps");
+    let tests_target_dir = target_dir.join("tests");
 
     let output = try!(util::process("rustc").arg("-v").exec_with_output());
     let rustc_version = str::from_utf8(output.output.as_slice()).unwrap();
@@ -41,6 +44,10 @@ pub fn compile_packages<'a>(pkg: &Package, deps: &PackageSet,
         internal(format!("Couldn't create the directory for dependencies for {} at {}",
                  pkg.get_name(), deps_target_dir.display()))));
 
+    try!(mk_target(&tests_target_dir).chain_error(||
+        internal(format!("Couldn't create the directory for tests for {} at {}",
+                 pkg.get_name(), tests_target_dir.display()))));
+
     let mut cx = Context {
         dest: &deps_target_dir,
         deps_dir: &deps_target_dir,
@@ -52,18 +59,28 @@ pub fn compile_packages<'a>(pkg: &Package, deps: &PackageSet,
 
     // Traverse the dependencies in topological order
     for dep in try!(topsort(deps)).iter() {
-        try!(compile_pkg(dep, &mut cx));
+        let targets = dep.get_targets().iter().filter(|target| {
+            // Only compile lib targets for dependencies
+            target.is_lib() && target.get_profile().is_compile()
+        }).collect::<Vec<&Target>>();
+
+        try!(compile(targets.as_slice(), dep, &mut cx));
     }
 
     cx.primary = true;
     cx.dest = &target_dir;
-    try!(compile_pkg(pkg, &mut cx));
+
+    try!(compile(targets, pkg, &mut cx));
 
     Ok(())
 }
 
-fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
+fn compile(targets: &[&Target], pkg: &Package, cx: &mut Context) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, pkg.get_targets());
+
+    if targets.is_empty() {
+        return Ok(());
+    }
 
     // First check to see if this package is fresh.
     //
@@ -74,10 +91,12 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
     //
     // This is not quite accurate, we should only trigger forceful
     // recompilations for downstream dependencies of ourselves, not everyone
-    // compiled afterwards.
+    // compiled afterwards.a
+    //
+    // TODO: Figure out how this works with targets
     let fingerprint_loc = cx.dest.join(format!(".{}.fingerprint",
                                                pkg.get_name()));
-    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx));
+    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx, targets));
     if !cx.compiled_anything && is_fresh {
         try!(cx.config.shell().status("Fresh", pkg));
         return Ok(())
@@ -88,6 +107,7 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
     // command if one is present.
     try!(cx.config.shell().status("Compiling", pkg));
 
+    // TODO: Should this be on the target or the package?
     match pkg.get_manifest().get_build() {
         Some(cmd) => try!(compile_custom(pkg, cmd, cx)),
         None => {}
@@ -95,11 +115,8 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
 
     // After the custom command has run, execute rustc for all targets of our
     // package.
-    for target in pkg.get_targets().iter() {
-        // Only compile lib targets for dependencies
-        if cx.primary || target.is_lib() {
-            try!(rustc(&pkg.get_root(), target, cx))
-        }
+    for &target in targets.iter() {
+        try!(rustc(&pkg.get_root(), target, cx));
     }
 
     // Now that everything has successfully compiled, write our new fingerprint
@@ -111,19 +128,35 @@ fn compile_pkg(pkg: &Package, cx: &mut Context) -> CargoResult<()> {
 }
 
 fn is_fresh(dep: &Package, loc: &Path,
-            cx: &mut Context) -> CargoResult<(bool, String)> {
-    let new_fingerprint = format!("{}{}", cx.rustc_version,
+            cx: &mut Context, targets: &[&Target]) -> CargoResult<(bool, String)>
+{
+    let new_pkg_fingerprint = format!("{}{}", cx.rustc_version,
                                   try!(dep.get_fingerprint(cx.config)));
+
+    let new_fingerprint = fingerprint(new_pkg_fingerprint, hash_targets(targets));
+
     let mut file = match File::open(loc) {
         Ok(file) => file,
         Err(..) => return Ok((false, new_fingerprint)),
     };
+
     let old_fingerprint = try!(file.read_to_str());
 
     log!(5, "old fingerprint: {}", old_fingerprint);
     log!(5, "new fingerprint: {}", new_fingerprint);
 
     Ok((old_fingerprint == new_fingerprint, new_fingerprint))
+}
+
+fn hash_targets(targets: &[&Target]) -> u64 {
+    let hasher = SipHasher::new_with_keys(0,0);
+    let targets = targets.iter().map(|t| (*t).clone()).collect::<Vec<Target>>();
+    hasher.hash(&targets)
+}
+
+fn fingerprint(package: String, profiles: u64) -> String {
+    let hasher = SipHasher::new_with_keys(0,0);
+    util::to_hex(hasher.hash(&(package, profiles)))
 }
 
 fn mk_target(target: &Path) -> Result<(), IoError> {
@@ -170,6 +203,7 @@ fn prepare_rustc(root: &Path, target: &Target, crate_types: Vec<&str>,
     build_base_args(&mut args, target, crate_types, cx);
     build_deps_args(&mut args, cx);
 
+
     util::process("rustc")
         .cwd(root.clone())
         .args(args.as_slice())
@@ -184,8 +218,16 @@ fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
         into.push("--crate-type".to_str());
         into.push(crate_type.to_str());
     }
+
+    let mut out = cx.dest.clone();
+
+    if target.get_profile().is_test() {
+        into.push("--test".to_str());
+        out = out.join("tests");
+    }
+
     into.push("--out-dir".to_str());
-    into.push(cx.dest.display().to_str());
+    into.push(out.display().to_str());
 }
 
 fn build_deps_args(dst: &mut Args, cx: &Context) {
