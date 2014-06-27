@@ -302,6 +302,34 @@ test!(cargo_compile_with_nested_paths {
       execs().with_stdout("hello world\n"));
 })
 
+test!(cargo_compile_with_short_ssh_git {
+    let url = "git@github.com:a/dep";
+
+    let project = project("project")
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep]
+
+            git = "{}"
+
+            [[bin]]
+
+            name = "foo"
+        "#, url))
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+
+    assert_that(project.cargo_process("cargo-build"),
+        execs()
+        .with_stdout("")
+        .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
+                              invalid url `{}`: `url: Invalid character in scheme.\n", url)));
+})
+
 test!(recompilation {
     let git_project = git_repo("bar", |project| {
         project
