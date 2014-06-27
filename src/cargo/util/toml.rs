@@ -198,15 +198,16 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
     }
 
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
-        let l = &libs[0];
-        let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
-        let crate_types = l.crate_type.clone().and_then(|kinds| {
-            LibKind::from_strs(kinds).ok()
-        }).unwrap_or_else(|| vec!(Lib));
+        for l in libs.iter() {
+            let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
+            let crate_types = l.crate_type.clone().and_then(|kinds| {
+                LibKind::from_strs(kinds).ok()
+            }).unwrap_or_else(|| vec!(Lib));
 
-        for profile in target_profiles(l).iter() {
-            dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
-                                        &Path::new(path.as_slice()), profile));
+            for profile in target_profiles(l).iter() {
+                dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
+                                            &Path::new(path.as_slice()), profile));
+            }
         }
     }
 

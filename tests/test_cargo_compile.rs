@@ -559,3 +559,47 @@ test!(many_crate_types {
     assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
             file1.ends_with(os::consts::DLL_SUFFIX));
 })
+
+test!(multiple_libs {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "foofoofoo"
+
+            [[lib]]
+
+            name = "barbarbar"
+        "#)
+        .file("src/foofoofoo.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("src/barbarbar.rs", r#"
+            pub fn bar() {}
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    let files = fs::readdir(&p.root().join("target")).assert();
+    let mut files: Vec<String> = files.iter().filter_map(|f| {
+        match f.filename_str().unwrap() {
+            "deps" => None,
+            s if s.contains("fingerprint") => None,
+            s => Some(s.to_str())
+        }
+    }).collect();
+    files.sort();
+    let file0 = files.get(0).as_slice();
+    let file1 = files.get(1).as_slice();
+    println!("{} {}", file0, file1);
+    assert!(file0.contains("barbarbar"));
+    assert!(file1.contains("foofoofoo"));
+})
