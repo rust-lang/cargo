@@ -2,12 +2,11 @@ use serialize::Decodable;
 use std::collections::HashMap;
 use std::str;
 use toml;
-use url;
 
 use core::{SourceId, GitKind};
 use core::manifest::{LibKind, Lib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
-use core::source::{Location, Local, Remote};
+use core::source::Location;
 use util::{CargoResult, Require, human};
 
 pub fn to_manifest(contents: &[u8],
@@ -118,15 +117,6 @@ impl TomlManifest {
 
         let mut deps = Vec::new();
 
-        fn to_location(s: &str) -> Location {
-            if s.starts_with("file:") {
-                Local(Path::new(s.slice_from(5)))
-            } else {
-                // TODO: Don't unwrap here
-                Remote(url::from_str(s).unwrap())
-            }
-        }
-
         // Collect the deps
         match self.dependencies {
             Some(ref dependencies) => {
@@ -141,19 +131,22 @@ impl TomlManifest {
                                 .or_else(|| details.rev.as_ref().map(|t| t.clone()))
                                 .unwrap_or_else(|| "master".to_str());
 
-                            let new_source_id = details.git.as_ref().map(|git| {
-                                let kind = GitKind(reference.clone());
-                                let loc = to_location(git.as_slice());
-                                let source_id = SourceId::new(kind, loc);
-                                // TODO: Don't do this for path
-                                sources.push(source_id.clone());
-                                source_id
-                            }).or_else(|| {
-                                details.path.as_ref().map(|path| {
-                                    nested_paths.push(Path::new(path.as_slice()));
-                                    source_id.clone()
-                                })
-                            }).unwrap_or(SourceId::for_central());
+                            let new_source_id = match details.git {
+                                Some(ref git) => {
+                                    let kind = GitKind(reference.clone());
+                                    let loc = try!(Location::parse(git.as_slice()));
+                                    let source_id = SourceId::new(kind, loc);
+                                    // TODO: Don't do this for path
+                                    sources.push(source_id.clone());
+                                    Some(source_id)
+                                }
+                                None => {
+                                    details.path.as_ref().map(|path| {
+                                        nested_paths.push(Path::new(path.as_slice()));
+                                        source_id.clone()
+                                    })
+                                }
+                            }.unwrap_or(SourceId::for_central());
 
                             (details.version.clone(), new_source_id)
                         }

@@ -10,7 +10,7 @@ extern crate hammer;
 
 use cargo::{execute_main_without_stdin};
 use cargo::core::MultiShell;
-use cargo::core::source::{Source,SourceId};
+use cargo::core::source::{Source, SourceId};
 use cargo::sources::git::{GitSource};
 use cargo::util::{Config, CliResult, CliError, Require, human};
 use url::Url;
