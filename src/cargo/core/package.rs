@@ -155,12 +155,13 @@ impl PackageSet {
     }
 
     pub fn pop(&mut self) -> Package {
-        self.packages.pop().unwrap()
+        self.packages.pop().expect("PackageSet.pop: empty set")
     }
 
     /// Get a package by name out of the set
     pub fn get<'a>(&'a self, name: &str) -> &'a Package {
-        self.packages.iter().find(|pkg| name == pkg.get_name()).unwrap()
+        self.packages.iter().find(|pkg| name == pkg.get_name())
+            .expect("PackageSet.get: empty set")
     }
 
     pub fn get_all<'a>(&'a self, names: &[&str]) -> Vec<&'a Package> {
