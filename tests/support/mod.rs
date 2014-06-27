@@ -360,7 +360,7 @@ pub fn escape_path(p: &Path) -> String {
 
 pub fn basic_bin_manifest(name: &str) -> String {
     format!(r#"
-        [project]
+        [package]
 
         name = "{}"
         version = "0.5.0"

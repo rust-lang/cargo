@@ -559,3 +559,47 @@ test!(many_crate_types {
     assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
             file1.ends_with(os::consts::DLL_SUFFIX));
 })
+
+test!(unused_keys {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            bulid = "foo"
+
+            [[lib]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0)
+                       .with_stderr("unused manifest key: project.bulid\n"));
+
+    let mut p = project("bar");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "foo"
+            build = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0)
+                       .with_stderr("unused manifest key: lib.build\n"));
+})
