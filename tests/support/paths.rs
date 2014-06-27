@@ -13,8 +13,9 @@ static mut NEXT_ID: atomics::AtomicUint = atomics::INIT_ATOMIC_UINT;
 
 pub fn root() -> Path {
     let my_id = *task_id.get().unwrap();
-    let path = os::tmpdir().join(CARGO_INTEGRATION_TEST_DIR)
-                           .join(format!("test-{}", my_id));
+    let path = os::self_exe_path().unwrap()
+                  .join(CARGO_INTEGRATION_TEST_DIR)
+                  .join(format!("test-{}", my_id));
     realpath(&path).unwrap()
 }
 
