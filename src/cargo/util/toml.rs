@@ -22,9 +22,37 @@ pub fn to_manifest(contents: &[u8],
                                             manifest\n\n{}", e)))
     };
 
-    toml_manifest.to_manifest(source_id).map_err(|err| {
+    let pair = try!(toml_manifest.to_manifest(source_id).map_err(|err| {
         human(format!("Cargo.toml is not a valid manifest\n\n{}", err))
-    })
+    }));
+    let (mut manifest, paths) = pair;
+    match d.toml {
+        Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
+        None => {}
+    }
+    return Ok((manifest, paths));
+
+    fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
+        match *toml {
+            toml::Table(ref table) => {
+                for (k, v) in table.iter() {
+                    add_unused_keys(m, v, if key.len() == 0 {
+                        k.clone()
+                    } else {
+                        key + "." + k.as_slice()
+                    })
+                }
+            }
+            toml::Array(ref arr) => {
+                for v in arr.iter() {
+                    add_unused_keys(m, v, key.clone());
+                }
+            }
+            _ => m.add_unused_key(key),
+        }
+    }
+
+
 }
 
 pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
@@ -126,9 +154,9 @@ impl TomlManifest {
                             (Some(string.clone()), SourceId::for_central())
                         },
                         DetailedDep(ref details) => {
-                            let reference = details.branch.as_ref().map(|b| b.clone())
-                                .or_else(|| details.tag.as_ref().map(|t| t.clone()))
-                                .or_else(|| details.rev.as_ref().map(|t| t.clone()))
+                            let reference = details.branch.clone()
+                                .or_else(|| details.tag.clone())
+                                .or_else(|| details.rev.clone())
                                 .unwrap_or_else(|| "master".to_str());
 
                             let new_source_id = match details.git {
@@ -161,11 +189,14 @@ impl TomlManifest {
         }
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
-        let project = try!(project.require(|| human("No `package` or `project` section found.")));
+        let project = try!(project.require(|| {
+            human("No `package` or `project` section found.")
+        }));
 
+        let pkgid = try!(project.to_package_id(source_id.get_location()));
+        let summary = Summary::new(&pkgid, deps.as_slice());
         Ok((Manifest::new(
-                &Summary::new(&try!(project.to_package_id(source_id.get_location())),
-                              deps.as_slice()),
+                &summary,
                 targets.as_slice(),
                 &Path::new("target"),
                 sources,

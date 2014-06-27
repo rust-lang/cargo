@@ -1,6 +1,6 @@
 use term;
 use term::{Terminal,color};
-use term::color::{Color, BLACK, RED, GREEN};
+use term::color::{Color, BLACK, RED, GREEN, YELLOW};
 use term::attr::{Attr, Bold};
 use std::io::{IoResult, stderr};
 use std::fmt::Show;
@@ -62,6 +62,10 @@ impl MultiShell {
 
     pub fn error<T: ToStr>(&mut self, message: T) -> IoResult<()> {
         self.err().say(message, RED)
+    }
+
+    pub fn warn<T: ToStr>(&mut self, message: T) -> IoResult<()> {
+        self.err().say(message, YELLOW)
     }
 }
 
