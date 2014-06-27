@@ -39,8 +39,8 @@ pub fn resolve<R: Registry>(deps: &[Dependency],
         }
 
         if opts.len() > 1 {
-            return Err(internal("Temporarily, Cargo only supports a single \
-                                 result for a dependency"))
+            return Err(internal(format!("At the moment, Cargo only supports a\
+                single source for a particular package name ({}).", curr.get_name())));
         }
 
         let pkg = opts.get(0).clone();
