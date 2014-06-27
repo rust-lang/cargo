@@ -1,4 +1,4 @@
-use std::{io,fmt,os};
+use std::{io,fmt,os, result};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
@@ -231,17 +231,15 @@ fn merge_array(existing: &mut ConfigValue, val: &[toml::Value],
     match existing.value {
         String(_) => Err(internal("should be an Array, but it was a String")),
         List(ref mut list) => {
-            let new_list: Vec<CargoResult<String>> =
-                val.iter().map(toml_string).collect();
-            if new_list.iter().any(|v| v.is_err()) {
-                return Err(internal("should be an Array of Strings, but \
-                                     was an Array of other values"));
-            } else {
-                let new_list: Vec<String> =
-                    new_list.move_iter().map(|v| v.unwrap()).collect();
-                list.push_all(new_list.as_slice());
-                existing.path.push(path.clone());
-                Ok(())
+            let r: CargoResult<Vec<String>> = result::collect(val.iter().map(toml_string));
+            match r {
+                Err(_) => Err(internal("should be an Array of Strings, but \
+                                        was an Array of other values")),
+                Ok(new_list) => {
+                    list.push_all(new_list.as_slice());
+                    existing.path.push(path.clone());
+                    Ok(())
+                }
             }
         }
     }

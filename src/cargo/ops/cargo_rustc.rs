@@ -168,9 +168,9 @@ fn compile_custom(pkg: &Package, cmd: &str, cx: &Context) -> CargoResult<()> {
     let mut cmd = cmd.split(' ');
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
-                     .env("OUT_DIR", Some(cx.dest.as_str().unwrap()))
+                     .env("OUT_DIR", Some(cx.dest.as_str().expect("non-UTF8 dest path")))
                      .env("DEPS_DIR", Some(cx.dest.join(cx.deps_dir)
-                                             .as_str().unwrap()));
+                                             .as_str().expect("non-UTF8 deps path")));
     for arg in cmd {
         p = p.arg(arg);
     }
