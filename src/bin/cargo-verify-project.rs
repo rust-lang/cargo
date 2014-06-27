@@ -26,12 +26,13 @@ fn main() {
         }
     };
 
-    if !matches.opt_present("m") {
-        fail("missing-argument", "manifest");
-        return;
-    }
-
-    let manifest = matches.opt_str("m").unwrap();
+    let manifest = match matches.opt_str("m") {
+        Some(m) => m,
+        None => {
+            fail("missing-argument", "manifest");
+            return;
+        }
+    };
     let file = Path::new(manifest);
     let contents = match File::open(&file).read_to_str() {
         Ok(s) => s,
@@ -50,6 +51,6 @@ fn main() {
 }
 
 fn fail(reason: &str, value: &str) {
-    println!(r#"{{ "{:s}", "{:s}" }}"#, reason, value);
+    println!(r#"{{ "{:s}": "{:s}" }}"#, reason, value);
     set_exit_status(1);
 }
