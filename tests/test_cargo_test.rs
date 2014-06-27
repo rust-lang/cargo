@@ -1,4 +1,4 @@
-use support::{project, execs, basic_bin_manifest, COMPILING};
+use support::{project, execs, basic_bin_manifest, COMPILING, cargo_dir};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -28,13 +28,13 @@ test!(cargo_test_simple {
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.process(cargo_dir().join("cargo-test")),
         execs().with_stdout(format!("{} foo v0.5.0 (file:{})\n\n\
                                     running 1 test\n\
                                     test test_hello ... ok\n\n\
                                     test result: ok. 1 passed; 0 failed; \
                                     0 ignored; 0 measured\n\n",
                                     COMPILING, p.root().display())));
-    
+
     assert_that(&p.bin("tests/foo"), existing_file());
 })
