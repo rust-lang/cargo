@@ -21,11 +21,13 @@ use cargo::util::important_paths::find_project_manifest;
 #[deriving(PartialEq,Clone,Decodable,Encodable)]
 pub struct Options {
     manifest_path: Option<String>,
-    update_remotes: bool
+    update_remotes: bool,
+    jobs: Option<uint>,
 }
 
 hammer_config!(Options "Build the current project", |c| {
     c.short("update_remotes", 'u')
+     .short("jobs", 'j')
 })
 
 fn main() {
@@ -46,8 +48,9 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     };
 
     let update = options.update_remotes;
+    let jobs = options.jobs;
 
-    ops::compile(&root, update, "compile", shell).map(|_| None).map_err(|err| {
+    ops::compile(&root, update, "compile", shell, jobs).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }
