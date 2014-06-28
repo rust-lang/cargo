@@ -1,7 +1,7 @@
 use std::io::File;
 use util;
 use core::{Package,Manifest,SourceId};
-use util::{CargoResult, human};
+use util::{CargoResult, human, important_paths};
 
 pub fn read_manifest(contents: &[u8], source_id: &SourceId)
     -> CargoResult<(Manifest, Vec<Path>)>
@@ -24,7 +24,8 @@ pub fn read_package(path: &Path, source_id: &SourceId)
 pub fn read_packages(path: &Path, source_id: &SourceId)
     -> CargoResult<Vec<Package>>
 {
-    let (pkg, nested) = try!(read_package(&path.join("Cargo.toml"), source_id));
+    let manifest = try!(important_paths::find_project_manifest_exact(path, "Cargo.toml"));
+    let (pkg, nested) = try!(read_package(&manifest, source_id));
     let mut ret = vec!(pkg);
 
     for p in nested.iter() {
