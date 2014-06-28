@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::io::File;
 use util;
 use core::{Package,Manifest,SourceId};
@@ -24,13 +25,23 @@ pub fn read_package(path: &Path, source_id: &SourceId)
 pub fn read_packages(path: &Path, source_id: &SourceId)
     -> CargoResult<Vec<Package>>
 {
-    let manifest = try!(important_paths::find_project_manifest_exact(path, "Cargo.toml"));
-    let (pkg, nested) = try!(read_package(&manifest, source_id));
-    let mut ret = vec!(pkg);
+    return read_packages(path, source_id, &mut HashSet::new());
 
-    for p in nested.iter() {
-        ret.push_all(try!(read_packages(&path.join(p), source_id)).as_slice());
+    fn read_packages(path: &Path, source_id: &SourceId,
+                     visited: &mut HashSet<Path>) -> CargoResult<Vec<Package>> {
+        if !visited.insert(path.clone()) { return Ok(Vec::new()) }
+
+        let manifest = try!(important_paths::find_project_manifest_exact(path,
+                                                                         "Cargo.toml"));
+        let (pkg, nested) = try!(read_package(&manifest, source_id));
+        let mut ret = vec![pkg];
+
+        for p in nested.iter() {
+            ret.push_all(try!(read_packages(&path.join(p),
+                                            source_id,
+                                            visited)).as_slice());
+        }
+
+        Ok(ret)
     }
-
-    Ok(ret)
 }
