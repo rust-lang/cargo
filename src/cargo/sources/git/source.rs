@@ -67,7 +67,13 @@ fn ident(location: &Location) -> String {
             let last = path.components().last().unwrap();
             str::from_utf8(last).unwrap().to_str()
         }
-        Remote(ref url) => url.path.as_slice().split('/').last().unwrap().to_str()
+        Remote(ref url) => {
+            // Remove the trailing '/' so that 'split' doesn't give us
+            // an empty string, making '../foo/' and '../foo' both
+            // result in the name 'foo' (#84)
+            let path = strip_trailing_slash(url.path.as_slice());
+            path.split('/').last().unwrap().to_str()
+        }
     };
 
     let ident = if ident.as_slice() == "" {
@@ -77,6 +83,14 @@ fn ident(location: &Location) -> String {
     };
 
     format!("{}-{}", ident, to_hex(hasher.hash(&location.to_str())))
+}
+
+fn strip_trailing_slash<'a>(path: &'a str) -> &'a str {
+    if path.as_bytes().last() != Some(&('/' as u8)) {
+        path.clone()
+    } else {
+        path.slice(0, path.len() - 1)
+    }
 }
 
 impl<'a, 'b> Show for GitSource<'a, 'b> {
