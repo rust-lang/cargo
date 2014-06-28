@@ -12,6 +12,8 @@ use ham = hamcrest;
 use cargo::util::{process,ProcessBuilder};
 use cargo::util::ProcessError;
 
+use support::paths::PathExt;
+
 pub mod paths;
 
 /*
@@ -107,7 +109,7 @@ impl ProjectBuilder {
         try!(mkdir_recursive(&self.root));
 
         for file in self.files.iter() {
-          try!(file.mk());
+            try!(file.mk());
         }
 
         Ok(())
@@ -116,8 +118,7 @@ impl ProjectBuilder {
     fn rm_root(&self) -> Result<(), String> {
         if self.root.exists() {
             rmdir_recursive(&self.root)
-        }
-        else {
+        } else {
             Ok(())
         }
     }
@@ -137,7 +138,7 @@ pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
 }
 
 pub fn rmdir_recursive(path: &Path) -> Result<(), String> {
-    fs::rmdir_recursive(path)
+    path.rm_rf()
         .with_err_msg(format!("could not rm directory; path={}",
                               path.display()))
 }
