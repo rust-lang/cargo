@@ -49,7 +49,8 @@ fn execute() {
         },
         "--help" | "-h" | "help" | "-?" => {
             println!("Commands:");
-            println!("  build          # compile the current project\n");
+            println!("  build          # compile the current project");
+            println!("  test           # run the tests\n");
 
             let (_, options) = hammer::usage::<GlobalFlags>(false);
             println!("Options (for all commands):\n\n{}", options);
