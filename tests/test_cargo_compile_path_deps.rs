@@ -354,3 +354,26 @@ test!(nested_deps_recompile {
                                             FRESH, bar.display(),
                                             COMPILING, p.root().display())));
 })
+
+test!(error_message_for_missing_manifest {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+
+            path = "src/bar"
+        "#)
+       .file("src/bar/not-a-manifest", "");
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs()
+                .with_status(101)
+                .with_stderr(format!("Could not find `Cargo.toml` in `{}`\n",
+                                     p.root().join_many(&["src", "bar"]).display())));
+
+})
