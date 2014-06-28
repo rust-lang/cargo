@@ -142,7 +142,7 @@ fn config_list(args: ConfigListFlags, _: &mut MultiShell) -> CliResult<Option<Co
 }
 
 fn locate_project(_: NoFlags, _: &mut MultiShell) -> CliResult<Option<ProjectLocation>> {
-    let root = try!(find_project(os::getcwd(), "Cargo.toml").map_err(|e| {
+    let root = try!(find_project(&os::getcwd(), "Cargo.toml").map_err(|e| {
         CliError::from_boxed(e, 1)
     }));
 

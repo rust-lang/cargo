@@ -16,7 +16,7 @@ use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell};
 use cargo::util;
 use cargo::util::{CliResult, CliError};
-use cargo::util::important_paths::find_project;
+use cargo::util::important_paths::find_project_manifest;
 
 #[deriving(PartialEq,Clone,Decodable)]
 struct Options {
@@ -33,8 +33,7 @@ fn main() {
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let root = match options.manifest_path {
         Some(path) => Path::new(path),
-        None => try!(find_project(os::getcwd(), "Cargo.toml")
-                    .map(|path| path.join("Cargo.toml"))
+        None => try!(find_project_manifest(&os::getcwd(), "Cargo.toml")
                     .map_err(|_| {
                         CliError::new("Could not find Cargo.toml in this \
                                        directory or any parent directory",
