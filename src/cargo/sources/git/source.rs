@@ -68,7 +68,7 @@ fn ident(location: &Location) -> String {
             str::from_utf8(last).unwrap().to_str()
         }
         Remote(ref url) => {
-            let path = strip_trailing_slash(url.path.as_slice());
+            let path = canonicalize_url(url.path.as_slice());
             path.as_slice().split('/').last().unwrap().to_str()
         }
     };
@@ -95,18 +95,31 @@ fn strip_trailing_slash<'a>(path: &'a str) -> &'a str {
     }
 }
 
+// Some hacks and heuristics for making equivalent URLs hash the same
 fn canonicalize_url(url: &str) -> String {
+    let url = strip_trailing_slash(url);
+
     // HACKHACK: For github URL's specifically just lowercase
     // everything.  GitHub traits both the same, but they hash
     // differently, and we're gonna be hashing them. This wants a more
     // general solution, and also we're almost certainly not using the
     // same case conversion rules that GitHub does. (#84)
+
     let lower_url = url.chars().map(|c|c.to_lowercase()).collect::<String>();
-    if lower_url.as_slice().contains("github.com") {
+    let url = if lower_url.as_slice().contains("github.com") {
         lower_url
     } else {
         url.to_string()
-    }
+    };
+
+    // Repos generally can be accessed with or w/o '.git'
+    let url = if !url.as_slice().ends_with(".git") {
+        url
+    } else {
+        url.as_slice().slice(0, url.len() - 4).to_string()
+    };
+
+    return url;
 }
 
 impl<'a, 'b> Show for GitSource<'a, 'b> {
@@ -180,6 +193,23 @@ mod test {
         assert_eq!(ident.as_slice(), "_empty-fc065c9b6b16fc00");
     }
 
+    #[test]
+    fn test_canonicalize_idents_by_stripping_trailing_url_slash() {
+        let ident = ident(&Remote(url("https://github.com/PistonDevelopers/piston/")));
+        assert_eq!(ident.as_slice(), "piston-1ad60373965e5b42");
+    }
+
+    #[test]
+    fn test_canonicalize_idents_by_lowercasing_github_urls() {
+        let ident = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
+        assert_eq!(ident.as_slice(), "piston-1ad60373965e5b42");
+    }
+
+    #[test]
+    fn test_canonicalize_idents_by_stripping_dot_git() {
+        let ident = ident(&Remote(url("https://github.com/PistonDevelopers/piston.git")));
+        assert_eq!(ident.as_slice(), "piston-1ad60373965e5b42");
+    }
 
     fn url(s: &str) -> Url {
         url::from_str(s).unwrap()
