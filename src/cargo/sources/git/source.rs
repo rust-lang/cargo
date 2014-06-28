@@ -68,11 +68,8 @@ fn ident(location: &Location) -> String {
             str::from_utf8(last).unwrap().to_str()
         }
         Remote(ref url) => {
-            // Remove the trailing '/' so that 'split' doesn't give us
-            // an empty string, making '../foo/' and '../foo' both
-            // result in the name 'foo' (#84)
             let path = strip_trailing_slash(url.path.as_slice());
-            path.split('/').last().unwrap().to_str()
+            path.as_slice().split('/').last().unwrap().to_str()
         }
     };
 
@@ -82,14 +79,33 @@ fn ident(location: &Location) -> String {
         ident
     };
 
-    format!("{}-{}", ident, to_hex(hasher.hash(&location.to_str())))
+    let location = canonicalize_url(location.to_str().as_slice());
+
+    format!("{}-{}", ident, to_hex(hasher.hash(&location.as_slice())))
 }
 
 fn strip_trailing_slash<'a>(path: &'a str) -> &'a str {
+    // Remove the trailing '/' so that 'split' doesn't give us
+    // an empty string, making '../foo/' and '../foo' both
+    // result in the name 'foo' (#84)
     if path.as_bytes().last() != Some(&('/' as u8)) {
         path.clone()
     } else {
         path.slice(0, path.len() - 1)
+    }
+}
+
+fn canonicalize_url(url: &str) -> String {
+    // HACKHACK: For github URL's specifically just lowercase
+    // everything.  GitHub traits both the same, but they hash
+    // differently, and we're gonna be hashing them. This wants a more
+    // general solution, and also we're almost certainly not using the
+    // same case conversion rules that GitHub does. (#84)
+    let lower_url = url.chars().map(|c|c.to_lowercase()).collect::<String>();
+    if lower_url.as_slice().contains("github.com") {
+        lower_url
+    } else {
+        url.to_string()
     }
 }
 
