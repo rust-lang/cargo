@@ -1,11 +1,11 @@
 use util::errors::{CargoResult, CargoError};
 
 pub trait Wrap {
-    fn wrap<E: CargoError>(self, error: E) -> Self;
+    fn wrap<E: CargoError + Send>(self, error: E) -> Self;
 }
 
-impl<T> Wrap for Result<T, Box<CargoError>> {
-    fn wrap<E: CargoError>(self, error: E) -> CargoResult<T> {
+impl<T> Wrap for Result<T, Box<CargoError + Send>> {
+    fn wrap<E: CargoError + Send>(self, error: E) -> CargoResult<T> {
         match self {
             Ok(x) => Ok(x),
             Err(e) => Err(error.with_cause(e))
@@ -14,14 +14,14 @@ impl<T> Wrap for Result<T, Box<CargoError>> {
 }
 
 pub trait Require<T> {
-    fn require<E: CargoError>(self, err: || -> E) -> CargoResult<T>;
+    fn require<E: CargoError + Send>(self, err: || -> E) -> CargoResult<T>;
 }
 
 impl<T> Require<T> for Option<T> {
-    fn require<E: CargoError>(self, err: || -> E) -> CargoResult<T> {
+    fn require<E: CargoError + Send>(self, err: || -> E) -> CargoResult<T> {
         match self {
             Some(x) => Ok(x),
-            None => Err(box err().concrete() as Box<CargoError>)
+            None => Err(box err().concrete() as Box<CargoError + Send>)
         }
     }
 }
