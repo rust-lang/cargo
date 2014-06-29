@@ -195,20 +195,23 @@ mod test {
 
     #[test]
     fn test_canonicalize_idents_by_stripping_trailing_url_slash() {
-        let ident = ident(&Remote(url("https://github.com/PistonDevelopers/piston/")));
-        assert_eq!(ident.as_slice(), "piston-1ad60373965e5b42");
+        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston/")));
+        let ident2 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
+        assert_eq!(ident1, ident2);
     }
 
     #[test]
     fn test_canonicalize_idents_by_lowercasing_github_urls() {
-        let ident = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
-        assert_eq!(ident.as_slice(), "piston-1ad60373965e5b42");
+        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
+        let ident2 = ident(&Remote(url("https://github.com/pistondevelopers/piston")));
+        assert_eq!(ident1, ident2);
     }
 
     #[test]
     fn test_canonicalize_idents_by_stripping_dot_git() {
-        let ident = ident(&Remote(url("https://github.com/PistonDevelopers/piston.git")));
-        assert_eq!(ident.as_slice(), "piston-1ad60373965e5b42");
+        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
+        let ident2 = ident(&Remote(url("https://github.com/PistonDevelopers/piston.git")));
+        assert_eq!(ident1, ident2);
     }
 
     fn url(s: &str) -> Url {
