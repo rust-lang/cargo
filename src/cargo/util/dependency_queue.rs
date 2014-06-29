@@ -62,12 +62,17 @@ impl<T> DependencyQueue<T> {
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
     pub fn enqueue(&mut self, pkg: &Package, fresh: Freshness, data: T) {
+        // ignore self-deps
+        if self.pkgs.contains_key(&pkg.get_name().to_str()) { return }
+
         if fresh == Dirty {
             self.dirty.insert(pkg.get_name().to_str());
         }
 
         let mut my_dependencies = HashSet::new();
         for dep in pkg.get_dependencies().iter() {
+            if dep.get_name() == pkg.get_name() { continue }
+
             let name = dep.get_name().to_str();
             assert!(my_dependencies.insert(name.clone()));
             let rev = self.reverse_dep_map.find_or_insert(name, HashSet::new());
