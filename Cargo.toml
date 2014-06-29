@@ -1,0 +1,41 @@
+[package]
+name = "cargo"
+version = "0.1.0"
+authors = [ "Yehuda Katz <wycats@gmail.com>", "Carl Lerche <me@carllerche.com>" ]
+
+[dependencies.hammer]
+git = "https://github.com/wycats/hammer.rs.git"
+
+[dependencies.hamcrest]
+git = "https://github.com/carllerche/hamcrest-rust.git"
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs.git"
+
+[[lib]]
+name = "cargo"
+path = "src/cargo/lib.rs"
+
+[[bin]]
+name = "cargo"
+path = "src/bin/cargo.rs"
+
+[[bin]]
+name = "cargo-build"
+path = "src/bin/cargo-build.rs"
+
+[[bin]]
+name = "cargo-git-checkout"
+path = "src/bin/cargo-git-checkout.rs"
+
+[[bin]]
+name = "cargo-read-manifest"
+path = "src/bin/cargo-read-manifest.rs"
+
+[[bin]]
+name = "cargo-rustc"
+path = "src/bin/cargo-rustc.rs"
+
+[[bin]]
+name = "cargo-verify-project"
+path = "src/bin/cargo-verify-project.rs"
