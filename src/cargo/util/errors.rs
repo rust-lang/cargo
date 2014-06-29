@@ -62,7 +62,7 @@ macro_rules! from_error (
     }
 )
 
-impl Show for Box<CargoError> {
+impl Show for Box<CargoError + Send> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.description()));
         Ok(())
