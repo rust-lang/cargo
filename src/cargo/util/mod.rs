@@ -6,6 +6,7 @@ pub use self::errors::{CliError, FromError, ProcessError};
 pub use self::errors::{process_error, internal_error, internal, human};
 pub use self::paths::realpath;
 pub use self::hex::to_hex;
+pub use self::pool::TaskPool;
 
 pub mod graph;
 pub mod process_builder;
@@ -16,3 +17,4 @@ pub mod toml;
 pub mod paths;
 pub mod errors;
 pub mod hex;
+mod pool;
