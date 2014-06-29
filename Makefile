@@ -19,6 +19,7 @@ BINS = cargo \
 	     cargo-verify-project \
 	     cargo-git-checkout \
 		 cargo-test \
+	     cargo-init
 
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
