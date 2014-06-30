@@ -17,14 +17,14 @@ fn already_exists(items: Vec<Path>, quer: &str) -> bool {
 }
 
 /// Prompts the user for command-line input, with a default response.
-fn ask_default(query: String, default: String) -> String {
+fn ask_default(query: String, default: String) -> IoResult<String> {
     print!("{} [default: {}] ", query, default);
-    let result = stdin().read_line().unwrap().to_str();
+    let result = try!(stdin().read_line());
     if result == "\n".to_str() {
-        default
+        Ok(default)
     }
     else {
-        result.as_slice().slice_from(1).to_str()
+        Ok(result.as_slice().slice_from(1).to_str())
     }
 }
 
@@ -50,9 +50,10 @@ fn execute() -> IoResult<()>{
 
 /// Prompts the user to name and license their project.
 fn make_cargo_interactive() -> IoResult<()>{
-    try!(make_cargo(ask_default("Project name:".to_str(), "untitled".to_str()).as_slice(),
-                    ask_default("lib/bin:".to_str(), "lib".to_str()).as_slice() == "lib".as_slice(),
-                    ask_default("Your name: ".to_str(), "anonymous".to_str()).as_slice()));
+    try!(make_cargo(
+        try!(ask_default("Project name:".to_str(), "untitled".to_str())).as_slice(),
+        try!(ask_default("lib/bin:".to_str(), "lib".to_str())).as_slice() == "lib".as_slice(),
+        try!(ask_default("Your name: ".to_str(), "anonymous".to_str())).as_slice()));
     Ok(())
 }
 
