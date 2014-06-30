@@ -43,6 +43,10 @@ pub fn compile(manifest_path: &Path, update: bool,
     let package = try!(source.get_root_package());
     debug!("loaded package; package={}", package);
 
+    for key in package.get_manifest().get_unused_keys().iter() {
+        try!(shell.warn(format!("unused manifest key: {}", key)));
+    }
+
     let override_ids = try!(source_ids_from_config());
     let source_ids = package.get_source_ids();
 
