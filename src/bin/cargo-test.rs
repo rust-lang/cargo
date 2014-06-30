@@ -21,10 +21,13 @@ use cargo::util::important_paths::find_project_manifest;
 #[deriving(PartialEq,Clone,Decodable)]
 struct Options {
     manifest_path: Option<String>,
-    rest: Vec<String>
+    jobs: Option<uint>,
+    rest: Vec<String>,
 }
 
-hammer_config!(Options "Run the package's test suite")
+hammer_config!(Options "Run the package's test suite", |c| {
+    c.short("jobs", 'j')
+})
 
 fn main() {
     execute_main_without_stdin(execute);
@@ -41,7 +44,8 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    try!(ops::compile(&root, false, "test", shell).map(|_| None::<()>).map_err(|err| {
+    try!(ops::compile(&root, false, "test", shell, options.jobs)
+             .map(|_| None::<()>).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
 

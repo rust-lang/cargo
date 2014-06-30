@@ -1,7 +1,7 @@
 #![crate_id="cargo"]
 #![crate_type="rlib"]
 
-#![feature(macro_rules,phase)]
+#![feature(macro_rules, phase)]
 
 extern crate debug;
 extern crate term;

@@ -31,7 +31,8 @@ use sources::{PathSource};
 use util::{CargoResult, Wrap, config, internal, human};
 
 pub fn compile(manifest_path: &Path, update: bool,
-               env: &str, shell: &mut MultiShell) -> CargoResult<()>
+               env: &str, shell: &mut MultiShell,
+               jobs: Option<uint>) -> CargoResult<()>
 {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
@@ -51,7 +52,7 @@ pub fn compile(manifest_path: &Path, update: bool,
     let source_ids = package.get_source_ids();
 
     let packages = {
-        let mut config = try!(Config::new(shell, update));
+        let mut config = try!(Config::new(shell, update, jobs));
 
         let mut registry =
             try!(PackageRegistry::new(source_ids, override_ids, &mut config));
@@ -70,7 +71,7 @@ pub fn compile(manifest_path: &Path, update: bool,
         target.get_profile().get_env() == env
     }).collect::<Vec<&Target>>();
 
-    let mut config = try!(Config::new(shell, update));
+    let mut config = try!(Config::new(shell, update, jobs));
     try!(ops::compile_targets(targets.as_slice(), &package,
          &PackageSet::new(packages.as_slice()), &mut config));
 
