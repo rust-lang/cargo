@@ -36,7 +36,8 @@ fn execute() -> IoResult<()>{
     let cwd_contents = try!(readdir(&os::getcwd())); 
 
     if already_exists(cwd_contents, "toml") && ! args.any(|x| x == "--override"){
-        println!(".toml file already exists in current directory. Use --override to bypass.");     
+        println!(".toml file already exists in current directory. Use --override to bypass.");
+        return Ok(());
     }
     
     //Either explicitly state a name, type, and author, or all will be gathered interactively.
