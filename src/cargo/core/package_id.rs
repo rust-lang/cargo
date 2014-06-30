@@ -115,8 +115,11 @@ impl Show for PackageId {
     }
 }
 
-impl<D: Decoder<Box<CargoError>>> Decodable<D,Box<CargoError>> for PackageId {
-    fn decode(d: &mut D) -> Result<PackageId, Box<CargoError>> {
+impl<D: Decoder<Box<CargoError + Send>>>
+    Decodable<D,Box<CargoError + Send>>
+    for PackageId
+{
+    fn decode(d: &mut D) -> Result<PackageId, Box<CargoError + Send>> {
         let vector: Vec<String> = match Decodable::decode(d) {
             Ok(v) => v,
             Err(e) => return Err(e.to_error())
