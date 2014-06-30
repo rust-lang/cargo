@@ -59,7 +59,7 @@ fn make_cargo(nm: &str, lib: bool, auth: &str){
     let mut tomlFile = io::fs::File::create(&Path::new("Cargo.toml"));
     let mut gitignr  = io::fs::File::create(&Path::new(".gitignore")); // Ignores "target" by default"
 
-    let IOio::fs::mkdir(&Path::new("src"), io::UserRWX);
+    let IO = io::fs::mkdir(&Path::new("src"), io::UserRWX);
     let mut srcFile = io::fs::File::create(&Path::new(format!("./src/{}.rs", nm)));
     
     if !cwd_contents.iter().any(|x| x.filename_str().unwrap() == ".gitignore") {
