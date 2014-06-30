@@ -31,7 +31,7 @@ fn ask_default(query: String, default: String) -> IoResult<String> {
 /// Initalize a Cargo build.
 fn execute() -> IoResult<()>{
     let os_args  = os::args();
-    let mut args = os_args.slice(1, os_args.len()).iter().map(|x| x.as_slice()); // Drop program name
+    let mut args = os_args.slice(1, os_args.len()).iter().map(|x| x.as_slice()); // Drop exec name
 
     let cwd_contents = try!(readdir(&os::getcwd())); 
 
