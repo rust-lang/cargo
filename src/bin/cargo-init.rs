@@ -1,15 +1,15 @@
 #![crate_id="cargo-init"]
 #![feature(phase)]
 
-use std::io::{fs, stdin, UserRWX, IoResult};
-use std::io::fs::{File, readdir};
+use std::io::{stdin, UserRWX, IoResult};
+use std::io::fs::{File, readdir, mkdir};
 use std::os;
 
 /// Checks the existance of a file with a given extension.
 fn already_exists(items: Vec<Path>, quer: &str) -> bool {
     items.iter().any(|nms: &Path| -> bool {
-        let extStr = nms.extension_str();
-        match extStr{
+        let ext_str = nms.extension_str();
+        match ext_str{
             Some(a) => a == quer, //file with extension found
             None => false // file has no extension
         }
@@ -30,8 +30,8 @@ fn ask_default(query: String, default: String) -> IoResult<String> {
 
 /// Initalize a Cargo build.
 fn execute() -> IoResult<()>{
-    let osArgs = os::args();
-    let mut args = osArgs.slice(1, osArgs.len()).iter().map(|x| x.as_slice()); // Drop program name
+    let os_args  = os::args();
+    let mut args = os_args.slice(1, os_args.len()).iter().map(|x| x.as_slice()); // Drop program name
 
     let cwd_contents = try!(readdir(&os::getcwd())); 
 
@@ -40,7 +40,7 @@ fn execute() -> IoResult<()>{
     }
     
     //Either explicitly state a name, type, and author, or all will be gathered interactively.
-    try!(match osArgs.as_slice().slice(1,osArgs.len()) {
+    try!(match os_args.as_slice().slice(1,os_args.len()) {
         [ref nm, ref bl, ref auth, ..] if *nm != "--override".to_str() => 
              make_cargo(nm.as_slice(), bl == &"lib".to_str(), auth.as_slice()),
         _ => make_cargo_interactive()
@@ -63,7 +63,7 @@ fn make_cargo(nm: &str, lib: bool, auth: &str) -> IoResult<()>{
     let mut tomlFile = File::create(&Path::new("Cargo.toml"));
     let mut gitignr  = File::create(&Path::new(".gitignore")); // Ignores "target" by default"
 
-    try!(fs::mkdir(&Path::new("src"), UserRWX));
+    try!(mkdir(&Path::new("src"), UserRWX));
     let mut srcFile = File::create(&Path::new(format!("./src/{}.rs", nm)));
     
     if !cwd_contents.iter().any(|x| x.filename_str() == Some(".gitignore")) {
