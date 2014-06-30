@@ -603,3 +603,26 @@ test!(unused_keys {
                 execs().with_status(0)
                        .with_stderr("unused manifest key: lib.build\n"));
 })
+
+test!(self_dependency {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.test]
+
+            path = "."
+
+            [[lib]]
+
+            name = "test"
+        "#)
+        .file("src/test.rs", "fn main() {}");
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+})
