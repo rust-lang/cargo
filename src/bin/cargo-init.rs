@@ -18,14 +18,12 @@ fn already_exists(items: Vec<Path>, quer: &str) -> bool {
 
 /// Prompts the user for command-line input, with a default response.
 fn ask_default(query: String, default: String) -> String{
-    print!("{} [Default: {}]: ", query, default);
     let result = io::stdin().read_line().unwrap().to_str();
     if result == "\n".to_str()  {        
         default.clone()
     }
     else {
-        result.as_slice().slice(0,result.len()-1).to_str().clone()
-        
+        result.as_slice().slice(0,result.len()-1).to_str().clone()        
     }
 }
 
