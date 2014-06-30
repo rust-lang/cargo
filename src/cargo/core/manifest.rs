@@ -20,6 +20,7 @@ pub struct Manifest {
     target_dir: Path,
     sources: Vec<SourceId>,
     build: Option<String>,
+    unused_keys: Vec<String>,
 }
 
 impl Show for Manifest {
@@ -192,6 +193,7 @@ impl Manifest {
             target_dir: target_dir.clone(),
             sources: sources,
             build: build,
+            unused_keys: Vec::new(),
         }
     }
 
@@ -233,6 +235,14 @@ impl Manifest {
 
     pub fn get_build<'a>(&'a self) -> Option<&'a str> {
         self.build.as_ref().map(|s| s.as_slice())
+    }
+
+    pub fn add_unused_key(&mut self, s: String) {
+        self.unused_keys.push(s)
+    }
+
+    pub fn get_unused_keys<'a>(&'a self) -> &'a [String] {
+        self.unused_keys.as_slice()
     }
 }
 
