@@ -13,13 +13,13 @@ fn already_exists(items: Vec<Path>, quer: &str) -> bool {
             None => false
         }
     })
-
 }
 
 /// Prompts the user for command-line input, with a default response.
-fn ask_default(query: String, default: String) -> String{
+fn ask_default(query: String, default: String) -> String {
+    print!("{}", query);
     let result = io::stdin().read_line().unwrap().to_str();
-    if result == "\n".to_str()  {        
+    if result == "\n".to_str() {
         default.clone()
     }
     else {
@@ -40,21 +40,21 @@ fn execute(){
     }
     
     //Either explicitly state a name and license, or both will be gathered interactively.
-    match osArgs.as_slice().slice(1,osArgs.len()){
+    match osArgs.as_slice().slice(1,osArgs.len()) {
         [ref nm, ref bl, ref auth, ..] if *nm != "--override".to_str() => make_cargo(nm.as_slice(), bl == &"lib".to_str(), auth.as_slice()),
         _ => make_cargo_interactive()
     }
 }
 
 /// Prompts the user to name and license their project.
-fn make_cargo_interactive(){
+fn make_cargo_interactive() {
     make_cargo(ask_default("Project name ".to_str(),"Untitled project".to_str()).as_slice(),
-               ask_default("lib/bin? ".to_str(), "lib".to_str()).to_str().as_slice() == "lib".to_str().as_slice(),
+               ask_default("lib/bin? ".to_str(), "lib".to_str()).as_slice() == "lib".as_slice(),
                ask_default("Your name: ".to_str(), "anonymous".to_str()).as_slice());
 }
 
 /// Write the .toml file and set up the .src directory with a dummy file
-fn make_cargo(nm: &str, lib: bool, auth: &str){
+fn make_cargo(nm: &str, lib: bool, auth: &str) {
     let cwd_contents = io::fs::readdir(&os::getcwd()).unwrap();
     let mut tomlFile = io::fs::File::create(&Path::new("Cargo.toml"));
     let mut gitignr  = io::fs::File::create(&Path::new(".gitignore")); // Ignores "target" by default"
@@ -67,19 +67,21 @@ fn make_cargo(nm: &str, lib: bool, auth: &str){
         gitignr.write("target".as_bytes());
     }
 
-    tomlFile.write        ("[package]\n".as_slice().clone().as_bytes());
-    tomlFile.write(format!("name = \"{}\"\n", nm).as_slice().clone().as_bytes());
-    tomlFile.write        ("version = \"0.1.0\"\n".as_slice().clone().as_bytes());
+    tomlFile.write        ("[package]\n".as_bytes());
+    tomlFile.write(format!("name = \"{}\"\n", nm).as_bytes());
+    tomlFile.write        ("version = \"0.1.0\"\n".as_bytes());
 
     tomlFile.write(format!("authors = [ \"{}\" ]\n\n", auth).as_bytes());
     
-    if lib{
-        tomlFile.write        ("[[lib]]\n".as_slice().as_bytes());
+    if lib {
+        tomlFile.write("[[lib]]\n".as_slice().as_bytes()); //No main in src
     } else
-    {   tomlFile.write("[[bin]]\n".as_slice().as_bytes()); }
+    {
+        tomlFile.write("[[bin]]\n".as_slice().as_bytes());
+        srcFile.write("fn main() {\n\n}".as_bytes());
+    }
 
-    tomlFile.write(format!("name = \"{}\"\n", nm).as_slice().as_bytes());
-    
+    tomlFile.write(format!("name = \"{}\"\n", nm).as_slice().as_bytes());    
 }
 
 fn main() { execute();}
