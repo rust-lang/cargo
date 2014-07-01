@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
 use core::MultiShell;
-use util::{CargoResult, CargoError, ChainError, Require, internal, human};
+use util::{CargoResult, ChainError, Require, internal, human};
 
 use cargo_toml = util::toml;
 
