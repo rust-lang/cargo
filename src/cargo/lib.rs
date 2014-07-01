@@ -173,7 +173,7 @@ pub fn process_executed<'a,
         Err(e) => handle_error(e, shell),
         Ok(encodable) => {
             encodable.map(|encodable| {
-                let encoded = json::Encoder::str_encode(&encodable);
+                let encoded = json::encode(&encodable);
                 println!("{}", encoded);
             });
         }
