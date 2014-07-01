@@ -35,7 +35,7 @@ pub fn read_packages(path: &Path,
     try!(walk(path, true, |dir| {
         log!(5, "looking for child package: {}", dir.display());
         if dir.filename_str() == Some(".git") { return Ok(false); }
-        if dir.join(".git").is_dir() { return Ok(false); }
+        if dir.join(".git").exists() { return Ok(false); }
         try!(process_possible_package(dir, &mut all_packages, source_id, &mut visited));
         Ok(true)
     }));
@@ -90,9 +90,9 @@ fn read_nested_packages(path: &Path, source_id: &SourceId,
     let mut ret = vec![pkg];
 
     for p in nested.iter() {
-        ret.push_all(try!(read_nested_packages(&path.join(p),
+        ret.push_all_move(try!(read_nested_packages(&path.join(p),
                                         source_id,
-                                        visited)).as_slice());
+                                        visited)));
     }
 
     Ok(ret)
