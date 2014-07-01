@@ -61,7 +61,7 @@ pub enum Location {
     Remote(Url),
 }
 
-#[deriving(Clone,PartialEq)]
+#[deriving(Clone, PartialEq, Eq)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub location: Location,
