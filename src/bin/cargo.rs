@@ -51,6 +51,7 @@ fn execute() {
             println!("Commands:");
             println!("  build          # compile the current project");
             println!("  test           # run the tests\n");
+            println!("  init           # set up a template cargo project");
 
             let (_, options) = hammer::usage::<GlobalFlags>(false);
             println!("Options (for all commands):\n\n{}", options);
