@@ -50,8 +50,8 @@ mod cargo {
 #[macro_export]
 macro_rules! try (
     ($expr:expr) => ({
-        use cargo::util::CargoError;
-        match $expr.map_err(|err| err.to_error()) {
+        use cargo::util::FromError;
+        match $expr.map_err(FromError::from_error) {
             Ok(val) => val,
             Err(err) => return Err(err)
         }
