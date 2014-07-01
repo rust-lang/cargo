@@ -265,12 +265,18 @@ impl GitCheckout {
         // --tags on 1.9. For simplicity, we execute with and without --tags for
         // all gits.
         //
-        // FIXME: This is suspicious. I have been informated that, for example,
+        // FIXME: This is suspicious. I have been informed that, for example,
         //        bundler does not do this, yet bundler appears to work!
-        git!(self.location, "fetch --force --quiet {}",
-             self.get_source().display());
-        git!(self.location, "fetch --force --quiet --tags {}",
-             self.get_source().display());
+        //
+        // And to continue the fun, git before 1.7.3 had the fun bug that if a
+        // branch was tracking a remote, then `git fetch $url` doesn't work!
+        //
+        // For details, see
+        // https://www.kernel.org/pub/software/scm/git/docs/RelNotes-1.7.3.txt
+        //
+        // In this case we just use `origin` here instead of the database path.
+        git!(self.location, "fetch --force --quiet origin");
+        git!(self.location, "fetch --force --quiet --tags origin");
         try!(self.reset(self.revision.as_slice()));
         Ok(())
     }
