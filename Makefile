@@ -83,9 +83,7 @@ clean:
 	rm -rf target
 
 clean-all: clean
-	cd libs/hamcrest-rust && make clean
-	cd libs/hammer.rs && make clean
-	cd libs/toml-rs && make clean
+	git submodule foreach make clean
 
 install:
 	install -d $(DESTDIR)$(BINDIR)
