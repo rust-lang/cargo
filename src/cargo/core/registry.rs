@@ -29,6 +29,7 @@ impl<'a> PackageRegistry<'a> {
                config: &'a mut Config<'a>) -> CargoResult<PackageRegistry<'a>> {
 
         let mut reg = PackageRegistry::empty(config);
+        let source_ids = dedup(source_ids);
 
         for id in source_ids.iter() {
             try!(reg.load(id, false));
@@ -90,7 +91,7 @@ impl<'a> PackageRegistry<'a> {
 
             // Get the summaries
             for summary in (try!(source.list())).iter() {
-                assert!(!dst.contains(summary), "duplicate summaries");
+                assert!(!dst.contains(summary), "duplicate summaries: {}", summary);
                 dst.push(summary.clone());
                 // self.summaries.push(summary.clone());
             }
@@ -104,6 +105,17 @@ impl<'a> PackageRegistry<'a> {
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", namespace)))
     }
+}
+
+fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
+    let mut seen = vec!();
+
+    for id in ids.move_iter() {
+        if seen.contains(&id) { continue; }
+        seen.push(id);
+    }
+
+    seen
 }
 
 impl<'a> Registry for PackageRegistry<'a> {
