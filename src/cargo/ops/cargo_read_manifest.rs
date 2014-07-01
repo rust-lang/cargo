@@ -1,8 +1,9 @@
 use std::collections::HashSet;
-use std::io::File;
+use std::io::{File, fs};
 use util;
 use core::{Package,Manifest,SourceId};
-use util::{CargoResult, human, important_paths};
+use util::{CargoResult, human};
+use util::important_paths::find_project_manifest_exact;
 
 pub fn read_manifest(contents: &[u8], source_id: &SourceId)
     -> CargoResult<(Manifest, Vec<Path>)>
@@ -22,26 +23,85 @@ pub fn read_package(path: &Path, source_id: &SourceId)
     Ok((Package::new(manifest, path, source_id), nested))
 }
 
-pub fn read_packages(path: &Path, source_id: &SourceId)
-    -> CargoResult<Vec<Package>>
+pub fn read_packages(path: &Path,
+                     source_id: &SourceId) -> CargoResult<Vec<Package>>
 {
-    return read_packages(path, source_id, &mut HashSet::new());
+    let mut all_packages = Vec::new();
+    let mut visited = HashSet::<Path>::new();
 
-    fn read_packages(path: &Path, source_id: &SourceId,
-                     visited: &mut HashSet<Path>) -> CargoResult<Vec<Package>> {
-        if !visited.insert(path.clone()) { return Ok(Vec::new()) }
+    log!(5, "looking for root package: {}, source_id={}", path.display(), source_id);
+    try!(process_possible_package(path, &mut all_packages, source_id, &mut visited));
 
-        let manifest = try!(important_paths::find_project_manifest_exact(path,
-                                                                         "Cargo.toml"));
-        let (pkg, nested) = try!(read_package(&manifest, source_id));
-        let mut ret = vec![pkg];
+    try!(walk(path, true, |dir| {
+        log!(5, "looking for child package: {}", dir.display());
+        if dir.filename_str() == Some(".git") { return Ok(false); }
+        if dir.join(".git").exists() { return Ok(false); }
+        try!(process_possible_package(dir, &mut all_packages, source_id, &mut visited));
+        Ok(true)
+    }));
 
-        for p in nested.iter() {
-            ret.push_all(try!(read_packages(&path.join(p),
-                                            source_id,
-                                            visited)).as_slice());
+    if all_packages.is_empty() {
+        Err(human(format!("Could not find Cargo.toml in `{}`", path.display())))
+    } else {
+        log!(5, "all packages: {}", all_packages);
+        Ok(all_packages)
+    }
+}
+
+fn walk(path: &Path, is_root: bool, callback: |&Path| -> CargoResult<bool>) -> CargoResult<()> {
+    if path.is_dir() {
+        if !is_root {
+            let continues = try!(callback(path));
+            if !continues { log!(5, "Found submodule at {}", path.display()); return Ok(()); }
         }
 
-        Ok(ret)
+        for dir in try!(fs::readdir(path)).iter() {
+            try!(walk(dir, false, |x| callback(x)))
+        }
+    }
+
+    Ok(())
+}
+
+fn process_possible_package(dir: &Path,
+                            all_packages: &mut Vec<Package>,
+                            source_id: &SourceId,
+                            visited: &mut HashSet<Path>) -> CargoResult<()> {
+
+    if !has_manifest(dir) { return Ok(()); }
+
+    let packages = try!(read_nested_packages(dir, source_id, visited));
+    push_all(all_packages, packages);
+
+    Ok(())
+}
+
+fn has_manifest(path: &Path) -> bool {
+    find_project_manifest_exact(path, "Cargo.toml").is_ok()
+}
+
+fn read_nested_packages(path: &Path, source_id: &SourceId,
+                 visited: &mut HashSet<Path>) -> CargoResult<Vec<Package>> {
+    if !visited.insert(path.clone()) { return Ok(Vec::new()) }
+
+    let manifest = try!(find_project_manifest_exact(path, "Cargo.toml"));
+
+    let (pkg, nested) = try!(read_package(&manifest, source_id));
+    let mut ret = vec![pkg];
+
+    for p in nested.iter() {
+        ret.push_all_move(try!(read_nested_packages(&path.join(p),
+                                        source_id,
+                                        visited)));
+    }
+
+    Ok(ret)
+}
+
+fn push_all(set: &mut Vec<Package>, packages: Vec<Package>) {
+    for package in packages.move_iter() {
+        if set.contains(&package) { continue; }
+
+        set.push(package)
     }
 }

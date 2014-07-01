@@ -227,6 +227,7 @@ test!(cargo_compile_git_dep_tag {
       cargo::util::process(project.bin("foo")),
       execs().with_stdout("hello world\n"));
 })
+
 test!(cargo_compile_with_nested_paths {
     let git_project = git_repo("dep1", |project| {
         project
@@ -300,6 +301,79 @@ test!(cargo_compile_with_nested_paths {
     assert_that(
       cargo::util::process(p.bin("parent")),
       execs().with_stdout("hello world\n"));
+})
+
+test!(cargo_compile_with_meta_package {
+    let git_project = git_repo("meta-dep", |project| {
+        project
+            .file("dep1/Cargo.toml", r#"
+                [project]
+
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]]
+
+                name = "dep1"
+            "#)
+            .file("dep1/src/dep1.rs", r#"
+                pub fn hello() -> &'static str {
+                    "this is dep1"
+                }
+            "#)
+            .file("dep2/Cargo.toml", r#"
+                [project]
+
+                name = "dep2"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]]
+
+                name = "dep2"
+            "#)
+            .file("dep2/src/dep2.rs", r#"
+                pub fn hello() -> &'static str {
+                    "this is dep2"
+                }
+            "#)
+    }).assert();
+
+    let p = project("parent")
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "parent"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            version = "0.5.0"
+            git = "file:{}"
+
+            [dependencies.dep2]
+
+            version = "0.5.0"
+            git = "file:{}"
+
+            [[bin]]
+
+            name = "parent"
+        "#, escape_path(&git_project.root()), escape_path(&git_project.root())))
+        .file("src/parent.rs",
+              main_file(r#""{} {}", dep1::hello(), dep2::hello()"#, ["dep1", "dep2"]).as_slice());
+
+    p.cargo_process("cargo-build")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.bin("parent"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("parent")),
+      execs().with_stdout("this is dep1 this is dep2\n"));
 })
 
 test!(cargo_compile_with_short_ssh_git {

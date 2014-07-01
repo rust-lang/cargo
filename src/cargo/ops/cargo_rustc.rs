@@ -219,7 +219,6 @@ fn prepare_rustc(root: &Path, target: &Target, crate_types: Vec<&str>,
     build_base_args(&mut args, target, crate_types, cx);
     build_deps_args(&mut args, cx);
 
-
     util::process("rustc")
         .cwd(root.clone())
         .args(args.as_slice())
