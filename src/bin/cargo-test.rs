@@ -15,7 +15,7 @@ use cargo::ops;
 use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell};
 use cargo::util;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, CargoError};
 use cargo::util::important_paths::find_project_manifest;
 
 #[deriving(PartialEq,Clone,Decodable)]
@@ -56,7 +56,9 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     }));
 
     for file in walk {
-        try!(util::process(file).exec().map_err(|e| CliError::from_boxed(e.box_error(), 1)));
+        try!(util::process(file).exec().map_err(|e| {
+            CliError::from_boxed(e.box_error(), 1)
+        }));
     }
 
     Ok(None)
