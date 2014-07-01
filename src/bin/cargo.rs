@@ -56,7 +56,12 @@ fn execute() {
             println!("Options (for all commands):\n\n{}", options);
         },
         _ => {
-            let command = Command::new(format!("cargo-{}", cmd))
+            let command = format!("cargo-{}", cmd);
+            let mut command = match os::self_exe_path() {
+                Some(path) => Command::new(path.join(command)),
+                None => Command::new(command),
+            };
+            let command = command
                 .args(args.as_slice())
                 .stdin(InheritFd(0))
                 .stdout(InheritFd(1))
