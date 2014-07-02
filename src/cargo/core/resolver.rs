@@ -47,6 +47,8 @@ pub fn resolve<R: Registry>(deps: &[Dependency],
         resolve.insert(pkg.get_name().to_str(), pkg.clone());
 
         for dep in pkg.get_dependencies().iter() {
+            if !dep.is_transitive() { continue; }
+
             if !resolve.contains_key_equiv(&dep.get_name()) {
                 remaining.push(dep.clone());
             }
@@ -63,18 +65,31 @@ mod test {
     use core::{Dependency, PackageId, Summary};
     use super::resolve;
 
-    macro_rules! pkg(
-        ($name:expr => $($deps:expr),+) => (
-            {
+    trait ToDep {
+        fn to_dep(self) -> Dependency;
+    }
+
+    impl ToDep for &'static str {
+        fn to_dep(self) -> Dependency {
             let url = url::from_str("http://example.com").unwrap();
             let source_id = SourceId::new(RegistryKind, Remote(url));
-            let d: Vec<Dependency> = vec!($($deps),+).iter().map(|s| {
-                Dependency::parse(*s, Some("1.0.0"), &source_id).unwrap()
-            }).collect();
+            Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
+        }
+    }
+
+    impl ToDep for Dependency {
+        fn to_dep(self) -> Dependency {
+            self
+        }
+    }
+
+    macro_rules! pkg(
+        ($name:expr => $($deps:expr),+) => ({
+            let d: Vec<Dependency> = vec!($($deps.to_dep()),+);
+
             Summary::new(&PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
                          d.as_slice())
-            }
-        );
+        });
 
         ($name:expr) => (
             Summary::new(&PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
@@ -152,5 +167,19 @@ mod test {
         let res = resolve([dep("foo"), dep("bar")], &mut reg).unwrap();
 
         assert_that(&res, contains(names(["foo", "bar"])));
+    }
+
+    #[test]
+    pub fn test_resolving_with_dev_deps() {
+        let mut reg = registry(vec!(
+            pkg!("foo" => "bar", dep("baz").as_dev()),
+            pkg!("baz" => "bat", dep("bam").as_dev()),
+            pkg!("bar"),
+            pkg!("bat")
+        ));
+
+        let res = resolve([dep("foo"), dep("baz").as_dev()], &mut reg).unwrap();
+
+        assert_that(&res, contains(names(["foo", "bar", "baz"])));
     }
 }
