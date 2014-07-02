@@ -111,6 +111,7 @@ pub struct TomlManifest {
     lib: Option<Vec<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies: Option<HashMap<String, TomlDependency>>
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
@@ -126,6 +127,13 @@ impl TomlProject {
     pub fn to_package_id(&self, namespace: &Location) -> CargoResult<PackageId> {
         PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
     }
+}
+
+struct Context<'a> {
+    deps: &'a mut Vec<Dependency>,
+    source_id: &'a SourceId,
+    source_ids: &'a mut Vec<SourceId>,
+    nested_paths: &'a mut Vec<Path>
 }
 
 impl TomlManifest {
@@ -145,47 +153,18 @@ impl TomlManifest {
 
         let mut deps = Vec::new();
 
-        // Collect the deps
-        match self.dependencies {
-            Some(ref dependencies) => {
-                for (n, v) in dependencies.iter() {
-                    let (version, source_id) = match *v {
-                        SimpleDep(ref string) => {
-                            (Some(string.clone()), SourceId::for_central())
-                        },
-                        DetailedDep(ref details) => {
-                            let reference = details.branch.clone()
-                                .or_else(|| details.tag.clone())
-                                .or_else(|| details.rev.clone())
-                                .unwrap_or_else(|| "master".to_str());
+        {
 
-                            let new_source_id = match details.git {
-                                Some(ref git) => {
-                                    let kind = GitKind(reference.clone());
-                                    let loc = try!(Location::parse(git.as_slice()));
-                                    let source_id = SourceId::new(kind, loc);
-                                    // TODO: Don't do this for path
-                                    sources.push(source_id.clone());
-                                    Some(source_id)
-                                }
-                                None => {
-                                    details.path.as_ref().map(|path| {
-                                        nested_paths.push(Path::new(path.as_slice()));
-                                        source_id.clone()
-                                    })
-                                }
-                            }.unwrap_or(SourceId::for_central());
+            let mut cx = Context {
+                deps: &mut deps,
+                source_id: source_id,
+                source_ids: &mut sources,
+                nested_paths: &mut nested_paths
+            };
 
-                            (details.version.clone(), new_source_id)
-                        }
-                    };
-
-                    deps.push(try!(Dependency::parse(n.as_slice(),
-                                                     version.as_ref().map(|v| v.as_slice()),
-                                                     &source_id)))
-                }
-            }
-            None => ()
+            // Collect the deps
+            try!(process_dependencies(&mut cx, self.dependencies.as_ref()));
+            try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref()));
         }
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
@@ -203,6 +182,54 @@ impl TomlManifest {
                 project.build.clone()),
            nested_paths))
     }
+}
+
+fn process_dependencies<'a>(cx: &mut Context<'a>,
+                            new_deps: Option<&HashMap<String, TomlDependency>>)
+                            -> CargoResult<()> {
+    match new_deps {
+        Some(ref dependencies) => {
+            for (n, v) in dependencies.iter() {
+                let (version, source_id) = match *v {
+                    SimpleDep(ref string) => {
+                        (Some(string.clone()), SourceId::for_central())
+                    },
+                    DetailedDep(ref details) => {
+                        let reference = details.branch.clone()
+                            .or_else(|| details.tag.clone())
+                            .or_else(|| details.rev.clone())
+                            .unwrap_or_else(|| "master".to_str());
+
+                        let new_source_id = match details.git {
+                            Some(ref git) => {
+                                let kind = GitKind(reference.clone());
+                                let loc = try!(Location::parse(git.as_slice()));
+                                let source_id = SourceId::new(kind, loc);
+                                // TODO: Don't do this for path
+                                cx.source_ids.push(source_id.clone());
+                                Some(source_id)
+                            }
+                            None => {
+                                details.path.as_ref().map(|path| {
+                                    cx.nested_paths.push(Path::new(path.as_slice()));
+                                    cx.source_id.clone()
+                                })
+                            }
+                        }.unwrap_or(SourceId::for_central());
+
+                        (details.version.clone(), new_source_id)
+                    }
+                };
+
+                cx.deps.push(try!(Dependency::parse(n.as_slice(),
+                                                 version.as_ref().map(|v| v.as_slice()),
+                                                 &source_id)))
+            }
+        }
+        None => ()
+    }
+
+    Ok(())
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]

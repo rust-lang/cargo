@@ -70,15 +70,90 @@ test!(cargo_compile_with_nested_deps_shorthand {
             }
         "#);
 
-    p.cargo_process("cargo-build")
-        .exec_with_output()
-        .assert();
+    assert_that(p.cargo_process("cargo-build"),
+        execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
+                                     {} bar v0.5.0 (file:{})\n\
+                                     {} foo v0.5.0 (file:{})\n",
+                                    COMPILING, p.root().display(),
+                                    COMPILING, p.root().display(),
+                                    COMPILING, p.root().display())));
 
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
       cargo::util::process(p.bin("foo")),
       execs().with_stdout("test passed\n"));
+})
+
+test!(cargo_compile_with_dev_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+
+            version = "0.5.0"
+            path = "bar"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dev-dependencies.baz]
+
+            version = "0.5.0"
+            path = "baz"
+
+            [[lib]]
+
+            name = "bar"
+        "#)
+        .file("bar/src/bar.rs", r#"
+            pub fn gimme() -> &'static str {
+                "zoidberg"
+            }
+        "#)
+        .file("bar/baz/Cargo.toml", r#"
+            [project]
+
+            name = "baz"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "baz"
+        "#)
+        .file("bar/baz/src/baz.rs", r#"
+            pub fn gimme() -> &'static str {
+                "nope"
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"),
+        execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                                     {} foo v0.5.0 (file:{})\n",
+                                    COMPILING, p.root().display(),
+                                    COMPILING, p.root().display())));
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout("zoidberg\n"));
 })
 
 test!(no_rebuild_dependency {
