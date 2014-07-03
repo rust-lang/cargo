@@ -5,7 +5,8 @@ use util::CargoResult;
 pub struct Dependency {
     name: String,
     namespace: SourceId,
-    req: VersionReq
+    req: VersionReq,
+    transitive: bool
 }
 
 impl Dependency {
@@ -20,7 +21,8 @@ impl Dependency {
         Ok(Dependency {
             name: name.to_str(),
             namespace: namespace.clone(),
-            req: version
+            req: version,
+            transitive: true
         })
     }
 
@@ -34,6 +36,16 @@ impl Dependency {
 
     pub fn get_namespace<'a>(&'a self) -> &'a SourceId {
         &self.namespace
+    }
+
+    pub fn as_dev(&self) -> Dependency {
+        let mut dep = self.clone();
+        dep.transitive = false;
+        dep
+    }
+
+    pub fn is_transitive(&self) -> bool {
+      self.transitive
     }
 }
 
