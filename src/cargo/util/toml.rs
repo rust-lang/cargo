@@ -120,6 +120,7 @@ pub struct TomlProject {
     pub version: String,
     pub authors: Vec<String>,
     build: Option<String>,
+    cmake: Option<Vec<String>>,
 }
 
 impl TomlProject {
@@ -178,7 +179,8 @@ impl TomlManifest {
                 targets.as_slice(),
                 &Path::new("target"),
                 sources,
-                project.build.clone()),
+                project.build.clone(),
+                match project.cmake.clone() { Some(l) => l, None => Vec::new() }),
            nested_paths))
     }
 }

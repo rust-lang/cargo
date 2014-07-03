@@ -626,3 +626,165 @@ test!(self_dependency {
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0));
 })
+
+test!(cmake_build_primary {
+    let mut p = project("foo");
+    p = p
+        .file("vendor/main.c", r#"
+                extern int my_c_func() { return 5; }
+            "#)
+        .file("vendor/CMakeLists.txt", r#"
+            cmake_minimum_required(VERSION 2.6) 
+            project(mylib)
+
+            add_library(mylib main.c)
+        "#)
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            cmake = ["vendor"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            extern crate libc;
+
+            #[link(name="mylib")]
+            extern {
+                fn my_c_func() -> ::libc::c_int;
+            }
+
+            fn main() {
+                println!("{}", unsafe { my_c_func() });
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    assert_that(
+      process(p.bin("foo")),
+      execs().with_stdout("5\n"));      // this "5" comes from vendor/main.c
+})
+
+test!(cmake_build_non_primary {
+    let mut p = project("foo");
+    p = p
+        .file("sub/Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            cmake = ["vendor"]
+
+            [[lib]] name = "foo"
+            "#)
+        .file("sub/vendor/main.c", r#"
+                extern int my_c_func() { return 5; }
+            "#)
+        .file("sub/vendor/CMakeLists.txt", r#"
+            cmake_minimum_required(VERSION 2.6) 
+            project(mylib)
+
+            add_library(mylib main.c)
+        "#)
+        .file("sub/src/foo.rs", r#"
+            extern crate libc;
+
+            #[link(name="mylib")]
+            extern {
+                fn my_c_func() -> ::libc::c_int;
+            }
+
+            pub fn get_c_func() -> int {
+               unsafe { my_c_func() as int }
+            }
+        "#)
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "bar"
+
+            [dependencies.foo]
+            path="sub"
+        "#)
+        .file("src/bar.rs", r#"
+            extern crate foo;
+
+            fn main() {
+                println!("{}", foo::get_c_func());
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    assert_that(
+      process(p.bin("bar")),
+      execs().with_stdout("5\n"));
+})
+
+test!(cmake_build_multiple {
+    let mut p = project("foo");
+    p = p
+        .file("lib1/main.c", r#"
+                extern int c_func_1() { return 5; }
+            "#)
+        .file("lib1/CMakeLists.txt", r#"
+            cmake_minimum_required(VERSION 2.6) 
+            project(lib1)
+
+            add_library(lib1 main.c)
+        "#)
+        .file("lib2/main.c", r#"
+                extern int c_func_2() { return 3; }
+            "#)
+        .file("lib2/CMakeLists.txt", r#"
+            cmake_minimum_required(VERSION 2.6) 
+            project(lib2)
+
+            add_library(lib2 main.c)
+        "#)
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            cmake = ["lib1", "lib2"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            extern crate libc;
+
+            #[link(name="lib1")]
+            extern {
+                fn c_func_1() -> ::libc::c_int;
+            }
+
+            #[link(name="lib2")]
+            extern {
+                fn c_func_2() -> ::libc::c_int;
+            }
+
+            fn main() {
+                println!("{}-{}", unsafe { c_func_1() }, unsafe { c_func_2() });
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    assert_that(
+      process(p.bin("foo")),
+      execs().with_stdout("5-3\n"));
+})

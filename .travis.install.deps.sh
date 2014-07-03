@@ -15,6 +15,11 @@ if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     sudo apt-get install gcc-multilib lib32stdc++6
 fi
 
+# CMake installation
+if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+    brew install cmake
+fi
+
 # Install both 64 and 32 bit libraries. Apparently travis barfs if you try to
 # just install the right ones? This should enable cross compilation in the
 # future anyway.

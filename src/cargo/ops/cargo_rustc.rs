@@ -114,6 +114,11 @@ fn compile(targets: &[&Target], pkg: &Package,
         None => {}
     }
 
+    // Executing all CMake compilations
+    for (i, dir) in pkg.get_manifest().get_cmake_dirs().iter().enumerate() {
+        cmds.push(try!(build_cmake_job(pkg, dir.as_slice(), i, cx)))
+    }
+
     // After the custom command has run, execute rustc for all targets of our
     // package.
     for &target in targets.iter() {
@@ -187,6 +192,81 @@ fn compile_custom(pkg: &Package, cmd: &str,
         p = p.arg(arg);
     }
     proc() p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
+}
+
+// cmakeDir is the directory to CMakeLists.txt
+// cmakeNum is the index of this CMake element in the list of CMake elements from the manifest
+fn build_cmake_job(pkg: &Package, cmakeDir: &str, cmakeNum: uint,
+                  context: &Context) -> CargoResult<Job> {
+
+    // checking that CMake is available
+    if cmakeNum == 0 {
+        try!(util::process("cmake")
+            .arg("--version")
+            .exec().map_err(|err| human(err.to_str()))
+        );
+    }
+
+    // choosing the generator that CMake will use
+    let (generatorCmake, generatorExec) = if cfg!(unix) {
+        ("Unix Makefiles", "make")
+    } else if cfg!(windows) {
+        if util::process("mingw32-make -v").exec().is_ok() {
+            ("MinGW Makefiles", "mingw32-make")
+        } else if util::process("nmake -help").exec().is_ok() {
+            ("NMake Makefiles", "nmake")
+        } else {
+            fail!("failed to find available build engine")
+        }
+    } else {
+        fail!("failed to find available build engine")
+    };
+
+    // the directory where CMakeLists.txt is found
+    let sourceDirectory = pkg.get_root().join(cmakeDir);
+
+    // if we are primary target, then specify the cmake build directory
+    let buildDirectoryIfPrimary = if context.primary {
+        let dir = context.dest.join(format!("cmake{}", cmakeNum).as_slice()).clone();
+        try!(mk_target(&dir).chain_error(||
+            internal(format!("Couldn't create the CMake build directory for {} at {}",
+                     pkg.get_name(), dir.display()))));
+        Some(dir)
+    } else {
+        None
+    };
+
+    // where to put the compiled libraries
+    let outputDirectory = context.dest.clone();
+
+    Ok(proc() {
+        let tmpBuildDirectory = match buildDirectoryIfPrimary {
+            Some(_) => None,
+            None => Some(::std::io::TempDir::new("cargo_cmake")
+                .expect("unable to create temporary directory"))
+        };
+
+        let buildDirectory = match buildDirectoryIfPrimary {
+            Some(d) => d,       // make sure not to destroy tmpBuildDirectory
+            None => tmpBuildDirectory.as_ref().unwrap().path().clone()
+        };
+
+        // invoking CMake
+        try!(util::process("cmake")
+            .cwd(buildDirectory.clone())
+            .args(&["-G", generatorCmake])
+            .arg(format!("-DCMAKE_LIBRARY_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
+            .arg(format!("-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
+            .arg(format!("-DCMAKE_RUNTIME_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
+            .arg(format!("{}", sourceDirectory.display()))
+            .exec().map_err(|err| human(err.to_str()))
+        );
+
+        // invoking make (or equivalent)
+        util::process(generatorExec)
+            .cwd(buildDirectory.clone())
+            .exec().map_err(|err| human(err.to_str()))
+    })
 }
 
 fn rustc(root: &Path, target: &Target,
