@@ -18,7 +18,7 @@ use serialize::{Encoder,Encodable};
 use core::source::{SourceId, SourceSet, Source};
 
 // TODO: Is manifest_path a relic?
-#[deriving(Clone,PartialEq)]
+#[deriving(Clone)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
@@ -135,6 +135,12 @@ impl Package {
 impl Show for Package {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.get_summary().get_package_id())
+    }
+}
+
+impl PartialEq for Package {
+    fn eq(&self, other: &Package) -> bool {
+        self.get_package_id() == other.get_package_id()
     }
 }
 
