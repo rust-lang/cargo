@@ -15,7 +15,7 @@ impl Summary {
     pub fn new(pkg_id: &PackageId, dependencies: &[Dependency]) -> Summary {
         Summary {
             package_id: pkg_id.clone(),
-            dependencies: Vec::from_slice(dependencies)
+            dependencies: Vec::from_slice(dependencies),
         }
     }
 
