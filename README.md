@@ -4,7 +4,7 @@ Learn more at http://crates.io/.
 
 ## Compiling cargo
 
-You'll want to clone cargo using --recursive on git, to clone in it's submodule
+You'll want to clone cargo using --recursive on git, to clone in its submodule
 dependencies.
 ```
 $ git clone --recursive https://github.com/rust-lang/cargo
