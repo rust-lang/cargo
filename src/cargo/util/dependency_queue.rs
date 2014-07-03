@@ -57,6 +57,13 @@ impl<T> DependencyQueue<T> {
         }
     }
 
+    /// Registers a package with this queue.
+    ///
+    /// Only registered packages will be returned from dequeue().
+    pub fn register(&mut self, pkg: &Package) {
+        self.reverse_dep_map.insert(pkg.get_name().to_str(), HashSet::new());
+    }
+
     /// Adds a new package to this dependency queue.
     ///
     /// It is assumed that any dependencies of this package will eventually also
@@ -72,6 +79,10 @@ impl<T> DependencyQueue<T> {
         let mut my_dependencies = HashSet::new();
         for dep in pkg.get_dependencies().iter() {
             if dep.get_name() == pkg.get_name() { continue }
+            // skip deps which were filtered out as part of resolve
+            if !self.reverse_dep_map.find_equiv(&dep.get_name()).is_some() {
+                continue
+            }
 
             let name = dep.get_name().to_str();
             assert!(my_dependencies.insert(name.clone()));

@@ -58,26 +58,25 @@ pub fn to_manifest(contents: &[u8],
 pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
     let mut parser = toml::Parser::new(toml.as_slice());
     match parser.parse() {
-        Some(toml) => Ok(toml),
-        None => {
-            let mut error_str = format!("could not parse input TOML\n");
-            for error in parser.errors.iter() {
-                let (loline, locol) = parser.to_linecol(error.lo);
-                let (hiline, hicol) = parser.to_linecol(error.hi);
-                error_str.push_str(format!("{}:{}:{}{} {}\n",
-                                           file,
-                                           loline + 1, locol + 1,
-                                           if loline != hiline || locol != hicol {
-                                               format!("-{}:{}", hiline + 1,
-                                                       hicol + 1)
-                                           } else {
-                                               "".to_string()
-                                           },
-                                           error.desc).as_slice());
-            }
-            Err(human(error_str))
-        }
+        Some(toml) => return Ok(toml),
+        None => {}
     }
+    let mut error_str = format!("could not parse input TOML\n");
+    for error in parser.errors.iter() {
+        let (loline, locol) = parser.to_linecol(error.lo);
+        let (hiline, hicol) = parser.to_linecol(error.hi);
+        error_str.push_str(format!("{}:{}:{}{} {}\n",
+                                   file,
+                                   loline + 1, locol + 1,
+                                   if loline != hiline || locol != hicol {
+                                       format!("-{}:{}", hiline + 1,
+                                               hicol + 1)
+                                   } else {
+                                       "".to_string()
+                                   },
+                                   error.desc).as_slice());
+    }
+    Err(human(error_str))
 }
 
 type TomlLibTarget = TomlTarget;
@@ -111,6 +110,7 @@ pub struct TomlManifest {
     lib: Option<Vec<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies: Option<HashMap<String, TomlDependency>>
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
@@ -126,6 +126,13 @@ impl TomlProject {
     pub fn to_package_id(&self, namespace: &Location) -> CargoResult<PackageId> {
         PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
     }
+}
+
+struct Context<'a> {
+    deps: &'a mut Vec<Dependency>,
+    source_id: &'a SourceId,
+    source_ids: &'a mut Vec<SourceId>,
+    nested_paths: &'a mut Vec<Path>
 }
 
 impl TomlManifest {
@@ -145,47 +152,18 @@ impl TomlManifest {
 
         let mut deps = Vec::new();
 
-        // Collect the deps
-        match self.dependencies {
-            Some(ref dependencies) => {
-                for (n, v) in dependencies.iter() {
-                    let (version, source_id) = match *v {
-                        SimpleDep(ref string) => {
-                            (Some(string.clone()), SourceId::for_central())
-                        },
-                        DetailedDep(ref details) => {
-                            let reference = details.branch.clone()
-                                .or_else(|| details.tag.clone())
-                                .or_else(|| details.rev.clone())
-                                .unwrap_or_else(|| "master".to_str());
+        {
 
-                            let new_source_id = match details.git {
-                                Some(ref git) => {
-                                    let kind = GitKind(reference.clone());
-                                    let loc = try!(Location::parse(git.as_slice()));
-                                    let source_id = SourceId::new(kind, loc);
-                                    // TODO: Don't do this for path
-                                    sources.push(source_id.clone());
-                                    Some(source_id)
-                                }
-                                None => {
-                                    details.path.as_ref().map(|path| {
-                                        nested_paths.push(Path::new(path.as_slice()));
-                                        source_id.clone()
-                                    })
-                                }
-                            }.unwrap_or(SourceId::for_central());
+            let mut cx = Context {
+                deps: &mut deps,
+                source_id: source_id,
+                source_ids: &mut sources,
+                nested_paths: &mut nested_paths
+            };
 
-                            (details.version.clone(), new_source_id)
-                        }
-                    };
-
-                    deps.push(try!(Dependency::parse(n.as_slice(),
-                                                     version.as_ref().map(|v| v.as_slice()),
-                                                     &source_id)))
-                }
-            }
-            None => ()
+            // Collect the deps
+            try!(process_dependencies(&mut cx, false, self.dependencies.as_ref()));
+            try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
         }
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
@@ -203,6 +181,57 @@ impl TomlManifest {
                 project.build.clone()),
            nested_paths))
     }
+}
+
+fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
+                            new_deps: Option<&HashMap<String, TomlDependency>>)
+                            -> CargoResult<()> {
+    let dependencies = match new_deps {
+        Some(ref dependencies) => dependencies,
+        None => return Ok(())
+    };
+    for (n, v) in dependencies.iter() {
+        let (version, source_id) = match *v {
+            SimpleDep(ref string) => {
+                (Some(string.clone()), SourceId::for_central())
+            },
+            DetailedDep(ref details) => {
+                let reference = details.branch.clone()
+                    .or_else(|| details.tag.clone())
+                    .or_else(|| details.rev.clone())
+                    .unwrap_or_else(|| "master".to_str());
+
+                let new_source_id = match details.git {
+                    Some(ref git) => {
+                        let kind = GitKind(reference.clone());
+                        let loc = try!(Location::parse(git.as_slice()));
+                        let source_id = SourceId::new(kind, loc);
+                        // TODO: Don't do this for path
+                        cx.source_ids.push(source_id.clone());
+                        Some(source_id)
+                    }
+                    None => {
+                        details.path.as_ref().map(|path| {
+                            cx.nested_paths.push(Path::new(path.as_slice()));
+                            cx.source_id.clone()
+                        })
+                    }
+                }.unwrap_or(SourceId::for_central());
+
+                (details.version.clone(), new_source_id)
+            }
+        };
+
+        let mut dep = try!(Dependency::parse(n.as_slice(),
+                       version.as_ref().map(|v| v.as_slice()),
+                       &source_id));
+
+        if dev { dep = dep.as_dev() }
+
+        cx.deps.push(dep)
+    }
+
+    Ok(())
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]

@@ -201,6 +201,8 @@ fn rustc(root: &Path, target: &Target,
     let primary = cx.primary;
     let rustc = prepare_rustc(root, target, crate_types, cx);
 
+    log!(5, "command={}", rustc);
+
     proc() {
         if primary {
             rustc.exec().map_err(|err| human(err.to_str()))
@@ -262,6 +264,9 @@ fn execute(config: &mut Config,
     let pool = TaskPool::new(config.jobs());
     let (tx, rx) = channel();
     let mut queue = DependencyQueue::new();
+    for &(pkg, _) in jobs.iter() {
+        queue.register(pkg);
+    }
     for (pkg, (fresh, job)) in jobs.move_iter() {
         queue.enqueue(pkg, fresh, (pkg, job));
     }
@@ -302,6 +307,8 @@ fn execute(config: &mut Config,
             }
         }
     }
+
+    log!(5, "rustc jobs completed");
 
     Ok(())
 }
