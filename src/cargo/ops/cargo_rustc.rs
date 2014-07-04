@@ -207,6 +207,9 @@ fn build_cmake_job(pkg: &Package, cmakeDir: &str, cmakeNum: uint,
         );
     }
 
+    // detecting target options by calling rustc
+    let wordsize = try!(detect_rustc_wordsize());
+
     // choosing the generator that CMake will use
     let (generatorCmake, generatorExec) = if cfg!(unix) {
         ("Unix Makefiles", "make")
@@ -221,6 +224,9 @@ fn build_cmake_job(pkg: &Package, cmakeDir: &str, cmakeNum: uint,
     } else {
         fail!("failed to find available build engine")
     };
+
+    // flags to pass to C and Cxx compilers
+    let cFlags = if cfg!(unix) { format!("-m{}", wordsize) } else { "".to_string() };
 
     // the directory where CMakeLists.txt is found
     let sourceDirectory = pkg.get_root().join(cmakeDir);
@@ -257,7 +263,8 @@ fn build_cmake_job(pkg: &Package, cmakeDir: &str, cmakeNum: uint,
             .args(&["-G", generatorCmake])
             .arg(format!("-DCMAKE_LIBRARY_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
             .arg(format!("-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
-            .arg(format!("-DCMAKE_RUNTIME_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
+            .arg(format!("-DCMAKE_C_FLAGS:dir={}", cFlags))
+            .arg(format!("-DCMAKE_CXX_FLAGS:dir={}", cFlags))
             .arg(format!("{}", sourceDirectory.display()))
             .exec().map_err(|err| human(err.to_str()))
         );
@@ -267,6 +274,62 @@ fn build_cmake_job(pkg: &Package, cmakeDir: &str, cmakeNum: uint,
             .cwd(buildDirectory.clone())
             .exec().map_err(|err| human(err.to_str()))
     })
+}
+
+// autodetects the wordsize that rustc compiles into
+fn detect_rustc_wordsize()
+    -> CargoResult<uint>
+{
+    let tmpDir = ::std::io::TempDir::new("rustc-target-find")
+                .expect("unable to create temporary directory");
+
+    let filePath = tmpDir.path().clone().join("detect.rs");
+    let execPath = tmpDir.path().clone().join("detect");
+
+    let fileContent = r#"
+        fn main() {
+            print!("{}",
+                if cfg!(target_word_size = "32") {
+                    32u
+                } else if cfg!(target_word_size = "64") {
+                    64u
+                } else {
+                    fail!()
+                }
+            )
+        }
+    "#;
+
+    // writing fileContent into filePath
+    {
+        let mut file = try!(::std::io::fs::File::create(&filePath)
+            .map_err(|_| human(format!("Could not create file; path={}", filePath.display()))));
+        try!(file.write_str(fileContent)
+            .map_err(|_| human(format!("Could not write to file; path={}", filePath.display()))));
+    }
+
+    // compiling filePath (ie. the code in fileContent)
+    try!(util::process("rustc")
+        .args(&[
+            "-o".to_string(), format!("{}", execPath.display()),
+            format!("{}", filePath.display())
+        ])
+        .env("RUST_LOG", None)
+        .exec().map_err(|err| human(err.to_str())));
+
+    // executing the result and converting its stdout into an uint
+    let result = util::process(execPath)
+        .exec_with_output()
+        .map(|s| from_str::<uint>(
+                    ::std::path::BytesContainer::container_as_str(&s.output)
+                        .expect("detector's stdout is not utf8!")
+                ).expect("could not convert detector's stdout into an uint"))
+        .map_err(|err| human(err.to_str()));
+
+    // make sure that the tmpDir still existed here
+    tmpDir.close().ok();
+
+    result
 }
 
 fn rustc(root: &Path, target: &Target,
