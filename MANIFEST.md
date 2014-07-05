@@ -7,7 +7,7 @@ The `Cargo.toml` file contains several top-level sections:
 * `[project]`: project-specific details, such as name, version and author
 * `[[lib]]`: information about the main library file, if one exists. By
   default, the main library file is `src/<package-name>.rs`
-* `[[executable]]`: optionally repeated information about executables
+* `[[bin]]`: optionally repeated information about executables
   that the project is generating. This can both be used for projects
   that primarily build executables, as well as projects that contain
   utility executables (such as an HTTP library that comes with a web
@@ -29,7 +29,7 @@ into Rust structs that are used throughout the built-in commands.
 * `readme`: a Markdown-formatted file in the project that can be used as
   a description of the document in indexes (`Option<Path>`, relative to
   the project root, defaults to "./README.md", if found).
-* `tags`: an array of tags that can be used in indexes (`Vec<String>`) 
+* `tags`: an array of tags that can be used in indexes (`Vec<String>`)
 * `authors`: a list of authors in `name <email>` format (`Vec<String>`). At
   least one `author` with email will probably be required to submit to
   the Cargo repository.
@@ -53,9 +53,9 @@ Note that we plan to support multiple `Cargo.toml` files in Cargo's git
 support, so you don't have to have a separate git repository per
 library.
 
-## The `[[executable]]` Section
+## The `[[bin]]` Section
 
-The `executable` section is optionally repeated. It is designed for
+The `bin` section is optionally repeated. It is designed for
 projects whose main raison d'être is a single executable, or for projects
 that want to provide utility executables alongside a primary library.
 
