@@ -96,7 +96,7 @@ fn strip_trailing_slash<'a>(path: &'a str) -> &'a str {
 }
 
 // Some hacks and heuristics for making equivalent URLs hash the same
-fn canonicalize_url(url: &str) -> String {
+pub fn canonicalize_url(url: &str) -> String {
     let url = strip_trailing_slash(url);
 
     // HACKHACK: For github URL's specifically just lowercase
@@ -107,7 +107,12 @@ fn canonicalize_url(url: &str) -> String {
 
     let lower_url = url.chars().map(|c|c.to_lowercase()).collect::<String>();
     let url = if lower_url.as_slice().contains("github.com") {
-        lower_url
+        if lower_url.as_slice().starts_with("https") {
+            lower_url
+        } else {
+            let pos = lower_url.as_slice().find_str("://").unwrap_or(0);
+            "https".to_string() + lower_url.as_slice().slice_from(pos)
+        }
     } else {
         url.to_string()
     };
@@ -211,6 +216,13 @@ mod test {
     fn test_canonicalize_idents_by_stripping_dot_git() {
         let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
         let ident2 = ident(&Remote(url("https://github.com/PistonDevelopers/piston.git")));
+        assert_eq!(ident1, ident2);
+    }
+
+    #[test]
+    fn test_canonicalize_idents_different_protocls() {
+        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
+        let ident2 = ident(&Remote(url("git://github.com/PistonDevelopers/piston")));
         assert_eq!(ident1, ident2);
     }
 
