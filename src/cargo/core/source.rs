@@ -6,6 +6,7 @@ use url::Url;
 
 use core::{Summary, Package, PackageId};
 use sources::{PathSource, GitSource};
+use sources::git;
 use util::{Config, CargoResult};
 use util::errors::human;
 
@@ -61,7 +62,7 @@ pub enum Location {
     Remote(Url),
 }
 
-#[deriving(Clone, PartialEq, Eq)]
+#[deriving(Clone, Eq)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub location: Location,
@@ -107,6 +108,25 @@ impl Show for SourceId {
         }
 
         Ok(())
+    }
+}
+
+// This custom implementation handles situations such as when two git sources
+// point at *almost* the same URL, but not quite, even when they actually point
+// to the same repository.
+impl PartialEq for SourceId {
+    fn eq(&self, other: &SourceId) -> bool {
+        if self.kind != other.kind { return false }
+        if self.location == other.location { return true }
+
+        match (&self.kind, &other.kind, &self.location, &other.location) {
+            (&GitKind(..), &GitKind(..),
+             &Remote(ref u1), &Remote(ref u2)) => {
+                git::canonicalize_url(u1.to_str().as_slice()) ==
+                    git::canonicalize_url(u2.to_str().as_slice())
+            }
+            _ => false,
+        }
     }
 }
 
@@ -212,5 +232,24 @@ impl Source for SourceSet {
             ret.push_str(try!(source.fingerprint(id)).as_slice());
         }
         return Ok(ret);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SourceId, Remote, GitKind};
+
+    #[test]
+    fn github_sources_equal() {
+        let loc = Remote(from_str("https://github.com/foo/bar").unwrap());
+        let s1 = SourceId::new(GitKind("master".to_string()), loc);
+
+        let loc = Remote(from_str("git://github.com/foo/bar").unwrap());
+        let mut s2 = SourceId::new(GitKind("master".to_string()), loc);
+
+        assert_eq!(s1, s2);
+
+        s2.kind = GitKind("foo".to_string());
+        assert!(s1 != s2);
     }
 }
