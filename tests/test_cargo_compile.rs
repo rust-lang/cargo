@@ -766,3 +766,19 @@ test!(ignore_broken_symlinks {
       process(p.bin("foo")),
       execs().with_stdout("i am foo\n"));
 })
+
+test!(missing_lib_and_bin {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(101)
+                       .with_stderr("either a [[lib]] or [[bin]] section \
+                                     must be present\n"));
+})
