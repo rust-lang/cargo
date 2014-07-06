@@ -114,6 +114,11 @@ fn compile(targets: &[&Target], pkg: &Package,
         None => {}
     }
 
+    // Executing all CMake compilations
+    for (i, dir) in pkg.get_manifest().get_cmake_dirs().iter().enumerate() {
+        cmds.push(try!(build_cmake_job(pkg, dir.as_slice(), i, cx)))
+    }
+
     // After the custom command has run, execute rustc for all targets of our
     // package.
     for &target in targets.iter() {
@@ -187,6 +192,144 @@ fn compile_custom(pkg: &Package, cmd: &str,
         p = p.arg(arg);
     }
     proc() p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
+}
+
+// cmakeDir is the directory to CMakeLists.txt
+// cmakeNum is the index of this CMake element in the list of CMake elements from the manifest
+fn build_cmake_job(pkg: &Package, cmakeDir: &str, cmakeNum: uint,
+                  context: &Context) -> CargoResult<Job> {
+
+    // checking that CMake is available
+    if cmakeNum == 0 {
+        try!(util::process("cmake")
+            .arg("--version")
+            .exec().map_err(|err| human(err.to_str()))
+        );
+    }
+
+    // detecting target options by calling rustc
+    let wordsize = try!(detect_rustc_wordsize());
+
+    // choosing the generator that CMake will use
+    let (generatorCmake, generatorExec) = if cfg!(unix) {
+        ("Unix Makefiles", "make")
+    } else if cfg!(windows) {
+        if util::process("mingw32-make -v").exec().is_ok() {
+            ("MinGW Makefiles", "mingw32-make")
+        } else if util::process("nmake -help").exec().is_ok() {
+            ("NMake Makefiles", "nmake")
+        } else {
+            fail!("failed to find available build engine")
+        }
+    } else {
+        fail!("failed to find available build engine")
+    };
+
+    // flags to pass to C and Cxx compilers
+    let cFlags = if cfg!(unix) { format!("-m{}", wordsize) } else { "".to_string() };
+
+    // the directory where CMakeLists.txt is found
+    let sourceDirectory = pkg.get_root().join(cmakeDir);
+
+    // if we are primary target, then specify the cmake build directory
+    let buildDirectoryIfPrimary = if context.primary {
+        let dir = context.dest.join(format!("cmake{}", cmakeNum).as_slice()).clone();
+        try!(mk_target(&dir).chain_error(||
+            internal(format!("Couldn't create the CMake build directory for {} at {}",
+                     pkg.get_name(), dir.display()))));
+        Some(dir)
+    } else {
+        None
+    };
+
+    // where to put the compiled libraries
+    let outputDirectory = context.dest.clone();
+
+    Ok(proc() {
+        let tmpBuildDirectory = match buildDirectoryIfPrimary {
+            Some(_) => None,
+            None => Some(::std::io::TempDir::new("cargo_cmake")
+                .expect("unable to create temporary directory"))
+        };
+
+        let buildDirectory = match buildDirectoryIfPrimary {
+            Some(d) => d,       // make sure not to destroy tmpBuildDirectory
+            None => tmpBuildDirectory.as_ref().unwrap().path().clone()
+        };
+
+        // invoking CMake
+        try!(util::process("cmake")
+            .cwd(buildDirectory.clone())
+            .args(&["-G", generatorCmake])
+            .arg(format!("-DCMAKE_LIBRARY_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
+            .arg(format!("-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY:dir={}", outputDirectory.display()))
+            .arg(format!("-DCMAKE_C_FLAGS:dir={}", cFlags))
+            .arg(format!("-DCMAKE_CXX_FLAGS:dir={}", cFlags))
+            .arg(format!("{}", sourceDirectory.display()))
+            .exec().map_err(|err| human(err.to_str()))
+        );
+
+        // invoking make (or equivalent)
+        util::process(generatorExec)
+            .cwd(buildDirectory.clone())
+            .exec().map_err(|err| human(err.to_str()))
+    })
+}
+
+// autodetects the wordsize that rustc compiles into
+fn detect_rustc_wordsize()
+    -> CargoResult<uint>
+{
+    let tmpDir = ::std::io::TempDir::new("rustc-target-find")
+                .expect("unable to create temporary directory");
+
+    let filePath = tmpDir.path().clone().join("detect.rs");
+    let execPath = tmpDir.path().clone().join("detect");
+
+    let fileContent = r#"
+        fn main() {
+            print!("{}",
+                if cfg!(target_word_size = "32") {
+                    32u
+                } else if cfg!(target_word_size = "64") {
+                    64u
+                } else {
+                    fail!()
+                }
+            )
+        }
+    "#;
+
+    // writing fileContent into filePath
+    {
+        let mut file = try!(::std::io::fs::File::create(&filePath)
+            .map_err(|_| human(format!("Could not create file; path={}", filePath.display()))));
+        try!(file.write_str(fileContent)
+            .map_err(|_| human(format!("Could not write to file; path={}", filePath.display()))));
+    }
+
+    // compiling filePath (ie. the code in fileContent)
+    try!(util::process("rustc")
+        .args(&[
+            "-o".to_string(), format!("{}", execPath.display()),
+            format!("{}", filePath.display())
+        ])
+        .env("RUST_LOG", None)
+        .exec().map_err(|err| human(err.to_str())));
+
+    // executing the result and converting its stdout into an uint
+    let result = util::process(execPath)
+        .exec_with_output()
+        .map(|s| from_str::<uint>(
+                    ::std::path::BytesContainer::container_as_str(&s.output)
+                        .expect("detector's stdout is not utf8!")
+                ).expect("could not convert detector's stdout into an uint"))
+        .map_err(|err| human(err.to_str()));
+
+    // make sure that the tmpDir still existed here
+    tmpDir.close().ok();
+
+    result
 }
 
 fn rustc(root: &Path, target: &Target,

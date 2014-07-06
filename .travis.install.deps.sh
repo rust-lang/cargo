@@ -12,7 +12,12 @@ fi
 if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     # Install a 32-bit compiler for linux
     sudo apt-get update
-    sudo apt-get install gcc-multilib lib32stdc++6
+    sudo apt-get install gcc-multilib lib32stdc++6 libc6-dev-i386
+fi
+
+# CMake installation
+if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+    brew install cmake
 fi
 
 # Install both 64 and 32 bit libraries. Apparently travis barfs if you try to

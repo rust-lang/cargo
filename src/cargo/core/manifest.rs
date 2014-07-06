@@ -20,15 +20,16 @@ pub struct Manifest {
     target_dir: Path,
     sources: Vec<SourceId>,
     build: Option<String>,
+    cmake_dirs: Vec<String>,
     unused_keys: Vec<String>,
 }
 
 impl Show for Manifest {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Manifest({}, authors={}, targets={}, target_dir={}, \
-                   build={})",
+                   build={}, cmake={})",
                self.summary, self.authors, self.targets,
-               self.target_dir.display(), self.build)
+               self.target_dir.display(), self.build, self.cmake_dirs)
     }
 }
 
@@ -41,6 +42,7 @@ pub struct SerializedManifest {
     targets: Vec<Target>,
     target_dir: String,
     build: Option<String>,
+    cmake_dirs: Vec<String>,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
@@ -55,6 +57,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_str(),
             build: self.build.clone(),
+            cmake_dirs: self.cmake_dirs.clone(),
         }.encode(s)
     }
 }
@@ -185,7 +188,7 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: &Summary, targets: &[Target],
                target_dir: &Path, sources: Vec<SourceId>,
-               build: Option<String>) -> Manifest {
+               build: Option<String>, cmake_dirs: Vec<String>) -> Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
@@ -193,6 +196,7 @@ impl Manifest {
             target_dir: target_dir.clone(),
             sources: sources,
             build: build,
+            cmake_dirs: cmake_dirs,
             unused_keys: Vec::new(),
         }
     }
@@ -235,6 +239,10 @@ impl Manifest {
 
     pub fn get_build<'a>(&'a self) -> Option<&'a str> {
         self.build.as_ref().map(|s| s.as_slice())
+    }
+
+    pub fn get_cmake_dirs<'a>(&'a self) -> &'a [String] {
+        self.cmake_dirs.as_slice()
     }
 
     pub fn add_unused_key(&mut self, s: String) {
