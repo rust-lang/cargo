@@ -19,7 +19,7 @@ pub struct Manifest {
     targets: Vec<Target>,
     target_dir: Path,
     sources: Vec<SourceId>,
-    build: Option<String>,
+    build: Vec<String>,
     unused_keys: Vec<String>,
 }
 
@@ -40,7 +40,7 @@ pub struct SerializedManifest {
     authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: String,
-    build: Option<String>,
+    build: Option<Vec<String>>,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
@@ -54,7 +54,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
             authors: self.authors.clone(),
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_str(),
-            build: self.build.clone(),
+            build: if self.build.len() == 0 { None } else { Some(self.build.clone()) },
         }.encode(s)
     }
 }
@@ -185,7 +185,7 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: &Summary, targets: &[Target],
                target_dir: &Path, sources: Vec<SourceId>,
-               build: Option<String>) -> Manifest {
+               build: Vec<String>) -> Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
@@ -233,8 +233,8 @@ impl Manifest {
         self.sources.as_slice()
     }
 
-    pub fn get_build<'a>(&'a self) -> Option<&'a str> {
-        self.build.as_ref().map(|s| s.as_slice())
+    pub fn get_build<'a>(&'a self) -> &'a [String] {
+        self.build.as_slice()
     }
 
     pub fn add_unused_key(&mut self, s: String) {
