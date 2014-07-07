@@ -119,7 +119,13 @@ pub struct TomlProject {
     // FIXME #54: should be a Version to be able to be Decodable'd directly.
     pub version: String,
     pub authors: Vec<String>,
-    build: Option<String>,
+    build: Option<TomlBuildCommandsList>,
+}
+
+#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
+pub enum TomlBuildCommandsList {
+    SingleBuildCommand(String),
+    MultipleBuildCommands(Vec<String>)
 }
 
 impl TomlProject {
@@ -178,7 +184,11 @@ impl TomlManifest {
                 targets.as_slice(),
                 &Path::new("target"),
                 sources,
-                project.build.clone()),
+                match project.build {
+                    Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
+                    Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
+                    None => Vec::new()
+                }),
            nested_paths))
     }
 }
