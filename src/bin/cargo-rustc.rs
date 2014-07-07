@@ -1,4 +1,4 @@
-#![crate_id="cargo-rustc"]
+#![crate_name="cargo-rustc"]
 
 extern crate cargo;
 

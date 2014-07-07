@@ -1,4 +1,4 @@
-#![crate_id="cargo-read-manifest"]
+#![crate_name="cargo-read-manifest"]
 #![feature(phase)]
 
 extern crate cargo;
