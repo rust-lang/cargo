@@ -36,5 +36,5 @@ test!(cargo_test_simple {
                                     0 ignored; 0 measured\n\n",
                                     COMPILING, p.root().display())));
 
-    assert_that(&p.bin("tests/foo"), existing_file());
+    assert_that(&p.bin("test/foo"), existing_file());
 })

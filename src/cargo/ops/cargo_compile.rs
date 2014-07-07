@@ -30,10 +30,16 @@ use ops;
 use sources::{PathSource};
 use util::{CargoResult, Wrap, config, internal, human};
 
-pub fn compile(manifest_path: &Path, update: bool,
-               env: &str, shell: &mut MultiShell,
-               jobs: Option<uint>) -> CargoResult<()>
-{
+pub struct CompileOptions<'a> {
+    pub update: bool,
+    pub env: &'a str,
+    pub shell: &'a mut MultiShell,
+    pub jobs: Option<uint>
+}
+
+pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()> {
+    let CompileOptions { update, env, shell, jobs } = options;
+
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
     let mut source = PathSource::for_path(&manifest_path.dir_path());

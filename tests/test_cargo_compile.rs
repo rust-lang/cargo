@@ -92,7 +92,7 @@ test!(cargo_compile_with_invalid_code {
 {filename}:1 invalid rust code!
              ^~~~~~~
 Could not execute process \
-`rustc {filename} --crate-type bin --out-dir {} -L {} -L {}` (status=101)\n",
+`rustc {filename} --crate-type bin -g --out-dir {} -L {} -L {}` (status=101)\n",
             target.display(),
             target.display(),
             target.join("deps").display(),
@@ -672,7 +672,7 @@ test!(many_crate_types {
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
             "deps" => None,
-            s if s.contains("fingerprint") => None,
+            s if s.contains("fingerprint") || s.contains("dSYM") => None,
             s => Some(s.to_str())
         }
     }).collect();

@@ -80,7 +80,7 @@ pub struct NoFlags;
 
 hammer_config!(NoFlags)
 
-#[deriving(Decodable)]
+#[deriving(Show, Decodable)]
 pub struct GlobalFlags {
     verbose: bool,
     help: bool,
