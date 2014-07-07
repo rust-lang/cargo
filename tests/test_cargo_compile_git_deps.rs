@@ -82,7 +82,7 @@ test!(cargo_compile_simple_git_dep {
     let root = project.root();
     let git_root = git_project.root();
 
-    assert_that(project.cargo_process("cargo-build").arg("--verbose"),
+    assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
                               {} dep1 v0.5.0 (file:{})\n\
