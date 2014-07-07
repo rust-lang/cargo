@@ -181,7 +181,6 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
 #[cfg(test)]
 mod test {
-    use url;
     use url::Url;
     use core::source::Remote;
     use super::ident;
@@ -227,6 +226,6 @@ mod test {
     }
 
     fn url(s: &str) -> Url {
-        url::from_str(s).unwrap()
+        from_str(s).unwrap()
     }
 }

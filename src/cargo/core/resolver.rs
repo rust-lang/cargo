@@ -58,7 +58,6 @@ pub fn resolve<R: Registry>(deps: &[Dependency],
 
 #[cfg(test)]
 mod test {
-    use url;
     use hamcrest::{assert_that, equal_to, contains};
 
     use core::source::{SourceId, RegistryKind, Location, Remote};
@@ -71,7 +70,7 @@ mod test {
 
     impl ToDep for &'static str {
         fn to_dep(self) -> Dependency {
-            let url = url::from_str("http://example.com").unwrap();
+            let url = from_str("http://example.com").unwrap();
             let source_id = SourceId::new(RegistryKind, Remote(url));
             Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
         }
@@ -107,7 +106,7 @@ mod test {
     }
 
     fn dep(name: &str) -> Dependency {
-        let url = url::from_str("http://example.com").unwrap();
+        let url = from_str("http://example.com").unwrap();
         let source_id = SourceId::new(RegistryKind, Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }

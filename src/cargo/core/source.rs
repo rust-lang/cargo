@@ -1,7 +1,6 @@
 use std::fmt;
 use std::fmt::{Show, Formatter};
 
-use url;
 use url::Url;
 
 use core::{Summary, Package, PackageId};
@@ -82,7 +81,7 @@ impl Location {
         if s.starts_with("file:") {
             Ok(Local(Path::new(s.slice_from(5))))
         } else {
-            url::from_str(s).map(Remote).map_err(|e| {
+            Url::parse(s).map(Remote).map_err(|e| {
                 human(format!("invalid url `{}`: `{}", s, e))
             })
         }
@@ -146,7 +145,7 @@ impl SourceId {
 
     pub fn for_central() -> SourceId {
         SourceId::new(RegistryKind,
-                      Remote(url::from_str("https://example.com").unwrap()))
+                      Remote(Url::parse("https://example.com").unwrap()))
     }
 
     pub fn get_location<'a>(&'a self) -> &'a Location {
