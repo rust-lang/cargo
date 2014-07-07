@@ -104,16 +104,48 @@ pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
     debug: bool,
-    test: bool
+    test: bool,
+    dest: Option<String>
 }
 
 impl Profile {
-    pub fn default(env: &str) -> Profile {
+    pub fn default_dev() -> Profile {
         Profile {
-            env: env.to_str(), // run in the default environment only
+            env: "compile".to_str(), // run in the default environment only
             opt_level: 0,
             debug: true,
-            test: false // whether or not to pass --test
+            test: false, // whether or not to pass --test
+            dest: None
+        }
+    }
+
+    pub fn default_test() -> Profile {
+        Profile {
+            env: "test".to_str(), // run in the default environment only
+            opt_level: 0,
+            debug: true,
+            test: true, // whether or not to pass --test
+            dest: Some("test".to_str())
+        }
+    }
+
+    pub fn default_bench() -> Profile {
+        Profile {
+            env: "bench".to_str(), // run in the default environment only
+            opt_level: 3,
+            debug: false,
+            test: true, // whether or not to pass --test
+            dest: Some("bench".to_str())
+        }
+    }
+
+    pub fn default_release() -> Profile {
+        Profile {
+            env: "release".to_str(), // run in the default environment only
+            opt_level: 3,
+            debug: false,
+            test: false, // whether or not to pass --test
+            dest: Some("release".to_str())
         }
     }
 
@@ -125,8 +157,20 @@ impl Profile {
         self.test
     }
 
+    pub fn get_opt_level(&self) -> uint {
+        self.opt_level
+    }
+
+    pub fn get_debug(&self) -> bool {
+        self.debug
+    }
+
     pub fn get_env<'a>(&'a self) -> &'a str {
         self.env.as_slice()
+    }
+
+    pub fn get_dest<'a>(&'a self) -> Option<&'a str> {
+        self.dest.as_ref().map(|d| d.as_slice())
     }
 
     pub fn opt_level(mut self, level: uint) -> Profile {

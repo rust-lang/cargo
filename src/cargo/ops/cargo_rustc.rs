@@ -23,14 +23,36 @@ struct Context<'a, 'b> {
 
 type Job = proc():Send -> CargoResult<()>;
 
+// This is a temporary assert that ensures the consistency of the arguments
+// given the current limitations of Cargo. The long term fix is to have each
+// Target know the absolute path to the build location.
+fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
+    let mut curr: Option<Option<&str>> = None;
+
+    for t in targets.iter() {
+        let dest = t.get_profile().get_dest();
+
+        match curr {
+            Some(curr) => assert!(curr == dest),
+            None => curr = Some(dest)
+        }
+    }
+
+    curr.unwrap()
+}
+
 pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet,
                            config: &'a mut Config<'a>) -> CargoResult<()> {
 
+    if targets.is_empty() {
+        return Ok(());
+    }
+
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
-    let target_dir = pkg.get_absolute_target_dir();
+    let path_fragment = uniq_target_dest(targets);
+    let target_dir = pkg.get_absolute_target_dir().join(path_fragment.unwrap_or(""));
     let deps_target_dir = target_dir.join("deps");
-    let tests_target_dir = target_dir.join("tests");
 
     let output = try!(util::process("rustc").arg("-v").exec_with_output());
     let rustc_version = str::from_utf8(output.output.as_slice()).unwrap();
@@ -45,10 +67,6 @@ pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet
     try!(mk_target(&deps_target_dir).chain_error(||
         internal(format!("Couldn't create the directory for dependencies for {} at {}",
                  pkg.get_name(), deps_target_dir.display()))));
-
-    try!(mk_target(&tests_target_dir).chain_error(||
-        internal(format!("Couldn't create the directory for tests for {} at {}",
-                 pkg.get_name(), tests_target_dir.display()))));
 
     let mut cx = Context {
         dest: &deps_target_dir,
@@ -189,9 +207,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     proc() p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
 }
 
-fn rustc(root: &Path, target: &Target,
-         cx: &Context) -> Job {
-
+fn rustc(root: &Path, target: &Target, cx: &mut Context) -> Job {
     let crate_types = target.rustc_crate_types();
 
     log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; verbose={}",
@@ -202,6 +218,8 @@ fn rustc(root: &Path, target: &Target,
     let rustc = prepare_rustc(root, target, crate_types, cx);
 
     log!(5, "command={}", rustc);
+
+    cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_str()));
 
     proc() {
         if primary {
@@ -237,10 +255,19 @@ fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
     }
 
     let mut out = cx.dest.clone();
+    let profile = target.get_profile();
 
-    if target.get_profile().is_test() {
+    if profile.get_opt_level() != 0 {
+        into.push("--opt-level".to_str());
+        into.push(profile.get_opt_level().to_str());
+    }
+
+    if profile.get_debug() {
+        into.push("-g".to_str());
+    }
+
+    if profile.is_test() {
         into.push("--test".to_str());
-        out = out.join("tests");
     }
 
     into.push("--out-dir".to_str());
