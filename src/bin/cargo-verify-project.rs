@@ -1,4 +1,4 @@
-#![crate_id="cargo-verify-project"]
+#![crate_name="cargo-verify-project"]
 
 extern crate toml;
 extern crate getopts;

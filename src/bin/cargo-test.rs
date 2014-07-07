@@ -1,4 +1,4 @@
-#![crate_id="cargo-test"]
+#![crate_name="cargo-test"]
 #![feature(phase)]
 
 #[phase(plugin, link)]
