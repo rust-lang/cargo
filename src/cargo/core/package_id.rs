@@ -1,5 +1,4 @@
 use semver;
-use url;
 use url::Url;
 use std::fmt;
 use std::fmt::{Show,Formatter};
@@ -38,7 +37,7 @@ trait ToUrl {
 
 impl<'a> ToUrl for &'a str {
     fn to_url(self) -> Result<Url, String> {
-        url::from_str(self)
+        Url::parse(self)
     }
 }
 
