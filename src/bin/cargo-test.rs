@@ -44,18 +44,29 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    try!(ops::compile(&root, false, "test", shell, options.jobs)
-             .map(|_| None::<()>).map_err(|err| {
+    let compile_opts = ops::CompileOptions {
+        update: false,
+        env: "test",
+        shell: shell,
+        jobs: options.jobs
+    };
+
+    try!(ops::compile(&root, compile_opts).map(|_| None::<()>).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
 
-    let test_dir = root.dir_path().join("target").join("tests");
+    let test_dir = root.dir_path().join("target").join("test");
 
     let mut walk = try!(fs::walk_dir(&test_dir).map_err(|e| {
         CliError::from_error(e, 1)
     }));
 
     for file in walk {
+        // TODO: The proper fix is to have target knows its expected
+        // output and only run expected executables.
+        if file.display().to_str().as_slice().contains("dSYM") { continue; }
+        if !file.is_file() { continue; }
+
         try!(util::process(file).exec().map_err(|e| {
             CliError::from_boxed(e.box_error(), 1)
         }));
