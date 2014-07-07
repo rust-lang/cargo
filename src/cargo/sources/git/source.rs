@@ -68,7 +68,7 @@ fn ident(location: &Location) -> String {
             str::from_utf8(last).unwrap().to_str()
         }
         Remote(ref url) => {
-            let path = canonicalize_url(url.path.as_slice());
+            let path = canonicalize_url(url.path.path.as_slice());
             path.as_slice().split('/').last().unwrap().to_str()
         }
     };
