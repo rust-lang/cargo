@@ -626,3 +626,17 @@ test!(self_dependency {
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0));
 })
+
+test!(ignore_bogus_symlinks {
+    let p = project("foo")
+        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice())
+        .symlink("Notafile", "bar");
+
+    assert_that(p.cargo_process("cargo-build"), execs());
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      process(p.bin("foo")),
+      execs().with_stdout("i am foo\n"));
+})
