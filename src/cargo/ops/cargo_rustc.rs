@@ -109,9 +109,8 @@ fn compile(targets: &[&Target], pkg: &Package,
     let mut cmds = Vec::new();
 
     // TODO: Should this be on the target or the package?
-    match pkg.get_manifest().get_build() {
-        Some(cmd) => cmds.push(compile_custom(pkg, cmd, cx)),
-        None => {}
+    for build_cmd in pkg.get_manifest().get_build().iter() {
+        cmds.push(compile_custom(pkg, build_cmd.as_slice(), cx));
     }
 
     // After the custom command has run, execute rustc for all targets of our

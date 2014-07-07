@@ -369,6 +369,70 @@ test!(custom_build {
                        .with_stderr(""));
 })
 
+test!(custom_multiple_build {
+    let mut build1 = project("builder1");
+    build1 = build1
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() {
+                let args = ::std::os::args();
+                assert_eq!(args.get(1), &"hello".to_string());
+                assert_eq!(args.get(2), &"world".to_string());
+            }
+        "#);
+    assert_that(build1.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    let mut build2 = project("builder2");
+    build2 = build2
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "bar"
+        "#)
+        .file("src/bar.rs", r#"
+            fn main() {
+                let args = ::std::os::args();
+                assert_eq!(args.get(1), &"cargo".to_string());
+            }
+        "#);
+    assert_that(build2.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = [ "{} hello world", "{} cargo" ]
+
+            [[bin]] name = "foo"
+        "#, escape_path(&build1.bin("foo")), escape_path(&build2.bin("bar"))))
+        .file("src/foo.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0)
+                       .with_stdout(format!("   Compiling foo v0.5.0 (file:{})\n",
+                                            p.root().display()))
+                       .with_stderr(""));
+})
+
 test!(custom_build_failure {
     let mut build = project("builder");
     build = build
@@ -411,6 +475,67 @@ Could not execute process `{}` (status=101)\n\
 task '<main>' failed at 'nope', {filename}:2\n\
 \n\
 ", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP))));
+})
+
+test!(custom_second_build_failure {
+    let mut build1 = project("builder1");
+    build1 = build1
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]] name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() { println!("Hello!"); }
+        "#);
+    assert_that(build1.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    let mut build2 = project("builder2");
+    build2 = build2
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/bar.rs", r#"
+            fn main() { fail!("nope") }
+        "#);
+    assert_that(build2.cargo_process("cargo-build"), execs().with_status(0));
+
+
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = [ "{}", "{}" ]
+
+            [[bin]]
+            name = "foo"
+        "#, escape_path(&build1.bin("foo")), escape_path(&build2.bin("bar"))))
+        .file("src/foo.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(101).with_stderr(format!("\
+Could not execute process `{}` (status=101)\n\
+--- stderr\n\
+task '<main>' failed at 'nope', {filename}:2\n\
+\n\
+", build2.bin("bar").display(), filename = format!("src{}bar.rs", path::SEP))));
 })
 
 test!(custom_build_env_vars {
