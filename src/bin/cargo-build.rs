@@ -14,6 +14,7 @@ extern crate serialize;
 use std::os;
 use cargo::{execute_main_without_stdin};
 use cargo::ops;
+use cargo::ops::CompileOptions;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_project_manifest;
@@ -23,6 +24,7 @@ pub struct Options {
     manifest_path: Option<String>,
     update_remotes: bool,
     jobs: Option<uint>,
+    release: bool,
 }
 
 hammer_config!(Options "Build the current project", |c| {
@@ -50,7 +52,20 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let update = options.update_remotes;
     let jobs = options.jobs;
 
-    ops::compile(&root, update, "compile", shell, jobs).map(|_| None).map_err(|err| {
+    let env = if options.release {
+        "release"
+    } else {
+        "compile"
+    };
+
+    let opts = CompileOptions {
+        update: options.update_remotes,
+        env: env,
+        shell: shell,
+        jobs: options.jobs
+    };
+
+    ops::compile(&root, opts).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

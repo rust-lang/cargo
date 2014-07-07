@@ -257,10 +257,10 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
     log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
 
     fn target_profiles(target: &TomlTarget) -> Vec<Profile> {
-        let mut ret = vec!(Profile::default("compile"));
+        let mut ret = vec!(Profile::default_dev(), Profile::default_release());
 
         match target.test {
-            Some(true) | None => ret.push(Profile::default("test").test(true)),
+            Some(true) | None => ret.push(Profile::default_test()),
             _ => {}
         };
 
