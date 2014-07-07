@@ -1,4 +1,4 @@
-#![crate_id="cargo"]
+#![crate_name="cargo"]
 #![crate_type="rlib"]
 
 #![feature(macro_rules, phase)]
