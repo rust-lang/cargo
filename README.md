@@ -2,6 +2,24 @@ Cargo downloads your Rust project’s dependencies and compiles your project.
 
 Learn more at http://crates.io/.
 
+## Installing cargo
+
+Cargo has nightlies available for use. The cargo source is not always guaranteed
+to compile on rust master as it may lag behind by a day or two. Nightlies,
+however, will run regardless of this fact!
+
+```
+$ curl -O http://static.rust-lang.org/cargo-dist/cargo-nightly-linux.tar.gz
+$ tar xf cargo-nightly-linux.tar.gz
+$ ./cargo-nightly/bin/cargo build
+```
+
+The current nightlies available are:
+
+* `cargo-nightly-linux`
+* `cargo-nightly-win`
+* `cargo-nightly-mac`
+
 ## Compiling cargo
 
 You'll want to clone cargo using --recursive on git, to clone in its submodule
