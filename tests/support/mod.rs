@@ -98,7 +98,11 @@ impl ProjectBuilder {
     }
 
     pub fn bin(&self, b: &str) -> Path {
-        self.root.join("target").join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+        self.build_dir().join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+    }
+
+    pub fn build_dir(&self) -> Path {
+        self.root.join("target")
     }
 
     pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {

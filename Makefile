@@ -14,6 +14,7 @@ export PATH := $(PATH):$(CURDIR)/rustc/bin
 # Link flags to pull in dependencies
 BINS = cargo \
 	     cargo-build \
+	     cargo-clean \
 	     cargo-read-manifest \
 	     cargo-rustc \
 	     cargo-verify-project \
