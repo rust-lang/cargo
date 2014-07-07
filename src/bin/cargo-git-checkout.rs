@@ -1,4 +1,4 @@
-#![crate_id="cargo-git-checkout"]
+#![crate_name="cargo-git-checkout"]
 #![feature(phase)]
 
 extern crate cargo;

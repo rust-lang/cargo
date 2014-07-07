@@ -23,8 +23,8 @@ BINS = cargo \
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
 DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
-TOML = libs/toml-rs/build/$(shell $(RUSTC) --crate-file-name libs/toml-rs/src/toml.rs)
-HAMMER = libs/hammer.rs/target/$(shell $(RUSTC) --crate-type=lib --crate-file-name libs/hammer.rs/src/hammer.rs)
+TOML = libs/toml-rs/build/$(shell $(RUSTC) --print-file-name libs/toml-rs/src/toml.rs)
+HAMMER = libs/hammer.rs/target/$(shell $(RUSTC) --crate-type=lib --print-file-name libs/hammer.rs/src/hammer.rs)
 HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
 LIBCARGO = target/libcargo.timestamp
 BIN_TARGETS = $(patsubst %,target/%,$(BINS))
