@@ -310,6 +310,10 @@ impl Target {
         }
     }
 
+    pub fn get_name<'a>(&'a self) -> &'a str {
+        self.name.as_slice()
+    }
+
     pub fn get_path<'a>(&'a self) -> &'a Path {
         &self.path
     }
