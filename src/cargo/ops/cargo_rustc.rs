@@ -121,6 +121,7 @@ fn compile(targets: &[&Target], pkg: &Package,
     // TODO: Figure out how this works with targets
     let fingerprint_loc = cx.dest.join(format!(".{}.fingerprint",
                                                pkg.get_name()));
+
     let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx,
                                                 targets));
 
@@ -244,10 +245,15 @@ fn prepare_rustc(root: &Path, target: &Target, crate_types: Vec<&str>,
         .env("RUST_LOG", None) // rustc is way too noisy
 }
 
-fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
-                   cx: &Context) {
+fn build_base_args(into: &mut Args,
+                   target: &Target,
+                   crate_types: Vec<&str>,
+                   cx: &Context)
+{
+    let metadata = target.get_metadata();
+
     // TODO: Handle errors in converting paths into args
-    into.push(target.get_path().display().to_str());
+    into.push(target.get_src_path().display().to_str());
 
     into.push("--crate-name".to_str());
     into.push(target.get_name().to_str());
@@ -271,6 +277,17 @@ fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
 
     if profile.is_test() {
         into.push("--test".to_str());
+    }
+
+    match metadata {
+        Some(m) => {
+            into.push("-C".to_str());
+            into.push(format!("metadata={}", m.metadata));
+
+            into.push("-C".to_str());
+            into.push(format!("extra-filename={}", m.extra_filename));
+        }
+        None => {}
     }
 
     if target.is_lib() {

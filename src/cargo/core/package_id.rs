@@ -9,7 +9,7 @@ use serialize::{
     Decoder
 };
 
-use util::{CargoResult, CargoError};
+use util::{CargoResult, CargoError, short_hash};
 use core::source::SourceId;
 
 trait ToVersion {
@@ -53,7 +53,7 @@ impl<'a> ToUrl for &'a Url {
     }
 }
 
-#[deriving(Clone,PartialEq)]
+#[deriving(Clone, PartialEq)]
 pub struct PackageId {
     name: String,
     version: semver::Version,
@@ -74,6 +74,12 @@ impl CargoError for PackageIdError {
         }
     }
     fn is_human(&self) -> bool { true }
+}
+
+#[deriving(PartialEq, Hash, Clone, Encodable)]
+pub struct Metadata {
+    pub metadata: String,
+    pub extra_filename: String
 }
 
 impl PackageId {
@@ -97,6 +103,14 @@ impl PackageId {
 
     pub fn get_source_id<'a>(&'a self) -> &'a SourceId {
         &self.source_id
+    }
+
+    pub fn generate_metadata(&self) -> Metadata {
+        let metadata = format!("{}:-:{}:-:{}", self.name, self.version, self.source_id);
+        let extra_filename = short_hash(
+            &(self.name.as_slice(), self.version.to_str(), &self.source_id));
+
+        Metadata { metadata: metadata, extra_filename: extra_filename }
     }
 }
 
