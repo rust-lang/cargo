@@ -81,7 +81,7 @@ style:
 	sh tests/check-style.sh
 
 no-exes:
-	find $$(git ls-files) -perm +111 -type f \
+	find $$(git ls-files | grep -v '^lib') -perm +111 -type f \
 		-not -name '*.sh' -not -name '*.rs' | grep '.*' \
 		&& exit 1 || exit 0
 
