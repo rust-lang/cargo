@@ -66,6 +66,8 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         // output and only run expected executables.
         if file.display().to_str().as_slice().contains("dSYM") { continue; }
         if !file.is_file() { continue; }
+        // Skip files beginning with '.', such as fingerprint files
+        if file.filename().map_or(false, |f| f.starts_with(b".")) { continue; }
 
         try!(util::process(file).exec().map_err(|e| {
             CliError::from_boxed(e.box_error(), 1)
