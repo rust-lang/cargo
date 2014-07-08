@@ -39,7 +39,7 @@ pub fn project_layout(root: &Path) -> Layout {
         bins.push(root.join("src/main.rs"));
     }
 
-    fs::readdir(&root.join("src/bin"))
+    let _ = fs::readdir(&root.join("src/bin"))
         .map(|v| v.move_iter())
         .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
         .map(|mut i| i.collect())
@@ -176,8 +176,8 @@ pub enum TomlBuildCommandsList {
 }
 
 impl TomlProject {
-    pub fn to_package_id(&self, namespace: &Location) -> CargoResult<PackageId> {
-        PackageId::new(self.name.as_slice(), self.version.as_slice(), namespace)
+    pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
+        PackageId::new(self.name.as_slice(), self.version.as_slice(), source_id)
     }
 }
 
@@ -301,7 +301,7 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
         }
 
-        let pkgid = try!(project.to_package_id(source_id.get_location()));
+        let pkgid = try!(project.to_package_id(source_id));
         let summary = Summary::new(&pkgid, deps.as_slice());
         Ok((Manifest::new(
                 &summary,

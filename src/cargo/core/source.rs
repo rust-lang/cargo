@@ -1,12 +1,13 @@
 use std::fmt;
 use std::fmt::{Show, Formatter};
+use serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
 
 use core::{Summary, Package, PackageId};
 use sources::{PathSource, GitSource};
 use sources::git;
-use util::{Config, CargoResult};
+use util::{Config, CargoResult, CargoError};
 use util::errors::human;
 
 /// A Source finds and downloads remote packages based on names and
@@ -45,7 +46,7 @@ pub trait Source {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
-#[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[deriving(Encodable, Decodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SourceKind {
     /// GitKind(<git reference>) represents a git repository
     GitKind(String),
@@ -61,7 +62,22 @@ pub enum Location {
     Remote(Url),
 }
 
-#[deriving(Clone, Eq)]
+type Error = Box<CargoError + Send>;
+
+impl<E, D: Decoder<E>> Decodable<D, E> for Location {
+    fn decode(d: &mut D) -> Result<Location, E> {
+        let url: String  = raw_try!(Decodable::decode(d));
+        Ok(Location::parse(url.as_slice()).unwrap())
+    }
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for Location {
+    fn encode(&self, e: &mut S) -> Result<(), E> {
+        self.to_str().encode(e)
+    }
+}
+
+#[deriving(Encodable, Decodable, Clone, Eq)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub location: Location,
@@ -97,7 +113,7 @@ impl Show for SourceId {
             SourceId { kind: GitKind(ref reference), ref location } => {
                 try!(write!(f, "{}", location));
                 if reference.as_slice() != "master" {
-                    try!(write!(f, " (ref={})", reference));
+                    try!(write!(f, "#ref={}", reference));
                 }
             },
             SourceId { kind: RegistryKind, .. } => {

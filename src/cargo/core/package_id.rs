@@ -10,7 +10,7 @@ use serialize::{
 };
 
 use util::{CargoResult, CargoError};
-use core::source::Location;
+use core::source::SourceId;
 
 trait ToVersion {
     fn to_version(self) -> Result<semver::Version, String>;
@@ -57,7 +57,7 @@ impl<'a> ToUrl for &'a Url {
 pub struct PackageId {
     name: String,
     version: semver::Version,
-    namespace: Location,
+    source_id: SourceId,
 }
 
 #[deriving(Clone, Show, PartialEq)]
@@ -78,12 +78,12 @@ impl CargoError for PackageIdError {
 
 impl PackageId {
     pub fn new<T: ToVersion>(name: &str, version: T,
-                             ns: &Location) -> CargoResult<PackageId> {
+                             sid: &SourceId) -> CargoResult<PackageId> {
         let v = try!(version.to_version().map_err(InvalidVersion));
         Ok(PackageId {
             name: name.to_str(),
             version: v,
-            namespace: ns.clone()
+            source_id: sid.clone()
         })
     }
 
@@ -95,8 +95,8 @@ impl PackageId {
         &self.version
     }
 
-    pub fn get_namespace<'a>(&'a self) -> &'a Location {
-        &self.namespace
+    pub fn get_source_id<'a>(&'a self) -> &'a SourceId {
+        &self.source_id
     }
 }
 
@@ -106,8 +106,8 @@ impl Show for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{} v{}", self.name, self.version));
 
-        if self.namespace.to_str().as_slice() != central_repo {
-            try!(write!(f, " ({})", self.namespace));
+        if self.source_id.to_str().as_slice() != central_repo {
+            try!(write!(f, " ({})", self.source_id));
         }
 
         Ok(())
@@ -118,31 +118,29 @@ impl<D: Decoder<Box<CargoError + Send>>>
     Decodable<D,Box<CargoError + Send>>
     for PackageId
 {
-    fn decode(d: &mut D) -> Result<PackageId, Box<CargoError + Send>> {
-        let vector: Vec<String> = try!(Decodable::decode(d));
+    fn decode(d: &mut D) -> CargoResult<PackageId> {
+        let (name, version, source_id): (String, String, SourceId) = try!(Decodable::decode(d));
 
-        PackageId::new(
-            vector.get(0).as_slice(),
-            vector.get(1).as_slice(),
-            &try!(Location::parse(vector.get(2).as_slice())))
+        PackageId::new(name.as_slice(), version.as_slice(), &source_id)
     }
 }
 
 impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
     fn encode(&self, e: &mut S) -> Result<(), E> {
-        (vec!(self.name.clone(), self.version.to_str()),
-              self.namespace.to_str()).encode(e)
+        (self.name.clone(), self.version.to_str(), self.source_id.clone()).encode(e)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{PackageId, central_repo};
-    use core::source::Location;
+    use core::source::{Location, RegistryKind, SourceId};
 
     #[test]
     fn invalid_version_handled_nicely() {
-        let repo = Location::parse(central_repo).unwrap();
+        let loc = Location::parse(central_repo).unwrap();
+        let repo = SourceId::new(RegistryKind, loc);
+
         assert!(PackageId::new("foo", "1.0", &repo).is_err());
         assert!(PackageId::new("foo", "1", &repo).is_err());
         assert!(PackageId::new("foo", "bar", &repo).is_err());

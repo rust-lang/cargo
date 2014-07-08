@@ -149,7 +149,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{})\n\
+                              {} dep1 v0.5.0 (file:{}#ref=branchy)\n\
                               {} foo v0.5.0 (file:{})\n",
                              UPDATING, git_root.display(),
                              COMPILING, git_root.display(),
@@ -214,7 +214,7 @@ test!(cargo_compile_git_dep_tag {
     assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{})\n\
+                              {} dep1 v0.5.0 (file:{}#ref=v0.1.0)\n\
                               {} foo v0.5.0 (file:{})\n",
                              UPDATING, git_root.display(),
                              COMPILING, git_root.display(),
