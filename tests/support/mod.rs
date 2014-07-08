@@ -52,10 +52,35 @@ impl FileBuilder {
 }
 
 #[deriving(PartialEq,Clone)]
+struct SymlinkBuilder {
+    dst: Path,
+    src: Path
+}
+
+impl SymlinkBuilder {
+    pub fn new(dst: Path, src: Path) -> SymlinkBuilder {
+        SymlinkBuilder { dst: dst, src: src }
+    }
+
+    fn mk(&self) -> Result<(), String> {
+        try!(mkdir_recursive(&self.dirname()));
+
+        fs::symlink(&self.dst, &self.src)
+            .with_err_msg(format!("Could not create symlink; dst={} src={}",
+                                   self.dst.display(), self.src.display()))
+    }
+
+    fn dirname(&self) -> Path {
+        Path::new(self.src.dirname())
+    }
+}
+
+#[deriving(PartialEq,Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: Path,
-    files: Vec<FileBuilder>
+    files: Vec<FileBuilder>,
+    symlinks: Vec<SymlinkBuilder>
 }
 
 impl ProjectBuilder {
@@ -63,7 +88,8 @@ impl ProjectBuilder {
         ProjectBuilder {
             name: name.to_str(),
             root: root,
-            files: vec!()
+            files: vec!(),
+            symlinks: vec!()
         }
     }
 
@@ -93,6 +119,13 @@ impl ProjectBuilder {
         self
     }
 
+    pub fn symlink<T: BytesContainer>(mut self, dst: T,
+                                      src: T) -> ProjectBuilder {
+        self.symlinks.push(SymlinkBuilder::new(self.root.join(dst),
+                                               self.root.join(src)));
+        self
+    }
+
     // TODO: return something different than a ProjectBuilder
     pub fn build<'a>(&'a self) -> &'a ProjectBuilder {
         match self.build_with_result() {
@@ -110,6 +143,10 @@ impl ProjectBuilder {
 
         for file in self.files.iter() {
             try!(file.mk());
+        }
+
+        for symlink in self.symlinks.iter() {
+            try!(symlink.mk());
         }
 
         Ok(())
