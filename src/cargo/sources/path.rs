@@ -106,7 +106,12 @@ impl Source for PathSource {
 
         fn walk(path: &Path, is_root: bool) -> CargoResult<u64> {
             if !path.is_dir() {
-                return Ok(try!(fs::stat(path)).modified)
+                // An fs::stat error here is either because path is a
+                // broken symlink, a permissions error, or a race
+                // condition where this path was rm'ed - either way,
+                // we can ignore the error and treat the path's mtime
+                // as 0.
+                return Ok(fs::stat(path).map(|s| s.modified).unwrap_or(0))
             }
             // Don't recurse into any sub-packages that we have
             if !is_root && path.join("Cargo.toml").exists() { return Ok(0) }
