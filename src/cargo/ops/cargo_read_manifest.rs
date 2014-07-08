@@ -4,11 +4,12 @@ use util;
 use core::{Package,Manifest,SourceId};
 use util::{CargoResult, human};
 use util::important_paths::find_project_manifest_exact;
+use util::toml::{Layout, project_layout};
 
-pub fn read_manifest(contents: &[u8], source_id: &SourceId)
+pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId)
     -> CargoResult<(Manifest, Vec<Path>)>
 {
-    util::toml::to_manifest(contents, source_id).map_err(human)
+    util::toml::to_manifest(contents, source_id, layout).map_err(human)
 }
 
 pub fn read_package(path: &Path, source_id: &SourceId)
@@ -17,8 +18,10 @@ pub fn read_package(path: &Path, source_id: &SourceId)
     log!(5, "read_package; path={}; source-id={}", path.display(), source_id);
     let mut file = try!(File::open(path));
     let data = try!(file.read_to_end());
-    let (manifest, nested) = try!(read_manifest(data.as_slice(),
-                                                      source_id));
+
+    let layout = project_layout(&path.dir_path());
+    let (manifest, nested) = 
+        try!(read_manifest(data.as_slice(), layout, source_id));
 
     Ok((Package::new(manifest, path, source_id), nested))
 }

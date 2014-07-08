@@ -219,7 +219,7 @@ fn rustc(root: &Path, target: &Target, cx: &mut Context) -> Job {
 
     log!(5, "command={}", rustc);
 
-    cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_str()));
+    let _ = cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_str()));
 
     proc() {
         if primary {
@@ -249,12 +249,16 @@ fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
                    cx: &Context) {
     // TODO: Handle errors in converting paths into args
     into.push(target.get_path().display().to_str());
+
+    into.push("--crate-name".to_str());
+    into.push(target.get_name().to_str());
+
     for crate_type in crate_types.iter() {
         into.push("--crate-type".to_str());
         into.push(crate_type.to_str());
     }
 
-    let mut out = cx.dest.clone();
+    let out = cx.dest.clone();
     let profile = target.get_profile();
 
     if profile.get_opt_level() != 0 {
@@ -270,8 +274,13 @@ fn build_base_args(into: &mut Args, target: &Target, crate_types: Vec<&str>,
         into.push("--test".to_str());
     }
 
-    into.push("--out-dir".to_str());
-    into.push(out.display().to_str());
+    if target.is_lib() {
+        into.push("--out-dir".to_str());
+        into.push(out.display().to_str());
+    } else {
+        into.push("-o".to_str());
+        into.push(out.join(target.get_name()).display().to_str());
+    }
 }
 
 fn build_deps_args(dst: &mut Args, cx: &Context) {

@@ -92,8 +92,8 @@ test!(cargo_compile_with_invalid_code {
 {filename}:1 invalid rust code!
              ^~~~~~~
 Could not execute process \
-`rustc {filename} --crate-type bin -g --out-dir {} -L {} -L {}` (status=101)\n",
-            target.display(),
+`rustc {filename} --crate-name foo --crate-type bin -g -o {} -L {} -L {}` (status=101)\n",
+            target.join("foo").display(),
             target.display(),
             target.join("deps").display(),
             filename = format!("src{}foo.rs", path::SEP)).as_slice()));
@@ -168,6 +168,142 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
                              COMPILING, bar.display(),
                              COMPILING, main.display()))
         .with_stderr(""));
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout("test passed\n"));
+})
+
+test!(cargo_compile_with_nested_deps_inferred {
+    let mut p = project("foo");
+    let bar = p.root().join("bar");
+    let baz = p.root().join("baz");
+
+    p = p
+        .file(".cargo/config", format!(r#"
+            paths = ["{}", "{}"]
+        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies]
+
+            bar = "0.5.0"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies]
+
+            baz = "0.5.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            extern crate baz;
+
+            pub fn gimme() -> String {
+                baz::gimme()
+            }
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+
+            name = "baz"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("baz/src/lib.rs", r#"
+            pub fn gimme() -> String {
+                "test passed".to_str()
+            }
+        "#);
+
+    p.cargo_process("cargo-build")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout("test passed\n"));
+})
+
+test!(cargo_compile_with_nested_deps_correct_bin {
+    let mut p = project("foo");
+    let bar = p.root().join("bar");
+    let baz = p.root().join("baz");
+
+    p = p
+        .file(".cargo/config", format!(r#"
+            paths = ["{}", "{}"]
+        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies]
+
+            bar = "0.5.0"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/main.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies]
+
+            baz = "0.5.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            extern crate baz;
+
+            pub fn gimme() -> String {
+                baz::gimme()
+            }
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+
+            name = "baz"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("baz/src/lib.rs", r#"
+            pub fn gimme() -> String {
+                "test passed".to_str()
+            }
+        "#);
+
+    p.cargo_process("cargo-build")
+        .exec_with_output()
+        .assert();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -511,18 +647,16 @@ test!(custom_build_in_dependency {
             version = "0.5.0"
             authors = ["wycats@example.com"]
             build = "{}"
-
-            [[lib]]
-            name = "bar"
         "#, escape_path(&build.bin("foo"))))
-        .file("bar/src/bar.rs", r#"
+        .file("bar/src/lib.rs", r#"
             pub fn bar() {}
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0));
 })
 
-test!(many_crate_types {
+// this is testing that src/<pkg-name>.rs still works (for now)
+test!(many_crate_types_old_style_lib_location {
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
@@ -538,6 +672,44 @@ test!(many_crate_types {
             crate_type = ["rlib", "dylib"]
         "#)
         .file("src/foo.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+
+    let files = fs::readdir(&p.root().join("target")).assert();
+    let mut files: Vec<String> = files.iter().filter_map(|f| {
+        match f.filename_str().unwrap() {
+            "deps" => None,
+            s if s.contains("fingerprint") || s.contains("dSYM") => None,
+            s => Some(s.to_str())
+        }
+    }).collect();
+    files.sort();
+    let file0 = files.get(0).as_slice();
+    let file1 = files.get(1).as_slice();
+    println!("{} {}", file0, file1);
+    assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
+    assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
+            file1.ends_with(os::consts::DLL_SUFFIX));
+})
+
+test!(many_crate_types_correct {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[lib]]
+
+            name = "foo"
+            crate_type = ["rlib", "dylib"]
+        "#)
+        .file("src/lib.rs", r#"
             pub fn foo() {}
         "#);
     assert_that(p.cargo_process("cargo-build"),
