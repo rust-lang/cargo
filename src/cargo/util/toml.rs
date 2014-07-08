@@ -1,9 +1,9 @@
 use serialize::Decodable;
 use std::collections::HashMap;
 use std::str;
+use std::io::fs;
 use toml;
 
-use glob::glob;
 use core::{SourceId, GitKind};
 use core::manifest::{LibKind, Lib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
@@ -39,10 +39,11 @@ pub fn project_layout(root: &Path) -> Layout {
         bins.push(root.join("src/main.rs"));
     }
 
-    // TODO: glob takes a &str even though Paths may have non-UTF8 chars. This
-    // seems like a bug in libglob
-    let found = glob(root.join("src/bin/*.rs").display().to_str().as_slice()).collect();
-    bins.push_all_move(found);
+    fs::readdir(&root.join("src/bin"))
+        .map(|v| v.move_iter())
+        .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
+        .map(|mut i| i.collect())
+        .map(|found| bins.push_all_move(found));
 
     Layout {
         lib: lib,
