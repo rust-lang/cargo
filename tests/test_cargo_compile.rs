@@ -627,7 +627,8 @@ test!(self_dependency {
                 execs().with_status(0));
 })
 
-test!(ignore_bogus_symlinks {
+#[cfg(not(windows))]
+test!(ignore_broken_symlinks {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice())
