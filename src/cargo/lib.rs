@@ -8,6 +8,7 @@ extern crate term;
 extern crate url;
 extern crate serialize;
 extern crate semver;
+extern crate glob;
 extern crate toml;
 
 #[phase(plugin, link)]
