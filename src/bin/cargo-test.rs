@@ -9,7 +9,7 @@ extern crate serialize;
 extern crate hammer;
 
 use std::os;
-use std::io::fs;
+use std::io::{UserExecute, fs};
 
 use cargo::ops;
 use cargo::{execute_main_without_stdin};
@@ -65,7 +65,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         // TODO: The proper fix is to have target knows its expected
         // output and only run expected executables.
         if file.display().to_str().as_slice().contains("dSYM") { continue; }
-        if !file.is_file() { continue; }
+        if !is_executable(&file) { continue; }
 
         try!(util::process(file).exec().map_err(|e| {
             CliError::from_boxed(e.box_error(), 1)
@@ -73,4 +73,9 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     }
 
     Ok(None)
+}
+
+fn is_executable(path: &Path) -> bool {
+    if !path.is_file() { return false; }
+    path.stat().map(|stat| stat.perm.intersects(UserExecute)).unwrap_or(false)
 }

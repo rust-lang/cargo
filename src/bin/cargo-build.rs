@@ -49,9 +49,6 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    let update = options.update_remotes;
-    let jobs = options.jobs;
-
     let env = if options.release {
         "release"
     } else {

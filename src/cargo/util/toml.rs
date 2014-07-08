@@ -1,6 +1,7 @@
 use serialize::Decodable;
 use std::collections::HashMap;
 use std::str;
+use std::io::fs;
 use toml;
 
 use core::{SourceId, GitKind};
@@ -9,8 +10,52 @@ use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::source::Location;
 use util::{CargoResult, Require, human};
 
+#[deriving(Clone)]
+pub struct Layout {
+    lib: Option<Path>,
+    bins: Vec<Path>
+}
+
+impl Layout {
+    fn main<'a>(&'a self) -> Option<&'a Path> {
+        self.bins.iter().find(|p| {
+            match p.filename_str() {
+                Some(s) => s == "main.rs",
+                None => false
+            }
+        })
+    }
+}
+
+pub fn project_layout(root: &Path) -> Layout {
+    let mut lib = None;
+    let mut bins = vec!();
+
+    if root.join("src/lib.rs").exists() {
+        lib = Some(root.join("src/lib.rs"));
+    }
+
+    if root.join("src/main.rs").exists() {
+        bins.push(root.join("src/main.rs"));
+    }
+
+    fs::readdir(&root.join("src/bin"))
+        .map(|v| v.move_iter())
+        .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
+        .map(|mut i| i.collect())
+        .map(|found| bins.push_all_move(found));
+
+    Layout {
+        lib: lib,
+        bins: bins
+    }
+}
+
 pub fn to_manifest(contents: &[u8],
-                   source_id: &SourceId) -> CargoResult<(Manifest, Vec<Path>)> {
+                   source_id: &SourceId,
+                   layout: Layout)
+                   -> CargoResult<(Manifest, Vec<Path>)>
+{
     let contents = try!(str::from_utf8(contents).require(|| {
         human("Cargo.toml is not valid UTF-8")
     }));
@@ -22,7 +67,7 @@ pub fn to_manifest(contents: &[u8],
                                             manifest\n\n{}", e)))
     };
 
-    let pair = try!(toml_manifest.to_manifest(source_id).map_err(|err| {
+    let pair = try!(toml_manifest.to_manifest(source_id, &layout).map_err(|err| {
         human(format!("Cargo.toml is not a valid manifest\n\n{}", err))
     }));
     let (mut manifest, paths) = pair;
@@ -55,8 +100,6 @@ pub fn to_manifest(contents: &[u8],
             _ => m.add_unused_key(key),
         }
     }
-
-
 }
 
 pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
@@ -145,16 +188,98 @@ struct Context<'a> {
     nested_paths: &'a mut Vec<Path>
 }
 
+// These functions produce the equivalent of specific manifest entries. One
+// wrinkle is that certain paths cannot be represented in the manifest due
+// to Toml's UTF-8 requirement. This could, in theory, mean that certain
+// otherwise acceptable executable names are not used when inside of
+// `src/bin/*`, but it seems ok to not build executables with non-UTF8
+// paths.
+fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
+    layout.lib.as_ref().map(|lib| {
+        vec![TomlTarget {
+            name: name.to_str(),
+            crate_type: None,
+            path: Some(lib.display().to_str()),
+            test: None
+        }]
+    })
+}
+
+fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
+    Some(layout.bins.iter().filter_map(|bin| {
+        let name = if bin.as_str() == Some("src/main.rs") {
+            Some(name.to_str())
+        } else {
+            bin.filestem_str().map(|f| f.to_str())
+        };
+
+        name.map(|name| {
+            TomlTarget {
+                name: name,
+                crate_type: None,
+                path: Some(bin.display().to_str()),
+                test: None
+            }
+        })
+    }).collect())
+}
+
 impl TomlManifest {
-    pub fn to_manifest(&self, source_id: &SourceId)
+    pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
         -> CargoResult<(Manifest, Vec<Path>)>
     {
         let mut sources = vec!();
         let mut nested_paths = vec!();
 
+        let project = self.project.as_ref().or_else(|| self.package.as_ref());
+        let project = try!(project.require(|| {
+            human("No `package` or `project` section found.")
+        }));
+
+
+        // If we have no lib at all, use the inferred lib if available
+        // If we have a lib with a path, we're done
+        // If we have a lib with no path, use the inferred lib or_else package name
+
+        let lib = if self.lib.is_none() || self.lib.get_ref().is_empty() {
+            inferred_lib_target(project.name.as_slice(), layout)
+        } else {
+            Some(self.lib.get_ref().iter().map(|t| {
+                if layout.lib.is_some() && t.path.is_none() {
+                    TomlTarget {
+                        name: t.name.clone(),
+                        crate_type: t.crate_type.clone(),
+                        path: layout.lib.as_ref().map(|p| p.display().to_str()),
+                        test: t.test
+                    }
+                } else {
+                    t.clone()
+                }
+            }).collect())
+        };
+
+        let bins = if self.bin.is_none() || self.bin.get_ref().is_empty() {
+            inferred_bin_targets(project.name.as_slice(), layout)
+        } else {
+            let bin = layout.main();
+
+            Some(self.bin.get_ref().iter().map(|t| {
+                if bin.is_some() && t.path.is_none() {
+                    TomlTarget {
+                        name: t.name.clone(),
+                        crate_type: t.crate_type.clone(),
+                        path: bin.as_ref().map(|p| p.display().to_str()),
+                        test: t.test
+                    }
+                } else {
+                    t.clone()
+                }
+            }).collect())
+        };
+
         // Get targets
-        let targets = normalize(self.lib.as_ref().map(|l| l.as_slice()),
-                                self.bin.as_ref().map(|b| b.as_slice()));
+        let targets = normalize(lib.as_ref().map(|l| l.as_slice()),
+                                bins.as_ref().map(|b| b.as_slice()));
 
         if targets.is_empty() {
             debug!("manifest has no build targets; project={}", self.project);
@@ -175,11 +300,6 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, false, self.dependencies.as_ref()));
             try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
         }
-
-        let project = self.project.as_ref().or_else(|| self.package.as_ref());
-        let project = try!(project.require(|| {
-            human("No `package` or `project` section found.")
-        }));
 
         let pkgid = try!(project.to_package_id(source_id.get_location()));
         let summary = Summary::new(&pkgid, deps.as_slice());
@@ -257,7 +377,9 @@ struct TomlTarget {
 }
 
 fn normalize(lib: Option<&[TomlLibTarget]>,
-             bin: Option<&[TomlBinTarget]>) -> Vec<Target> {
+             bin: Option<&[TomlBinTarget]>)
+             -> Vec<Target>
+{
     log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
 
     fn target_profiles(target: &TomlTarget) -> Vec<Profile> {
