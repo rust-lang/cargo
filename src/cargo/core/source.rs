@@ -46,7 +46,7 @@ pub trait Source {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
-#[deriving(Encodable, Decodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[deriving(Encodable, Decodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SourceKind {
     /// GitKind(<git reference>) represents a git repository
     GitKind(String),
@@ -56,7 +56,7 @@ pub enum SourceKind {
     RegistryKind
 }
 
-#[deriving(Clone, PartialEq, Eq)]
+#[deriving(Clone, PartialEq, Eq, Hash)]
 pub enum Location {
     Local(Path),
     Remote(Url),
@@ -77,7 +77,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Location {
     }
 }
 
-#[deriving(Encodable, Decodable, Clone, Eq)]
+#[deriving(Encodable, Decodable, Clone, Eq, Hash)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub location: Location,

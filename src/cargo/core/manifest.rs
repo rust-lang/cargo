@@ -9,6 +9,7 @@ use core::{
     PackageId,
     Summary
 };
+use core::package_id::Metadata;
 use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
@@ -99,13 +100,13 @@ pub enum TargetKind {
     BinTarget
 }
 
-#[deriving(Clone, Hash, PartialEq)]
+#[deriving(Encodable, Decodable, Clone, Hash, PartialEq)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
     debug: bool,
     test: bool,
-    dest: Option<String>
+    dest: Option<String>,
 }
 
 impl Profile {
@@ -193,15 +194,18 @@ impl Profile {
 pub struct Target {
     kind: TargetKind,
     name: String,
-    path: Path,
-    profile: Profile
+    src_path: Path,
+    profile: Profile,
+    metadata: Option<Metadata>
 }
 
 #[deriving(Encodable)]
 pub struct SerializedTarget {
     kind: Vec<&'static str>,
     name: String,
-    path: String
+    src_path: String,
+    profile: Profile,
+    metadata: Option<Metadata>
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Target {
@@ -214,7 +218,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
         SerializedTarget {
             kind: kind,
             name: self.name.clone(),
-            path: self.path.display().to_str()
+            src_path: self.src_path.display().to_str(),
+            profile: self.profile.clone(),
+            metadata: self.metadata.clone()
         }.encode(s)
     }
 }
@@ -222,9 +228,10 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
 impl Show for Target {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}(name={}, path={})", self.kind, self.name,
-               self.path.display())
+               self.src_path.display())
     }
 }
+
 
 impl Manifest {
     pub fn new(summary: &Summary, targets: &[Target],
@@ -292,21 +299,26 @@ impl Manifest {
 
 impl Target {
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
-                      path: &Path, profile: &Profile) -> Target {
+                      src_path: &Path, profile: &Profile,
+                      metadata: &Metadata)
+                      -> Target
+    {
         Target {
             kind: LibTarget(crate_targets),
             name: name.to_str(),
-            path: path.clone(),
-            profile: profile.clone()
+            src_path: src_path.clone(),
+            profile: profile.clone(),
+            metadata: Some(metadata.clone())
         }
     }
 
-    pub fn bin_target(name: &str, path: &Path, profile: &Profile) -> Target {
+    pub fn bin_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
         Target {
             kind: BinTarget,
             name: name.to_str(),
-            path: path.clone(),
-            profile: profile.clone()
+            src_path: src_path.clone(),
+            profile: profile.clone(),
+            metadata: None
         }
     }
 
@@ -314,8 +326,8 @@ impl Target {
         self.name.as_slice()
     }
 
-    pub fn get_path<'a>(&'a self) -> &'a Path {
-        &self.path
+    pub fn get_src_path<'a>(&'a self) -> &'a Path {
+        &self.src_path
     }
 
     pub fn is_lib(&self) -> bool {
@@ -334,6 +346,10 @@ impl Target {
 
     pub fn get_profile<'a>(&'a self) -> &'a Profile {
         &self.profile
+    }
+
+    pub fn get_metadata<'a>(&'a self) -> Option<&'a Metadata> {
+        self.metadata.as_ref()
     }
 
     pub fn rustc_crate_types(&self) -> Vec<&'static str> {

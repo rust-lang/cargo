@@ -7,6 +7,7 @@ use toml;
 use core::{SourceId, GitKind};
 use core::manifest::{LibKind, Lib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
+use core::package_id::Metadata;
 use core::source::Location;
 use util::{CargoResult, Require, human};
 
@@ -236,6 +237,8 @@ impl TomlManifest {
             human("No `package` or `project` section found.")
         }));
 
+        let pkgid = try!(project.to_package_id(source_id));
+        let metadata = pkgid.generate_metadata();
 
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
@@ -279,7 +282,8 @@ impl TomlManifest {
 
         // Get targets
         let targets = normalize(lib.as_ref().map(|l| l.as_slice()),
-                                bins.as_ref().map(|b| b.as_slice()));
+                                bins.as_ref().map(|b| b.as_slice()),
+                                &metadata);
 
         if targets.is_empty() {
             debug!("manifest has no build targets; project={}", self.project);
@@ -301,7 +305,6 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
         }
 
-        let pkgid = try!(project.to_package_id(source_id));
         let summary = Summary::new(&pkgid, deps.as_slice());
         Ok((Manifest::new(
                 &summary,
@@ -377,7 +380,8 @@ struct TomlTarget {
 }
 
 fn normalize(lib: Option<&[TomlLibTarget]>,
-             bin: Option<&[TomlBinTarget]>)
+             bin: Option<&[TomlBinTarget]>,
+             metadata: &Metadata)
              -> Vec<Target>
 {
     log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
@@ -393,7 +397,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         ret
     }
 
-    fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget]) {
+    fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget], metadata: &Metadata) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         let crate_types = l.crate_type.clone().and_then(|kinds| {
@@ -402,7 +406,8 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
         for profile in target_profiles(l).iter() {
             dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
-                                        &Path::new(path.as_slice()), profile));
+                                        &Path::new(path.as_slice()), profile,
+                                        metadata));
         }
     }
 
@@ -413,7 +418,8 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
             for profile in target_profiles(bin).iter() {
                 dst.push(Target::bin_target(bin.name.as_slice(),
-                                            &Path::new(path.as_slice()), profile));
+                                            &Path::new(path.as_slice()),
+                                            profile));
             }
         }
     }
@@ -422,12 +428,12 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
     match (lib, bin) {
         (Some(ref libs), Some(ref bins)) => {
-            lib_targets(&mut ret, libs.as_slice());
+            lib_targets(&mut ret, libs.as_slice(), metadata);
             bin_targets(&mut ret, bins.as_slice(),
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         (Some(ref libs), None) => {
-            lib_targets(&mut ret, libs.as_slice());
+            lib_targets(&mut ret, libs.as_slice(), metadata);
         },
         (None, Some(ref bins)) => {
             bin_targets(&mut ret, bins.as_slice(),

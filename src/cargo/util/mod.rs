@@ -5,7 +5,7 @@ pub use self::errors::{CargoResult, CargoError, BoxError, ChainError, CliResult}
 pub use self::errors::{CliError, FromError, ProcessError};
 pub use self::errors::{process_error, internal_error, internal, human};
 pub use self::paths::realpath;
-pub use self::hex::to_hex;
+pub use self::hex::{to_hex, short_hash};
 pub use self::pool::TaskPool;
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
 
