@@ -493,6 +493,10 @@ test!(error_message_for_missing_manifest {
             [dependencies.bar]
 
             path = "src/bar"
+
+            [[lib]]
+
+            name = "foo"
         "#)
        .file("src/bar/not-a-manifest", "");
 
