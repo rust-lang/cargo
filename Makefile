@@ -74,10 +74,15 @@ test-unit: target/tests/test-unit
 test-integration: target/tests/test-integration
 	$< $(only)
 
-test: test-unit test-integration style
+test: test-unit test-integration style no-exes
 
 style:
 	sh tests/check-style.sh
+
+no-exes:
+	find $$(git ls-files) -perm +111 -type f \
+		-not -name '*.sh' -not -name '*.rs' | grep '.*' \
+		&& exit 1 || exit 0
 
 clean:
 	rm -rf target
