@@ -97,7 +97,7 @@ mod test {
     )
 
     fn registry_loc() -> SourceId {
-        let remote = Location::parse("http://www.example.com/").unwrap();
+        let remote = Location::parse("http://example.com").unwrap();
         SourceId::new(RegistryKind, remote)
     }
 

@@ -1,4 +1,4 @@
-use core::{VersionReq,SourceId};
+use core::{VersionReq,SourceId,Summary};
 use util::CargoResult;
 
 #[deriving(PartialEq,Clone,Show)]
@@ -45,7 +45,16 @@ impl Dependency {
     }
 
     pub fn is_transitive(&self) -> bool {
-      self.transitive
+        self.transitive
+    }
+
+    pub fn matches(&self, sum: &Summary) -> bool {
+        debug!("self={}; summary={}", self, sum);
+        debug!("   a={}; b={}", self.namespace, sum.get_source_id());
+
+        self.name.as_slice() == sum.get_name() &&
+            self.req.matches(sum.get_version()) &&
+            &self.namespace == sum.get_source_id()
     }
 }
 
