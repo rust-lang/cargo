@@ -47,14 +47,14 @@ pub struct SerializedManifest {
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         SerializedManifest {
-            name: self.summary.get_name().to_str(),
-            version: self.summary.get_version().to_str(),
+            name: self.summary.get_name().to_string(),
+            version: self.summary.get_version().to_string(),
             dependencies: self.summary.get_dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
             authors: self.authors.clone(),
             targets: self.targets.clone(),
-            target_dir: self.target_dir.display().to_str(),
+            target_dir: self.target_dir.display().to_string(),
             build: if self.build.len() == 0 { None } else { Some(self.build.clone()) },
         }.encode(s)
     }
@@ -112,7 +112,7 @@ pub struct Profile {
 impl Profile {
     pub fn default_dev() -> Profile {
         Profile {
-            env: "compile".to_str(), // run in the default environment only
+            env: "compile".to_string(), // run in the default environment only
             opt_level: 0,
             debug: true,
             test: false, // whether or not to pass --test
@@ -122,31 +122,31 @@ impl Profile {
 
     pub fn default_test() -> Profile {
         Profile {
-            env: "test".to_str(), // run in the default environment only
+            env: "test".to_string(), // run in the default environment only
             opt_level: 0,
             debug: true,
             test: true, // whether or not to pass --test
-            dest: Some("test".to_str())
+            dest: Some("test".to_string())
         }
     }
 
     pub fn default_bench() -> Profile {
         Profile {
-            env: "bench".to_str(), // run in the default environment only
+            env: "bench".to_string(), // run in the default environment only
             opt_level: 3,
             debug: false,
             test: true, // whether or not to pass --test
-            dest: Some("bench".to_str())
+            dest: Some("bench".to_string())
         }
     }
 
     pub fn default_release() -> Profile {
         Profile {
-            env: "release".to_str(), // run in the default environment only
+            env: "release".to_string(), // run in the default environment only
             opt_level: 3,
             debug: false,
             test: false, // whether or not to pass --test
-            dest: Some("release".to_str())
+            dest: Some("release".to_string())
         }
     }
 
@@ -218,7 +218,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
         SerializedTarget {
             kind: kind,
             name: self.name.clone(),
-            src_path: self.src_path.display().to_str(),
+            src_path: self.src_path.display().to_string(),
             profile: self.profile.clone(),
             metadata: self.metadata.clone()
         }.encode(s)
@@ -305,7 +305,7 @@ impl Target {
     {
         Target {
             kind: LibTarget(crate_targets),
-            name: name.to_str(),
+            name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
             metadata: Some(metadata.clone())
@@ -315,7 +315,7 @@ impl Target {
     pub fn bin_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
         Target {
             kind: BinTarget,
-            name: name.to_str(),
+            name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
             metadata: None

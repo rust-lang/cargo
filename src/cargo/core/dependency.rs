@@ -19,7 +19,7 @@ impl Dependency {
         };
 
         Ok(Dependency {
-            name: name.to_str(),
+            name: name.to_string(),
             namespace: namespace.clone(),
             req: version,
             transitive: true
@@ -67,8 +67,8 @@ pub struct SerializedDependency {
 impl SerializedDependency {
     pub fn from_dependency(dep: &Dependency) -> SerializedDependency {
         SerializedDependency {
-            name: dep.get_name().to_str(),
-            req: dep.get_version_req().to_str()
+            name: dep.get_name().to_string(),
+            req: dep.get_version_req().to_string()
         }
     }
 }
