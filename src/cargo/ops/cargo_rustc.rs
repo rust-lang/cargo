@@ -41,7 +41,8 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
     curr.unwrap()
 }
 
-pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet,
+pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
+                           deps: &PackageSet,
                            config: &'a mut Config<'a>) -> CargoResult<()> {
 
     if targets.is_empty() {
@@ -84,11 +85,10 @@ pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet
     for dep in deps.iter() {
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
-            target.is_lib() && target.get_profile().is_compile()
+            target.is_lib() && target.get_profile().get_env() == env
         }).collect::<Vec<&Target>>();
 
-        jobs.push((dep,
-                   try!(compile(targets.as_slice(), dep, &mut cx))));
+        jobs.push((dep, try!(compile(targets.as_slice(), dep, &mut cx))));
     }
 
     cx.primary = true;
@@ -285,7 +285,7 @@ fn build_base_args(into: &mut Args,
             into.push(format!("metadata={}", m.metadata));
 
             into.push("-C".to_str());
-            into.push(format!("extra-filename={}", m.extra_filename));
+            into.push(format!("extra-filename=-{}", m.extra_filename));
         }
         None => {}
     }
