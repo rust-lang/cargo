@@ -1,7 +1,8 @@
 use semver::Version;
 use core::{
     Dependency,
-    PackageId
+    PackageId,
+    SourceId
 };
 
 /// Summaries are cloned, and should not be mutated after creation
@@ -29,6 +30,10 @@ impl Summary {
 
     pub fn get_version<'a>(&'a self) -> &'a Version {
         self.get_package_id().get_version()
+    }
+
+    pub fn get_source_id<'a>(&'a self) -> &'a SourceId {
+        self.package_id.get_source_id()
     }
 
     pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
