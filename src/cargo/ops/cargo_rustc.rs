@@ -271,9 +271,10 @@ fn build_base_args(into: &mut Args,
         into.push(profile.get_opt_level().to_str());
     }
 
-    if profile.get_debug() {
-        into.push("-g".to_str());
-    }
+    // Right now -g is a little buggy, so we're not passing -g just yet
+    // if profile.get_debug() {
+    //     into.push("-g".to_str());
+    // }
 
     if profile.is_test() {
         into.push("--test".to_str());
