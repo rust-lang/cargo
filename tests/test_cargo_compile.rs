@@ -1,9 +1,10 @@
 use std::io::fs;
 use std::os;
 use std::path;
+use std::str;
 
 use support::{ResultTest, project, execs, main_file, escape_path, basic_bin_manifest};
-use support::COMPILING;
+use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process, realpath};
@@ -953,4 +954,120 @@ test!(missing_lib_and_bin {
                 execs().with_status(101)
                        .with_stderr("either a [[lib]] or [[bin]] section \
                                      must be present\n"));
+})
+
+test!(verbose_build {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+    let output = p.cargo_process("cargo-build").arg("-v")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
+    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 15);
+    let hash = hash.slice_to(17);
+    assert_eq!(out, format!("\
+{} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
+        -C metadata=test:-:0.0.0:-:file:{dir} \
+        -C extra-filename={hash} \
+        --out-dir {dir}{sep}target \
+        -L {dir}{sep}target \
+        -L {dir}{sep}target{sep}deps`
+{} test v0.0.0 (file:{dir})\n",
+                    RUNNING, COMPILING,
+                    dir = p.root().display(),
+                    sep = path::SEP,
+                    hash = hash).as_slice());
+})
+
+test!(verbose_release_build {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+    let output = p.cargo_process("cargo-build").arg("-v").arg("--release")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
+    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 15);
+    let hash = hash.slice_to(17);
+    assert_eq!(out, format!("\
+{} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+        --opt-level 3 \
+        -C metadata=test:-:0.0.0:-:file:{dir} \
+        -C extra-filename={hash} \
+        --out-dir {dir}{sep}target{sep}release \
+        -L {dir}{sep}target{sep}release \
+        -L {dir}{sep}target{sep}release{sep}deps`
+{} test v0.0.0 (file:{dir})\n",
+                    RUNNING, COMPILING,
+                    dir = p.root().display(),
+                    sep = path::SEP,
+                    hash = hash).as_slice());
+})
+
+test!(verbose_release_build_deps {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.foo]
+            path = "foo"
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "");
+    let output = p.cargo_process("cargo-build").arg("-v").arg("--release")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
+    let pos1 = out.find_str("extra-filename=").unwrap();
+    let hash1 = out.slice_from(pos1 + 15).slice_to(17);
+    let pos2 = out.slice_from(pos1 + 10).find_str("extra-filename=").unwrap();
+    let hash2 = out.slice_from(pos1 + 10 + pos2 + 15).slice_to(17);
+    assert_eq!(out, format!("\
+{running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
+        --crate-type lib \
+        --opt-level 3 \
+        -C metadata=foo:-:0.0.0:-:file:{dir} \
+        -C extra-filename={hash1} \
+        --out-dir {dir}{sep}target{sep}release{sep}deps \
+        -L {dir}{sep}target{sep}release{sep}deps \
+        -L {dir}{sep}target{sep}release{sep}deps`
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+        --opt-level 3 \
+        -C metadata=test:-:0.0.0:-:file:{dir} \
+        -C extra-filename={hash2} \
+        --out-dir {dir}{sep}target{sep}release \
+        -L {dir}{sep}target{sep}release \
+        -L {dir}{sep}target{sep}release{sep}deps`
+{compiling} foo v0.0.0 (file:{dir})
+{compiling} test v0.0.0 (file:{dir})\n",
+                    running = RUNNING,
+                    compiling = COMPILING,
+                    dir = p.root().display(),
+                    sep = path::SEP,
+                    hash1 = hash1,
+                    hash2 = hash2).as_slice());
 })

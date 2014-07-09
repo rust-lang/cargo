@@ -38,3 +38,46 @@ test!(cargo_test_simple {
 
     assert_that(&p.bin("test/foo"), existing_file());
 })
+
+test!(test_with_lib_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn foo(){}")
+        .file("src/main.rs", "
+            extern crate foo;
+            fn main() {}
+        ");
+
+    assert_that(p.cargo_process("cargo-test"), execs().with_status(0));
+})
+
+test!(test_with_deep_lib_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.foo]
+            path = "foo"
+        "#)
+        .file("src/lib.rs", "
+            extern crate foo;
+            pub fn bar() {}
+        ")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("cargo-test"), execs().with_status(0));
+})
