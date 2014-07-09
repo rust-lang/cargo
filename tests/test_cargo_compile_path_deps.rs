@@ -66,7 +66,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
         "#)
         .file("bar/baz/src/baz.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_str()
+                "test passed".to_string()
             }
         "#);
 

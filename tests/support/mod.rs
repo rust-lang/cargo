@@ -30,7 +30,7 @@ struct FileBuilder {
 
 impl FileBuilder {
     pub fn new(path: Path, body: &str) -> FileBuilder {
-        FileBuilder { path: path, body: body.to_str() }
+        FileBuilder { path: path, body: body.to_string() }
     }
 
     fn mk(&self) -> Result<(), String> {
@@ -86,7 +86,7 @@ pub struct ProjectBuilder {
 impl ProjectBuilder {
     pub fn new(name: &str, root: Path) -> ProjectBuilder {
         ProjectBuilder {
-            name: name.to_str(),
+            name: name.to_string(),
             root: root,
             files: vec!(),
             symlinks: vec!()
@@ -108,7 +108,7 @@ impl ProjectBuilder {
     pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {
         process(program)
             .cwd(self.root())
-            .env("HOME", Some(paths::home().display().to_str().as_slice()))
+            .env("HOME", Some(paths::home().display().to_string().as_slice()))
             .extra_path(cargo_dir())
     }
 
@@ -195,7 +195,7 @@ pub fn main_file<T: Str>(println: T, deps: &[&str]) -> String {
     buf.push_str(println.as_slice());
     buf.push_str("); }\n");
 
-    buf.to_str()
+    buf.to_string()
 }
 
 trait ErrMsg<T> {
@@ -238,13 +238,13 @@ struct Execs {
 
 impl Execs {
 
-    pub fn with_stdout<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
-        self.expect_stdout = Some(expected.to_str());
+    pub fn with_stdout<S: ToString>(mut ~self, expected: S) -> Box<Execs> {
+        self.expect_stdout = Some(expected.to_string());
         self
     }
 
-    pub fn with_stderr<S: ToStr>(mut ~self, expected: S) -> Box<Execs> {
-        self.expect_stderr = Some(expected.to_str());
+    pub fn with_stderr<S: ToString>(mut ~self, expected: S) -> Box<Execs> {
+        self.expect_stderr = Some(expected.to_string());
         self
     }
 
@@ -310,7 +310,7 @@ impl Execs {
 
 impl ham::SelfDescribing for Execs {
     fn describe(&self) -> String {
-        "execs".to_str()
+        "execs".to_string()
     }
 }
 
@@ -354,13 +354,13 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
     {
         println!("{}", actual);
         let actual = std::str::from_utf8_lossy(actual);
-        let actual = actual.to_str();
+        let actual = actual.to_string();
         ham::expect(actual == self.expected, actual)
     }
 }
 
 pub fn shell_writes<T: Show>(string: T) -> Box<ShellWrites> {
-    box ShellWrites { expected: string.to_str() }
+    box ShellWrites { expected: string.to_string() }
 }
 
 pub trait ResultTest<T,E> {
@@ -397,7 +397,7 @@ impl<T> Tap for T {
 }
 
 pub fn escape_path(p: &Path) -> String {
-    p.display().to_str().as_slice().replace("\\", "\\\\")
+    p.display().to_string().as_slice().replace("\\", "\\\\")
 }
 
 pub fn basic_bin_manifest(name: &str) -> String {

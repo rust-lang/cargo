@@ -153,7 +153,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_str()
+                "test passed".to_string()
             }
 
             fn dead() {}
@@ -230,7 +230,7 @@ test!(cargo_compile_with_nested_deps_inferred {
         "#)
         .file("baz/src/lib.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_str()
+                "test passed".to_string()
             }
         "#);
 
@@ -298,7 +298,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
         "#)
         .file("baz/src/lib.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_str()
+                "test passed".to_string()
             }
         "#);
 
@@ -374,7 +374,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_str()
+                "test passed".to_string()
             }
         "#);
 
@@ -450,7 +450,7 @@ test!(cargo_compile_with_nested_deps_longhand {
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn gimme() -> String {
-                "test passed".to_str()
+                "test passed".to_string()
             }
         "#);
 
@@ -692,8 +692,8 @@ test!(custom_build_env_vars {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
-                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_str());
-                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_str());
+                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_string());
+                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_string());
             }}
         "#,
         escape_path(&p.root().join("target")),
@@ -737,8 +737,8 @@ test!(custom_build_in_dependency {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
-                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_str());
-                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_str());
+                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_string());
+                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_string());
             }}
         "#,
         escape_path(&p.root().join("target/deps")),
@@ -808,7 +808,7 @@ test!(many_crate_types_old_style_lib_location {
         match f.filename_str().unwrap() {
             "deps" => None,
             s if s.contains("fingerprint") || s.contains("dSYM") => None,
-            s => Some(s.to_str())
+            s => Some(s.to_string())
         }
     }).collect();
     files.sort();
@@ -846,7 +846,7 @@ test!(many_crate_types_correct {
         match f.filename_str().unwrap() {
             "deps" => None,
             s if s.contains("fingerprint") || s.contains("dSYM") => None,
-            s => Some(s.to_str())
+            s => Some(s.to_string())
         }
     }).collect();
     files.sort();
