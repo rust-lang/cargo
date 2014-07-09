@@ -73,7 +73,7 @@ impl<E, D: Decoder<E>> Decodable<D, E> for Location {
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Location {
     fn encode(&self, e: &mut S) -> Result<(), E> {
-        self.to_str().encode(e)
+        self.to_string().encode(e)
     }
 }
 
@@ -137,8 +137,8 @@ impl PartialEq for SourceId {
         match (&self.kind, &other.kind, &self.location, &other.location) {
             (&GitKind(..), &GitKind(..),
              &Remote(ref u1), &Remote(ref u2)) => {
-                git::canonicalize_url(u1.to_str().as_slice()) ==
-                    git::canonicalize_url(u2.to_str().as_slice())
+                git::canonicalize_url(u1.to_string().as_slice()) ==
+                    git::canonicalize_url(u2.to_string().as_slice())
             }
             _ => false,
         }
@@ -156,7 +156,7 @@ impl SourceId {
     }
 
     pub fn for_git(url: &Url, reference: &str) -> SourceId {
-        SourceId::new(GitKind(reference.to_str()), Remote(url.clone()))
+        SourceId::new(GitKind(reference.to_string()), Remote(url.clone()))
     }
 
     pub fn for_central() -> SourceId {

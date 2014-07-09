@@ -42,7 +42,7 @@ impl MultiShell {
         &mut self.err
     }
 
-    pub fn say<T: ToStr>(&mut self, message: T, color: Color) -> IoResult<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
         self.out().say(message, color)
     }
 
@@ -60,11 +60,11 @@ impl MultiShell {
         Ok(())
     }
 
-    pub fn error<T: ToStr>(&mut self, message: T) -> IoResult<()> {
+    pub fn error<T: ToString>(&mut self, message: T) -> IoResult<()> {
         self.err().say(message, RED)
     }
 
-    pub fn warn<T: ToStr>(&mut self, message: T) -> IoResult<()> {
+    pub fn warn<T: ToString>(&mut self, message: T) -> IoResult<()> {
         self.err().say(message, YELLOW)
     }
 }
@@ -96,10 +96,10 @@ impl Shell {
         Ok(())
     }
 
-    pub fn say<T: ToStr>(&mut self, message: T, color: Color) -> IoResult<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
-        try!(self.write_line(message.to_str().as_slice()));
+        try!(self.write_line(message.to_string().as_slice()));
         try!(self.reset());
         try!(self.flush());
         Ok(())

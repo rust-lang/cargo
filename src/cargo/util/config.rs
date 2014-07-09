@@ -118,7 +118,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
 impl fmt::Show for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let paths: Vec<String> = self.path.iter().map(|p| {
-            p.display().to_str()
+            p.display().to_string()
         }).collect();
         write!(f, "{} (from {})", self.value, paths)
     }
@@ -184,16 +184,16 @@ fn walk_tree(pwd: &Path,
 }
 
 fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
-    let contents = try!(file.read_to_str());
+    let contents = try!(file.read_to_string());
     let toml = try!(cargo_toml::parse(contents.as_slice(),
                                       file.path().filename_display()
-                                          .to_str().as_slice()));
+                                          .to_string().as_slice()));
     let val = try!(toml.find_equiv(&key).require(|| internal("")));
 
     let v = match *val {
         toml::String(ref val) => String(val.clone()),
         toml::Array(ref val) => {
-            List(val.iter().map(|s: &toml::Value| s.to_str()).collect())
+            List(val.iter().map(|s: &toml::Value| s.to_string()).collect())
         }
         _ => return Err(internal(""))
     };
@@ -204,8 +204,8 @@ fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue>
 fn extract_all_configs(mut file: io::fs::File,
                        map: &mut HashMap<String, ConfigValue>) -> CargoResult<()> {
     let path = file.path().clone();
-    let contents = try!(file.read_to_str());
-    let file = path.filename_display().to_str();
+    let contents = try!(file.read_to_string());
+    let file = path.filename_display().to_string();
     let table = try!(cargo_toml::parse(contents.as_slice(),
                                        file.as_slice()).chain_error(|| {
         internal(format!("could not parse Toml manifest; path={}",

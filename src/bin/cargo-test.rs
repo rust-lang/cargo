@@ -64,7 +64,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     for file in walk {
         // TODO: The proper fix is to have target knows its expected
         // output and only run expected executables.
-        if file.display().to_str().as_slice().contains("dSYM") { continue; }
+        if file.display().to_string().as_slice().contains("dSYM") { continue; }
         if !is_executable(&file) { continue; }
 
         try!(util::process(file).exec().map_err(|e| {

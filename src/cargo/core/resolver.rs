@@ -44,7 +44,7 @@ pub fn resolve<R: Registry>(deps: &[Dependency],
         }
 
         let pkg = opts.get(0).clone();
-        resolve.insert(pkg.get_name().to_str(), pkg.clone());
+        resolve.insert(pkg.get_name().to_string(), pkg.clone());
 
         for dep in pkg.get_dependencies().iter() {
             if !dep.is_transitive() { continue; }

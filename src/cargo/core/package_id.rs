@@ -87,7 +87,7 @@ impl PackageId {
                              sid: &SourceId) -> CargoResult<PackageId> {
         let v = try!(version.to_version().map_err(InvalidVersion));
         Ok(PackageId {
-            name: name.to_str(),
+            name: name.to_string(),
             version: v,
             source_id: sid.clone()
         })
@@ -108,7 +108,7 @@ impl PackageId {
     pub fn generate_metadata(&self) -> Metadata {
         let metadata = format!("{}:-:{}:-:{}", self.name, self.version, self.source_id);
         let extra_filename = short_hash(
-            &(self.name.as_slice(), self.version.to_str(), &self.source_id));
+            &(self.name.as_slice(), self.version.to_string(), &self.source_id));
 
         Metadata { metadata: metadata, extra_filename: extra_filename }
     }
@@ -120,7 +120,7 @@ impl Show for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{} v{}", self.name, self.version));
 
-        if self.source_id.to_str().as_slice() != central_repo {
+        if self.source_id.to_string().as_slice() != central_repo {
             try!(write!(f, " ({})", self.source_id));
         }
 
@@ -141,7 +141,7 @@ impl<D: Decoder<Box<CargoError + Send>>>
 
 impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
     fn encode(&self, e: &mut S) -> Result<(), E> {
-        (self.name.clone(), self.version.to_str(), self.source_id.clone()).encode(e)
+        (self.name.clone(), self.version.to_string(), self.source_id.clone()).encode(e)
     }
 }
 

@@ -32,8 +32,8 @@ pub struct CLIError {
 impl CLIError {
     pub fn new<T: Show, U: Show>(msg: T, detail: Option<U>,
                                  exit_code: uint) -> CLIError {
-        let detail = detail.map(|d| d.to_str());
-        CLIError { msg: msg.to_str(), detail: detail, exit_code: exit_code }
+        let detail = detail.map(|d| d.to_string());
+        CLIError { msg: msg.to_string(), detail: detail, exit_code: exit_code }
     }
 }
 
@@ -84,7 +84,7 @@ impl CargoError {
     }
 
     pub fn described<T: Show>(description: T) -> CargoError {
-        CargoInternalError(Described(description.to_str()))
+        CargoInternalError(Described(description.to_string()))
     }
 
     pub fn other() -> CargoError {

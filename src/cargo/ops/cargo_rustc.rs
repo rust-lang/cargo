@@ -169,7 +169,7 @@ fn is_fresh(dep: &Package, loc: &Path,
         Err(..) => return Ok((false, new_fingerprint)),
     };
 
-    let old_fingerprint = try!(file.read_to_str());
+    let old_fingerprint = try!(file.read_to_string());
 
     log!(5, "old fingerprint: {}", old_fingerprint);
     log!(5, "new fingerprint: {}", new_fingerprint);
@@ -219,14 +219,14 @@ fn rustc(root: &Path, target: &Target, cx: &mut Context) -> Job {
 
     log!(5, "command={}", rustc);
 
-    let _ = cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_str()));
+    let _ = cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_string()));
 
     proc() {
         if primary {
-            rustc.exec().map_err(|err| human(err.to_str()))
+            rustc.exec().map_err(|err| human(err.to_string()))
         } else {
             rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                human(err.to_str())
+                human(err.to_string())
             })
         }
     }
@@ -253,57 +253,57 @@ fn build_base_args(into: &mut Args,
     let metadata = target.get_metadata();
 
     // TODO: Handle errors in converting paths into args
-    into.push(target.get_src_path().display().to_str());
+    into.push(target.get_src_path().display().to_string());
 
-    into.push("--crate-name".to_str());
-    into.push(target.get_name().to_str());
+    into.push("--crate-name".to_string());
+    into.push(target.get_name().to_string());
 
     for crate_type in crate_types.iter() {
-        into.push("--crate-type".to_str());
-        into.push(crate_type.to_str());
+        into.push("--crate-type".to_string());
+        into.push(crate_type.to_string());
     }
 
     let out = cx.dest.clone();
     let profile = target.get_profile();
 
     if profile.get_opt_level() != 0 {
-        into.push("--opt-level".to_str());
-        into.push(profile.get_opt_level().to_str());
+        into.push("--opt-level".to_string());
+        into.push(profile.get_opt_level().to_string());
     }
 
     if profile.get_debug() {
-        into.push("-g".to_str());
+        into.push("-g".to_string());
     }
 
     if profile.is_test() {
-        into.push("--test".to_str());
+        into.push("--test".to_string());
     }
 
     match metadata {
         Some(m) => {
-            into.push("-C".to_str());
+            into.push("-C".to_string());
             into.push(format!("metadata={}", m.metadata));
 
-            into.push("-C".to_str());
+            into.push("-C".to_string());
             into.push(format!("extra-filename={}", m.extra_filename));
         }
         None => {}
     }
 
     if target.is_lib() {
-        into.push("--out-dir".to_str());
-        into.push(out.display().to_str());
+        into.push("--out-dir".to_string());
+        into.push(out.display().to_string());
     } else {
-        into.push("-o".to_str());
-        into.push(out.join(target.get_name()).display().to_str());
+        into.push("-o".to_string());
+        into.push(out.join(target.get_name()).display().to_string());
     }
 }
 
 fn build_deps_args(dst: &mut Args, cx: &Context) {
-    dst.push("-L".to_str());
-    dst.push(cx.dest.display().to_str());
-    dst.push("-L".to_str());
-    dst.push(cx.deps_dir.display().to_str());
+    dst.push("-L".to_string());
+    dst.push(cx.dest.display().to_string());
+    dst.push("-L".to_string());
+    dst.push(cx.deps_dir.display().to_string());
 }
 
 /// Execute all jobs necessary to build the dependency graph.

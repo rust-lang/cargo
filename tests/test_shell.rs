@@ -56,5 +56,5 @@ fn colored_output<S: Str>(string: S, color: color::Color) -> IoResult<String> {
     try!(term.write_str(string.as_slice()));
     try!(term.reset());
     try!(term.flush());
-    Ok(from_utf8_lossy(term.get_ref().get_ref()).to_str())
+    Ok(from_utf8_lossy(term.get_ref().get_ref()).to_string())
 }

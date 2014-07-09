@@ -45,14 +45,14 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
         let package_id = summary.get_package_id();
 
         SerializedPackage {
-            name: package_id.get_name().to_str(),
-            version: package_id.get_version().to_str(),
+            name: package_id.get_name().to_string(),
+            version: package_id.get_version().to_string(),
             dependencies: summary.get_dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
             authors: Vec::from_slice(manifest.get_authors()),
             targets: Vec::from_slice(manifest.get_targets()),
-            manifest_path: self.manifest_path.display().to_str()
+            manifest_path: self.manifest_path.display().to_string()
         }.encode(s)
     }
 }
@@ -123,7 +123,7 @@ impl Package {
         // Sort the sources just to make sure we have a consistent fingerprint.
         sources.sort_by(|a, b| {
             cmp::lexical_ordering(a.kind.cmp(&b.kind),
-                                  a.location.to_str().cmp(&b.location.to_str()))
+                                  a.location.to_string().cmp(&b.location.to_string()))
         });
         let sources = sources.iter().map(|source_id| {
             source_id.load(config)
