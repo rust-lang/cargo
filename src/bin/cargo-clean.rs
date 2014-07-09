@@ -1,4 +1,4 @@
-#![crate_id="cargo-clean"]
+#![crate_name="cargo-clean"]
 #![feature(phase)]
 
 extern crate cargo;

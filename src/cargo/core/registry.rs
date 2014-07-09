@@ -7,9 +7,9 @@ pub trait Registry {
 }
 
 impl Registry for Vec<Summary> {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         Ok(self.iter()
-            .filter(|summary| name.get_name() == summary.get_name())
+            .filter(|summary| dep.matches(*summary))
             .map(|summary| summary.clone())
             .collect())
     }
@@ -105,6 +105,13 @@ impl<'a> PackageRegistry<'a> {
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", namespace)))
     }
+
+    fn query_overrides(&self, dep: &Dependency) -> Vec<Summary> {
+        self.overrides.iter()
+            .filter(|s| s.get_name() == dep.get_name())
+            .map(|s| s.clone())
+            .collect()
+    }
 }
 
 fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
@@ -120,7 +127,7 @@ fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
 
 impl<'a> Registry for PackageRegistry<'a> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let overrides = try!(self.overrides.query(dep)); // this can never fail in practice
+        let overrides = self.query_overrides(dep);
 
         if overrides.is_empty() {
             // Ensure the requested namespace is loaded

@@ -4,7 +4,7 @@ use core::{
     Dependency,
     PackageId,
     Summary,
-    Registry
+    Registry,
 };
 
 use util::{CargoResult, human, internal};
@@ -96,8 +96,9 @@ mod test {
         )
     )
 
-    fn registry_loc() -> Location {
-        Location::parse("http://www.example.com/").unwrap()
+    fn registry_loc() -> SourceId {
+        let remote = Location::parse("http://example.com").unwrap();
+        SourceId::new(RegistryKind, remote)
     }
 
     fn pkg(name: &str) -> Summary {
