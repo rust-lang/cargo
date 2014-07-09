@@ -16,9 +16,9 @@ $ ./cargo-nightly/bin/cargo build
 
 The current nightlies available are:
 
-* `cargo-nightly-linux`
-* `cargo-nightly-win`
-* `cargo-nightly-mac`
+* [`cargo-nightly-linux`](http://static.rust-lang.org/cargo-dist/cargo-nightly-linux.tar.gz)
+* [`cargo-nightly-win`](http://static.rust-lang.org/cargo-dist/cargo-nightly-win.tar.gz)
+* [`cargo-nightly-mac`](http://static.rust-lang.org/cargo-dist/cargo-nightly-mac.tar.gz)
 
 ## Compiling cargo
 
