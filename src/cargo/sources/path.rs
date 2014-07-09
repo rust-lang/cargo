@@ -102,7 +102,7 @@ impl Source for PathSource {
             let loc = pkg.get_manifest_path().dir_path();
             max = cmp::max(max, try!(walk(&loc, true)));
         }
-        return Ok(max.to_str());
+        return Ok(max.to_string());
 
         fn walk(path: &Path, is_root: bool) -> CargoResult<u64> {
             if !path.is_dir() {

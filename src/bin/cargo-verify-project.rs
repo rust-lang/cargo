@@ -34,7 +34,7 @@ fn main() {
         }
     };
     let file = Path::new(manifest);
-    let contents = match File::open(&file).read_to_str() {
+    let contents = match File::open(&file).read_to_string() {
         Ok(s) => s,
         Err(e) => return fail("invalid", format!("error reading file: {}",
                                                  e).as_slice())

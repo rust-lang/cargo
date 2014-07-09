@@ -82,7 +82,7 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
         }
 
         let summary = pkgs.get(0).clone();
-        let name = summary.get_name().to_str();
+        let name = summary.get_name().to_string();
         let source_id = summary.get_source_id().clone();
         let version = summary.get_version().clone();
 
@@ -179,7 +179,7 @@ mod test {
 
     fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
         let remote = Location::parse(loc);
-        let source_id = SourceId::new(GitKind("master".to_str()),
+        let source_id = SourceId::new(GitKind("master".to_string()),
                                       remote.unwrap());
 
         PackageId::new(name, "1.0.0", &source_id).unwrap()
@@ -197,7 +197,7 @@ mod test {
 
     fn dep_loc(name: &str, location: &str) -> Dependency {
         let url = from_str(location).unwrap();
-        let source_id = SourceId::new(GitKind("master".to_str()), Remote(url));
+        let source_id = SourceId::new(GitKind("master".to_string()), Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
 

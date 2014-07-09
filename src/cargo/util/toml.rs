@@ -198,9 +198,9 @@ struct Context<'a> {
 fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
     layout.lib.as_ref().map(|lib| {
         vec![TomlTarget {
-            name: name.to_str(),
+            name: name.to_string(),
             crate_type: None,
-            path: Some(lib.display().to_str()),
+            path: Some(lib.display().to_string()),
             test: None
         }]
     })
@@ -209,16 +209,16 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
 fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
     Some(layout.bins.iter().filter_map(|bin| {
         let name = if bin.as_str() == Some("src/main.rs") {
-            Some(name.to_str())
+            Some(name.to_string())
         } else {
-            bin.filestem_str().map(|f| f.to_str())
+            bin.filestem_str().map(|f| f.to_string())
         };
 
         name.map(|name| {
             TomlTarget {
                 name: name,
                 crate_type: None,
-                path: Some(bin.display().to_str()),
+                path: Some(bin.display().to_string()),
                 test: None
             }
         })
@@ -252,7 +252,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
-                        path: layout.lib.as_ref().map(|p| p.display().to_str()),
+                        path: layout.lib.as_ref().map(|p| p.display().to_string()),
                         test: t.test
                     }
                 } else {
@@ -271,7 +271,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
-                        path: bin.as_ref().map(|p| p.display().to_str()),
+                        path: bin.as_ref().map(|p| p.display().to_string()),
                         test: t.test
                     }
                 } else {
@@ -336,7 +336,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
                 let reference = details.branch.clone()
                     .or_else(|| details.tag.clone())
                     .or_else(|| details.rev.clone())
-                    .unwrap_or_else(|| "master".to_str());
+                    .unwrap_or_else(|| "master".to_string());
 
                 let new_source_id = match details.git {
                     Some(ref git) => {

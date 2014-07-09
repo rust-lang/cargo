@@ -61,7 +61,7 @@ impl<T> DependencyQueue<T> {
     ///
     /// Only registered packages will be returned from dequeue().
     pub fn register(&mut self, pkg: &Package) {
-        self.reverse_dep_map.insert(pkg.get_name().to_str(), HashSet::new());
+        self.reverse_dep_map.insert(pkg.get_name().to_string(), HashSet::new());
     }
 
     /// Adds a new package to this dependency queue.
@@ -70,10 +70,10 @@ impl<T> DependencyQueue<T> {
     /// be added to the dependency queue.
     pub fn enqueue(&mut self, pkg: &Package, fresh: Freshness, data: T) {
         // ignore self-deps
-        if self.pkgs.contains_key(&pkg.get_name().to_str()) { return }
+        if self.pkgs.contains_key(&pkg.get_name().to_string()) { return }
 
         if fresh == Dirty {
-            self.dirty.insert(pkg.get_name().to_str());
+            self.dirty.insert(pkg.get_name().to_string());
         }
 
         let mut my_dependencies = HashSet::new();
@@ -84,12 +84,12 @@ impl<T> DependencyQueue<T> {
                 continue
             }
 
-            let name = dep.get_name().to_str();
+            let name = dep.get_name().to_string();
             assert!(my_dependencies.insert(name.clone()));
             let rev = self.reverse_dep_map.find_or_insert(name, HashSet::new());
-            assert!(rev.insert(pkg.get_name().to_str()));
+            assert!(rev.insert(pkg.get_name().to_string()));
         }
-        assert!(self.pkgs.insert(pkg.get_name().to_str(),
+        assert!(self.pkgs.insert(pkg.get_name().to_string(),
                                  (my_dependencies, data)));
     }
 
@@ -100,7 +100,7 @@ impl<T> DependencyQueue<T> {
     pub fn dequeue(&mut self) -> Option<(String, Freshness, T)> {
         let pkg = match self.pkgs.iter()
                                  .find(|&(_, &(ref deps, _))| deps.len() == 0)
-                                 .map(|(ref name, _)| name.to_str()) {
+                                 .map(|(ref name, _)| name.to_string()) {
             Some(pkg) => pkg,
             None => return None
         };

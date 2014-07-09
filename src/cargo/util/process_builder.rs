@@ -36,12 +36,12 @@ static PATH_SEP : &'static str = ";";
 
 impl ProcessBuilder {
     pub fn arg<T: Str>(mut self, arg: T) -> ProcessBuilder {
-        self.args.push(arg.as_slice().to_str());
+        self.args.push(arg.as_slice().to_string());
         self
     }
 
     pub fn args<T: Str>(mut self, arguments: &[T]) -> ProcessBuilder {
-        self.args = arguments.iter().map(|a| a.as_slice().to_str()).collect();
+        self.args = arguments.iter().map(|a| a.as_slice().to_string()).collect();
         self
     }
 
@@ -51,7 +51,7 @@ impl ProcessBuilder {
 
     pub fn extra_path(mut self, path: Path) -> ProcessBuilder {
         // For now, just convert to a string, but we should do something better
-        self.path.unshift(path.display().to_str());
+        self.path.unshift(path.display().to_string());
         self
     }
 
@@ -63,10 +63,10 @@ impl ProcessBuilder {
     pub fn env(mut self, key: &str, val: Option<&str>) -> ProcessBuilder {
         match val {
             Some(v) => {
-                self.env.insert(key.to_str(), v.to_str());
+                self.env.insert(key.to_string(), v.to_string());
             },
             None => {
-                self.env.remove(&key.to_str());
+                self.env.remove(&key.to_string());
             }
         }
 
@@ -139,7 +139,7 @@ impl ProcessBuilder {
         }
 
         match self.build_path() {
-            Some(path) => ret.push(("PATH".to_str(), path)),
+            Some(path) => ret.push(("PATH".to_string(), path)),
             _ => ()
         }
 
