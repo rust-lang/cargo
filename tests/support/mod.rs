@@ -414,6 +414,7 @@ pub fn basic_bin_manifest(name: &str) -> String {
     "#, name, name)
 }
 
+pub static RUNNING:   &'static str = "     Running";
 pub static COMPILING: &'static str = "   Compiling";
 pub static FRESH:     &'static str = "       Fresh";
 pub static UPDATING:  &'static str = "    Updating";

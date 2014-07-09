@@ -78,7 +78,7 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()>
     }).collect::<Vec<&Target>>();
 
     let mut config = try!(Config::new(shell, update, jobs));
-    try!(ops::compile_targets(targets.as_slice(), &package,
+    try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
          &PackageSet::new(packages.as_slice()), &mut config));
 
     Ok(())
