@@ -100,7 +100,7 @@ pub enum TargetKind {
     BinTarget
 }
 
-#[deriving(Encodable, Decodable, Clone, Hash, PartialEq)]
+#[deriving(Encodable, Decodable, Clone, Hash, PartialEq, Show)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
@@ -227,8 +227,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
 
 impl Show for Target {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}(name={}, path={})", self.kind, self.name,
-               self.src_path.display())
+        write!(f, "{}(name={}, path={}, profile={})", self.kind, self.name,
+               self.src_path.display(), self.profile)
     }
 }
 
