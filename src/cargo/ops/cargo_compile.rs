@@ -24,7 +24,7 @@
 
 use std::os;
 use util::config::{Config, ConfigValue};
-use core::{MultiShell, Source, SourceId, PackageSet, Target, resolver};
+use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, resolver};
 use core::registry::PackageRegistry;
 use ops;
 use sources::{PathSource};
@@ -57,18 +57,22 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()>
     let override_ids = try!(source_ids_from_config());
     let source_ids = package.get_source_ids();
 
-    let packages = {
+    let (packages, resolve) = {
         let mut config = try!(Config::new(shell, update, jobs));
 
         let mut registry =
             try!(PackageRegistry::new(source_ids, override_ids, &mut config));
 
-        let resolved =
-            try!(resolver::resolve(package.get_dependencies(), &mut registry));
+        let resolved = try!(resolver::resolve(package.get_package_id(),
+                                              package.get_dependencies(),
+                                              &mut registry));
 
-        try!(registry.get(resolved.as_slice()).wrap({
+        let req: Vec<PackageId> = resolved.iter().map(|r| r.clone()).collect();
+        let packages = try!(registry.get(req.as_slice()).wrap({
             human("Unable to get packages from source")
-        }))
+        }));
+
+        (packages, resolved)
     };
 
     debug!("packages={}", packages);
@@ -78,8 +82,9 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()>
     }).collect::<Vec<&Target>>();
 
     let mut config = try!(Config::new(shell, update, jobs));
-    try!(ops::compile_targets(targets.as_slice(), &package,
-         &PackageSet::new(packages.as_slice()), &mut config));
+
+    try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
+         &PackageSet::new(packages.as_slice()), &resolve, &mut config));
 
     Ok(())
 }

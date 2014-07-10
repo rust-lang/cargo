@@ -48,7 +48,7 @@ pub trait SummaryVec {
 impl SummaryVec for Vec<Summary> {
     // TODO: Move to Registry
     fn names(&self) -> Vec<String> {
-        self.iter().map(|summary| summary.get_name().to_str()).collect()
+        self.iter().map(|summary| summary.get_name().to_string()).collect()
     }
 
 }

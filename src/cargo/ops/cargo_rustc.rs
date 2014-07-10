@@ -6,9 +6,9 @@ use std::os::args;
 use std::str;
 use term::color::YELLOW;
 
-use core::{Package, PackageSet, Target};
+use core::{Package, PackageSet, Target, Resolve};
 use util;
-use util::{CargoResult, ChainError, ProcessBuilder, internal, human, CargoError};
+use util::{CargoResult, ChainError, ProcessBuilder, CargoError, internal, human};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
 
 type Args = Vec<String>;
@@ -18,7 +18,10 @@ struct Context<'a, 'b> {
     deps_dir: &'a Path,
     primary: bool,
     rustc_version: &'a str,
-    config: &'b mut Config<'b>
+    resolve: &'a Resolve,
+    package_set: &'a PackageSet,
+    config: &'b mut Config<'b>,
+    dylib: (String, String)
 }
 
 type Job = proc():Send -> CargoResult<()>;
@@ -41,9 +44,10 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
     curr.unwrap()
 }
 
-pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet,
-                           config: &'a mut Config<'a>) -> CargoResult<()> {
-
+pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
+                           deps: &PackageSet, resolve: &'a Resolve,
+                           config: &'a mut Config<'a>) -> CargoResult<()>
+{
     if targets.is_empty() {
         return Ok(());
     }
@@ -68,12 +72,27 @@ pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet
         internal(format!("Couldn't create the directory for dependencies for {} at {}",
                  pkg.get_name(), deps_target_dir.display()))));
 
+    let output = try!(util::process("rustc")
+                      .arg("-")
+                      .arg("--crate-name").arg("-")
+                      .arg("--crate-type").arg("dylib")
+                      .arg("--print-file-name")
+                      .exec_with_output());
+
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
+
+    let parts: Vec<&str> = output.slice_to(output.len() - 1).split('-').collect();
+    assert!(parts.len() == 2, "rustc --print-file-name output has changed");
+
     let mut cx = Context {
         dest: &deps_target_dir,
         deps_dir: &deps_target_dir,
         primary: false,
         rustc_version: rustc_version.as_slice(),
-        config: config
+        resolve: resolve,
+        package_set: deps,
+        config: config,
+        dylib: (parts.get(0).to_string(), parts.get(1).to_string())
     };
 
     // Build up a list of pending jobs, each of which represent compiling a
@@ -82,13 +101,17 @@ pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet
     // everything in order with proper parallelism.
     let mut jobs = Vec::new();
     for dep in deps.iter() {
+        if dep == pkg { continue; }
+
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
-            target.is_lib() && target.get_profile().is_compile()
+            target.is_lib() && match env {
+                "test" => target.get_profile().is_compile(),
+                _ => target.get_profile().get_env() == env,
+            }
         }).collect::<Vec<&Target>>();
 
-        jobs.push((dep,
-                   try!(compile(targets.as_slice(), dep, &mut cx))));
+        jobs.push((dep, try!(compile(targets.as_slice(), dep, &mut cx))));
     }
 
     cx.primary = true;
@@ -101,7 +124,7 @@ pub fn compile_targets<'a>(targets: &[&Target], pkg: &Package, deps: &PackageSet
 
 fn compile(targets: &[&Target], pkg: &Package,
            cx: &mut Context) -> CargoResult<(Freshness, Job)> {
-    debug!("compile_pkg; pkg={}; targets={}", pkg, pkg.get_targets());
+    debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
 
     if targets.is_empty() {
         return Ok((Fresh, proc() Ok(())))
@@ -135,7 +158,7 @@ fn compile(targets: &[&Target], pkg: &Package,
     // After the custom command has run, execute rustc for all targets of our
     // package.
     for &target in targets.iter() {
-        cmds.push(rustc(&pkg.get_root(), target, cx));
+        cmds.push(rustc(pkg, target, cx));
     }
 
     cmds.push(proc() {
@@ -169,7 +192,7 @@ fn is_fresh(dep: &Package, loc: &Path,
         Err(..) => return Ok((false, new_fingerprint)),
     };
 
-    let old_fingerprint = try!(file.read_to_str());
+    let old_fingerprint = try!(file.read_to_string());
 
     log!(5, "old fingerprint: {}", old_fingerprint);
     log!(5, "new fingerprint: {}", new_fingerprint);
@@ -207,37 +230,42 @@ fn compile_custom(pkg: &Package, cmd: &str,
     proc() p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
 }
 
-fn rustc(root: &Path, target: &Target, cx: &mut Context) -> Job {
+fn rustc(package: &Package, target: &Target, cx: &mut Context) -> Job {
     let crate_types = target.rustc_crate_types();
+    let root = package.get_root();
 
     log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; verbose={}",
          root.display(), target, crate_types, cx.dest.display(),
          cx.deps_dir.display(), cx.primary);
 
     let primary = cx.primary;
-    let rustc = prepare_rustc(root, target, crate_types, cx);
+    let rustc = prepare_rustc(package, target, crate_types, cx);
 
     log!(5, "command={}", rustc);
 
-    let _ = cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_str()));
+    let _ = cx.config.shell().verbose(|shell| shell.status("Running", rustc.to_string()));
 
     proc() {
         if primary {
-            rustc.exec().map_err(|err| human(err.to_str()))
+            log!(5, "executing primary");
+            rustc.exec().map_err(|err| human(err.to_string()))
         } else {
+            log!(5, "executing deps");
             rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                human(err.to_str())
+                human(err.to_string())
             })
         }
     }
 }
 
-fn prepare_rustc(root: &Path, target: &Target, crate_types: Vec<&str>,
-                 cx: &Context) -> ProcessBuilder {
+fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
+                 cx: &Context) -> ProcessBuilder
+{
+    let root = package.get_root();
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, crate_types, cx);
-    build_deps_args(&mut args, cx);
+    build_deps_args(&mut args, package, cx);
 
     util::process("rustc")
         .cwd(root.clone())
@@ -253,57 +281,96 @@ fn build_base_args(into: &mut Args,
     let metadata = target.get_metadata();
 
     // TODO: Handle errors in converting paths into args
-    into.push(target.get_src_path().display().to_str());
+    into.push(target.get_src_path().display().to_string());
 
-    into.push("--crate-name".to_str());
-    into.push(target.get_name().to_str());
+    into.push("--crate-name".to_string());
+    into.push(target.get_name().to_string());
 
     for crate_type in crate_types.iter() {
-        into.push("--crate-type".to_str());
-        into.push(crate_type.to_str());
+        into.push("--crate-type".to_string());
+        into.push(crate_type.to_string());
     }
 
     let out = cx.dest.clone();
     let profile = target.get_profile();
 
     if profile.get_opt_level() != 0 {
-        into.push("--opt-level".to_str());
-        into.push(profile.get_opt_level().to_str());
+        into.push("--opt-level".to_string());
+        into.push(profile.get_opt_level().to_string());
     }
 
-    if profile.get_debug() {
-        into.push("-g".to_str());
-    }
+    // Right now -g is a little buggy, so we're not passing -g just yet
+    // if profile.get_debug() {
+    //     into.push("-g".to_string());
+    // }
 
     if profile.is_test() {
-        into.push("--test".to_str());
+        into.push("--test".to_string());
     }
 
     match metadata {
         Some(m) => {
-            into.push("-C".to_str());
+            into.push("-C".to_string());
             into.push(format!("metadata={}", m.metadata));
 
-            into.push("-C".to_str());
+            into.push("-C".to_string());
             into.push(format!("extra-filename={}", m.extra_filename));
         }
         None => {}
     }
 
     if target.is_lib() {
-        into.push("--out-dir".to_str());
-        into.push(out.display().to_str());
+        into.push("--out-dir".to_string());
+        into.push(out.display().to_string());
     } else {
-        into.push("-o".to_str());
-        into.push(out.join(target.get_name()).display().to_str());
+        into.push("-o".to_string());
+        into.push(out.join(target.get_name()).display().to_string());
     }
 }
 
-fn build_deps_args(dst: &mut Args, cx: &Context) {
-    dst.push("-L".to_str());
-    dst.push(cx.dest.display().to_str());
-    dst.push("-L".to_str());
-    dst.push(cx.deps_dir.display().to_str());
+fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context) {
+    dst.push("-L".to_string());
+    dst.push(cx.dest.display().to_string());
+    dst.push("-L".to_string());
+    dst.push(cx.deps_dir.display().to_string());
+
+    for target in dep_targets(package, cx).iter() {
+        dst.push("--extern".to_string());
+        dst.push(format!("{}={}/{}",
+                 target.get_name(),
+                 cx.deps_dir.display(),
+                 target_filename(target, cx)));
+    }
+}
+
+fn target_filename(target: &Target, cx: &Context) -> String {
+    let stem = target.file_stem();
+
+    if target.is_dylib() {
+        let (ref prefix, ref suffix) = cx.dylib;
+        format!("{}{}{}", prefix, stem, suffix)
+    } else if target.is_rlib() {
+        format!("lib{}.rlib", stem)
+    } else {
+        unreachable!()
+    }
+}
+
+fn dep_targets(pkg: &Package, cx: &Context) -> Vec<Target> {
+    match cx.resolve.deps(pkg.get_package_id()) {
+        None => vec!(),
+        Some(deps) => deps
+            .map(|pkg_id| {
+                cx.package_set.iter()
+                  .find(|pkg| pkg_id == pkg.get_package_id())
+                  .expect("Should have found package")
+            })
+            .filter_map(|pkg| {
+                pkg.get_targets().iter().find(|&t| t.is_lib() && t.get_profile().is_compile())
+            })
+            .map(|t| t.clone())
+            .collect()
+    }
 }
 
 /// Execute all jobs necessary to build the dependency graph.

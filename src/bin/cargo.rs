@@ -81,7 +81,7 @@ fn execute() {
 
 fn process(args: Vec<String>) -> (String, Vec<String>) {
     let mut args = Vec::from_slice(args.tail());
-    let head = args.shift().unwrap_or("--help".to_str());
+    let head = args.shift().unwrap_or("--help".to_string());
 
     (head, args)
 }
@@ -156,5 +156,5 @@ fn locate_project(_: NoFlags, _: &mut MultiShell) -> CliResult<Option<ProjectLoc
                                          not representable in Unicode"))
                       .map_err(|e| CliError::from_boxed(e, 1)));
 
-    Ok(Some(ProjectLocation { root: string.to_str() }))
+    Ok(Some(ProjectLocation { root: string.to_string() }))
 }

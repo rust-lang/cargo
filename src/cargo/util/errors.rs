@@ -120,20 +120,20 @@ impl<T, E: CargoError + Send> ChainError<T> for Result<T, E> {
 }
 
 impl CargoError for IoError {
-    fn description(&self) -> String { self.to_str() }
+    fn description(&self) -> String { self.to_string() }
 }
 
 from_error!(IoError)
 
 impl CargoError for TomlError {
-    fn description(&self) -> String { self.to_str() }
+    fn description(&self) -> String { self.to_string() }
 }
 
 from_error!(TomlError)
 
 impl CargoError for FormatError {
     fn description(&self) -> String {
-        "formatting failed".to_str()
+        "formatting failed".to_string()
     }
 }
 
@@ -152,8 +152,8 @@ from_error!(ProcessError)
 impl Show for ProcessError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let exit = match self.exit {
-            Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_str(),
-            None => "never executed".to_str()
+            Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_string(),
+            None => "never executed".to_string()
         };
         try!(write!(f, "{} (status={})", self.msg, exit));
         match self.output {
@@ -178,7 +178,7 @@ impl Show for ProcessError {
 }
 
 impl CargoError for ProcessError {
-    fn description(&self) -> String { self.to_str() }
+    fn description(&self) -> String { self.to_string() }
 
     fn detail(&self) -> Option<String> {
         self.detail.clone()
@@ -248,7 +248,7 @@ pub struct CliError {
 
 impl CargoError for CliError {
     fn description(&self) -> String {
-        self.error.to_str()
+        self.error.to_string()
     }
 }
 
@@ -256,7 +256,7 @@ from_error!(CliError)
 
 impl CliError {
     pub fn new<S: Str>(error: S, code: uint) -> CliError {
-        let error = human(error.as_slice().to_str());
+        let error = human(error.as_slice().to_string());
         CliError::from_boxed(error, code)
     }
 
@@ -276,7 +276,7 @@ pub fn process_error<S: Str>(msg: S,
                              status: Option<&ProcessExit>,
                              output: Option<&ProcessOutput>) -> ProcessError {
     ProcessError {
-        msg: msg.as_slice().to_str(),
+        msg: msg.as_slice().to_string(),
         exit: status.map(|o| o.clone()),
         output: output.map(|o| o.clone()),
         detail: None,
@@ -287,8 +287,8 @@ pub fn process_error<S: Str>(msg: S,
 pub fn internal_error<S1: Str, S2: Str>(error: S1,
                                         detail: S2) -> Box<CargoError + Send> {
     box ConcreteCargoError {
-        description: error.as_slice().to_str(),
-        detail: Some(detail.as_slice().to_str()),
+        description: error.as_slice().to_string(),
+        detail: Some(detail.as_slice().to_string()),
         cause: None,
         is_human: false
     } as Box<CargoError + Send>
@@ -296,7 +296,7 @@ pub fn internal_error<S1: Str, S2: Str>(error: S1,
 
 pub fn internal<S: Show>(error: S) -> Box<CargoError + Send> {
     box ConcreteCargoError {
-        description: error.to_str(),
+        description: error.to_string(),
         detail: None,
         cause: None,
         is_human: false
@@ -305,7 +305,7 @@ pub fn internal<S: Show>(error: S) -> Box<CargoError + Send> {
 
 pub fn human<S: Show>(error: S) -> Box<CargoError + Send> {
     box ConcreteCargoError {
-        description: error.to_str(),
+        description: error.to_string(),
         detail: None,
         cause: None,
         is_human: true
