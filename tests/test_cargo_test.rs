@@ -47,13 +47,36 @@ test!(test_with_lib_dep {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo(){}")
+        .file("src/lib.rs", "
+            pub fn foo(){}
+            #[test] fn lib_test() {}
+        ")
         .file("src/main.rs", "
             extern crate foo;
+
             fn main() {}
+
+            #[test]
+            fn bin_test() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"), execs().with_status(0));
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+
+running 1 test
+test bin_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+
+running 1 test
+test lib_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, dir = p.root().display()).as_slice()));
 })
 
 test!(test_with_deep_lib_dep {
