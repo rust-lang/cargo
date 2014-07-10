@@ -9,8 +9,12 @@ script:
   - make install DESTDIR=${PWD}/destdir
 
 env:
-  - BITS=32
-  - BITS=64
+  global:
+    - LD_LIBRARY_PATH=/usr/local/lib
+    - DYLD_LIBRARY_PATH=/usr/local/lib
+  matrix:
+    - BITS=32
+    - BITS=64
 
 os:
   - linux
