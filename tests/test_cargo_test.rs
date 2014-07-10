@@ -57,27 +57,49 @@ test!(test_with_lib_dep {
 })
 
 test!(test_with_deep_lib_dep {
-    let p = project("foo")
+    let p = project("bar")
         .file("Cargo.toml", r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.0.1"
             authors = []
 
             [dependencies.foo]
-            path = "foo"
+            path = "../foo"
         "#)
         .file("src/lib.rs", "
             extern crate foo;
-            pub fn bar() {}
-        ")
+            #[test]
+            fn bar_test() {
+                foo::foo();
+            }
+        ");
+    let p2 = project("foo")
         .file("Cargo.toml", r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "
+            pub fn foo() {}
 
-    assert_that(p.cargo_process("cargo-test"), execs().with_status(0));
+            #[test]
+            fn foo_test() {}
+        ");
+
+    p2.build();
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+{compiling} bar v0.0.1 (file:{dir})
+
+running 1 test
+test bar_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
 })
