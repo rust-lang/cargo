@@ -65,7 +65,7 @@ pub struct PackageId {
 impl<S: hash::Writer> Hash<S> for PackageId {
     fn hash(&self, state: &mut S) {
         self.name.hash(state);
-        self.version.to_str().hash(state);
+        self.version.to_string().hash(state);
         self.source_id.hash(state);
     }
 }
