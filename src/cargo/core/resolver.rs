@@ -122,7 +122,7 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
 mod test {
     use hamcrest::{assert_that, equal_to, contains};
 
-    use core::source::{SourceId, RegistryKind, Location, Remote};
+    use core::source::{SourceId, RegistryKind, GitKind, Location, Remote};
     use core::{Dependency, PackageId, Summary, Registry};
     use util::CargoResult;
 
@@ -177,9 +177,27 @@ mod test {
         PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
     }
 
+    fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
+        let remote = Location::parse(loc);
+        let source_id = SourceId::new(GitKind("master".to_str()),
+                                      remote.unwrap());
+
+        PackageId::new(name, "1.0.0", &source_id).unwrap()
+    }
+
+    fn pkg_loc(name: &str, loc: &str) -> Summary {
+        Summary::new(&pkg_id_loc(name, loc), &[])
+    }
+
     fn dep(name: &str) -> Dependency {
         let url = from_str("http://example.com").unwrap();
         let source_id = SourceId::new(RegistryKind, Remote(url));
+        Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
+    }
+
+    fn dep_loc(name: &str, location: &str) -> Dependency {
+        let url = from_str(location).unwrap();
+        let source_id = SourceId::new(GitKind("master".to_str()), Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
 
@@ -191,6 +209,11 @@ mod test {
         names.iter()
             .map(|name| PackageId::new(*name, "1.0.0", &registry_loc()).unwrap())
             .collect()
+    }
+
+    fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
+        names.iter()
+            .map(|&(name, loc)| pkg_id_loc(name, loc)).collect()
     }
 
     #[test]
@@ -238,6 +261,25 @@ mod test {
         let res = resolve(&pkg_id("root"), [dep("foo"), dep("bar")], &mut reg).unwrap();
 
         assert_that(&res, contains(names(["root", "foo", "bar"])));
+    }
+
+    #[test]
+    pub fn test_resolving_with_same_name() {
+        let list = vec!(pkg_loc("foo", "http://first.example.com"),
+                        pkg_loc("foo", "http://second.example.com"));
+
+        let mut reg = registry(list);
+        let res = resolve(&pkg_id("root"),
+                          [dep_loc("foo", "http://first.example.com"),
+                           dep_loc("foo", "http://second.example.com")],
+                           &mut reg);
+
+        let mut names = loc_names([("foo", "http://first.example.com"),
+                              ("foo", "http://second.example.com")]);
+
+        names.push(pkg_id("root"));
+
+        assert_that(&res.unwrap(), contains(names).exactly());
     }
 
     #[test]
