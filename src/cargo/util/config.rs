@@ -12,12 +12,14 @@ pub struct Config<'a> {
     update_remotes: bool,
     shell: &'a mut MultiShell,
     jobs: uint,
+    target: Option<String>,
 }
 
 impl<'a> Config<'a> {
     pub fn new<'a>(shell: &'a mut MultiShell,
                    update_remotes: bool,
-                   jobs: Option<uint>) -> CargoResult<Config<'a>> {
+                   jobs: Option<uint>,
+                   target: Option<String>) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
@@ -29,6 +31,7 @@ impl<'a> Config<'a> {
             update_remotes: update_remotes,
             shell: shell,
             jobs: jobs.unwrap_or(os::num_cpus()),
+            target: target,
         })
     }
 
@@ -48,8 +51,12 @@ impl<'a> Config<'a> {
         self.update_remotes
     }
 
-    pub fn jobs(&mut self) -> uint {
+    pub fn jobs(&self) -> uint {
         self.jobs
+    }
+
+    pub fn target<'a>(&'a self) -> Option<&'a str> {
+        self.target.as_ref().map(|t| t.as_slice())
     }
 }
 

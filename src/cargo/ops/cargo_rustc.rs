@@ -54,8 +54,9 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
-    let path_fragment = uniq_target_dest(targets);
-    let target_dir = pkg.get_absolute_target_dir().join(path_fragment.unwrap_or(""));
+    let target_dir = pkg.get_absolute_target_dir()
+                        .join(config.target().unwrap_or(""))
+                        .join(uniq_target_dest(targets).unwrap_or(""));
     let deps_target_dir = target_dir.join("deps");
 
     let output = try!(util::process("rustc").arg("-v").exec_with_output());
@@ -223,7 +224,8 @@ fn compile_custom(pkg: &Package, cmd: &str,
                      .cwd(pkg.get_root())
                      .env("OUT_DIR", Some(cx.dest.as_str().expect("non-UTF8 dest path")))
                      .env("DEPS_DIR", Some(cx.dest.join(cx.deps_dir)
-                                             .as_str().expect("non-UTF8 deps path")));
+                                             .as_str().expect("non-UTF8 deps path")))
+                     .env("TARGET", cx.config.target());
     for arg in cmd {
         p = p.arg(arg);
     }
@@ -325,6 +327,14 @@ fn build_base_args(into: &mut Args,
     } else {
         into.push("-o".to_string());
         into.push(out.join(target.get_name()).display().to_string());
+    }
+
+    match cx.config.target() {
+        Some(target) => {
+            into.push("--target".to_string());
+            into.push(target.to_string());
+        }
+        None => {}
     }
 }
 
