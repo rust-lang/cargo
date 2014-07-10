@@ -105,7 +105,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
-            target.is_lib() && target.get_profile().get_env() == env
+            target.is_lib() && match env {
+                "test" => target.get_profile().is_compile(),
+                _ => target.get_profile().get_env() == env,
+            }
         }).collect::<Vec<&Target>>();
 
         jobs.push((dep, try!(compile(targets.as_slice(), dep, &mut cx))));
@@ -121,7 +124,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
 
 fn compile(targets: &[&Target], pkg: &Package,
            cx: &mut Context) -> CargoResult<(Freshness, Job)> {
-    debug!("compile_pkg; pkg={}; targets={}", pkg, pkg.get_targets());
+    debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
 
     if targets.is_empty() {
         return Ok((Fresh, proc() Ok(())))
