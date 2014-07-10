@@ -4,11 +4,12 @@ use std::io::{File, IoError};
 use std::io;
 use std::os::args;
 use std::str;
+use std::io::TempDir;
 use term::color::YELLOW;
 
 use core::{Package, PackageSet, Target, Resolve};
 use util;
-use util::{CargoResult, ChainError, ProcessBuilder, internal, human, CargoError};
+use util::{CargoResult, ChainError, ProcessBuilder, CargoError, Require, internal, human};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
 
 type Args = Vec<String>;
@@ -20,7 +21,8 @@ struct Context<'a, 'b> {
     rustc_version: &'a str,
     resolve: &'a Resolve,
     package_set: &'a PackageSet,
-    config: &'b mut Config<'b>
+    config: &'b mut Config<'b>,
+    dylib: (String, String)
 }
 
 type Job = proc():Send -> CargoResult<()>;
@@ -71,6 +73,24 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
         internal(format!("Couldn't create the directory for dependencies for {} at {}",
                  pkg.get_name(), deps_target_dir.display()))));
 
+    let temp: TempDir = try!(TempDir::new_in(&deps_target_dir, "temp")
+                             .require(|| internal("Couldn't create a tempdir")));
+
+    let file = temp.path().join("dylib.rs");
+    try!(File::create(&file));
+
+    let output = try!(util::process("rustc")
+                      .arg(file.display().to_str())
+                      .arg("--crate-name").arg("-")
+                      .arg("--crate-type").arg("dylib")
+                      .arg("--print-file-name")
+                      .exec_with_output());
+
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
+
+    let parts: Vec<&str> = output.slice_to(output.len() - 1).split('-').collect();
+    assert!(parts.len() == 2, "rustc --print-file-name output has changed");
+
     let mut cx = Context {
         dest: &deps_target_dir,
         deps_dir: &deps_target_dir,
@@ -78,7 +98,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
         rustc_version: rustc_version.as_slice(),
         resolve: resolve,
         package_set: deps,
-        config: config
+        config: config,
+        dylib: (parts.get(0).to_str(), parts.get(1).to_str())
     };
 
     // Build up a list of pending jobs, each of which represent compiling a
@@ -87,6 +108,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
     // everything in order with proper parallelism.
     let mut jobs = Vec::new();
     for dep in deps.iter() {
+        if dep == pkg { continue; }
+
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
             target.is_lib() && target.get_profile().get_env() == env
@@ -228,8 +251,10 @@ fn rustc(package: &Package, target: &Target, cx: &mut Context) -> Job {
 
     proc() {
         if primary {
+            log!(5, "executing primary");
             rustc.exec().map_err(|err| human(err.to_str()))
         } else {
+            log!(5, "executing deps");
             rustc.exec_with_output().and(Ok(())).map_err(|err| {
                 human(err.to_str())
             })
@@ -315,10 +340,23 @@ fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context) {
 
     for target in dep_targets(package, cx).iter() {
         dst.push("--extern".to_str());
-        dst.push(format!("{}={}/lib{}.rlib",
+        dst.push(format!("{}={}/{}",
                  target.get_name(),
                  cx.deps_dir.display(),
-                 target.file_stem()));
+                 target_filename(target, cx)));
+    }
+}
+
+fn target_filename(target: &Target, cx: &Context) -> String {
+    let stem = target.file_stem();
+
+    if target.is_dylib() {
+        let (ref prefix, ref suffix) = cx.dylib;
+        format!("{}{}{}", prefix, stem, suffix)
+    } else if target.is_rlib() {
+        format!("lib{}.rlib", stem)
+    } else {
+        unreachable!()
     }
 }
 

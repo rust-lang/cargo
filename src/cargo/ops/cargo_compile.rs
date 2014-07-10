@@ -63,8 +63,9 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()>
         let mut registry =
             try!(PackageRegistry::new(source_ids, override_ids, &mut config));
 
-        let resolved =
-            try!(resolver::resolve(package.get_dependencies(), &mut registry));
+        let resolved = try!(resolver::resolve(package.get_package_id(),
+                                              package.get_dependencies(),
+                                              &mut registry));
 
         let req: Vec<PackageId> = resolved.iter().map(|r| r.clone()).collect();
         let packages = try!(registry.get(req.as_slice()).wrap({

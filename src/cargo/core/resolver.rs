@@ -4,7 +4,6 @@ use util::graph::{Nodes,Edges};
 use core::{
     Dependency,
     PackageId,
-    Summary,
     Registry,
     SourceId,
 };
@@ -31,12 +30,6 @@ impl Resolve {
     }
 }
 
-/*
-pub fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Vec<PackageId>> {
-    Ok(try!(resolve2(deps, registry)).iter().map(|p| p.clone()).collect())
-}
-*/
-
 struct Context<'a, R> {
     registry: &'a mut R,
     resolve: Resolve,
@@ -57,15 +50,17 @@ impl<'a, R: Registry> Context<'a, R> {
     }
 }
 
-pub fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Resolve> {
+pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mut R)
+                            -> CargoResult<Resolve>
+{
     log!(5, "resolve; deps={}", deps);
 
     let mut context = Context::new(registry);
-    try!(resolve_deps(None, deps, &mut context));
+    try!(resolve_deps(root, deps, &mut context));
     Ok(context.resolve)
 }
 
-fn resolve_deps<'a, R: Registry>(parent: Option<&PackageId>,
+fn resolve_deps<'a, R: Registry>(parent: &PackageId,
                                  deps: &[Dependency],
                                  ctx: &mut Context<'a, R>)
                                  -> CargoResult<()>
@@ -91,6 +86,8 @@ fn resolve_deps<'a, R: Registry>(parent: Option<&PackageId>,
         let source_id = summary.get_source_id().clone();
         let version = summary.get_version().clone();
 
+        ctx.resolve.graph.link(parent.clone(), summary.get_package_id().clone());
+
         let found = {
             let found = ctx.seen.find(&(name.clone(), source_id.clone()));
 
@@ -115,11 +112,7 @@ fn resolve_deps<'a, R: Registry>(parent: Option<&PackageId>,
             .map(|d| d.clone())
             .collect();
 
-        try!(resolve_deps(Some(summary.get_package_id()), deps.as_slice(), ctx));
-
-        parent.map(|parent| {
-            ctx.resolve.graph.link(parent.clone(), summary.get_package_id().clone());
-        });
+        try!(resolve_deps(summary.get_package_id(), deps.as_slice(), ctx));
     }
 
     Ok(())
@@ -131,11 +124,12 @@ mod test {
 
     use core::source::{SourceId, RegistryKind, Location, Remote};
     use core::{Dependency, PackageId, Summary, Registry};
-    use super::resolve;
     use util::CargoResult;
 
-    fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Vec<PackageId>> {
-        Ok(try!(super::resolve(deps, registry)).iter().map(|p| p.clone()).collect())
+    fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency], registry: &mut R)
+                            -> CargoResult<Vec<PackageId>>
+    {
+        Ok(try!(super::resolve(pkg, deps, registry)).iter().map(|p| p.clone()).collect())
     }
 
     trait ToDep {
@@ -176,8 +170,11 @@ mod test {
     }
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&PackageId::new(name, "1.0.0", &registry_loc()).unwrap(),
-                     &[])
+        Summary::new(&pkg_id(name), &[])
+    }
+
+    fn pkg_id(name: &str) -> PackageId {
+        PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
     }
 
     fn dep(name: &str) -> Dependency {
@@ -198,7 +195,7 @@ mod test {
 
     #[test]
     pub fn test_resolving_empty_dependency_list() {
-        let res = resolve([], &mut registry(vec!())).unwrap();
+        let res = resolve(&pkg_id("root"), [], &mut registry(vec!())).unwrap();
 
         assert_that(&res, equal_to(&names([])));
     }
@@ -206,41 +203,41 @@ mod test {
     #[test]
     pub fn test_resolving_only_package() {
         let mut reg = registry(vec!(pkg("foo")));
-        let res = resolve([dep("foo")], &mut reg);
+        let res = resolve(&pkg_id("root"), [dep("foo")], &mut reg);
 
-        assert_that(&res.unwrap(), equal_to(&names(["foo"])));
+        assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_one_dep() {
         let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
-        let res = resolve([dep("foo")], &mut reg);
+        let res = resolve(&pkg_id("root"), [dep("foo")], &mut reg);
 
-        assert_that(&res.unwrap(), equal_to(&names(["foo"])));
+        assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_multiple_deps() {
         let mut reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
-        let res = resolve([dep("foo"), dep("baz")], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("foo"), dep("baz")], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "baz"])).exactly());
+        assert_that(&res, contains(names(["root", "foo", "baz"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_transitive_deps() {
         let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
-        let res = resolve([dep("bar")], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("bar")], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "bar"])));
+        assert_that(&res, contains(names(["root", "foo", "bar"])));
     }
 
     #[test]
     pub fn test_resolving_common_transitive_deps() {
         let mut reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
-        let res = resolve([dep("foo"), dep("bar")], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("foo"), dep("bar")], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "bar"])));
+        assert_that(&res, contains(names(["root", "foo", "bar"])));
     }
 
     #[test]
@@ -252,8 +249,8 @@ mod test {
             pkg!("bat")
         ));
 
-        let res = resolve([dep("foo"), dep("baz").as_dev()], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("foo"), dep("baz").as_dev()], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "bar", "baz"])));
+        assert_that(&res, contains(names(["root", "foo", "bar", "baz"])));
     }
 }
