@@ -343,6 +343,16 @@ impl Target {
         }
     }
 
+    pub fn example_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
+        Target {
+            kind: BinTarget,
+            name: name.to_string(),
+            src_path: src_path.clone(),
+            profile: profile.clone(),
+            metadata: None
+        }
+    }
+
     pub fn get_name<'a>(&'a self) -> &'a str {
         self.name.as_slice()
     }
