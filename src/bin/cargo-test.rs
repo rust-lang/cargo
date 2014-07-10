@@ -22,11 +22,12 @@ use cargo::util::important_paths::find_project_manifest;
 struct Options {
     manifest_path: Option<String>,
     jobs: Option<uint>,
+    update: bool,
     rest: Vec<String>,
 }
 
 hammer_config!(Options "Run the package's test suite", |c| {
-    c.short("jobs", 'j')
+    c.short("jobs", 'j').short("update", 'u')
 })
 
 fn main() {
@@ -45,7 +46,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     };
 
     let compile_opts = ops::CompileOptions {
-        update: false,
+        update: options.update,
         env: "test",
         shell: shell,
         jobs: options.jobs
