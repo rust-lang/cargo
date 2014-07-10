@@ -6,7 +6,7 @@ use std::os::args;
 use std::str;
 use term::color::YELLOW;
 
-use core::{Package, PackageSet, Target};
+use core::{Package, PackageSet, Target, Resolve};
 use util;
 use util::{CargoResult, ChainError, ProcessBuilder, internal, human, CargoError};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
@@ -18,6 +18,8 @@ struct Context<'a, 'b> {
     deps_dir: &'a Path,
     primary: bool,
     rustc_version: &'a str,
+    resolve: &'a Resolve,
+    package_set: &'a PackageSet,
     config: &'b mut Config<'b>
 }
 
@@ -42,9 +44,9 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 }
 
 pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
-                           deps: &PackageSet,
-                           config: &'a mut Config<'a>) -> CargoResult<()> {
-
+                           deps: &PackageSet, resolve: &'a Resolve,
+                           config: &'a mut Config<'a>) -> CargoResult<()>
+{
     if targets.is_empty() {
         return Ok(());
     }
@@ -74,6 +76,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
         deps_dir: &deps_target_dir,
         primary: false,
         rustc_version: rustc_version.as_slice(),
+        resolve: resolve,
+        package_set: deps,
         config: config
     };
 
@@ -135,7 +139,7 @@ fn compile(targets: &[&Target], pkg: &Package,
     // After the custom command has run, execute rustc for all targets of our
     // package.
     for &target in targets.iter() {
-        cmds.push(rustc(&pkg.get_root(), target, cx));
+        cmds.push(rustc(pkg, target, cx));
     }
 
     cmds.push(proc() {
@@ -207,15 +211,16 @@ fn compile_custom(pkg: &Package, cmd: &str,
     proc() p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human())
 }
 
-fn rustc(root: &Path, target: &Target, cx: &mut Context) -> Job {
+fn rustc(package: &Package, target: &Target, cx: &mut Context) -> Job {
     let crate_types = target.rustc_crate_types();
+    let root = package.get_root();
 
     log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; verbose={}",
          root.display(), target, crate_types, cx.dest.display(),
          cx.deps_dir.display(), cx.primary);
 
     let primary = cx.primary;
-    let rustc = prepare_rustc(root, target, crate_types, cx);
+    let rustc = prepare_rustc(package, target, crate_types, cx);
 
     log!(5, "command={}", rustc);
 
@@ -232,12 +237,14 @@ fn rustc(root: &Path, target: &Target, cx: &mut Context) -> Job {
     }
 }
 
-fn prepare_rustc(root: &Path, target: &Target, crate_types: Vec<&str>,
-                 cx: &Context) -> ProcessBuilder {
+fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
+                 cx: &Context) -> ProcessBuilder
+{
+    let root = package.get_root();
     let mut args = Vec::new();
 
     build_base_args(&mut args, target, crate_types, cx);
-    build_deps_args(&mut args, cx);
+    build_deps_args(&mut args, package, cx);
 
     util::process("rustc")
         .cwd(root.clone())
@@ -286,7 +293,7 @@ fn build_base_args(into: &mut Args,
             into.push(format!("metadata={}", m.metadata));
 
             into.push("-C".to_str());
-            into.push(format!("extra-filename=-{}", m.extra_filename));
+            into.push(format!("extra-filename={}", m.extra_filename));
         }
         None => {}
     }
@@ -300,11 +307,36 @@ fn build_base_args(into: &mut Args,
     }
 }
 
-fn build_deps_args(dst: &mut Args, cx: &Context) {
+fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context) {
     dst.push("-L".to_str());
     dst.push(cx.dest.display().to_str());
     dst.push("-L".to_str());
     dst.push(cx.deps_dir.display().to_str());
+
+    for target in dep_targets(package, cx).iter() {
+        dst.push("--extern".to_str());
+        dst.push(format!("{}={}/lib{}.rlib",
+                 target.get_name(),
+                 cx.deps_dir.display(),
+                 target.file_stem()));
+    }
+}
+
+fn dep_targets(pkg: &Package, cx: &Context) -> Vec<Target> {
+    match cx.resolve.deps(pkg.get_package_id()) {
+        None => vec!(),
+        Some(deps) => deps
+            .map(|pkg_id| {
+                cx.package_set.iter()
+                  .find(|pkg| pkg_id == pkg.get_package_id())
+                  .expect("Should have found package")
+            })
+            .filter_map(|pkg| {
+                pkg.get_targets().iter().find(|&t| t.is_lib() && t.get_profile().is_compile())
+            })
+            .map(|t| t.clone())
+            .collect()
+    }
 }
 
 /// Execute all jobs necessary to build the dependency graph.

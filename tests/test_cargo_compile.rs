@@ -93,7 +93,7 @@ test!(cargo_compile_with_invalid_code {
 {filename}:1 invalid rust code!
              ^~~~~~~
 Could not execute process \
-`rustc {filename} --crate-name foo --crate-type bin -g -o {} -L {} -L {}` (status=101)\n",
+`rustc {filename} --crate-name foo --crate-type bin -o {} -L {} -L {}` (status=101)\n",
             target.join("foo").display(),
             target.display(),
             target.join("deps").display(),
@@ -973,7 +973,7 @@ test!(verbose_build {
     let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 15);
     let hash = hash.slice_to(17);
     assert_eq!(out, format!("\
-{} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
+{} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         -C metadata=test:-:0.0.0:-:file:{dir} \
         -C extra-filename={hash} \
         --out-dir {dir}{sep}target \

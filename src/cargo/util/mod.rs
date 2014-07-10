@@ -8,6 +8,7 @@ pub use self::paths::realpath;
 pub use self::hex::{to_hex, short_hash};
 pub use self::pool::TaskPool;
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
+pub use self::graph::Graph;
 
 pub mod graph;
 pub mod process_builder;

@@ -1,8 +1,9 @@
 use std::hash::Hash;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::collections::hashmap::{Keys, SetItems};
 
 pub struct Graph<N> {
-    nodes: HashMap<N, Vec<N>>
+    nodes: HashMap<N, HashSet<N>>
 }
 
 enum Mark {
@@ -10,13 +11,26 @@ enum Mark {
     Done
 }
 
+pub type Nodes<'a, N> = Keys<'a, N, HashSet<N>>;
+pub type Edges<'a, N> = SetItems<'a, N>;
+
 impl<N: Eq + Hash + Clone> Graph<N> {
     pub fn new() -> Graph<N> {
         Graph { nodes: HashMap::new() }
     }
 
     pub fn add(&mut self, node: N, children: &[N]) {
-        self.nodes.insert(node, children.to_owned());
+        self.nodes.insert(node, children.iter().map(|n| n.clone()).collect());
+    }
+
+    pub fn link(&mut self, node: N, child: N) {
+        self.nodes
+            .find_or_insert_with(node, |_| HashSet::new())
+            .insert(child);
+    }
+
+    pub fn edges<'a>(&'a self, node: &N) -> Option<Edges<'a, N>> {
+        self.nodes.find(node).map(|set| set.iter())
     }
 
     pub fn sort(&self) -> Option<Vec<N>> {
@@ -43,5 +57,9 @@ impl<N: Eq + Hash + Clone> Graph<N> {
 
         dst.push(node.clone());
         marks.insert(node.clone(), Done);
+    }
+
+    pub fn iter<'a>(&'a self) -> Nodes<'a, N> {
+        self.nodes.keys()
     }
 }

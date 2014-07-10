@@ -2,9 +2,11 @@
 #![crate_type="rlib"]
 
 #![feature(macro_rules, phase)]
+#![feature(default_type_params)]
 
 extern crate debug;
 extern crate term;
+extern crate collections;
 extern crate url;
 extern crate serialize;
 extern crate semver;

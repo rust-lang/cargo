@@ -1,59 +1,128 @@
 use std::collections::HashMap;
+use util::graph::{Nodes,Edges};
 
 use core::{
     Dependency,
     PackageId,
     Summary,
     Registry,
+    SourceId,
 };
 
-use util::{CargoResult, human, internal};
+use semver;
 
-/* TODO:
- * - The correct input here is not a registry. Resolves should be performable
- * on package summaries vs. the packages themselves.
- */
-pub fn resolve<R: Registry>(deps: &[Dependency],
-                            registry: &mut R) -> CargoResult<Vec<PackageId>> {
+use util::{CargoResult, Graph, human, internal};
+
+pub struct Resolve {
+    graph: Graph<PackageId>
+}
+
+impl Resolve {
+    fn new() -> Resolve {
+        Resolve { graph: Graph::new() }
+    }
+
+    pub fn iter<'a>(&'a self) -> Nodes<'a, PackageId> {
+        self.graph.iter()
+    }
+
+    pub fn deps<'a>(&'a self, pkg: &PackageId) -> Option<Edges<'a, PackageId>> {
+        self.graph.edges(pkg)
+    }
+}
+
+/*
+pub fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Vec<PackageId>> {
+    Ok(try!(resolve2(deps, registry)).iter().map(|p| p.clone()).collect())
+}
+*/
+
+struct Context<'a, R> {
+    registry: &'a mut R,
+    resolve: Resolve,
+
+    // Eventually, we will have smarter logic for checking for conflicts in the resolve,
+    // but without the registry, conflicts should not exist in practice, so this is just
+    // a sanity check.
+    seen: HashMap<(String, SourceId), semver::Version>
+}
+
+impl<'a, R: Registry> Context<'a, R> {
+    fn new(registry: &'a mut R) -> Context<'a, R> {
+        Context {
+            registry: registry,
+            resolve: Resolve::new(),
+            seen: HashMap::new()
+        }
+    }
+}
+
+pub fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Resolve> {
     log!(5, "resolve; deps={}", deps);
 
-    let mut remaining = Vec::from_slice(deps);
-    let mut resolve = HashMap::<String, Summary>::new();
+    let mut context = Context::new(registry);
+    try!(resolve_deps(None, deps, &mut context));
+    Ok(context.resolve)
+}
 
-    loop {
-        let curr = match remaining.pop() {
-            Some(curr) => curr,
-            None => {
-                let ret = resolve.values().map(|summary| {
-                    summary.get_package_id().clone()
-                }).collect();
-                log!(5, "resolve complete; ret={}", ret);
-                return Ok(ret);
+fn resolve_deps<'a, R: Registry>(parent: Option<&PackageId>,
+                                 deps: &[Dependency],
+                                 ctx: &mut Context<'a, R>)
+                                 -> CargoResult<()>
+{
+    if deps.is_empty() {
+        return Ok(());
+    }
+
+    for dep in deps.iter() {
+        let pkgs = try!(ctx.registry.query(dep));
+
+        if pkgs.is_empty() {
+            return Err(human(format!("No package named {} found", dep)));
+        }
+
+        if pkgs.len() > 1 {
+            return Err(internal(format!("At the moment, Cargo only supports a \
+                single source for a particular package name ({}).", dep)));
+        }
+
+        let summary = pkgs.get(0).clone();
+        let name = summary.get_name().to_str();
+        let source_id = summary.get_source_id().clone();
+        let version = summary.get_version().clone();
+
+        let found = {
+            let found = ctx.seen.find(&(name.clone(), source_id.clone()));
+
+            if found.is_some() {
+                if found == Some(&version) { continue; }
+                return Err(human(format!("Cargo found multiple copies of {} in {}. This \
+                                        is not currently supported",
+                                        summary.get_name(), summary.get_source_id())));
+            } else {
+                false
             }
         };
 
-        let opts = try!(registry.query(&curr));
-
-        if opts.len() == 0 {
-            return Err(human(format!("No package named {} found", curr.get_name())));
+        if !found {
+            ctx.seen.insert((name, source_id), version);
         }
 
-        if opts.len() > 1 {
-            return Err(internal(format!("At the moment, Cargo only supports a \
-                single source for a particular package name ({}).", curr.get_name())));
-        }
+        ctx.resolve.graph.add(summary.get_package_id().clone(), []);
 
-        let pkg = opts.get(0).clone();
-        resolve.insert(pkg.get_name().to_str(), pkg.clone());
+        let deps: Vec<Dependency> = summary.get_dependencies().iter()
+            .filter(|d| d.is_transitive())
+            .map(|d| d.clone())
+            .collect();
 
-        for dep in pkg.get_dependencies().iter() {
-            if !dep.is_transitive() { continue; }
+        try!(resolve_deps(Some(summary.get_package_id()), deps.as_slice(), ctx));
 
-            if !resolve.contains_key_equiv(&dep.get_name()) {
-                remaining.push(dep.clone());
-            }
-        }
+        parent.map(|parent| {
+            ctx.resolve.graph.link(parent.clone(), summary.get_package_id().clone());
+        });
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -61,8 +130,13 @@ mod test {
     use hamcrest::{assert_that, equal_to, contains};
 
     use core::source::{SourceId, RegistryKind, Location, Remote};
-    use core::{Dependency, PackageId, Summary};
+    use core::{Dependency, PackageId, Summary, Registry};
     use super::resolve;
+    use util::CargoResult;
+
+    fn resolve<R: Registry>(deps: &[Dependency], registry: &mut R) -> CargoResult<Vec<PackageId>> {
+        Ok(try!(super::resolve(deps, registry)).iter().map(|p| p.clone()).collect())
+    }
 
     trait ToDep {
         fn to_dep(self) -> Dependency;
