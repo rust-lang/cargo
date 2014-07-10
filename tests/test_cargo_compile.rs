@@ -1062,7 +1062,7 @@ test!(verbose_release_build_deps {
         --out-dir {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps \
-        --extern foo={dir}/target/release/deps/libfoo{hash1}.rlib`
+        --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo{hash1}.rlib`
 {compiling} foo v0.0.0 (file:{dir})
 {compiling} test v0.0.0 (file:{dir})\n",
                     running = RUNNING,

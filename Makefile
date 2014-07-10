@@ -7,9 +7,11 @@ ifeq ($(wildcard rustc/bin),)
 export RUSTC := rustc
 else
 export RUSTC := $(CURDIR)/rustc/bin/rustc
+export LD_LIBRARY_PATH := $(CURDIR)/rustc/lib:$(LD_LIBRARY_PATH)
+export DYLD_LIBRARY_PATH := $(CURDIR)/rustc/lib:$(DYLD_LIBRARY_PATH)
 endif
 
-export PATH := $(PATH):$(CURDIR)/rustc/bin
+export PATH := $(CURDIR)/rustc/bin:$(PATH)
 
 # Link flags to pull in dependencies
 BINS = cargo \

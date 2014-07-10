@@ -1,4 +1,7 @@
+use std::str;
+
 use support::{project, execs, basic_bin_manifest, COMPILING, cargo_dir};
+use support::{ResultTest};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -60,23 +63,26 @@ test!(test_with_lib_dep {
             fn bin_test() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
-                execs().with_status(0)
-                       .with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+    let output = p.cargo_process("cargo-test")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
 
+    let bin = "\
 running 1 test
 test bin_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+    let lib = "\
 running 1 test
 test lib_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
 
-", compiling = COMPILING, dir = p.root().display()).as_slice()));
+    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
+                       compiling = COMPILING, dir = p.root().display());
+
+    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
+            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
 })
 
 test!(test_with_deep_lib_dep {
