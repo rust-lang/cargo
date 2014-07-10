@@ -198,9 +198,9 @@ struct Context<'a> {
 fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
     layout.lib.as_ref().map(|lib| {
         vec![TomlTarget {
-            name: name.to_str(),
+            name: name.to_string(),
             crate_type: None,
-            path: Some(lib.display().to_str()),
+            path: Some(lib.display().to_string()),
             test: None
         }]
     })
@@ -209,16 +209,16 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
 fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
     Some(layout.bins.iter().filter_map(|bin| {
         let name = if bin.as_str() == Some("src/main.rs") {
-            Some(name.to_str())
+            Some(name.to_string())
         } else {
-            bin.filestem_str().map(|f| f.to_str())
+            bin.filestem_str().map(|f| f.to_string())
         };
 
         name.map(|name| {
             TomlTarget {
                 name: name,
                 crate_type: None,
-                path: Some(bin.display().to_str()),
+                path: Some(bin.display().to_string()),
                 test: None
             }
         })
@@ -252,7 +252,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
-                        path: layout.lib.as_ref().map(|p| p.display().to_str()),
+                        path: layout.lib.as_ref().map(|p| p.display().to_string()),
                         test: t.test
                     }
                 } else {
@@ -271,7 +271,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
-                        path: bin.as_ref().map(|p| p.display().to_str()),
+                        path: bin.as_ref().map(|p| p.display().to_string()),
                         test: t.test
                     }
                 } else {
@@ -336,7 +336,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
                 let reference = details.branch.clone()
                     .or_else(|| details.tag.clone())
                     .or_else(|| details.rev.clone())
-                    .unwrap_or_else(|| "master".to_str());
+                    .unwrap_or_else(|| "master".to_string());
 
                 let new_source_id = match details.git {
                     Some(ref git) => {
@@ -386,25 +386,34 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 {
     log!(4, "normalizing toml targets; lib={}; bin={}", lib, bin);
 
-    fn target_profiles(target: &TomlTarget) -> Vec<Profile> {
+    enum TestDep { Needed, NotNeeded }
+
+    fn target_profiles(target: &TomlTarget,
+                       dep: Option<TestDep>) -> Vec<Profile> {
         let mut ret = vec!(Profile::default_dev(), Profile::default_release());
 
         match target.test {
             Some(true) | None => ret.push(Profile::default_test()),
+            Some(false) => {}
+        }
+
+        match dep {
+            Some(Needed) => ret.push(Profile::default_test().test(false)),
             _ => {}
-        };
+        }
 
         ret
     }
 
-    fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget], metadata: &Metadata) {
+    fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget],
+                   dep: TestDep, metadata: &Metadata) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             LibKind::from_strs(kinds).ok()
         }).unwrap_or_else(|| vec!(Lib));
 
-        for profile in target_profiles(l).iter() {
+        for profile in target_profiles(l, Some(dep)).iter() {
             dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
                                         &Path::new(path.as_slice()), profile,
                                         metadata));
@@ -416,7 +425,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| default(bin));
 
-            for profile in target_profiles(bin).iter() {
+            for profile in target_profiles(bin, None).iter() {
                 dst.push(Target::bin_target(bin.name.as_slice(),
                                             &Path::new(path.as_slice()),
                                             profile));
@@ -428,12 +437,12 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
     match (lib, bin) {
         (Some(ref libs), Some(ref bins)) => {
-            lib_targets(&mut ret, libs.as_slice(), metadata);
+            lib_targets(&mut ret, libs.as_slice(), Needed, metadata);
             bin_targets(&mut ret, bins.as_slice(),
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         (Some(ref libs), None) => {
-            lib_targets(&mut ret, libs.as_slice(), metadata);
+            lib_targets(&mut ret, libs.as_slice(), NotNeeded, metadata);
         },
         (None, Some(ref bins)) => {
             bin_targets(&mut ret, bins.as_slice(),

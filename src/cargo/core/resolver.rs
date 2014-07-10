@@ -1,68 +1,136 @@
 use std::collections::HashMap;
+use util::graph::{Nodes,Edges};
 
 use core::{
     Dependency,
     PackageId,
-    Summary,
     Registry,
+    SourceId,
 };
 
-use util::{CargoResult, human, internal};
+use semver;
 
-/* TODO:
- * - The correct input here is not a registry. Resolves should be performable
- * on package summaries vs. the packages themselves.
- */
-pub fn resolve<R: Registry>(deps: &[Dependency],
-                            registry: &mut R) -> CargoResult<Vec<PackageId>> {
+use util::{CargoResult, Graph, human, internal};
+
+pub struct Resolve {
+    graph: Graph<PackageId>
+}
+
+impl Resolve {
+    fn new() -> Resolve {
+        Resolve { graph: Graph::new() }
+    }
+
+    pub fn iter<'a>(&'a self) -> Nodes<'a, PackageId> {
+        self.graph.iter()
+    }
+
+    pub fn deps<'a>(&'a self, pkg: &PackageId) -> Option<Edges<'a, PackageId>> {
+        self.graph.edges(pkg)
+    }
+}
+
+struct Context<'a, R> {
+    registry: &'a mut R,
+    resolve: Resolve,
+
+    // Eventually, we will have smarter logic for checking for conflicts in the resolve,
+    // but without the registry, conflicts should not exist in practice, so this is just
+    // a sanity check.
+    seen: HashMap<(String, SourceId), semver::Version>
+}
+
+impl<'a, R: Registry> Context<'a, R> {
+    fn new(registry: &'a mut R) -> Context<'a, R> {
+        Context {
+            registry: registry,
+            resolve: Resolve::new(),
+            seen: HashMap::new()
+        }
+    }
+}
+
+pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mut R)
+                            -> CargoResult<Resolve>
+{
     log!(5, "resolve; deps={}", deps);
 
-    let mut remaining = Vec::from_slice(deps);
-    let mut resolve = HashMap::<String, Summary>::new();
+    let mut context = Context::new(registry);
+    try!(resolve_deps(root, deps, &mut context));
+    Ok(context.resolve)
+}
 
-    loop {
-        let curr = match remaining.pop() {
-            Some(curr) => curr,
-            None => {
-                let ret = resolve.values().map(|summary| {
-                    summary.get_package_id().clone()
-                }).collect();
-                log!(5, "resolve complete; ret={}", ret);
-                return Ok(ret);
+fn resolve_deps<'a, R: Registry>(parent: &PackageId,
+                                 deps: &[Dependency],
+                                 ctx: &mut Context<'a, R>)
+                                 -> CargoResult<()>
+{
+    if deps.is_empty() {
+        return Ok(());
+    }
+
+    for dep in deps.iter() {
+        let pkgs = try!(ctx.registry.query(dep));
+
+        if pkgs.is_empty() {
+            return Err(human(format!("No package named {} found", dep)));
+        }
+
+        if pkgs.len() > 1 {
+            return Err(internal(format!("At the moment, Cargo only supports a \
+                single source for a particular package name ({}).", dep)));
+        }
+
+        let summary = pkgs.get(0).clone();
+        let name = summary.get_name().to_string();
+        let source_id = summary.get_source_id().clone();
+        let version = summary.get_version().clone();
+
+        ctx.resolve.graph.link(parent.clone(), summary.get_package_id().clone());
+
+        let found = {
+            let found = ctx.seen.find(&(name.clone(), source_id.clone()));
+
+            if found.is_some() {
+                if found == Some(&version) { continue; }
+                return Err(human(format!("Cargo found multiple copies of {} in {}. This \
+                                        is not currently supported",
+                                        summary.get_name(), summary.get_source_id())));
+            } else {
+                false
             }
         };
 
-        let opts = try!(registry.query(&curr));
-
-        if opts.len() == 0 {
-            return Err(human(format!("No package named {} found", curr.get_name())));
+        if !found {
+            ctx.seen.insert((name, source_id), version);
         }
 
-        if opts.len() > 1 {
-            return Err(internal(format!("At the moment, Cargo only supports a \
-                single source for a particular package name ({}).", curr.get_name())));
-        }
+        ctx.resolve.graph.add(summary.get_package_id().clone(), []);
 
-        let pkg = opts.get(0).clone();
-        resolve.insert(pkg.get_name().to_str(), pkg.clone());
+        let deps: Vec<Dependency> = summary.get_dependencies().iter()
+            .filter(|d| d.is_transitive())
+            .map(|d| d.clone())
+            .collect();
 
-        for dep in pkg.get_dependencies().iter() {
-            if !dep.is_transitive() { continue; }
-
-            if !resolve.contains_key_equiv(&dep.get_name()) {
-                remaining.push(dep.clone());
-            }
-        }
+        try!(resolve_deps(summary.get_package_id(), deps.as_slice(), ctx));
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod test {
     use hamcrest::{assert_that, equal_to, contains};
 
-    use core::source::{SourceId, RegistryKind, Location, Remote};
-    use core::{Dependency, PackageId, Summary};
-    use super::resolve;
+    use core::source::{SourceId, RegistryKind, GitKind, Location, Remote};
+    use core::{Dependency, PackageId, Summary, Registry};
+    use util::CargoResult;
+
+    fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency], registry: &mut R)
+                            -> CargoResult<Vec<PackageId>>
+    {
+        Ok(try!(super::resolve(pkg, deps, registry)).iter().map(|p| p.clone()).collect())
+    }
 
     trait ToDep {
         fn to_dep(self) -> Dependency;
@@ -102,13 +170,34 @@ mod test {
     }
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&PackageId::new(name, "1.0.0", &registry_loc()).unwrap(),
-                     &[])
+        Summary::new(&pkg_id(name), &[])
+    }
+
+    fn pkg_id(name: &str) -> PackageId {
+        PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
+    }
+
+    fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
+        let remote = Location::parse(loc);
+        let source_id = SourceId::new(GitKind("master".to_string()),
+                                      remote.unwrap());
+
+        PackageId::new(name, "1.0.0", &source_id).unwrap()
+    }
+
+    fn pkg_loc(name: &str, loc: &str) -> Summary {
+        Summary::new(&pkg_id_loc(name, loc), &[])
     }
 
     fn dep(name: &str) -> Dependency {
         let url = from_str("http://example.com").unwrap();
         let source_id = SourceId::new(RegistryKind, Remote(url));
+        Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
+    }
+
+    fn dep_loc(name: &str, location: &str) -> Dependency {
+        let url = from_str(location).unwrap();
+        let source_id = SourceId::new(GitKind("master".to_string()), Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
 
@@ -122,9 +211,14 @@ mod test {
             .collect()
     }
 
+    fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
+        names.iter()
+            .map(|&(name, loc)| pkg_id_loc(name, loc)).collect()
+    }
+
     #[test]
     pub fn test_resolving_empty_dependency_list() {
-        let res = resolve([], &mut registry(vec!())).unwrap();
+        let res = resolve(&pkg_id("root"), [], &mut registry(vec!())).unwrap();
 
         assert_that(&res, equal_to(&names([])));
     }
@@ -132,41 +226,60 @@ mod test {
     #[test]
     pub fn test_resolving_only_package() {
         let mut reg = registry(vec!(pkg("foo")));
-        let res = resolve([dep("foo")], &mut reg);
+        let res = resolve(&pkg_id("root"), [dep("foo")], &mut reg);
 
-        assert_that(&res.unwrap(), equal_to(&names(["foo"])));
+        assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_one_dep() {
         let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
-        let res = resolve([dep("foo")], &mut reg);
+        let res = resolve(&pkg_id("root"), [dep("foo")], &mut reg);
 
-        assert_that(&res.unwrap(), equal_to(&names(["foo"])));
+        assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_multiple_deps() {
         let mut reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
-        let res = resolve([dep("foo"), dep("baz")], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("foo"), dep("baz")], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "baz"])).exactly());
+        assert_that(&res, contains(names(["root", "foo", "baz"])).exactly());
     }
 
     #[test]
     pub fn test_resolving_transitive_deps() {
         let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
-        let res = resolve([dep("bar")], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("bar")], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "bar"])));
+        assert_that(&res, contains(names(["root", "foo", "bar"])));
     }
 
     #[test]
     pub fn test_resolving_common_transitive_deps() {
         let mut reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
-        let res = resolve([dep("foo"), dep("bar")], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("foo"), dep("bar")], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "bar"])));
+        assert_that(&res, contains(names(["root", "foo", "bar"])));
+    }
+
+    #[test]
+    pub fn test_resolving_with_same_name() {
+        let list = vec!(pkg_loc("foo", "http://first.example.com"),
+                        pkg_loc("foo", "http://second.example.com"));
+
+        let mut reg = registry(list);
+        let res = resolve(&pkg_id("root"),
+                          [dep_loc("foo", "http://first.example.com"),
+                           dep_loc("foo", "http://second.example.com")],
+                           &mut reg);
+
+        let mut names = loc_names([("foo", "http://first.example.com"),
+                              ("foo", "http://second.example.com")]);
+
+        names.push(pkg_id("root"));
+
+        assert_that(&res.unwrap(), contains(names).exactly());
     }
 
     #[test]
@@ -178,8 +291,8 @@ mod test {
             pkg!("bat")
         ));
 
-        let res = resolve([dep("foo"), dep("baz").as_dev()], &mut reg).unwrap();
+        let res = resolve(&pkg_id("root"), [dep("foo"), dep("baz").as_dev()], &mut reg).unwrap();
 
-        assert_that(&res, contains(names(["foo", "bar", "baz"])));
+        assert_that(&res, contains(names(["root", "foo", "bar", "baz"])));
     }
 }

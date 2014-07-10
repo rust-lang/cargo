@@ -47,14 +47,14 @@ pub struct SerializedManifest {
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         SerializedManifest {
-            name: self.summary.get_name().to_str(),
-            version: self.summary.get_version().to_str(),
+            name: self.summary.get_name().to_string(),
+            version: self.summary.get_version().to_string(),
             dependencies: self.summary.get_dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
             authors: self.authors.clone(),
             targets: self.targets.clone(),
-            target_dir: self.target_dir.display().to_str(),
+            target_dir: self.target_dir.display().to_string(),
             build: if self.build.len() == 0 { None } else { Some(self.build.clone()) },
         }.encode(s)
     }
@@ -100,7 +100,7 @@ pub enum TargetKind {
     BinTarget
 }
 
-#[deriving(Encodable, Decodable, Clone, Hash, PartialEq)]
+#[deriving(Encodable, Decodable, Clone, Hash, PartialEq, Show)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
@@ -112,7 +112,7 @@ pub struct Profile {
 impl Profile {
     pub fn default_dev() -> Profile {
         Profile {
-            env: "compile".to_str(), // run in the default environment only
+            env: "compile".to_string(), // run in the default environment only
             opt_level: 0,
             debug: true,
             test: false, // whether or not to pass --test
@@ -122,31 +122,31 @@ impl Profile {
 
     pub fn default_test() -> Profile {
         Profile {
-            env: "test".to_str(), // run in the default environment only
+            env: "test".to_string(), // run in the default environment only
             opt_level: 0,
             debug: true,
             test: true, // whether or not to pass --test
-            dest: Some("test".to_str())
+            dest: Some("test".to_string())
         }
     }
 
     pub fn default_bench() -> Profile {
         Profile {
-            env: "bench".to_str(), // run in the default environment only
+            env: "bench".to_string(), // run in the default environment only
             opt_level: 3,
             debug: false,
             test: true, // whether or not to pass --test
-            dest: Some("bench".to_str())
+            dest: Some("bench".to_string())
         }
     }
 
     pub fn default_release() -> Profile {
         Profile {
-            env: "release".to_str(), // run in the default environment only
+            env: "release".to_string(), // run in the default environment only
             opt_level: 3,
             debug: false,
             test: false, // whether or not to pass --test
-            dest: Some("release".to_str())
+            dest: Some("release".to_string())
         }
     }
 
@@ -218,7 +218,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
         SerializedTarget {
             kind: kind,
             name: self.name.clone(),
-            src_path: self.src_path.display().to_str(),
+            src_path: self.src_path.display().to_string(),
             profile: self.profile.clone(),
             metadata: self.metadata.clone()
         }.encode(s)
@@ -227,8 +227,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
 
 impl Show for Target {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}(name={}, path={})", self.kind, self.name,
-               self.src_path.display())
+        write!(f, "{}(name={}, path={}, profile={})", self.kind, self.name,
+               self.src_path.display(), self.profile)
     }
 }
 
@@ -298,6 +298,13 @@ impl Manifest {
 }
 
 impl Target {
+    pub fn file_stem(&self) -> String {
+        match self.metadata {
+            Some(ref metadata) => format!("{}{}", self.name, metadata.extra_filename),
+            None => self.name.clone()
+        }
+    }
+
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
                       src_path: &Path, profile: &Profile,
                       metadata: &Metadata)
@@ -305,7 +312,7 @@ impl Target {
     {
         Target {
             kind: LibTarget(crate_targets),
-            name: name.to_str(),
+            name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
             metadata: Some(metadata.clone())
@@ -315,7 +322,7 @@ impl Target {
     pub fn bin_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
         Target {
             kind: BinTarget,
-            name: name.to_str(),
+            name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
             metadata: None
@@ -333,6 +340,21 @@ impl Target {
     pub fn is_lib(&self) -> bool {
         match self.kind {
             LibTarget(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_dylib(&self) -> bool {
+        match self.kind {
+            LibTarget(ref kinds) => kinds.iter().any(|&k| k == Dylib),
+            _ => false
+        }
+    }
+
+    pub fn is_rlib(&self) -> bool {
+        match self.kind {
+            LibTarget(ref kinds) =>
+                kinds.iter().any(|&k| k == Rlib || k == Lib),
             _ => false
         }
     }

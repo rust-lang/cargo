@@ -65,11 +65,11 @@ fn ident(location: &Location) -> String {
     let ident = match *location {
         Local(ref path) => {
             let last = path.components().last().unwrap();
-            str::from_utf8(last).unwrap().to_str()
+            str::from_utf8(last).unwrap().to_string()
         }
         Remote(ref url) => {
             let path = canonicalize_url(url.path.path.as_slice());
-            path.as_slice().split('/').last().unwrap().to_str()
+            path.as_slice().split('/').last().unwrap().to_string()
         }
     };
 
@@ -79,7 +79,7 @@ fn ident(location: &Location) -> String {
         ident
     };
 
-    let location = canonicalize_url(location.to_str().as_slice());
+    let location = canonicalize_url(location.to_string().as_slice());
 
     format!("{}-{}", ident, to_hex(hasher.hash(&location.as_slice())))
 }

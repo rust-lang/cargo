@@ -19,7 +19,7 @@ impl GitReference {
         if string.as_slice() == "master" {
             Master
         } else {
-            Other(string.as_slice().to_str())
+            Other(string.as_slice().to_string())
         }
     }
 }
@@ -79,7 +79,7 @@ struct EncodableGitRemote {
 impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitRemote {
-            location: self.location.to_str()
+            location: self.location.to_string()
         }.encode(s)
     }
 }
@@ -102,7 +102,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitDatabase {
             remote: self.remote.clone(),
-            path: self.path.display().to_str()
+            path: self.path.display().to_string()
         }.encode(s)
     }
 }
@@ -129,9 +129,9 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitCheckout {
             database: self.database.clone(),
-            location: self.location.display().to_str(),
-            reference: self.reference.to_str(),
-            revision: self.revision.to_str()
+            location: self.location.display().to_string(),
+            reference: self.reference.to_string(),
+            revision: self.revision.to_string()
         }.encode(s)
     }
 }
@@ -182,8 +182,8 @@ impl GitRemote {
 
     fn fetch_location(&self) -> String {
         match self.location {
-            Local(ref p) => p.display().to_str(),
-            Remote(ref u) => u.to_str(),
+            Local(ref p) => p.display().to_string(),
+            Remote(ref u) => u.to_string(),
         }
     }
 }
@@ -308,10 +308,10 @@ fn git_output(path: &Path, str: String) -> CargoResult<String> {
                                                      .chain_error(||
         human(format!("Executing `git {}` failed", str))));
 
-    Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_str())
+    Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_string())
 }
 
 fn to_str(vec: &[u8]) -> String {
-    str::from_utf8_lossy(vec).to_str()
+    str::from_utf8_lossy(vec).to_string()
 }
 

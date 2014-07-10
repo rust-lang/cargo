@@ -2,9 +2,11 @@
 #![crate_type="rlib"]
 
 #![feature(macro_rules, phase)]
+#![feature(default_type_params)]
 
 extern crate debug;
 extern crate term;
+extern crate collections;
 extern crate url;
 extern crate serialize;
 extern crate semver;
@@ -204,7 +206,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     if unknown {
         let _ = shell.error("An unknown error occurred");
     } else {
-        let _ = shell.error(error.to_str());
+        let _ = shell.error(error.to_string());
     }
 
     if error.cause().is_some() {
@@ -246,7 +248,7 @@ fn global_flags() -> CliResult<GlobalFlags> {
 
 fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
     let mut reader = io::stdin();
-    let input = try!(reader.read_to_str().map_err(|_| {
+    let input = try!(reader.read_to_string().map_err(|_| {
         CliError::new("Standard in did not exist or was not UTF-8", 1)
     }));
 
