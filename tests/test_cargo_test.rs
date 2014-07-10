@@ -239,3 +239,43 @@ test!(dont_run_examples {
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0));
 })
+
+test!(pass_through_command_line {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            #[test] fn foo() {}
+            #[test] fn bar() {}
+        ");
+
+    assert_that(p.cargo_process("cargo-test").arg("bar"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+
+running 1 test
+test bar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+
+    assert_that(p.cargo_process("cargo-test").arg("foo"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+})
