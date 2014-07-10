@@ -344,6 +344,21 @@ impl Target {
         }
     }
 
+    pub fn is_dylib(&self) -> bool {
+        match self.kind {
+            LibTarget(ref kinds) => kinds.iter().any(|&k| k == Dylib),
+            _ => false
+        }
+    }
+
+    pub fn is_rlib(&self) -> bool {
+        match self.kind {
+            LibTarget(ref kinds) =>
+                kinds.iter().any(|&k| k == Rlib || k == Lib),
+            _ => false
+        }
+    }
+
     pub fn is_bin(&self) -> bool {
         match self.kind {
             BinTarget => true,

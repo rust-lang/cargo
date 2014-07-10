@@ -1061,7 +1061,8 @@ test!(verbose_release_build_deps {
         -C extra-filename={hash2} \
         --out-dir {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release \
-        -L {dir}{sep}target{sep}release{sep}deps`
+        -L {dir}{sep}target{sep}release{sep}deps \
+        --extern foo={dir}/target/release/deps/libfoo-12f497cde367dfe6.rlib`
 {compiling} foo v0.0.0 (file:{dir})
 {compiling} test v0.0.0 (file:{dir})\n",
                     running = RUNNING,
