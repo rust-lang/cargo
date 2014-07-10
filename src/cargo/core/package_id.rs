@@ -1,7 +1,9 @@
 use semver;
 use url::Url;
+use std::hash::Hash;
 use std::fmt;
 use std::fmt::{Show,Formatter};
+use collections::hash;
 use serialize::{
     Encodable,
     Encoder,
@@ -60,6 +62,16 @@ pub struct PackageId {
     source_id: SourceId,
 }
 
+impl<S: hash::Writer> Hash<S> for PackageId {
+    fn hash(&self, state: &mut S) {
+        self.name.hash(state);
+        self.version.to_str().hash(state);
+        self.source_id.hash(state);
+    }
+}
+
+impl Eq for PackageId {}
+
 #[deriving(Clone, Show, PartialEq)]
 pub enum PackageIdError {
     InvalidVersion(String),
@@ -110,7 +122,7 @@ impl PackageId {
         let extra_filename = short_hash(
             &(self.name.as_slice(), self.version.to_str(), &self.source_id));
 
-        Metadata { metadata: metadata, extra_filename: extra_filename }
+        Metadata { metadata: metadata, extra_filename: format!("-{}", extra_filename) }
     }
 }
 

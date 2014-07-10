@@ -298,6 +298,13 @@ impl Manifest {
 }
 
 impl Target {
+    pub fn file_stem(&self) -> String {
+        match self.metadata {
+            Some(ref metadata) => format!("{}{}", self.name, metadata.extra_filename),
+            None => self.name.clone()
+        }
+    }
+
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
                       src_path: &Path, profile: &Profile,
                       metadata: &Metadata)
