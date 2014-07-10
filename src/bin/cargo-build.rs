@@ -24,6 +24,7 @@ pub struct Options {
     manifest_path: Option<String>,
     update_remotes: bool,
     jobs: Option<uint>,
+    target: Option<String>,
     release: bool,
 }
 
@@ -59,7 +60,8 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         update: options.update_remotes,
         env: env,
         shell: shell,
-        jobs: options.jobs
+        jobs: options.jobs,
+        target: options.target.as_ref().map(|t| t.as_slice()),
     };
 
     ops::compile(&root, opts).map(|_| None).map_err(|err| {
