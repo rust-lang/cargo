@@ -97,32 +97,28 @@ test!(cargo_compile_with_root_dev_deps {
             [dev-dependencies.bar]
 
             version = "0.5.0"
-            path = "bar"
+            path = "../bar"
 
             [[bin]]
-
             name = "foo"
         "#)
-        .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
-        .file("bar/Cargo.toml", r#"
-            [project]
+        .file("src/main.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice());
+    let p2 = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
 
             name = "bar"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-
-            [[lib]]
-
-            name = "bar"
         "#)
-        .file("bar/src/bar.rs", r#"
+        .file("src/lib.rs", r#"
             pub fn gimme() -> &'static str {
                 "zoidberg"
             }
-        "#)
-        ;
+        "#);
 
+    p2.build();
     assert_that(p.cargo_process("cargo-build"),
         execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
                                      {} foo v0.5.0 (file:{})\n",
