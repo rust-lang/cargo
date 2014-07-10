@@ -4,12 +4,11 @@ use std::io::{File, IoError};
 use std::io;
 use std::os::args;
 use std::str;
-use std::io::TempDir;
 use term::color::YELLOW;
 
 use core::{Package, PackageSet, Target, Resolve};
 use util;
-use util::{CargoResult, ChainError, ProcessBuilder, CargoError, Require, internal, human};
+use util::{CargoResult, ChainError, ProcessBuilder, CargoError, internal, human};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
 
 type Args = Vec<String>;
@@ -73,14 +72,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
         internal(format!("Couldn't create the directory for dependencies for {} at {}",
                  pkg.get_name(), deps_target_dir.display()))));
 
-    let temp: TempDir = try!(TempDir::new_in(&deps_target_dir, "temp")
-                             .require(|| internal("Couldn't create a tempdir")));
-
-    let file = temp.path().join("dylib.rs");
-    try!(File::create(&file));
-
     let output = try!(util::process("rustc")
-                      .arg(file.display().to_string())
+                      .arg("-")
                       .arg("--crate-name").arg("-")
                       .arg("--crate-type").arg("dylib")
                       .arg("--print-file-name")
