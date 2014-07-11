@@ -330,11 +330,11 @@ fn build_base_args(into: &mut Args,
     }
 
     match cx.config.target() {
-        Some(target) => {
+        Some(target) if !profile.is_plugin() => {
             into.push("--target".to_string());
             into.push(target.to_string());
         }
-        None => {}
+        _ => {}
     }
 }
 
