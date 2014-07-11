@@ -1,8 +1,4 @@
 use std::collections::HashMap;
-use std::hash::Hasher;
-use std::hash::sip::SipHasher;
-use std::io::File;
-use std::os::args;
 use term::color::YELLOW;
 
 use core::{Package, PackageSet, Target, Resolve};
@@ -15,6 +11,7 @@ use self::context::Context;
 
 mod job;
 mod context;
+mod fingerprint;
 
 type Args = Vec<String>;
 
@@ -106,8 +103,7 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
     // Note that bins can all be built in parallel because they all depend on
     // one another, but libs must be built sequentially because they may have
     // interdependencies.
-    let mut libs = Vec::new();
-    let mut bins = Vec::new();
+    let (mut libs, mut bins) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
         let job = rustc(pkg, target, cx);
         if target.is_lib() {
@@ -124,15 +120,8 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
     // TODO: Can a fingerprint be per-target instead of per-package? Doing so
     //       would likely involve altering the granularity of key for the
     //       dependency queue that is later used to run jobs.
-    let fingerprint_loc = cx.dest().join(format!(".{}.fingerprint",
-                                                 pkg.get_name()));
-
-    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx,
-                                                targets));
-    let write_fingerprint = Job::new(proc() {
-        try!(File::create(&fingerprint_loc).write_str(fingerprint.as_slice()));
-        Ok(Vec::new())
-    });
+    let (freshness, write_fingerprint) =
+        try!(fingerprint::prepare(cx, pkg, targets));
 
     // Note that we build the job backwards because each job will produce more
     // work.
@@ -140,40 +129,8 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
     let build_libs = Job::all(libs, bins);
     let job = Job::all(build_cmds, vec![build_libs]);
 
-    jobs.push((pkg, if is_fresh {Fresh} else {Dirty}, job));
+    jobs.push((pkg, freshness, job));
     Ok(())
-}
-
-fn is_fresh(dep: &Package, loc: &Path,
-            cx: &mut Context, targets: &[&Target]) -> CargoResult<(bool, String)>
-{
-    let new_pkg_fingerprint = format!("{}{}", cx.rustc_version,
-                                  try!(dep.get_fingerprint(cx.config)));
-
-    let new_fingerprint = fingerprint(new_pkg_fingerprint, hash_targets(targets));
-
-    let mut file = match File::open(loc) {
-        Ok(file) => file,
-        Err(..) => return Ok((false, new_fingerprint)),
-    };
-
-    let old_fingerprint = try!(file.read_to_string());
-
-    log!(5, "old fingerprint: {}", old_fingerprint);
-    log!(5, "new fingerprint: {}", new_fingerprint);
-
-    Ok((old_fingerprint == new_fingerprint, new_fingerprint))
-}
-
-fn hash_targets(targets: &[&Target]) -> u64 {
-    let hasher = SipHasher::new_with_keys(0,0);
-    let targets = targets.iter().map(|t| (*t).clone()).collect::<Vec<Target>>();
-    hasher.hash(&targets)
-}
-
-fn fingerprint(package: String, profiles: u64) -> String {
-    let hasher = SipHasher::new_with_keys(0,0);
-    util::to_hex(hasher.hash(&(package, profiles)))
 }
 
 fn compile_custom(pkg: &Package, cmd: &str,
