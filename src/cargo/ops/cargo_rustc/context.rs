@@ -18,6 +18,7 @@ pub struct Context<'a, 'b> {
     pub primary: bool,
     pub rustc_version: String,
     pub config: &'b mut Config<'b>,
+    pub resolve: &'a Resolve,
 
     dest: Path,
     host_dest: Path,
@@ -25,7 +26,6 @@ pub struct Context<'a, 'b> {
     host_deps_dir: Path,
     host_dylib: (String, String),
     package_set: &'a PackageSet,
-    resolve: &'a Resolve,
     target_dylib: (String, String),
     requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
 }

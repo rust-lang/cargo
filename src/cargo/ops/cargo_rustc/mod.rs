@@ -81,7 +81,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     try!(compile(targets, pkg, &mut cx, &mut jobs));
 
     // Now that we've figured out everything that we're going to do, do it!
-    JobQueue::new(cx.config, jobs).execute()
+    JobQueue::new(cx.config, cx.resolve, jobs).execute()
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
