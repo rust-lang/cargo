@@ -1,33 +1,22 @@
 use std::collections::HashMap;
 use std::hash::Hasher;
 use std::hash::sip::SipHasher;
-use std::io::{File, IoError};
-use std::io;
+use std::io::File;
 use std::os::args;
-use std::str;
 use term::color::YELLOW;
 
 use core::{Package, PackageSet, Target, Resolve};
 use util;
-use util::{CargoResult, ChainError, ProcessBuilder, CargoError, internal, human};
+use util::{CargoResult, ProcessBuilder, CargoError, human};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
 
 use self::job::Job;
+use self::context::Context;
 
 mod job;
+mod context;
 
 type Args = Vec<String>;
-
-struct Context<'a, 'b> {
-    dest: &'a Path,
-    deps_dir: &'a Path,
-    primary: bool,
-    rustc_version: &'a str,
-    resolve: &'a Resolve,
-    package_set: &'a PackageSet,
-    config: &'b mut Config<'b>,
-    dylib: (String, String)
-}
 
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
@@ -62,42 +51,11 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
                         .join(uniq_target_dest(targets).unwrap_or(""));
     let deps_target_dir = target_dir.join("deps");
 
-    let output = try!(util::process("rustc").arg("-v").exec_with_output());
-    let rustc_version = str::from_utf8(output.output.as_slice()).unwrap();
+    let mut cx = try!(Context::new(resolve, deps, config,
+                                   target_dir, deps_target_dir));
 
     // First ensure that the destination directory exists
-    debug!("creating target dir; path={}", target_dir.display());
-
-    try!(mk_target(&target_dir).chain_error(||
-        internal(format!("Couldn't create the target directory for {} at {}",
-                 pkg.get_name(), target_dir.display()))));
-
-    try!(mk_target(&deps_target_dir).chain_error(||
-        internal(format!("Couldn't create the directory for dependencies for {} at {}",
-                 pkg.get_name(), deps_target_dir.display()))));
-
-    let output = try!(util::process("rustc")
-                      .arg("-")
-                      .arg("--crate-name").arg("-")
-                      .arg("--crate-type").arg("dylib")
-                      .arg("--print-file-name")
-                      .exec_with_output());
-
-    let output = str::from_utf8(output.output.as_slice()).unwrap();
-
-    let parts: Vec<&str> = output.slice_to(output.len() - 1).split('-').collect();
-    assert!(parts.len() == 2, "rustc --print-file-name output has changed");
-
-    let mut cx = Context {
-        dest: &deps_target_dir,
-        deps_dir: &deps_target_dir,
-        primary: false,
-        rustc_version: rustc_version.as_slice(),
-        resolve: resolve,
-        package_set: deps,
-        config: config,
-        dylib: (parts.get(0).to_string(), parts.get(1).to_string())
-    };
+    try!(cx.prepare(pkg));
 
     // Build up a list of pending jobs, each of which represent compiling a
     // particular package. No actual work is executed as part of this, that's
@@ -118,8 +76,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
         try!(compile(targets.as_slice(), dep, &mut cx, &mut jobs));
     }
 
-    cx.primary = true;
-    cx.dest = &target_dir;
+    cx.primary();
     try!(compile(targets, pkg, &mut cx, &mut jobs));
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -167,8 +124,8 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
     // TODO: Can a fingerprint be per-target instead of per-package? Doing so
     //       would likely involve altering the granularity of key for the
     //       dependency queue that is later used to run jobs.
-    let fingerprint_loc = cx.dest.join(format!(".{}.fingerprint",
-                                               pkg.get_name()));
+    let fingerprint_loc = cx.dest().join(format!(".{}.fingerprint",
+                                                 pkg.get_name()));
 
     let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx,
                                                 targets));
@@ -219,19 +176,16 @@ fn fingerprint(package: String, profiles: u64) -> String {
     util::to_hex(hasher.hash(&(package, profiles)))
 }
 
-fn mk_target(target: &Path) -> Result<(), IoError> {
-    io::fs::mkdir_recursive(target, io::UserRWX)
-}
-
 fn compile_custom(pkg: &Package, cmd: &str,
                   cx: &Context) -> Job {
     // FIXME: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
-                     .env("OUT_DIR", Some(cx.dest.as_str().expect("non-UTF8 dest path")))
-                     .env("DEPS_DIR", Some(cx.dest.join(cx.deps_dir)
-                                             .as_str().expect("non-UTF8 deps path")))
+                     .env("OUT_DIR", Some(cx.dest().as_str()
+                                            .expect("non-UTF8 dest path")))
+                     .env("DEPS_DIR", Some(cx.deps_dir.as_str()
+                                             .expect("non-UTF8 deps path")))
                      .env("TARGET", cx.config.target());
     for arg in cmd {
         p = p.arg(arg);
@@ -247,7 +201,7 @@ fn rustc(package: &Package, target: &Target, cx: &mut Context) -> Job {
     let root = package.get_root();
 
     log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; verbose={}",
-         root.display(), target, crate_types, cx.dest.display(),
+         root.display(), target, crate_types, cx.dest().display(),
          cx.deps_dir.display(), cx.primary);
 
     let primary = cx.primary;
@@ -306,7 +260,7 @@ fn build_base_args(into: &mut Args,
         into.push(crate_type.to_string());
     }
 
-    let out = cx.dest.clone();
+    let out = cx.dest().clone();
     let profile = target.get_profile();
 
     if profile.get_opt_level() != 0 {
@@ -353,46 +307,16 @@ fn build_base_args(into: &mut Args,
 
 fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context) {
     dst.push("-L".to_string());
-    dst.push(cx.dest.display().to_string());
+    dst.push(cx.dest().display().to_string());
     dst.push("-L".to_string());
     dst.push(cx.deps_dir.display().to_string());
 
-    for target in dep_targets(package, cx).iter() {
+    for target in cx.dep_targets(package).iter() {
         dst.push("--extern".to_string());
         dst.push(format!("{}={}/{}",
                  target.get_name(),
                  cx.deps_dir.display(),
-                 target_filename(target, cx)));
-    }
-}
-
-fn target_filename(target: &Target, cx: &Context) -> String {
-    let stem = target.file_stem();
-
-    if target.is_dylib() {
-        let (ref prefix, ref suffix) = cx.dylib;
-        format!("{}{}{}", prefix, stem, suffix)
-    } else if target.is_rlib() {
-        format!("lib{}.rlib", stem)
-    } else {
-        unreachable!()
-    }
-}
-
-fn dep_targets(pkg: &Package, cx: &Context) -> Vec<Target> {
-    match cx.resolve.deps(pkg.get_package_id()) {
-        None => vec!(),
-        Some(deps) => deps
-            .map(|pkg_id| {
-                cx.package_set.iter()
-                  .find(|pkg| pkg_id == pkg.get_package_id())
-                  .expect("Should have found package")
-            })
-            .filter_map(|pkg| {
-                pkg.get_targets().iter().find(|&t| t.is_lib() && t.get_profile().is_compile())
-            })
-            .map(|t| t.clone())
-            .collect()
+                 cx.target_filename(target)));
     }
 }
 
