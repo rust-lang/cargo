@@ -222,3 +222,20 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
     assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, internal, external).as_slice() ||
             out == format!("{}\n\n{}\n\n\n{}\n\n", head, external, internal).as_slice());
 })
+
+test!(dont_run_examples {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+        "#)
+        .file("examples/dont-run-me-i-will-fail.rs", r#"
+            fn main() { fail!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0));
+})
