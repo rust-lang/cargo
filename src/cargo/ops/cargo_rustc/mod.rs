@@ -5,13 +5,16 @@ use std::io::{File, IoError};
 use std::io;
 use std::os::args;
 use std::str;
-use std::sync::{atomics, Arc};
 use term::color::YELLOW;
 
 use core::{Package, PackageSet, Target, Resolve};
 use util;
 use util::{CargoResult, ChainError, ProcessBuilder, CargoError, internal, human};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
+
+use self::job::Job;
+
+mod job;
 
 type Args = Vec<String>;
 
@@ -24,21 +27,6 @@ struct Context<'a, 'b> {
     package_set: &'a PackageSet,
     config: &'b mut Config<'b>,
     dylib: (String, String)
-}
-
-enum Job {
-    Work(proc():Send -> CargoResult<Vec<Job>>),
-}
-
-impl Job {
-    fn all(jobs: Vec<Job>, after: Vec<Job>) -> Job {
-        Work(proc() {
-            for Work(job) in jobs.move_iter() {
-                try!(job());
-            }
-            Ok(after)
-        })
-    }
 }
 
 // This is a temporary assert that ensures the consistency of the arguments
@@ -146,22 +134,6 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
         return Ok(())
     }
 
-    // First check to see if this package is fresh.
-    //
-    // Note that we're compiling things in topological order, so if nothing has
-    // been built up to this point and we're fresh, then we can safely skip
-    // recompilation. If anything has previously been rebuilt, it may have been
-    // a dependency of ours, so just go ahead and rebuild ourselves.
-    //
-    // This is not quite accurate, we should only trigger forceful
-    // recompilations for downstream dependencies of ourselves, not everyone
-    // compiled afterwards.a
-    let fingerprint_loc = cx.dest.join(format!(".{}.fingerprint",
-                                               pkg.get_name()));
-
-    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx,
-                                                targets));
-
     // First part of the build step of a target is to execute all of the custom
     // build commands.
     //
@@ -195,34 +167,20 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
     // TODO: Can a fingerprint be per-target instead of per-package? Doing so
     //       would likely involve altering the granularity of key for the
     //       dependency queue that is later used to run jobs.
-    let state = Arc::new(atomics::AtomicUint::new(bins.len()));
-    let write_fingerprint = || {
-        let (my_state, fingerprint_loc, fingerprint) =
-            (state.clone(), fingerprint_loc.clone(), fingerprint.clone());
-        Work(proc() {
-            if my_state.load(atomics::SeqCst) == 0 {
-                let mut file = try!(File::create(&fingerprint_loc));
-                try!(file.write_str(fingerprint.as_slice()));
-            }
-            Ok(Vec::new())
-        })
-    };
+    let fingerprint_loc = cx.dest.join(format!(".{}.fingerprint",
+                                               pkg.get_name()));
+
+    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc, cx,
+                                                targets));
+    let write_fingerprint = Job::new(proc() {
+        try!(File::create(&fingerprint_loc).write_str(fingerprint.as_slice()));
+        Ok(Vec::new())
+    });
 
     // Note that we build the job backwards because each job will produce more
     // work.
-    let build_libs = if bins.len() == 0 {
-        Job::all(libs, vec![write_fingerprint()])
-    } else {
-        Job::all(libs, bins.move_iter().map(|Work(bin)| {
-            let my_state = state.clone();
-            let write = write_fingerprint();
-            Work(proc() {
-                try!(bin());
-                my_state.fetch_sub(1, atomics::SeqCst);
-                Ok(vec![write])
-            })
-        }).collect())
-    };
+    let bins = Job::after(bins, write_fingerprint);
+    let build_libs = Job::all(libs, bins);
     let job = Job::all(build_cmds, vec![build_libs]);
 
     jobs.push((pkg, if is_fresh {Fresh} else {Dirty}, job));
@@ -278,7 +236,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     for arg in cmd {
         p = p.arg(arg);
     }
-    Work(proc() {
+    Job::new(proc() {
         try!(p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human()));
         Ok(Vec::new())
     })
@@ -301,7 +259,7 @@ fn rustc(package: &Package, target: &Target, cx: &mut Context) -> Job {
         shell.status("Running", rustc.to_string())
     });
 
-    Work(proc() {
+    Job::new(proc() {
         if primary {
             log!(5, "executing primary");
             try!(rustc.exec().map_err(|err| human(err.to_string())))
@@ -467,11 +425,11 @@ fn execute(config: &mut Config,
                     try!(config.shell().status("Fresh", pkg));
                     tx.send((name, Fresh, Ok(Vec::new())));
                 }
-                Some((name, Dirty, (pkg, Work(job)))) => {
+                Some((name, Dirty, (pkg, job))) => {
                     assert!(active.insert(name.clone(), 1));
                     try!(config.shell().status("Compiling", pkg));
                     let my_tx = tx.clone();
-                    pool.execute(proc() my_tx.send((name, Dirty, job())));
+                    pool.execute(proc() my_tx.send((name, Dirty, job.run())));
                 }
                 None => break,
             }
@@ -484,12 +442,12 @@ fn execute(config: &mut Config,
         *active.get_mut(&name) -= 1;
         match result {
             Ok(v) => {
-                for Work(job) in v.move_iter() {
+                for job in v.move_iter() {
                     *active.get_mut(&name) += 1;
                     let my_tx = tx.clone();
                     let my_name = name.clone();
                     pool.execute(proc() {
-                        my_tx.send((my_name, fresh, job()));
+                        my_tx.send((my_name, fresh, job.run()));
                     });
                 }
                 if *active.get(&name) == 0 {
