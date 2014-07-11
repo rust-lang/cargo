@@ -49,7 +49,8 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         update: options.update,
         env: "test",
         shell: shell,
-        jobs: options.jobs
+        jobs: options.jobs,
+        target: None,
     };
 
     try!(ops::compile(&root, compile_opts).map(|_| None::<()>).map_err(|err| {
