@@ -38,7 +38,7 @@ pub struct CompileOptions<'a> {
     pub target: Option<&'a str>,
 }
 
-pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()> {
+pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<Vec<String>> {
     let CompileOptions { update, env, shell, jobs, target } = options;
     let target = target.map(|s| s.to_string());
 
@@ -88,7 +88,18 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<()>
     try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
          &PackageSet::new(packages.as_slice()), &resolve, &mut config));
 
-    Ok(())
+    let test_executables: Vec<String> = targets.iter()
+        .filter_map(|target| {
+            if target.get_profile().is_test() {
+                debug!("Run  Target: {}", target.get_name());
+                Some(target.get_name().to_string())
+            } else {
+                debug!("Skip Target: {}", target.get_name());
+                None
+            }
+    }).collect();
+
+    Ok(test_executables)
 }
 
 fn source_ids_from_config() -> CargoResult<Vec<SourceId>> {
