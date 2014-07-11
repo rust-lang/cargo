@@ -18,8 +18,8 @@ use super::context::Context;
 /// compilation, returning the job as the second part of the tuple.
 pub fn prepare(cx: &mut Context, pkg: &Package,
                targets: &[&Target]) -> CargoResult<(Freshness, Job)> {
-    let fingerprint_loc = cx.dest().join(format!(".{}.fingerprint",
-                                                 pkg.get_name()));
+    let fingerprint_loc = cx.dest(false).join(format!(".{}.fingerprint",
+                                                      pkg.get_name()));
 
     let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc,
                                                 cx, targets));

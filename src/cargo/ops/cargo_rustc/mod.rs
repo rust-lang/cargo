@@ -5,7 +5,7 @@ use util::{Config, Freshness};
 
 use self::job::Job;
 use self::job_queue::JobQueue;
-use self::context::Context;
+use self::context::{Context, PlatformRequirement, Target, Plugin, PluginAndTarget};
 
 mod context;
 mod fingerprint;
@@ -32,7 +32,7 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
     curr.unwrap()
 }
 
-pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
+pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
                            config: &'a mut Config<'a>) -> CargoResult<()>
 {
@@ -42,13 +42,18 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
+    let host_dir = pkg.get_absolute_target_dir()
+                        .join(uniq_target_dest(targets).unwrap_or(""));
+    let host_deps_dir = host_dir.join("deps");
+
     let target_dir = pkg.get_absolute_target_dir()
                         .join(config.target().unwrap_or(""))
                         .join(uniq_target_dest(targets).unwrap_or(""));
     let deps_target_dir = target_dir.join("deps");
 
     let mut cx = try!(Context::new(resolve, deps, config,
-                                   target_dir, deps_target_dir));
+                                   target_dir, deps_target_dir,
+                                   host_dir, host_deps_dir));
 
     // First ensure that the destination directory exists
     try!(cx.prepare(pkg));
@@ -79,8 +84,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&Target], pkg: &Package,
     JobQueue::new(cx.config, jobs).execute()
 }
 
-fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
-               jobs: &mut Vec<(&'a Package, Freshness, Job)>) -> CargoResult<()> {
+fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
+                   cx: &mut Context<'a, 'b>,
+                   jobs: &mut Vec<(&'a Package, Freshness, Job)>)
+                   -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
 
     if targets.is_empty() {
@@ -104,11 +111,12 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
     // interdependencies.
     let (mut libs, mut bins) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
-        let job = rustc(pkg, target, cx);
+        let req = cx.get_requirement(pkg, target);
+        let jobs = rustc(pkg, target, cx, req);
         if target.is_lib() {
-            libs.push(job);
+            libs.push_all_move(jobs);
         } else {
-            bins.push(job);
+            bins.push_all_move(jobs);
         }
     }
 
@@ -134,13 +142,15 @@ fn compile<'a>(targets: &[&Target], pkg: &'a Package, cx: &mut Context,
 
 fn compile_custom(pkg: &Package, cmd: &str,
                   cx: &Context) -> Job {
-    // FIXME: this needs to be smarter about splitting
+    // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
+    // TODO: this shouldn't explicitly pass `false` for dest/deps_dir, we may
+    //       be building a C lib for a plugin
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
-                     .env("OUT_DIR", Some(cx.dest().as_str()
+                     .env("OUT_DIR", Some(cx.dest(false).as_str()
                                             .expect("non-UTF8 dest path")))
-                     .env("DEPS_DIR", Some(cx.deps_dir.as_str()
+                     .env("DEPS_DIR", Some(cx.deps_dir(false).as_str()
                                              .expect("non-UTF8 deps path")))
                      .env("TARGET", cx.config.target());
     for arg in cmd {
@@ -152,56 +162,73 @@ fn compile_custom(pkg: &Package, cmd: &str,
     })
 }
 
-fn rustc(package: &Package, target: &Target, cx: &mut Context) -> Job {
+fn rustc(package: &Package, target: &Target,
+         cx: &mut Context, req: PlatformRequirement) -> Vec<Job> {
     let crate_types = target.rustc_crate_types();
     let root = package.get_root();
 
-    log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; verbose={}",
-         root.display(), target, crate_types, cx.dest().display(),
-         cx.deps_dir.display(), cx.primary);
+    log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; \
+             verbose={}; req={}",
+         root.display(), target, crate_types, cx.dest(false).display(),
+         cx.deps_dir(false).display(), cx.primary, req);
 
     let primary = cx.primary;
-    let rustc = prepare_rustc(package, target, crate_types, cx);
+    let rustcs = prepare_rustc(package, target, crate_types, cx, req);
 
-    log!(5, "command={}", rustc);
+    log!(5, "commands={}", rustcs);
 
     let _ = cx.config.shell().verbose(|shell| {
-        shell.status("Running", rustc.to_string())
+        for rustc in rustcs.iter() {
+            try!(shell.status("Running", rustc.to_string()));
+        }
+        Ok(())
     });
 
-    Job::new(proc() {
-        if primary {
-            log!(5, "executing primary");
-            try!(rustc.exec().map_err(|err| human(err.to_string())))
-        } else {
-            log!(5, "executing deps");
-            try!(rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                human(err.to_string())
-            }))
-        }
-        Ok(Vec::new())
-    })
+    rustcs.move_iter().map(|rustc| {
+        Job::new(proc() {
+            if primary {
+                log!(5, "executing primary");
+                try!(rustc.exec().map_err(|err| human(err.to_string())))
+            } else {
+                log!(5, "executing deps");
+                try!(rustc.exec_with_output().and(Ok(())).map_err(|err| {
+                    human(err.to_string())
+                }))
+            }
+            Ok(Vec::new())
+        })
+    }).collect()
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
-                 cx: &Context) -> ProcessBuilder
-{
+                 cx: &Context, req: PlatformRequirement) -> Vec<ProcessBuilder> {
     let root = package.get_root();
-    let mut args = Vec::new();
+    let mut target_args = Vec::new();
+    build_base_args(&mut target_args, target, crate_types.as_slice(), cx, false);
+    build_deps_args(&mut target_args, package, cx, false);
 
-    build_base_args(&mut args, target, crate_types, cx);
-    build_deps_args(&mut args, package, cx);
+    let mut plugin_args = Vec::new();
+    build_base_args(&mut plugin_args, target, crate_types.as_slice(), cx, true);
+    build_deps_args(&mut plugin_args, package, cx, true);
 
-    util::process("rustc")
-        .cwd(root.clone())
-        .args(args.as_slice())
-        .env("RUST_LOG", None) // rustc is way too noisy
+    let base = util::process("rustc").cwd(root.clone());
+
+    match req {
+        Target => vec![base.args(target_args.as_slice())],
+        Plugin => vec![base.args(plugin_args.as_slice())],
+        PluginAndTarget if cx.config.target().is_none() =>
+            vec![base.args(target_args.as_slice())],
+        PluginAndTarget =>
+            vec![base.clone().args(target_args.as_slice()),
+                 base.args(plugin_args.as_slice())],
+    }
 }
 
 fn build_base_args(into: &mut Args,
                    target: &Target,
-                   crate_types: Vec<&str>,
-                   cx: &Context)
+                   crate_types: &[&str],
+                   cx: &Context,
+                   plugin: bool)
 {
     let metadata = target.get_metadata();
 
@@ -216,7 +243,6 @@ fn build_base_args(into: &mut Args,
         into.push(crate_type.to_string());
     }
 
-    let out = cx.dest().clone();
     let profile = target.get_profile();
 
     if profile.get_opt_level() != 0 {
@@ -244,16 +270,11 @@ fn build_base_args(into: &mut Args,
         None => {}
     }
 
-    if target.is_lib() {
-        into.push("--out-dir".to_string());
-        into.push(out.display().to_string());
-    } else {
-        into.push("-o".to_string());
-        into.push(out.join(target.get_name()).display().to_string());
-    }
+    into.push("--out-dir".to_string());
+    into.push(cx.dest(plugin).display().to_string());
 
     match cx.config.target() {
-        Some(target) if !profile.is_plugin() => {
+        Some(target) if !plugin => {
             into.push("--target".to_string());
             into.push(target.to_string());
         }
@@ -261,17 +282,18 @@ fn build_base_args(into: &mut Args,
     }
 }
 
-fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context) {
+fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context,
+                   plugin: bool) {
     dst.push("-L".to_string());
-    dst.push(cx.dest().display().to_string());
+    dst.push(cx.dest(plugin).display().to_string());
     dst.push("-L".to_string());
-    dst.push(cx.deps_dir.display().to_string());
+    dst.push(cx.deps_dir(plugin).display().to_string());
 
-    for target in cx.dep_targets(package).iter() {
+    for &(_, target) in cx.dep_targets(package).iter() {
         dst.push("--extern".to_string());
         dst.push(format!("{}={}/{}",
                  target.get_name(),
-                 cx.deps_dir.display(),
+                 cx.deps_dir(target.get_profile().is_plugin()).display(),
                  cx.target_filename(target)));
     }
 }

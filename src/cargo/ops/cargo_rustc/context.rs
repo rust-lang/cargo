@@ -1,28 +1,41 @@
 use std::io::IoError;
 use std::io;
 use std::str;
+use std::collections::{HashMap, HashSet};
 
-use core::{Package, PackageSet, Resolve, Target};
+use core::{Package, PackageId, PackageSet, Resolve, Target};
 use util;
 use util::{CargoResult, ChainError, internal, Config};
 
+#[deriving(Show)]
+pub enum PlatformRequirement {
+    Target,
+    Plugin,
+    PluginAndTarget,
+}
+
 pub struct Context<'a, 'b> {
-    pub deps_dir: Path,
     pub primary: bool,
     pub rustc_version: String,
     pub config: &'b mut Config<'b>,
 
     dest: Path,
+    host_dest: Path,
+    deps_dir: Path,
+    host_deps_dir: Path,
     host_dylib: (String, String),
     package_set: &'a PackageSet,
     resolve: &'a Resolve,
     target_dylib: (String, String),
+    requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
     pub fn new(resolve: &'a Resolve, deps: &'a PackageSet,
                config: &'b mut Config<'b>,
-               dest: Path, deps_dir: Path) -> CargoResult<Context<'a, 'b>> {
+               dest: Path, deps_dir: Path,
+               host_dest: Path, host_deps_dir: Path)
+               -> CargoResult<Context<'a, 'b>> {
         let target_dylib = try!(Context::dylib_parts(config.target()));
         let host_dylib = if config.target().is_none() {
             target_dylib.clone()
@@ -39,6 +52,9 @@ impl<'a, 'b> Context<'a, 'b> {
             config: config,
             target_dylib: target_dylib,
             host_dylib: host_dylib,
+            requirements: HashMap::new(),
+            host_dest: host_dest,
+            host_deps_dir: host_deps_dir,
         })
     }
 
@@ -72,22 +88,58 @@ impl<'a, 'b> Context<'a, 'b> {
 
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
-    pub fn prepare(&self, pkg: &Package) -> CargoResult<()> {
+    pub fn prepare(&mut self, pkg: &'a Package) -> CargoResult<()> {
         debug!("creating target dir; path={}", self.dest.display());
 
         try!(self.mk_target(&self.dest).chain_error(||
             internal(format!("Couldn't create the target directory for {} at {}",
+                     pkg.get_name(), self.dest.display()))));
+        try!(self.mk_target(&self.host_dest).chain_error(||
+            internal(format!("Couldn't create the host directory for {} at {}",
                      pkg.get_name(), self.dest.display()))));
 
         try!(self.mk_target(&self.deps_dir).chain_error(||
             internal(format!("Couldn't create the directory for dependencies for {} at {}",
                      pkg.get_name(), self.deps_dir.display()))));
 
+        try!(self.mk_target(&self.host_deps_dir).chain_error(||
+            internal(format!("Couldn't create the directory for dependencies for {} at {}",
+                     pkg.get_name(), self.deps_dir.display()))));
+
+        let targets = pkg.get_targets().iter();
+        for target in targets.filter(|t| t.get_profile().is_compile()) {
+            self.build_requirements(pkg, target, Target, &mut HashSet::new());
+        }
+
         Ok(())
     }
 
     fn mk_target(&self, target: &Path) -> Result<(), IoError> {
         io::fs::mkdir_recursive(target, io::UserRWX)
+    }
+
+    fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
+                          req: PlatformRequirement,
+                          visiting: &mut HashSet<&'a PackageId>) {
+        if !visiting.insert(pkg.get_package_id()) { return }
+
+        let key = (pkg.get_package_id(), target.get_name());
+        let req = if target.get_profile().is_plugin() {Plugin} else {req};
+        self.requirements.insert_or_update_with(key, req, |_, v| {
+            *v = v.combine(req);
+        });
+
+        for &(pkg, dep) in self.dep_targets(pkg).iter() {
+            self.build_requirements(pkg, dep, req, visiting);
+        }
+
+        visiting.remove(&pkg.get_package_id());
+    }
+
+    pub fn get_requirement(&self, pkg: &'a Package,
+                           target: &'a Target) -> PlatformRequirement {
+        self.requirements.find(&(pkg.get_package_id(), target.get_name()))
+            .map(|a| *a).unwrap_or(Target)
     }
 
     /// Switch this context over to being the primary compilation unit,
@@ -97,8 +149,17 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 
     /// Return the destination directory for output.
-    pub fn dest<'a>(&'a self) -> &'a Path {
-        if self.primary {&self.dest} else {&self.deps_dir}
+    pub fn dest<'a>(&'a self, plugin: bool) -> &'a Path {
+        if self.primary {
+            if plugin {&self.host_dest} else {&self.dest}
+        } else {
+            self.deps_dir(plugin)
+        }
+    }
+
+    /// Return the destination directory for dependencies.
+    pub fn deps_dir<'a>(&'a self, plugin: bool) -> &'a Path {
+        if plugin {&self.host_deps_dir} else {&self.deps_dir}
     }
 
     /// Return the (prefix, suffix) pair for dynamic libraries.
@@ -126,7 +187,7 @@ impl<'a, 'b> Context<'a, 'b> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, pkg: &Package) -> Vec<Target> {
+    pub fn dep_targets(&self, pkg: &Package) -> Vec<(&'a Package, &'a Target)> {
         let deps = match self.resolve.deps(pkg.get_package_id()) {
             None => return vec!(),
             Some(deps) => deps,
@@ -139,9 +200,18 @@ impl<'a, 'b> Context<'a, 'b> {
         .filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| {
                 t.is_lib() && t.get_profile().is_compile()
-            })
+            }).map(|t| (pkg, t))
         })
-        .map(|t| t.clone())
         .collect()
+    }
+}
+
+impl PlatformRequirement {
+    fn combine(self, other: PlatformRequirement) -> PlatformRequirement {
+        match (self, other) {
+            (Target, Target) => Target,
+            (Plugin, Plugin) => Plugin,
+            _ => PluginAndTarget,
+        }
     }
 }
