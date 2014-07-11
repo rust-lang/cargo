@@ -107,6 +107,7 @@ pub struct Profile {
     debug: bool,
     test: bool,
     dest: Option<String>,
+    plugin: bool,
 }
 
 impl Profile {
@@ -116,7 +117,8 @@ impl Profile {
             opt_level: 0,
             debug: true,
             test: false, // whether or not to pass --test
-            dest: None
+            dest: None,
+            plugin: false,
         }
     }
 
@@ -126,7 +128,8 @@ impl Profile {
             opt_level: 0,
             debug: true,
             test: true, // whether or not to pass --test
-            dest: Some("test".to_string())
+            dest: Some("test".to_string()),
+            plugin: false,
         }
     }
 
@@ -136,7 +139,8 @@ impl Profile {
             opt_level: 3,
             debug: false,
             test: true, // whether or not to pass --test
-            dest: Some("bench".to_string())
+            dest: Some("bench".to_string()),
+            plugin: false,
         }
     }
 
@@ -146,7 +150,8 @@ impl Profile {
             opt_level: 3,
             debug: false,
             test: false, // whether or not to pass --test
-            dest: Some("release".to_string())
+            dest: Some("release".to_string()),
+            plugin: false,
         }
     }
 
@@ -156,6 +161,10 @@ impl Profile {
 
     pub fn is_test(&self) -> bool {
         self.test
+    }
+
+    pub fn is_plugin(&self) -> bool {
+        self.plugin
     }
 
     pub fn get_opt_level(&self) -> uint {
@@ -188,6 +197,11 @@ impl Profile {
         self.test = test;
         self
     }
+
+    pub fn plugin(mut self, plugin: bool) -> Profile {
+        self.plugin = plugin;
+        self
+    }
 }
 
 #[deriving(Clone, Hash, PartialEq)]
@@ -196,7 +210,7 @@ pub struct Target {
     name: String,
     src_path: Path,
     profile: Profile,
-    metadata: Option<Metadata>
+    metadata: Option<Metadata>,
 }
 
 #[deriving(Encodable)]

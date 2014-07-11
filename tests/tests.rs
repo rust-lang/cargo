@@ -26,3 +26,4 @@ mod test_cargo_compile_git_deps;
 mod test_cargo_compile_path_deps;
 mod test_cargo_test;
 mod test_shell;
+mod test_cargo_cross_compile;

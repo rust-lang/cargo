@@ -5,7 +5,7 @@ use std::io::fs;
 use toml;
 
 use core::{SourceId, GitKind};
-use core::manifest::{LibKind, Lib, Profile};
+use core::manifest::{LibKind, Lib, Dylib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::package_id::Metadata;
 use core::source::Location;
@@ -201,7 +201,8 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
             name: name.to_string(),
             crate_type: None,
             path: Some(lib.display().to_string()),
-            test: None
+            test: None,
+            plugin: None,
         }]
     })
 }
@@ -219,7 +220,8 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> 
                 name: name,
                 crate_type: None,
                 path: Some(bin.display().to_string()),
-                test: None
+                test: None,
+                plugin: None,
             }
         })
     }).collect())
@@ -253,7 +255,8 @@ impl TomlManifest {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
                         path: layout.lib.as_ref().map(|p| p.display().to_string()),
-                        test: t.test
+                        test: t.test,
+                        plugin: t.plugin,
                     }
                 } else {
                     t.clone()
@@ -272,7 +275,8 @@ impl TomlManifest {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
                         path: bin.as_ref().map(|p| p.display().to_string()),
-                        test: t.test
+                        test: t.test,
+                        plugin: None,
                     }
                 } else {
                     t.clone()
@@ -376,7 +380,8 @@ struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
     path: Option<String>,
-    test: Option<bool>
+    test: Option<bool>,
+    plugin: Option<bool>,
 }
 
 fn normalize(lib: Option<&[TomlLibTarget]>,
@@ -390,7 +395,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
     fn target_profiles(target: &TomlTarget,
                        dep: Option<TestDep>) -> Vec<Profile> {
-        let mut ret = vec!(Profile::default_dev(), Profile::default_release());
+        let mut ret = vec![Profile::default_dev(), Profile::default_release()];
 
         match target.test {
             Some(true) | None => ret.push(Profile::default_test()),
@@ -402,6 +407,10 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
             _ => {}
         }
 
+        if target.plugin == Some(true) {
+            ret = ret.move_iter().map(|p| p.plugin(true)).collect();
+        }
+
         ret
     }
 
@@ -411,7 +420,9 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             LibKind::from_strs(kinds).ok()
-        }).unwrap_or_else(|| vec!(Lib));
+        }).unwrap_or_else(|| {
+            vec![if l.plugin == Some(true) {Dylib} else {Lib}]
+        });
 
         for profile in target_profiles(l, Some(dep)).iter() {
             dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
