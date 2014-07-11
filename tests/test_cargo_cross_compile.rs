@@ -15,7 +15,7 @@ fn setup() {
 fn alternate() -> &'static str {
     match os::consts::SYSNAME {
         "linux" => "i686-unknown-linux-gnu",
-        "darwin" => "i686-apple-darwin",
+        "macos" => "i686-apple-darwin",
         _ => unreachable!(),
     }
 }
@@ -75,4 +75,158 @@ test!(simple_deps {
       execs().with_status(0));
 })
 
+test!(plugin_deps {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
 
+            [dependencies.bar]
+            path = "../bar"
+
+            [dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("src/main.rs", r#"
+            #![feature(phase)]
+            #[phase(plugin)]
+            extern crate bar;
+            extern crate baz;
+            fn main() {
+                assert_eq!(bar!(), baz::baz());
+            }
+        "#);
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "bar"
+            plugin = true
+        "#)
+        .file("src/lib.rs", r#"
+            #![feature(plugin_registrar, quote)]
+
+            extern crate rustc;
+            extern crate syntax;
+
+            use rustc::plugin::Registry;
+            use syntax::ast::TokenTree;
+            use syntax::codemap::Span;
+            use syntax::ext::base::{ExtCtxt, MacExpr, MacResult};
+
+            #[plugin_registrar]
+            pub fn foo(reg: &mut Registry) {
+                reg.register_macro("bar", expand_bar);
+            }
+
+            fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
+                          -> Box<MacResult> {
+                MacExpr::new(quote_expr!(cx, 1i))
+            }
+        "#);
+    let baz = project("baz")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+    bar.build();
+    baz.build();
+
+    let target = alternate();
+    assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+                execs().with_status(0));
+    assert_that(&foo.target_bin(target, "main"), existing_file());
+
+    assert_that(
+      process(foo.target_bin(target, "main")),
+      execs().with_status(0));
+})
+
+test!(plugin_to_the_max {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+
+            [dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("src/main.rs", r#"
+            #![feature(phase)]
+            #[phase(plugin)]
+            extern crate bar;
+            extern crate baz;
+            fn main() {
+                assert_eq!(bar!(), baz::baz());
+            }
+        "#);
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "bar"
+            plugin = true
+
+            [dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("src/lib.rs", r#"
+            #![feature(plugin_registrar, quote)]
+
+            extern crate rustc;
+            extern crate syntax;
+            extern crate baz;
+
+            use rustc::plugin::Registry;
+            use syntax::ast::TokenTree;
+            use syntax::codemap::Span;
+            use syntax::ext::base::{ExtCtxt, MacExpr, MacResult};
+
+            #[plugin_registrar]
+            pub fn foo(reg: &mut Registry) {
+                reg.register_macro("bar", expand_bar);
+            }
+
+            fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
+                          -> Box<MacResult> {
+                MacExpr::new(quote_expr!(cx, baz::baz()))
+            }
+        "#);
+    let baz = project("baz")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+    bar.build();
+    baz.build();
+
+    let target = alternate();
+    assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+                execs().with_status(0));
+    assert_that(&foo.target_bin(target, "main"), existing_file());
+
+    assert_that(
+      process(foo.target_bin(target, "main")),
+      execs().with_status(0));
+})

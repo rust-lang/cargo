@@ -93,8 +93,8 @@ test!(cargo_compile_with_invalid_code {
 {filename}:1 invalid rust code!
              ^~~~~~~
 Could not execute process \
-`rustc {filename} --crate-name foo --crate-type bin -o {} -L {} -L {}` (status=101)\n",
-            target.join("foo").display(),
+`rustc {filename} --crate-name foo --crate-type bin --out-dir {} -L {} -L {}` (status=101)\n",
+            target.display(),
             target.display(),
             target.join("deps").display(),
             filename = format!("src{}foo.rs", path::SEP)).as_slice()));
