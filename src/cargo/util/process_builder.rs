@@ -77,7 +77,7 @@ impl ProcessBuilder {
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
         command
-            .env(self.build_env().as_slice())
+            .env_set_all(self.build_env().as_slice())
             .stdout(InheritFd(1))
             .stderr(InheritFd(2));
 
@@ -96,7 +96,7 @@ impl ProcessBuilder {
 
     pub fn exec_with_output(&self) -> Result<ProcessOutput, ProcessError> {
         let mut command = self.build_command();
-        command.env(self.build_env().as_slice());
+        command.env_set_all(self.build_env().as_slice());
 
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
