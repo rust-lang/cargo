@@ -16,6 +16,7 @@ pub struct Layout {
     lib: Option<Path>,
     bins: Vec<Path>,
     examples: Vec<Path>,
+    tests: Vec<Path>,
 }
 
 impl Layout {
@@ -33,6 +34,7 @@ pub fn project_layout(root: &Path) -> Layout {
     let mut lib = None;
     let mut bins = vec!();
     let mut examples = vec!();
+    let mut tests = vec!();
 
     if root.join("src/lib.rs").exists() {
         lib = Some(root.join("src/lib.rs"));
@@ -54,10 +56,22 @@ pub fn project_layout(root: &Path) -> Layout {
         .map(|mut i| i.collect())
         .map(|found| examples.push_all_move(found));
 
+    // support two styles of tests: src/test.rs or tests/*.rs
+    let _ = fs::readdir(&root.join("tests"))
+        .map(|v| v.move_iter())
+        .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
+        .map(|mut i| i.collect())
+        .map(|found| tests.push_all_move(found));
+
+    if root.join("src/test.rs").exists() {
+        tests.push(root.join("src/test.rs"));
+    }
+
     Layout {
         lib: lib,
         bins: bins,
         examples: examples,
+        tests: tests,
     }
 }
 
@@ -139,6 +153,7 @@ pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
 type TomlLibTarget = TomlTarget;
 type TomlBinTarget = TomlTarget;
 type TomlExampleTarget = TomlTarget;
+type TomlTestTarget = TomlTarget;
 
 /*
  * TODO: Make all struct fields private
@@ -168,6 +183,7 @@ pub struct TomlManifest {
     lib: Option<Vec<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
+    test: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>
 }
@@ -254,6 +270,22 @@ fn inferred_example_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
     }).collect())
 }
 
+fn inferred_test_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
+    Some(layout.tests.iter().filter_map(|ex| {
+        let name = ex.filestem_str().map(|f| f.to_string());
+
+        name.map(|name| {
+            TomlTarget {
+                name: name,
+                crate_type: None,
+                path: Some(ex.display().to_string()),
+                test: None,
+                plugin: None,
+            }
+        })
+    }).collect())
+}
+
 impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
         -> CargoResult<(Manifest, Vec<Path>)>
@@ -319,10 +351,19 @@ impl TomlManifest {
             }).collect())
         };
 
+        let tests = if self.test.is_none() || self.test.get_ref().is_empty() {
+            inferred_test_targets(layout)
+        } else {
+            Some(self.test.get_ref().iter().map(|t| {
+                t.clone()
+            }).collect())
+        };
+
         // Get targets
         let targets = normalize(lib.as_ref().map(|l| l.as_slice()),
                                 bins.as_ref().map(|b| b.as_slice()),
                                 examples.as_ref().map(|e| e.as_slice()),
+                                tests.as_ref().map(|e| e.as_slice()),
                                 &metadata);
 
         if targets.is_empty() {
@@ -423,10 +464,12 @@ struct TomlTarget {
 fn normalize(lib: Option<&[TomlLibTarget]>,
              bin: Option<&[TomlBinTarget]>,
              example: Option<&[TomlExampleTarget]>,
+             test: Option<&[TomlTestTarget]>,
              metadata: &Metadata)
              -> Vec<Target>
 {
-    log!(4, "normalizing toml targets; lib={}; bin={}; example={}", lib, bin, example);
+    log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}",
+         lib, bin, example, test);
 
     enum TestDep { Needed, NotNeeded }
 
@@ -495,6 +538,20 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         }
     }
 
+    fn test_targets(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
+                   default: |&TomlTestTarget| -> String) {
+        for test in tests.iter() {
+            let path = test.path.clone().unwrap_or_else(|| default(test));
+
+            let profile = &Profile::default_test();
+            {
+                dst.push(Target::test_target(test.name.as_slice(),
+                                            &Path::new(path.as_slice()),
+                                            profile));
+            }
+        }
+    }
+
     let mut ret = Vec::new();
 
     match (lib, bin) {
@@ -518,6 +575,19 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         Some(ref examples) => {
             example_targets(&mut ret, examples.as_slice(),
                         |ex| format!("examples/{}.rs", ex.name));
+        },
+        None => ()
+    }
+
+    match test {
+        Some(ref tests) => {
+            test_targets(&mut ret, tests.as_slice(),
+                        |test| {
+                            if test.name.as_slice() == "test" {
+                                "src/test.rs".to_string()
+                            } else {
+                                format!("tests/{}.rs", test.name)
+                            }});
         },
         None => ()
     }
