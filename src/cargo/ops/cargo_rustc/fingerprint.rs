@@ -4,6 +4,7 @@ use std::io::File;
 
 use core::{Package, Target};
 use util;
+use util::hex::short_hash;
 use util::{CargoResult, Fresh, Dirty, Freshness};
 
 use super::job::Job;
@@ -18,8 +19,10 @@ use super::context::Context;
 /// compilation, returning the job as the second part of the tuple.
 pub fn prepare(cx: &mut Context, pkg: &Package,
                targets: &[&Target]) -> CargoResult<(Freshness, Job)> {
-    let fingerprint_loc = cx.dest(false).join(format!(".{}.fingerprint",
-                                                      pkg.get_name()));
+    let short = short_hash(pkg.get_package_id());
+    let fingerprint_loc = cx.dest(false).join(format!(".{}.{}.fingerprint",
+                                                      pkg.get_name(),
+                                                      short));
 
     let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc,
                                                 cx, targets));
