@@ -30,6 +30,21 @@ impl Layout {
     }
 }
 
+fn try_add_file(files: &mut Vec<Path>, root: &Path, dir: &str) {
+    let p = root.join(dir);
+    if p.exists() {
+        files.push(p);
+    }
+}
+fn try_add_files(files: &mut Vec<Path>, root: &Path, dir: &str) {
+    match fs::readdir(&root.join(dir)) {
+        Ok(new) => {
+            files.extend(new.move_iter().filter(|f| f.extension_str() == Some("rs")))
+        }
+        Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
+    }
+}
+
 pub fn project_layout(root: &Path) -> Layout {
     let mut lib = None;
     let mut bins = vec!();
@@ -40,32 +55,14 @@ pub fn project_layout(root: &Path) -> Layout {
         lib = Some(root.join("src/lib.rs"));
     }
 
-    if root.join("src/main.rs").exists() {
-        bins.push(root.join("src/main.rs"));
-    }
+    try_add_file(&mut bins, root, "src/main.rs");
+    try_add_files(&mut bins, root, "src/bin");
 
-    let _ = fs::readdir(&root.join("src/bin"))
-        .map(|v| v.move_iter())
-        .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
-        .map(|mut i| i.collect())
-        .map(|found| bins.push_all_move(found));
-
-    let _ = fs::readdir(&root.join("examples"))
-        .map(|v| v.move_iter())
-        .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
-        .map(|mut i| i.collect())
-        .map(|found| examples.push_all_move(found));
+    try_add_files(&mut examples, root, "examples");
 
     // support two styles of tests: src/test.rs or tests/*.rs
-    let _ = fs::readdir(&root.join("tests"))
-        .map(|v| v.move_iter())
-        .map(|i| i.filter(|f| f.extension_str() == Some("rs")))
-        .map(|mut i| i.collect())
-        .map(|found| tests.push_all_move(found));
-
-    if root.join("src/test.rs").exists() {
-        tests.push(root.join("src/test.rs"));
-    }
+    try_add_file(&mut tests, root, "src/test.rs");
+    try_add_files(&mut tests, root, "tests");
 
     Layout {
         lib: lib,
@@ -256,11 +253,9 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> 
 
 fn inferred_example_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
     Some(layout.examples.iter().filter_map(|ex| {
-        let name = ex.filestem_str().map(|f| f.to_string());
-
-        name.map(|name| {
+        ex.filestem_str().map(|name| {
             TomlTarget {
-                name: name,
+                name: name.to_string(),
                 crate_type: None,
                 path: Some(ex.display().to_string()),
                 test: None,
@@ -272,11 +267,9 @@ fn inferred_example_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
 
 fn inferred_test_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
     Some(layout.tests.iter().filter_map(|ex| {
-        let name = ex.filestem_str().map(|f| f.to_string());
-
-        name.map(|name| {
+        ex.filestem_str().map(|name| {
             TomlTarget {
-                name: name,
+                name: name.to_string(),
                 crate_type: None,
                 path: Some(ex.display().to_string()),
                 test: None,
