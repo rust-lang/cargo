@@ -404,6 +404,81 @@ test!(cargo_compile_with_short_ssh_git {
                               invalid url `{}`: `url: Invalid character in scheme.\n", url)));
 })
 
+test!(two_revs_same_deps {
+    let bar = git_repo("meta-dep", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+    }).assert();
+
+    // Commit the changes and make sure we trigger a recompile
+    let rev1 = bar.process("git").args(["rev-parse", "HEAD"])
+                  .exec_with_output().assert();
+    File::create(&bar.root().join("src/lib.rs")).write_str(r#"
+        pub fn bar() -> int { 2 }
+    "#).assert();
+    bar.process("git").args(["add", "."]).exec_with_output().assert();
+    bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
+       .assert();
+    let rev2 = bar.process("git").args(["rev-parse", "HEAD"])
+                  .exec_with_output().assert();
+
+    let rev1 = String::from_utf8(rev1.output).unwrap();
+    let rev2 = String::from_utf8(rev2.output).unwrap();
+
+    let foo = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.bar]
+            git = "file:{}"
+            rev = "{}"
+
+            [dependencies.baz]
+            path = "../baz"
+        "#, escape_path(&bar.root()), rev1.as_slice().trim()).as_slice())
+        .file("src/main.rs", r#"
+            extern crate bar;
+            extern crate baz;
+
+            fn main() {
+                assert_eq!(bar::bar(), 1);
+                assert_eq!(baz::baz(), 2);
+            }
+        "#);
+
+    let baz = project("baz")
+        .file("Cargo.toml", format!(r#"
+            [package]
+            name = "baz"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.bar]
+            git = "file:{}"
+            rev = "{}"
+        "#, escape_path(&bar.root()), rev2.as_slice().trim()).as_slice())
+        .file("src/lib.rs", r#"
+            extern crate bar;
+            pub fn baz() -> int { bar::bar() }
+        "#);
+
+    baz.build();
+
+    // TODO: -j1 is a hack
+    assert_that(foo.cargo_process("cargo-build").arg("-j").arg("1"),
+                execs().with_status(0));
+    assert_that(&foo.bin("main"), existing_file());
+    assert_that(foo.process(foo.bin("main")), execs().with_status(0));
+})
+
 test!(recompilation {
     let git_project = git_repo("bar", |project| {
         project

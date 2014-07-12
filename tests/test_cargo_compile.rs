@@ -100,6 +100,31 @@ Could not execute process \
             filename = format!("src{}foo.rs", path::SEP)).as_slice()));
 })
 
+test!(cargo_compile_with_invalid_code_in_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+            [dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("src/main.rs", "invalid rust code!");
+    let bar = project("bar")
+        .file("Cargo.toml", basic_bin_manifest("bar").as_slice())
+        .file("src/lib.rs", "invalid rust code!");
+    let baz = project("baz")
+        .file("Cargo.toml", basic_bin_manifest("baz").as_slice())
+        .file("src/lib.rs", "invalid rust code!");
+    bar.build();
+    baz.build();
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(101));
+})
+
 test!(cargo_compile_with_warnings_in_the_root_package {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
