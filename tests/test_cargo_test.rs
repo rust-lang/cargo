@@ -132,3 +132,110 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        compiling = COMPILING,
                        dir = p.root().display()).as_slice()));
 })
+
+test!(external_test_explicit {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[test]]
+            name = "test"
+            path = "src/test.rs"
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "Hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("src/test.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
+        "#);
+
+    let output = p.cargo_process("cargo-test")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
+
+    let internal = "\
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+    let external = "\
+running 1 test
+test external_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+
+    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
+                       compiling = COMPILING, dir = p.root().display());
+
+    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, internal, external).as_slice() ||
+            out == format!("{}\n\n{}\n\n\n{}\n\n", head, external, internal).as_slice());
+})
+
+test!(external_test_implicit {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "Hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("src/test.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
+        "#);
+
+    let output = p.cargo_process("cargo-test")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
+
+    let internal = "\
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+    let external = "\
+running 1 test
+test external_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+
+    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
+                       compiling = COMPILING, dir = p.root().display());
+
+    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, internal, external).as_slice() ||
+            out == format!("{}\n\n{}\n\n\n{}\n\n", head, external, internal).as_slice());
+})
+
+test!(dont_run_examples {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+        "#)
+        .file("examples/dont-run-me-i-will-fail.rs", r#"
+            fn main() { fail!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0));
+})
