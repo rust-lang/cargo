@@ -11,6 +11,10 @@ use core::package_id::Metadata;
 use core::source::Location;
 use util::{CargoResult, Require, human};
 
+/// Representation of the projects file layout.
+///
+/// This structure is used to hold references to all project files that are relevant to cargo.
+
 #[deriving(Clone)]
 pub struct Layout {
     lib: Option<Path>,
@@ -45,22 +49,25 @@ fn try_add_files(files: &mut Vec<Path>, root: &Path, dir: &str) {
     }
 }
 
-pub fn project_layout(root: &Path) -> Layout {
+/// Returns a new `Layout` for a given root path.
+/// The `root_path` represents the directory that contains the `Cargo.toml` file.
+
+pub fn project_layout(root_path: &Path) -> Layout {
     let mut lib = None;
     let mut bins = vec!();
     let mut examples = vec!();
     let mut tests = vec!();
 
-    if root.join("src/lib.rs").exists() {
-        lib = Some(root.join("src/lib.rs"));
+    if root_path.join("src/lib.rs").exists() {
+        lib = Some(root_path.join("src/lib.rs"));
     }
 
-    try_add_file(&mut bins, root, "src/main.rs");
-    try_add_files(&mut bins, root, "src/bin");
+    try_add_file(&mut bins, root_path, "src/main.rs");
+    try_add_files(&mut bins, root_path, "src/bin");
 
-    try_add_files(&mut examples, root, "examples");
+    try_add_files(&mut examples, root_path, "examples");
 
-    try_add_files(&mut tests, root, "tests");
+    try_add_files(&mut tests, root_path, "tests");
 
     Layout {
         lib: lib,
