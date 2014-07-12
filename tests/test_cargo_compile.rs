@@ -1030,6 +1030,7 @@ test!(verbose_release_build {
     assert_eq!(out, format!("\
 {} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
+        --cfg ndebug \
         -C metadata=test:-:0.0.0:-:file:{dir} \
         -C extra-filename={hash} \
         --out-dir {dir}{sep}target{sep}release \
@@ -1075,6 +1076,7 @@ test!(verbose_release_build_deps {
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type lib \
         --opt-level 3 \
+        --cfg ndebug \
         -C metadata=foo:-:0.0.0:-:file:{dir} \
         -C extra-filename={hash1} \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
@@ -1082,6 +1084,7 @@ test!(verbose_release_build_deps {
         -L {dir}{sep}target{sep}release{sep}deps`
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
+        --cfg ndebug \
         -C metadata=test:-:0.0.0:-:file:{dir} \
         -C extra-filename={hash2} \
         --out-dir {dir}{sep}target{sep}release \
@@ -1162,4 +1165,39 @@ test!(implicit_examples {
     assert_that(p.cargo_process("cargo-test"), execs());
     assert_that(process(p.bin("test/hello")), execs().with_stdout("Hello, World!\n"));
     assert_that(process(p.bin("test/goodbye")), execs().with_stdout("Goodbye, World!\n"));
+})
+
+test!(standard_build_no_ndebug {
+    let p = project("world")
+        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("src/foo.rs", r#"
+            fn main() {
+                if cfg!(ndebug) {
+                    println!("fast")
+                } else {
+                    println!("slow")
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+    assert_that(process(p.bin("foo")), execs().with_stdout("slow\n"));
+})
+
+test!(release_build_ndebug {
+    let p = project("world")
+        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("src/foo.rs", r#"
+            fn main() {
+                if cfg!(ndebug) {
+                    println!("fast")
+                } else {
+                    println!("slow")
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build").arg("--release"),
+                execs().with_status(0));
+    assert_that(process(p.bin("release/foo")), execs().with_stdout("fast\n"));
 })
