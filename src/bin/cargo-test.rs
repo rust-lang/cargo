@@ -9,7 +9,6 @@ extern crate serialize;
 extern crate hammer;
 
 use std::os;
-use std::io::{UserExecute, fs};
 
 use cargo::ops;
 use cargo::{execute_main_without_stdin};
@@ -53,31 +52,17 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         target: None,
     };
 
-    try!(ops::compile(&root, compile_opts).map(|_| None::<()>).map_err(|err| {
+    let test_executables = try!(ops::compile(&root, compile_opts).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
 
     let test_dir = root.dir_path().join("target").join("test");
 
-    let mut walk = try!(fs::walk_dir(&test_dir).map_err(|e| {
-        CliError::from_error(e, 1)
-    }));
-
-    for file in walk {
-        // TODO: The proper fix is to have target knows its expected
-        // output and only run expected executables.
-        if file.display().to_string().as_slice().contains("dSYM") { continue; }
-        if !is_executable(&file) { continue; }
-
-        try!(util::process(file).exec().map_err(|e| {
+    for file in test_executables.iter() {
+        try!(util::process(test_dir.join(file.as_slice())).exec().map_err(|e| {
             CliError::from_boxed(e.box_error(), 1)
         }));
     }
 
     Ok(None)
-}
-
-fn is_executable(path: &Path) -> bool {
-    if !path.is_file() { return false; }
-    path.stat().map(|stat| stat.perm.intersects(UserExecute)).unwrap_or(false)
 }

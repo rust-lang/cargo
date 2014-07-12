@@ -1072,3 +1072,69 @@ test!(verbose_release_build_deps {
                     hash1 = hash1,
                     hash2 = hash2).as_slice());
 })
+
+test!(explicit_examples {
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "world"
+            version = "1.0.0"
+            authors = []
+
+            [[lib]]
+            name = "world"
+            path = "src/lib.rs"
+
+            [[example]]
+            name = "hello"
+            path = "examples/ex-hello.rs"
+
+            [[example]]
+            name = "goodbye"
+            path = "examples/ex-goodbye.rs"
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "Hello" }
+            pub fn get_goodbye() -> &'static str { "Goodbye" }
+            pub fn get_world() -> &'static str { "World" }
+        "#)
+        .file("examples/ex-hello.rs", r#"
+            extern crate world;
+            fn main() { println!("{}, {}!", world::get_hello(), world::get_world()); }
+        "#)
+        .file("examples/ex-goodbye.rs", r#"
+            extern crate world;
+            fn main() { println!("{}, {}!", world::get_goodbye(), world::get_world()); }
+        "#);
+
+    assert_that(p.cargo_process("cargo-test"), execs());
+    assert_that(process(p.bin("test/hello")), execs().with_stdout("Hello, World!\n"));
+    assert_that(process(p.bin("test/goodbye")), execs().with_stdout("Goodbye, World!\n"));
+})
+
+test!(implicit_examples {
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "world"
+            version = "1.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "Hello" }
+            pub fn get_goodbye() -> &'static str { "Goodbye" }
+            pub fn get_world() -> &'static str { "World" }
+        "#)
+        .file("examples/hello.rs", r#"
+            extern crate world;
+            fn main() { println!("{}, {}!", world::get_hello(), world::get_world()); }
+        "#)
+        .file("examples/goodbye.rs", r#"
+            extern crate world;
+            fn main() { println!("{}, {}!", world::get_goodbye(), world::get_world()); }
+        "#);
+
+    assert_that(p.cargo_process("cargo-test"), execs());
+    assert_that(process(p.bin("test/hello")), execs().with_stdout("Hello, World!\n"));
+    assert_that(process(p.bin("test/goodbye")), execs().with_stdout("Goodbye, World!\n"));
+})
