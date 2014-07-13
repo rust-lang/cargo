@@ -59,7 +59,9 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let test_dir = root.dir_path().join("target").join("test");
 
     for file in test_executables.iter() {
-        try!(util::process(test_dir.join(file.as_slice())).exec().map_err(|e| {
+        try!(util::process(test_dir.join(file.as_slice()))
+                  .args(options.rest.as_slice())
+                  .exec().map_err(|e| {
             CliError::from_boxed(e.box_error(), 1)
         }));
     }
