@@ -38,8 +38,9 @@ pub struct CompileOptions<'a> {
     pub target: Option<&'a str>,
 }
 
-pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<Vec<String>> {
-    let CompileOptions { update, env, shell, jobs, target } = options;
+pub fn compile(manifest_path: &Path,
+               options: &mut CompileOptions) -> CargoResult<Vec<String>> {
+    let CompileOptions { update, env, ref mut shell, jobs, target } = *options;
     let target = target.map(|s| s.to_string());
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
@@ -60,7 +61,7 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<Vec
     let source_ids = package.get_source_ids();
 
     let (packages, resolve) = {
-        let mut config = try!(Config::new(shell, update, jobs, target.clone()));
+        let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
 
         let mut registry =
             try!(PackageRegistry::new(source_ids, override_ids, &mut config));
@@ -83,7 +84,7 @@ pub fn compile(manifest_path: &Path, options: CompileOptions) -> CargoResult<Vec
         target.get_profile().get_env() == env
     }).collect::<Vec<&Target>>();
 
-    let mut config = try!(Config::new(shell, update, jobs, target));
+    let mut config = try!(Config::new(*shell, update, jobs, target));
 
     try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
          &PackageSet::new(packages.as_slice()), &resolve, &mut config));

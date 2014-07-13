@@ -1,36 +1,32 @@
-#![crate_name="cargo-build"]
+#![crate_name = "cargo-run"]
 #![feature(phase)]
 
+#[phase(plugin, link)]
 extern crate cargo;
+extern crate serialize;
 
 #[phase(plugin, link)]
 extern crate hammer;
 
-#[phase(plugin, link)]
-extern crate log;
-
-extern crate serialize;
-
 use std::os;
-use cargo::{execute_main_without_stdin};
+use std::io::process::ExitStatus;
+
 use cargo::ops;
-use cargo::ops::CompileOptions;
-use cargo::core::MultiShell;
+use cargo::{execute_main_without_stdin};
+use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_project_manifest;
 
-#[deriving(PartialEq,Clone,Decodable,Encodable)]
-pub struct Options {
+#[deriving(PartialEq,Clone,Decodable)]
+struct Options {
     manifest_path: Option<String>,
-    update_remotes: bool,
     jobs: Option<uint>,
-    target: Option<String>,
-    release: bool,
+    update: bool,
+    rest: Vec<String>,
 }
 
-hammer_config!(Options "Build the current project", |c| {
-    c.short("update_remotes", 'u')
-     .short("jobs", 'j')
+hammer_config!(Options "Run the package's main executable", |c| {
+    c.short("jobs", 'j').short("update", 'u')
 })
 
 fn main() {
@@ -38,8 +34,6 @@ fn main() {
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-compile; args={}", os::args());
-
     let root = match options.manifest_path {
         Some(path) => Path::new(path),
         None => try!(find_project_manifest(&os::getcwd(), "Cargo.toml")
@@ -50,21 +44,26 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    let env = if options.release {
-        "release"
-    } else {
-        "compile"
-    };
-
-    let mut opts = CompileOptions {
-        update: options.update_remotes,
-        env: env,
+    let mut compile_opts = ops::CompileOptions {
+        update: options.update,
+        env: "compile",
         shell: shell,
         jobs: options.jobs,
-        target: options.target.as_ref().map(|t| t.as_slice()),
+        target: None,
     };
 
-    ops::compile(&root, &mut opts).map(|_| None).map_err(|err| {
+    let err = try!(ops::run(&root, &mut compile_opts,
+                            options.rest.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
-    })
+    }));
+    match err {
+        None => Ok(None),
+        Some(err) => {
+            Err(match err.exit {
+                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as uint),
+                _ => CliError::from_boxed(box err, 101),
+            })
+        }
+    }
 }
+
