@@ -255,6 +255,11 @@ fn build_base_args(into: &mut Args,
     //     into.push("-g".to_string());
     // }
 
+    if !profile.get_debug() {
+        into.push("--cfg".to_string());
+        into.push("ndebug".to_string());
+    }
+
     if profile.is_test() {
         into.push("--test".to_string());
     }
