@@ -60,8 +60,6 @@ pub fn project_layout(root: &Path) -> Layout {
 
     try_add_files(&mut examples, root, "examples");
 
-    // support two styles of tests: src/test.rs or tests/*.rs
-    try_add_file(&mut tests, root, "src/test.rs");
     try_add_files(&mut tests, root, "tests");
 
     Layout {
