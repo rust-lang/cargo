@@ -51,8 +51,10 @@ fn execute() {
             println!("Commands:");
             println!("  build          # compile the current project");
             println!("  test           # run the tests");
-            println!("  clean          # remove the target directory\n");
-            
+            println!("  clean          # remove the target directory");
+            println!("  run            # build and execute src/main.rs");
+            println!("");
+
 
             let (_, options) = hammer::usage::<GlobalFlags>(false);
             println!("Options (for all commands):\n\n{}", options);
