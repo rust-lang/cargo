@@ -1063,6 +1063,10 @@ test!(verbose_release_build_deps {
             name = "foo"
             version = "0.0.0"
             authors = []
+
+            [[lib]]
+            name = "foo"
+            crate_type = ["dylib", "rlib"]
         "#)
         .file("foo/src/lib.rs", "");
     let output = p.cargo_process("cargo-build").arg("-v").arg("--release")
@@ -1074,7 +1078,7 @@ test!(verbose_release_build_deps {
     let hash2 = out.slice_from(pos1 + 10 + pos2 + 15).slice_to(17);
     assert_eq!(out, format!("\
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
-        --crate-type lib \
+        --crate-type dylib --crate-type rlib \
         --opt-level 3 \
         --cfg ndebug \
         -C metadata=foo:-:0.0.0:-:file:{dir} \
@@ -1090,6 +1094,8 @@ test!(verbose_release_build_deps {
         --out-dir {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps \
+        --extern foo={dir}{sep}target{sep}release{sep}deps/\
+                     {prefix}foo{hash1}{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo{hash1}.rlib`
 {compiling} foo v0.0.0 (file:{dir})
 {compiling} test v0.0.0 (file:{dir})\n",
@@ -1098,7 +1104,9 @@ test!(verbose_release_build_deps {
                     dir = p.root().display(),
                     sep = path::SEP,
                     hash1 = hash1,
-                    hash2 = hash2).as_slice());
+                    hash2 = hash2,
+                    prefix = os::consts::DLL_PREFIX,
+                    suffix = os::consts::DLL_SUFFIX).as_slice());
 })
 
 test!(explicit_examples {
