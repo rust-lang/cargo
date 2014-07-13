@@ -12,6 +12,7 @@ The `Cargo.toml` file contains several top-level sections:
   that primarily build executables, as well as projects that contain
   utility executables (such as an HTTP library that comes with a web
   server executable).
+* `[[test]]`: information about the test files.
 
 ## Extensibility
 
@@ -29,7 +30,7 @@ into Rust structs that are used throughout the built-in commands.
 * `readme`: a Markdown-formatted file in the project that can be used as
   a description of the document in indexes (`Option<Path>`, relative to
   the project root, defaults to "./README.md", if found).
-* `tags`: an array of tags that can be used in indexes (`~[~str]`) 
+* `tags`: an array of tags that can be used in indexes (`~[~str]`)
 * `authors`: a list of authors in `name <email>` format (`~[~str]`). At
   least one `author` with email will probably be required to submit to
   the Cargo repository.
@@ -78,6 +79,16 @@ standalone library limited to the bare minimum requirements.
 
 rust-http = "~1.2.0"
 hamcrest = [">1.2.0", "<2.0.0"]
+```
+
+## The `[[test]]` Section
+
+The `test` section allows you to separate your tests from the source files.
+
+```toml
+[[test]]
+name = "foo"
+path = "some/path/my_tests.rs"
 ```
 
 ## Projects Containing Both `lib` and `bin`
