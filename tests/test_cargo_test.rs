@@ -194,7 +194,7 @@ test!(external_test_implicit {
             #[test]
             fn internal_test() {}
         "#)
-        .file("src/test.rs", r#"
+        .file("tests/external.rs", r#"
             extern crate foo;
 
             #[test]
