@@ -4,8 +4,10 @@
 #![cfg(target_os = "macos")]
 
 use std::os;
+use std::path;
 
 use support::{project, execs, basic_bin_manifest};
+use support::{RUNNING, COMPILING};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -229,4 +231,40 @@ test!(plugin_to_the_max {
     assert_that(
       process(foo.target_bin(target, "main")),
       execs().with_status(0));
+})
+
+test!(linker_and_ar {
+    let target = alternate();
+    let p = project("foo")
+        .file(".cargo/config", format!(r#"
+            [target.{}]
+            ar = "my-ar-tool"
+            linker = "my-linker-tool"
+        "#, target).as_slice())
+        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("src/foo.rs", r#"
+            use std::os;
+            fn main() {
+                assert_eq!(os::consts::ARCH, "x86");
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build").arg("--target").arg(target)
+                                              .arg("-v"),
+                execs().with_status(101)
+                       .with_stdout(format!("\
+{running} `rustc src/foo.rs --crate-name foo --crate-type bin \
+    --out-dir {dir}{sep}target{sep}{target} \
+    --target {target} \
+    -C ar=my-ar-tool -C linker=my-linker-tool \
+    -L {dir}{sep}target{sep}{target} \
+    -L {dir}{sep}target{sep}{target}{sep}deps`
+{compiling} foo v0.5.0 (file:{dir})
+",
+                            running = RUNNING,
+                            compiling = COMPILING,
+                            dir = p.root().display(),
+                            target = target,
+                            sep = path::SEP,
+                            ).as_slice()));
 })
