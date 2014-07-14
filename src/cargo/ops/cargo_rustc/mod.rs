@@ -295,10 +295,12 @@ fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context,
     dst.push(cx.deps_dir(plugin).display().to_string());
 
     for &(_, target) in cx.dep_targets(package).iter() {
-        dst.push("--extern".to_string());
-        dst.push(format!("{}={}/{}",
-                 target.get_name(),
-                 cx.deps_dir(target.get_profile().is_plugin()).display(),
-                 cx.target_filename(target)));
+        for filename in cx.target_filenames(target).iter() {
+            dst.push("--extern".to_string());
+            dst.push(format!("{}={}/{}",
+                     target.get_name(),
+                     cx.deps_dir(target.get_profile().is_plugin()).display(),
+                     filename));
+        }
     }
 }
