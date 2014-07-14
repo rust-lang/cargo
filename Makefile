@@ -1,7 +1,8 @@
 RUSTC_FLAGS ?=
 DESTDIR ?=
 PREFIX ?= /usr/local
-BINDIR ?= $(PREFIX)/bin
+TARGET ?= target
+PKG_NAME ?= cargo-nightly
 
 ifeq ($(wildcard rustc/bin),)
 export RUSTC := rustc
@@ -29,8 +30,11 @@ DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
 TOML = libs/toml-rs/build/$(shell $(RUSTC) --print-file-name libs/toml-rs/src/toml.rs)
 HAMMER = libs/hammer.rs/target/$(shell $(RUSTC) --crate-type=lib --print-file-name libs/hammer.rs/src/hammer.rs)
 HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
-LIBCARGO = target/libcargo.timestamp
-BIN_TARGETS = $(patsubst %,target/%,$(BINS))
+LIBCARGO = $(TARGET)/libcargo.rlib
+TESTDIR = $(TARGET)/tests
+DISTDIR = $(TARGET)/dist
+PKGDIR = $(DISTDIR)/$(PKG_NAME)
+BIN_TARGETS = $(BINS:%=$(TARGET)/%)
 
 all: $(BIN_TARGETS)
 
@@ -45,36 +49,39 @@ $(TOML): $(wildcard libs/toml-rs/src/*.rs)
 $(HAMCREST): $(shell find libs/hamcrest-rust/src/hamcrest -name '*.rs')
 	$(MAKE) -C libs/hamcrest-rust
 
+$(TARGET)/:
+	mkdir -p $@
+
+$(TESTDIR)/:
+	mkdir -p $@
+
 # === Cargo
 
-$(LIBCARGO): $(SRC) $(HAMMER) $(TOML)
-	mkdir -p target
-	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir target src/cargo/lib.rs
-	touch $(LIBCARGO)
+$(LIBCARGO): $(SRC) $(HAMMER) $(TOML) | $(TARGET)/
+	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir $(TARGET) src/cargo/lib.rs
 
 libcargo: $(LIBCARGO)
 
 # === Commands
 
-$(BIN_TARGETS): target/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
-	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) -Ltarget --out-dir target $<
+$(BIN_TARGETS): $(TARGET)/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
+	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) -L$(TARGET) --out-dir $(TARGET) $<
 
 # === Tests
 
 TEST_SRC = $(shell find tests -name '*.rs')
 TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
 
-target/tests/test-integration: $(HAMCREST) $(TEST_SRC) $(BIN_TARGETS)
-	$(RUSTC) --test --crate-type=lib $(TEST_DEPS) -Ltarget -o $@  tests/tests.rs
+$(TESTDIR)/test-integration: $(HAMCREST) $(TEST_SRC) $(BIN_TARGETS) | $(TESTDIR)/
+	$(RUSTC) --test $(TEST_DEPS) -L$(TARGET) -o $@ tests/tests.rs
 
-target/tests/test-unit: $(TOML) $(HAMCREST) $(SRC) $(HAMMER)
-	mkdir -p target/tests
+$(TESTDIR)/test-unit: $(TOML) $(HAMCREST) $(SRC) $(HAMMER) | $(TESTDIR)/
 	$(RUSTC) --test -g $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/lib.rs
 
-test-unit: target/tests/test-unit
-	target/tests/test-unit $(only)
+test-unit: $(TESTDIR)/test-unit
+	$< $(only)
 
-test-integration: target/tests/test-integration
+test-integration: $(TESTDIR)/test-integration
 	$< $(only)
 
 test: test-unit test-integration style no-exes
@@ -88,14 +95,42 @@ no-exes:
 		&& exit 1 || exit 0
 
 clean:
-	rm -rf target
+	rm -rf $(TARGET)
 
 clean-all: clean
 	git submodule foreach make clean
 
-install:
-	install -d $(DESTDIR)$(BINDIR)
-	install target/cargo target/cargo-* $(DESTDIR)$(BINDIR)
+dist: $(DISTDIR)/$(PKG_NAME).tar.gz
+
+distcheck: dist
+	rm -rf $(TARGET)/distcheck
+	mkdir -p $(TARGET)/distcheck
+	(cd $(TARGET)/distcheck && tar xf ../dist/$(PKG_NAME).tar.gz)
+	$(TARGET)/distcheck/$(PKG_NAME)/install.sh \
+		--prefix=$(TARGET)/distcheck/install
+	$(TARGET)/distcheck/install/bin/cargo -h > /dev/null
+	$(TARGET)/distcheck/$(PKG_NAME)/install.sh \
+		--prefix=$(TARGET)/distcheck/install --uninstall
+	[ -f $(TARGET)/distcheck/install/bin/cargo ] && exit 1 || exit 0
+
+$(DISTDIR)/$(PKG_NAME).tar.gz: $(PKGDIR)/lib/cargo/manifest.in
+	tar -czvf $@ -C $(DISTDIR) $(PKG_NAME)
+
+$(PKGDIR)/lib/cargo/manifest.in: $(BIN_TARGETS) Makefile
+	rm -rf $(PKGDIR)
+	mkdir -p $(PKGDIR)/bin $(PKGDIR)/lib/cargo
+	cp $(TARGET)/cargo $(PKGDIR)/bin
+	cp $(BIN_TARGETS) $(PKGDIR)/lib/cargo
+	rm $(PKGDIR)/lib/cargo/cargo
+	(cd $(PKGDIR) && find . -type f | sed 's/^\.\///') \
+		> $(DISTDIR)/manifest-$(PKG_NAME).in
+	cp src/install.sh $(PKGDIR)
+	cp README.md LICENSE-MIT LICENSE-APACHE $(PKGDIR)
+	cp LICENSE-MIT $(PKGDIR)
+	mv $(DISTDIR)/manifest-$(PKG_NAME).in $(PKGDIR)/lib/cargo/manifest.in
+
+install: $(PKGDIR)/lib/cargo/manifest.in
+	$(PKGDIR)/install.sh --prefix=$(PREFIX)
 
 # Setup phony tasks
 .PHONY: all clean distclean test test-unit test-integration libcargo style

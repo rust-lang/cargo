@@ -58,9 +58,20 @@ fn execute() {
             println!("Options (for all commands):\n\n{}", options);
         },
         _ => {
-            let command = format!("cargo-{}", cmd);
+            let command = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
             let mut command = match os::self_exe_path() {
-                Some(path) => Command::new(path.join(command)),
+                Some(path) => {
+                    let p1 = path.join("../lib/cargo").join(command.as_slice());
+                    let p2 = path.join(command.as_slice());
+                    println!("{} {}", p1.display(), p2.display());
+                    if p1.exists() {
+                        Command::new(p1)
+                    } else if p2.exists() {
+                        Command::new(p2)
+                    } else {
+                        Command::new(command)
+                    }
+                }
                 None => Command::new(command),
             };
             let command = command
