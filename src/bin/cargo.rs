@@ -65,7 +65,6 @@ fn execute() {
                 Some(path) => {
                     let p1 = path.join("../lib/cargo").join(command.as_slice());
                     let p2 = path.join(command.as_slice());
-                    println!("{} {}", p1.display(), p2.display());
                     if p1.exists() {
                         Command::new(p1)
                     } else if p2.exists() {
