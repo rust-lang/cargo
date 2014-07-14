@@ -23,12 +23,14 @@
 //!
 
 use std::os;
-use util::config::{Config, ConfigValue};
-use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, resolver};
+use std::collections::HashMap;
+
 use core::registry::PackageRegistry;
+use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, resolver};
 use ops;
 use sources::{PathSource};
-use util::{CargoResult, Wrap, config, internal, human};
+use util::config::{Config, ConfigValue};
+use util::{CargoResult, Wrap, config, internal, human, ChainError};
 
 pub struct CompileOptions<'a> {
     pub update: bool,
@@ -57,7 +59,8 @@ pub fn compile(manifest_path: &Path,
         try!(shell.warn(format!("unused manifest key: {}", key)));
     }
 
-    let override_ids = try!(source_ids_from_config());
+    let user_configs = try!(config::all_configs(os::getcwd()));
+    let override_ids = try!(source_ids_from_config(&user_configs));
     let source_ids = package.get_source_ids();
 
     let (packages, resolve) = {
@@ -85,6 +88,7 @@ pub fn compile(manifest_path: &Path,
     }).collect::<Vec<&Target>>();
 
     let mut config = try!(Config::new(*shell, update, jobs, target));
+    try!(scrape_target_config(&mut config, &user_configs));
 
     try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
          &PackageSet::new(packages.as_slice()), &resolve, &mut config));
@@ -103,23 +107,57 @@ pub fn compile(manifest_path: &Path,
     Ok(test_executables)
 }
 
-fn source_ids_from_config() -> CargoResult<Vec<SourceId>> {
-    let configs = try!(config::all_configs(os::getcwd()));
-
+fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>)
+                          -> CargoResult<Vec<SourceId>> {
     debug!("loaded config; configs={}", configs);
 
     let config_paths = configs.find_equiv(&"paths").map(|v| v.clone());
     let config_paths = config_paths.unwrap_or_else(|| ConfigValue::new());
 
-    let paths: Vec<Path> = match *config_paths.get_value() {
-        config::String(_) => return Err(internal("The path was configured as \
-                                                  a String instead of a List")),
-        config::Table(_) => return Err(internal("The path was configured as \
-                                                 a Table instead of a List")),
-        config::List(ref list) => {
-            list.iter().map(|path| Path::new(path.as_slice())).collect()
-        }
+    let paths = try!(config_paths.list().chain_error(|| {
+        internal("invalid configuration for the key `path`")
+    }));
+
+    Ok(paths.iter().map(|p| SourceId::for_path(&Path::new(p.as_slice()))).collect())
+}
+
+fn scrape_target_config(config: &mut Config,
+                        configs: &HashMap<String, config::ConfigValue>)
+                        -> CargoResult<()> {
+    let target = match configs.find_equiv(&"target") {
+        None => return Ok(()),
+        Some(target) => try!(target.table().chain_error(|| {
+            internal("invalid configuration for the key `target`")
+        })),
+    };
+    let target = match config.target() {
+        None => target,
+        Some(triple) => match target.find_equiv(&triple) {
+            None => return Ok(()),
+            Some(target) => try!(target.table().chain_error(|| {
+                internal(format!("invalid configuration for the key \
+                                  `target.{}`", triple))
+            })),
+        },
     };
 
-    Ok(paths.iter().map(|p| SourceId::for_path(p)).collect())
+    match target.find_equiv(&"ar") {
+        None => {}
+        Some(ar) => {
+            config.set_ar(try!(ar.string().chain_error(|| {
+                internal("invalid configuration for key `ar`")
+            })).to_string());
+        }
+    }
+
+    match target.find_equiv(&"linker") {
+        None => {}
+        Some(linker) => {
+            config.set_linker(try!(linker.string().chain_error(|| {
+                internal("invalid configuration for key `ar`")
+            })).to_string());
+        }
+    }
+
+    Ok(())
 }

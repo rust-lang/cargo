@@ -13,6 +13,8 @@ pub struct Config<'a> {
     shell: &'a mut MultiShell,
     jobs: uint,
     target: Option<String>,
+    linker: Option<String>,
+    ar: Option<String>,
 }
 
 impl<'a> Config<'a> {
@@ -32,6 +34,8 @@ impl<'a> Config<'a> {
             shell: shell,
             jobs: jobs.unwrap_or(os::num_cpus()),
             target: target,
+            ar: None,
+            linker: None,
         })
     }
 
@@ -57,6 +61,17 @@ impl<'a> Config<'a> {
 
     pub fn target<'a>(&'a self) -> Option<&'a str> {
         self.target.as_ref().map(|t| t.as_slice())
+    }
+
+    pub fn set_ar(&mut self, ar: String) { self.ar = Some(ar); }
+
+    pub fn set_linker(&mut self, linker: String) { self.linker = Some(linker); }
+
+    pub fn linker<'a>(&'a self) -> Option<&'a str> {
+        self.linker.as_ref().map(|t| t.as_slice())
+    }
+    pub fn ar<'a>(&'a self) -> Option<&'a str> {
+        self.ar.as_ref().map(|t| t.as_slice())
     }
 }
 
@@ -160,6 +175,30 @@ impl ConfigValue {
         }
 
         Ok(())
+    }
+
+    pub fn string<'a>(&'a self) -> CargoResult<&'a str> {
+        match self.value {
+            Table(_) => Err(internal("expected a string, but found a table")),
+            List(_) => Err(internal("expected a string, but found a list")),
+            String(ref s) => Ok(s.as_slice()),
+        }
+    }
+
+    pub fn table<'a>(&'a self) -> CargoResult<&'a HashMap<String, ConfigValue>> {
+        match self.value {
+            String(_) => Err(internal("expected a table, but found a string")),
+            List(_) => Err(internal("expected a table, but found a list")),
+            Table(ref table) => Ok(table),
+        }
+    }
+
+    pub fn list<'a>(&'a self) -> CargoResult<&'a [String]> {
+        match self.value {
+            String(_) => Err(internal("expected a list, but found a string")),
+            Table(_) => Err(internal("expected a list, but found a table")),
+            List(ref list) => Ok(list.as_slice()),
+        }
     }
 }
 
