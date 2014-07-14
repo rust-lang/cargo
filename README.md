@@ -2,7 +2,7 @@ Cargo downloads your Rust project’s dependencies and compiles your project.
 
 Learn more at http://crates.io/.
 
-## Installing cargo
+## Installing cargo from nightlies
 
 Cargo has nightlies available for use. The cargo source is not always guaranteed
 to compile on rust master as it may lag behind by a day or two. Nightlies,
@@ -11,7 +11,7 @@ however, will run regardless of this fact!
 ```
 $ curl -O http://static.rust-lang.org/cargo-dist/cargo-nightly-linux.tar.gz
 $ tar xf cargo-nightly-linux.tar.gz
-$ ./cargo-nightly/bin/cargo build
+$ ./cargo-nightly/install.sh
 ```
 
 The current nightlies available are:
