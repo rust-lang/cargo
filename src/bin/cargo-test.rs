@@ -44,7 +44,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    let compile_opts = ops::CompileOptions {
+    let mut compile_opts = ops::CompileOptions {
         update: options.update,
         env: "test",
         shell: shell,
@@ -52,7 +52,8 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         target: None,
     };
 
-    let test_executables = try!(ops::compile(&root, compile_opts).map_err(|err| {
+    let test_executables = try!(ops::compile(&root,
+                                             &mut compile_opts).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
 
