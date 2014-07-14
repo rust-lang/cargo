@@ -172,17 +172,19 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 
     /// Return the exact filename of the target.
-    pub fn target_filename(&self, target: &Target) -> String {
+    pub fn target_filenames(&self, target: &Target) -> Vec<String> {
         let stem = target.file_stem();
 
+        let mut ret = Vec::new();
         if target.is_dylib() {
             let (prefix, suffix) = self.dylib(target.get_profile().is_plugin());
-            format!("{}{}{}", prefix, stem, suffix)
-        } else if target.is_rlib() {
-            format!("lib{}.rlib", stem)
-        } else {
-            unreachable!()
+            ret.push(format!("{}{}{}", prefix, stem, suffix));
         }
+        if target.is_rlib() {
+            ret.push(format!("lib{}.rlib", stem));
+        }
+        assert!(ret.len() > 0);
+        return ret;
     }
 
     /// For a package, return all targets which are registered as dependencies
