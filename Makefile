@@ -27,6 +27,10 @@ BINS = cargo \
 
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
+ifeq ($(OS),Windows_NT)
+X = .exe
+endif
+
 DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
 TOML = libs/toml-rs/build/$(shell $(RUSTC) --print-file-name libs/toml-rs/src/toml.rs)
 HAMMER = libs/hammer.rs/target/$(shell $(RUSTC) --crate-type=lib --print-file-name libs/hammer.rs/src/hammer.rs)
@@ -35,7 +39,7 @@ LIBCARGO = $(TARGET)/libcargo.rlib
 TESTDIR = $(TARGET)/tests
 DISTDIR = $(TARGET)/dist
 PKGDIR = $(DISTDIR)/$(PKG_NAME)
-BIN_TARGETS = $(BINS:%=$(TARGET)/%)
+BIN_TARGETS = $(BINS:%=$(TARGET)/%$(X))
 
 all: $(BIN_TARGETS)
 
@@ -65,7 +69,7 @@ libcargo: $(LIBCARGO)
 
 # === Commands
 
-$(BIN_TARGETS): $(TARGET)/%: src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
+$(BIN_TARGETS): $(TARGET)/%$(X): src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
 	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) -L$(TARGET) --out-dir $(TARGET) $<
 
 # === Tests
@@ -120,9 +124,9 @@ $(DISTDIR)/$(PKG_NAME).tar.gz: $(PKGDIR)/lib/cargo/manifest.in
 $(PKGDIR)/lib/cargo/manifest.in: $(BIN_TARGETS) Makefile
 	rm -rf $(PKGDIR)
 	mkdir -p $(PKGDIR)/bin $(PKGDIR)/lib/cargo
-	cp $(TARGET)/cargo $(PKGDIR)/bin
+	cp $(TARGET)/cargo$(X) $(PKGDIR)/bin
 	cp $(BIN_TARGETS) $(PKGDIR)/lib/cargo
-	rm $(PKGDIR)/lib/cargo/cargo
+	rm $(PKGDIR)/lib/cargo/cargo$(X)
 	(cd $(PKGDIR) && find . -type f | sed 's/^\.\///') \
 		> $(DISTDIR)/manifest-$(PKG_NAME).in
 	cp src/install.sh $(PKGDIR)
