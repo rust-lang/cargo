@@ -113,7 +113,9 @@ fn source_ids_from_config() -> CargoResult<Vec<SourceId>> {
 
     let paths: Vec<Path> = match *config_paths.get_value() {
         config::String(_) => return Err(internal("The path was configured as \
-                                                   a String instead of a List")),
+                                                  a String instead of a List")),
+        config::Table(_) => return Err(internal("The path was configured as \
+                                                 a Table instead of a List")),
         config::List(ref list) => {
             list.iter().map(|path| Path::new(path.as_slice())).collect()
         }
