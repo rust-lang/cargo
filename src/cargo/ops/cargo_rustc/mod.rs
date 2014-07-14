@@ -278,12 +278,21 @@ fn build_base_args(into: &mut Args,
     into.push("--out-dir".to_string());
     into.push(cx.dest(plugin).display().to_string());
 
-    match cx.config.target() {
-        Some(target) if !plugin => {
-            into.push("--target".to_string());
-            into.push(target.to_string());
+    if !plugin {
+        fn opt(into: &mut Vec<String>, key: &str, prefix: &str,
+               val: Option<&str>) {
+            match val {
+                Some(val) => {
+                    into.push(key.to_string());
+                    into.push(format!("{}{}", prefix, val));
+                }
+                None => {}
+            }
         }
-        _ => {}
+
+        opt(into, "--target", "", cx.config.target());
+        opt(into, "-C", "ar=", cx.config.ar());
+        opt(into, "-C", "linker=", cx.config.linker());
     }
 }
 
