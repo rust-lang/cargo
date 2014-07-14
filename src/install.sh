@@ -275,15 +275,7 @@ OPTIONS=""
 BOOL_OPTIONS=""
 VAL_OPTIONS=""
 
-# On windows we just store the libraries in the bin directory because
-# there's no rpath. This is where the build system itself puts libraries;
-# --libdir is used to configure the installation directory.
-# FIXME: Thise needs to parameterized over target triples. Do it in platform.mk
 CFG_LIBDIR_RELATIVE=lib
-if [ "$CFG_OSTYPE" = "pc-mingw32" ] || [ "$CFG_OSTYPE" = "w64-mingw32" ]
-then
-    CFG_LIBDIR_RELATIVE=bin
-fi
 
 flag uninstall "only uninstall from the installation prefix"
 opt verify 1 "verify that the installed binaries run correctly"
