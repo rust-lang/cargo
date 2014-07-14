@@ -19,8 +19,8 @@ pub fn clean(manifest_path: &Path) -> CargoResult<()>
     let build_dir = manifest.get_target_dir();
 
     if build_dir.exists() {
-      return rmdir_recursive(build_dir).chain_error(|| human("Could not remove build directory"))
+      rmdir_recursive(build_dir).chain_error(|| human("Could not remove build directory"))
+    } else {
+      Ok(())
     }
-
-    Ok(())
 }
