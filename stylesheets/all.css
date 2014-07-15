@@ -1,4 +1,4 @@
-/* line 17, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 17, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
 a, abbr, acronym, address, big, cite, code,
@@ -19,38 +19,38 @@ time, mark, audio, video {
   font-size: 100%;
   vertical-align: baseline; }
 
-/* line 22, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 22, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 html {
   line-height: 1; }
 
-/* line 24, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 24, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 ol, ul {
   list-style: none; }
 
-/* line 26, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 26, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 table {
   border-collapse: collapse;
   border-spacing: 0; }
 
-/* line 28, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 28, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 caption, th, td {
   text-align: left;
   font-weight: normal;
   vertical-align: middle; }
 
-/* line 30, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 30, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 q, blockquote {
   quotes: none; }
-  /* line 103, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+  /* line 103, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
   q:before, q:after, blockquote:before, blockquote:after {
     content: "";
     content: none; }
 
-/* line 32, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 32, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 a img {
   border: none; }
 
-/* line 116, /home/wycats/.rvm/gems/ruby-2.1.0/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
+/* line 116, /home/wycats/.rvm/gems/ruby-2.1.2/gems/compass-0.12.6/frameworks/compass/stylesheets/compass/reset/_utilities.scss */
 article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section, summary {
   display: block; }
 
@@ -493,31 +493,32 @@ h1 {
   color: #b64790; }
   /* line 45, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   h1 code:not(.highlight) {
-    color: #f3bb00; }
-  /* line 50, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+    color: #d9a700;
+    vertical-align: bottom; }
+  /* line 51, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   h1:hover .headerlink {
     display: inline-block; }
 
-/* line 56, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 57, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 h1:first-child {
   margin-top: 0; }
 
-/* line 60, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 61, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 h2 {
   font-size: 18px;
   margin: 15px 0 5px 0;
   color: #b64790;
   font-weight: bold; }
-  /* line 66, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 67, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   h2 code:not(.highlight) {
-    color: #f3bb00; }
+    color: #d9a700; }
 
-/* line 71, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 72, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 code:not(.highlight) {
   font-family: Consolas;
   color: #b64790; }
 
-/* line 76, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 77, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 main {
   display: flex;
   flex-direction: column;
@@ -527,7 +528,7 @@ main {
   padding: 15px;
   border-radius: 5px;
   box-shadow: 0px 0px 5px 2px #3b6837; }
-  /* line 88, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 89, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main p:first-child {
     color: #199b5c;
     font-weight: 500;
@@ -535,33 +536,33 @@ main {
     padding-bottom: 15px;
     border-bottom: 1px solid #62865f;
     text-align: center; }
-    /* line 96, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+    /* line 97, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
     main p:first-child a {
       color: #3b6837; }
-      /* line 99, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+      /* line 100, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
       main p:first-child a:hover {
         color: #62865f; }
-  /* line 105, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 106, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main p, main ul {
     color: #3b6837;
     margin: 10px 0;
     line-height: 150%; }
-  /* line 111, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 112, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main ul {
     margin-left: 20px; }
-  /* line 115, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 116, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main li {
     list-style-type: disc; }
-  /* line 119, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 120, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   main strong {
     font-weight: bold; }
 
-/* line 124, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 125, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 img.logo {
   align-self: center;
   margin-bottom: 10px; }
 
-/* line 129, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 130, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 pre {
   background: #eeecdd;
   padding: 10px;
@@ -570,22 +571,28 @@ pre {
   border-radius: 4px;
   line-height: 120%; }
 
-/* line 138, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 139, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 footer {
   margin-top: 10px;
   border-top: 1px solid #b64790;
   padding-top: 10px;
   width: 100%;
   text-align: center; }
-  /* line 145, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 146, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   footer a {
     color: #b64790;
     text-decoration: none; }
-    /* line 149, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+    /* line 150, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
     footer a:hover {
       text-decoration: underline; }
 
-/* line 155, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 156, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 .headerlink {
   display: none;
   text-decoration: none; }
+
+/* line 161, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+.fork-me {
+  position: absolute;
+  top: 0;
+  right: 0; }

@@ -14,12 +14,23 @@
   </head>
   
   <body class="index">
-    <a href="/"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
+    <a href="https://github.com/rust-lang/cargo"><img class="fork-me" alt="" width="149" height="149" src="images/forkme.png" /></a>
+    <a href="./"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
 
     <main>
       <p>Cargo downloads your <a href="http://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
 
-      <h1>Let&rsquo;s Get Started</h1>
+      <h1>Installing</h1>
+
+<p>The easiest way to get Cargo is to get the Rust nightly build by using
+the <code>rustup</code> script:</p>
+<pre><code class="highlight shell"><span class="gp">$ </span>curl www.rust-lang.org/rustup.sh | sudo bash
+</code></pre>
+
+<p>This will get you the latest nightly build for your platform along with
+the latest Cargo. You can run this every day to get the latest updates.</p>
+
+<h1>Let&rsquo;s Get Started</h1>
 
 <p>To start, add a <code>Cargo.toml</code> to the root of your project. Here&rsquo;s a
 simple one to get you started.</p>
@@ -28,13 +39,9 @@ simple one to get you started.</p>
 <span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
 <span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
 <span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@example.com"</span> <span class="p">]</span>
-
-<span class="nn">[[bin]]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span> <span class="c"># the name of the executable to generate</span>
 </code></pre>
 
-<p>Next, add <code>src/hello-world.rs</code> to your project.</p>
+<p>Next, add <code>src/main.rs</code> to your project.</p>
 <pre><code class="highlight rust"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
     <span class="nd">println!</span><span class="p">(</span><span class="s">"Hello world!"</span><span class="p">);</span>
 <span class="p">}</span>
@@ -58,10 +65,6 @@ Hello world!
 <span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
 <span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@example.com"</span> <span class="p">]</span>
 
-<span class="nn">[[bin]]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span> <span class="c"># the name of the executable to generate</span>
-
 <span class="nn">[dependencies.color]</span>
 
 <span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/bjz/color-rs.git"</span>
@@ -71,7 +74,7 @@ Hello world!
 between different color types.</p>
 
 <p>Now, you can pull in that library using <code>extern crate</code> in
-<code>hello-world.rs</code>.</p>
+<code>main.rs</code>.</p>
 <pre><code class="highlight rust"><span class="k">extern</span> <span class="n">crate</span> <span class="n">color</span><span class="p">;</span>
 
 <span class="k">use</span> <span class="nn">color</span><span class="p">::{</span><span class="n">RGB</span><span class="p">,</span> <span class="n">ToHSV</span><span class="p">};</span>
@@ -96,10 +99,10 @@ HSV: HSV <span class="o">{</span> h: 0, s: 1, v: 1 <span class="o">}</span>
 
 <h1>Recompiling</h1>
 
-<p>If you modify <code>hello-world.rs</code> and recompile, Cargo will intelligently
+<p>If you modify <code>main.rs</code> and recompile, Cargo will intelligently
 skip recompiling <code>color</code>, which is still fresh.</p>
 
-<pre><code class="highlight"><span class="gp">$</span> touch src/hello-world.rs
+<pre><code class="highlight"><span class="gp">$</span> touch src/main.rs
 <span class="gp">$</span> cargo build
 <span style="font-weight: bold" class="s1">       Fresh</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
 <span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
@@ -107,7 +110,7 @@ skip recompiling <code>color</code>, which is still fresh.</p>
 <p>To update the repository from Github, pass the <code>--update-remotes</code> (or
 <code>-u</code>) flag to <code>cargo build</code>.</p>
 
-<pre><code class="highlight"><span class="gp">$</span> touch src/hello-world.rs
+<pre><code class="highlight"><span class="gp">$</span> touch src/main.rs
 <span class="gp">$</span> cargo build -u
 <span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`
 <span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
@@ -115,8 +118,8 @@ skip recompiling <code>color</code>, which is still fresh.</p>
 
 
       <footer>
-        <a href="/faq.html">Frequently Asked Questions</a> |
-        <a href="/manifest.html">Manifest Format</a>
+        <a href="faq.html">Frequently Asked Questions</a> |
+        <a href="manifest.html">Manifest Format</a>
       </footer>
     </main>
 

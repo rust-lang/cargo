@@ -14,7 +14,8 @@
   </head>
   
   <body class="manifest">
-    <a href="/"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
+    <a href="https://github.com/rust-lang/cargo"><img class="fork-me" alt="" width="149" height="149" src="images/forkme.png" /></a>
+    <a href="./"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
 
     <main>
       <p>Cargo downloads your <a href="http://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
@@ -76,109 +77,78 @@ wanted to depend on both <code>hammer</code> and <code>color</code>:</p>
 <p>You can specify the source of a dependency in one of two ways at the moment:</p>
 
 <ul>
-<li><code>git = &quot;&lt;git-url&gt;&quot;</code>: A git repository with a <code>Cargo.toml</code> in its root.</li>
+<li><code>git = &quot;&lt;git-url&gt;&quot;</code>: A git repository with a <code>Cargo.toml</code> in its root. The
+<code>rev</code>, <code>tag</code>, and <code>branch</code> options are also recognized to use something other
+than the <code>master</code> branch.</li>
 <li><code>path = &quot;&lt;relative-path&gt;&quot;</code>: A path relative to the current <code>Cargo.toml</code>
 with a <code>Cargo.toml</code> in its root.</li>
 </ul>
 
 <p>Soon, you will be able to load packages from the Cargo registry as well.</p>
 
-<h1>The <code>[[lib]]</code> and <code>[[bin]]</code> Sections</h1>
+<h1>The Project Layout</h1>
 
-<p>A Cargo package can export at most one library, and can build as many
-executables as you like.</p>
+<p>If your project is an executable, name the main source file <code>src/main.rs</code>.
+If it is a library, name the main source file <code>src/lib.rs</code>.</p>
 
-<p>The double-brackets around <code>lib</code> and <code>bin</code> indicate that the sections
-may be repeated to represent a list. At the moment, Cargo only supports
-a single <code>lib</code>, but we use the double-bracket syntax to reserve the
-ability to support multiple <code>lib</code> sections in the future.</p>
+<p>Cargo will also treat any files located in <code>src/bin/*.rs</code> as
+executables.</p>
 
-<h1>The <code>lib</code> Section</h1>
-
-<p>If your project produces a library (the main <code>.rs</code> file does not have a
-<code>main</code> function), you should include a <code>[[lib]]</code> section.</p>
-<pre><code class="highlight toml"><span class="nn">[package]</span>
-
-<span class="c"># ...</span>
-
-<span class="nn">[[lib]]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"color"</span> <span class="c"># the name of the library, the same as the package name</span>
+<p>When you run <code>cargo build</code>, Cargo will compile all of these files into
+the <code>target</code> directory.</p>
+<pre><code class="highlight plaintext">▾ src/          # directory containing source files
+  ▾ bin/        # (optional) directory containing executables
+    *.rs
+  lib.rs        # the main entry point for libraries and packages
+  main.rs       # the main entry point for projects producing executables
+▾ examples/     # (optional) examples
+  *.rs
+▾ tests/        # (optional) integration tests
+  *.rs
 </code></pre>
 
-<h2>The <code>crate-type</code> Field</h2>
+<h1>Examples</h1>
 
-<p>Top-level packages can specify the kind of library for Cargo to build:</p>
-<pre><code class="highlight toml"><span class="nn">[package]</span>
+<p>Files located under <code>examples</code> are example uses of the functionality
+provided by the library.</p>
 
-<span class="c"># ...</span>
+<p>They must compile as executables (with <code>main.rs</code>) and load in the
+library by using <code>extern crate &lt;library-name&gt;</code>. They are compiled when
+you run your tests to protect them from bitrotting.</p>
 
-<span class="nn">[[lib]]</span>
+<h1>Tests</h1>
 
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">crate-type</span> <span class="p">=</span> <span class="p">[</span><span class="s">"dylib"</span><span class="p">,</span> <span class="s">"staticlib"</span><span class="p">]</span>
-</code></pre>
-
-<p>This will produce a <code>.a</code> file and an <code>.so</code> (or <code>.dylib</code> on OSX).</p>
-
-<h2>The <code>path</code> Field</h2>
-
-<p>You can specify the location of the main <code>.rs</code> file by using the <code>path</code>
-field.</p>
-<pre><code class="highlight toml"><span class="nn">[package]</span>
-
-<span class="c"># ...</span>
-
-<span class="nn">[[lib]]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">path</span> <span class="p">=</span> <span class="s">"src/lib.rs"</span>
-</code></pre>
-
-<p>As a temporary measure, if you use the <code>path</code> field, you <strong>must</strong>
-specify a <code>#[crate_id=&lt;name&gt;]</code> inside the <code>.rs</code> file. Rust will soon
-support passing this information from the command-line to <code>rustc</code>, which
-will change this requirement.</p>
-
-<h1>The <code>bin</code> Section</h1>
-
-<p>Cargo will produce one executable for every <code>bin</code> section.</p>
-
-<p>If you don&rsquo;t specify a <code>path</code>, the path defaults to:</p>
+<p>When you run <code>cargo test</code>, Cargo will:</p>
 
 <ul>
-<li>If you don&rsquo;t also have a <code>lib</code>, <code>src/&lt;name&gt;.rs</code></li>
-<li>If you also have a <code>lib</code>, <code>src/bin/&lt;name&gt;.rs</code></li>
+<li>Compile your library&rsquo;s unit tests, which are in files reachable from
+<code>lib.rs</code>. Any sections marked with <code>#[cfg(test)]</code> will be included.</li>
+<li>Compile your library&rsquo;s integration tests, which are located in
+<code>tests</code>. Files in <code>tests</code> load in your library by using <code>extern crate
+&lt;library-name&gt;</code> like any other code that depends on it.</li>
+<li>Compile your library&rsquo;s examples.</li>
 </ul>
 
-<p>As a temporary measure, if you use the <code>path</code> field, and the crate name
-is not <strong>exactly</strong> the same as the last part of the file name, you
-<strong>must</strong> specify a <code>#[crate_id=&lt;name&gt;]</code> inside the <code>.rs</code> file. Rust will
-soon support passing this information from the command-line to <code>rustc</code>,
-which will change this requirement.</p>
-<pre><code class="highlight toml"><span class="nn">[package]</span>
+<h2>Building Dynamic Libraries</h2>
 
-<span class="c"># ...</span>
+<p>If your project produces a library, you can specify which kind of
+library to build by explicitly listing the library in your <code>Cargo.toml</code>:</p>
+<pre><code class="highlight toml"><span class="c"># ...</span>
 
-<span class="nn">[[bin]]</span>
+<span class="nn">[[lib]]</span>
 
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-
-<span class="nn">[[bin]]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hiya"</span> <span class="c"># defaults to src/fun-times.rs</span>
-
-<span class="nn">[[bin]]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"folks"</span>
-<span class="c"># you must specify a #[crate_id=folks] inside this file </span>
-<span class="py">path</span> <span class="p">=</span> <span class="s">"src/exe/folkster.rs"</span> 
+<span class="py">crate-types</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"dylib"</span> <span class="p">]</span>
 </code></pre>
+
+<p>The available options are <code>dylib</code> and <code>staticlib</code>. You should only use
+this option in a project. Cargo will always compile <strong>packages</strong>
+(dependencies) based on the requirements of the project that includes
+them.</p>
 
 
       <footer>
-        <a href="/faq.html">Frequently Asked Questions</a> |
-        <a href="/manifest.html">Manifest Format</a>
+        <a href="faq.html">Frequently Asked Questions</a> |
+        <a href="manifest.html">Manifest Format</a>
       </footer>
     </main>
 
