@@ -307,8 +307,7 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
         if self.state == LexInit {
             self.state = LexStart;
             next!();
-        }
-        else {
+        } else {
             c = self.c;
             idx = self.idx;
         }
@@ -336,8 +335,7 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
                     else if c == ',' {
                         self.state = LexInit;
                         return Some(Comma);
-                    }
-                    else {
+                    } else {
                         self.state = LexErr;
                         return None;
                     }
@@ -345,8 +343,7 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
                 LexAlphaNum => {
                     if c.is_alphanumeric() {
                         next!();
-                    }
-                    else {
+                    } else {
                         self.state = LexStart;
                         return flush!(LexAlphaNum);
                     }
@@ -354,8 +351,7 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
                 LexSigil => {
                     if is_sigil(c) {
                         next!();
-                    }
-                    else {
+                    } else {
                         self.state = LexStart;
                         return flush!(LexSigil);
                     }
@@ -408,13 +404,11 @@ impl fmt::Show for VersionReq {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         if self.predicates.is_empty() {
             try!(write!(fmt, "*"));
-        }
-        else {
+        } else {
             for (i, ref pred) in self.predicates.iter().enumerate() {
                 if i == 0 {
                     try!(write!(fmt, "{}", pred));
-                }
-                else {
+                } else {
                     try!(write!(fmt, ", {}", pred));
                 }
             }

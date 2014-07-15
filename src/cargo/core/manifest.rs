@@ -321,9 +321,7 @@ impl Target {
 
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
                       src_path: &Path, profile: &Profile,
-                      metadata: &Metadata)
-                      -> Target
-    {
+                      metadata: &Metadata) -> Target {
         Target {
             kind: LibTarget(crate_targets),
             name: name.to_string(),

@@ -80,8 +80,7 @@ pub fn project_layout(root_path: &Path) -> Layout {
 pub fn to_manifest(contents: &[u8],
                    source_id: &SourceId,
                    layout: Layout)
-                   -> CargoResult<(Manifest, Vec<Path>)>
-{
+                   -> CargoResult<(Manifest, Vec<Path>)> {
     let contents = try!(str::from_utf8(contents).require(|| {
         human("Cargo.toml is not valid UTF-8")
     }));
@@ -286,8 +285,7 @@ fn inferred_test_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
 
 impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
-        -> CargoResult<(Manifest, Vec<Path>)>
-    {
+        -> CargoResult<(Manifest, Vec<Path>)> {
         let mut sources = vec!();
         let mut nested_paths = vec!();
 
@@ -463,9 +461,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
              bin: Option<&[TomlBinTarget]>,
              example: Option<&[TomlExampleTarget]>,
              test: Option<&[TomlTestTarget]>,
-             metadata: &Metadata)
-             -> Vec<Target>
-{
+             metadata: &Metadata) -> Vec<Target> {
     log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}",
          lib, bin, example, test);
 

@@ -34,8 +34,7 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 
 pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
-                           config: &'a mut Config<'a>) -> CargoResult<()>
-{
+                           config: &'a mut Config<'a>) -> CargoResult<()> {
     if targets.is_empty() {
         return Ok(());
     }
@@ -228,8 +227,7 @@ fn build_base_args(into: &mut Args,
                    target: &Target,
                    crate_types: &[&str],
                    cx: &Context,
-                   plugin: bool)
-{
+                   plugin: bool) {
     let metadata = target.get_metadata();
 
     // TODO: Handle errors in converting paths into args
