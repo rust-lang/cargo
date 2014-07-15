@@ -4,14 +4,14 @@ use util::CargoResult;
 #[deriving(PartialEq,Clone,Show)]
 pub struct Dependency {
     name: String,
-    namespace: SourceId,
+    source_id: SourceId,
     req: VersionReq,
     transitive: bool
 }
 
 impl Dependency {
     pub fn parse(name: &str, version: Option<&str>,
-                 namespace: &SourceId) -> CargoResult<Dependency> {
+                 source_id: &SourceId) -> CargoResult<Dependency> {
         let version = match version {
             Some(v) => try!(VersionReq::parse(v)),
             None => VersionReq::any()
@@ -19,7 +19,7 @@ impl Dependency {
 
         Ok(Dependency {
             name: name.to_string(),
-            namespace: namespace.clone(),
+            source_id: source_id.clone(),
             req: version,
             transitive: true
         })
@@ -33,8 +33,8 @@ impl Dependency {
         self.name.as_slice()
     }
 
-    pub fn get_namespace(&self) -> &SourceId {
-        &self.namespace
+    pub fn get_source_id(&self) -> &SourceId {
+        &self.source_id
     }
 
     pub fn as_dev(&self) -> Dependency {
@@ -48,12 +48,12 @@ impl Dependency {
     }
 
     pub fn matches(&self, sum: &Summary) -> bool {
-        debug!("self={}; summary={}", self, sum);
-        debug!("   a={}; b={}", self.namespace, sum.get_source_id());
+        debug!("matches; self={}; summary={}", self, sum);
+        debug!("         a={}; b={}", self.source_id, sum.get_source_id());
 
         self.name.as_slice() == sum.get_name() &&
             self.req.matches(sum.get_version()) &&
-            &self.namespace == sum.get_source_id()
+            &self.source_id == sum.get_source_id()
     }
 }
 

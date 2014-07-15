@@ -4,8 +4,10 @@ use std::fmt;
 use std::fmt::{Show, Formatter};
 use std::hash;
 use std::c_str::CString;
+use std::cmp::Ordering;
 use serialize::{Decodable, Decoder, Encodable, Encoder};
 
+use url;
 use url::Url;
 
 use core::{Summary, Package, PackageId};
@@ -81,10 +83,12 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Location {
     }
 }
 
-#[deriving(Encodable, Decodable, Clone, Eq)]
+#[deriving(Clone, Eq)]
 pub struct SourceId {
-    pub kind: SourceKind,
     pub location: Location,
+    pub kind: SourceKind,
+    // e.g. the exact git revision of the specified branch for a Git Source
+    pub precise: Option<String>
 }
 
 impl Show for Location {
@@ -93,6 +97,18 @@ impl Show for Location {
             Local(ref p) => write!(f, "file:{}", p.display()),
             Remote(ref u) => write!(f, "{}", u),
         }
+    }
+}
+
+impl PartialOrd for SourceId {
+    fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
+        self.to_string().partial_cmp(&other.to_string())
+    }
+}
+
+impl Ord for SourceId {
+    fn cmp(&self, other: &SourceId) -> Ordering {
+        self.to_string().cmp(&other.to_string())
     }
 }
 
@@ -119,16 +135,37 @@ impl<'a> ToCStr for &'a Location {
     unsafe fn to_c_str_unchecked(&self) -> CString { self.to_c_str() }
 }
 
+impl<E, S: Encoder<E>> Encodable<S, E> for SourceId {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        if self.is_path() {
+            s.emit_option_none()
+        } else {
+           self.to_url().encode(s)
+        }
+    }
+}
+
+impl<E, D: Decoder<E>> Decodable<D, E> for SourceId {
+    fn decode(d: &mut D) -> Result<SourceId, E> {
+        let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
+        Ok(SourceId::from_url(string))
+    }
+}
+
 impl Show for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
-            SourceId { kind: PathKind, ref location } => {
+            SourceId { kind: PathKind, ref location, .. } => {
                 try!(write!(f, "{}", location))
             },
-            SourceId { kind: GitKind(ref reference), ref location } => {
+            SourceId { kind: GitKind(ref reference), ref location, ref precise, .. } => {
                 try!(write!(f, "{}", location));
                 if reference.as_slice() != "master" {
-                    try!(write!(f, "#ref={}", reference));
+                    try!(write!(f, "?ref={}", reference));
+                }
+
+                if precise.is_some() {
+                    try!(write!(f, "#{}", precise.get_ref()));
                 }
             },
             SourceId { kind: RegistryKind, .. } => {
@@ -165,7 +202,8 @@ impl<S: hash::Writer> hash::Hash<S> for SourceId {
         match *self {
             SourceId {
                 kind: ref kind @ GitKind(..),
-                location: Remote(ref url)
+                location: Remote(ref url),
+                precise: None
             } => {
                 kind.hash(into);
                 git::canonicalize_url(url.to_string().as_slice()).hash(into);
@@ -180,7 +218,63 @@ impl<S: hash::Writer> hash::Hash<S> for SourceId {
 
 impl SourceId {
     pub fn new(kind: SourceKind, location: Location) -> SourceId {
-        SourceId { kind: kind, location: location }
+        SourceId { kind: kind, location: location, precise: None }
+    }
+
+    pub fn from_url(string: String) -> SourceId {
+        let mut parts = string.as_slice().splitn('+', 1);
+        let kind = parts.nth(0).unwrap();
+        let mut url = Url::parse(parts.nth(0).unwrap()).ok().expect("Invalid URL");
+
+        match kind {
+            "git" => {
+                let reference = {
+                    url.path.query.iter()
+                        .find(|&&(ref k, ref v)| k.as_slice() == "ref")
+                        .map(|&(ref k, ref v)| v.to_string())
+                        .unwrap_or("master".to_string())
+                        .to_string()
+                };
+
+                url.path.query = url.path.query.iter()
+                    .filter(|&&(ref k,_)| k.as_slice() != "ref")
+                    .map(|q| q.clone())
+                    .collect();
+
+                let precise = url.path.fragment.clone();
+                url.path.fragment = None;
+
+                SourceId::for_git(&url, reference.as_slice(), precise)
+            },
+            _ => fail!("Unsupported serialized SourceId")
+        }
+    }
+
+    pub fn to_url(&self) -> String {
+        match *self {
+            SourceId { kind: PathKind, ref location, .. } => {
+                fail!("Path sources are not included in the lockfile, so this is unimplemented");
+            },
+            SourceId { kind: GitKind(ref reference), ref location, ref precise, .. } => {
+                let ref_str = if reference.as_slice() != "master" {
+                    format!("?ref={}", reference)
+                } else {
+                    "".to_string()
+                };
+
+                let precise_str = if precise.is_some() {
+                    format!("#{}", precise.get_ref())
+                } else {
+                    "".to_string()
+                };
+
+                format!("git+{}{}{}", location, ref_str, precise_str)
+            },
+            SourceId { kind: RegistryKind, .. } => {
+                // TODO: Central registry vs. alternates
+                "registry+https://crates.io/".to_string()
+            }
+        }
     }
 
     // Pass absolute path
@@ -188,8 +282,13 @@ impl SourceId {
         SourceId::new(PathKind, Local(path.clone()))
     }
 
-    pub fn for_git(url: &Url, reference: &str) -> SourceId {
-        SourceId::new(GitKind(reference.to_string()), Remote(url.clone()))
+    pub fn for_git(url: &Url, reference: &str, precise: Option<String>) -> SourceId {
+        let mut id = SourceId::new(GitKind(reference.to_string()), Remote(url.clone()));
+        if precise.is_some() {
+            id = id.with_precise(precise.unwrap());
+        }
+
+        id
     }
 
     pub fn for_central() -> SourceId {
@@ -224,6 +323,13 @@ impl SourceId {
                 box PathSource::new(path, self) as Box<Source>
             },
             RegistryKind => unimplemented!()
+        }
+    }
+
+    pub fn with_precise(&self, v: String) -> SourceId {
+        SourceId {
+            precise: Some(v),
+            .. self.clone()
         }
     }
 }

@@ -2,6 +2,7 @@ use std::fmt;
 use std::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use std::collections::hashmap::{Keys, SetItems};
+use serialize::Decodable;
 
 pub struct Graph<N> {
     nodes: HashMap<N, HashSet<N>>
