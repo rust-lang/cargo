@@ -51,8 +51,7 @@ impl<'a, R: Registry> Context<'a, R> {
 }
 
 pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mut R)
-                            -> CargoResult<Resolve>
-{
+                            -> CargoResult<Resolve> {
     log!(5, "resolve; deps={}", deps);
 
     let mut context = Context::new(registry);
@@ -62,9 +61,7 @@ pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mu
 
 fn resolve_deps<'a, R: Registry>(parent: &PackageId,
                                  deps: &[Dependency],
-                                 ctx: &mut Context<'a, R>)
-                                 -> CargoResult<()>
-{
+                                 ctx: &mut Context<'a, R>) -> CargoResult<()> {
     if deps.is_empty() {
         return Ok(());
     }
@@ -127,8 +124,7 @@ mod test {
     use util::CargoResult;
 
     fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency], registry: &mut R)
-                            -> CargoResult<Vec<PackageId>>
-    {
+                            -> CargoResult<Vec<PackageId>> {
         Ok(try!(super::resolve(pkg, deps, registry)).iter().map(|p| p.clone()).collect())
     }
 

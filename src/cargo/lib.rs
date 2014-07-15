@@ -97,17 +97,14 @@ pub fn execute_main<'a,
                     T: Flags,
                     U: RepresentsJSON,
                     V: Encodable<json::Encoder<'a>, io::IoError>>(
-                        exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>)
-{
+                        exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>) {
     fn call<'a,
             T: Flags,
             U: RepresentsJSON,
             V: Encodable<json::Encoder<'a>, io::IoError>>(
                 exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
                 shell: &mut MultiShell,
-                args: &[String])
-        -> CliResult<Option<V>>
-    {
+                args: &[String]) -> CliResult<Option<V>> {
         let flags = try!(flags_from_args::<T>(args));
         let json = try!(json_from_stdin::<U>());
 
@@ -120,16 +117,13 @@ pub fn execute_main<'a,
 pub fn execute_main_without_stdin<'a,
                                   T: Flags,
                                   V: Encodable<json::Encoder<'a>, io::IoError>>(
-                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>)
-{
+                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>) {
     fn call<'a,
             T: Flags,
             V: Encodable<json::Encoder<'a>, io::IoError>>(
                 exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
                 shell: &mut MultiShell,
-                args: &[String])
-        -> CliResult<Option<V>>
-    {
+                args: &[String]) -> CliResult<Option<V>> {
         let flags = try!(flags_from_args::<T>(args));
         exec(flags, shell)
     }
@@ -169,8 +163,7 @@ fn process<'a,
 pub fn process_executed<'a,
                         T: Encodable<json::Encoder<'a>, io::IoError>>(
                             result: CliResult<Option<T>>,
-                            shell: &mut MultiShell)
-{
+                            shell: &mut MultiShell) {
     match result {
         Err(e) => handle_error(e, shell),
         Ok(encodable) => {
