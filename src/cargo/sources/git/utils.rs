@@ -213,8 +213,12 @@ impl GitCheckout {
         Ok(checkout)
     }
 
-    fn get_source<'a>(&'a self) -> &'a Path {
+    fn get_source(&self) -> &Path {
         self.database.get_path()
+    }
+
+    pub fn get_rev(&self) -> &str {
+        self.revision.as_slice()
     }
 
     fn clone_repo(&self) -> CargoResult<()> {

@@ -17,7 +17,8 @@ pub struct GitSource<'a, 'b> {
     reference: GitReference,
     db_path: Path,
     checkout_path: Path,
-    path_source: PathSource,
+    source_id: SourceId,
+    path_source: Option<PathSource>,
     config: &'a mut Config<'b>
 }
 
@@ -39,19 +40,18 @@ impl<'a, 'b> GitSource<'a, 'b> {
         let checkout_path = config.git_checkout_path()
             .join(ident.as_slice()).join(reference.as_slice());
 
-        let path_source = PathSource::new(&checkout_path, source_id);
-
         GitSource {
             remote: remote,
             reference: GitReference::for_str(reference.as_slice()),
             db_path: db_path,
             checkout_path: checkout_path,
-            path_source: path_source,
+            source_id: source_id.clone(),
+            path_source: None,
             config: config
         }
     }
 
-    pub fn get_namespace(&self) -> &Location {
+    pub fn get_location(&self) -> &Location {
         self.remote.get_location()
     }
 }
@@ -155,13 +155,17 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
             self.remote.db_at(&self.db_path)
         };
 
-        try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
+        let checkout = try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
 
-        self.path_source.update()
+        let source_id = self.source_id.with_precise(checkout.get_rev().to_string());
+        let path_source = PathSource::new(&self.checkout_path, &source_id);
+
+        self.path_source = Some(path_source);
+        self.path_source.as_mut().unwrap().update()
     }
 
     fn list(&self) -> CargoResult<Vec<Summary>> {
-        self.path_source.list()
+        self.path_source.as_ref().expect("BUG: update() must be called before list()").list()
     }
 
     fn download(&self, _: &[PackageId]) -> CargoResult<()> {
@@ -171,7 +175,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packages for package ids `{}` from `{}`", ids, self.remote);
-        self.path_source.get(ids)
+        self.path_source.as_ref().expect("BUG: update() must be called before get()").get(ids)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
