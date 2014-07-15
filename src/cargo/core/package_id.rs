@@ -141,9 +141,7 @@ impl Show for PackageId {
 }
 
 impl<D: Decoder<Box<CargoError + Send>>>
-    Decodable<D,Box<CargoError + Send>>
-    for PackageId
-{
+    Decodable<D,Box<CargoError + Send>> for PackageId {
     fn decode(d: &mut D) -> CargoResult<PackageId> {
         let (name, version, source_id): (String, String, SourceId) = try!(Decodable::decode(d));
 

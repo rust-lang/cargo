@@ -7,14 +7,12 @@ use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 
 pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId)
-    -> CargoResult<(Manifest, Vec<Path>)>
-{
+    -> CargoResult<(Manifest, Vec<Path>)> {
     util::toml::to_manifest(contents, source_id, layout).map_err(human)
 }
 
 pub fn read_package(path: &Path, source_id: &SourceId)
-    -> CargoResult<(Package, Vec<Path>)>
-{
+    -> CargoResult<(Package, Vec<Path>)> {
     log!(5, "read_package; path={}; source-id={}", path.display(), source_id);
     let mut file = try!(File::open(path));
     let data = try!(file.read_to_end());
@@ -27,8 +25,7 @@ pub fn read_package(path: &Path, source_id: &SourceId)
 }
 
 pub fn read_packages(path: &Path,
-                     source_id: &SourceId) -> CargoResult<Vec<Package>>
-{
+                     source_id: &SourceId) -> CargoResult<Vec<Package>> {
     let mut all_packages = Vec::new();
     let mut visited = HashSet::<Path>::new();
 

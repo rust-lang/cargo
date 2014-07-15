@@ -11,8 +11,7 @@ pub struct Dependency {
 
 impl Dependency {
     pub fn parse(name: &str, version: Option<&str>,
-                 namespace: &SourceId) -> CargoResult<Dependency>
-    {
+                 namespace: &SourceId) -> CargoResult<Dependency> {
         let version = match version {
             Some(v) => try!(VersionReq::parse(v)),
             None => VersionReq::any()
