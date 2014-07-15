@@ -135,7 +135,7 @@ $(PKGDIR)/lib/cargo/manifest.in: $(BIN_TARGETS) Makefile
 	mv $(DISTDIR)/manifest-$(PKG_NAME).in $(PKGDIR)/lib/cargo/manifest.in
 
 install: $(PKGDIR)/lib/cargo/manifest.in
-	$(PKGDIR)/install.sh --prefix=$(PREFIX)
+	$(PKGDIR)/install.sh --prefix=$(PREFIX) --destdir=$(DESTDIR)
 
 # Setup phony tasks
 .PHONY: all clean distclean test test-unit test-integration libcargo style

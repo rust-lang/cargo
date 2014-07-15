@@ -278,12 +278,14 @@ VAL_OPTIONS=""
 CFG_LIBDIR_RELATIVE=lib
 
 flag uninstall "only uninstall from the installation prefix"
+valopt destdir "" "set installation root"
 opt verify 1 "verify that the installed binaries run correctly"
 valopt prefix "/usr/local" "set installation prefix"
 # NB This isn't quite the same definition as in `configure`.
 # just using 'lib' instead of CFG_LIBDIR_RELATIVE
-valopt libdir "${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}" "install libraries"
-valopt mandir "${CFG_PREFIX}/share/man" "install man pages in PATH"
+valopt libdir "${CFG_DESTDIR}${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}" "install libraries"
+valopt mandir "${CFG_DESTDIR}${CFG_PREFIX}/share/man" "install man pages in PATH"
+
 
 if [ $HELP -eq 1 ]
 then
@@ -402,7 +404,7 @@ need_ok "failed to create installed manifest"
 while read p; do
 
     # Decide the destination of the file
-    FILE_INSTALL_PATH="${CFG_PREFIX}/$p"
+    FILE_INSTALL_PATH="${CFG_DESTDIR}${CFG_PREFIX}/$p"
 
     if echo "$p" | grep "^lib/" > /dev/null
     then
@@ -446,7 +448,7 @@ done < "${CFG_SRC_DIR}/${CFG_LIBDIR_RELATIVE}/cargo/manifest.in"
 if [ -z "${CFG_DISABLE_VERIFY}" ]
 then
     msg "verifying installed binaries are executable"
-    "${CFG_PREFIX}/bin/cargo" -h > /dev/null
+    "${CFG_DESTDIR}${CFG_PREFIX}/bin/cargo" -h > /dev/null
     if [ $? -ne 0 ]
     then
         ERR="can't execute installed rustc binary. "
