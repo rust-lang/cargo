@@ -7,8 +7,7 @@ use util::toml::{project_layout};
 
 /// Cleans the project from build artifacts.
 
-pub fn clean(manifest_path: &Path) -> CargoResult<()>
-{
+pub fn clean(manifest_path: &Path) -> CargoResult<()> {
     let mut file = try!(File::open(manifest_path));
     let data = try!(file.read_to_end());
     let layout = project_layout(&manifest_path.dir_path());
