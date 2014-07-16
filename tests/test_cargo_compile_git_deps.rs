@@ -1,7 +1,7 @@
 use std::io::File;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
-use support::{escape_path, cargo_dir};
+use support::{cargo_dir};
 use support::{COMPILING, FRESH, UPDATING};
 use hamcrest::{assert_that,existing_file};
 use cargo;
@@ -71,12 +71,12 @@ test!(cargo_compile_simple_git_dep {
 
             [dependencies.dep1]
 
-            git = "file:{}"
+            git = 'file:{}'
 
             [[bin]]
 
             name = "foo"
-        "#, escape_path(&git_project.root())))
+        "#, git_project.root().display()))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -134,13 +134,13 @@ test!(cargo_compile_git_dep_branch {
 
             [dependencies.dep1]
 
-            git = "file:{}"
+            git = 'file:{}'
             branch = "branchy"
 
             [[bin]]
 
             name = "foo"
-        "#, escape_path(&git_project.root())))
+        "#, git_project.root().display()))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -199,13 +199,13 @@ test!(cargo_compile_git_dep_tag {
 
             [dependencies.dep1]
 
-            git = "file:{}"
+            git = 'file:{}'
             tag = "v0.1.0"
 
             [[bin]]
 
             name = "foo"
-        "#, escape_path(&git_project.root())))
+        "#, git_project.root().display()))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -283,12 +283,12 @@ test!(cargo_compile_with_nested_paths {
             [dependencies.dep1]
 
             version = "0.5.0"
-            git = "file:{}"
+            git = 'file:{}'
 
             [[bin]]
 
             name = "parent"
-        "#, escape_path(&git_project.root())))
+        "#, git_project.root().display()))
         .file("src/parent.rs",
               main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
 
@@ -351,17 +351,17 @@ test!(cargo_compile_with_meta_package {
             [dependencies.dep1]
 
             version = "0.5.0"
-            git = "file:{}"
+            git = 'file:{}'
 
             [dependencies.dep2]
 
             version = "0.5.0"
-            git = "file:{}"
+            git = 'file:{}'
 
             [[bin]]
 
             name = "parent"
-        "#, escape_path(&git_project.root()), escape_path(&git_project.root())))
+        "#, git_project.root().display(), git_project.root().display()))
         .file("src/parent.rs",
               main_file(r#""{} {}", dep1::hello(), dep2::hello()"#, ["dep1", "dep2"]).as_slice());
 
@@ -438,12 +438,12 @@ test!(two_revs_same_deps {
             authors = []
 
             [dependencies.bar]
-            git = "file:{}"
+            git = 'file:{}'
             rev = "{}"
 
             [dependencies.baz]
             path = "../baz"
-        "#, escape_path(&bar.root()), rev1.as_slice().trim()).as_slice())
+        "#, bar.root().display(), rev1.as_slice().trim()).as_slice())
         .file("src/main.rs", r#"
             extern crate bar;
             extern crate baz;
@@ -462,9 +462,9 @@ test!(two_revs_same_deps {
             authors = []
 
             [dependencies.bar]
-            git = "file:{}"
+            git = 'file:{}'
             rev = "{}"
-        "#, escape_path(&bar.root()), rev2.as_slice().trim()).as_slice())
+        "#, bar.root().display(), rev2.as_slice().trim()).as_slice())
         .file("src/lib.rs", r#"
             extern crate bar;
             pub fn baz() -> int { bar::bar() }
@@ -508,12 +508,12 @@ test!(recompilation {
             [dependencies.bar]
 
             version = "0.5.0"
-            git = "file:{}"
+            git = 'file:{}'
 
             [[bin]]
 
             name = "foo"
-        "#, escape_path(&git_project.root())))
+        "#, git_project.root().display()))
         .file("src/foo.rs",
               main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
 

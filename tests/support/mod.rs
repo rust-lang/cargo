@@ -401,10 +401,6 @@ impl<T> Tap for T {
     }
 }
 
-pub fn escape_path(p: &Path) -> String {
-    p.display().to_string().as_slice().replace("\\", "\\\\")
-}
-
 pub fn basic_bin_manifest(name: &str) -> String {
     format!(r#"
         [package]
