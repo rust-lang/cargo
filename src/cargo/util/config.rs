@@ -309,7 +309,7 @@ fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue>
     let mut toml = try!(cargo_toml::parse(contents.as_slice(),
                                           file.path().filename_display()
                                               .to_string().as_slice()));
-    let val = try!(toml.pop_equiv(&key).require(|| internal("")));
+    let val = try!(toml.pop(&key.to_string()).require(|| internal("")));
 
     ConfigValue::from_toml(file.path(), val)
 }
