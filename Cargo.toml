@@ -1,0 +1,66 @@
+[project]
+
+name = "cargo"
+version = "0.0.1-pre"
+authors = ["Yehuda Katz <wycats@gmail.com>",
+           "Carl Lerche <me@carllerche.com>"]
+
+[[lib]]
+
+name = "cargo"
+path = "src/cargo/lib.rs"
+
+[dependencies.hammer]
+git = "https://github.com/wycats/hammer.rs"
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs"
+
+[dependencies.hamcrest]
+git = "https://github.com/carllerche/hamcrest-rust.git"
+
+[dependencies.curl]
+git = "https://github.com/carllerche/curl-rust"
+
+[[bin]]
+name = "cargo"
+test = false
+
+[[bin]]
+name = "cargo-build"
+test = false
+
+[[bin]]
+name = "cargo-clean"
+test = false
+
+[[bin]]
+name = "cargo-git-checkout"
+test = false
+
+[[bin]]
+name = "cargo-read-manifest"
+test = false
+
+[[bin]]
+name = "cargo-run"
+test = false
+
+[[bin]]
+name = "cargo-rustc"
+test = false
+
+[[bin]]
+name = "cargo-test"
+test = false
+
+[[bin]]
+name = "cargo-verify-project"
+test = false
+
+[[bin]]
+name = "cargo-version"
+test = false
+
+[[test]]
+name = "tests"
