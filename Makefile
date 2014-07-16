@@ -1,7 +1,5 @@
-RUSTC_FLAGS ?=
 DESTDIR ?=
 PREFIX ?= /usr/local
-TARGET ?= target
 PKG_NAME ?= cargo-nightly
 
 ifeq ($(wildcard rustc/bin),)
@@ -24,98 +22,49 @@ export CFG_VERSION
 
 export PATH := $(CURDIR)/rustc/bin:$(PATH)
 
-# Link flags to pull in dependencies
-BINS = cargo \
-	     cargo-build \
-	     cargo-clean \
-	     cargo-read-manifest \
-	     cargo-rustc \
-	     cargo-verify-project \
-	     cargo-git-checkout \
-		 cargo-test \
-		 cargo-run \
-		 cargo-version \
-		 cargo-new
-
-SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
-
 ifeq ($(OS),Windows_NT)
 X = .exe
 endif
 
-DEPS = -L libs/hammer.rs/target -L libs/toml-rs/build
-TOML = libs/toml-rs/build/$(shell $(RUSTC) --print-file-name libs/toml-rs/src/toml.rs)
-HAMMER = libs/hammer.rs/target/$(shell $(RUSTC) --crate-type=lib --print-file-name libs/hammer.rs/src/hammer.rs)
-HAMCREST = libs/hamcrest-rust/target/libhamcrest.timestamp
-LIBCARGO = $(TARGET)/libcargo.rlib
-TESTDIR = $(TARGET)/tests
+TARGET = target
 DISTDIR = $(TARGET)/dist
 PKGDIR = $(DISTDIR)/$(PKG_NAME)
-BIN_TARGETS = $(BINS:%=$(TARGET)/%$(X))
 
-all: $(BIN_TARGETS)
+BIN_TARGETS := $(wildcard src/bin/*.rs)
+BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
+BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
+BIN_TARGETS := $(BIN_TARGETS:%=$(TARGET)/%$(X))
 
-# === Dependencies
+CARGO := $(TARGET)/snapshot/cargo-nightly/bin/cargo$(X)
 
-$(HAMMER): $(wildcard libs/hammer.rs/src/*.rs)
-	$(MAKE) -C libs/hammer.rs
+all: $(CARGO)
+	$(CARGO) build $(ARGS)
 
-$(TOML): $(wildcard libs/toml-rs/src/*.rs)
-	$(MAKE) -C libs/toml-rs
+$(CARGO): src/snapshots.txt
+	python src/etc/dl-snapshot.py
+	touch $@
 
-$(HAMCREST): $(shell find libs/hamcrest-rust/src/hamcrest -name '*.rs')
-	$(MAKE) -C libs/hamcrest-rust
-
-$(TARGET)/:
-	mkdir -p $@
-
-$(TESTDIR)/:
-	mkdir -p $@
-
-# === Cargo
-
-$(LIBCARGO): $(SRC) $(HAMMER) $(TOML) | $(TARGET)/
-	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) --out-dir $(TARGET) src/cargo/lib.rs
-
-libcargo: $(LIBCARGO)
-
-# === Commands
-
-$(BIN_TARGETS): $(TARGET)/%$(X): src/bin/%.rs $(HAMMER) $(TOML) $(LIBCARGO)
-	$(RUSTC) $(RUSTC_FLAGS) $(DEPS) -L$(TARGET) --out-dir $(TARGET) $<
 
 # === Tests
 
-TEST_SRC = $(shell find tests -name '*.rs')
-TEST_DEPS = $(DEPS) -L libs/hamcrest-rust/target
+test: test-unit style no-exes
 
-$(TESTDIR)/test-integration: $(HAMCREST) $(TEST_SRC) $(BIN_TARGETS) | $(TESTDIR)/
-	$(RUSTC) --test $(TEST_DEPS) -L$(TARGET) -o $@ tests/tests.rs
-
-$(TESTDIR)/test-unit: $(TOML) $(HAMCREST) $(SRC) $(HAMMER) | $(TESTDIR)/
-	$(RUSTC) --test -g $(RUSTC_FLAGS) $(TEST_DEPS) -o $@ src/cargo/lib.rs
-
-test-unit: $(TESTDIR)/test-unit
-	$< $(only)
-
-test-integration: $(TESTDIR)/test-integration
-	$< $(only)
-
-test: test-unit test-integration style no-exes
+test-unit: $(CARGO)
+	$(CARGO) test $(only)
 
 style:
 	sh tests/check-style.sh
 
 no-exes:
-	find $$(git ls-files | grep -v '^lib') -perm +111 -type f \
+	find $$(git ls-files) -perm +111 -type f \
 		-not -name '*.sh' -not -name '*.rs' | grep '.*' \
 		&& exit 1 || exit 0
 
-clean:
-	rm -rf $(TARGET)
+# === Misc
 
 clean-all: clean
-	git submodule foreach make clean
+clean:
+	rm -rf $(TARGET)
 
 dist: $(DISTDIR)/$(PKG_NAME).tar.gz
 
@@ -133,15 +82,14 @@ distcheck: dist
 $(DISTDIR)/$(PKG_NAME).tar.gz: $(PKGDIR)/lib/cargo/manifest.in
 	tar -czvf $@ -C $(DISTDIR) $(PKG_NAME)
 
-$(PKGDIR)/lib/cargo/manifest.in: $(BIN_TARGETS) Makefile
+$(PKGDIR)/lib/cargo/manifest.in: all
 	rm -rf $(PKGDIR)
 	mkdir -p $(PKGDIR)/bin $(PKGDIR)/lib/cargo
 	cp $(TARGET)/cargo$(X) $(PKGDIR)/bin
 	cp $(BIN_TARGETS) $(PKGDIR)/lib/cargo
-	rm $(PKGDIR)/lib/cargo/cargo$(X)
 	(cd $(PKGDIR) && find . -type f | sed 's/^\.\///') \
 		> $(DISTDIR)/manifest-$(PKG_NAME).in
-	cp src/install.sh $(PKGDIR)
+	cp src/etc/install.sh $(PKGDIR)
 	cp README.md LICENSE-MIT LICENSE-APACHE $(PKGDIR)
 	cp LICENSE-MIT $(PKGDIR)
 	mv $(DISTDIR)/manifest-$(PKG_NAME).in $(PKGDIR)/lib/cargo/manifest.in
@@ -150,7 +98,7 @@ install: $(PKGDIR)/lib/cargo/manifest.in
 	$(PKGDIR)/install.sh --prefix=$(PREFIX) --destdir=$(DESTDIR)
 
 # Setup phony tasks
-.PHONY: all clean distclean test test-unit test-integration libcargo style
+.PHONY: all clean test test-unit style
 
 # Disable unnecessary built-in rules
 .SUFFIXES:

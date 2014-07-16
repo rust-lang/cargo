@@ -1,4 +1,3 @@
-#![crate_name = "cargo-run"]
 #![feature(phase)]
 
 #[phase(plugin, link)]
