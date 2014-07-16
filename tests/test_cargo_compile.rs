@@ -3,7 +3,7 @@ use std::os;
 use std::path;
 use std::str;
 
-use support::{ResultTest, project, execs, main_file, escape_path, basic_bin_manifest};
+use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that, existing_file};
 use cargo;
@@ -146,8 +146,8 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}"]
-        "#, escape_path(&bar)).as_slice())
+            paths = ['{}']
+        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -209,8 +209,8 @@ test!(cargo_compile_with_nested_deps_inferred {
 
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}", "{}"]
-        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+            paths = ['{}', '{}']
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -277,8 +277,8 @@ test!(cargo_compile_with_nested_deps_correct_bin {
 
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}", "{}"]
-        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+            paths = ['{}', '{}']
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -345,8 +345,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}", "{}"]
-        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+            paths = ['{}', '{}']
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -421,8 +421,8 @@ test!(cargo_compile_with_nested_deps_longhand {
 
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}", "{}"]
-        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+            paths = ['{}', '{}']
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -517,10 +517,10 @@ test!(custom_build {
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "{}"
+            build = '{}'
 
             [[bin]] name = "foo"
-        "#, escape_path(&build.bin("foo"))))
+        "#, build.bin("foo").display()))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -581,10 +581,10 @@ test!(custom_multiple_build {
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = [ "{} hello world", "{} cargo" ]
+            build = [ '{} hello world', '{} cargo' ]
 
             [[bin]] name = "foo"
-        "#, escape_path(&build1.bin("foo")), escape_path(&build2.bin("bar"))))
+        "#, build1.bin("foo").display(), build2.bin("bar").display()))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -622,11 +622,11 @@ test!(custom_build_failure {
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "{}"
+            build = '{}'
 
             [[bin]]
             name = "foo"
-        "#, escape_path(&build.bin("foo"))))
+        "#, build.bin("foo").display()))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -683,11 +683,11 @@ test!(custom_second_build_failure {
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = [ "{}", "{}" ]
+            build = [ '{}', '{}' ]
 
             [[bin]]
             name = "foo"
-        "#, escape_path(&build1.bin("foo")), escape_path(&build2.bin("bar"))))
+        "#, build1.bin("foo").display(), build2.bin("bar").display()))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -717,12 +717,12 @@ test!(custom_build_env_vars {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
-                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_string());
-                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_string());
+                assert_eq!(os::getenv("OUT_DIR").unwrap(), r"{}".to_string());
+                assert_eq!(os::getenv("DEPS_DIR").unwrap(), r"{}".to_string());
             }}
         "#,
-        escape_path(&p.root().join("target")),
-        escape_path(&p.root().join("target").join("deps"))));
+        p.root().join("target").display(),
+        p.root().join("target").join("deps").display()));
     assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
 
 
@@ -733,11 +733,11 @@ test!(custom_build_env_vars {
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "{}"
+            build = '{}'
 
             [[bin]]
             name = "foo"
-        "#, escape_path(&build.bin("foo"))))
+        "#, build.bin("foo").display()))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
@@ -762,19 +762,19 @@ test!(custom_build_in_dependency {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
-                assert_eq!(os::getenv("OUT_DIR").unwrap(), "{}".to_string());
-                assert_eq!(os::getenv("DEPS_DIR").unwrap(), "{}".to_string());
+                assert_eq!(os::getenv("OUT_DIR").unwrap(), r"{}".to_string());
+                assert_eq!(os::getenv("DEPS_DIR").unwrap(), r"{}".to_string());
             }}
         "#,
-        escape_path(&p.root().join("target/deps")),
-        escape_path(&p.root().join("target/deps"))));
+        p.root().join("target/deps").display(),
+        p.root().join("target/deps").display()));
     assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
 
 
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}"]
-        "#, escape_path(&bar)).as_slice())
+            paths = ['{}']
+        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -797,8 +797,8 @@ test!(custom_build_in_dependency {
             name = "bar"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "{}"
-        "#, escape_path(&build.bin("foo"))))
+            build = '{}'
+        "#, build.bin("foo").display()))
         .file("bar/src/lib.rs", r#"
             pub fn bar() {}
         "#);

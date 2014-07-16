@@ -1,7 +1,7 @@
 use std::io::File;
 use std::io::timer;
 
-use support::{ResultTest, project, execs, main_file, escape_path, cargo_dir};
+use support::{ResultTest, project, execs, main_file, cargo_dir};
 use support::{COMPILING, FRESH};
 use hamcrest::{assert_that, existing_file};
 use cargo;
@@ -208,8 +208,8 @@ test!(no_rebuild_dependency {
     let bar = p.root().join("bar");
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}"]
-        "#, escape_path(&bar)).as_slice())
+            paths = ['{}']
+        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -263,8 +263,8 @@ test!(deep_dependencies_trigger_rebuild {
     let baz = p.root().join("baz");
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}", "{}"]
-        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+            paths = ['{}', '{}']
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -361,8 +361,8 @@ test!(no_rebuild_two_deps {
     let baz = p.root().join("baz");
     p = p
         .file(".cargo/config", format!(r#"
-            paths = ["{}", "{}"]
-        "#, escape_path(&bar), escape_path(&baz)).as_slice())
+            paths = ['{}', '{}']
+        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
