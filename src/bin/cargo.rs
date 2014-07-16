@@ -105,7 +105,7 @@ fn execute() {
 
 fn process(args: Vec<String>) -> (String, Vec<String>) {
     let mut args = Vec::from_slice(args.tail());
-    let head = args.shift().unwrap_or("--help".to_string());
+    let head = args.remove(0).unwrap_or("--help".to_string());
 
     (head, args)
 }
