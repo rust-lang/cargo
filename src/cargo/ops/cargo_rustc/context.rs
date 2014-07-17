@@ -83,7 +83,7 @@ impl<'a, 'b> Context<'a, 'b> {
         let parts: Vec<&str> = output.trim().split('-').collect();
         assert!(parts.len() == 2, "rustc --print-file-name output has changed");
 
-        Ok((parts.get(0).to_string(), parts.get(1).to_string()))
+        Ok((parts[0].to_string(), parts[1].to_string()))
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in

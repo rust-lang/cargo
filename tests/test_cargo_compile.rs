@@ -837,8 +837,8 @@ test!(many_crate_types_old_style_lib_location {
         }
     }).collect();
     files.sort();
-    let file0 = files.get(0).as_slice();
-    let file1 = files.get(1).as_slice();
+    let file0 = files[0].as_slice();
+    let file1 = files[1].as_slice();
     println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
     assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
@@ -875,8 +875,8 @@ test!(many_crate_types_correct {
         }
     }).collect();
     files.sort();
-    let file0 = files.get(0).as_slice();
-    let file1 = files.get(1).as_slice();
+    let file0 = files[0].as_slice();
+    let file1 = files[1].as_slice();
     println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
     assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
