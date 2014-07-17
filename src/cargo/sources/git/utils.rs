@@ -1,6 +1,5 @@
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use std::str;
 use std::io::{UserDir};
 use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use serialize::{Encodable,Encoder};
@@ -311,6 +310,6 @@ fn git_output(path: &Path, str: String) -> CargoResult<String> {
 }
 
 fn to_str(vec: &[u8]) -> String {
-    str::from_utf8_lossy(vec).to_string()
+    String::from_utf8_lossy(vec).into_string()
 }
 

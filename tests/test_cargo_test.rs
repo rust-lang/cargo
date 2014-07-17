@@ -49,6 +49,10 @@ test!(test_with_lib_dep {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [[bin]]
+            name = "baz"
+            path = "src/main.rs"
         "#)
         .file("src/lib.rs", "
             pub fn foo(){}
@@ -81,6 +85,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
     let head = format!("{compiling} foo v0.0.1 (file:{dir})",
                        compiling = COMPILING, dir = p.root().display());
 
+    println!("{}", out);
     assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
             out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
 })

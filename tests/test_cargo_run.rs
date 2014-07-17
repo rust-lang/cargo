@@ -22,14 +22,14 @@ test!(simple {
     assert_that(p.cargo_process("cargo-run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
-{running} `target{sep}main`
+{running} `target{sep}foo`
 hello
 ",
         compiling = COMPILING,
         running = RUNNING,
         dir = p.root().display(),
         sep = path::SEP).as_slice()));
-    assert_that(&p.bin("main"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 })
 
 test!(simple_with_args {

@@ -1209,3 +1209,19 @@ test!(release_build_ndebug {
                 execs().with_status(0));
     assert_that(process(p.bin("release/foo")), execs().with_stdout("fast\n"));
 })
+
+test!(inferred_main_bin {
+    let p = project("world")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+    assert_that(process(p.bin("foo")), execs().with_status(0));
+})
