@@ -78,7 +78,7 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
                 single source for a particular package name ({}).", dep)));
         }
 
-        let summary = pkgs.get(0).clone();
+        let summary = pkgs[0].clone();
         let name = summary.get_name().to_string();
         let source_id = summary.get_source_id().clone();
         let version = summary.get_version().clone();
