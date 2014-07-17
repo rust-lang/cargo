@@ -17,6 +17,7 @@ use util::{CargoResult, Require, human};
 
 #[deriving(Clone)]
 pub struct Layout {
+    root: Path,
     lib: Option<Path>,
     bins: Vec<Path>,
     examples: Vec<Path>,
@@ -70,6 +71,7 @@ pub fn project_layout(root_path: &Path) -> Layout {
     try_add_files(&mut tests, root_path, "tests");
 
     Layout {
+        root: root_path.clone(),
         lib: lib,
         bins: bins,
         examples: examples,
@@ -237,7 +239,8 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
 
 fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
     Some(layout.bins.iter().filter_map(|bin| {
-        let name = if bin.as_str() == Some("src/main.rs") {
+        let name = if bin.as_vec() == b"src/main.rs" ||
+                      *bin == layout.root.join("src/main.rs") {
             Some(name.to_string())
         } else {
             bin.filestem_str().map(|f| f.to_string())
