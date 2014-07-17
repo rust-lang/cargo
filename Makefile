@@ -12,6 +12,16 @@ export LD_LIBRARY_PATH := $(CURDIR)/rustc/lib:$(LD_LIBRARY_PATH)
 export DYLD_LIBRARY_PATH := $(CURDIR)/rustc/lib:$(DYLD_LIBRARY_PATH)
 endif
 
+CFG_RELEASE=0.1.0-pre
+CFG_VER_DATE = $(shell git log -1 --pretty=format:'%ai')
+CFG_VER_HASH = $(shell git rev-parse --short HEAD)
+CFG_VERSION = $(PKG_NAME) $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE))
+
+export CFG_RELEASE
+export CFG_VER_DATE
+export CFG_VER_HASH
+export CFG_VERSION
+
 export PATH := $(CURDIR)/rustc/bin:$(PATH)
 
 # Link flags to pull in dependencies
@@ -23,7 +33,8 @@ BINS = cargo \
 	     cargo-verify-project \
 	     cargo-git-checkout \
 		 cargo-test \
-		 cargo-run
+		 cargo-run \
+		 cargo-version
 
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 

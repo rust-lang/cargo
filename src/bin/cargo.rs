@@ -1,8 +1,11 @@
 #![feature(phase)]
 
 extern crate cargo;
+#[phase(plugin, link)]
 extern crate hammer;
+
 extern crate serialize;
+
 #[phase(plugin, link)]
 extern crate log;
 
@@ -31,7 +34,6 @@ struct ProjectLocation {
 */
 fn execute() {
     debug!("executing; cmd=cargo; args={}", os::args());
-
     let (cmd, args) = process(os::args());
 
     match cmd.as_slice() {
@@ -53,6 +55,7 @@ fn execute() {
             println!("  test           # run the tests");
             println!("  clean          # remove the target directory");
             println!("  run            # build and execute src/main.rs");
+            println!("  version        # displays the version of cargo");
             println!("");
 
 
@@ -60,6 +63,12 @@ fn execute() {
             println!("Options (for all commands):\n\n{}", options);
         },
         _ => {
+            // `cargo --version` and `cargo -v` are aliases for `cargo version`
+            let cmd = if cmd.as_slice() == "--version" || cmd.as_slice() == "-V" {
+                "version".into_string()
+            } else {
+                cmd
+            };
             let command = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
             let mut command = match os::self_exe_path() {
                 Some(path) => {
