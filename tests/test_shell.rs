@@ -1,7 +1,6 @@
 use support::{ResultTest,Tap,shell_writes};
 use hamcrest::{assert_that};
 use std::io::{MemWriter, BufWriter, IoResult};
-use std::str::from_utf8_lossy;
 use cargo::core::shell::{Shell,ShellConfig};
 use term::{Terminal,TerminfoTerminal,color};
 
@@ -56,5 +55,5 @@ fn colored_output<S: Str>(string: S, color: color::Color) -> IoResult<String> {
     try!(term.write_str(string.as_slice()));
     try!(term.reset());
     try!(term.flush());
-    Ok(from_utf8_lossy(term.get_ref().get_ref()).to_string())
+    Ok(String::from_utf8_lossy(term.get_ref().get_ref()).to_string())
 }
