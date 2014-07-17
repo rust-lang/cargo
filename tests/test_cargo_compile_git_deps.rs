@@ -475,8 +475,8 @@ test!(two_revs_same_deps {
     // TODO: -j1 is a hack
     assert_that(foo.cargo_process("cargo-build").arg("-j").arg("1"),
                 execs().with_status(0));
-    assert_that(&foo.bin("main"), existing_file());
-    assert_that(foo.process(foo.bin("main")), execs().with_status(0));
+    assert_that(&foo.bin("foo"), existing_file());
+    assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
 })
 
 test!(recompilation {

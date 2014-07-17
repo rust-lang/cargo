@@ -1,5 +1,3 @@
-// use std::io::fs::{mkdir_recursive,rmdir_recursive};
-use std;
 use std::io;
 use std::io::fs;
 use std::io::process::{ProcessOutput};
@@ -305,7 +303,7 @@ impl Execs {
                                             `{}`\n\n\
                                             other output:\n\
                                             `{}`", description, actual, out,
-                                            str::from_utf8_lossy(extra)))
+                                            String::from_utf8_lossy(extra)))
                     }
                 }
             }
@@ -358,7 +356,7 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
         -> ham::MatchResult
     {
         println!("{}", actual);
-        let actual = std::str::from_utf8_lossy(actual);
+        let actual = String::from_utf8_lossy(actual);
         let actual = actual.to_string();
         ham::expect(actual == self.expected, actual)
     }

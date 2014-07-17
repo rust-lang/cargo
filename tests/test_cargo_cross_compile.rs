@@ -70,10 +70,10 @@ test!(simple_deps {
     let target = alternate();
     assert_that(p.cargo_process("cargo-build").arg("--target").arg(target),
                 execs().with_status(0));
-    assert_that(&p.target_bin(target, "main"), existing_file());
+    assert_that(&p.target_bin(target, "foo"), existing_file());
 
     assert_that(
-      process(p.target_bin(target, "main")),
+      process(p.target_bin(target, "foo")),
       execs().with_status(0));
 })
 
@@ -146,10 +146,10 @@ test!(plugin_deps {
     let target = alternate();
     assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
                 execs().with_status(0));
-    assert_that(&foo.target_bin(target, "main"), existing_file());
+    assert_that(&foo.target_bin(target, "foo"), existing_file());
 
     assert_that(
-      process(foo.target_bin(target, "main")),
+      process(foo.target_bin(target, "foo")),
       execs().with_status(0));
 })
 
@@ -226,10 +226,10 @@ test!(plugin_to_the_max {
     let target = alternate();
     assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
                 execs().with_status(0));
-    assert_that(&foo.target_bin(target, "main"), existing_file());
+    assert_that(&foo.target_bin(target, "foo"), existing_file());
 
     assert_that(
-      process(foo.target_bin(target, "main")),
+      process(foo.target_bin(target, "foo")),
       execs().with_status(0));
 })
 
