@@ -3,11 +3,11 @@ use std::os;
 use std::path;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder, path2url};
+use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
 use hamcrest::{assert_that, existing_file};
 use support::paths::PathExt;
 use cargo;
-use cargo::util::{process, realpath};
+use cargo::util::process;
 
 fn setup() {
 }
@@ -170,12 +170,8 @@ on by default
 
 test!(cargo_compile_with_warnings_in_a_dep_package {
     let mut p = project("foo");
-    let bar = p.root().join("bar");
 
     p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}']
-        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -183,9 +179,8 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
 
             [[bin]]
 
@@ -212,15 +207,12 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             fn dead() {}
         "#);
 
-    let bar = realpath(&p.root().join("bar")).assert();
-    let main = realpath(&p.root()).assert();
-
     assert_that(p.cargo_process("build"),
         execs()
         .with_stdout(format!("{} bar v0.5.0 ({})\n\
                               {} foo v0.5.0 ({})\n",
-                             COMPILING, path2url(bar),
-                             COMPILING, path2url(main)))
+                             COMPILING, p.url(),
+                             COMPILING, p.url()))
         .with_stderr(""));
 
     assert_that(&p.bin("foo"), existing_file());
@@ -231,14 +223,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 })
 
 test!(cargo_compile_with_nested_deps_inferred {
-    let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
-
-    p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}', '{}']
-        "#, bar.display(), baz.display()).as_slice())
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -246,12 +231,10 @@ test!(cargo_compile_with_nested_deps_inferred {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = 'bar'
 
             [[bin]]
-
             name = "foo"
         "#)
         .file("src/foo.rs",
@@ -263,9 +246,8 @@ test!(cargo_compile_with_nested_deps_inferred {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            baz = "0.5.0"
+            [dependencies.baz]
+            path = "../baz"
         "#)
         .file("bar/src/lib.rs", r#"
             extern crate baz;
@@ -299,14 +281,7 @@ test!(cargo_compile_with_nested_deps_inferred {
 })
 
 test!(cargo_compile_with_nested_deps_correct_bin {
-    let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
-
-    p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}', '{}']
-        "#, bar.display(), baz.display()).as_slice())
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -314,12 +289,10 @@ test!(cargo_compile_with_nested_deps_correct_bin {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
 
             [[bin]]
-
             name = "foo"
         "#)
         .file("src/main.rs",
@@ -331,9 +304,8 @@ test!(cargo_compile_with_nested_deps_correct_bin {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            baz = "0.5.0"
+            [dependencies.baz]
+            path = "../baz"
         "#)
         .file("bar/src/lib.rs", r#"
             extern crate baz;
@@ -367,14 +339,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
 })
 
 test!(cargo_compile_with_nested_deps_shorthand {
-    let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
-
-    p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}', '{}']
-        "#, bar.display(), baz.display()).as_slice())
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -382,9 +347,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
 
             [[bin]]
 
@@ -399,9 +363,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            baz = "0.5.0"
+            [dependencies.baz]
+            path = "../baz"
 
             [lib]
 
@@ -443,14 +406,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
 })
 
 test!(cargo_compile_with_nested_deps_longhand {
-    let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
-
-    p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}', '{}']
-        "#, bar.display(), baz.display()).as_slice())
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -458,9 +414,9 @@ test!(cargo_compile_with_nested_deps_longhand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies]
-
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
+            version = "0.5.0"
 
             [[bin]]
 
@@ -476,7 +432,7 @@ test!(cargo_compile_with_nested_deps_longhand {
             authors = ["wycats@example.com"]
 
             [dependencies.baz]
-
+            path = "../baz"
             version = "0.5.0"
 
             [lib]
@@ -890,7 +846,6 @@ test!(crate_version_env_vars {
 
 test!(custom_build_in_dependency {
     let mut p = project("foo");
-    let bar = p.root().join("bar");
     let mut build = project("builder");
     build = build
         .file("Cargo.toml", r#"
@@ -915,9 +870,6 @@ test!(custom_build_in_dependency {
 
 
     p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}']
-        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -927,8 +879,8 @@ test!(custom_build_in_dependency {
 
             [[bin]]
             name = "foo"
-            [dependencies]
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;

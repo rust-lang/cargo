@@ -85,7 +85,8 @@ impl Predicate {
             Ex => self.is_exact(ver),
             Gt => self.is_greater(ver),
             GtEq => self.is_exact(ver) || self.is_greater(ver),
-            _ => false // not implemented
+            Lt => !self.is_exact(ver) && !self.is_greater(ver),
+            LtEq => !self.is_greater(ver),
         }
     }
 
@@ -117,13 +118,13 @@ impl Predicate {
 
     fn is_greater(self, ver: &Version) -> bool {
         if self.major != ver.major {
-            return self.major > ver.major;
+            return ver.major > self.major;
         }
 
         match self.minor {
             Some(minor) => {
                 if minor != ver.minor {
-                    return minor > ver.minor
+                    return ver.minor > minor
                 }
             }
             None => return false
@@ -132,7 +133,7 @@ impl Predicate {
         match self.patch {
             Some(patch) => {
                 if patch != ver.patch {
-                    return patch > ver.patch
+                    return ver.patch > patch
                 }
             }
 
@@ -317,22 +318,18 @@ impl<'a> Iterator<Token<'a>> for Lexer<'a> {
                 LexStart => {
                     if c.is_whitespace() {
                         next!(); // Ignore
-                    }
-                    else if c.is_alphanumeric() {
+                    } else if c.is_alphanumeric() {
                         self.mark(idx);
                         self.state = LexAlphaNum;
                         next!();
-                    }
-                    else if is_sigil(c) {
+                    } else if is_sigil(c) {
                         self.mark(idx);
                         self.state = LexSigil;
                         next!();
-                    }
-                    else if c == '.' {
+                    } else if c == '.' {
                         self.state = LexInit;
                         return Some(Dot);
-                    }
-                    else if c == ',' {
+                    } else if c == ',' {
                         self.state = LexInit;
                         return Some(Comma);
                     } else {
@@ -478,7 +475,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_parsing_exact() {
+    fn test_parsing_exact() {
         let r = req("1.0.0");
 
         assert!(r.to_string() == "= 1.0.0".to_string());
@@ -495,12 +492,23 @@ mod test {
     }
 
     #[test]
-    pub fn test_parsing_greater_than() {
+    fn test_parsing_greater_than() {
         let r = req(">= 1.0.0");
 
         assert!(r.to_string() == ">= 1.0.0".to_string());
 
-        assert_match(&r, ["1.0.0"]);
+        assert_match(&r, ["1.0.0", "2.0.0", "1.2.3", "1.4.0"]);
+        assert_not_match(&r, ["0.0.1", "0.9.9"]);
+    }
+
+    #[test]
+    fn test_parsing_less_than() {
+        let r = req("<= 1.0.0");
+
+        assert!(r.to_string() == "<= 1.0.0".to_string());
+
+        assert_not_match(&r, ["2.0.0", "1.2.3", "1.4.0"]);
+        assert_match(&r, ["0.0.1", "0.9.9", "1.0.0"]);
     }
 
     /* TODO:

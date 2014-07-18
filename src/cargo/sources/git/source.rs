@@ -184,7 +184,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         self.path_source.as_mut().unwrap().update()
     }
 
-    fn download(&self, _: &[PackageId]) -> CargoResult<()> {
+    fn download(&mut self, _: &[PackageId]) -> CargoResult<()> {
         // TODO: assert! that the PackageId is contained by the source
         Ok(())
     }

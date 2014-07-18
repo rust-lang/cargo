@@ -17,11 +17,12 @@ pub fn package(manifest_path: &Path,
 
     let filename = format!("{}-{}.tar.gz", pkg.get_name(), pkg.get_version());
     let dst = pkg.get_manifest_path().dir_path().join(filename);
+    if dst.exists() { return Ok(dst) }
+
     try!(shell.status("Packaging", pkg.get_package_id().to_string()));
     try!(tar(&pkg, &src, shell, &dst).chain_error(|| {
         human("failed to prepare local package for uploading")
     }));
-
     Ok(dst)
 }
 
@@ -56,6 +57,6 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
-
+    try!(ar.finish());
     Ok(())
 }

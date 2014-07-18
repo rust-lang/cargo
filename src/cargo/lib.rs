@@ -13,6 +13,7 @@ extern crate time;
 #[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
 
+extern crate curl;
 extern crate docopt;
 extern crate flate2;
 extern crate git2;

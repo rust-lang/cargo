@@ -32,7 +32,7 @@ impl<'a> PackageRegistry<'a> {
         }
     }
 
-    pub fn get(&self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
+    pub fn get(&mut self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packags; sources={}; ids={}", self.sources.len(),
              package_ids);
 
@@ -40,7 +40,7 @@ impl<'a> PackageRegistry<'a> {
         // source
         let mut ret = Vec::new();
 
-        for source in self.sources.sources() {
+        for source in self.sources.sources_mut() {
             try!(source.download(package_ids));
             let packages = try!(source.get(package_ids));
 

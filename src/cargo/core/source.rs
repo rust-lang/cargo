@@ -10,7 +10,7 @@ use serialize::{Decodable, Decoder, Encodable, Encoder};
 use url::Url;
 
 use core::{Summary, Package, PackageId, Registry, Dependency};
-use sources::{PathSource, GitSource, DummyRegistrySource};
+use sources::{PathSource, GitSource, RegistrySource};
 use sources::git;
 use util::{human, Config, CargoResult, CargoError, ToUrl};
 
@@ -24,7 +24,7 @@ pub trait Source: Registry {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&self, packages: &[PackageId]) -> CargoResult<()>;
+    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()>;
 
     /// The get method returns the Path of each specified package on the
     /// local file system. It assumes that `download` was already called,
@@ -111,9 +111,13 @@ impl Show for SourceId {
                 }
                 Ok(())
             },
-            SourceId { kind: RegistryKind, .. } => {
-                // TODO: Central registry vs. alternates
-                write!(f, "the package registry")
+            SourceId { kind: RegistryKind, ref url, .. } => {
+                let default = RegistrySource::url().ok();
+                if default.as_ref() == Some(url) {
+                    write!(f, "the package registry")
+                } else {
+                    write!(f, "registry {}", url)
+                }
             }
         }
     }
@@ -173,7 +177,10 @@ impl SourceId {
                 let precise = mem::replace(&mut url.fragment, None);
                 SourceId::for_git(&url, reference.as_slice(), precise)
             },
-            "registry" => SourceId::for_central(),
+            "registry" => {
+                let url = url.to_url().unwrap();
+                SourceId::for_registry(&url)
+            }
             "path" => SourceId::for_path(&Path::new(url.slice_from(5))).unwrap(),
             _ => fail!("Unsupported serialized SourceId")
         }
@@ -224,9 +231,12 @@ impl SourceId {
         id
     }
 
-    pub fn for_central() -> SourceId {
-        SourceId::new(RegistryKind,
-                      "https://example.com".to_url().unwrap())
+    pub fn for_registry(url: &Url) -> SourceId {
+        SourceId::new(RegistryKind, url.clone())
+    }
+
+    pub fn for_central() -> CargoResult<SourceId> {
+        Ok(SourceId::for_registry(&try!(RegistrySource::url())))
     }
 
     pub fn get_url(&self) -> &Url {
@@ -255,7 +265,7 @@ impl SourceId {
                 };
                 box PathSource::new(&path, self) as Box<Source>
             },
-            RegistryKind => box DummyRegistrySource::new(self) as Box<Source+'a>,
+            RegistryKind => box RegistrySource::new(self, config) as Box<Source+'a>,
         }
     }
 
@@ -355,8 +365,8 @@ impl<'a> Source for SourceSet<'a> {
         Ok(())
     }
 
-    fn download(&self, packages: &[PackageId]) -> CargoResult<()> {
-        for source in self.sources.iter() {
+    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
+        for source in self.sources.mut_iter() {
             try!(source.download(packages));
         }
 
