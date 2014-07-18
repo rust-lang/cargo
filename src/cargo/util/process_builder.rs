@@ -143,7 +143,7 @@ impl ProcessBuilder {
             _ => ()
         }
 
-        ret.as_slice().to_owned()
+        ret.to_vec()
     }
 
     fn build_path(&self) -> Option<String> {
