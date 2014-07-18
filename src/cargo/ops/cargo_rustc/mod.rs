@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use util;
-use util::{CargoResult, ProcessBuilder, CargoError, human};
+use util::{CargoResult, ProcessBuilder, CargoError, ChainError, human, caused_human};
 use util::{Config, Freshness, internal, ChainError};
 
 use self::job::Job;
@@ -187,14 +187,16 @@ fn rustc(package: &Package, target: &Target,
     });
 
     rustcs.move_iter().map(|rustc| {
+        let name = package.get_name().to_string();
+
         Job::new(proc() {
             if primary {
                 log!(5, "executing primary");
-                try!(rustc.exec().map_err(|err| human(err.to_string())))
+                try!(rustc.exec().chain_error(|| human(format!("Could not compile `{}`.", name))))
             } else {
                 log!(5, "executing deps");
                 try!(rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                    human(err.to_string())
+                    caused_human(format!("Could not compile `{}`.\n{}", name, err.output().unwrap()), err)
                 }))
             }
             Ok(Vec::new())
