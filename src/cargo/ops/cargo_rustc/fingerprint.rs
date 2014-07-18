@@ -1,6 +1,6 @@
 use std::hash::Hasher;
 use std::hash::sip::SipHasher;
-use std::io::File;
+use std::io::{fs, File};
 
 use core::{Package, Target};
 use util;
@@ -17,20 +17,52 @@ use super::context::Context;
 /// it as the first part of the return tuple. It will then prepare a job to
 /// update the fingerprint if this package is actually rebuilt as part of
 /// compilation, returning the job as the second part of the tuple.
+///
+/// The third part of the tuple is a job to run when a package is discovered to
+/// be fresh to ensure that all of its artifacts are moved to the correct
+/// location.
 pub fn prepare(cx: &mut Context, pkg: &Package,
-               targets: &[&Target]) -> CargoResult<(Freshness, Job)> {
-    let short = short_hash(pkg.get_package_id());
-    let fingerprint_loc = cx.dest(false).join(format!(".{}.{}.fingerprint",
-                                                      pkg.get_name(),
-                                                      short));
+               targets: &[&Target]) -> CargoResult<(Freshness, Job, Job)> {
+    let filename = format!(".{}.{}.fingerprint", pkg.get_name(),
+                           short_hash(pkg.get_package_id()));
+    let filename = filename.as_slice();
+    let (old_fingerprint_loc, new_fingerprint_loc) = {
+        let layout = cx.layout(false);
+        (layout.old_root().join(filename), layout.root().join(filename))
+    };
 
-    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &fingerprint_loc,
+    // First, figure out if the old location exists, and if it does whether it's
+    // still fresh or not.
+    let (is_fresh, fingerprint) = try!(is_fresh(pkg, &old_fingerprint_loc,
                                                 cx, targets));
+
+    // Prepare a job to update the location of the new fingerprint.
+    let new_fingerprint_loc2 = new_fingerprint_loc.clone();
     let write_fingerprint = Job::new(proc() {
-        try!(File::create(&fingerprint_loc).write_str(fingerprint.as_slice()));
+        let mut f = try!(File::create(&new_fingerprint_loc2));
+        try!(f.write_str(fingerprint.as_slice()));
         Ok(Vec::new())
     });
-    Ok((if is_fresh {Fresh} else {Dirty}, write_fingerprint))
+
+    // Prepare a job to copy over all old artifacts into their new destination.
+    let mut pairs = Vec::new();
+    pairs.push((old_fingerprint_loc, new_fingerprint_loc));
+    for &target in targets.iter() {
+        for filename in cx.target_filenames(target).iter() {
+            let filename = filename.as_slice();
+            let layout = cx.layout(target.get_profile().is_plugin());
+            pairs.push((layout.old_root().join(filename),
+                        layout.root().join(filename)));
+        }
+    }
+    let move_old = Job::new(proc() {
+        for &(ref src, ref dst) in pairs.iter() {
+            try!(fs::rename(src, dst));
+        }
+        Ok(Vec::new())
+    });
+
+    Ok((if is_fresh {Fresh} else {Dirty}, write_fingerprint, move_old))
 }
 
 fn is_fresh(dep: &Package, loc: &Path, cx: &mut Context, targets: &[&Target])

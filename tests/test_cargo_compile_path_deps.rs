@@ -415,6 +415,7 @@ test!(no_rebuild_two_deps {
                                             COMPILING, baz.display(),
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
+    assert_that(&p.bin("foo"), existing_file());
     assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
                                              {} bar v0.5.0 (file:{})\n\
@@ -422,6 +423,7 @@ test!(no_rebuild_two_deps {
                                             FRESH, baz.display(),
                                             FRESH, bar.display(),
                                             FRESH, p.root().display())));
+    assert_that(&p.bin("foo"), existing_file());
 })
 
 test!(nested_deps_recompile {
