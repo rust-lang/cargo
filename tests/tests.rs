@@ -28,3 +28,4 @@ mod test_cargo_test;
 mod test_shell;
 mod test_cargo_cross_compile;
 mod test_cargo_run;
+mod test_cargo_version;
