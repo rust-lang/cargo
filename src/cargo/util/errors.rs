@@ -4,6 +4,7 @@ use std::fmt;
 use std::fmt::{Show, Formatter, FormatError};
 use std::str;
 
+use curl;
 use TomlError = toml::Error;
 
 pub trait CargoError: Send {
@@ -138,6 +139,12 @@ impl CargoError for FormatError {
 }
 
 from_error!(FormatError)
+
+impl CargoError for curl::ErrCode {
+    fn description(&self) -> String { self.to_string() }
+}
+
+from_error!(curl::ErrCode)
 
 pub struct ProcessError {
     pub msg: String,

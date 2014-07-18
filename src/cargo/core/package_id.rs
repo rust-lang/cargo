@@ -3,7 +3,7 @@ use url::Url;
 use std::hash::Hash;
 use std::fmt;
 use std::fmt::{Show,Formatter};
-use collections::hash;
+use std::hash;
 use serialize::{
     Encodable,
     Encoder,

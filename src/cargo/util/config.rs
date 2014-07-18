@@ -1,4 +1,5 @@
-use std::{io, fmt, os, result, mem};
+use std::{fmt, os, result, mem};
+use std::io::fs::File;
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
@@ -119,6 +120,10 @@ impl ConfigValue {
         ConfigValue { value: List(vec!()), path: vec!() }
     }
 
+    pub fn new_string(s: String) -> ConfigValue {
+        ConfigValue { value: String(s), path: Vec::new() }
+    }
+
     pub fn get_value<'a>(&'a self) -> &'a ConfigValueValue {
         &self.value
     }
@@ -210,6 +215,16 @@ impl ConfigValueValue {
             String(..) => "string",
         }
     }
+
+    fn into_toml(self) -> toml::Value {
+        match self {
+            String(s) => toml::String(s),
+            List(l) => toml::Array(l.move_iter().map(toml::String).collect()),
+            Table(l) => toml::Table(l.move_iter()
+                                     .map(|(k, v)| (k, v.value.into_toml()))
+                                     .collect()),
+        }
+    }
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
@@ -261,13 +276,13 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
 }
 
 fn find_in_tree<T>(pwd: &Path,
-                   walk: |io::fs::File| -> CargoResult<T>) -> CargoResult<T> {
+                   walk: |File| -> CargoResult<T>) -> CargoResult<T> {
     let mut current = pwd.clone();
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible));
+            let file = try!(File::open(&possible));
 
             match walk(file) {
                 Ok(res) => return Ok(res),
@@ -282,14 +297,14 @@ fn find_in_tree<T>(pwd: &Path,
 }
 
 fn walk_tree(pwd: &Path,
-             walk: |io::fs::File| -> CargoResult<()>) -> CargoResult<()> {
+             walk: |File| -> CargoResult<()>) -> CargoResult<()> {
     let mut current = pwd.clone();
     let mut err = false;
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible));
+            let file = try!(File::open(&possible));
 
             match walk(file) {
                 Err(_) => err = false,
@@ -304,7 +319,7 @@ fn walk_tree(pwd: &Path,
     Ok(())
 }
 
-fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
+fn extract_config(mut file: File, key: &str) -> CargoResult<ConfigValue> {
     let contents = try!(file.read_to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(),
                                           file.path().filename_display()
@@ -312,4 +327,24 @@ fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue>
     let val = try!(toml.pop(&key.to_string()).require(|| internal("")));
 
     ConfigValue::from_toml(file.path(), val)
+}
+
+pub fn set_config(cfg: &Config, loc: Location, key: &str,
+                  value: ConfigValueValue) -> CargoResult<()> {
+    // TODO: There are a number of drawbacks here
+    //
+    // 1. Project is unimplemented
+    // 2. This blows away all comments in a file
+    // 3. This blows away the previous ordering of a file.
+    let file = match loc {
+        Global => cfg.home_path.join(".cargo").join("config"),
+        Project => unimplemented!(),
+    };
+    let contents = File::open(&file).read_to_string().unwrap_or(String::new());
+    let mut toml = try!(cargo_toml::parse(contents.as_slice(),
+                                          file.filename_display()
+                                              .to_string().as_slice()));
+    toml.insert(key.to_string(), value.into_toml());
+    try!(File::create(&file).write(toml::Table(toml).to_string().as_bytes()));
+    Ok(())
 }

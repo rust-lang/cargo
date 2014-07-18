@@ -13,7 +13,7 @@ mac = lines[1]
 linux = lines[2]
 win = lines[3]
 
-if sys.platform == 'linux2':
+if 'linux' in sys.platform:
     me = linux
 elif sys.platform == 'win32':
     me = win
