@@ -241,17 +241,17 @@ struct Execs {
 
 impl Execs {
 
-    pub fn with_stdout<S: ToString>(mut ~self, expected: S) -> Box<Execs> {
+    pub fn with_stdout<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stdout = Some(expected.to_string());
         self
     }
 
-    pub fn with_stderr<S: ToString>(mut ~self, expected: S) -> Box<Execs> {
+    pub fn with_stderr<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr = Some(expected.to_string());
         self
     }
 
-    pub fn with_status(mut ~self, expected: int) -> Box<Execs> {
+    pub fn with_status(mut self, expected: int) -> Execs {
         self.expect_exit_code = Some(expected);
         self
     }
@@ -331,8 +331,8 @@ impl ham::Matcher<ProcessBuilder> for Execs {
     }
 }
 
-pub fn execs() -> Box<Execs> {
-    box Execs {
+pub fn execs() -> Execs {
+    Execs {
         expect_stdout: None,
         expect_stderr: None,
         expect_stdin: None,
@@ -362,8 +362,8 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
     }
 }
 
-pub fn shell_writes<T: Show>(string: T) -> Box<ShellWrites> {
-    box ShellWrites { expected: string.to_string() }
+pub fn shell_writes<T: Show>(string: T) -> ShellWrites {
+    ShellWrites { expected: string.to_string() }
 }
 
 pub trait ResultTest<T,E> {
