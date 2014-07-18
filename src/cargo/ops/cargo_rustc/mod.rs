@@ -11,6 +11,7 @@ mod context;
 mod fingerprint;
 mod job;
 mod job_queue;
+mod layout;
 
 type Args = Vec<String>;
 
@@ -41,18 +42,15 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
-    let host_dir = pkg.get_absolute_target_dir()
-                        .join(uniq_target_dest(targets).unwrap_or(""));
-    let host_deps_dir = host_dir.join("deps");
+    let root = pkg.get_absolute_target_dir();
+    let dest = uniq_target_dest(targets).unwrap_or("");
+    let host_layout = layout::Layout::new(root.join(dest));
+    let target_layout = config.target().map(|target| {
+        layout::Layout::new(root.join(target).join(dest))
+    });
 
-    let target_dir = pkg.get_absolute_target_dir()
-                        .join(config.target().unwrap_or(""))
-                        .join(uniq_target_dest(targets).unwrap_or(""));
-    let deps_target_dir = target_dir.join("deps");
-
-    let mut cx = try!(Context::new(resolve, deps, config,
-                                   target_dir, deps_target_dir,
-                                   host_dir, host_deps_dir));
+    let mut cx = try!(Context::new(env, resolve, deps, config,
+                                   host_layout, target_layout));
 
     // First ensure that the destination directory exists
     try!(cx.prepare(pkg));
@@ -67,10 +65,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
-            target.is_lib() && match env {
-                "test" => target.get_profile().is_compile(),
-                _ => target.get_profile().get_env() == env,
-            }
+            cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
         try!(compile(targets.as_slice(), dep, &mut cx, &mut jobs));
@@ -85,7 +80,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                    cx: &mut Context<'a, 'b>,
-                   jobs: &mut Vec<(&'a Package, Freshness, Job)>)
+                   jobs: &mut Vec<(&'a Package, Freshness, (Job, Job))>)
                    -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
 
@@ -126,7 +121,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // TODO: Can a fingerprint be per-target instead of per-package? Doing so
     //       would likely involve altering the granularity of key for the
     //       dependency queue that is later used to run jobs.
-    let (freshness, write_fingerprint) =
+    let (freshness, write_fingerprint, copy_old) =
         try!(fingerprint::prepare(cx, pkg, targets));
 
     // Note that we build the job backwards because each job will produce more
@@ -135,7 +130,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     let build_libs = Job::all(libs, bins);
     let job = Job::all(build_cmds, vec![build_libs]);
 
-    jobs.push((pkg, freshness, job));
+    jobs.push((pkg, freshness, (job, copy_old)));
     Ok(())
 }
 
@@ -145,12 +140,13 @@ fn compile_custom(pkg: &Package, cmd: &str,
     let mut cmd = cmd.split(' ');
     // TODO: this shouldn't explicitly pass `false` for dest/deps_dir, we may
     //       be building a C lib for a plugin
+    let layout = cx.layout(false);
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
-                     .env("OUT_DIR", Some(cx.dest(false).as_str()
-                                            .expect("non-UTF8 dest path")))
-                     .env("DEPS_DIR", Some(cx.deps_dir(false).as_str()
-                                             .expect("non-UTF8 deps path")))
+                     .env("OUT_DIR", Some(layout.root().as_str()
+                                                .expect("non-UTF8 dest path")))
+                     .env("DEPS_DIR", Some(layout.deps().as_str()
+                                                 .expect("non-UTF8 deps path")))
                      .env("TARGET", cx.config.target());
     for arg in cmd {
         p = p.arg(arg);
@@ -166,10 +162,8 @@ fn rustc(package: &Package, target: &Target,
     let crate_types = target.rustc_crate_types();
     let root = package.get_root();
 
-    log!(5, "root={}; target={}; crate_types={}; dest={}; deps={}; \
-             verbose={}; req={}",
-         root.display(), target, crate_types, cx.dest(false).display(),
-         cx.deps_dir(false).display(), cx.primary, req);
+    log!(5, "root={}; target={}; crate_types={}; verbose={}; req={}",
+         root.display(), target, crate_types, cx.primary, req);
 
     let primary = cx.primary;
     let rustcs = prepare_rustc(package, target, crate_types, cx, req);
@@ -274,7 +268,7 @@ fn build_base_args(into: &mut Args,
     }
 
     into.push("--out-dir".to_string());
-    into.push(cx.dest(plugin).display().to_string());
+    into.push(cx.layout(plugin).root().display().to_string());
 
     if !plugin {
         fn opt(into: &mut Vec<String>, key: &str, prefix: &str,
@@ -296,17 +290,19 @@ fn build_base_args(into: &mut Args,
 
 fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context,
                    plugin: bool) {
+    let layout = cx.layout(plugin);
     dst.push("-L".to_string());
-    dst.push(cx.dest(plugin).display().to_string());
+    dst.push(layout.root().display().to_string());
     dst.push("-L".to_string());
-    dst.push(cx.deps_dir(plugin).display().to_string());
+    dst.push(layout.deps().display().to_string());
 
     for &(_, target) in cx.dep_targets(package).iter() {
+        let layout = cx.layout(target.get_profile().is_plugin());
         for filename in cx.target_filenames(target).iter() {
             dst.push("--extern".to_string());
             dst.push(format!("{}={}/{}",
                      target.get_name(),
-                     cx.deps_dir(target.get_profile().is_plugin()).display(),
+                     layout.deps().display(),
                      filename));
         }
     }

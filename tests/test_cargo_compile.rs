@@ -1225,3 +1225,36 @@ test!(inferred_main_bin {
     assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
     assert_that(process(p.bin("foo")), execs().with_status(0));
 })
+
+test!(deletion_causes_failure {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            fn main() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+    let p = p.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#);
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(101));
+})
