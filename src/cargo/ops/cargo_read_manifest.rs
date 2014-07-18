@@ -18,7 +18,7 @@ pub fn read_package(path: &Path, source_id: &SourceId)
     let data = try!(file.read_to_end());
 
     let layout = project_layout(&path.dir_path());
-    let (manifest, nested) = 
+    let (manifest, nested) =
         try!(read_manifest(data.as_slice(), layout, source_id));
 
     Ok((Package::new(manifest, path, source_id), nested))
@@ -32,11 +32,14 @@ pub fn read_packages(path: &Path,
     log!(5, "looking for root package: {}, source_id={}", path.display(), source_id);
     try!(process_possible_package(path, &mut all_packages, source_id, &mut visited));
 
-    try!(walk(path, true, |dir| {
+    try!(walk(path, true, |root, dir| {
         log!(5, "looking for child package: {}", dir.display());
+        if root && dir.join("target").is_dir() { return Ok(false); }
+        if root { return Ok(true) }
         if dir.filename_str() == Some(".git") { return Ok(false); }
         if dir.join(".git").exists() { return Ok(false); }
-        try!(process_possible_package(dir, &mut all_packages, source_id, &mut visited));
+        try!(process_possible_package(dir, &mut all_packages, source_id,
+                                      &mut visited));
         Ok(true)
     }));
 
@@ -48,15 +51,17 @@ pub fn read_packages(path: &Path,
     }
 }
 
-fn walk(path: &Path, is_root: bool, callback: |&Path| -> CargoResult<bool>) -> CargoResult<()> {
+fn walk(path: &Path, is_root: bool,
+        callback: |bool, &Path| -> CargoResult<bool>) -> CargoResult<()> {
     if path.is_dir() {
-        if !is_root {
-            let continues = try!(callback(path));
-            if !continues { log!(5, "Found submodule at {}", path.display()); return Ok(()); }
+        let continues = try!(callback(is_root, path));
+        if !continues {
+            log!(5, "not processing {}", path.display());
+            return Ok(());
         }
 
         for dir in try!(fs::readdir(path)).iter() {
-            try!(walk(dir, false, |x| callback(x)))
+            try!(walk(dir, false, |a, x| callback(a, x)))
         }
     }
 
