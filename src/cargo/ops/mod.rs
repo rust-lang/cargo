@@ -8,6 +8,7 @@ pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_generate_lockfile::{generate_lockfile, write_resolve};
 pub use self::cargo_generate_lockfile::{update_lockfile, load_lockfile};
 pub use self::cargo_test::{run_tests, run_benches, TestOptions};
+pub use self::cargo_package::package;
 
 mod cargo_clean;
 mod cargo_compile;
@@ -18,3 +19,4 @@ mod cargo_new;
 mod cargo_doc;
 mod cargo_generate_lockfile;
 mod cargo_test;
+mod cargo_package;

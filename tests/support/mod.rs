@@ -507,3 +507,4 @@ pub static COMPILING: &'static str = "   Compiling";
 pub static FRESH:     &'static str = "       Fresh";
 pub static UPDATING:  &'static str = "    Updating";
 pub static DOCTEST:   &'static str = "   Doc-tests";
+pub static PACKAGING: &'static str = "   Packaging";

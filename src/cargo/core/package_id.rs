@@ -1,7 +1,7 @@
 use semver;
 use std::hash::Hash;
 use std::fmt::{mod, Show, Formatter};
-use collections::hash;
+use std::hash;
 use serialize::{
     Encodable,
     Encoder,
