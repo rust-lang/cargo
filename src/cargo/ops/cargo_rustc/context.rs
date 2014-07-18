@@ -1,5 +1,6 @@
-use std::str;
 use std::collections::{HashMap, HashSet};
+use std::os;
+use std::str;
 
 use core::{Package, PackageId, PackageSet, Resolve, Target};
 use util;
@@ -26,6 +27,7 @@ pub struct Context<'a, 'b> {
     host_dylib: (String, String),
     package_set: &'a PackageSet,
     target_dylib: (String, String),
+    target_exe: String,
     requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
 }
 
@@ -34,11 +36,13 @@ impl<'a, 'b> Context<'a, 'b> {
                config: &'b mut Config<'b>,
                host: Layout, target: Option<Layout>)
                -> CargoResult<Context<'a, 'b>> {
-        let target_dylib = try!(Context::dylib_parts(config.target()));
+        let (target_dylib, target_exe) =
+                try!(Context::filename_parts(config.target()));
         let host_dylib = if config.target().is_none() {
             target_dylib.clone()
         } else {
-            try!(Context::dylib_parts(None))
+            let (dylib, _) = try!(Context::filename_parts(None));
+            dylib
         };
         Ok(Context {
             rustc_version: try!(Context::rustc_version()),
@@ -50,6 +54,7 @@ impl<'a, 'b> Context<'a, 'b> {
             package_set: deps,
             config: config,
             target_dylib: target_dylib,
+            target_exe: target_exe,
             host_dylib: host_dylib,
             requirements: HashMap::new(),
         })
@@ -63,8 +68,9 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 
     /// Run `rustc` to discover the dylib prefix/suffix for the target
-    /// specified.
-    fn dylib_parts(target: Option<&str>) -> CargoResult<(String, String)> {
+    /// specified as well as the exe suffix
+    fn filename_parts(target: Option<&str>)
+                      -> CargoResult<((String, String), String)> {
         let process = util::process("rustc")
                            .arg("-")
                            .arg("--crate-name").arg("-")
@@ -77,10 +83,17 @@ impl<'a, 'b> Context<'a, 'b> {
         let output = try!(process.exec_with_output());
 
         let output = str::from_utf8(output.output.as_slice()).unwrap();
-        let parts: Vec<&str> = output.trim().split('-').collect();
-        assert!(parts.len() == 2, "rustc --print-file-name output has changed");
+        let dylib_parts: Vec<&str> = output.trim().split('-').collect();
+        assert!(dylib_parts.len() == 2,
+                "rustc --print-file-name output has changed");
+        let exe_suffix = match target {
+            None => os::consts::EXE_SUFFIX,
+            Some(s) if s.contains("win32") || s.contains("windows") => ".exe",
+            Some(_) => "",
+        };
 
-        Ok((parts[0].to_string(), parts[1].to_string()))
+        Ok(((dylib_parts[0].to_string(), dylib_parts[1].to_string()),
+            exe_suffix.to_string()))
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in
@@ -170,7 +183,7 @@ impl<'a, 'b> Context<'a, 'b> {
             ret.push(format!("lib{}.rlib", stem));
         }
         if target.is_bin() {
-            ret.push(stem.to_string());
+            ret.push(format!("{}{}", stem, self.target_exe));
         }
         assert!(ret.len() > 0);
         return ret;
@@ -183,16 +196,19 @@ impl<'a, 'b> Context<'a, 'b> {
             None => return vec!(),
             Some(deps) => deps,
         };
-        deps.map(|pkg_id| {
-            self.package_set.iter()
-                .find(|pkg| pkg_id == pkg.get_package_id())
-                .expect("Should have found package")
-        })
+        deps.map(|pkg_id| self.get_package(pkg_id))
         .filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
         })
         .collect()
+    }
+
+    /// Gets a package for the given package id.
+    pub fn get_package(&self, id: &PackageId) -> &'a Package {
+        self.package_set.iter()
+            .find(|pkg| id == pkg.get_package_id())
+            .expect("Should have found package")
     }
 
     pub fn is_relevant_target(&self, target: &Target) -> bool {

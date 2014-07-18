@@ -717,12 +717,12 @@ test!(custom_build_env_vars {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
-                assert_eq!(os::getenv("OUT_DIR").unwrap(), r"{}".to_string());
-                assert_eq!(os::getenv("DEPS_DIR").unwrap(), r"{}".to_string());
+                let out = os::getenv("OUT_DIR").unwrap();
+                assert!(out.as_slice().starts_with(r"{}"));
+                assert!(Path::new(out).is_dir());
             }}
         "#,
-        p.root().join("target").display(),
-        p.root().join("target").join("deps").display()));
+        p.root().join("target").join("native").join("foo-").display()));
     assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
 
 
@@ -762,12 +762,11 @@ test!(custom_build_in_dependency {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
-                assert_eq!(os::getenv("OUT_DIR").unwrap(), r"{}".to_string());
-                assert_eq!(os::getenv("DEPS_DIR").unwrap(), r"{}".to_string());
+                assert!(os::getenv("OUT_DIR").unwrap().as_slice()
+                           .starts_with(r"{}"));
             }}
         "#,
-        p.root().join("target/deps").display(),
-        p.root().join("target/deps").display()));
+        p.root().join("target/native/bar-").display()));
     assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
 
 

@@ -10,6 +10,18 @@
 //!         # This is the root directory for all output of *dependencies*
 //!         deps/
 //!
+//!         # This is the location at which the output of all custom build
+//!         # commands are rooted
+//!         native/
+//!
+//!             # Each package gets its own directory for where its output is
+//!             # placed. We can't track exactly what's getting put in here, so
+//!             # we just assume that all relevant output is in these
+//!             # directories.
+//!             $pkg1/
+//!             $pkg2/
+//!             $pkg3/
+//!
 //!         # This is a temporary directory as part of the build process. When a
 //!         # build starts, it initially moves the old `deps` directory to this
 //!         # location. This is done to ensure that there are no stale artifacts
@@ -23,16 +35,24 @@
 //!         # Similar to old-deps, this is where all of the output under
 //!         # `target/` is moved at the start of a build.
 //!         old-root/
+//!
+//!         # Same as the two above old directories
+//!         old-native/
 
 use std::io;
 use std::io::{fs, IoResult};
 
+use core::Package;
+use util::hex::short_hash;
+
 pub struct Layout {
     root: Path,
     deps: Path,
+    native: Path,
 
     old_deps: Path,
     old_root: Path,
+    old_native: Path,
 }
 
 pub struct LayoutProxy<'a> {
@@ -44,8 +64,10 @@ impl Layout {
     pub fn new(root: Path) -> Layout {
         Layout {
             deps: root.join("deps"),
+            native: root.join("native"),
             old_deps: root.join("old-deps"),
             old_root: root.join("old-root"),
+            old_native: root.join("old-native"),
             root: root,
         }
     }
@@ -61,11 +83,18 @@ impl Layout {
         if self.old_root.exists() {
             try!(fs::rmdir_recursive(&self.old_root));
         }
+        if self.old_native.exists() {
+            try!(fs::rmdir_recursive(&self.old_root));
+        }
         if self.deps.exists() {
             try!(fs::rename(&self.deps, &self.old_deps));
         }
+        if self.native.exists() {
+            try!(fs::rename(&self.native, &self.old_native));
+        }
 
         try!(fs::mkdir(&self.deps, io::UserRWX));
+        try!(fs::mkdir(&self.native, io::UserRWX));
         try!(fs::mkdir(&self.old_root, io::UserRWX));
 
         for file in try!(fs::readdir(&self.root)).iter() {
@@ -79,14 +108,26 @@ impl Layout {
 
     pub fn dest<'a>(&'a self) -> &'a Path { &self.root }
     pub fn deps<'a>(&'a self) -> &'a Path { &self.deps }
+    pub fn native(&self, package: &Package) -> Path {
+        self.native.join(self.native_name(package))
+    }
+
     pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
     pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
+    pub fn old_native(&self, package: &Package) -> Path {
+        self.old_native.join(self.native_name(package))
+    }
+
+    fn native_name(&self, pkg: &Package) -> String {
+        format!("{}-{}", pkg.get_name(), short_hash(pkg.get_package_id()))
+    }
 }
 
 impl Drop for Layout {
     fn drop(&mut self) {
         let _ = fs::rmdir_recursive(&self.old_deps);
         let _ = fs::rmdir_recursive(&self.old_root);
+        let _ = fs::rmdir_recursive(&self.old_native);
     }
 }
 
@@ -103,7 +144,13 @@ impl<'a> LayoutProxy<'a> {
     }
     pub fn deps(&self) -> &'a Path { self.root.deps() }
 
+    pub fn native(&self, pkg: &Package) -> Path { self.root.native(pkg) }
+
     pub fn old_root(&self) -> &'a Path {
         if self.primary {self.root.old_dest()} else {self.root.old_deps()}
+    }
+
+    pub fn old_native(&self, pkg: &Package) -> Path {
+        self.root.old_native(pkg)
     }
 }

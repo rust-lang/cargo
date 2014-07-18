@@ -48,9 +48,12 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
     let mut pairs = Vec::new();
     pairs.push((old_fingerprint_loc, new_fingerprint_loc));
     for &target in targets.iter() {
+        let layout = cx.layout(target.get_profile().is_plugin());
+        if pkg.get_manifest().get_build().len() > 0 {
+            pairs.push((layout.old_native(pkg), layout.native(pkg)));
+        }
         for filename in cx.target_filenames(target).iter() {
             let filename = filename.as_slice();
-            let layout = cx.layout(target.get_profile().is_plugin());
             pairs.push((layout.old_root().join(filename),
                         layout.root().join(filename)));
         }
