@@ -85,18 +85,18 @@ version = "1.2.x"
 git = "http://github.com/carllerche/hamcrest"
 ```
 
-## Projects Containing Both `lib` and `executable`
+## Projects Containing Both `lib` and `bin`
 
 Most projects will primarily produce either a library or an executable.
 Such projects should name the main crate file `<projectname>.rs` and
-omit the optional `path` from the `lib` or `executable` sections.
+omit the optional `path` from the `lib` or `bin` sections.
 
 Projects that contain both a library and one or more executables should
 generally use `<projectname>.rs` for their library, and `bin/*.rs`
 for the executables.
 
 These rules are also the default behavior if `path` is left off of `lib`
-or `executable` sections.
+or `bin` sections.
 
 ## Example Manifests
 
@@ -115,7 +115,7 @@ authors = ["Yehuda Katz <wycats@gmail.com>"]
 name = "hammer"
 ```
 
-Simple `executable`:
+Simple `bin`:
 
 ```toml
 [project]
@@ -125,13 +125,13 @@ version = "0.5.0"
 authors = ["Tom Dale <tom@tomdale.net>", "Carl Lerche <me@carllerche.com>"]
 tags = ["performance", "profiling"]
 
-[[executable]]
+[[bin]]
 
 name = "skylight"
 path = "bin/skylight.rs" # supports existing project structures
 ```
 
-A project with both a lib and an `executable`:
+A project with both a lib and an executable:
 
 ```toml
 [project]
@@ -145,11 +145,11 @@ tags = ["performance", "profiling"]
 
 name = "skylight" # path defaults to src/skylight.rs
 
-[[executable]]
+[[bin]]
 
 name = "skylight" # path defaults to src/bin/skylight.rs
 
-[[executable]]
+[[bin]]
 
 name = "skylight-setup" # path defaults to src/bin/skylight-setup.rs
 ```
