@@ -270,8 +270,8 @@ impl Execs {
                     actual.status.matches_exit_status(code),
                     format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
                             actual.status,
-                            str::from_utf8(actual.output.as_slice()),
-                            str::from_utf8(actual.error.as_slice())))
+                            String::from_utf8_lossy(actual.output.as_slice()),
+                            String::from_utf8_lossy(actual.error.as_slice())))
             }
         }
     }

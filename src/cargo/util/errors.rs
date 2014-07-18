@@ -156,24 +156,34 @@ impl Show for ProcessError {
             None => "never executed".to_string()
         };
         try!(write!(f, "{} (status={})", self.msg, exit));
+        self.output().map(|out| { let _ = write!(f, "{}", out); });
+        Ok(())
+    }
+}
+
+impl ProcessError {
+    pub fn output(&self) -> Option<String> {
         match self.output {
             Some(ref out) => {
+                let mut string = String::new();
                 match str::from_utf8(out.output.as_slice()) {
                     Some(s) if s.trim().len() > 0 => {
-                        try!(write!(f, "\n--- stdout\n{}", s));
+                        string.push_str("\n--- stdout\n");
+                        string.push_str(s);
                     }
                     Some(..) | None => {}
                 }
                 match str::from_utf8(out.error.as_slice()) {
                     Some(s) if s.trim().len() > 0 => {
-                        try!(write!(f, "\n--- stderr\n{}", s));
+                        string.push_str("\n--- stderr\n");
+                        string.push_str(s);
                     }
                     Some(..) | None => {}
                 }
-            }
-            None => {}
+                Some(string)
+            },
+            None => None
         }
-        Ok(())
     }
 }
 
@@ -308,6 +318,15 @@ pub fn human<S: Show>(error: S) -> Box<CargoError + Send> {
         description: error.to_string(),
         detail: None,
         cause: None,
+        is_human: true
+    } as Box<CargoError + Send>
+}
+
+pub fn caused_human<S: Show, E: CargoError + Send>(error: S, cause: E) -> Box<CargoError + Send> {
+    box ConcreteCargoError {
+        description: error.to_string(),
+        detail: None,
+        cause: Some(cause.box_error()),
         is_human: true
     } as Box<CargoError + Send>
 }
