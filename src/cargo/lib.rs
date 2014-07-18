@@ -5,19 +5,19 @@
 #![feature(default_type_params)]
 #![deny(warnings)]
 
-extern crate collections;
-extern crate debug;
 extern crate glob;
 extern crate regex;
-extern crate semver;
 extern crate serialize;
 extern crate term;
 extern crate time;
-extern crate url;
 #[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
 
+extern crate semver;
 extern crate docopt;
+extern crate flate2;
+extern crate tar;
+extern crate url;
 extern crate toml;
 #[cfg(test)] extern crate hamcrest;
 
