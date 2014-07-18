@@ -8,7 +8,6 @@ extern crate serialize;
 extern crate hammer;
 
 use std::os;
-use std::io::process::ExitStatus;
 
 use cargo::ops;
 use cargo::{execute_main_without_stdin};
@@ -19,21 +18,19 @@ use cargo::util::important_paths::find_project_manifest;
 #[deriving(PartialEq,Clone,Decodable)]
 struct Options {
     manifest_path: Option<String>,
-    jobs: Option<uint>,
-    update: bool,
-    rest: Vec<String>,
+    token: Option<String>,
+    host: Option<String>,
 }
 
-hammer_config!(Options "Run the package's main executable", |c| {
-    c.short("jobs", 'j').short("update", 'u')
-})
+hammer_config!(Options "Upload a package to the registry")
 
 fn main() {
     execute_main_without_stdin(execute);
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    let root = match options.manifest_path {
+    let Options { manifest_path, token, host } = options;
+    let root = match manifest_path {
         Some(path) => Path::new(path),
         None => try!(find_project_manifest(&os::getcwd(), "Cargo.toml")
                     .map_err(|_| {
@@ -43,26 +40,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
-    let mut compile_opts = ops::CompileOptions {
-        update: options.update,
-        env: "compile",
-        shell: shell,
-        jobs: options.jobs,
-        target: None,
-    };
-
-    let err = try!(ops::run(&root, &mut compile_opts,
-                            options.rest.as_slice()).map_err(|err| {
+    ops::upload(&root, shell, token, host).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
-    }));
-    match err {
-        None => Ok(None),
-        Some(err) => {
-            Err(match err.exit {
-                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as uint),
-                _ => CliError::from_boxed(box err, 101),
-            })
-        }
-    }
+    })
 }
-

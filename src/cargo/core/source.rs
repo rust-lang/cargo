@@ -11,6 +11,8 @@ use sources::git;
 use util::{Config, CargoResult, CargoError};
 use util::errors::human;
 
+pub static CENTRAL: &'static str = "https://example.com";
+
 /// A Source finds and downloads remote packages based on names and
 /// versions.
 pub trait Source {
@@ -179,8 +181,7 @@ impl SourceId {
     }
 
     pub fn for_central() -> SourceId {
-        SourceId::new(RegistryKind,
-                      Remote(Url::parse("https://example.com").unwrap()))
+        SourceId::new(RegistryKind, Remote(Url::parse(CENTRAL).unwrap()))
     }
 
     pub fn get_location<'a>(&'a self) -> &'a Location {

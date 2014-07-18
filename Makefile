@@ -47,7 +47,7 @@ $(CARGO): src/snapshots.txt
 
 # === Tests
 
-test: test-unit test-integration style no-exes
+test: test-unit style no-exes
 
 test-unit: $(CARGO)
 	$(CARGO) test $(only)
