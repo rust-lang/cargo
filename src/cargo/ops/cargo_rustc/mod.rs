@@ -1,7 +1,10 @@
-use core::{Package, PackageSet, Target, Resolve};
+use std::io::{fs, UserRWX};
+use std::collections::HashSet;
+
+use core::{Package, PackageId, PackageSet, Target, Resolve};
 use util;
 use util::{CargoResult, ProcessBuilder, CargoError, human};
-use util::{Config, Freshness};
+use util::{Config, Freshness, internal, ChainError};
 
 use self::job::Job;
 use self::job_queue::JobQueue;
@@ -94,7 +97,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // TODO: Should this be on the target or the package?
     let mut build_cmds = Vec::new();
     for build_cmd in pkg.get_manifest().get_build().iter() {
-        build_cmds.push(compile_custom(pkg, build_cmd.as_slice(), cx));
+        build_cmds.push(try!(compile_custom(pkg, build_cmd.as_slice(), cx)));
     }
 
     // After the custom command has run, execute rustc for all targets of our
@@ -135,26 +138,32 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 }
 
 fn compile_custom(pkg: &Package, cmd: &str,
-                  cx: &Context) -> Job {
+                  cx: &Context) -> CargoResult<Job> {
     // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
     // TODO: this shouldn't explicitly pass `false` for dest/deps_dir, we may
     //       be building a C lib for a plugin
     let layout = cx.layout(false);
+    let output = layout.native(pkg);
+    if !output.exists() {
+        try!(fs::mkdir(&output, UserRWX).chain_error(|| {
+            internal("failed to create output directory for build command")
+        }));
+    }
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
-                     .env("OUT_DIR", Some(layout.root().as_str()
+                     .env("OUT_DIR", Some(output.as_str()
                                                 .expect("non-UTF8 dest path")))
-                     .env("DEPS_DIR", Some(layout.deps().as_str()
-                                                 .expect("non-UTF8 deps path")))
+                     .env("DEPS_DIR", Some(output.as_str()
+                                                 .expect("non-UTF8 dest path")))
                      .env("TARGET", cx.config.target());
     for arg in cmd {
         p = p.arg(arg);
     }
-    Job::new(proc() {
+    Ok(Job::new(proc() {
         try!(p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human()));
         Ok(Vec::new())
-    })
+    }))
 }
 
 fn rustc(package: &Package, target: &Target,
@@ -296,6 +305,10 @@ fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context,
     dst.push("-L".to_string());
     dst.push(layout.deps().display().to_string());
 
+    // Traverse the entire dependency graph looking for -L paths to pass for
+    // native dependencies.
+    push_native_dirs(dst, &layout, package, cx, &mut HashSet::new());
+
     for &(_, target) in cx.dep_targets(package).iter() {
         let layout = cx.layout(target.get_profile().is_plugin());
         for filename in cx.target_filenames(target).iter() {
@@ -304,6 +317,27 @@ fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context,
                      target.get_name(),
                      layout.deps().display(),
                      filename));
+        }
+    }
+
+    fn push_native_dirs(dst: &mut Args, layout: &layout::LayoutProxy,
+                        pkg: &Package, cx: &Context,
+                        visited: &mut HashSet<PackageId>) {
+        if !visited.insert(pkg.get_package_id().clone()) { return }
+
+        if pkg.get_manifest().get_build().len() > 0 {
+            dst.push("-L".to_string());
+            dst.push(layout.native(pkg).display().to_string());
+        }
+
+        match cx.resolve.deps(pkg.get_package_id()) {
+            Some(mut pkgids) => {
+                for dep_id in pkgids {
+                    let dep = cx.get_package(dep_id);
+                    push_native_dirs(dst, layout, dep, cx, visited);
+                }
+            }
+            None => {}
         }
     }
 }
