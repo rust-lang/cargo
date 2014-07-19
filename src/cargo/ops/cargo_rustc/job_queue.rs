@@ -10,7 +10,7 @@ use super::job::Job;
 
 pub struct JobQueue<'a, 'b> {
     pool: TaskPool,
-    queue: DependencyQueue<'a, (&'a Package, Job)>,
+    queue: DependencyQueue<'a, (&'a Package, (Job, Job))>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
     active: HashMap<&'a PackageId, uint>,
@@ -22,7 +22,8 @@ type Message = (PackageId, Freshness, CargoResult<Vec<Job>>);
 impl<'a, 'b> JobQueue<'a, 'b> {
     pub fn new(config: &'b mut Config<'b>,
                resolve: &'a Resolve,
-               jobs: Vec<(&'a Package, Freshness, Job)>) -> JobQueue<'a, 'b> {
+               jobs: Vec<(&'a Package, Freshness, (Job, Job))>)
+               -> JobQueue<'a, 'b> {
         let (tx, rx) = channel();
         let mut queue = DependencyQueue::new();
         for &(pkg, _, _) in jobs.iter() {
@@ -56,17 +57,18 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         while self.queue.len() > 0 {
             loop {
                 match self.queue.dequeue() {
-                    Some((id, Fresh, (pkg, _))) => {
+                    Some((id, Fresh, (pkg, (_, fresh)))) => {
                         assert!(self.active.insert(id, 1u));
                         try!(self.config.shell().status("Fresh", pkg));
                         self.tx.send((id.clone(), Fresh, Ok(Vec::new())));
+                        try!(fresh.run());
                     }
-                    Some((id, Dirty, (pkg, job))) => {
+                    Some((id, Dirty, (pkg, (dirty, _)))) => {
                         assert!(self.active.insert(id, 1));
                         try!(self.config.shell().status("Compiling", pkg));
                         let my_tx = self.tx.clone();
                         let id = id.clone();
-                        self.pool.execute(proc() my_tx.send((id, Dirty, job.run())));
+                        self.pool.execute(proc() my_tx.send((id, Dirty, dirty.run())));
                     }
                     None => break,
                 }
