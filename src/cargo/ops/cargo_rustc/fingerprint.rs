@@ -60,6 +60,7 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
     }
     let move_old = Job::new(proc() {
         for &(ref src, ref dst) in pairs.iter() {
+            let _ = fs::rmdir_recursive(dst);
             try!(fs::rename(src, dst));
         }
         Ok(Vec::new())
