@@ -97,7 +97,7 @@ pub fn compile(manifest_path: &Path,
         .filter_map(|target| {
             if target.get_profile().is_test() {
                 debug!("Run  Target: {}", target.get_name());
-                Some(target.get_name().to_string())
+                Some(target.file_stem())
             } else {
                 debug!("Skip Target: {}", target.get_name());
                 None
