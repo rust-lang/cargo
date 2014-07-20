@@ -180,7 +180,11 @@ impl<'a, 'b> Context<'a, 'b> {
             ret.push(format!("{}{}{}", prefix, stem, suffix));
         }
         if target.is_rlib() {
-            ret.push(format!("lib{}.rlib", stem));
+            if target.get_profile().is_test() {
+                ret.push(format!("{}{}", stem, self.target_exe));
+            } else {
+                ret.push(format!("lib{}.rlib", stem));
+            }
         }
         if target.is_bin() {
             ret.push(format!("{}{}", stem, self.target_exe));
