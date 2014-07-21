@@ -105,15 +105,15 @@ impl PackageId {
         })
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         self.name.as_slice()
     }
 
-    pub fn get_version<'a>(&'a self) -> &'a semver::Version {
+    pub fn get_version(&self) -> &semver::Version {
         &self.version
     }
 
-    pub fn get_source_id<'a>(&'a self) -> &'a SourceId {
+    pub fn get_source_id(&self) -> &SourceId {
         &self.source_id
     }
 

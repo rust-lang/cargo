@@ -25,15 +25,15 @@ impl Dependency {
         })
     }
 
-    pub fn get_version_req<'a>(&'a self) -> &'a VersionReq {
+    pub fn get_version_req(&self) -> &VersionReq {
         &self.req
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         self.name.as_slice()
     }
 
-    pub fn get_namespace<'a>(&'a self) -> &'a SourceId {
+    pub fn get_namespace(&self) -> &SourceId {
         &self.namespace
     }
 

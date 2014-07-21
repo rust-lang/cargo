@@ -29,11 +29,11 @@ impl<N: Eq + Hash + Clone> Graph<N> {
             .insert(child);
     }
 
-    pub fn get_nodes<'a>(&'a self) -> &'a HashMap<N, HashSet<N>> {
+    pub fn get_nodes(&self) -> &HashMap<N, HashSet<N>> {
         &self.nodes
     }
 
-    pub fn edges<'a>(&'a self, node: &N) -> Option<Edges<'a, N>> {
+    pub fn edges(&self, node: &N) -> Option<Edges<N>> {
         self.nodes.find(node).map(|set| set.iter())
     }
 
@@ -63,7 +63,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
         marks.insert(node.clone(), Done);
     }
 
-    pub fn iter<'a>(&'a self) -> Nodes<'a, N> {
+    pub fn iter(&self) -> Nodes<N> {
         self.nodes.keys()
     }
 }

@@ -25,7 +25,7 @@ pub struct Layout {
 }
 
 impl Layout {
-    fn main<'a>(&'a self) -> Option<&'a Path> {
+    fn main(&self) -> Option<&Path> {
         self.bins.iter().find(|p| {
             match p.filename_str() {
                 Some(s) => s == "main.rs",

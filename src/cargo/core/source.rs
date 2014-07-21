@@ -183,7 +183,7 @@ impl SourceId {
                       Remote(Url::parse("https://example.com").unwrap()))
     }
 
-    pub fn get_location<'a>(&'a self) -> &'a Location {
+    pub fn get_location(&self) -> &Location {
         &self.location
     }
 

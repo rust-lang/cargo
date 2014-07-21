@@ -34,11 +34,11 @@ impl MultiShell {
         MultiShell { out: out, err: err, verbose: verbose }
     }
 
-    pub fn out<'a>(&'a mut self) -> &'a mut Shell {
+    pub fn out(&mut self) -> &mut Shell {
         &mut self.out
     }
 
-    pub fn err<'a>(&'a mut self) -> &'a mut Shell {
+    pub fn err(&mut self) -> &mut Shell {
         &mut self.err
     }
 

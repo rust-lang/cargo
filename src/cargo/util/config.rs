@@ -47,7 +47,7 @@ impl<'a> Config<'a> {
         self.home_path.join(".cargo").join("git").join("checkouts")
     }
 
-    pub fn shell<'a>(&'a mut self) -> &'a mut MultiShell {
+    pub fn shell(&mut self) -> &mut MultiShell {
         &mut *self.shell
     }
 
@@ -59,7 +59,7 @@ impl<'a> Config<'a> {
         self.jobs
     }
 
-    pub fn target<'a>(&'a self) -> Option<&'a str> {
+    pub fn target(&self) -> Option<&str> {
         self.target.as_ref().map(|t| t.as_slice())
     }
 
@@ -67,10 +67,10 @@ impl<'a> Config<'a> {
 
     pub fn set_linker(&mut self, linker: String) { self.linker = Some(linker); }
 
-    pub fn linker<'a>(&'a self) -> Option<&'a str> {
+    pub fn linker(&self) -> Option<&str> {
         self.linker.as_ref().map(|t| t.as_slice())
     }
-    pub fn ar<'a>(&'a self) -> Option<&'a str> {
+    pub fn ar(&self) -> Option<&str> {
         self.ar.as_ref().map(|t| t.as_slice())
     }
 }
@@ -119,7 +119,7 @@ impl ConfigValue {
         ConfigValue { value: List(vec!()), path: vec!() }
     }
 
-    pub fn get_value<'a>(&'a self) -> &'a ConfigValueValue {
+    pub fn get_value(&self) -> &ConfigValueValue {
         &self.value
     }
 
@@ -177,7 +177,7 @@ impl ConfigValue {
         Ok(())
     }
 
-    pub fn string<'a>(&'a self) -> CargoResult<&'a str> {
+    pub fn string(&self) -> CargoResult<&str> {
         match self.value {
             Table(_) => Err(internal("expected a string, but found a table")),
             List(_) => Err(internal("expected a string, but found a list")),
@@ -185,7 +185,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn table<'a>(&'a self) -> CargoResult<&'a HashMap<String, ConfigValue>> {
+    pub fn table(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         match self.value {
             String(_) => Err(internal("expected a table, but found a string")),
             List(_) => Err(internal("expected a table, but found a list")),
@@ -193,7 +193,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn list<'a>(&'a self) -> CargoResult<&'a [String]> {
+    pub fn list(&self) -> CargoResult<&[String]> {
         match self.value {
             String(_) => Err(internal("expected a list, but found a string")),
             Table(_) => Err(internal("expected a list, but found a table")),
