@@ -21,11 +21,11 @@ impl Resolve {
         Resolve { graph: Graph::new() }
     }
 
-    pub fn iter<'a>(&'a self) -> Nodes<'a, PackageId> {
+    pub fn iter(&self) -> Nodes<PackageId> {
         self.graph.iter()
     }
 
-    pub fn deps<'a>(&'a self, pkg: &PackageId) -> Option<Edges<'a, PackageId>> {
+    pub fn deps(&self, pkg: &PackageId) -> Option<Edges<PackageId>> {
         self.graph.edges(pkg)
     }
 }

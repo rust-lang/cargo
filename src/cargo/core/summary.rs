@@ -20,23 +20,23 @@ impl Summary {
         }
     }
 
-    pub fn get_package_id<'a>(&'a self) -> &'a PackageId {
+    pub fn get_package_id(&self) -> &PackageId {
         &self.package_id
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         self.get_package_id().get_name()
     }
 
-    pub fn get_version<'a>(&'a self) -> &'a Version {
+    pub fn get_version(&self) -> &Version {
         self.get_package_id().get_version()
     }
 
-    pub fn get_source_id<'a>(&'a self) -> &'a SourceId {
+    pub fn get_source_id(&self) -> &SourceId {
         self.package_id.get_source_id()
     }
 
-    pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
+    pub fn get_dependencies(&self) -> &[Dependency] {
         self.dependencies.as_slice()
     }
 }

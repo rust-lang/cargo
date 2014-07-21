@@ -68,43 +68,43 @@ impl Package {
         }
     }
 
-    pub fn get_manifest<'a>(&'a self) -> &'a Manifest {
+    pub fn get_manifest(&self) -> &Manifest {
         &self.manifest
     }
 
-    pub fn get_summary<'a>(&'a self) -> &'a Summary {
+    pub fn get_summary(&self) -> &Summary {
         self.manifest.get_summary()
     }
 
-    pub fn get_package_id<'a>(&'a self) -> &'a PackageId {
+    pub fn get_package_id(&self) -> &PackageId {
         self.manifest.get_package_id()
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         self.get_package_id().get_name()
     }
 
-    pub fn get_version<'a>(&'a self) -> &'a Version {
+    pub fn get_version(&self) -> &Version {
         self.get_package_id().get_version()
     }
 
-    pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
+    pub fn get_dependencies(&self) -> &[Dependency] {
         self.get_manifest().get_dependencies()
     }
 
-    pub fn get_targets<'a>(&'a self) -> &'a [Target] {
+    pub fn get_targets(&self) -> &[Target] {
         self.get_manifest().get_targets()
     }
 
-    pub fn get_manifest_path<'a>(&'a self) -> &'a Path {
+    pub fn get_manifest_path(&self) -> &Path {
         &self.manifest_path
     }
 
-    pub fn get_root<'a>(&'a self) -> Path {
+    pub fn get_root(&self) -> Path {
         self.manifest_path.dir_path()
     }
 
-    pub fn get_target_dir<'a>(&'a self) -> &'a Path {
+    pub fn get_target_dir(&self) -> &Path {
         self.manifest.get_target_dir()
     }
 
@@ -165,16 +165,16 @@ impl PackageSet {
     }
 
     /// Get a package by name out of the set
-    pub fn get<'a>(&'a self, name: &str) -> &'a Package {
+    pub fn get(&self, name: &str) -> &Package {
         self.packages.iter().find(|pkg| name == pkg.get_name())
             .expect("PackageSet.get: empty set")
     }
 
-    pub fn get_all<'a>(&'a self, names: &[&str]) -> Vec<&'a Package> {
+    pub fn get_all(&self, names: &[&str]) -> Vec<&Package> {
         names.iter().map(|name| self.get(*name) ).collect()
     }
 
-    pub fn get_packages<'a>(&'a self) -> &'a [Package] {
+    pub fn get_packages(&self) -> &[Package] {
         self.packages.as_slice()
     }
 
@@ -200,7 +200,7 @@ impl PackageSet {
         })
     }
 
-    pub fn iter<'a>(&'a self) -> slice::Items<'a, Package> {
+    pub fn iter(&self) -> slice::Items<Package> {
         self.packages.iter()
     }
 }
