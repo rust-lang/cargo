@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::{Show, Formatter};
+use std::hash;
 use serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
@@ -77,7 +78,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Location {
     }
 }
 
-#[deriving(Encodable, Decodable, Clone, Eq, Hash)]
+#[deriving(Encodable, Decodable, Clone, Eq)]
 pub struct SourceId {
     pub kind: SourceKind,
     pub location: Location,
@@ -141,6 +142,24 @@ impl PartialEq for SourceId {
                     git::canonicalize_url(u2.to_string().as_slice())
             }
             _ => false,
+        }
+    }
+}
+
+impl<S: hash::Writer> hash::Hash<S> for SourceId {
+    fn hash(&self, into: &mut S) {
+        match *self {
+            SourceId {
+                kind: ref kind @ GitKind(..),
+                location: Remote(ref url)
+            } => {
+                kind.hash(into);
+                git::canonicalize_url(url.to_string().as_slice()).hash(into);
+            }
+            _ => {
+                self.kind.hash(into);
+                self.location.hash(into);
+            }
         }
     }
 }
