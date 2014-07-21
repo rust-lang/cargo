@@ -196,7 +196,8 @@ fn rustc(package: &Package, target: &Target,
             } else {
                 log!(5, "executing deps");
                 try!(rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                    caused_human(format!("Could not compile `{}`.\n{}", name, err.output().unwrap()), err)
+                    caused_human(format!("Could not compile `{}`.\n{}",
+                                         name, err.output().unwrap()), err)
                 }))
             }
             Ok(Vec::new())
