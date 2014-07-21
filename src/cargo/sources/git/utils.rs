@@ -24,7 +24,7 @@ impl GitReference {
 }
 
 impl Str for GitReference {
-    fn as_slice<'a>(&'a self) -> &'a str {
+    fn as_slice(&self) -> &str {
         match *self {
             Master => "master",
             Other(ref string) => string.as_slice()
@@ -142,7 +142,7 @@ impl GitRemote {
         GitRemote { location: location.clone() }
     }
 
-    pub fn get_location<'a>(&'a self) -> &'a Location {
+    pub fn get_location(&self) -> &Location {
         &self.location
     }
 

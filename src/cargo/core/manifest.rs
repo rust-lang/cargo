@@ -175,11 +175,11 @@ impl Profile {
         self.debug
     }
 
-    pub fn get_env<'a>(&'a self) -> &'a str {
+    pub fn get_env(&self) -> &str {
         self.env.as_slice()
     }
 
-    pub fn get_dest<'a>(&'a self) -> Option<&'a str> {
+    pub fn get_dest(&self) -> Option<&str> {
         self.dest.as_ref().map(|d| d.as_slice())
     }
 
@@ -262,43 +262,43 @@ impl Manifest {
         }
     }
 
-    pub fn get_summary<'a>(&'a self) -> &'a Summary {
+    pub fn get_summary(&self) -> &Summary {
         &self.summary
     }
 
-    pub fn get_package_id<'a>(&'a self) -> &'a PackageId {
+    pub fn get_package_id(&self) -> &PackageId {
         self.get_summary().get_package_id()
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         self.get_package_id().get_name()
     }
 
-    pub fn get_version<'a>(&'a self) -> &'a Version {
+    pub fn get_version(&self) -> &Version {
         self.get_summary().get_package_id().get_version()
     }
 
-    pub fn get_authors<'a>(&'a self) -> &'a [String] {
+    pub fn get_authors(&self) -> &[String] {
         self.authors.as_slice()
     }
 
-    pub fn get_dependencies<'a>(&'a self) -> &'a [Dependency] {
+    pub fn get_dependencies(&self) -> &[Dependency] {
         self.get_summary().get_dependencies()
     }
 
-    pub fn get_targets<'a>(&'a self) -> &'a [Target] {
+    pub fn get_targets(&self) -> &[Target] {
         self.targets.as_slice()
     }
 
-    pub fn get_target_dir<'a>(&'a self) -> &'a Path {
+    pub fn get_target_dir(&self) -> &Path {
         &self.target_dir
     }
 
-    pub fn get_source_ids<'a>(&'a self) -> &'a [SourceId] {
+    pub fn get_source_ids(&self) -> &[SourceId] {
         self.sources.as_slice()
     }
 
-    pub fn get_build<'a>(&'a self) -> &'a [String] {
+    pub fn get_build(&self) -> &[String] {
         self.build.as_slice()
     }
 
@@ -306,7 +306,7 @@ impl Manifest {
         self.unused_keys.push(s)
     }
 
-    pub fn get_unused_keys<'a>(&'a self) -> &'a [String] {
+    pub fn get_unused_keys(&self) -> &[String] {
         self.unused_keys.as_slice()
     }
 }
@@ -361,11 +361,11 @@ impl Target {
         }
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         self.name.as_slice()
     }
 
-    pub fn get_src_path<'a>(&'a self) -> &'a Path {
+    pub fn get_src_path(&self) -> &Path {
         &self.src_path
     }
 
@@ -398,11 +398,11 @@ impl Target {
         }
     }
 
-    pub fn get_profile<'a>(&'a self) -> &'a Profile {
+    pub fn get_profile(&self) -> &Profile {
         &self.profile
     }
 
-    pub fn get_metadata<'a>(&'a self) -> Option<&'a Metadata> {
+    pub fn get_metadata(&self) -> Option<&Metadata> {
         self.metadata.as_ref()
     }
 

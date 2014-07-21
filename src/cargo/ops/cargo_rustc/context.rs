@@ -152,7 +152,7 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn layout<'a>(&'a self, plugin: bool) -> LayoutProxy<'a> {
+    pub fn layout(&self, plugin: bool) -> LayoutProxy {
         if plugin {
             LayoutProxy::new(&self.host, self.primary)
         } else {
@@ -165,7 +165,7 @@ impl<'a, 'b> Context<'a, 'b> {
     ///
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
-    fn dylib<'a>(&'a self, plugin: bool) -> (&'a str, &'a str) {
+    fn dylib(&self, plugin: bool) -> (&str, &str) {
         let pair = if plugin {&self.host_dylib} else {&self.target_dylib};
         (pair.ref0().as_slice(), pair.ref1().as_slice())
     }

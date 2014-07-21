@@ -9,7 +9,7 @@ use TomlError = toml::Error;
 pub trait CargoError: Send {
     fn description(&self) -> String;
     fn detail(&self) -> Option<String> { None }
-    fn cause<'a>(&'a self) -> Option<&'a CargoError + Send> { None }
+    fn cause(&self) -> Option<&CargoError + Send> { None }
     fn is_human(&self) -> bool { false }
 
     fn to_error<E: FromError<Self>>(self) -> E {
@@ -78,7 +78,7 @@ impl CargoError for Box<CargoError + Send> {
         (*self).detail()
     }
 
-    fn cause<'a>(&'a self) -> Option<&'a CargoError + Send> {
+    fn cause(&self) -> Option<&CargoError + Send> {
         (*self).cause()
     }
 
@@ -184,7 +184,7 @@ impl CargoError for ProcessError {
         self.detail.clone()
     }
 
-    fn cause<'a>(&'a self) -> Option<&'a CargoError + Send> {
+    fn cause(&self) -> Option<&CargoError + Send> {
         self.cause.as_ref().map(|c| { let err: &CargoError + Send = *c; err })
     }
 
@@ -217,7 +217,7 @@ impl CargoError for ConcreteCargoError {
         self.detail.clone()
     }
 
-    fn cause<'a>(&'a self) -> Option<&'a CargoError + Send> {
+    fn cause(&self) -> Option<&CargoError + Send> {
         self.cause.as_ref().map(|c| { let err: &CargoError + Send = *c; err })
     }
 

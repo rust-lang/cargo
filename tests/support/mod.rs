@@ -134,7 +134,7 @@ impl ProjectBuilder {
     }
 
     // TODO: return something different than a ProjectBuilder
-    pub fn build<'a>(&'a self) -> &'a ProjectBuilder {
+    pub fn build(&self) -> &ProjectBuilder {
         match self.build_with_result() {
             Err(e) => fail!(e),
             _ => return self

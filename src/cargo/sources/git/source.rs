@@ -51,7 +51,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
         }
     }
 
-    pub fn get_namespace<'a>(&'a self) -> &'a Location {
+    pub fn get_namespace(&self) -> &Location {
         self.remote.get_location()
     }
 }
@@ -84,7 +84,7 @@ fn ident(location: &Location) -> String {
     format!("{}-{}", ident, to_hex(hasher.hash(&location.as_slice())))
 }
 
-fn strip_trailing_slash<'a>(path: &'a str) -> &'a str {
+fn strip_trailing_slash(path: &str) -> &str {
     // Remove the trailing '/' so that 'split' doesn't give us
     // an empty string, making '../foo/' and '../foo' both
     // result in the name 'foo' (#84)

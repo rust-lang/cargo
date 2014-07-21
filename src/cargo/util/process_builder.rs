@@ -45,7 +45,7 @@ impl ProcessBuilder {
         self
     }
 
-    pub fn get_args<'a>(&'a self) -> &'a [String] {
+    pub fn get_args(&self) -> &[String] {
         self.args.as_slice()
     }
 
