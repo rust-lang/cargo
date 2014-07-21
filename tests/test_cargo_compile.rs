@@ -1257,3 +1257,20 @@ test!(deletion_causes_failure {
         "#);
     assert_that(p.cargo_process("cargo-build"), execs().with_status(101));
 })
+
+test!(bad_cargo_toml_in_target_dir {
+    let p = project("world")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("target/Cargo.toml", "bad-toml");
+
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+    assert_that(process(p.bin("foo")), execs().with_status(0));
+})
