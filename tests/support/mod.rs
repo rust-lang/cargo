@@ -296,18 +296,67 @@ impl Execs {
                     Some(actual) => {
                         // Let's not deal with \r\n vs \n on windows...
                         let actual = actual.replace("\r", "");
+                        let actual = actual.replace("\t", "<tab>");
+
+                        let a = actual.as_slice().lines();
+                        let e = out.lines();
+
+                        let diffs = zip_all(a, e).enumerate();
+                        let mut diffs = diffs.filter_map(|(i, (a,e))| {
+                            match (a, e) {
+                                (Some(a), Some(e)) => {
+                                    if e.as_slice().equiv(&a.as_slice()) {
+                                        None
+                                    } else {
+                                        Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
+                                    }
+                                },
+                                (Some(a), None) => {
+                                    Some(format!("{:3} -\n    + |{}|\n", i, a))
+                                },
+                                (None, Some(e)) => {
+                                    Some(format!("{:3} - |{}|\n    +\n", i, e))
+                                },
+                                (None, None) => fail!("Cannot get here")
+                            }
+                        });
+
+                        let diffs = diffs.collect::<Vec<String>>().connect("\n");
+
                         ham::expect(actual.as_slice() == out,
-                                    format!("{} was:\n\
-                                            `{}`\n\n\
-                                            expected:\n\
-                                            `{}`\n\n\
+                                    format!("differences:\n\
+                                            {}\n\n\
                                             other output:\n\
-                                            `{}`", description, actual, out,
+                                            `{}`", diffs,
                                             String::from_utf8_lossy(extra)))
                     }
                 }
             }
         }
+    }
+}
+
+struct ZipAll<T, I1, I2> {
+    first: I1,
+    second: I2,
+}
+
+impl<T, I1: Iterator<T>, I2: Iterator<T>> Iterator<(Option<T>, Option<T>)> for ZipAll<T, I1, I2> {
+    fn next(&mut self) -> Option<(Option<T>, Option<T>)> {
+        let first = self.first.next();
+        let second = self.second.next();
+
+        match (first, second) {
+            (None, None) => None,
+            (a, b) => Some((a, b))
+        }
+    }
+}
+
+fn zip_all<T, I1: Iterator<T>, I2: Iterator<T>>(a: I1, b: I2) -> ZipAll<T, I1, I2> {
+    ZipAll {
+        first: a,
+        second: b
     }
 }
 
