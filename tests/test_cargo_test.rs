@@ -1,7 +1,7 @@
 use std::str;
 
-use support::{project, execs, basic_bin_manifest, COMPILING, cargo_dir};
-use support::{ResultTest};
+use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
+use support::{COMPILING, cargo_dir, ResultTest};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -283,4 +283,24 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING,
                        dir = p.root().display()).as_slice()));
+})
+
+// Regression test for running cargo-test twice with
+// tests in an rlib
+test!(cargo_test_twice {
+    let p = project("test_twice")
+        .file("Cargo.toml", basic_lib_manifest("test_twice").as_slice())
+        .file("src/test_twice.rs", r#"
+            #![crate_type = "rlib"]
+
+            #[test]
+            fn dummy_test() { }
+            "#);
+
+    p.cargo_process("cargo-build");
+
+    for _ in range(0u, 2) {
+        assert_that(p.process(cargo_dir().join("cargo-test")),
+                    execs().with_status(0));
+    }
 })
