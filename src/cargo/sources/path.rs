@@ -1,7 +1,7 @@
 use std::cmp;
 use std::fmt::{Show, Formatter};
 use std::fmt;
-use std::io::fs;
+use std::io::{fs, IoResult};
 
 use core::{Package, PackageId, Summary, SourceId, Source};
 use ops;
@@ -12,6 +12,10 @@ pub struct PathSource {
     path: Path,
     updated: bool,
     packages: Vec<Package>
+}
+
+pub struct PackageFiles {
+    stack: Vec<(bool, Path)>,
 }
 
 // TODO: Figure out if packages should be discovered in new or self should be
@@ -36,6 +40,8 @@ impl PathSource {
         }
     }
 
+    pub fn path<'a>(&'a self) -> &'a Path { &self.path }
+
     pub fn get_root_package(&self) -> CargoResult<Package> {
         log!(5, "get_root_package; source={}", self);
 
@@ -47,6 +53,10 @@ impl PathSource {
             Some(pkg) => Ok(pkg.clone()),
             None => Err(internal("no package found in source"))
         }
+    }
+
+    pub fn walk(&self) -> PackageFiles {
+        PackageFiles { stack: vec![(true, self.path.clone())] }
     }
 
     fn read_packages(&self) -> CargoResult<Vec<Package>> {
@@ -122,6 +132,31 @@ impl Source for PathSource {
                 max = cmp::max(max, try!(walk(dir, false)));
             }
             return Ok(max)
+        }
+    }
+}
+
+impl Iterator<IoResult<Path>> for PackageFiles {
+    fn next(&mut self) -> Option<IoResult<Path>> {
+        loop {
+            let (root, next) = match self.stack.pop() {
+                Some(pair) => pair,
+                None => return None,
+            };
+            if next.is_file() {
+                return Some(Ok(next))
+            }
+
+            let children = match fs::readdir(&next) {
+                Ok(children) => children,
+                Err(e) => return Some(Err(e)),
+            };
+
+            for child in children.move_iter() {
+                if child.filename_str() == Some(".git") { continue }
+                if root && child.filename_str() == Some("target") { continue }
+                self.stack.push((false, child));
+            }
         }
     }
 }

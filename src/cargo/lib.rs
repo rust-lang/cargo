@@ -5,11 +5,14 @@
 #![feature(default_type_params)]
 
 extern crate debug;
-extern crate term;
-extern crate collections;
-extern crate url;
-extern crate serialize;
 extern crate semver;
+extern crate serialize;
+extern crate term;
+extern crate url;
+
+extern crate curl;
+extern crate flate2;
+extern crate tar;
 extern crate toml;
 
 #[phase(plugin, link)]
