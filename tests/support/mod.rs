@@ -413,6 +413,20 @@ pub fn basic_bin_manifest(name: &str) -> String {
     "#, name, name)
 }
 
+pub fn basic_lib_manifest(name: &str) -> String {
+    format!(r#"
+        [package]
+
+        name = "{}"
+        version = "0.5.0"
+        authors = ["wycats@example.com"]
+
+        [[lib]]
+
+        name = "{}"
+    "#, name, name)
+}
+
 pub static RUNNING:   &'static str = "     Running";
 pub static COMPILING: &'static str = "   Compiling";
 pub static FRESH:     &'static str = "       Fresh";
