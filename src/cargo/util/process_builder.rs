@@ -10,49 +10,36 @@ use util::{ProcessError, process_error};
 #[deriving(Clone,PartialEq)]
 pub struct ProcessBuilder {
     program: CString,
-    args: Vec<String>,
-    path: Vec<String>,
-    env: HashMap<String, String>,
-    cwd: Path
+    args: Vec<CString>,
+    env: HashMap<String, Option<CString>>,
+    cwd: Path,
 }
 
 impl Show for ProcessBuilder {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", self.program.as_str().unwrap_or("<not-utf8>")));
+        try!(write!(f, "`{}", String::from_utf8_lossy(self.program.as_bytes_no_nul())));
 
-        if self.args.len() > 0 {
-            try!(write!(f, " {}", self.args.connect(" ")));
+        for arg in self.args.iter() {
+            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes_no_nul())));
         }
 
         write!(f, "`")
     }
 }
 
-// TODO: Upstream a Windows/Posix branch to Rust proper
-#[cfg(unix)]
-static PATH_SEP : &'static str = ":";
-#[cfg(windows)]
-static PATH_SEP : &'static str = ";";
-
 impl ProcessBuilder {
-    pub fn arg<T: Str>(mut self, arg: T) -> ProcessBuilder {
-        self.args.push(arg.as_slice().to_string());
+    pub fn arg<T: ToCStr>(mut self, arg: T) -> ProcessBuilder {
+        self.args.push(arg.to_c_str());
         self
     }
 
-    pub fn args<T: Str>(mut self, arguments: &[T]) -> ProcessBuilder {
-        self.args = arguments.iter().map(|a| a.as_slice().to_string()).collect();
+    pub fn args<T: ToCStr>(mut self, arguments: &[T]) -> ProcessBuilder {
+        self.args.extend(arguments.iter().map(|t| t.to_c_str()));
         self
     }
 
-    pub fn get_args(&self) -> &[String] {
+    pub fn get_args(&self) -> &[CString] {
         self.args.as_slice()
-    }
-
-    pub fn extra_path(mut self, path: Path) -> ProcessBuilder {
-        // For now, just convert to a string, but we should do something better
-        self.path.unshift(path.display().to_string());
-        self
     }
 
     pub fn cwd(mut self, path: Path) -> ProcessBuilder {
@@ -60,26 +47,16 @@ impl ProcessBuilder {
         self
     }
 
-    pub fn env(mut self, key: &str, val: Option<&str>) -> ProcessBuilder {
-        match val {
-            Some(v) => {
-                self.env.insert(key.to_string(), v.to_string());
-            },
-            None => {
-                self.env.remove(&key.to_string());
-            }
-        }
-
+    pub fn env<T: ToCStr>(mut self, key: &str, val: Option<T>) -> ProcessBuilder {
+        self.env.insert(key.to_string(), val.map(|t| t.to_c_str()));
         self
     }
 
     // TODO: should InheritFd be hardcoded?
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
-        command
-            .env_set_all(self.build_env().as_slice())
-            .stdout(InheritFd(1))
-            .stderr(InheritFd(2));
+        command.stdout(InheritFd(1))
+               .stderr(InheritFd(2));
 
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
@@ -95,8 +72,7 @@ impl ProcessBuilder {
     }
 
     pub fn exec_with_output(&self) -> Result<ProcessOutput, ProcessError> {
-        let mut command = self.build_command();
-        command.env_set_all(self.build_env().as_slice());
+        let command = self.build_command();
 
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
@@ -115,65 +91,37 @@ impl ProcessBuilder {
 
     pub fn build_command(&self) -> Command {
         let mut command = Command::new(self.program.as_bytes_no_nul());
-        command.args(self.args.as_slice()).cwd(&self.cwd);
+        command.cwd(&self.cwd);
+        for arg in self.args.iter() {
+            command.arg(arg.as_bytes_no_nul());
+        }
+        for (k, v) in self.env.iter() {
+            let k = k.as_slice();
+            match *v {
+                Some(ref v) => { command.env(k, v.as_bytes_no_nul()); }
+                None => { command.env_remove(k); }
+            }
+        }
         command
     }
 
     fn debug_string(&self) -> String {
-        let program = self.program.as_str().unwrap_or("<not-utf8>");
-        if self.args.len() == 0 {
-            program.to_string()
-        } else {
-            format!("{} {}", program, self.args.connect(" "))
+        let program = String::from_utf8_lossy(self.program.as_bytes_no_nul());
+        let mut program = program.into_string();
+        for arg in self.args.iter() {
+            program.push_char(' ');
+            let s = String::from_utf8_lossy(arg.as_bytes_no_nul());
+            program.push_str(s.as_slice());
         }
-    }
-
-    fn build_env(&self) -> Vec<(String, String)> {
-        let mut ret = Vec::new();
-
-        for (key, val) in self.env.iter() {
-            // Skip path
-            if key.as_slice() != "PATH" {
-                ret.push((key.clone(), val.clone()));
-            }
-        }
-
-        match self.build_path() {
-            Some(path) => ret.push(("PATH".to_string(), path)),
-            _ => ()
-        }
-
-        ret.to_vec()
-    }
-
-    fn build_path(&self) -> Option<String> {
-        let path = self.path.connect(PATH_SEP);
-
-        match self.env.find_equiv(&("PATH")) {
-            Some(existing) => {
-                if self.path.is_empty() {
-                    Some(existing.clone())
-                } else {
-                    Some(format!("{}{}{}", existing, PATH_SEP, path))
-                }
-            },
-            None => {
-                if self.path.is_empty() {
-                    None
-                } else {
-                    Some(path)
-                }
-            }
-        }
+        program
     }
 }
 
 pub fn process<T: ToCStr>(cmd: T) -> ProcessBuilder {
     ProcessBuilder {
         program: cmd.to_c_str(),
-        args: vec!(),
-        path: vec!(),
+        args: Vec::new(),
         cwd: os::getcwd(),
-        env: os::env().move_iter().collect()
+        env: HashMap::new(),
     }
 }
