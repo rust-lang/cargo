@@ -4,7 +4,7 @@ use std::path;
 use std::str;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, RUNNING, cargo_dir};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process, realpath};
@@ -798,6 +798,42 @@ test!(custom_build_in_dependency {
             pub fn bar() {}
         "#);
     assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+})
+
+// tests that custom build in dep can be built twice in a row - issue 227
+test!(custom_build_in_dependency_twice {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]]
+            name = "foo"
+            [dependencies.bar]
+            path = "./bar"
+            "#)
+        .file("src/foo.rs", r#"
+            extern crate bar;
+            fn main() { bar::bar() }
+            "#)
+        .file("bar/Cargo.toml", format!(r#"
+            [project]
+
+            name = "bar"
+            version = "0.0.1"
+            authors = ["wycats@example.com"]
+            build = '{}'
+        "#, "echo test"))
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#);
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0));
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_status(0));
 })
 
