@@ -56,6 +56,7 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
     }
 
     for &target in targets.iter() {
+        if target.get_profile().is_doc() { continue }
         let layout = cx.layout(target.get_profile().is_plugin());
         for filename in cx.target_filenames(target).iter() {
             let filename = filename.as_slice();

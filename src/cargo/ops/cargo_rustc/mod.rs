@@ -110,8 +110,12 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // interdependencies.
     let (mut libs, mut bins) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
-        let req = cx.get_requirement(pkg, target);
-        let jobs = rustc(pkg, target, cx, req);
+        let jobs = if target.get_profile().is_doc() {
+            vec![rustdoc(pkg, target, cx)]
+        } else {
+            let req = cx.get_requirement(pkg, target);
+            rustc(pkg, target, cx, req)
+        };
         if target.is_lib() {
             libs.push_all_move(jobs);
         } else {
@@ -222,6 +226,44 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
     }
 }
 
+
+fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Job {
+    // Can't document binaries, but they have a doc target listed so we can
+    // build documentation of dependencies even when `cargo doc` is run.
+    if target.is_bin() {
+        return Job::new(proc() Ok(Vec::new()))
+    }
+
+    let pkg_root = package.get_root();
+    let cx_root = cx.layout(false).proxy().dest().dir_path().join("doc");
+    let rustdoc = util::process("rustdoc").cwd(pkg_root.clone());
+    let rustdoc = rustdoc.arg(target.get_src_path())
+                         .arg("-o").arg(cx_root)
+                         .arg("--crate-name").arg(target.get_name());
+    let rustdoc = build_deps_args(rustdoc, target, package, cx, false);
+
+    log!(5, "commands={}", rustdoc);
+
+    let _ = cx.config.shell().verbose(|shell| {
+        shell.status("Running", rustdoc.to_string())
+    });
+
+    let primary = cx.primary;
+    let name = package.get_name().to_string();
+    Job::new(proc() {
+        if primary {
+            try!(rustdoc.exec().chain_error(|| {
+                human(format!("Could not document `{}`.", name))
+            }))
+        } else {
+            try!(rustdoc.exec_with_output().and(Ok(())).map_err(|err| {
+                caused_human(format!("Could not document `{}`.\n{}",
+                                     name, err.output().unwrap()), err)
+            }))
+        }
+        Ok(Vec::new())
+    })
+}
 fn build_base_args(mut cmd: ProcessBuilder,
                    target: &Target,
                    crate_types: &[&str]) -> ProcessBuilder {

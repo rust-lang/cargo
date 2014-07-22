@@ -85,7 +85,11 @@ pub fn compile(manifest_path: &Path,
     debug!("packages={}", packages);
 
     let targets = package.get_targets().iter().filter(|target| {
-        target.get_profile().get_env() == env
+        match env {
+            // doc-all == document everything, so look for doc targets
+            "doc" | "doc-all" => target.get_profile().get_env() == "doc",
+            env => target.get_profile().get_env() == env,
+        }
     }).collect::<Vec<&Target>>();
 
     let mut config = try!(Config::new(*shell, update, jobs, target));
