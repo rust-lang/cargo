@@ -1,4 +1,3 @@
-use std::cmp;
 use std::fmt::{Show,Formatter};
 use std::fmt;
 use std::slice;
@@ -122,8 +121,9 @@ impl Package {
         let mut sources = self.get_source_ids();
         // Sort the sources just to make sure we have a consistent fingerprint.
         sources.sort_by(|a, b| {
-            cmp::lexical_ordering(a.kind.cmp(&b.kind),
-                                  a.location.to_string().cmp(&b.location.to_string()))
+            let a = (&a.kind, a.location.to_string());
+            let b = (&b.kind, b.location.to_string());
+            a.cmp(&b)
         });
         let sources = sources.iter().map(|source_id| {
             source_id.load(config)
