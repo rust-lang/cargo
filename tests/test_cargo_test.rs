@@ -345,3 +345,48 @@ test!(cargo_test_twice {
                     execs().with_status(0));
     }
 })
+
+test!(lib_bin_same_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "foo"
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("src/lib.rs", "
+            #[test] fn lib_test() {}
+        ")
+        .file("src/main.rs", "
+            extern crate foo;
+
+            #[test]
+            fn bin_test() {}
+        ");
+
+    let output = p.cargo_process("cargo-test")
+                  .exec_with_output().assert();
+    let out = str::from_utf8(output.output.as_slice()).assert();
+
+    let bin = "\
+running 1 test
+test bin_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+    let lib = "\
+running 1 test
+test lib_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+
+    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
+                       compiling = COMPILING, dir = p.root().display());
+
+    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
+            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
+})
