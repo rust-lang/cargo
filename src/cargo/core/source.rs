@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fmt::{Show, Formatter};
 use std::hash;
+use std::c_str::CString;
 use serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
@@ -103,6 +104,17 @@ impl Location {
             })
         }
     }
+}
+
+impl<'a> ToCStr for &'a Location {
+    fn to_c_str(&self) -> CString {
+        match **self {
+            Local(ref p) => p.to_c_str(),
+            Remote(ref u) => u.to_string().to_c_str(),
+        }
+    }
+
+    unsafe fn to_c_str_unchecked(&self) -> CString { self.to_c_str() }
 }
 
 impl Show for SourceId {

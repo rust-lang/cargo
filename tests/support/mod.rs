@@ -112,7 +112,6 @@ impl ProjectBuilder {
         process(program)
             .cwd(self.root())
             .env("HOME", Some(paths::home().display().to_string().as_slice()))
-            .extra_path(cargo_dir())
     }
 
     pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
