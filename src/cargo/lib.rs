@@ -209,7 +209,9 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     }
 
     let _ = shell.verbose(|shell| {
-        let _ = handle_cause(error, shell);
+        error.cause().map(|err| {
+            let _ = handle_cause(err, shell);
+        });
         Ok(())
       });
 
