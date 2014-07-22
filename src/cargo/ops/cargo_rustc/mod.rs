@@ -16,8 +16,6 @@ mod job;
 mod job_queue;
 mod layout;
 
-type Args = Vec<String>;
-
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
 // Target know the absolute path to the build location.
@@ -152,10 +150,8 @@ fn compile_custom(pkg: &Package, cmd: &str,
     }
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
-                     .env("OUT_DIR", Some(output.as_str()
-                                                .expect("non-UTF8 dest path")))
-                     .env("DEPS_DIR", Some(output.as_str()
-                                                 .expect("non-UTF8 dest path")))
+                     .env("OUT_DIR", Some(&output))
+                     .env("DEPS_DIR", Some(&output))
                      .env("TARGET", cx.config.target());
     for arg in cmd {
         p = p.arg(arg);
@@ -208,50 +204,41 @@ fn rustc(package: &Package, target: &Target,
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement) -> Vec<ProcessBuilder> {
     let root = package.get_root();
-    let mut target_args = Vec::new();
-    build_base_args(&mut target_args, target, crate_types.as_slice(), cx, false);
-    build_deps_args(&mut target_args, package, cx, false);
-
-    let mut plugin_args = Vec::new();
-    build_base_args(&mut plugin_args, target, crate_types.as_slice(), cx, true);
-    build_deps_args(&mut plugin_args, package, cx, true);
 
     let base = util::process("rustc").cwd(root.clone());
+    let base = build_base_args(base, target, crate_types.as_slice());
+
+    let target = build_plugin_args(base.clone(), cx, false);
+    let plugin = build_plugin_args(base, cx, true);
+    let target = build_deps_args(target, package, cx, false);
+    let plugin = build_deps_args(plugin, package, cx, true);
 
     match req {
-        Target => vec![base.args(target_args.as_slice())],
-        Plugin => vec![base.args(plugin_args.as_slice())],
-        PluginAndTarget if cx.config.target().is_none() =>
-            vec![base.args(target_args.as_slice())],
-        PluginAndTarget =>
-            vec![base.clone().args(target_args.as_slice()),
-                 base.args(plugin_args.as_slice())],
+        Target => vec![target],
+        Plugin => vec![plugin],
+        PluginAndTarget if cx.config.target().is_none() => vec![target],
+        PluginAndTarget => vec![target, plugin],
     }
 }
 
-fn build_base_args(into: &mut Args,
+fn build_base_args(mut cmd: ProcessBuilder,
                    target: &Target,
-                   crate_types: &[&str],
-                   cx: &Context,
-                   plugin: bool) {
+                   crate_types: &[&str]) -> ProcessBuilder {
     let metadata = target.get_metadata();
 
     // TODO: Handle errors in converting paths into args
-    into.push(target.get_src_path().display().to_string());
+    cmd = cmd.arg(target.get_src_path());
 
-    into.push("--crate-name".to_string());
-    into.push(target.get_name().to_string());
+    cmd = cmd.arg("--crate-name").arg(target.get_name());
 
     for crate_type in crate_types.iter() {
-        into.push("--crate-type".to_string());
-        into.push(crate_type.to_string());
+        cmd = cmd.arg("--crate-type").arg(*crate_type);
     }
 
     let profile = target.get_profile();
 
     if profile.get_opt_level() != 0 {
-        into.push("--opt-level".to_string());
-        into.push(profile.get_opt_level().to_string());
+        cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
 
     // Right now -g is a little buggy, so we're not passing -g just yet
@@ -260,87 +247,91 @@ fn build_base_args(into: &mut Args,
     // }
 
     if !profile.get_debug() {
-        into.push("--cfg".to_string());
-        into.push("ndebug".to_string());
+        cmd = cmd.args(["--cfg", "ndebug"]);
     }
 
     if profile.is_test() {
-        into.push("--test".to_string());
+        cmd = cmd.arg("--test");
     }
 
     match metadata {
         Some(m) => {
-            into.push("-C".to_string());
-            into.push(format!("metadata={}", m.metadata));
-
-            into.push("-C".to_string());
-            into.push(format!("extra-filename={}", m.extra_filename));
+            cmd = cmd.arg("-C").arg(format!("metadata={}", m.metadata));
+            cmd = cmd.arg("-C").arg(format!("extra-filename={}", m.extra_filename));
         }
         None => {}
     }
+    return cmd;
+}
 
-    into.push("--out-dir".to_string());
-    into.push(cx.layout(plugin).root().display().to_string());
+
+fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context,
+                     plugin: bool) -> ProcessBuilder {
+    cmd = cmd.arg("--out-dir");
+    cmd = cmd.arg(cx.layout(plugin).root());
 
     if !plugin {
-        fn opt(into: &mut Vec<String>, key: &str, prefix: &str,
-               val: Option<&str>) {
+        fn opt(cmd: ProcessBuilder, key: &str, prefix: &str,
+               val: Option<&str>) -> ProcessBuilder {
             match val {
                 Some(val) => {
-                    into.push(key.to_string());
-                    into.push(format!("{}{}", prefix, val));
+                    cmd.arg(key)
+                       .arg(format!("{}{}", prefix, val))
                 }
-                None => {}
+                None => cmd
             }
         }
 
-        opt(into, "--target", "", cx.config.target());
-        opt(into, "-C", "ar=", cx.config.ar());
-        opt(into, "-C", "linker=", cx.config.linker());
+        cmd = opt(cmd, "--target", "", cx.config.target());
+        cmd = opt(cmd, "-C", "ar=", cx.config.ar());
+        cmd = opt(cmd, "-C", "linker=", cx.config.linker());
     }
+
+    return cmd;
 }
 
-fn build_deps_args(dst: &mut Args, package: &Package, cx: &Context,
-                   plugin: bool) {
+fn build_deps_args(mut cmd: ProcessBuilder, package: &Package, cx: &Context,
+                   plugin: bool) -> ProcessBuilder {
     let layout = cx.layout(plugin);
-    dst.push("-L".to_string());
-    dst.push(layout.root().display().to_string());
-    dst.push("-L".to_string());
-    dst.push(layout.deps().display().to_string());
+    cmd = cmd.arg("-L").arg(layout.root());
+    cmd = cmd.arg("-L").arg(layout.deps());
 
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
-    push_native_dirs(dst, &layout, package, cx, &mut HashSet::new());
+    cmd = push_native_dirs(cmd, &layout, package, cx, &mut HashSet::new());
 
     for &(_, target) in cx.dep_targets(package).iter() {
         let layout = cx.layout(target.get_profile().is_plugin());
         for filename in cx.target_filenames(target).iter() {
-            dst.push("--extern".to_string());
-            dst.push(format!("{}={}/{}",
-                     target.get_name(),
-                     layout.deps().display(),
-                     filename));
+            let mut v = Vec::new();
+            v.push_all(target.get_name().as_bytes());
+            v.push(b'=');
+            v.push_all(layout.deps().as_vec());
+            v.push(b'/');
+            v.push_all(filename.as_bytes());
+            cmd = cmd.arg("--extern").arg(v.as_slice());
         }
     }
 
-    fn push_native_dirs(dst: &mut Args, layout: &layout::LayoutProxy,
+    return cmd;
+
+    fn push_native_dirs(mut cmd: ProcessBuilder, layout: &layout::LayoutProxy,
                         pkg: &Package, cx: &Context,
-                        visited: &mut HashSet<PackageId>) {
-        if !visited.insert(pkg.get_package_id().clone()) { return }
+                        visited: &mut HashSet<PackageId>) -> ProcessBuilder {
+        if !visited.insert(pkg.get_package_id().clone()) { return cmd }
 
         if pkg.get_manifest().get_build().len() > 0 {
-            dst.push("-L".to_string());
-            dst.push(layout.native(pkg).display().to_string());
+            cmd = cmd.arg("-L").arg(layout.native(pkg));
         }
 
         match cx.resolve.deps(pkg.get_package_id()) {
             Some(mut pkgids) => {
-                for dep_id in pkgids {
+                pkgids.fold(cmd, |cmd, dep_id| {
                     let dep = cx.get_package(dep_id);
-                    push_native_dirs(dst, layout, dep, cx, visited);
-                }
+                    push_native_dirs(cmd, layout, dep, cx, visited)
+                })
             }
-            None => {}
+            None => cmd
         }
     }
 }
