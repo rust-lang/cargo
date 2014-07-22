@@ -1,7 +1,8 @@
 use serialize::Decodable;
 use std::collections::HashMap;
-use std::str;
+use std::fmt;
 use std::io::fs;
+use std::str;
 use toml;
 
 use core::{SourceId, GitKind};
@@ -230,7 +231,7 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
         vec![TomlTarget {
             name: name.to_string(),
             crate_type: None,
-            path: Some(lib.display().to_string()),
+            path: Some(TomlPath(lib.clone())),
             test: None,
             plugin: None,
         }]
@@ -250,7 +251,7 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> 
             TomlTarget {
                 name: name,
                 crate_type: None,
-                path: Some(bin.display().to_string()),
+                path: Some(TomlPath(bin.clone())),
                 test: None,
                 plugin: None,
             }
@@ -264,7 +265,7 @@ fn inferred_example_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
             TomlTarget {
                 name: name.to_string(),
                 crate_type: None,
-                path: Some(ex.display().to_string()),
+                path: Some(TomlPath(ex.clone())),
                 test: None,
                 plugin: None,
             }
@@ -278,7 +279,7 @@ fn inferred_test_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
             TomlTarget {
                 name: name.to_string(),
                 crate_type: None,
-                path: Some(ex.display().to_string()),
+                path: Some(TomlPath(ex.clone())),
                 test: None,
                 plugin: None,
             }
@@ -312,7 +313,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
-                        path: layout.lib.as_ref().map(|p| p.display().to_string()),
+                        path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
                         test: t.test,
                         plugin: t.plugin,
                     }
@@ -332,7 +333,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: t.name.clone(),
                         crate_type: t.crate_type.clone(),
-                        path: bin.as_ref().map(|p| p.display().to_string()),
+                        path: bin.as_ref().map(|&p| TomlPath(p.clone())),
                         test: t.test,
                         plugin: None,
                     }
@@ -455,9 +456,33 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
-    path: Option<String>,
+    path: Option<TomlPath>,
     test: Option<bool>,
     plugin: Option<bool>,
+}
+
+#[deriving(Decodable,Encodable,PartialEq,Clone)]
+enum TomlPath {
+    TomlString(String),
+    TomlPath(Path),
+}
+
+impl TomlPath {
+    fn to_path(&self) -> Path {
+        match *self {
+            TomlString(ref s) => Path::new(s.as_slice()),
+            TomlPath(ref p) => p.clone(),
+        }
+    }
+}
+
+impl fmt::Show for TomlPath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TomlString(ref s) => s.fmt(f),
+            TomlPath(ref p) => p.display().fmt(f),
+        }
+    }
 }
 
 fn normalize(lib: Option<&[TomlLibTarget]>,
@@ -494,7 +519,9 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget],
                    dep: TestDep, metadata: &Metadata) {
         let l = &libs[0];
-        let path = l.path.clone().unwrap_or_else(|| format!("src/{}.rs", l.name));
+        let path = l.path.clone().unwrap_or_else(|| {
+            TomlString(format!("src/{}.rs", l.name))
+        });
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             LibKind::from_strs(kinds).ok()
         }).unwrap_or_else(|| {
@@ -503,7 +530,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
         for profile in target_profiles(l, Some(dep)).iter() {
             dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
-                                        &Path::new(path.as_slice()), profile,
+                                        &path.to_path(), profile,
                                         metadata));
         }
     }
@@ -511,11 +538,13 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
                    default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
-            let path = bin.path.clone().unwrap_or_else(|| default(bin));
+            let path = bin.path.clone().unwrap_or_else(|| {
+                TomlString(default(bin))
+            });
 
             for profile in target_profiles(bin, None).iter() {
                 dst.push(Target::bin_target(bin.name.as_slice(),
-                                            &Path::new(path.as_slice()),
+                                            &path.to_path(),
                                             profile));
             }
         }
@@ -524,28 +553,26 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
     fn example_targets(dst: &mut Vec<Target>, examples: &[TomlExampleTarget],
                    default: |&TomlExampleTarget| -> String) {
         for ex in examples.iter() {
-            let path = ex.path.clone().unwrap_or_else(|| default(ex));
+            let path = ex.path.clone().unwrap_or_else(|| TomlString(default(ex)));
 
             let profile = &Profile::default_test().test(false);
-            {
-                dst.push(Target::example_target(ex.name.as_slice(),
-                                            &Path::new(path.as_slice()),
+            dst.push(Target::example_target(ex.name.as_slice(),
+                                            &path.to_path(),
                                             profile));
-            }
         }
     }
 
     fn test_targets(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
                    default: |&TomlTestTarget| -> String) {
         for test in tests.iter() {
-            let path = test.path.clone().unwrap_or_else(|| default(test));
+            let path = test.path.clone().unwrap_or_else(|| {
+                TomlString(default(test))
+            });
 
             let profile = &Profile::default_test();
-            {
-                dst.push(Target::test_target(test.name.as_slice(),
-                                            &Path::new(path.as_slice()),
-                                            profile));
-            }
+            dst.push(Target::test_target(test.name.as_slice(),
+                                         &path.to_path(),
+                                         profile));
         }
     }
 
