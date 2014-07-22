@@ -1,4 +1,4 @@
-use std::io::{File, TempDir};
+use std::io::File;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir};
