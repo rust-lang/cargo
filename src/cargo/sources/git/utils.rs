@@ -4,7 +4,7 @@ use std::io::{UserDir};
 use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use serialize::{Encodable,Encoder};
 
-use core::source::{Location, Local, Remote};
+use core::source::Location;
 use util::{CargoResult, ChainError, ProcessBuilder, process, human};
 
 #[deriving(PartialEq,Clone,Encodable)]
@@ -40,23 +40,15 @@ impl Show for GitReference {
 
 
 macro_rules! git(
-    ($config:expr, $str:expr, $($rest:expr),*) => (
-        try!(git_inherit(&$config, format!($str, $($rest),*)))
-    );
-
-    ($config:expr, $str:expr) => (
-        try!(git_inherit(&$config, format!($str)))
-    );
+    ($config:expr, $($arg:expr),+) => (
+        try!(git_inherit(&$config, process("git")$(.arg($arg))*))
+    )
 )
 
 macro_rules! git_output(
-    ($config:expr, $str:expr, $($rest:expr),*) => ({
-        try!(git_output(&$config, format!($str, $($rest),*)))
-    });
-
-    ($config:expr, $str:expr) => ({
-        try!(git_output(&$config, format!($str)))
-    });
+    ($config:expr, $($arg:expr),*) => ({
+        try!(git_output(&$config, process("git")$(.arg($arg))*))
+    })
 )
 
 macro_rules! errln(
@@ -147,7 +139,7 @@ impl GitRemote {
     }
 
     pub fn has_ref<S: Str>(&self, path: &Path, reference: S) -> CargoResult<()> {
-        git_output!(*path, "rev-parse {}", reference.as_slice());
+        git_output!(*path, "rev-parse", reference.as_slice());
         Ok(())
     }
 
@@ -166,8 +158,8 @@ impl GitRemote {
     }
 
     fn fetch_into(&self, path: &Path) -> CargoResult<()> {
-        Ok(git!(*path, "fetch --force --quiet --tags {} \
-                        refs/heads/*:refs/heads/*", self.fetch_location()))
+        Ok(git!(*path, "fetch", "--force", "--quiet", "--tags",
+                &self.location, "refs/heads/*:refs/heads/*"))
     }
 
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
@@ -175,15 +167,8 @@ impl GitRemote {
 
         try!(mkdir_recursive(path, UserDir));
 
-        Ok(git!(dirname, "clone {} {} --bare --no-hardlinks --quiet",
-                self.fetch_location(), path.display()))
-    }
-
-    fn fetch_location(&self) -> String {
-        match self.location {
-            Local(ref p) => p.display().to_string(),
-            Remote(ref u) => u.to_string(),
-        }
+        Ok(git!(dirname, "clone", &self.location, path, "--bare",
+                "--no-hardlinks", "--quiet"))
     }
 }
 
@@ -204,7 +189,7 @@ impl GitDatabase {
     }
 
     pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<String> {
-        Ok(git_output!(self.path, "rev-parse {}", reference.as_slice()))
+        Ok(git_output!(self.path, "rev-parse", reference.as_slice()))
     }
 
 }
@@ -247,8 +232,8 @@ impl GitCheckout {
             }));
         }
 
-        git!(dirname, "clone --no-checkout --quiet {} {}",
-             self.get_source().display(), self.location.display());
+        git!(dirname, "clone", "--no-checkout", "--quiet",
+             self.get_source(), &self.location);
 
         Ok(())
     }
@@ -273,38 +258,39 @@ impl GitCheckout {
         // https://www.kernel.org/pub/software/scm/git/docs/RelNotes-1.7.3.txt
         //
         // In this case we just use `origin` here instead of the database path.
-        git!(self.location, "fetch --force --quiet origin");
-        git!(self.location, "fetch --force --quiet --tags origin");
+        git!(self.location, "fetch", "--force", "--quiet", "origin");
+        git!(self.location, "fetch", "--force", "--quiet", "--tags", "origin");
         try!(self.reset(self.revision.as_slice()));
         Ok(())
     }
 
-    fn reset<T: Show>(&self, revision: T) -> CargoResult<()> {
-        Ok(git!(self.location, "reset -q --hard {}", revision))
+    fn reset(&self, revision: &str) -> CargoResult<()> {
+        Ok(git!(self.location, "reset", "-q", "--hard", revision))
     }
 
     fn update_submodules(&self) -> CargoResult<()> {
-        Ok(git!(self.location, "submodule update --init --recursive --quiet"))
+        Ok(git!(self.location, "submodule", "update", "--init",
+                "--recursive", "--quiet"))
     }
 }
 
-fn git(path: &Path, str: &str) -> ProcessBuilder {
-    debug!("Executing git {} @ {}", str, path.display());
+fn git(path: &Path, cmd: ProcessBuilder) -> ProcessBuilder {
+    debug!("Executing {} @ {}", cmd, path.display());
 
-    process("git").args(str.split(' ').collect::<Vec<&str>>().as_slice())
-                  .cwd(path.clone())
+    cmd.cwd(path.clone())
 }
 
-fn git_inherit(path: &Path, str: String) -> CargoResult<()> {
-    git(path, str.as_slice()).exec().chain_error(|| {
-        human(format!("Executing `git {}` failed", str))
+fn git_inherit(path: &Path, cmd: ProcessBuilder) -> CargoResult<()> {
+    let cmd = git(path, cmd);
+    cmd.exec().chain_error(|| {
+        human(format!("Executing {} failed", cmd))
     })
 }
 
-fn git_output(path: &Path, str: String) -> CargoResult<String> {
-    let output = try!(git(path, str.as_slice()).exec_with_output()
-                                                     .chain_error(||
-        human(format!("Executing `git {}` failed", str))));
+fn git_output(path: &Path, cmd: ProcessBuilder) -> CargoResult<String> {
+    let cmd = git(path, cmd);
+    let output = try!(cmd.exec_with_output().chain_error(||
+        human(format!("Executing {} failed", cmd))));
 
     Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_string())
 }
