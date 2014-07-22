@@ -84,7 +84,7 @@ impl Layout {
             try!(fs::rmdir_recursive(&self.old_root));
         }
         if self.old_native.exists() {
-            try!(fs::rmdir_recursive(&self.old_root));
+            try!(fs::rmdir_recursive(&self.old_native));
         }
         if self.deps.exists() {
             try!(fs::rename(&self.deps, &self.old_deps));
