@@ -83,8 +83,6 @@ test!(cargo_compile_with_invalid_code {
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", "invalid rust code!");
 
-    let target = realpath(&p.root().join("target")).assert();
-
     assert_that(p.cargo_process("cargo-build"),
         execs()
         .with_status(101)
@@ -92,11 +90,9 @@ test!(cargo_compile_with_invalid_code {
 {filename}:1:1: 1:8 error: expected item but found `invalid`
 {filename}:1 invalid rust code!
              ^~~~~~~
-Could not execute process \
-`rustc {filename} --crate-name foo --crate-type bin --out-dir {} -L {} -L {}` (status=101)\n",
-            target.display(),
-            target.display(),
-            target.join("deps").display(),
+Could not compile `foo`.
+
+To learn more, run the command again with --verbose.\n",
             filename = format!("src{}foo.rs", path::SEP)).as_slice()));
 })
 
