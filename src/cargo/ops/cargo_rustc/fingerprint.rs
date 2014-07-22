@@ -71,7 +71,7 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
 fn is_fresh(dep: &Package, loc: &Path, cx: &mut Context, targets: &[&Target])
             -> CargoResult<(bool, String)> {
     let new_pkg_fingerprint = format!("{}{}", cx.rustc_version,
-                                  try!(dep.get_fingerprint(cx.config)));
+                                      try!(dep.get_fingerprint(cx.config)));
 
     let new_fingerprint = fingerprint(new_pkg_fingerprint, hash_targets(targets));
 

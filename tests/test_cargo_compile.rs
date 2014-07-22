@@ -990,12 +990,12 @@ test!(verbose_build {
     let output = p.cargo_process("cargo-build").arg("-v")
                   .exec_with_output().assert();
     let out = str::from_utf8(output.output.as_slice()).assert();
-    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 15);
-    let hash = hash.slice_to(17);
+    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 16);
+    let hash = hash.slice_to(16);
     assert_eq!(out, format!("\
 {} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
-        -C metadata=test:-:0.0.0:-:file:{dir} \
-        -C extra-filename={hash} \
+        -C metadata={hash} \
+        -C extra-filename=-{hash} \
         --out-dir {dir}{sep}target \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
@@ -1020,14 +1020,14 @@ test!(verbose_release_build {
     let output = p.cargo_process("cargo-build").arg("-v").arg("--release")
                   .exec_with_output().assert();
     let out = str::from_utf8(output.output.as_slice()).assert();
-    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 15);
-    let hash = hash.slice_to(17);
+    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 16);
+    let hash = hash.slice_to(16);
     assert_eq!(out, format!("\
 {} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
         --cfg ndebug \
-        -C metadata=test:-:0.0.0:-:file:{dir} \
-        -C extra-filename={hash} \
+        -C metadata={hash} \
+        -C extra-filename=-{hash} \
         --out-dir {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps`
@@ -1068,30 +1068,30 @@ test!(verbose_release_build_deps {
                   .exec_with_output().assert();
     let out = str::from_utf8(output.output.as_slice()).assert();
     let pos1 = out.find_str("extra-filename=").unwrap();
-    let hash1 = out.slice_from(pos1 + 15).slice_to(17);
+    let hash1 = out.slice_from(pos1 + 16).slice_to(16);
     let pos2 = out.slice_from(pos1 + 10).find_str("extra-filename=").unwrap();
-    let hash2 = out.slice_from(pos1 + 10 + pos2 + 15).slice_to(17);
+    let hash2 = out.slice_from(pos1 + 10 + pos2 + 16).slice_to(16);
     assert_eq!(out, format!("\
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib \
         --opt-level 3 \
         --cfg ndebug \
-        -C metadata=foo:-:0.0.0:-:file:{dir} \
-        -C extra-filename={hash1} \
+        -C metadata={hash1} \
+        -C extra-filename=-{hash1} \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps`
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
         --cfg ndebug \
-        -C metadata=test:-:0.0.0:-:file:{dir} \
-        -C extra-filename={hash2} \
+        -C metadata={hash2} \
+        -C extra-filename=-{hash2} \
         --out-dir {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
-                     {prefix}foo{hash1}{suffix} \
-        --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo{hash1}.rlib`
+                     {prefix}foo-{hash1}{suffix} \
+        --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-{hash1}.rlib`
 {compiling} foo v0.0.0 (file:{dir})
 {compiling} test v0.0.0 (file:{dir})\n",
                     running = RUNNING,
