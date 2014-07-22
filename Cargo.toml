@@ -67,5 +67,9 @@ test = false
 name = "cargo-new"
 test = false
 
+[[bin]]
+name = "cargo-doc"
+test = false
+
 [[test]]
 name = "tests"
