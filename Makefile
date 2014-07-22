@@ -34,7 +34,8 @@ BINS = cargo \
 	     cargo-git-checkout \
 		 cargo-test \
 		 cargo-run \
-		 cargo-version
+		 cargo-version \
+		 cargo-new
 
 SRC = $(shell find src -name '*.rs' -not -path 'src/bin*')
 
