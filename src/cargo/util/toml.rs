@@ -472,7 +472,11 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
     fn target_profiles(target: &TomlTarget,
                        dep: Option<TestDep>) -> Vec<Profile> {
-        let mut ret = vec![Profile::default_dev(), Profile::default_release()];
+        let mut ret = vec![
+            Profile::default_dev(),
+            Profile::default_release(),
+            Profile::default_bench(),
+        ];
 
         match target.test {
             Some(true) | None => ret.push(Profile::default_test()),

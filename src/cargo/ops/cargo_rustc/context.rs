@@ -217,7 +217,7 @@ impl<'a, 'b> Context<'a, 'b> {
 
     pub fn is_relevant_target(&self, target: &Target) -> bool {
         target.is_lib() && match self.env {
-            "test" => target.get_profile().is_compile(),
+            "test" | "bench" => target.get_profile().is_compile(),
             _ => target.get_profile().get_env() == self.env,
         }
     }
