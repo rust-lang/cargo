@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use util;
-use util::{CargoResult, ProcessBuilder, CargoError, ChainError, human, caused_human};
+use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
 use util::{Config, Freshness, internal, ChainError};
 
 use self::job::Job;

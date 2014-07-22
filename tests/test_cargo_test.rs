@@ -1,3 +1,4 @@
+use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
@@ -73,11 +74,12 @@ test!(cargo_test_failing_test {
                                     ---- test_hello stdout ----\n<tab>\
                                     task 'test_hello' failed at 'assertion failed: \
                                     `(left == right) && (right == left)` (left: \
-                                    `hello`, right: `nope`)', src/foo.rs:12\n<tab>\n<tab>\n\n\
+                                    `hello`, right: `nope`)', src{sep}foo.rs:12\n<tab>\n<tab>\n\n\
                                     failures:\n    test_hello\n\n\
                                     test result: FAILED. 0 passed; 1 failed; \
                                     0 ignored; 0 measured\n\n",
-                                    COMPILING, p.root().display())));
+                                    COMPILING, p.root().display(),
+                                    sep = path::SEP)));
 
     assert_that(&p.bin("test/foo"), existing_file());
 })
