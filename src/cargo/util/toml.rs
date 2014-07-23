@@ -568,23 +568,30 @@ fn normalize(libs: &[TomlLibTarget],
             let profile = &Profile::default_test();
             dst.push(Target::test_target(test.name.as_slice(),
                                          &path.to_path(),
-                                         profile));
+                                         profile,
+                                         metadata));
         }
     }
 
     let mut ret = Vec::new();
 
+    let test_dep = if examples.len() > 0 || tests.len() > 0 {
+        Needed
+    } else {
+        NotNeeded
+    };
+
     match (libs, bins) {
         ([_, ..], [_, ..]) => {
             lib_targets(&mut ret, libs, Needed, metadata);
-            bin_targets(&mut ret, bins, NotNeeded,
+            bin_targets(&mut ret, bins, test_dep,
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         ([_, ..], []) => {
-            lib_targets(&mut ret, libs, NotNeeded, metadata);
+            lib_targets(&mut ret, libs, test_dep, metadata);
         },
         ([], [_, ..]) => {
-            bin_targets(&mut ret, bins, NotNeeded,
+            bin_targets(&mut ret, bins, test_dep,
                         |bin| format!("src/{}.rs", bin.name));
         },
         ([], []) => ()
