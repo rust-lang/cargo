@@ -9,12 +9,13 @@ extern crate serialize;
 extern crate hammer;
 
 use std::os;
+use std::io::process::ExitStatus;
 
 use cargo::ops;
 use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell};
 use cargo::util;
-use cargo::util::{CliResult, CliError, human};
+use cargo::util::{CliResult, CliError, CargoError};
 use cargo::util::important_paths::find_project_manifest;
 
 #[deriving(PartialEq,Clone,Decodable)]
@@ -62,7 +63,13 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     for file in test_executables.iter() {
         try!(util::process(test_dir.join(file.as_slice()))
                   .args(options.rest.as_slice())
-                  .exec().map_err(|_| CliError::from_boxed(human(""), 1)));
+                  .exec().map_err(|e| {
+            let exit_status = match e.exit {
+                Some(ExitStatus(i)) => i as uint,
+                _ => 1,
+            };
+            CliError::from_boxed(e.mark_human(), exit_status)
+        }));
     }
 
     Ok(None)
