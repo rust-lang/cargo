@@ -390,3 +390,77 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
     assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
             out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
 })
+
+test!(lib_with_standard_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "syntax"
+            test = false
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("tests/test.rs", "
+            extern crate syntax;
+
+            #[test]
+            fn test() { syntax::foo() }
+        ");
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} syntax v0.0.1 (file:{dir})
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+})
+
+test!(lib_with_standard_name2 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "syntax"
+            test = false
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ");
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} syntax v0.0.1 (file:{dir})
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+})

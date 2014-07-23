@@ -1270,3 +1270,28 @@ test!(bad_cargo_toml_in_target_dir {
     assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
     assert_that(process(p.bin("foo")), execs().with_status(0));
 })
+
+test!(lib_with_standard_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+            fn main() { syntax::foo() }
+        ");
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} syntax v0.0.1 (file:{dir})
+",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+})
