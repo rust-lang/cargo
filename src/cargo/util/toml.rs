@@ -226,7 +226,7 @@ struct Context<'a> {
 // otherwise acceptable executable names are not used when inside of
 // `src/bin/*`, but it seems ok to not build executables with non-UTF8
 // paths.
-fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
+fn inferred_lib_target(name: &str, layout: &Layout) -> Vec<TomlTarget> {
     layout.lib.as_ref().map(|lib| {
         vec![TomlTarget {
             name: name.to_string(),
@@ -235,11 +235,11 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
             test: None,
             plugin: None,
         }]
-    })
+    }).unwrap_or(Vec::new())
 }
 
-fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> {
-    Some(layout.bins.iter().filter_map(|bin| {
+fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
+    layout.bins.iter().filter_map(|bin| {
         let name = if bin.as_vec() == b"src/main.rs" ||
                       *bin == layout.root.join("src/main.rs") {
             Some(name.to_string())
@@ -256,11 +256,11 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Option<Vec<TomlTarget>> 
                 plugin: None,
             }
         })
-    }).collect())
+    }).collect()
 }
 
-fn inferred_example_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
-    Some(layout.examples.iter().filter_map(|ex| {
+fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
+    layout.examples.iter().filter_map(|ex| {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
@@ -270,11 +270,11 @@ fn inferred_example_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
                 plugin: None,
             }
         })
-    }).collect())
+    }).collect()
 }
 
-fn inferred_test_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
-    Some(layout.tests.iter().filter_map(|ex| {
+fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
+    layout.tests.iter().filter_map(|ex| {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
@@ -284,7 +284,7 @@ fn inferred_test_targets(layout: &Layout) -> Option<Vec<TomlTarget>> {
                 plugin: None,
             }
         })
-    }).collect())
+    }).collect()
 }
 
 impl TomlManifest {
@@ -308,7 +308,7 @@ impl TomlManifest {
         let lib = if self.lib.is_none() || self.lib.get_ref().is_empty() {
             inferred_lib_target(project.name.as_slice(), layout)
         } else {
-            Some(self.lib.get_ref().iter().map(|t| {
+            self.lib.get_ref().iter().map(|t| {
                 if layout.lib.is_some() && t.path.is_none() {
                     TomlTarget {
                         name: t.name.clone(),
@@ -320,7 +320,7 @@ impl TomlManifest {
                 } else {
                     t.clone()
                 }
-            }).collect())
+            }).collect()
         };
 
         let bins = if self.bin.is_none() || self.bin.get_ref().is_empty() {
@@ -328,7 +328,7 @@ impl TomlManifest {
         } else {
             let bin = layout.main();
 
-            Some(self.bin.get_ref().iter().map(|t| {
+            self.bin.get_ref().iter().map(|t| {
                 if bin.is_some() && t.path.is_none() {
                     TomlTarget {
                         name: t.name.clone(),
@@ -340,30 +340,26 @@ impl TomlManifest {
                 } else {
                     t.clone()
                 }
-            }).collect())
+            }).collect()
         };
 
         let examples = if self.example.is_none() || self.example.get_ref().is_empty() {
             inferred_example_targets(layout)
         } else {
-            Some(self.example.get_ref().iter().map(|t| {
-                t.clone()
-            }).collect())
+            self.example.get_ref().iter().map(|t| t.clone()).collect()
         };
 
         let tests = if self.test.is_none() || self.test.get_ref().is_empty() {
             inferred_test_targets(layout)
         } else {
-            Some(self.test.get_ref().iter().map(|t| {
-                t.clone()
-            }).collect())
+            self.test.get_ref().iter().map(|t| t.clone()).collect()
         };
 
         // Get targets
-        let targets = normalize(lib.as_ref().map(|l| l.as_slice()),
-                                bins.as_ref().map(|b| b.as_slice()),
-                                examples.as_ref().map(|e| e.as_slice()),
-                                tests.as_ref().map(|e| e.as_slice()),
+        let targets = normalize(lib.as_slice(),
+                                bins.as_slice(),
+                                examples.as_slice(),
+                                tests.as_slice(),
                                 &metadata);
 
         if targets.is_empty() {
@@ -485,18 +481,18 @@ impl fmt::Show for TomlPath {
     }
 }
 
-fn normalize(lib: Option<&[TomlLibTarget]>,
-             bin: Option<&[TomlBinTarget]>,
-             example: Option<&[TomlExampleTarget]>,
-             test: Option<&[TomlTestTarget]>,
+fn normalize(libs: &[TomlLibTarget],
+             bins: &[TomlBinTarget],
+             examples: &[TomlExampleTarget],
+             tests: &[TomlTestTarget],
              metadata: &Metadata) -> Vec<Target> {
     log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}",
-         lib, bin, example, test);
+         libs, bins, examples, tests);
 
     enum TestDep { Needed, NotNeeded }
 
     fn target_profiles(target: &TomlTarget,
-                       dep: Option<TestDep>) -> Vec<Profile> {
+                       dep: TestDep) -> Vec<Profile> {
         let mut ret = vec![Profile::default_dev(), Profile::default_release()];
 
         match target.test {
@@ -505,7 +501,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
         }
 
         match dep {
-            Some(Needed) => ret.push(Profile::default_test().test(false)),
+            Needed => ret.push(Profile::default_test().test(false)),
             _ => {}
         }
 
@@ -528,7 +524,7 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
             vec![if l.plugin == Some(true) {Dylib} else {Lib}]
         });
 
-        for profile in target_profiles(l, Some(dep)).iter() {
+        for profile in target_profiles(l, dep).iter() {
             dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
                                         &path.to_path(), profile,
                                         metadata));
@@ -536,13 +532,13 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                   default: |&TomlBinTarget| -> String) {
+                   dep: TestDep, default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 TomlString(default(bin))
             });
 
-            for profile in target_profiles(bin, None).iter() {
+            for profile in target_profiles(bin, dep).iter() {
                 dst.push(Target::bin_target(bin.name.as_slice(),
                                             &path.to_path(),
                                             profile));
@@ -578,43 +574,33 @@ fn normalize(lib: Option<&[TomlLibTarget]>,
 
     let mut ret = Vec::new();
 
-    match (lib, bin) {
-        (Some(ref libs), Some(ref bins)) => {
-            lib_targets(&mut ret, libs.as_slice(), Needed, metadata);
-            bin_targets(&mut ret, bins.as_slice(),
+    match (libs, bins) {
+        ([_, ..], [_, ..]) => {
+            lib_targets(&mut ret, libs, Needed, metadata);
+            bin_targets(&mut ret, bins, NotNeeded,
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
-        (Some(ref libs), None) => {
-            lib_targets(&mut ret, libs.as_slice(), NotNeeded, metadata);
+        ([_, ..], []) => {
+            lib_targets(&mut ret, libs, NotNeeded, metadata);
         },
-        (None, Some(ref bins)) => {
-            bin_targets(&mut ret, bins.as_slice(),
+        ([], [_, ..]) => {
+            bin_targets(&mut ret, bins, NotNeeded,
                         |bin| format!("src/{}.rs", bin.name));
         },
-        (None, None) => ()
+        ([], []) => ()
     }
 
 
-    match example {
-        Some(ref examples) => {
-            example_targets(&mut ret, examples.as_slice(),
-                        |ex| format!("examples/{}.rs", ex.name));
-        },
-        None => ()
-    }
+    example_targets(&mut ret, examples,
+                    |ex| format!("examples/{}.rs", ex.name));
 
-    match test {
-        Some(ref tests) => {
-            test_targets(&mut ret, tests.as_slice(),
-                        |test| {
-                            if test.name.as_slice() == "test" {
-                                "src/test.rs".to_string()
-                            } else {
-                                format!("tests/{}.rs", test.name)
-                            }});
-        },
-        None => ()
-    }
+    test_targets(&mut ret, tests, metadata,
+                |test| {
+                    if test.name.as_slice() == "test" {
+                        "src/test.rs".to_string()
+                    } else {
+                        format!("tests/{}.rs", test.name)
+                    }});
 
     ret
 }
