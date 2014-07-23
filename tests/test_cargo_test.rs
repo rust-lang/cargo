@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest};
+use support::{COMPILING, cargo_dir, ResultTest, FRESH};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -515,4 +515,87 @@ test!(bin_there_for_integration {
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
+})
+
+test!(test_dylib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "foo"
+            crate_type = ["dylib"]
+        "#)
+        .file("src/lib.rs", "
+            #[test]
+            fn foo() {}
+        ");
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+    assert_that(p.process(cargo_dir().join("cargo-test")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       fresh = FRESH,
+                       dir = p.root().display()).as_slice()));
+})
+
+test!(test_twice_with_build_cmd {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = 'true'
+        "#)
+        .file("src/lib.rs", "
+            #[test]
+            fn foo() {}
+        ");
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+    assert_that(p.process(cargo_dir().join("cargo-test")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       fresh = FRESH,
+                       dir = p.root().display()).as_slice()));
 })

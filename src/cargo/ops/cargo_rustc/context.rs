@@ -175,19 +175,16 @@ impl<'a, 'b> Context<'a, 'b> {
         let stem = target.file_stem();
 
         let mut ret = Vec::new();
-        if target.is_dylib() {
-            let (prefix, suffix) = self.dylib(target.get_profile().is_plugin());
-            ret.push(format!("{}{}{}", prefix, stem, suffix));
-        }
-        if target.is_rlib() {
-            if target.get_profile().is_test() {
-                ret.push(format!("{}{}", stem, self.target_exe));
-            } else {
+        if target.is_bin() || target.get_profile().is_test() {
+            ret.push(format!("{}{}", stem, self.target_exe));
+        } else {
+            if target.is_dylib() {
+                let (prefix, suffix) = self.dylib(target.get_profile().is_plugin());
+                ret.push(format!("{}{}{}", prefix, stem, suffix));
+            }
+            if target.is_rlib() {
                 ret.push(format!("lib{}.rlib", stem));
             }
-        }
-        if target.is_bin() {
-            ret.push(format!("{}{}", stem, self.target_exe));
         }
         assert!(ret.len() > 0);
         return ret;
