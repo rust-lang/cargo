@@ -208,16 +208,16 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
     let base = util::process("rustc").cwd(root.clone());
     let base = build_base_args(base, target, crate_types.as_slice());
 
-    let target = build_plugin_args(base.clone(), cx, false);
-    let plugin = build_plugin_args(base, cx, true);
-    let target = build_deps_args(target, package, cx, false);
-    let plugin = build_deps_args(plugin, package, cx, true);
+    let target_cmd = build_plugin_args(base.clone(), cx, false);
+    let plugin_cmd = build_plugin_args(base, cx, true);
+    let target_cmd = build_deps_args(target_cmd, target, package, cx, false);
+    let plugin_cmd = build_deps_args(plugin_cmd, target, package, cx, true);
 
     match req {
-        Target => vec![target],
-        Plugin => vec![plugin],
-        PluginAndTarget if cx.config.target().is_none() => vec![target],
-        PluginAndTarget => vec![target, plugin],
+        Target => vec![target_cmd],
+        Plugin => vec![plugin_cmd],
+        PluginAndTarget if cx.config.target().is_none() => vec![target_cmd],
+        PluginAndTarget => vec![target_cmd, plugin_cmd],
     }
 }
 
@@ -290,8 +290,8 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context,
     return cmd;
 }
 
-fn build_deps_args(mut cmd: ProcessBuilder, package: &Package, cx: &Context,
-                   plugin: bool) -> ProcessBuilder {
+fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
+                   cx: &Context, plugin: bool) -> ProcessBuilder {
     let layout = cx.layout(plugin);
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
@@ -301,19 +301,39 @@ fn build_deps_args(mut cmd: ProcessBuilder, package: &Package, cx: &Context,
     cmd = push_native_dirs(cmd, &layout, package, cx, &mut HashSet::new());
 
     for &(_, target) in cx.dep_targets(package).iter() {
+        cmd = link_to(cmd, target, cx, true);
+    }
+
+    let mut targets = package.get_targets().iter().filter(|target| {
+        target.is_lib() && target.get_profile().is_compile()
+    });
+
+    if target.is_bin() {
+        for target in targets {
+            cmd = link_to(cmd, target, cx, false);
+        }
+    }
+
+    return cmd;
+
+    fn link_to(mut cmd: ProcessBuilder, target: &Target,
+               cx: &Context, is_dep_lib: bool) -> ProcessBuilder {
         let layout = cx.layout(target.get_profile().is_plugin());
         for filename in cx.target_filenames(target).iter() {
             let mut v = Vec::new();
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');
-            v.push_all(layout.deps().as_vec());
+            if is_dep_lib {
+                v.push_all(layout.deps().as_vec());
+            } else {
+                v.push_all(layout.root().as_vec());
+            }
             v.push(b'/');
             v.push_all(filename.as_bytes());
             cmd = cmd.arg("--extern").arg(v.as_slice());
         }
+        return cmd;
     }
-
-    return cmd;
 
     fn push_native_dirs(mut cmd: ProcessBuilder, layout: &layout::LayoutProxy,
                         pkg: &Package, cx: &Context,
