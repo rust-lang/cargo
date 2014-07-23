@@ -202,13 +202,16 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
         let _ = shell.error(error.to_string());
     }
 
-    if error.cause().is_some() {
+    if error.cause().is_some() || unknown {
         let _ = shell.concise(|shell| {
             shell.err().say("\nTo learn more, run the command again with --verbose.", BLACK)
         });
     }
 
     let _ = shell.verbose(|shell| {
+        if unknown {
+            let _ = shell.error(error.to_string());
+        }
         error.cause().map(|err| {
             let _ = handle_cause(err, shell);
         });
