@@ -559,3 +559,43 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        fresh = FRESH,
                        dir = p.root().display()).as_slice()));
 })
+
+test!(test_twice_with_build_cmd {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = 'true'
+        "#)
+        .file("src/lib.rs", "
+            #[test]
+            fn foo() {}
+        ");
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       compiling = COMPILING,
+                       dir = p.root().display()).as_slice()));
+    assert_that(p.process(cargo_dir().join("cargo-test")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.1 (file:{dir})
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+                       ",
+                       fresh = FRESH,
+                       dir = p.root().display()).as_slice()));
+})
