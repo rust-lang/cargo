@@ -94,8 +94,9 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     //
     // TODO: Should this be on the target or the package?
     let mut build_cmds = Vec::new();
-    for build_cmd in pkg.get_manifest().get_build().iter() {
-        build_cmds.push(try!(compile_custom(pkg, build_cmd.as_slice(), cx)));
+    for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
+        build_cmds.push(try!(compile_custom(pkg, build_cmd.as_slice(),
+                                            cx, i == 0)));
     }
 
     // After the custom command has run, execute rustc for all targets of our
@@ -136,18 +137,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 }
 
 fn compile_custom(pkg: &Package, cmd: &str,
-                  cx: &Context) -> CargoResult<Job> {
+                  cx: &Context, first: bool) -> CargoResult<Job> {
     // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
     // TODO: this shouldn't explicitly pass `false` for dest/deps_dir, we may
     //       be building a C lib for a plugin
     let layout = cx.layout(false);
     let output = layout.native(pkg);
-    if !output.exists() {
-        try!(fs::mkdir(&output, UserRWX).chain_error(|| {
-            internal("failed to create output directory for build command")
-        }));
-    }
     let mut p = util::process(cmd.next().unwrap())
                      .cwd(pkg.get_root())
                      .env("OUT_DIR", Some(&output))
@@ -157,6 +153,11 @@ fn compile_custom(pkg: &Package, cmd: &str,
         p = p.arg(arg);
     }
     Ok(Job::new(proc() {
+        if first {
+            try!(fs::mkdir(&output, UserRWX).chain_error(|| {
+                internal("failed to create output directory for build command")
+            }));
+        }
         try!(p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human()));
         Ok(Vec::new())
     }))
