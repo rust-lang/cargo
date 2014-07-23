@@ -290,49 +290,61 @@ impl Execs {
         match expected.as_ref().map(|s| s.as_slice()) {
             None => ham::success(),
             Some(out) => {
-                match str::from_utf8(actual) {
-                    None => Err(format!("{} was not utf8 encoded", description)),
-                    Some(actual) => {
-                        // Let's not deal with \r\n vs \n on windows...
-                        let actual = actual.replace("\r", "");
-                        let actual = actual.replace("\t", "<tab>");
+                let actual = match str::from_utf8(actual) {
+                    None => return Err(format!("{} was not utf8 encoded",
+                                               description)),
+                    Some(actual) => actual,
+                };
+                // Let's not deal with \r\n vs \n on windows...
+                let actual = actual.replace("\r", "");
+                let actual = actual.replace("\t", "<tab>");
 
-                        let a = actual.as_slice().lines();
-                        let e = out.lines();
+                let a = actual.as_slice().lines();
+                let e = out.lines();
 
-                        let diffs = zip_all(a, e).enumerate();
-                        let mut diffs = diffs.filter_map(|(i, (a,e))| {
-                            match (a, e) {
-                                (Some(a), Some(e)) => {
-                                    if e.as_slice().equiv(&a.as_slice()) {
-                                        None
-                                    } else {
-                                        Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
-                                    }
-                                },
-                                (Some(a), None) => {
-                                    Some(format!("{:3} -\n    + |{}|\n", i, a))
-                                },
-                                (None, Some(e)) => {
-                                    Some(format!("{:3} - |{}|\n    +\n", i, e))
-                                },
-                                (None, None) => fail!("Cannot get here")
+                let diffs = zip_all(a, e).enumerate();
+                let mut diffs = diffs.filter_map(|(i, (a,e))| {
+                    match (a, e) {
+                        (Some(a), Some(e)) => {
+                            if lines_match(e.as_slice(), a.as_slice()) {
+                                None
+                            } else {
+                                Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
                             }
-                        });
-
-                        let diffs = diffs.collect::<Vec<String>>().connect("\n");
-
-                        ham::expect(actual.as_slice() == out,
-                                    format!("differences:\n\
-                                            {}\n\n\
-                                            other output:\n\
-                                            `{}`", diffs,
-                                            String::from_utf8_lossy(extra)))
+                        },
+                        (Some(a), None) => {
+                            Some(format!("{:3} -\n    + |{}|\n", i, a))
+                        },
+                        (None, Some(e)) => {
+                            Some(format!("{:3} - |{}|\n    +\n", i, e))
+                        },
+                        (None, None) => fail!("Cannot get here")
                     }
-                }
+                });
+
+                let diffs = diffs.collect::<Vec<String>>().connect("\n");
+
+                ham::expect(diffs.len() == 0,
+                            format!("differences:\n\
+                                    {}\n\n\
+                                    other output:\n\
+                                    `{}`", diffs,
+                                    String::from_utf8_lossy(extra)))
             }
         }
     }
+}
+
+fn lines_match(expected: &str, mut actual: &str) -> bool {
+    for part in expected.split_str("[..]") {
+        match actual.find_str(part) {
+            Some(i) => actual = actual.slice_from(i),
+            None => {
+                return false
+            }
+        }
+    }
+    return true;
 }
 
 struct ZipAll<T, I1, I2> {
