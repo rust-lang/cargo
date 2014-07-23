@@ -1,12 +1,9 @@
 use std::os;
 use std::io;
-use std::io::{fs, File, Command};
+use std::io::{fs, File};
 
-use ops;
-use util::{CargoResult, human, ProcessError, Config, ChainError, process};
+use util::{CargoResult, human, ChainError, process};
 use core::shell::MultiShell;
-use core::source::Source;
-use sources::PathSource;
 
 macro_rules! git( ($($a:expr),*) => ({
     process("git") $(.arg($a))* .exec_with_output()
@@ -18,8 +15,7 @@ pub struct NewOptions<'a> {
     pub path: &'a str,
 }
 
-pub fn new(opts: NewOptions, shell: &mut MultiShell) -> CargoResult<()> {
-    let config = try!(Config::new(shell, false, None, None));
+pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
     let path = os::getcwd().join(opts.path);
     if path.exists() {
         return Err(human(format!("Destination `{}` already exists",
