@@ -351,13 +351,14 @@ impl Target {
         }
     }
 
-    pub fn test_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
+    pub fn test_target(name: &str, src_path: &Path,
+                       profile: &Profile, metadata: Metadata) -> Target {
         Target {
             kind: BinTarget,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
-            metadata: None
+            metadata: Some(metadata),
         }
     }
 

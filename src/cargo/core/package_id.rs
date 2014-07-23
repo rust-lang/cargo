@@ -126,6 +126,14 @@ impl PackageId {
     }
 }
 
+impl Metadata {
+    pub fn mix<T: Hash>(&mut self, t: &T) {
+        let new_metadata = short_hash(&(self.metadata.as_slice(), t));
+        self.extra_filename = format!("-{}", new_metadata);
+        self.metadata = new_metadata;
+    }
+}
+
 static central_repo: &'static str = "http://rust-lang.org/central-repo";
 
 impl Show for PackageId {

@@ -559,13 +559,18 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     fn test_targets(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
-                   default: |&TomlTestTarget| -> String) {
+                    metadata: &Metadata,
+                    default: |&TomlTestTarget| -> String) {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
                 TomlString(default(test))
             });
 
             let profile = &Profile::default_test();
+            // make sure this metadata is different from any same-named libs.
+            let mut metadata = metadata.clone();
+            metadata.mix(&format!("test-{}", test.name.as_slice()));
+
             dst.push(Target::test_target(test.name.as_slice(),
                                          &path.to_path(),
                                          profile,

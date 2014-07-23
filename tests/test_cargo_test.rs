@@ -42,6 +42,35 @@ test!(cargo_test_simple {
     assert_that(&p.bin("test/foo"), existing_file());
 })
 
+test!(many_similar_names {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+            #[test] fn lib_test() {}
+        ")
+        .file("src/main.rs", "
+            extern crate foo;
+            fn main() {}
+            #[test] fn bin_test() { foo::foo() }
+        ")
+        .file("tests/foo.rs", r#"
+            extern crate foo;
+            #[test] fn test_test() { foo::foo() }
+        "#);
+
+    let output = p.cargo_process("cargo-test").exec_with_output().assert();
+    let output = str::from_utf8(output.output.as_slice()).assert();
+    assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
+    assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
+    assert!(output.contains("test test_test"), "test_test missing\n{}", output);
+})
+
 test!(cargo_test_failing_test {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
