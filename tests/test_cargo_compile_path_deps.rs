@@ -505,3 +505,39 @@ test!(error_message_for_missing_manifest {
                                      p.root().join_many(&["src", "bar"]).display())));
 
 })
+
+test!(override_self {
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+       .file("src/lib.rs", "");
+
+    let p = project("foo");
+    let root = p.root().clone();
+    let p = p
+        .file(".cargo/config", format!(r#"
+            paths = ['{}']
+        "#, root.display()))
+        .file("Cargo.toml", format!(r#"
+            [package]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+            path = '{}'
+
+        "#, bar.root().display()))
+       .file("src/lib.rs", "")
+       .file("src/main.rs", "fn main() {}");
+
+    bar.build();
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+
+})
