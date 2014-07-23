@@ -22,18 +22,20 @@ struct Options {
     manifest_path: Option<String>,
     jobs: Option<uint>,
     update: bool,
+    bench: bool,
     rest: Vec<String>,
 }
 
 hammer_config!(Options "Run the package's test suite", |c| {
-    c.short("jobs", 'j').short("update", 'u')
+    c.short("jobs", 'j')
+     .short("update", 'u')
 })
 
 fn main() {
     execute_main_without_stdin(execute);
 }
 
-fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+fn execute(mut options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let root = match options.manifest_path {
         Some(path) => Path::new(path),
         None => try!(find_project_manifest(&os::getcwd(), "Cargo.toml")
@@ -44,9 +46,16 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     }))
     };
 
+    let env = if options.bench {
+        options.rest.push("--bench".to_string());
+        "bench"
+    } else {
+        "test"
+    };
+
     let mut compile_opts = ops::CompileOptions {
         update: options.update,
-        env: "test",
+        env: env,
         shell: shell,
         jobs: options.jobs,
         target: None,
