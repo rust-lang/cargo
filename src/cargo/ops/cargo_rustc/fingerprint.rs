@@ -47,11 +47,16 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
     // Prepare a job to copy over all old artifacts into their new destination.
     let mut pairs = Vec::new();
     pairs.push((old_fingerprint_loc, new_fingerprint_loc));
+
+    // TODO: this shouldn't explicitly pass false, for more info see
+    //       cargo_rustc::compile_custom
+    if pkg.get_manifest().get_build().len() > 0 {
+        let layout = cx.layout(false);
+        pairs.push((layout.old_native(pkg), layout.native(pkg)));
+    }
+
     for &target in targets.iter() {
         let layout = cx.layout(target.get_profile().is_plugin());
-        if pkg.get_manifest().get_build().len() > 0 {
-            pairs.push((layout.old_native(pkg), layout.native(pkg)));
-        }
         for filename in cx.target_filenames(target).iter() {
             let filename = filename.as_slice();
             pairs.push((layout.old_root().join(filename),
