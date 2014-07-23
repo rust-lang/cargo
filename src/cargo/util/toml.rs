@@ -532,22 +532,34 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                   dep: TestDep, default: |&TomlBinTarget| -> String) {
+                   dep: TestDep, metadata: &Metadata,
+                   default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 TomlString(default(bin))
             });
 
             for profile in target_profiles(bin, dep).iter() {
+                let metadata = if profile.is_test() {
+                    // Make sure that the name of this test executable doesn't
+                    // conflicts with a library that has the same name and is
+                    // being tested
+                    let mut metadata = metadata.clone();
+                    metadata.mix(&format!("bin-{}", bin.name));
+                    Some(metadata)
+                } else {
+                    None
+                };
                 dst.push(Target::bin_target(bin.name.as_slice(),
                                             &path.to_path(),
-                                            profile));
+                                            profile,
+                                            metadata));
             }
         }
     }
 
     fn example_targets(dst: &mut Vec<Target>, examples: &[TomlExampleTarget],
-                   default: |&TomlExampleTarget| -> String) {
+                       default: |&TomlExampleTarget| -> String) {
         for ex in examples.iter() {
             let path = ex.path.clone().unwrap_or_else(|| TomlString(default(ex)));
 
@@ -566,11 +578,11 @@ fn normalize(libs: &[TomlLibTarget],
                 TomlString(default(test))
             });
 
-            let profile = &Profile::default_test();
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
-            metadata.mix(&format!("test-{}", test.name.as_slice()));
+            metadata.mix(&format!("test-{}", test.name));
 
+            let profile = &Profile::default_test();
             dst.push(Target::test_target(test.name.as_slice(),
                                          &path.to_path(),
                                          profile,
@@ -589,14 +601,14 @@ fn normalize(libs: &[TomlLibTarget],
     match (libs, bins) {
         ([_, ..], [_, ..]) => {
             lib_targets(&mut ret, libs, Needed, metadata);
-            bin_targets(&mut ret, bins, test_dep,
+            bin_targets(&mut ret, bins, test_dep, metadata,
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         ([_, ..], []) => {
             lib_targets(&mut ret, libs, test_dep, metadata);
         },
         ([], [_, ..]) => {
-            bin_targets(&mut ret, bins, test_dep,
+            bin_targets(&mut ret, bins, test_dep, metadata,
                         |bin| format!("src/{}.rs", bin.name));
         },
         ([], []) => ()
