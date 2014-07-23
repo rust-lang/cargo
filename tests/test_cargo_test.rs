@@ -38,8 +38,6 @@ test!(cargo_test_simple {
                                     test test_hello ... ok\n\n\
                                     test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n",
                                     COMPILING, p.root().display())));
-
-    assert_that(&p.bin("test/foo"), existing_file());
 })
 
 test!(many_similar_names {
@@ -109,8 +107,6 @@ test!(cargo_test_failing_test {
                                     0 ignored; 0 measured\n\n",
                                     COMPILING, p.root().display(),
                                     sep = path::SEP)));
-
-    assert_that(&p.bin("test/foo"), existing_file());
 })
 
 test!(test_with_lib_dep {
@@ -492,4 +488,31 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING,
                        dir = p.root().display()).as_slice()));
+})
+
+test!(bin_there_for_integration {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "
+            fn main() { std::os::set_exit_status(1); }
+            #[test] fn main_test() {}
+        ")
+        .file("tests/foo.rs", r#"
+            use std::io::Command;
+            #[test]
+            fn test_test() {
+                let status = Command::new("target/test/foo").status().unwrap();
+                assert!(status.matches_exit_status(1));
+            }
+        "#);
+
+    let output = p.cargo_process("cargo-test").exec_with_output().assert();
+    let output = str::from_utf8(output.output.as_slice()).assert();
+    assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
+    assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
 })
