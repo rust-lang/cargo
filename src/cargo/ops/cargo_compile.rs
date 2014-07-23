@@ -60,7 +60,8 @@ pub fn compile(manifest_path: &Path,
     }
 
     let user_configs = try!(config::all_configs(os::getcwd()));
-    let override_ids = try!(source_ids_from_config(&user_configs));
+    let override_ids = try!(source_ids_from_config(&user_configs,
+                                                   manifest_path.dir_path()));
     let source_ids = package.get_source_ids();
 
     let (packages, resolve) = {
@@ -107,8 +108,8 @@ pub fn compile(manifest_path: &Path,
     Ok(test_executables)
 }
 
-fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>)
-                          -> CargoResult<Vec<SourceId>> {
+fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
+                          cur_path: Path) -> CargoResult<Vec<SourceId>> {
     debug!("loaded config; configs={}", configs);
 
     let config_paths = configs.find_equiv(&"paths").map(|v| v.clone());
@@ -118,7 +119,13 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>)
         internal("invalid configuration for the key `path`")
     }));
 
-    Ok(paths.iter().map(|p| SourceId::for_path(&Path::new(p.as_slice()))).collect())
+    // Make sure we don't override the local package, even if it's in the list
+    // of override paths
+    Ok(paths.iter().filter(|p| {
+        cur_path != os::make_absolute(&Path::new(p.as_slice()))
+    }).map(|p| {
+        SourceId::for_path(&Path::new(p.as_slice()))
+    }).collect())
 }
 
 fn scrape_target_config(config: &mut Config,
