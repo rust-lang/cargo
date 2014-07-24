@@ -485,6 +485,37 @@ test!(cargo_compile_with_nested_deps_longhand {
       execs().with_stdout("test passed\n"));
 })
 
+// Check that Cargo gives a sensible error if a dependency can't be found
+// because of a name mismatch.
+test!(cargo_compile_with_dep_name_mismatch {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "foo"
+            version = "0.0.1"
+            authors = ["wycats@example.com"]
+
+            [[bin]]
+
+            name = "foo"
+
+            [dependencies.notquitebar]
+
+            path = "bar"
+        "#)
+        .file("src/foo.rs", main_file(r#""i am foo""#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", basic_bin_manifest("bar").as_slice())
+        .file("bar/src/bar.rs", main_file(r#""i am bar""#, []).as_slice());
+
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(101).with_stderr(format!(
+r#"No package named `notquitebar` found (required by `foo`).
+Location searched: file:{proj_dir}
+Version required: *
+"#, proj_dir = p.root().display())));
+})
+
 // test!(compiling_project_with_invalid_manifest)
 
 test!(custom_build {
