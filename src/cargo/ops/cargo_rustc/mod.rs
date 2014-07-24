@@ -1,5 +1,6 @@
 use std::io::{fs, UserRWX};
 use std::collections::HashSet;
+use semver::Version;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use util;
@@ -144,8 +145,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     //       be building a C lib for a plugin
     let layout = cx.layout(false);
     let output = layout.native(pkg);
-    let mut p = util::process(cmd.next().unwrap())
-                     .cwd(pkg.get_root())
+    let mut p = process(cmd.next().unwrap(), pkg)
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", cx.config.target());
@@ -204,9 +204,7 @@ fn rustc(package: &Package, target: &Target,
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement) -> Vec<ProcessBuilder> {
-    let root = package.get_root();
-
-    let base = util::process("rustc").cwd(root.clone());
+    let base = process("rustc", package);
     let base = build_base_args(base, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, false);
@@ -355,4 +353,28 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             None => cmd
         }
     }
+}
+
+pub fn process<T: ToCStr>(cmd: T, pkg: &Package) -> ProcessBuilder {
+    util::process(cmd)
+        .cwd(pkg.get_root())
+        .env("CARGO_PKG_VERSION_MAJOR", Some(pkg.get_version().major.to_string()))
+        .env("CARGO_PKG_VERSION_MINOR", Some(pkg.get_version().minor.to_string()))
+        .env("CARGO_PKG_VERSION_PATCH", Some(pkg.get_version().patch.to_string()))
+        .env("CARGO_PKG_VERSION_PRE", pre_version_component(pkg.get_version()))
+}
+
+fn pre_version_component(v: &Version) -> Option<String> {
+    if v.pre.is_empty() {
+        return None;
+    }
+
+    let mut ret = String::new();
+
+    for (i, x) in v.pre.iter().enumerate() {
+        if i != 0 { ret.push_char('.') };
+        ret.push_str(x.to_string().as_slice());
+    }
+
+    Some(ret)
 }
