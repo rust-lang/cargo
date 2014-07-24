@@ -740,6 +740,42 @@ test!(custom_build_env_vars {
     assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
 })
 
+test!(crate_version_env_vars {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.1-alpha.1"
+            authors = ["wycats@example.com"]
+
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            use std::os;
+
+            static VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
+            static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
+            static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
+            static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
+
+            fn main() {
+                println!("{}-{}-{} @ {}",
+                         VERSION_MAJOR,
+                         VERSION_MINOR,
+                         VERSION_PATCH,
+                         VERSION_PRE);
+            }
+        "#);
+
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+
+    assert_that(
+      process(p.bin("foo")),
+      execs().with_stdout("0-5-1 @ alpha.1\n"));
+})
+
 test!(custom_build_in_dependency {
     let mut p = project("foo");
     let bar = p.root().join("bar");
