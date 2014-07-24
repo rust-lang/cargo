@@ -1,5 +1,7 @@
-use std::io::{fs, UserRWX};
 use std::collections::HashSet;
+use std::dynamic_lib::DynamicLibrary;
+use std::io::{fs, UserRWX};
+use std::os;
 use semver::Version;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
@@ -145,7 +147,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     //       be building a C lib for a plugin
     let layout = cx.layout(false);
     let output = layout.native(pkg);
-    let mut p = process(cmd.next().unwrap(), pkg)
+    let mut p = process(cmd.next().unwrap(), pkg, cx)
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", cx.config.target());
@@ -204,7 +206,7 @@ fn rustc(package: &Package, target: &Target,
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement) -> Vec<ProcessBuilder> {
-    let base = process("rustc", package);
+    let base = process("rustc", package, cx);
     let base = build_base_args(base, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, false);
@@ -355,9 +357,16 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T, pkg: &Package) -> ProcessBuilder {
+pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder {
+    // When invoking a tool, we need the *host* deps directory in the dynamic
+    // library search path for plugins and such which have dynamic dependencies.
+    let mut search_path = DynamicLibrary::search_path();
+    search_path.push(cx.layout(false).deps().clone());
+    let search_path = os::join_paths(search_path.as_slice()).unwrap();
+
     util::process(cmd)
         .cwd(pkg.get_root())
+        .env(DynamicLibrary::envvar(), Some(search_path.as_slice()))
         .env("CARGO_PKG_VERSION_MAJOR", Some(pkg.get_version().major.to_string()))
         .env("CARGO_PKG_VERSION_MINOR", Some(pkg.get_version().minor.to_string()))
         .env("CARGO_PKG_VERSION_PATCH", Some(pkg.get_version().patch.to_string()))
