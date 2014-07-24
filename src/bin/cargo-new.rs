@@ -1,47 +1,44 @@
 #![feature(phase)]
 
-extern crate cargo;
-
-#[phase(plugin, link)]
-extern crate hammer;
-
-#[phase(plugin, link)]
-extern crate log;
-
 extern crate serialize;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+#[phase(plugin, link)] extern crate log;
 
 use std::os;
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 
-#[deriving(PartialEq,Clone,Decodable,Encodable)]
-pub struct Options {
-    git: bool,
-    bin: bool,
-    rest: Vec<String>,
-}
+docopt!(Options, "
+Create a new cargo package at <path>
 
-hammer_config!(Options "Create a new cargo project")
+Usage:
+    cargo-new [options] <path>
+    cargo-new -h | --help
+
+Options:
+    -h, --help          Print this message
+    --git               Initialize a new git repository with a .gitignore
+    --bin               Use a binary instead of a library template
+    -v, --verbose       Use verbose output
+")
 
 fn main() {
-    cargo::execute_main_without_stdin(execute);
+    cargo::execute_main_without_stdin(execute, false)
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={}", os::args());
+    shell.set_verbose(options.flag_verbose);
 
-    let Options { git, mut rest, bin } = options;
-
-    let path = match rest.remove(0) {
-        Some(path) => path,
-        None => return Err(CliError::new("must have a path as an argument", 1))
-    };
+    let Options { flag_git, flag_bin, arg_path, .. } = options;
 
     let opts = ops::NewOptions {
-        git: git,
-        path: path.as_slice(),
-        bin: bin,
+        git: flag_git,
+        path: arg_path.as_slice(),
+        bin: flag_bin,
     };
 
     ops::new(opts, shell).map(|_| None).map_err(|err| {

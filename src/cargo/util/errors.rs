@@ -4,12 +4,13 @@ use std::fmt;
 use std::fmt::{Show, Formatter, FormatError};
 use std::str;
 
+use docopt;
 use TomlError = toml::Error;
 
 pub trait CargoError: Send {
     fn description(&self) -> String;
     fn detail(&self) -> Option<String> { None }
-    fn cause(&self) -> Option<&CargoError + Send> { None }
+    fn cause(&self) -> Option<&CargoError> { None }
     fn is_human(&self) -> bool { false }
 
     fn to_error<E: FromError<Self>>(self) -> E {
@@ -78,7 +79,7 @@ impl CargoError for Box<CargoError + Send> {
         (*self).detail()
     }
 
-    fn cause(&self) -> Option<&CargoError + Send> {
+    fn cause(&self) -> Option<&CargoError> {
         (*self).cause()
     }
 
@@ -194,8 +195,8 @@ impl CargoError for ProcessError {
         self.detail.clone()
     }
 
-    fn cause(&self) -> Option<&CargoError + Send> {
-        self.cause.as_ref().map(|c| { let err: &CargoError + Send = *c; err })
+    fn cause(&self) -> Option<&CargoError> {
+        self.cause.as_ref().map(|c| { let err: &CargoError = *c; err })
     }
 
     fn with_cause<E: CargoError + Send>(mut self,
@@ -227,8 +228,8 @@ impl CargoError for ConcreteCargoError {
         self.detail.clone()
     }
 
-    fn cause(&self) -> Option<&CargoError + Send> {
-        self.cause.as_ref().map(|c| { let err: &CargoError + Send = *c; err })
+    fn cause(&self) -> Option<&CargoError> {
+        self.cause.as_ref().map(|c| { let err: &CargoError = *c; err })
     }
 
     fn with_cause<E: CargoError + Send>(mut self,
@@ -263,6 +264,28 @@ impl CargoError for CliError {
 }
 
 from_error!(CliError)
+
+impl CargoError for docopt::Error {
+    fn description(&self) -> String {
+        match *self {
+            docopt::WithProgramUsage(ref other, _) => other.description(),
+            ref e if e.fatal() => self.to_string(),
+            _ => "".to_string(),
+        }
+    }
+
+    fn detail(&self) -> Option<String> {
+        match *self {
+            docopt::WithProgramUsage(_, ref usage) => Some(usage.clone()),
+            ref e if e.fatal() => None,
+            ref e => Some(e.to_string()),
+        }
+    }
+
+    fn is_human(&self) -> bool { true }
+}
+
+from_error!(docopt::Error)
 
 impl CliError {
     pub fn new<S: Str>(error: S, code: uint) -> CliError {

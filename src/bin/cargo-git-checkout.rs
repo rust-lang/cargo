@@ -1,12 +1,12 @@
-#![crate_name="cargo-git-checkout"]
 #![feature(phase)]
 
-extern crate cargo;
 extern crate serialize;
 extern crate url;
+#[phase(plugin, link)] extern crate log;
 
-#[phase(plugin, link)]
-extern crate hammer;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 use cargo::{execute_main_without_stdin};
 use cargo::core::MultiShell;
@@ -15,20 +15,21 @@ use cargo::sources::git::{GitSource};
 use cargo::util::{Config, CliResult, CliError, Require, human};
 use url::Url;
 
-#[deriving(PartialEq,Clone,Decodable)]
-struct Options {
-    url: String,
-    reference: String
-}
+docopt!(Options, "
+Usage:
+    cargo-git-checkout [options] --url=URL --reference=REF
 
-hammer_config!(Options)
+Options:
+    -h, --help              Print this message
+    -v, --verbose           Use verbose output
+")
 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, false);
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    let Options { url, reference, .. } = options;
+    let Options { flag_url: url, flag_reference: reference, .. } = options;
 
     let url: Url = try!(from_str(url.as_slice())
                         .require(|| human(format!("The URL `{}` you passed was \

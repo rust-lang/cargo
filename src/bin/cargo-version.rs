@@ -1,29 +1,27 @@
-#![crate_name="cargo-version"]
 #![feature(phase)]
 
-extern crate cargo;
-
-#[phase(plugin, link)]
-extern crate hammer;
-
-#[phase(plugin, link)]
-extern crate log;
-
 extern crate serialize;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+#[phase(plugin, link)] extern crate log;
 
 use std::os;
 use cargo::execute_main_without_stdin;
 use cargo::core::MultiShell;
 use cargo::util::CliResult;
 
-#[deriving(Decodable,Encodable)]
-pub struct Options;
+docopt!(Options, "
+Usage:
+    cargo-version [options]
 
-hammer_config!(Options)
+Options:
+    -h, --help              Print this message
+    -v, --verbose           Use verbose output
+")
 
- 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, false);
 }
 
 fn execute(_: Options, _: &mut MultiShell) -> CliResult<Option<()>> {
