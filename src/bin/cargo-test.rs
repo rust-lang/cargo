@@ -1,12 +1,9 @@
-#![crate_name="cargo-test"]
 #![feature(phase)]
 
-#[phase(plugin, link)]
-extern crate cargo;
 extern crate serialize;
-
-#[phase(plugin, link)]
-extern crate hammer;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 use std::io::process::ExitStatus;
 
@@ -17,30 +14,37 @@ use cargo::util;
 use cargo::util::{CliResult, CliError, CargoError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-#[deriving(PartialEq,Clone,Decodable)]
-struct Options {
-    manifest_path: Option<String>,
-    jobs: Option<uint>,
-    update: bool,
-    rest: Vec<String>,
-}
+docopt!(Options, "
+Execute all unit and integration tests of a local package
 
-hammer_config!(Options "Run the package's test suite", |c| {
-    c.short("jobs", 'j').short("update", 'u')
-})
+Usage:
+    cargo-test [options] [--] [<args>...]
+
+Options:
+    -h, --help              Print this message
+    -j N, --jobs N          The number of jobs to run in parallel
+    -u, --update-remotes    Update all remote packages before compiling
+    --manifest-path PATH    Path to the manifest to compile
+    -v, --verbose           Use verbose output
+
+All of the trailing arguments are passed to the test binaries generated for
+filtering tests and generally providing options configuring how they run.
+",  flag_jobs: Option<uint>, flag_target: Option<String>,
+    flag_manifest_path: Option<String>)
 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, true);
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    let root = try!(find_root_manifest_for_cwd(options.manifest_path));
+    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
+    shell.set_verbose(options.flag_verbose);
 
     let mut compile_opts = ops::CompileOptions {
-        update: options.update,
+        update: options.flag_update_remotes,
         env: "test",
         shell: shell,
-        jobs: options.jobs,
+        jobs: options.flag_jobs,
         target: None,
     };
 
@@ -53,7 +57,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
 
     for file in test_executables.iter() {
         try!(util::process(test_dir.join(file.as_slice()))
-                  .args(options.rest.as_slice())
+                  .args(options.arg_args.as_slice())
                   .exec().map_err(|e| {
             let exit_status = match e.exit {
                 Some(ExitStatus(i)) => i as uint,

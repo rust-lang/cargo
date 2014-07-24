@@ -305,7 +305,7 @@ then
     if [ -z "${CFG_UNINSTALL}" ]
     then
         msg "verifying platform can run binaries"
-        "${CFG_SRC_DIR}/bin/cargo" -h > /dev/null
+        "${CFG_SRC_DIR}/bin/cargo" -V > /dev/null
         if [ $? -ne 0 ]
         then
             err "can't execute rustc binary on this platform"
@@ -448,7 +448,7 @@ done < "${CFG_SRC_DIR}/${CFG_LIBDIR_RELATIVE}/cargo/manifest.in"
 if [ -z "${CFG_DISABLE_VERIFY}" ]
 then
     msg "verifying installed binaries are executable"
-    "${CFG_DESTDIR}${CFG_PREFIX}/bin/cargo" -h > /dev/null
+    "${CFG_DESTDIR}${CFG_PREFIX}/bin/cargo" -V > /dev/null
     if [ $? -ne 0 ]
     then
         ERR="can't execute installed rustc binary. "

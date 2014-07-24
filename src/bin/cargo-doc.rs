@@ -1,11 +1,9 @@
 #![feature(phase)]
 
-#[phase(plugin, link)]
-extern crate cargo;
 extern crate serialize;
-
-#[phase(plugin, link)]
-extern crate hammer;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 use std::os;
 
@@ -15,24 +13,32 @@ use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_project_manifest;
 
-#[deriving(PartialEq,Clone,Decodable)]
-struct Options {
-    manifest_path: Option<String>,
-    jobs: Option<uint>,
-    update: bool,
-    no_deps: bool,
-}
+docopt!(Options, "
+Build a package's documentation
 
-hammer_config!(Options "Build the package's documentation", |c| {
-    c.short("jobs", 'j').short("update", 'u')
-})
+Usage:
+    cargo-doc [options]
+
+Options:
+    -h, --help              Print this message
+    --no-deps               Don't build documentation for dependencies
+    -j N, --jobs N          The number of jobs to run in parallel
+    -u, --update-remotes    Update all remote packages before compiling
+    --manifest-path PATH    Path to the manifest to compile
+    -v, --verbose           Use verbose output
+
+By default the documentation for the local package and all dependencies is
+built. The output is all placed in `target/doc` in rustdoc's usual format.
+",  flag_jobs: Option<uint>,
+    flag_manifest_path: Option<String>)
 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, false)
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    let root = match options.manifest_path {
+    shell.set_verbose(options.flag_verbose);
+    let root = match options.flag_manifest_path {
         Some(path) => Path::new(path),
         None => try!(find_project_manifest(&os::getcwd(), "Cargo.toml")
                     .map_err(|_| {
@@ -43,12 +49,12 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     };
 
     let mut doc_opts = ops::DocOptions {
-        all: !options.no_deps,
+        all: !options.flag_no_deps,
         compile_opts: ops::CompileOptions {
-            update: options.update,
-            env: if options.no_deps {"doc"} else {"doc-all"},
+            update: options.flag_update_remotes,
+            env: if options.flag_no_deps {"doc"} else {"doc-all"},
             shell: shell,
-            jobs: options.jobs,
+            jobs: options.flag_jobs,
             target: None,
         },
     };
