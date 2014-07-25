@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fmt;
+use serialize::{Encodable, Encoder};
 use util::graph::{Nodes,Edges};
 
 use core::{
@@ -30,6 +32,12 @@ impl Resolve {
     }
 }
 
+impl fmt::Show for Resolve {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.graph.fmt(fmt)
+    }
+}
+
 struct Context<'a, R> {
     registry: &'a mut R,
     resolve: Resolve,
@@ -56,6 +64,7 @@ pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mu
 
     let mut context = Context::new(registry);
     try!(resolve_deps(root, deps, &mut context));
+    log!(5, "  result={}", context.resolve);
     Ok(context.resolve)
 }
 
