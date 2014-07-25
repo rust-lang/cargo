@@ -1,10 +1,5 @@
-use std::os;
-use std::path;
-
-use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING};
-use hamcrest::{assert_that, existing_file};
-use cargo::util::process;
+use support::{project, execs};
+use hamcrest::assert_that;
 
 fn setup() {
 }

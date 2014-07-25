@@ -12,9 +12,9 @@ use core::{
     Summary
 };
 use core::dependency::SerializedDependency;
-use util::{CargoResult, graph, Config};
+use util::{CargoResult, graph};
 use serialize::{Encoder,Encodable};
-use core::source::{SourceId, SourceSet, Source};
+use core::source::{SourceId, Source};
 
 // TODO: Is manifest_path a relic?
 #[deriving(Clone)]
@@ -115,20 +115,6 @@ impl Package {
         let mut ret = vec!(self.source_id.clone());
         ret.push_all(self.manifest.get_source_ids());
         ret
-    }
-
-    pub fn get_fingerprint(&self, config: &mut Config) -> CargoResult<String> {
-        let mut sources = self.get_source_ids();
-        // Sort the sources just to make sure we have a consistent fingerprint.
-        sources.sort_by(|a, b| {
-            let a = (&a.kind, a.location.to_string());
-            let b = (&b.kind, b.location.to_string());
-            a.cmp(&b)
-        });
-        let sources = sources.iter().map(|source_id| {
-            source_id.load(config)
-        }).collect::<Vec<_>>();
-        SourceSet::new(sources).fingerprint(self)
     }
 }
 

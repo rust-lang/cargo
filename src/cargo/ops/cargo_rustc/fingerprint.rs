@@ -5,7 +5,7 @@ use std::io::{fs, File};
 use core::{Package, Target};
 use util;
 use util::hex::short_hash;
-use util::{CargoResult, Fresh, Dirty, Freshness};
+use util::{CargoResult, Fresh, Dirty, Freshness, Config};
 
 use super::job::Job;
 use super::context::Context;
@@ -75,8 +75,8 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
 
 fn is_fresh(dep: &Package, loc: &Path, cx: &mut Context, targets: &[&Target])
             -> CargoResult<(bool, String)> {
-    let new_pkg_fingerprint = format!("{}{}", cx.rustc_version,
-                                      try!(dep.get_fingerprint(cx.config)));
+    let dep_fingerprint = try!(get_fingerprint(dep, cx.config));
+    let new_pkg_fingerprint = format!("{}{}", cx.rustc_version, dep_fingerprint);
 
     let new_fingerprint = fingerprint(new_pkg_fingerprint, hash_targets(targets));
 
@@ -102,4 +102,10 @@ fn hash_targets(targets: &[&Target]) -> u64 {
 fn fingerprint(package: String, profiles: u64) -> String {
     let hasher = SipHasher::new_with_keys(0,0);
     util::to_hex(hasher.hash(&(package, profiles)))
+}
+
+fn get_fingerprint(pkg: &Package, config: &mut Config) -> CargoResult<String> {
+    let source_id = pkg.get_package_id().get_source_id();
+    let source = source_id.load(config);
+    source.fingerprint(pkg)
 }
