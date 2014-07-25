@@ -1,4 +1,5 @@
 use std::io::File;
+use std::path;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir};
@@ -97,6 +98,60 @@ test!(cargo_compile_simple_git_dep {
     assert_that(
       cargo::util::process(project.bin("foo")),
       execs().with_stdout("hello world\n"));
+})
+
+test!(override_git_dep {
+    let p = project("foo");
+    let root = p.root().clone();
+    let p = p
+        .file(".cargo/config", format!(r#"
+            paths = ['{}/baz']
+        "#, root.display()))
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.baz]
+            git = 'git://example.com/path/to/nowhere'
+        "#)
+        .file("bar/src/lib.rs", "extern crate baz;")
+        .file("baz/Cargo.toml", r#"
+            [package]
+
+            name = "baz"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("baz/src/lib.rs", "");
+
+    assert_that(p.cargo_process("cargo-build"),
+        execs()
+        .with_stdout(format!("{compiling} baz v0.5.0 (file:{dir}{sep}baz)\n\
+                              {compiling} bar v0.5.0 (file:{dir})\n\
+                              {compiling} foo v0.5.0 (file:{dir})\n",
+                             compiling = COMPILING, dir = root.display(),
+                             sep = path::SEP))
+        .with_stderr(""));
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout(""));
 })
 
 test!(cargo_compile_git_dep_branch {
