@@ -75,7 +75,7 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
 
 fn is_fresh(dep: &Package, loc: &Path, cx: &mut Context, targets: &[&Target])
             -> CargoResult<(bool, String)> {
-    let dep_fingerprint = try!(get_fingerprint(dep, cx.config));
+    let dep_fingerprint = try!(get_fingerprint(dep, cx));
     let new_pkg_fingerprint = format!("{}{}", cx.rustc_version, dep_fingerprint);
 
     let new_fingerprint = fingerprint(new_pkg_fingerprint, hash_targets(targets));
@@ -93,6 +93,14 @@ fn is_fresh(dep: &Package, loc: &Path, cx: &mut Context, targets: &[&Target])
     Ok((old_fingerprint == new_fingerprint, new_fingerprint))
 }
 
+fn get_fingerprint(pkg: &Package, cx: &Context) -> CargoResult<String> {
+    let source = cx.sources
+        .get(pkg.get_package_id().get_source_id())
+        .expect("BUG: Missing package source");
+
+    source.fingerprint(pkg)
+}
+
 fn hash_targets(targets: &[&Target]) -> u64 {
     let hasher = SipHasher::new_with_keys(0,0);
     let targets = targets.iter().map(|t| (*t).clone()).collect::<Vec<Target>>();
@@ -102,10 +110,4 @@ fn hash_targets(targets: &[&Target]) -> u64 {
 fn fingerprint(package: String, profiles: u64) -> String {
     let hasher = SipHasher::new_with_keys(0,0);
     util::to_hex(hasher.hash(&(package, profiles)))
-}
-
-fn get_fingerprint(pkg: &Package, config: &mut Config) -> CargoResult<String> {
-    let source_id = pkg.get_package_id().get_source_id();
-    let source = source_id.load(config);
-    source.fingerprint(pkg)
 }

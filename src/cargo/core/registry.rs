@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::vec::Vec;
-use core::{Source, SourceId, Summary, Dependency, PackageId, Package};
+use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human};
 
 pub trait Registry {
@@ -16,10 +17,9 @@ impl Registry for Vec<Summary> {
 }
 
 pub struct PackageRegistry<'a> {
-    sources: Vec<Box<Source>>,
+    sources: SourceMap,
     overrides: Vec<Summary>,
     summaries: Vec<Summary>,
-    searched: Vec<SourceId>,
     config: &'a mut Config<'a>
 }
 
@@ -44,10 +44,9 @@ impl<'a> PackageRegistry<'a> {
 
     fn empty<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
-            sources: vec!(),
+            sources: SourceMap::new(),
             overrides: vec!(),
             summaries: vec!(),
-            searched: vec!(),
             config: config
         }
     }
@@ -60,7 +59,7 @@ impl<'a> PackageRegistry<'a> {
         // source
         let mut ret = Vec::new();
 
-        for source in self.sources.iter() {
+        for source in self.sources.sources() {
             try!(source.download(package_ids));
             let packages = try!(source.get(package_ids));
 
@@ -74,14 +73,20 @@ impl<'a> PackageRegistry<'a> {
         Ok(ret)
     }
 
+    pub fn move_sources(self) -> SourceMap {
+        self.sources
+    }
+
     fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
-        if self.searched.contains(namespace) { return Ok(()); }
+        if self.sources.contains(namespace) {
+            return Ok(());
+        }
+
         try!(self.load(namespace, false));
         Ok(())
     }
 
     fn load(&mut self, namespace: &SourceId, override: bool) -> CargoResult<()> {
-
         (|| {
             let mut source = namespace.load(self.config);
             let dst = if override {&mut self.overrides} else {&mut self.summaries};
@@ -97,10 +102,7 @@ impl<'a> PackageRegistry<'a> {
             }
 
             // Save off the source
-            self.sources.push(source);
-
-            // Track that the source has been searched
-            self.searched.push(namespace.clone());
+            self.sources.insert(namespace, source);
 
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", namespace)))
