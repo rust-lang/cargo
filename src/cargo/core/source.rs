@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::collections::hashmap::Values;
 use std::fmt;
 use std::fmt::{Show, Formatter};
 use std::hash;
@@ -211,6 +213,7 @@ impl SourceId {
     }
 
     pub fn load(&self, config: &mut Config) -> Box<Source> {
+        log!(5, "loading SourceId; {}", self);
         match self.kind {
             GitKind(..) => box GitSource::new(self, config) as Box<Source>,
             PathKind => {
@@ -222,6 +225,49 @@ impl SourceId {
             },
             RegistryKind => unimplemented!()
         }
+    }
+}
+
+pub struct SourceMap {
+    map: HashMap<SourceId, Box<Source>>
+}
+
+pub type Sources<'a> = Values<'a, SourceId, Box<Source>>;
+
+impl SourceMap {
+    pub fn new() -> SourceMap {
+        SourceMap {
+            map: HashMap::new()
+        }
+    }
+
+    pub fn contains(&self, id: &SourceId) -> bool {
+        self.map.contains_key(id)
+    }
+
+    pub fn get(&self, id: &SourceId) -> Option<&Source> {
+        let source = self.map.find(id);
+
+        source.map(|s| {
+            let s: &Source = *s;
+            s
+        })
+    }
+
+    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source> {
+        self.get(pkg_id.get_source_id())
+    }
+
+    pub fn insert(&mut self, id: &SourceId, source: Box<Source>) {
+        self.map.insert(id.clone(), source);
+    }
+
+    pub fn len(&self) -> uint {
+        self.map.len()
+    }
+
+    pub fn sources(&self) -> Sources {
+        self.map.values()
     }
 }
 

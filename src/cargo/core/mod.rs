@@ -21,6 +21,7 @@ pub use self::package_id::{
 pub use self::source::{
     Source,
     SourceId,
+    SourceMap,
     SourceSet,
     GitKind,
     PathKind,
