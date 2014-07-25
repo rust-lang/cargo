@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use serialize::{Encodable, Encoder};
+use serialize::{Encodable, Encoder, Decodable, Decoder};
 use util::graph::{Nodes,Edges};
 
 use core::{
@@ -21,15 +22,110 @@ pub struct Resolve {
 
 #[deriving(Encodable, Decodable, Show)]
 pub struct EncodableResolve {
-    package: Vec<EncodableDependency>
+    package: Vec<EncodableDependency>,
+    root: EncodableDependency
 }
 
-#[deriving(Encodable, Decodable, Show)]
-pub struct EncodableDependency{
+impl EncodableResolve {
+    pub fn to_resolve(&self, default: &SourceId) -> CargoResult<Resolve> {
+        let mut g = Graph::new();
+
+        add_pkg_to_graph(&mut g, &self.root, default);
+
+        for dep in self.package.iter() {
+            add_pkg_to_graph(&mut g, dep, default);
+        }
+
+        Ok(Resolve { graph: g, root: try!(self.root.to_package_id(default)) })
+    }
+}
+
+fn add_pkg_to_graph(g: &mut Graph<PackageId>,
+                    dep: &EncodableDependency,
+                    default: &SourceId)
+                    -> CargoResult<()>
+{
+    let package_id = try!(dep.to_package_id(default));
+    g.add(package_id.clone(), []);
+
+    match dep.dependencies {
+        Some(ref deps) => {
+            for edge in deps.iter() {
+                g.link(package_id.clone(), try!(edge.to_package_id(default)));
+            }
+        },
+        _ => ()
+    };
+
+    Ok(())
+}
+
+#[deriving(Encodable, Decodable, Show, PartialOrd, Ord, PartialEq, Eq)]
+pub struct EncodableDependency {
     name: String,
     version: String,
-    source: SourceId,
-    dependencies: Option<Vec<PackageId>>
+    source: Option<SourceId>,
+    dependencies: Option<Vec<EncodablePackageId>>
+}
+
+impl EncodableDependency {
+    fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
+        PackageId::new(
+            self.name.as_slice(),
+            self.version.as_slice(),
+            self.source.as_ref().unwrap_or(default_source))
+    }
+}
+
+#[deriving(Show, PartialOrd, Ord, PartialEq, Eq)]
+pub struct EncodablePackageId {
+    name: String,
+    version: String,
+    source: Option<SourceId>
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for EncodablePackageId {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        let mut out = format!("{} {}", self.name, self.version);
+        self.source.as_ref().map(|s| {
+            out.push_str(format!(" ({})", s.to_url()).as_slice())
+        });
+        out.encode(s)
+    }
+}
+
+impl<E, D: Decoder<E>> Decodable<D, E> for EncodablePackageId {
+    fn decode(d: &mut D) -> Result<EncodablePackageId, E> {
+        let string: String = raw_try!(Decodable::decode(d));
+        let regex = regex!(r"^([^ ]+) ([^ ]+) (?:\(([^\)]+)\))?$");
+        let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
+
+        let name = captures.at(1);
+        let version = captures.at(2);
+
+        let source = captures.at(3);
+
+        let source_id = if source == "" {
+            None
+        } else {
+            Some(SourceId::from_url(source.to_string()))
+        };
+
+        Ok(EncodablePackageId {
+            name: name.to_string(),
+            version: version.to_string(),
+            source: source_id
+        })
+    }
+}
+
+impl EncodablePackageId {
+    fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
+        PackageId::new(
+            self.name.as_slice(),
+            self.version.as_slice(),
+            self.source.as_ref().unwrap_or(default_source))
+    }
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Resolve {
@@ -40,21 +136,39 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Resolve {
         let encodable = ids.iter().filter_map(|&id| {
             if self.root == *id { return None; }
 
-            let deps = self.graph.edges(id).map(|edge| {
-                let mut deps = edge.map(|e| e.clone()).collect::<Vec<PackageId>>();
-                deps.sort();
-                deps
-            });
-
-            Some(EncodableDependency {
-                name: id.get_name().to_string(),
-                version: id.get_version().to_string(),
-                source: id.get_source_id().clone(),
-                dependencies: deps
-            })
+            Some(encodable_resolve_node(id, &self.graph))
         }).collect::<Vec<EncodableDependency>>();
 
-        EncodableResolve { package: encodable }.encode(s)
+        EncodableResolve {
+            package: encodable,
+            root: encodable_resolve_node(&self.root, &self.graph)
+        }.encode(s)
+    }
+}
+
+fn encodable_resolve_node(id: &PackageId, graph: &Graph<PackageId>) -> EncodableDependency {
+    let deps = graph.edges(id).map(|edge| {
+        let mut deps = edge.map(|e| {
+            encodable_package_id(e)
+        }).collect::<Vec<EncodablePackageId>>();
+        deps.sort();
+        deps
+    });
+
+
+    EncodableDependency {
+        name: id.get_name().to_string(),
+        version: id.get_version().to_string(),
+        source: Some(id.get_source_id().clone()),
+        dependencies: deps,
+    }
+}
+
+fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
+    EncodablePackageId {
+        name: id.get_name().to_string(),
+        version: id.get_version().to_string(),
+        source: Some(id.get_source_id().clone()),
     }
 }
 

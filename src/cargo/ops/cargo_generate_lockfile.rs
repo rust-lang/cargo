@@ -48,33 +48,22 @@ fn write_resolve(resolve: Resolve) {
     let mut e = Encoder::new();
     resolve.encode(&mut e).unwrap();
 
-    let deps = e.toml.find(&"package".to_string()).unwrap().as_slice().unwrap();
     let mut out = String::new();
+
+    let root = e.toml.find(&"root".to_string()).unwrap();
+
+    println!("root={}", root);
+
+    out.push_str("[root]\n");
+    emit_package(root.as_table().unwrap(), &mut out);
+
+    let deps = e.toml.find(&"package".to_string()).unwrap().as_slice().unwrap();
 
     for dep in deps.iter() {
         let dep = dep.as_table().unwrap();
+
         out.push_str("[[package]]\n");
-        out.push_str(format!("name = {}\n", lookup(dep, "name")).as_slice());
-        out.push_str(format!("version = {}\n", lookup(dep, "version")).as_slice());
-
-        dep.find(&"source".to_string()).map(|s| {
-          out.push_str(format!("source = {}\n", lookup(dep, "source")).as_slice());
-        });
-
-        dep.find(&"dependencies".to_string()).map(|s| {
-            let slice = s.as_slice().unwrap();
-
-            if !slice.is_empty() {
-                out.push_str("dependencies = [\n");
-
-                for child in s.as_slice().unwrap().iter() {
-                    out.push_str(format!("  {},\n", child).as_slice());
-                }
-
-                out.push_str("]\n");
-            }
-            out.push_str("\n");
-        });
+        emit_package(dep, &mut out);
     }
 
     let mut file = File::create(&Path::new("Cargo.lock"));
@@ -86,6 +75,30 @@ fn write_resolve(resolve: Resolve) {
     println!("{}", v);
 }
 
+fn emit_package(dep: &TreeMap<String, toml::Value>, out: &mut String) {
+    out.push_str(format!("name = {}\n", lookup(dep, "name")).as_slice());
+    out.push_str(format!("version = {}\n", lookup(dep, "version")).as_slice());
+
+    dep.find(&"source".to_string()).map(|s| {
+        out.push_str(format!("source = {}\n", lookup(dep, "source")).as_slice());
+    });
+
+    dep.find(&"dependencies".to_string()).map(|s| {
+        let slice = s.as_slice().unwrap();
+
+        if !slice.is_empty() {
+            out.push_str("dependencies = [\n");
+
+            for child in s.as_slice().unwrap().iter() {
+                out.push_str(format!("  {},\n", child).as_slice());
+            }
+
+            out.push_str("]\n");
+        }
+        out.push_str("\n");
+    });
+}
+
 fn lookup<'a>(table: &'a TreeMap<String, toml::Value>, key: &'static str) -> &'a toml::Value {
-    table.find(&key.to_string()).unwrap()
+    table.find(&key.to_string()).expect(format!("Didn't find {}", key).as_slice())
 }
