@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::os;
 use std::str;
 
-use core::{Package, PackageId, PackageSet, Resolve, Target};
+use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util;
 use util::{CargoResult, ChainError, internal, Config};
 
@@ -20,6 +20,7 @@ pub struct Context<'a, 'b> {
     pub rustc_version: String,
     pub config: &'b mut Config<'b>,
     pub resolve: &'a Resolve,
+    pub sources: &'a SourceMap,
 
     env: &'a str,
     host: Layout,
@@ -32,8 +33,8 @@ pub struct Context<'a, 'b> {
 }
 
 impl<'a, 'b> Context<'a, 'b> {
-    pub fn new(env: &'a str, resolve: &'a Resolve, deps: &'a PackageSet,
-               config: &'b mut Config<'b>,
+    pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap,
+               deps: &'a PackageSet, config: &'b mut Config<'b>,
                host: Layout, target: Option<Layout>)
                -> CargoResult<Context<'a, 'b>> {
         let (target_dylib, target_exe) =
@@ -51,6 +52,7 @@ impl<'a, 'b> Context<'a, 'b> {
             target: target,
             primary: false,
             resolve: resolve,
+            sources: sources,
             package_set: deps,
             config: config,
             target_dylib: target_dylib,
