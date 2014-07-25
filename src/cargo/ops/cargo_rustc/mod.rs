@@ -4,7 +4,7 @@ use std::io::{fs, UserRWX};
 use std::os;
 use semver::Version;
 
-use core::{Package, PackageId, PackageSet, Target, Resolve};
+use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util;
 use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
 use util::{Config, Freshness, internal, ChainError};
@@ -38,7 +38,7 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 }
 
 pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
-                           deps: &PackageSet, resolve: &'a Resolve,
+                           deps: &PackageSet, resolve: &'a Resolve, sources: &'a SourceMap,
                            config: &'a mut Config<'a>) -> CargoResult<()> {
     if targets.is_empty() {
         return Ok(());
@@ -53,7 +53,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         layout::Layout::new(root.join(target).join(dest))
     });
 
-    let mut cx = try!(Context::new(env, resolve, deps, config,
+    let mut cx = try!(Context::new(env, resolve, sources, deps, config,
                                    host_layout, target_layout));
 
     // First ensure that the destination directory exists

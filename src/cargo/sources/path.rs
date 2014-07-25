@@ -5,7 +5,7 @@ use std::io::fs;
 
 use core::{Package, PackageId, Summary, SourceId, Source};
 use ops;
-use util::{CargoResult, internal};
+use util::{CargoResult, internal, internal_error};
 
 pub struct PathSource {
     id: SourceId,
@@ -19,6 +19,7 @@ pub struct PathSource {
 impl PathSource {
 
     pub fn for_path(path: &Path) -> PathSource {
+        log!(5, "PathSource::for_path; path={}", path.display());
         PathSource::new(path, &SourceId::for_path(path))
     }
 
@@ -96,12 +97,17 @@ impl Source for PathSource {
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
-        let packages = try!(self.read_packages());
+        if !self.updated {
+            return Err(internal_error("BUG: source was not updated", ""));
+        }
+
         let mut max = 0;
-        for pkg in packages.iter().filter(|p| *p == pkg) {
+
+        for pkg in self.packages.iter().filter(|p| *p == pkg) {
             let loc = pkg.get_manifest_path().dir_path();
             max = cmp::max(max, try!(walk(&loc, true)));
         }
+
         return Ok(max.to_string());
 
         fn walk(path: &Path, is_root: bool) -> CargoResult<u64> {

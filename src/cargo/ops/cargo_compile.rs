@@ -64,7 +64,7 @@ pub fn compile(manifest_path: &Path,
                                                    manifest_path.dir_path()));
     let source_ids = package.get_source_ids();
 
-    let (packages, resolve) = {
+    let (packages, resolve, sources) = {
         let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
 
         let mut registry =
@@ -79,7 +79,7 @@ pub fn compile(manifest_path: &Path,
             human("Unable to get packages from source")
         }));
 
-        (packages, resolved)
+        (packages, resolved, registry.move_sources())
     };
 
     debug!("packages={}", packages);
@@ -92,7 +92,7 @@ pub fn compile(manifest_path: &Path,
     try!(scrape_target_config(&mut config, &user_configs));
 
     try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
-         &PackageSet::new(packages.as_slice()), &resolve, &mut config));
+         &PackageSet::new(packages.as_slice()), &resolve, &sources, &mut config));
 
     let test_executables: Vec<String> = targets.iter()
         .filter_map(|target| {

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use std::collections::hashmap::{Keys, SetItems};
@@ -65,5 +66,23 @@ impl<N: Eq + Hash + Clone> Graph<N> {
 
     pub fn iter(&self) -> Nodes<N> {
         self.nodes.keys()
+    }
+}
+
+impl<N: fmt::Show + Eq + Hash> fmt::Show for Graph<N> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        try!(writeln!(fmt, "Graph {{"));
+
+        for (n, e) in self.nodes.iter() {
+            try!(writeln!(fmt, "  - {}", n));
+
+            for n in e.iter() {
+                try!(writeln!(fmt, "    - {}", n));
+            }
+        }
+
+        try!(write!(fmt, "}}"));
+
+        Ok(())
     }
 }
