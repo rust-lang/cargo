@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::vec::Vec;
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human};
