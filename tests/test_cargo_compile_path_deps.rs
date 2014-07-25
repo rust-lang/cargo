@@ -161,8 +161,7 @@ test!(cargo_compile_with_transitive_dev_deps {
 
             [dev-dependencies.baz]
 
-            version = "0.5.0"
-            path = "baz"
+            git = "git://example.com/path/to/nowhere"
 
             [[lib]]
 
@@ -171,22 +170,6 @@ test!(cargo_compile_with_transitive_dev_deps {
         .file("bar/src/bar.rs", r#"
             pub fn gimme() -> &'static str {
                 "zoidberg"
-            }
-        "#)
-        .file("bar/baz/Cargo.toml", r#"
-            [project]
-
-            name = "baz"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [[lib]]
-
-            name = "baz"
-        "#)
-        .file("bar/baz/src/baz.rs", r#"
-            pub fn gimme() -> &'static str {
-                "nope"
             }
         "#);
 
