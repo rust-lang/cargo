@@ -52,8 +52,6 @@ fn write_resolve(resolve: Resolve) {
 
     let root = e.toml.find(&"root".to_string()).unwrap();
 
-    println!("root={}", root);
-
     out.push_str("[root]\n");
     emit_package(root.as_table().unwrap(), &mut out);
 
@@ -72,7 +70,6 @@ fn write_resolve(resolve: Resolve) {
     let mut d = Decoder::new(toml::Table(e.toml.clone()));
     let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
 
-    println!("{}", v);
 }
 
 fn emit_package(dep: &TreeMap<String, toml::Value>, out: &mut String) {

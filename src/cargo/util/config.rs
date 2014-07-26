@@ -244,9 +244,7 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     try!(walk_tree(&pwd, |mut file| {
         let path = file.path().clone();
         let contents = try!(file.read_to_string());
-        let file = path.filename_display().to_string();
-        let table = try!(cargo_toml::parse(contents.as_slice(),
-                                           file.as_slice()).chain_error(|| {
+        let table = try!(cargo_toml::parse(contents.as_slice(), &path).chain_error(|| {
             internal(format!("could not parse Toml manifest; path={}",
                              path.display()))
         }));
@@ -308,9 +306,7 @@ fn walk_tree(pwd: &Path,
 
 fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
     let contents = try!(file.read_to_string());
-    let mut toml = try!(cargo_toml::parse(contents.as_slice(),
-                                          file.path().filename_display()
-                                              .to_string().as_slice()));
+    let mut toml = try!(cargo_toml::parse(contents.as_slice(), file.path()));
     let val = try!(toml.pop(&key.to_string()).require(|| internal("")));
 
     ConfigValue::from_toml(file.path(), val)

@@ -24,13 +24,15 @@
 
 use std::os;
 use std::collections::HashMap;
+use std::io::File;
+use serialize::Decodable;
 
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, resolver};
+use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, Resolve, resolver};
 use ops;
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
-use util::{CargoResult, Wrap, config, internal, human, ChainError};
+use util::{CargoResult, Wrap, config, internal, human, ChainError, toml};
 
 pub struct CompileOptions<'a> {
     pub update: bool,
@@ -65,14 +67,22 @@ pub fn compile(manifest_path: &Path,
     let source_ids = package.get_source_ids();
 
     let (packages, resolve, sources) = {
+        let lockfile = manifest_path.dir_path().join("Cargo.lock");
+        let source_id = package.get_package_id().get_source_id();
+
         let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
 
         let mut registry =
             try!(PackageRegistry::new(source_ids, override_ids, &mut config));
 
-        let resolved = try!(resolver::resolve(package.get_package_id(),
-                                              package.get_dependencies(),
-                                              &mut registry));
+        let resolved = match try!(load_lockfile(&lockfile, source_id)) {
+            Some(r) => r,
+            None => {
+                try!(resolver::resolve(package.get_package_id(),
+                                       package.get_dependencies(),
+                                       &mut registry))
+            }
+        };
 
         let req: Vec<PackageId> = resolved.iter().map(|r| r.clone()).collect();
         let packages = try!(registry.get(req.as_slice()).wrap({
@@ -114,6 +124,20 @@ pub fn compile(manifest_path: &Path,
     }).collect();
 
     Ok(test_executables)
+}
+
+fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>> {
+    // If there is no lockfile, return none.
+    let mut f = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(None)
+    };
+
+    let s = try!(f.read_to_string());
+
+    let mut d = ::toml::Decoder::new(::toml::Table(try!(toml::parse(s.as_slice(), path))));
+    let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
+    Ok(Some(try!(v.to_resolve(sid))))
 }
 
 fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
