@@ -1,10 +1,10 @@
-use std::io::fs;
+use std::io::{fs, TempDir};
 use std::os;
 use std::path;
 use std::str;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING, cargo_dir};
+use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process, realpath};
@@ -69,7 +69,8 @@ test!(cargo_compile_with_invalid_version {
 })
 
 test!(cargo_compile_without_manifest {
-    let p = project("foo");
+    let tmpdir = TempDir::new("cargo").unwrap();
+    let p = ProjectBuilder::new("foo", tmpdir.path().clone());
 
     assert_that(p.cargo_process("cargo-build"),
         execs()

@@ -1,0 +1,71 @@
+[project]
+
+name = "cargo"
+version = "0.0.1-pre"
+authors = ["Yehuda Katz <wycats@gmail.com>",
+           "Carl Lerche <me@carllerche.com>"]
+
+[[lib]]
+
+name = "cargo"
+path = "src/cargo/lib.rs"
+
+# TODO: remove all these `rev` markers once we have an official lockfile
+[dependencies.hammer]
+git = "https://github.com/wycats/hammer.rs"
+rev = "c085c639"
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs"
+rev = "a3c7f2c3"
+
+[dependencies.hamcrest]
+git = "https://github.com/carllerche/hamcrest-rust.git"
+rev = "05acf768"
+
+[[bin]]
+name = "cargo"
+test = false
+
+[[bin]]
+name = "cargo-build"
+test = false
+
+[[bin]]
+name = "cargo-clean"
+test = false
+
+[[bin]]
+name = "cargo-git-checkout"
+test = false
+
+[[bin]]
+name = "cargo-read-manifest"
+test = false
+
+[[bin]]
+name = "cargo-run"
+test = false
+
+[[bin]]
+name = "cargo-rustc"
+test = false
+
+[[bin]]
+name = "cargo-test"
+test = false
+
+[[bin]]
+name = "cargo-verify-project"
+test = false
+
+[[bin]]
+name = "cargo-version"
+test = false
+
+[[bin]]
+name = "cargo-new"
+test = false
+
+[[test]]
+name = "tests"
