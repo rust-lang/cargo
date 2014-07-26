@@ -56,7 +56,8 @@ impl ProcessBuilder {
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
         command.stdout(InheritFd(1))
-               .stderr(InheritFd(2));
+               .stderr(InheritFd(2))
+               .stdin(InheritFd(0));
 
         let msg = || format!("Could not execute process `{}`",
                              self.debug_string());
