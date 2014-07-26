@@ -36,7 +36,8 @@ impl EncodableResolve {
             add_pkg_to_graph(&mut g, dep, default);
         }
 
-        Ok(Resolve { graph: g, root: try!(self.root.to_package_id(default)) })
+        let root = self.root.to_package_id(default);
+        Ok(Resolve { graph: g, root: try!(root) })
     }
 }
 

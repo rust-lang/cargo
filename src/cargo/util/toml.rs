@@ -87,7 +87,7 @@ pub fn to_manifest(contents: &[u8],
     let contents = try!(str::from_utf8(contents).require(|| {
         human("Cargo.toml is not valid UTF-8")
     }));
-    let root = try!(parse(contents, "Cargo.toml"));
+    let root = try!(parse(contents, &Path::new("Cargo.toml")));
     let mut d = toml::Decoder::new(toml::Table(root));
     let toml_manifest: TomlManifest = match Decodable::decode(&mut d) {
         Ok(t) => t,
@@ -130,7 +130,7 @@ pub fn to_manifest(contents: &[u8],
     }
 }
 
-pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
+pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
     let mut parser = toml::Parser::new(toml.as_slice());
     match parser.parse() {
         Some(toml) => return Ok(toml),
@@ -141,7 +141,7 @@ pub fn parse(toml: &str, file: &str) -> CargoResult<toml::Table> {
         let (loline, locol) = parser.to_linecol(error.lo);
         let (hiline, hicol) = parser.to_linecol(error.hi);
         error_str.push_str(format!("{}:{}:{}{} {}\n",
-                                   file,
+                                   file.filename_display(),
                                    loline + 1, locol + 1,
                                    if loline != hiline || locol != hicol {
                                        format!("-{}:{}", hiline + 1,
