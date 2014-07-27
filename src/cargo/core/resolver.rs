@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt;
-use serialize::{Encodable, Encoder};
 use util::graph::{Nodes,Edges};
 
 use core::{
