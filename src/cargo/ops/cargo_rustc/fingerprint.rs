@@ -5,7 +5,7 @@ use std::io::{fs, File};
 use core::{Package, Target};
 use util;
 use util::hex::short_hash;
-use util::{CargoResult, Fresh, Dirty, Freshness, Config};
+use util::{CargoResult, Fresh, Dirty, Freshness};
 
 use super::job::Job;
 use super::context::Context;

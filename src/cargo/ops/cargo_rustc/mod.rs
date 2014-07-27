@@ -371,6 +371,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
         .env("CARGO_PKG_VERSION_MINOR", Some(pkg.get_version().minor.to_string()))
         .env("CARGO_PKG_VERSION_PATCH", Some(pkg.get_version().patch.to_string()))
         .env("CARGO_PKG_VERSION_PRE", pre_version_component(pkg.get_version()))
+        .env("PKG_VERSION", Some(pkg.get_version().to_string()))
 }
 
 fn pre_version_component(v: &Version) -> Option<String> {
