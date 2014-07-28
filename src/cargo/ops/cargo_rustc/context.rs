@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::os;
 use std::str;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
