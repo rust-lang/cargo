@@ -77,6 +77,7 @@ impl<'a, 'b> Context<'a, 'b> {
                            .arg("-")
                            .arg("--crate-name").arg("-")
                            .arg("--crate-type").arg("dylib")
+                           .arg("--crate-type").arg("bin")
                            .arg("--print-file-name");
         let process = match target {
             Some(s) => process.arg("--target").arg(s),
@@ -85,14 +86,13 @@ impl<'a, 'b> Context<'a, 'b> {
         let output = try!(process.exec_with_output());
 
         let output = str::from_utf8(output.output.as_slice()).unwrap();
-        let dylib_parts: Vec<&str> = output.trim().split('-').collect();
+        let mut lines = output.lines();
+        let dylib_parts: Vec<&str> = lines.next().unwrap().trim()
+                                          .split('-').collect();
         assert!(dylib_parts.len() == 2,
                 "rustc --print-file-name output has changed");
-        let exe_suffix = match target {
-            None => os::consts::EXE_SUFFIX,
-            Some(s) if s.contains("win32") || s.contains("windows") => ".exe",
-            Some(_) => "",
-        };
+        let exe_suffix = lines.next().unwrap().trim()
+                              .split('-').skip(1).next().unwrap().to_string();
 
         Ok(((dylib_parts[0].to_string(), dylib_parts[1].to_string()),
             exe_suffix.to_string()))
