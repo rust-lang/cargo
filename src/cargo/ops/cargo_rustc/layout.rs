@@ -153,4 +153,6 @@ impl<'a> LayoutProxy<'a> {
     pub fn old_native(&self, pkg: &Package) -> Path {
         self.root.old_native(pkg)
     }
+
+    pub fn proxy(&self) -> &'a Layout { self.root }
 }

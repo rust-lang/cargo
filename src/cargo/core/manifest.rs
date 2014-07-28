@@ -19,6 +19,7 @@ pub struct Manifest {
     authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: Path,
+    doc_dir: Path,
     sources: Vec<SourceId>,
     build: Vec<String>,
     unused_keys: Vec<String>,
@@ -41,6 +42,7 @@ pub struct SerializedManifest {
     authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: String,
+    doc_dir: String,
     build: Option<Vec<String>>,
 }
 
@@ -55,6 +57,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
             authors: self.authors.clone(),
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_string(),
+            doc_dir: self.doc_dir.display().to_string(),
             build: if self.build.len() == 0 { None } else { Some(self.build.clone()) },
         }.encode(s)
     }
@@ -155,8 +158,23 @@ impl Profile {
         }
     }
 
+    pub fn default_doc() -> Profile {
+        Profile {
+            env: "doc".to_string(),
+            opt_level: 0,
+            debug: false,
+            test: false,
+            dest: Some("doc-build".to_string()),
+            plugin: false,
+        }
+    }
+
     pub fn is_compile(&self) -> bool {
         self.env.as_slice() == "compile"
+    }
+
+    pub fn is_doc(&self) -> bool {
+        self.env.as_slice() == "doc"
     }
 
     pub fn is_test(&self) -> bool {
@@ -249,13 +267,14 @@ impl Show for Target {
 
 impl Manifest {
     pub fn new(summary: &Summary, targets: &[Target],
-               target_dir: &Path, sources: Vec<SourceId>,
+               target_dir: &Path, doc_dir: &Path, sources: Vec<SourceId>,
                build: Vec<String>) -> Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
             targets: Vec::from_slice(targets),
             target_dir: target_dir.clone(),
+            doc_dir: doc_dir.clone(),
             sources: sources,
             build: build,
             unused_keys: Vec::new(),
@@ -292,6 +311,10 @@ impl Manifest {
 
     pub fn get_target_dir(&self) -> &Path {
         &self.target_dir
+    }
+
+    pub fn get_doc_dir(&self) -> &Path {
+        &self.doc_dir
     }
 
     pub fn get_source_ids(&self) -> &[SourceId] {
