@@ -234,6 +234,7 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Vec<TomlTarget> {
             path: Some(TomlPath(lib.clone())),
             test: None,
             plugin: None,
+            doc: None,
         }]
     }).unwrap_or(Vec::new())
 }
@@ -254,6 +255,7 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
                 path: Some(TomlPath(bin.clone())),
                 test: None,
                 plugin: None,
+                doc: None,
             }
         })
     }).collect()
@@ -268,6 +270,7 @@ fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
                 path: Some(TomlPath(ex.clone())),
                 test: None,
                 plugin: None,
+                doc: None,
             }
         })
     }).collect()
@@ -282,6 +285,7 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
                 path: Some(TomlPath(ex.clone())),
                 test: None,
                 plugin: None,
+                doc: None,
             }
         })
     }).collect()
@@ -316,6 +320,7 @@ impl TomlManifest {
                         path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
                         test: t.test,
                         plugin: t.plugin,
+                        doc: t.doc,
                     }
                 } else {
                     t.clone()
@@ -336,6 +341,7 @@ impl TomlManifest {
                         path: bin.as_ref().map(|&p| TomlPath(p.clone())),
                         test: t.test,
                         plugin: None,
+                        doc: t.doc,
                     }
                 } else {
                     t.clone()
@@ -387,6 +393,7 @@ impl TomlManifest {
                 &summary,
                 targets.as_slice(),
                 &Path::new("target"),
+                &Path::new("doc"),
                 sources,
                 match project.build {
                     Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
@@ -454,6 +461,7 @@ struct TomlTarget {
     crate_type: Option<Vec<String>>,
     path: Option<TomlPath>,
     test: Option<bool>,
+    doc: Option<bool>,
     plugin: Option<bool>,
 }
 
@@ -491,12 +499,16 @@ fn normalize(libs: &[TomlLibTarget],
 
     enum TestDep { Needed, NotNeeded }
 
-    fn target_profiles(target: &TomlTarget,
-                       dep: TestDep) -> Vec<Profile> {
+    fn target_profiles(target: &TomlTarget, dep: TestDep) -> Vec<Profile> {
         let mut ret = vec![Profile::default_dev(), Profile::default_release()];
 
         match target.test {
             Some(true) | None => ret.push(Profile::default_test()),
+            Some(false) => {}
+        }
+
+        match target.doc {
+            Some(true) | None => ret.push(Profile::default_doc()),
             Some(false) => {}
         }
 

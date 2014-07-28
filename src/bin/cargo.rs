@@ -57,6 +57,7 @@ fn execute() {
             println!("  run            # build and execute src/main.rs");
             println!("  version        # displays the version of cargo");
             println!("  new            # create a new cargo project");
+            println!("  doc            # build project's rustdoc documentation");
             println!("");
 
 
