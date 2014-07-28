@@ -1,0 +1,136 @@
+CFG_RELEASE_NUM=0.0.1
+CFG_RELEASE_LABEL=-pre
+
+include config.mk
+
+ifneq ($(CFG_LOCAL_RUST_ROOT),)
+export LD_LIBRARY_PATH := $(CFG_LOCAL_RUST_ROOT)/lib:$(LD_LIBRARY_PATH)
+export DYLD_LIBRARY_PATH := $(CFG_LOCAL_RUST_ROOT)/lib:$(DYLD_LIBRARY_PATH)
+endif
+
+export PATH := $(dir $(CFG_RUSTC)):$(PATH)
+
+ifdef CFG_ENABLE_NIGHTLY
+CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)-nightly
+CFG_PACKAGE_VERS = nightly
+else
+CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)
+CFG_PACKAGE_VERS=$(CFG_RELEASE)
+endif
+CFG_VER_DATE = $(shell git log -1 --pretty=format:'%ai')
+CFG_VER_HASH = $(shell git rev-parse --short HEAD)
+CFG_VERSION = $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE))
+PKG_NAME = cargo-$(CFG_PACKAGE_VERS)
+
+ifdef CFG_DISABLE_VERIFY_INSTALL
+MAYBE_DISABLE_VERIFY=--disable-verify
+else
+MAYBE_DISABLE_VERIFY=
+endif
+
+export CFG_VERSION
+
+ifeq ($(OS),Windows_NT)
+X = .exe
+endif
+
+TARGET_ROOT = target
+BIN_TARGETS := $(wildcard src/bin/*.rs)
+BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
+BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
+
+define DIST_TARGET
+TARGET_$(1) = $$(TARGET_ROOT)/$(1)
+DISTDIR_$(1) = $$(TARGET_$(1))/dist
+PKGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)
+BIN_TARGETS_$(1) := $$(BIN_TARGETS:%=$$(TARGET_$(1))/%$$(X))
+endef
+$(foreach target,$(CFG_TARGET),$(eval $(call DIST_TARGET,$(target))))
+
+CARGO := $(TARGET_ROOT)/snapshot/cargo-nightly/bin/cargo$(X)
+
+all: $(foreach target,$(CFG_TARGET),cargo-$(target))
+
+define CARGO_TARGET
+cargo-$(1): $$(CARGO)
+	$$(CARGO) build --target $(1) $$(ARGS)
+endef
+$(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
+
+$(CARGO): src/snapshots.txt
+	$(CFG_PYTHON) src/etc/dl-snapshot.py
+	touch $@
+
+
+# === Tests
+
+test: test-unit style no-exes
+
+test-unit: $(CARGO)
+	$(CARGO) test $(only)
+
+style:
+	sh tests/check-style.sh
+
+no-exes:
+	find $$(git ls-files) -perm +111 -type f \
+		-not -name configure -not -name '*.sh' -not -name '*.rs' | \
+		grep '.*' \
+		&& exit 1 || exit 0
+
+# === Misc
+
+clean-all: clean
+clean:
+	rm -rf $(TARGET_ROOT)
+
+# === Distribution
+
+define DO_DIST_TARGET
+dist-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
+
+distcheck-$(1): dist-$(1)
+	rm -rf $$(TARGET_$(1))/distcheck
+	mkdir -p $$(TARGET_$(1))/distcheck
+	(cd $$(TARGET_$(1))/distcheck && tar xf ../dist/$$(PKG_NAME)-$(1).tar.gz)
+	$$(TARGET_$(1))/distcheck/$$(PKG_NAME)-$(1)/install.sh \
+		--prefix=$$(TARGET_$(1))/distcheck/install
+	$$(TARGET_$(1))/distcheck/install/bin/cargo -V > /dev/null
+	$$(TARGET_$(1))/distcheck/$$(PKG_NAME)-$(1)/install.sh \
+		--prefix=$$(TARGET_$(1))/distcheck/install --uninstall
+	[ -f $$(TARGET_$(1))/distcheck/install/bin/cargo ] && exit 1 || exit 0
+
+$$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: $$(PKGDIR_$(1))/lib/cargo/manifest.in
+	tar -czvf $$@ -C $$(@D) $$(PKG_NAME)-$(1)
+
+$$(PKGDIR_$(1))/lib/cargo/manifest.in: all
+	rm -rf $$(PKGDIR_$(1))
+	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo
+	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
+	cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
+	(cd $$(PKGDIR_$(1)) && find . -type f | sed 's/^\.\///') \
+		> $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in
+	cp src/etc/install.sh $$(PKGDIR_$(1))
+	cp README.md LICENSE-MIT LICENSE-APACHE $$(PKGDIR_$(1))
+	cp LICENSE-MIT $$(PKGDIR_$(1))
+	mv $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in \
+		$$(PKGDIR_$(1))/lib/cargo/manifest.in
+
+install-$(1): $$(PKGDIR_$(1))/lib/cargo/manifest.in
+	$$(PKGDIR_$(1))/install.sh \
+		--prefix="$$(DESTDIR)$$(CFG_PREFIX)" \
+		--destdir="$$(DESTDIR)" $$(MAYBE_DISABLE_VERIFY)
+endef
+$(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
+
+dist: $(CARGO) $(foreach target,$(CFG_TARGET),dist-$(target))
+distcheck: $(CARGO) $(foreach target,$(CFG_TARGET),distcheck-$(target))
+install: $(CARGO) $(foreach target,$(CFG_TARGET),install-$(target))
+
+# Setup phony tasks
+.PHONY: all clean test test-unit style
+
+# Disable unnecessary built-in rules
+.SUFFIXES:
+
+
