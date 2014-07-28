@@ -94,8 +94,12 @@ fn execute() {
 
             match command {
                 Ok(ExitStatus(0)) => (),
-                Ok(ExitStatus(i)) | Ok(ExitSignal(i)) => {
+                Ok(ExitStatus(i)) => {
                     handle_error(CliError::new("", i as uint), &mut shell(false))
+                }
+                Ok(ExitSignal(i)) => {
+                    let msg = format!("subcommand failed with signal: {}", i);
+                    handle_error(CliError::new(msg, 1), &mut shell(false))
                 }
                 Err(_) => handle_error(CliError::new("No such subcommand", 127), &mut shell(false))
             }
