@@ -1,15 +1,11 @@
-#![crate_name="cargo-build"]
 #![feature(phase)]
 
-extern crate cargo;
-
-#[phase(plugin, link)]
-extern crate hammer;
-
-#[phase(plugin, link)]
-extern crate log;
-
 extern crate serialize;
+#[phase(plugin, link)] extern crate log;
+
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 use std::os;
 use cargo::{execute_main_without_stdin};
@@ -19,41 +15,45 @@ use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-#[deriving(PartialEq,Clone,Decodable,Encodable)]
-pub struct Options {
-    manifest_path: Option<String>,
-    update_remotes: bool,
-    jobs: Option<uint>,
-    target: Option<String>,
-    release: bool,
-}
+docopt!(Options, "
+Compile a local package and all of its dependencies
 
-hammer_config!(Options "Build the current project", |c| {
-    c.short("update_remotes", 'u')
-     .short("jobs", 'j')
-})
+Usage:
+    cargo-build [options]
+
+Options:
+    -h, --help              Print this message
+    -j N, --jobs N          The number of jobs to run in parallel
+    --release               Build artifacts in release mode, with optimizations
+    --target TRIPLE         Build for the target triple
+    -u, --update-remotes    Update all remote packages before compiling
+    --manifest-path PATH    Path to the manifest to compile
+    -v, --verbose           Use verbose output
+",  flag_jobs: Option<uint>, flag_target: Option<String>,
+    flag_manifest_path: Option<String>)
 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, false);
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-compile; args={}", os::args());
+    shell.set_verbose(options.flag_verbose);
 
-    let root = try!(find_root_manifest_for_cwd(options.manifest_path));
+    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    let env = if options.release {
+    let env = if options.flag_release {
         "release"
     } else {
         "compile"
     };
 
     let mut opts = CompileOptions {
-        update: options.update_remotes,
+        update: options.flag_update_remotes,
         env: env,
         shell: shell,
-        jobs: options.jobs,
-        target: options.target.as_ref().map(|t| t.as_slice()),
+        jobs: options.flag_jobs,
+        target: options.flag_target.as_ref().map(|t| t.as_slice()),
     };
 
     ops::compile(&root, &mut opts).map(|_| None).map_err(|err| {

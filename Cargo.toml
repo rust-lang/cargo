@@ -11,9 +11,13 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 # TODO: remove all these `rev` markers once we have an official lockfile
-[dependencies.hammer]
-git = "https://github.com/wycats/hammer.rs"
-rev = "c085c639"
+[dependencies.docopt]
+git = "https://github.com/burntsushi/docopt.rs"
+rev = "0babd54a"
+
+[dependencies.docopt_macros]
+git = "https://github.com/burntsushi/docopt.rs"
+rev = "0babd54a"
 
 [dependencies.toml]
 git = "https://github.com/alexcrichton/toml-rs"

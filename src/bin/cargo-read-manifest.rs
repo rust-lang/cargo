@@ -1,30 +1,31 @@
-#![crate_name="cargo-read-manifest"]
 #![feature(phase)]
 
-extern crate cargo;
 extern crate serialize;
-
-#[phase(plugin, link)]
-extern crate hammer;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell, Package, Source};
 use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 
-#[deriving(PartialEq,Clone,Decodable)]
-struct Options {
-    manifest_path: String
-}
+docopt!(Options, "
+Usage:
+    cargo-clean [options] --manifest-path=PATH
 
-hammer_config!(Options)
+Options:
+    -h, --help              Print this message
+    -v, --verbose           Use verbose output
+")
 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, false);
 }
 
 fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
-    let mut source = PathSource::for_path(&Path::new(options.manifest_path.as_slice()));
+    let path = Path::new(options.flag_manifest_path.as_slice());
+    let mut source = PathSource::for_path(&path);
 
     try!(source.update().map_err(|err| CliError::new(err.description(), 1)));
 
