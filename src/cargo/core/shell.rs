@@ -67,6 +67,10 @@ impl MultiShell {
     pub fn warn<T: ToString>(&mut self, message: T) -> IoResult<()> {
         self.err().say(message, YELLOW)
     }
+
+    pub fn set_verbose(&mut self, verbose: bool) {
+        self.verbose = verbose;
+    }
 }
 
 pub type ShellCallback<'a> = |&mut Shell|:'a -> IoResult<()>;

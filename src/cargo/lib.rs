@@ -10,22 +10,18 @@ extern crate collections;
 extern crate url;
 extern crate serialize;
 extern crate semver;
+#[phase(plugin, link)] extern crate log;
+
 extern crate toml;
+extern crate docopt;
+#[cfg(test)] extern crate hamcrest;
 
-#[phase(plugin, link)]
-extern crate hammer;
-
-#[phase(plugin, link)]
-extern crate log;
-
-#[cfg(test)]
-extern crate hamcrest;
-
-use serialize::{Decoder, Encoder, Decodable, Encodable, json};
-use std::io;
-use std::io::{stdout, stderr};
+use std::os;
 use std::io::stdio::{stdout_raw, stderr_raw};
-use hammer::{Flags, decode_args, usage};
+use std::io::{stdout, stderr};
+use std::io;
+use serialize::{Decoder, Encoder, Decodable, Encodable, json};
+use docopt::FlagParser;
 
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK};
@@ -77,87 +73,55 @@ pub mod util;
 trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
 impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
-#[deriving(Decodable)]
-pub struct NoFlags;
-
-hammer_config!(NoFlags)
-
-#[deriving(Show, Decodable)]
-pub struct GlobalFlags {
-    verbose: bool,
-    help: bool,
-    rest: Vec<String>
-}
-
-hammer_config!(GlobalFlags |c| {
-    c.short("verbose", 'v').short("help", 'h')
-})
-
 pub fn execute_main<'a,
-                    T: Flags,
+                    T: FlagParser,
                     U: RepresentsJSON,
                     V: Encodable<json::Encoder<'a>, io::IoError>>(
-                        exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>) {
-    fn call<'a,
-            T: Flags,
-            U: RepresentsJSON,
-            V: Encodable<json::Encoder<'a>, io::IoError>>(
-                exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
-                shell: &mut MultiShell,
-                args: &[String]) -> CliResult<Option<V>> {
-        let flags = try!(flags_from_args::<T>(args));
-        let json = try!(json_from_stdin::<U>());
+                        exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
+                        options_first: bool) {
+    process::<V>(|rest, shell| call_main(exec, shell, rest, options_first));
+}
 
-        exec(flags, json, shell)
-    }
+pub fn call_main<'a,
+        T: FlagParser,
+        U: RepresentsJSON,
+        V: Encodable<json::Encoder<'a>, io::IoError>>(
+            exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
+            shell: &mut MultiShell,
+            args: &[String],
+            options_first: bool) -> CliResult<Option<V>> {
+    let flags = try!(flags_from_args::<T>(args, options_first));
+    let json = try!(json_from_stdin::<U>());
 
-    process::<T, V>(|rest, shell| call(exec, shell, rest));
+    exec(flags, json, shell)
 }
 
 pub fn execute_main_without_stdin<'a,
-                                  T: Flags,
+                                  T: FlagParser,
                                   V: Encodable<json::Encoder<'a>, io::IoError>>(
-                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>) {
-    fn call<'a,
-            T: Flags,
-            V: Encodable<json::Encoder<'a>, io::IoError>>(
-                exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
-                shell: &mut MultiShell,
-                args: &[String]) -> CliResult<Option<V>> {
-        let flags = try!(flags_from_args::<T>(args));
-        exec(flags, shell)
-    }
-
-    process::<T, V>(|rest, shell| call(exec, shell, rest));
+                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
+                                      options_first: bool) {
+    process::<V>(|rest, shell| call_main_without_stdin(exec, shell, rest,
+                                                       options_first));
 }
 
-fn process<'a,
-           T: Flags,
-           V: Encodable<json::Encoder<'a>, io::IoError>>(
+pub fn call_main_without_stdin<'a,
+                               T: FlagParser,
+                               V: Encodable<json::Encoder<'a>, io::IoError>>(
+            exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
+            shell: &mut MultiShell,
+            args: &[String],
+            options_first: bool) -> CliResult<Option<V>> {
+    let flags = try!(flags_from_args::<T>(args, options_first));
+    exec(flags, shell)
+}
+
+fn process<'a, V: Encodable<json::Encoder<'a>, io::IoError>>(
                callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
-
-
-    match global_flags() {
-        Err(e) => handle_error(e, &mut shell(false)),
-        Ok(val) => {
-            let mut shell = shell(val.verbose);
-
-            if val.help {
-                let (desc, options) = usage::<T>(true);
-
-                desc.map(|d| println!("{}\n", d));
-
-                println!("Options:\n");
-
-                print!("{}", options);
-
-                let (_, options) = usage::<GlobalFlags>(false);
-                print!("{}", options);
-            } else {
-                process_executed(callback(val.rest.as_slice(), &mut shell), &mut shell)
-            }
-        }
-    }
+    let mut shell = shell(true);
+    let mut args = os::args();
+    args.remove(0);
+    process_executed(callback(args.as_slice(), &mut shell), &mut shell)
 }
 
 pub fn process_executed<'a,
@@ -194,11 +158,11 @@ pub fn shell(verbose: bool) -> MultiShell {
 pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     log!(4, "handle_error; err={}", err);
 
-    let CliError { error, exit_code, unknown, .. } = err;
+    let CliError { error, exit_code, unknown } = err;
 
     if unknown {
         let _ = shell.error("An unknown error occurred");
-    } else {
+    } else if error.to_string().len() > 0 {
         let _ = shell.error(error.to_string());
     }
 
@@ -212,6 +176,9 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
         if unknown {
             let _ = shell.error(error.to_string());
         }
+        error.detail().map(|detail| {
+            let _ = shell.err().say(format!("{}", detail), BLACK);
+        });
         error.cause().map(|err| {
             let _ = handle_cause(err, shell);
         });
@@ -228,19 +195,21 @@ fn handle_cause(err: &CargoError, shell: &mut MultiShell) {
     err.cause().map(|e| handle_cause(e, shell));
 }
 
-fn args() -> Vec<String> {
-    std::os::args()
+pub fn version() -> String {
+    (env!("CFG_VERSION")).to_string()
 }
 
-fn flags_from_args<T: Flags>(args: &[String]) -> CliResult<T> {
-    decode_args(args).map_err(|e| {
-        CliError::new(e.message, 1)
-    })
-}
-
-fn global_flags() -> CliResult<GlobalFlags> {
-    decode_args(args().tail()).map_err(|e| {
-        CliError::new(e.message, 1)
+fn flags_from_args<T: FlagParser>(args: &[String],
+                                  options_first: bool) -> CliResult<T> {
+    let args = args.iter().map(|a| a.as_slice()).collect::<Vec<&str>>();
+    let config = docopt::Config {
+        options_first: options_first,
+        help: true,
+        version: Some(version()),
+    };
+    FlagParser::parse_args(config, args.as_slice()).map_err(|e| {
+        let code = if e.fatal() {1} else {0};
+        CliError::from_error(e, code)
     })
 }
 

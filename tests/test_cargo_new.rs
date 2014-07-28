@@ -68,7 +68,11 @@ test!(simple_git {
 test!(no_argument {
     assert_that(cargo_process("cargo-new"),
                 execs().with_status(1)
-                       .with_stderr("must have a path as an argument\n"));
+                       .with_stderr("Invalid arguments.
+Usage:
+    cargo-new [options] <path>
+    cargo-new -h | --help
+"));
 })
 
 test!(existing {

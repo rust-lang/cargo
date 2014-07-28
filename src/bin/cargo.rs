@@ -1,75 +1,92 @@
 #![feature(phase)]
 
-extern crate cargo;
-#[phase(plugin, link)]
-extern crate hammer;
-
 extern crate serialize;
+#[phase(plugin, link)] extern crate log;
 
-#[phase(plugin, link)]
-extern crate log;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
-use hammer::{FlagConfig,FlagConfiguration};
 use std::os;
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
-use cargo::{GlobalFlags, NoFlags, execute_main_without_stdin, handle_error, shell};
+use docopt::FlagParser;
+
+use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
 use cargo::util::important_paths::find_project;
 use cargo::util::{CliError, CliResult, Require, config, human};
 
 fn main() {
-    execute();
+    execute_main_without_stdin(execute, true)
 }
 
-#[deriving(Encodable)]
-struct ProjectLocation {
-    root: String
-}
+docopt!(Flags, "
+Rust's package manager
+
+Usage:
+    cargo <command> [<args>...]
+    cargo -h | --help
+    cargo -V | --version
+
+Options:
+    -h, --help       Display this message
+    -V, --version    Print version info and exit
+    -v, --verbose    Use verbose output
+
+Some common cargo commands are:
+    build       Compile the current project
+    clean       Remove the target directory
+    doc         Build this project's and its dependencies' documentation
+    new         Create a new cargo project
+    run         Build and execute src/main.rs
+    test        Run the tests
+
+See 'cargo help <command>' for more information on a specific command.
+")
 
 /**
   The top-level `cargo` command handles configuration and project location
   because they are fundamental (and intertwined). Other commands can rely
   on this top-level information.
 */
-fn execute() {
+fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo; args={}", os::args());
-    let (cmd, args) = process(os::args());
-
-    match cmd.as_slice() {
+    shell.set_verbose(flags.flag_verbose);
+    let mut args = flags.arg_args.clone();
+    args.insert(0, flags.arg_command.clone());
+    match flags.arg_command.as_slice() {
         "config-for-key" => {
             log!(4, "cmd == config-for-key");
-            execute_main_without_stdin(config_for_key)
+            let r = cargo::call_main_without_stdin(config_for_key, shell,
+                                                   args.as_slice(), false);
+            cargo::process_executed(r, shell)
         },
         "config-list" => {
             log!(4, "cmd == config-list");
-            execute_main_without_stdin(config_list)
+            let r = cargo::call_main_without_stdin(config_list, shell,
+                                                   args.as_slice(), false);
+            cargo::process_executed(r, shell)
         },
         "locate-project" => {
             log!(4, "cmd == locate-project");
-            execute_main_without_stdin(locate_project)
+            let r = cargo::call_main_without_stdin(locate_project, shell,
+                                                   args.as_slice(), false);
+            cargo::process_executed(r, shell)
         },
-        "--help" | "-h" | "help" | "-?" => {
-            println!("Commands:");
-            println!("  build          # compile the current project");
-            println!("  test           # run the tests");
-            println!("  clean          # remove the target directory");
-            println!("  run            # build and execute src/main.rs");
-            println!("  version        # displays the version of cargo");
-            println!("  new            # create a new cargo project");
-            println!("  doc            # build project's rustdoc documentation");
-            println!("");
-
-
-            let (_, options) = hammer::usage::<GlobalFlags>(false);
-            println!("Options (for all commands):\n\n{}", options);
-        },
-        _ => {
-            // `cargo --version` and `cargo -v` are aliases for `cargo version`
-            let cmd = if cmd.as_slice() == "--version" || cmd.as_slice() == "-V" {
-                "version".into_string()
+        // If we have `help` with no arguments, re-invoke ourself with `-h` to
+        // get the help message printed
+        "help" if flags.arg_args.len() == 0 => {
+            shell.set_verbose(true);
+            let r = cargo::call_main_without_stdin(execute, shell,
+                                                   ["-h".to_string()], false);
+            cargo::process_executed(r, shell)
+        }
+        orig_cmd => {
+            let cmd = if orig_cmd == "help" {
+                flags.arg_args[0].as_slice()
             } else {
-                cmd
+                orig_cmd
             };
             let command = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
             let mut command = match os::self_exe_path() {
@@ -86,33 +103,32 @@ fn execute() {
                 }
                 None => Command::new(command),
             };
-            let command = command
-                .args(args.as_slice())
+            let command = if orig_cmd == "help" {
+                command.arg("-h")
+            } else {
+                command.args(flags.arg_args.as_slice())
+            };
+            let status = command
                 .stdin(InheritFd(0))
                 .stdout(InheritFd(1))
                 .stderr(InheritFd(2))
                 .status();
 
-            match command {
+            match status {
                 Ok(ExitStatus(0)) => (),
                 Ok(ExitStatus(i)) => {
-                    handle_error(CliError::new("", i as uint), &mut shell(false))
+                    handle_error(CliError::new("", i as uint), shell)
                 }
                 Ok(ExitSignal(i)) => {
                     let msg = format!("subcommand failed with signal: {}", i);
-                    handle_error(CliError::new(msg, 1), &mut shell(false))
+                    handle_error(CliError::new(msg, i as uint), shell)
                 }
-                Err(_) => handle_error(CliError::new("No such subcommand", 127), &mut shell(false))
+                Err(_) => handle_error(CliError::new("No such subcommand", 127),
+                                       shell)
             }
         }
     }
-}
-
-fn process(args: Vec<String>) -> (String, Vec<String>) {
-    let mut args = Vec::from_slice(args.tail());
-    let head = args.remove(0).unwrap_or("--help".to_string());
-
-    (head, args)
+    Ok(None)
 }
 
 #[deriving(Encodable)]
@@ -120,52 +136,36 @@ struct ConfigOut {
     values: std::collections::HashMap<String, config::ConfigValue>
 }
 
-#[deriving(Decodable)]
-struct ConfigForKeyFlags {
-    key: String,
-    human: bool
-}
+docopt!(ConfigForKeyFlags, "
+Usage: cargo config-for-key --human --key=<key>
+")
 
-impl FlagConfig for ConfigForKeyFlags {
-    fn config(_: Option<ConfigForKeyFlags>,
-              config: FlagConfiguration) -> FlagConfiguration {
-        config.short("human", 'h')
-    }
-}
-
-fn config_for_key(args: ConfigForKeyFlags, _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
+fn config_for_key(args: ConfigForKeyFlags,
+                  _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
     let value = try!(config::get_config(os::getcwd(),
-                                        args.key.as_slice()).map_err(|_| {
+                                        args.flag_key.as_slice()).map_err(|_| {
         CliError::new("Couldn't load configuration",  1)
     }));
 
-    if args.human {
+    if args.flag_human {
         println!("{}", value);
         Ok(None)
     } else {
         let mut map = std::collections::HashMap::new();
-        map.insert(args.key.clone(), value);
+        map.insert(args.flag_key.clone(), value);
         Ok(Some(ConfigOut { values: map }))
     }
 }
 
-#[deriving(Decodable)]
-struct ConfigListFlags {
-    human: bool
-}
-
-impl FlagConfig for ConfigListFlags {
-    fn config(_: Option<ConfigListFlags>,
-              config: FlagConfiguration) -> FlagConfiguration {
-        config.short("human", 'h')
-    }
-}
+docopt!(ConfigListFlags, "
+Usage: cargo config-list --human
+")
 
 fn config_list(args: ConfigListFlags, _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
     let configs = try!(config::all_configs(os::getcwd()).map_err(|_|
         CliError::new("Couldn't load configuration", 1)));
 
-    if args.human {
+    if args.flag_human {
         for (key, value) in configs.iter() {
             println!("{} = {}", key, value);
         }
@@ -175,7 +175,17 @@ fn config_list(args: ConfigListFlags, _: &mut MultiShell) -> CliResult<Option<Co
     }
 }
 
-fn locate_project(_: NoFlags, _: &mut MultiShell) -> CliResult<Option<ProjectLocation>> {
+docopt!(LocateProjectFlags, "
+Usage: cargo locate-project
+")
+
+#[deriving(Encodable)]
+struct ProjectLocation {
+    root: String
+}
+
+fn locate_project(_: LocateProjectFlags,
+                  _: &mut MultiShell) -> CliResult<Option<ProjectLocation>> {
     let root = try!(find_project(&os::getcwd(), "Cargo.toml").map_err(|e| {
         CliError::from_boxed(e, 1)
     }));
