@@ -3,6 +3,7 @@
 
 #![feature(macro_rules, phase)]
 #![feature(default_type_params)]
+#![deny(warnings)]
 
 extern crate debug;
 extern crate term;
