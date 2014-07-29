@@ -78,7 +78,13 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
         let pkgs = try!(ctx.registry.query(dep));
 
         if pkgs.is_empty() {
-            return Err(human(format!("No package named {} found", dep)));
+            return Err(human(format!("No package named `{:s}` found (required by `{:s}`).\n\
+                Location searched: {}\n\
+                Version required: {}",
+                dep.get_name(),
+                parent.get_name(),
+                dep.get_namespace(),
+                dep.get_version_req())));
         }
 
         if pkgs.len() > 1 {
