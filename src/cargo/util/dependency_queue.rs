@@ -29,7 +29,7 @@ pub struct DependencyQueue<K, V> {
 
     /// The packages which are currently being built, waiting for a call to
     /// `finish`.
-    pending: HashMap<K, Freshness>,
+    pending: HashSet<K>,
 }
 
 /// Indication of the freshness of a package.
@@ -43,26 +43,25 @@ pub enum Freshness {
 }
 
 /// A trait for discovering the dependencies of a piece of data.
-pub trait Dependency<K, C>: Hash + Eq + Clone {
-    fn dependencies(&self, cx: &C) -> Vec<K>;
+pub trait Dependency<C>: Hash + Eq + Clone {
+    fn dependencies(&self, cx: &C) -> Vec<Self>;
 }
 
-impl<C, K: Dependency<K, C>, V> DependencyQueue<K, V> {
+impl Freshness {
+    pub fn combine(&self, other: Freshness) -> Freshness {
+        match *self { Fresh => other, Dirty => Dirty }
+    }
+}
+
+impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
     /// Creates a new dependency queue with 0 packages.
     pub fn new() -> DependencyQueue<K, V> {
         DependencyQueue {
             dep_map: HashMap::new(),
             reverse_dep_map: HashMap::new(),
             dirty: HashSet::new(),
-            pending: HashMap::new(),
+            pending: HashSet::new(),
         }
-    }
-
-    /// Registers a package with this queue.
-    ///
-    /// Only registered packages will be returned from dequeue().
-    pub fn register(&mut self, step: K) {
-        self.reverse_dep_map.insert(step, HashSet::new());
     }
 
     /// Adds a new package to this dependency queue.
@@ -79,12 +78,6 @@ impl<C, K: Dependency<K, C>, V> DependencyQueue<K, V> {
 
         let mut my_dependencies = HashSet::new();
         for dep in key.dependencies(cx).move_iter() {
-            if dep == key { continue }
-            // skip deps which were filtered out as part of resolve
-            if !self.reverse_dep_map.find(&dep).is_some() {
-                continue
-            }
-
             assert!(my_dependencies.insert(dep.clone()));
             let rev = self.reverse_dep_map.find_or_insert(dep, HashSet::new());
             assert!(rev.insert(key.clone()));
@@ -105,7 +98,7 @@ impl<C, K: Dependency<K, C>, V> DependencyQueue<K, V> {
         };
         let (_, data) = self.dep_map.pop(&key).unwrap();
         let fresh = if self.dirty.contains(&key) {Dirty} else {Fresh};
-        self.pending.insert(key.clone(), fresh);
+        self.pending.insert(key.clone());
         Some((fresh, key, data))
     }
 
@@ -118,8 +111,8 @@ impl<C, K: Dependency<K, C>, V> DependencyQueue<K, V> {
     ///
     /// This function will update the dependency queue with this information,
     /// possibly allowing the next invocation of `dequeue` to return a package.
-    pub fn finish(&mut self, key: &K) {
-        let fresh = self.pending.pop(key).unwrap();
+    pub fn finish(&mut self, key: &K, fresh: Freshness) {
+        assert!(self.pending.remove(key));
         let reverse_deps = match self.reverse_dep_map.find(key) {
             Some(deps) => deps,
             None => return,

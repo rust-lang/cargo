@@ -418,7 +418,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
                        compiling = COMPILING, dir = p.root().display());
 
     assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
-            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
+            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice(),
+            "bad output: {}", out);
 })
 
 test!(lib_with_standard_name {
