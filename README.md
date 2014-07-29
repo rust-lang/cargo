@@ -22,16 +22,9 @@ The current nightlies available are:
 
 ## Compiling cargo
 
-You'll want to clone cargo using --recursive on git, to clone in its submodule
-dependencies.
-```
-$ git clone --recursive https://github.com/rust-lang/cargo
-```
-or
-```
-$ git submodule init
-$ git submodule update
-```
+Run `./configure` to create a Makefile.  (`./configure --help` will show common
+options.)
+
 Then it's as simple as ```make``` followed by ```make install``` and you're
 ready to go.
 
