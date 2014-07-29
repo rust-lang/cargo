@@ -27,7 +27,7 @@ fn main() {
 fn execute(_: Options, _: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-version; args={}", os::args());
 
-    println!("{}", env!("CFG_VERSION"));
+    println!("cargo {}", env!("CFG_VERSION"));
 
     Ok(None)
 }
