@@ -268,3 +268,67 @@ test!(linker_and_ar {
                             sep = path::SEP,
                             ).as_slice()));
 })
+
+test!(plugin_with_extra_dylib_dep {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+        "#)
+        .file("src/main.rs", r#"
+            #![feature(phase)]
+            #[phase(plugin)] extern crate bar;
+
+            fn main() {}
+        "#);
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "bar"
+            plugin = true
+
+            [dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("src/lib.rs", r#"
+            #![feature(plugin_registrar)]
+
+            extern crate rustc;
+            extern crate baz;
+
+            use rustc::plugin::Registry;
+
+            #[plugin_registrar]
+            pub fn foo(reg: &mut Registry) {
+                println!("{}", baz::baz());
+            }
+        "#);
+    let baz = project("baz")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "baz"
+            crate_type = ["dylib"]
+        "#)
+        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+    bar.build();
+    baz.build();
+
+    let target = alternate();
+    assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+                execs().with_status(0));
+})
