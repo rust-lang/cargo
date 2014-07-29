@@ -233,4 +233,18 @@ impl PlatformRequirement {
             _ => PluginAndTarget,
         }
     }
+
+    pub fn is_target(&self) -> bool {
+        match *self {
+            Target | PluginAndTarget => true,
+            Plugin => false
+        }
+    }
+
+    pub fn is_plugin(&self) -> bool {
+        match *self {
+            Plugin | PluginAndTarget => true,
+            Target => false
+        }
+    }
 }
