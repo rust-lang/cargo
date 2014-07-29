@@ -1,5 +1,5 @@
-use support::{project, execs};
-use support::{COMPILING};
+use support::{project, execs, cargo_dir};
+use support::{COMPILING, FRESH};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -85,11 +85,11 @@ test!(doc_twice {
         compiling = COMPILING,
         dir = p.root().display()).as_slice()));
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.process(cargo_dir().join("cargo-doc")),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{fresh} foo v0.0.1 (file:{dir})
 ",
-        compiling = COMPILING,
+        fresh = FRESH,
         dir = p.root().display()).as_slice()));
 })
 
@@ -124,6 +124,18 @@ test!(doc_deps {
 {compiling} foo v0.0.1 (file:{dir})
 ",
         compiling = COMPILING,
+        dir = p.root().display()).as_slice()));
+
+    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
+    assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
+
+    assert_that(p.process(cargo_dir().join("cargo-doc")),
+                execs().with_status(0).with_stdout(format!("\
+{fresh} bar v0.0.1 (file:{dir})
+{fresh} foo v0.0.1 (file:{dir})
+",
+        fresh = FRESH,
         dir = p.root().display()).as_slice()));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
