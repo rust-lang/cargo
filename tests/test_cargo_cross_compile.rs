@@ -7,7 +7,7 @@ use std::os;
 use std::path;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING};
+use support::{RUNNING, COMPILING, cargo_dir};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -225,6 +225,9 @@ test!(plugin_to_the_max {
 
     let target = alternate();
     assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+                execs().with_status(0));
+    assert_that(foo.process(cargo_dir().join("cargo-build"))
+                   .arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(target, "foo"), existing_file());
 

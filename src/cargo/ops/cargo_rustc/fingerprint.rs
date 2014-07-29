@@ -21,8 +21,9 @@ use super::context::Context;
 /// The third part of the tuple is a job to run when a package is discovered to
 /// be fresh to ensure that all of its artifacts are moved to the correct
 /// location.
-pub fn prepare(cx: &mut Context, pkg: &Package,
-               targets: &[&Target]) -> CargoResult<(Freshness, Job, Job)> {
+pub fn prepare<'a, 'b>(cx: &mut Context<'a, 'b>, pkg: &'a Package,
+                       targets: &[&'a Target])
+                       -> CargoResult<(Freshness, Job, Job)> {
     let filename = format!(".{}.{}.fingerprint", pkg.get_name(),
                            short_hash(pkg.get_package_id()));
     let filename = filename.as_slice();
@@ -57,11 +58,20 @@ pub fn prepare(cx: &mut Context, pkg: &Package,
 
     for &target in targets.iter() {
         if target.get_profile().is_doc() { continue }
-        let layout = cx.layout(target.get_profile().is_plugin());
+        let target_layout = cx.layout(false);
+        let plugin_layout = cx.layout(true);
+        let req = cx.get_requirement(pkg, target);
+
         for filename in cx.target_filenames(target).iter() {
             let filename = filename.as_slice();
-            pairs.push((layout.old_root().join(filename),
-                        layout.root().join(filename)));
+            if req.is_target() {
+                pairs.push((target_layout.old_root().join(filename),
+                            target_layout.root().join(filename)));
+            }
+            if req.is_plugin() && plugin_layout.root() != target_layout.root() {
+                pairs.push((plugin_layout.old_root().join(filename),
+                            plugin_layout.root().join(filename)));
+            }
         }
     }
     let move_old = Job::new(proc() {
