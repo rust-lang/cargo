@@ -335,6 +335,8 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context,
 
 fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
                    cx: &Context, plugin: bool) -> ProcessBuilder {
+    enum LinkReason { Dependency, LocalLib }
+
     let layout = cx.layout(plugin);
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
@@ -344,7 +346,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     cmd = push_native_dirs(cmd, &layout, package, cx, &mut HashSet::new());
 
     for &(_, target) in cx.dep_targets(package).iter() {
-        cmd = link_to(cmd, target, cx, true);
+        cmd = link_to(cmd, target, cx, plugin, Dependency);
     }
 
     let mut targets = package.get_targets().iter().filter(|target| {
@@ -353,23 +355,26 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     if target.is_bin() {
         for target in targets {
-            cmd = link_to(cmd, target, cx, false);
+            cmd = link_to(cmd, target, cx, plugin, LocalLib);
         }
     }
 
     return cmd;
 
     fn link_to(mut cmd: ProcessBuilder, target: &Target,
-               cx: &Context, is_dep_lib: bool) -> ProcessBuilder {
-        let layout = cx.layout(target.get_profile().is_plugin());
+               cx: &Context, plugin: bool, reason: LinkReason) -> ProcessBuilder {
+        // If this target is itself a plugin *or* if it's being linked to a
+        // plugin, then we want the plugin directory. Otherwise we want the
+        // target directory (hence the || here).
+        let layout = cx.layout(plugin || target.get_profile().is_plugin());
+
         for filename in cx.target_filenames(target).iter() {
             let mut v = Vec::new();
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');
-            if is_dep_lib {
-                v.push_all(layout.deps().as_vec());
-            } else {
-                v.push_all(layout.root().as_vec());
+            match reason {
+                Dependency => v.push_all(layout.deps().as_vec()),
+                LocalLib => v.push_all(layout.root().as_vec()),
             }
             v.push(b'/');
             v.push_all(filename.as_bytes());
@@ -403,7 +408,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let mut search_path = DynamicLibrary::search_path();
-    search_path.push(cx.layout(false).deps().clone());
+    search_path.push(cx.layout(true).deps().clone());
     let search_path = os::join_paths(search_path.as_slice()).unwrap();
 
     util::process(cmd)
