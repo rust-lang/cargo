@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
-use std::io::{fs, File, UserRWX};
+use std::io::{fs, File, UserRWX, BufferedReader};
 
 use core::{Package, Target};
 use util;
@@ -44,31 +44,37 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     let _p = profile::start(format!("fingerprint: {} / {}",
                                     pkg.get_package_id(), target));
     let (old, new) = dirs(cx, pkg, kind);
-    let filename = if target.is_lib() {
-        format!("lib-{}", target.get_name())
-    } else if target.get_profile().is_doc() {
-        format!("doc-{}", target.get_name())
-    } else {
-        format!("bin-{}", target.get_name())
-    };
+    let filename = filename(target);
     let old_loc = old.join(filename.as_slice());
     let new_loc = new.join(filename.as_slice());
+    let doc = target.get_profile().is_doc();
 
-    let new_fingerprint = try!(calculate_target_fingerprint(cx, pkg, target));
-    let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
+    // First bit of the freshness calculation, whether the dep-info file
+    // indicates that the target is fresh.
+    let (old_dep_info, new_dep_info) = dep_info_loc(cx, pkg, target, kind);
+    let are_files_fresh = doc || try!(calculate_target_fresh(pkg, &old_dep_info));
 
-    let is_fresh = try!(is_fresh(&old_loc, new_fingerprint.as_slice()));
+    // Second bit of the freshness calculation, whether rustc itself and the
+    // target are fresh.
+    let rustc_fingerprint = if doc {
+        mk_fingerprint(cx, &(target, try!(calculate_pkg_fingerprint(cx, pkg))))
+    } else {
+        mk_fingerprint(cx, target)
+    };
+    let is_rustc_fresh = try!(is_fresh(&old_loc, rustc_fingerprint.as_slice()));
+
     let layout = cx.layout(kind);
     let mut pairs = vec![(old_loc, new_loc.clone())];
-
     if !target.get_profile().is_doc() {
+        pairs.push((old_dep_info, new_dep_info));
         pairs.extend(cx.target_filenames(target).iter().map(|filename| {
             let filename = filename.as_slice();
             ((layout.old_root().join(filename), layout.root().join(filename)))
         }));
     }
 
-    Ok(prepare(is_fresh, new_loc, new_fingerprint, pairs))
+    Ok(prepare(is_rustc_fresh && are_files_fresh, new_loc, rustc_fingerprint,
+               pairs))
 }
 
 /// Prepare the necessary work for the fingerprint of a build command.
@@ -146,13 +152,21 @@ fn prepare(is_fresh: bool, loc: Path, fingerprint: String,
 }
 
 /// Return the (old, new) location for fingerprints for a package
-pub fn dirs(cx: &mut Context, pkg: &Package, kind: Kind) -> (Path, Path) {
+pub fn dirs(cx: &Context, pkg: &Package, kind: Kind) -> (Path, Path) {
     let dirname = format!("{}-{}", pkg.get_name(),
                           short_hash(pkg.get_package_id()));
     let dirname = dirname.as_slice();
     let layout = cx.layout(kind);
     let layout = layout.proxy();
     (layout.old_fingerprint().join(dirname), layout.fingerprint().join(dirname))
+}
+
+/// Returns the (old, new) location for the dep info file of a target.
+pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
+                    kind: Kind) -> (Path, Path) {
+    let (old, new) = dirs(cx, pkg, kind);
+    let filename = format!("dep-{}", filename(target));
+    (old.join(filename.as_slice()), new.join(filename))
 }
 
 fn is_fresh(loc: &Path, new_fingerprint: &str) -> CargoResult<bool> {
@@ -176,21 +190,50 @@ fn mk_fingerprint<T: Hash>(cx: &Context, data: &T) -> String {
     util::to_hex(hasher.hash(&(&cx.rustc_version, data)))
 }
 
-fn calculate_target_fingerprint(cx: &Context, pkg: &Package, target: &Target)
-                                -> CargoResult<String> {
-    let source = cx.sources
-        .get(pkg.get_package_id().get_source_id())
-        .expect("BUG: Missing package source");
+fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
+    let line = match BufferedReader::new(File::open(dep_info)).lines().next() {
+        Some(Ok(line)) => line,
+        _ => return Ok(false),
+    };
+    let mtime = try!(fs::stat(dep_info)).modified;
+    let deps = try!(line.as_slice().splitn(':', 1).skip(1).next().require(|| {
+        internal(format!("dep-info not in an understood format: {}",
+                         dep_info.display()))
+    }));
 
-    let pkg_fingerprint = try!(source.fingerprint(pkg));
-    Ok(pkg_fingerprint + short_hash(target))
+    for file in deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        match fs::stat(&pkg.get_root().join(file)) {
+            Ok(stat) if stat.modified <= mtime => {}
+            _ => { debug!("stale: {}", file); return Ok(false) }
+        }
+    }
+
+    Ok(true)
 }
 
 fn calculate_build_cmd_fingerprint(cx: &Context, pkg: &Package)
                                    -> CargoResult<String> {
+    // TODO: this should be scoped to just the `build` directory, not the entire
+    // package.
+    calculate_pkg_fingerprint(cx, pkg)
+}
+
+fn calculate_pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source = cx.sources
         .get(pkg.get_package_id().get_source_id())
         .expect("BUG: Missing package source");
 
     source.fingerprint(pkg)
+}
+
+fn filename(target: &Target) -> String {
+    let kind = if target.is_lib() {"lib"} else {"bin"};
+    let flavor = if target.get_profile().is_test() {
+        "test-"
+    } else if target.get_profile().is_doc() {
+        "doc-"
+    } else {
+        ""
+    };
+    format!("{}{}-{}", flavor, kind, target.get_name())
 }

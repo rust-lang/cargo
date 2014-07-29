@@ -220,8 +220,8 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
     let base = process("rustc", package, cx);
     let base = build_base_args(base, target, crate_types.as_slice());
 
-    let target_cmd = build_plugin_args(base.clone(), cx, KindTarget);
-    let plugin_cmd = build_plugin_args(base, cx, KindPlugin);
+    let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
+    let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
     let target_cmd = build_deps_args(target_cmd, target, package, cx, KindTarget);
     let plugin_cmd = build_deps_args(plugin_cmd, target, package, cx, KindPlugin);
 
@@ -315,14 +315,18 @@ fn build_base_args(mut cmd: ProcessBuilder,
         }
         None => {}
     }
+
     return cmd;
 }
 
 
-fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context,
-                     kind: Kind) -> ProcessBuilder {
+fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
+                     target: &Target, kind: Kind) -> ProcessBuilder {
     cmd = cmd.arg("--out-dir");
     cmd = cmd.arg(cx.layout(kind).root());
+
+    let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
+    cmd = cmd.arg("--dep-info").arg(dep_info_loc);
 
     if kind == KindTarget {
         fn opt(cmd: ProcessBuilder, key: &str, prefix: &str,
