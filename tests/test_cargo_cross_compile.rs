@@ -258,6 +258,7 @@ test!(linker_and_ar {
                        .with_stdout(format!("\
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin \
     --out-dir {dir}{sep}target{sep}{target} \
+    --dep-info [..] \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
     -L {dir}{sep}target{sep}{target} \
