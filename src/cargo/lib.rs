@@ -197,7 +197,10 @@ fn handle_cause(err: &CargoError, shell: &mut MultiShell) {
 }
 
 pub fn version() -> String {
-    (env!("CFG_VERSION")).to_string()
+    match option_env!("CFG_VERSION") {
+        None => return "".to_string(),
+        Some(o) => return o.to_string(),
+    }
 }
 
 fn flags_from_args<T: FlagParser>(args: &[String],
