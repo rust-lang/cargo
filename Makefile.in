@@ -118,8 +118,8 @@ $$(PKGDIR_$(1))/lib/cargo/manifest.in: all
 
 install-$(1): $$(PKGDIR_$(1))/lib/cargo/manifest.in
 	$$(PKGDIR_$(1))/install.sh \
-		--prefix="$$(DESTDIR)$$(CFG_PREFIX)" \
-		--destdir="$$(DESTDIR)" $$(MAYBE_DISABLE_VERIFY)
+		--prefix="$$(CFG_PREFIX)" \
+		--destdir="$$(DESTDIR)/" $$(MAYBE_DISABLE_VERIFY)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
 
