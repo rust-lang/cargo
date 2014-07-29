@@ -4,20 +4,20 @@ use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, profile};
+use util::{CargoResult, Dependency, profile};
 
 use super::job::Job;
 
 pub struct JobQueue<'a, 'b> {
     pool: TaskPool,
-    queue: DependencyQueue<'a, (&'a Package, (Job, Job))>,
+    queue: DependencyQueue<&'a PackageId, (&'a Package, (Job, Job))>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
     active: HashMap<&'a PackageId, uint>,
     config: &'b mut Config<'b>,
 }
 
-type Message = (PackageId, Freshness, CargoResult<Vec<Job>>);
+type Message = (PackageId, CargoResult<Vec<Job>>);
 
 impl<'a, 'b> JobQueue<'a, 'b> {
     pub fn new(config: &'b mut Config<'b>,
@@ -27,12 +27,10 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         let (tx, rx) = channel();
         let mut queue = DependencyQueue::new();
         for &(pkg, _, _) in jobs.iter() {
-            queue.register(pkg);
+            queue.register(pkg.get_package_id());
         }
         for (pkg, fresh, job) in jobs.move_iter() {
-            let mut deps = resolve.deps(pkg.get_package_id())
-                                  .move_iter().flat_map(|a| a);
-            queue.enqueue(pkg, deps.collect(), fresh, (pkg, job));
+            queue.enqueue(&resolve, fresh, pkg.get_package_id(), (pkg, job));
         }
 
         JobQueue {
@@ -59,18 +57,18 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         while self.queue.len() > 0 {
             loop {
                 match self.queue.dequeue() {
-                    Some((id, Fresh, (pkg, (_, fresh)))) => {
+                    Some((Fresh, id, (pkg, (_, fresh)))) => {
                         assert!(self.active.insert(id, 1u));
                         try!(self.config.shell().status("Fresh", pkg));
-                        self.tx.send((id.clone(), Fresh, Ok(Vec::new())));
+                        self.tx.send((id.clone(), Ok(Vec::new())));
                         try!(fresh.run());
                     }
-                    Some((id, Dirty, (pkg, (dirty, _)))) => {
+                    Some((Dirty, id, (pkg, (dirty, _)))) => {
                         assert!(self.active.insert(id, 1));
                         try!(self.config.shell().status("Compiling", pkg));
                         let my_tx = self.tx.clone();
                         let id = id.clone();
-                        self.pool.execute(proc() my_tx.send((id, Dirty, dirty.run())));
+                        self.pool.execute(proc() my_tx.send((id, dirty.run())));
                     }
                     None => break,
                 }
@@ -79,7 +77,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             // Now that all possible work has been scheduled, wait for a piece
             // of work to finish. If any package fails to build then we stop
             // scheduling work as quickly as possibly.
-            let (id, fresh, result) = self.rx.recv();
+            let (id, result) = self.rx.recv();
             let id = self.active.iter().map(|(&k, _)| k).find(|&k| k == &id)
                          .unwrap();
             *self.active.get_mut(&id) -= 1;
@@ -90,12 +88,12 @@ impl<'a, 'b> JobQueue<'a, 'b> {
                         let my_tx = self.tx.clone();
                         let my_id = id.clone();
                         self.pool.execute(proc() {
-                            my_tx.send((my_id, fresh, job.run()));
+                            my_tx.send((my_id, job.run()));
                         });
                     }
                     if *self.active.get(&id) == 0 {
                         self.active.remove(&id);
-                        self.queue.finish(id, fresh);
+                        self.queue.finish(&id);
                     }
                 }
                 Err(e) => {
@@ -117,5 +115,11 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         log!(5, "rustc jobs completed");
 
         Ok(())
+    }
+}
+
+impl<'a> Dependency<&'a PackageId, &'a Resolve> for &'a PackageId {
+    fn dependencies(&self, resolve: &&'a Resolve) -> Vec<&'a PackageId> {
+        resolve.deps(*self).move_iter().flat_map(|a| a).collect()
     }
 }
