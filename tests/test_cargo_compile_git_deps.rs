@@ -456,7 +456,7 @@ test!(cargo_compile_with_short_ssh_git {
         execs()
         .with_stdout("")
         .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
-                              invalid url `{}`: `url: Invalid character in scheme.\n", url)));
+                              invalid url `{}`: `Relative URL without a base\n", url)));
 })
 
 test!(two_revs_same_deps {

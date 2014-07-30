@@ -330,13 +330,14 @@ impl Source for SourceSet {
 #[cfg(test)]
 mod tests {
     use super::{SourceId, Remote, GitKind};
+    use util::ToUrl;
 
     #[test]
     fn github_sources_equal() {
-        let loc = Remote(from_str("https://github.com/foo/bar").unwrap());
+        let loc = Remote("https://github.com/foo/bar".to_url().unwrap());
         let s1 = SourceId::new(GitKind("master".to_string()), loc);
 
-        let loc = Remote(from_str("git://github.com/foo/bar").unwrap());
+        let loc = Remote("git://github.com/foo/bar".to_url().unwrap());
         let mut s2 = SourceId::new(GitKind("master".to_string()), loc);
 
         assert_eq!(s1, s2);

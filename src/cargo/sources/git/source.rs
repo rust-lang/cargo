@@ -68,7 +68,8 @@ fn ident(location: &Location) -> String {
             str::from_utf8(last).unwrap().to_string()
         }
         Remote(ref url) => {
-            let path = canonicalize_url(url.path.path.as_slice());
+            let path = url.path().unwrap().connect("/");
+            let path = canonicalize_url(path.as_slice());
             path.as_slice().split('/').last().unwrap().to_string()
         }
     };
@@ -184,6 +185,7 @@ mod test {
     use url::Url;
     use core::source::Remote;
     use super::ident;
+    use util::ToUrl;
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {
@@ -226,6 +228,6 @@ mod test {
     }
 
     fn url(s: &str) -> Url {
-        from_str(s).unwrap()
+        s.to_url().unwrap()
     }
 }
