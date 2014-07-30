@@ -12,7 +12,7 @@ use cargo::{execute_main_without_stdin};
 use cargo::core::MultiShell;
 use cargo::core::source::{Source, SourceId};
 use cargo::sources::git::{GitSource};
-use cargo::util::{Config, CliResult, CliError, Require, human};
+use cargo::util::{Config, CliResult, CliError, human};
 use url::Url;
 
 docopt!(Options, "
@@ -31,9 +31,10 @@ fn main() {
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let Options { flag_url: url, flag_reference: reference, .. } = options;
 
-    let url: Url = try!(from_str(url.as_slice())
-                        .require(|| human(format!("The URL `{}` you passed was \
-                                                   not a valid URL", url)))
+    let url: Url = try!(Url::parse(url.as_slice()).map_err(|e| {
+                            human(format!("The URL `{}` you passed was \
+                                           not a valid URL: {}", url, e))
+                        })
                         .map_err(|e| CliError::from_boxed(e, 1)));
 
     let source_id = SourceId::for_git(&url, reference.as_slice());

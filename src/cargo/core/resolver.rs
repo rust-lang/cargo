@@ -135,7 +135,7 @@ mod test {
 
     use core::source::{SourceId, RegistryKind, GitKind, Location, Remote};
     use core::{Dependency, PackageId, Summary, Registry};
-    use util::CargoResult;
+    use util::{CargoResult, ToUrl};
 
     fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency], registry: &mut R)
                             -> CargoResult<Vec<PackageId>> {
@@ -148,7 +148,7 @@ mod test {
 
     impl ToDep for &'static str {
         fn to_dep(self) -> Dependency {
-            let url = from_str("http://example.com").unwrap();
+            let url = "http://example.com".to_url().unwrap();
             let source_id = SourceId::new(RegistryKind, Remote(url));
             Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
         }
@@ -200,13 +200,13 @@ mod test {
     }
 
     fn dep(name: &str) -> Dependency {
-        let url = from_str("http://example.com").unwrap();
+        let url = "http://example.com".to_url().unwrap();
         let source_id = SourceId::new(RegistryKind, Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
 
     fn dep_loc(name: &str, location: &str) -> Dependency {
-        let url = from_str(location).unwrap();
+        let url = location.to_url().unwrap();
         let source_id = SourceId::new(GitKind("master".to_string()), Remote(url));
         Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
     }
