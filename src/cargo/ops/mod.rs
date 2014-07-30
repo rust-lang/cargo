@@ -5,7 +5,7 @@ pub use self::cargo_rustc::compile_targets;
 pub use self::cargo_run::run;
 pub use self::cargo_new::{new, NewOptions};
 pub use self::cargo_doc::{doc, DocOptions};
-pub use self::cargo_generate_lockfile::generate_lockfile;
+pub use self::cargo_generate_lockfile::{generate_lockfile, write_resolve};
 
 mod cargo_clean;
 mod cargo_compile;

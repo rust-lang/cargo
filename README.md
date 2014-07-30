@@ -43,7 +43,7 @@ for more than one target. For example, if you'd like to compile both 32 and 64
 bit versions of cargo on unix you would use:
 
 ```
-$ ./configure --target i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
+$ ./configure --target=i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
 ```
 
 ## Contributing to the Docs

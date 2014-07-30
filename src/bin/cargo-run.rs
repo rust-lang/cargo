@@ -35,8 +35,8 @@ fn main() {
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     shell.set_verbose(options.flag_verbose);
+    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let mut compile_opts = ops::CompileOptions {
         update: options.flag_update_remotes,

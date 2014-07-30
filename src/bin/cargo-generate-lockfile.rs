@@ -1,46 +1,40 @@
-#![crate_name="cargo-generate-lockfile"]
 #![feature(phase)]
 
-extern crate cargo;
-
-#[phase(plugin, link)]
-extern crate hammer;
-
-#[phase(plugin, link)]
-extern crate log;
-
 extern crate serialize;
+extern crate cargo;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+#[phase(plugin, link)] extern crate log;
 
 use std::os;
 use cargo::ops;
 use cargo::{execute_main_without_stdin};
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
-use cargo::util::important_paths::find_project_manifest;
+use cargo::util::important_paths::find_root_manifest_for_cwd;
 
-#[deriving(PartialEq,Clone,Decodable,Encodable)]
-pub struct Options {
-    manifest_path: Option<String>
-}
+docopt!(Options, "
+Generate the lockfile for a project
 
-hammer_config!(Options)
+Usage:
+    cargo-generate-lockfile [options]
+
+Options:
+    -h, --help              Print this message
+    --manifest-path PATH    Path to the manifest to compile
+    -v, --verbose           Use verbose output
+
+All of the trailing arguments are passed as to the binary to run.
+",  flag_manifest_path: Option<String>)
 
 fn main() {
-    execute_main_without_stdin(execute);
+    execute_main_without_stdin(execute, false);
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-clean; args={}", os::args());
-
-    let root = match options.manifest_path {
-        Some(path) => Path::new(path),
-        None => try!(find_project_manifest(&os::getcwd(), "Cargo.toml")
-                    .map_err(|_| {
-                        CliError::new("Could not find Cargo.toml in this \
-                                       directory or any parent directory",
-                                      102)
-                    }))
-    };
+    shell.set_verbose(options.flag_verbose);
+    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     ops::generate_lockfile(&root, shell, true)
         .map(|_| None).map_err(|err| CliError::from_boxed(err, 101))

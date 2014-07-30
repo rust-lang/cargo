@@ -1,4 +1,3 @@
-use std::vec::Vec;
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human};
 
@@ -8,37 +7,29 @@ pub trait Registry {
 
 impl Registry for Vec<Summary> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        debug!("querying, summaries={}",
+        debug!("querying for {}, summaries={}", dep,
             self.iter().map(|s| s.get_package_id().to_string()).collect::<Vec<String>>());
 
-        Ok(self.iter()
-            .filter(|summary| dep.matches(*summary))
-            .map(|summary| summary.clone())
-            .collect())
+        Ok(self.iter().filter(|summary| dep.matches(*summary))
+               .map(|summary| summary.clone()).collect())
     }
 }
 
 pub struct PackageRegistry<'a> {
     sources: SourceMap,
-    overrides: Vec<Summary>,
-    summaries: Vec<Summary>,
+    overrides: Vec<SourceId>,
     config: &'a mut Config<'a>
 }
 
 impl<'a> PackageRegistry<'a> {
     pub fn new<'a>(source_ids: Vec<SourceId>,
-               override_ids: Vec<SourceId>,
-               config: &'a mut Config<'a>) -> CargoResult<PackageRegistry<'a>> {
+                   config: &'a mut Config<'a>) -> CargoResult<PackageRegistry<'a>> {
 
         let mut reg = PackageRegistry::empty(config);
         let source_ids = dedup(source_ids);
 
         for id in source_ids.iter() {
             try!(reg.load(id, false));
-        }
-
-        for id in override_ids.iter() {
-            try!(reg.load(id, true));
         }
 
         Ok(reg)
@@ -48,7 +39,6 @@ impl<'a> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
             overrides: vec!(),
-            summaries: vec!(),
             config: config
         }
     }
@@ -70,7 +60,8 @@ impl<'a> PackageRegistry<'a> {
 
         // TODO: Return earlier if fail
         assert!(package_ids.len() == ret.len(),
-                "could not get packages from registry; ids={}", package_ids);
+                "could not get packages from registry; ids={}; ret={}",
+                package_ids, ret);
 
         Ok(ret)
     }
@@ -80,50 +71,46 @@ impl<'a> PackageRegistry<'a> {
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
-        if self.sources.contains(namespace) {
-            return Ok(());
-        }
+        if self.sources.contains(namespace) { return Ok(()); }
 
         try!(self.load(namespace, false));
         Ok(())
     }
 
-    fn ensure_loaded(&mut self, source_id: &SourceId) -> CargoResult<()> {
-        if self.searched.contains(source_id) { return Ok(()); }
-        try!(self.load(source_id, false));
+    pub fn add_overrides(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
+        for id in ids.iter() {
+            try!(self.load(id, true));
+        }
         Ok(())
     }
 
     fn load(&mut self, source_id: &SourceId, override: bool) -> CargoResult<()> {
         (|| {
             let mut source = source_id.load(self.config);
-            let dst = if override {&mut self.overrides} else {&mut self.summaries};
 
             // Ensure the source has fetched all necessary remote data.
             try!(source.update());
 
-            // Get the summaries
-            for summary in (try!(source.list())).iter() {
-                assert!(!dst.contains(summary), "duplicate summaries: {}", summary);
-                dst.push(summary.clone());
-                // self.summaries.push(summary.clone());
+            if override {
+                self.overrides.push(source_id.clone());
             }
 
             // Save off the source
-            self.sources.insert(namespace, source);
-
-            // Track that the source has been searched
-            self.searched.push(source_id.clone());
+            self.sources.insert(source_id, source);
 
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", source_id)))
     }
 
-    fn query_overrides(&self, dep: &Dependency) -> Vec<Summary> {
-        self.overrides.iter()
-            .filter(|s| s.get_name() == dep.get_name())
-            .map(|s| s.clone())
-            .collect()
+    fn query_overrides(&mut self, dep: &Dependency)
+                       -> CargoResult<Vec<Summary>> {
+        let mut ret = Vec::new();
+        for s in self.overrides.iter() {
+            let src = self.sources.get_mut(s).unwrap();
+            let dep = Dependency::new_override(dep.get_name(), s);
+            ret.push_all_move(try!(src.query(&dep)));
+        }
+        Ok(ret)
     }
 }
 
@@ -140,12 +127,16 @@ fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
 
 impl<'a> Registry for PackageRegistry<'a> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let overrides = self.query_overrides(dep);
+        let overrides = try!(self.query_overrides(dep));
 
-        if overrides.is_empty() {
+        if overrides.len() == 0 {
             // Ensure the requested source_id is loaded
             try!(self.ensure_loaded(dep.get_source_id()));
-            self.summaries.query(dep)
+            let mut ret = Vec::new();
+            for src in self.sources.sources_mut() {
+                ret.push_all_move(try!(src.query(dep)));
+            }
+            Ok(ret)
         } else {
             Ok(overrides)
         }

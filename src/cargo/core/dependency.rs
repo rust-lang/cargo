@@ -6,7 +6,8 @@ pub struct Dependency {
     name: String,
     source_id: SourceId,
     req: VersionReq,
-    transitive: bool
+    transitive: bool,
+    only_match_name: bool,
 }
 
 impl Dependency {
@@ -21,8 +22,19 @@ impl Dependency {
             name: name.to_string(),
             source_id: source_id.clone(),
             req: version,
-            transitive: true
+            transitive: true,
+            only_match_name: false,
         })
+    }
+
+    pub fn new_override(name: &str, source_id: &SourceId) -> Dependency {
+        Dependency {
+            name: name.to_string(),
+            source_id: source_id.clone(),
+            req: VersionReq::any(),
+            transitive: true,
+            only_match_name: true,
+        }
     }
 
     pub fn get_version_req(&self) -> &VersionReq {
@@ -52,8 +64,8 @@ impl Dependency {
         debug!("         a={}; b={}", self.source_id, sum.get_source_id());
 
         self.name.as_slice() == sum.get_name() &&
-            self.req.matches(sum.get_version()) &&
-            &self.source_id == sum.get_source_id()
+            (self.only_match_name || (self.req.matches(sum.get_version()) &&
+                                      &self.source_id == sum.get_source_id()))
     }
 }
 
