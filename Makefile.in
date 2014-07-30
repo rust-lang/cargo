@@ -47,7 +47,7 @@ BIN_TARGETS_$(1) := $$(BIN_TARGETS:%=$$(TARGET_$(1))/%$$(X))
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DIST_TARGET,$(target))))
 
-CARGO := $(TARGET_ROOT)/snapshot/cargo-nightly/bin/cargo$(X)
+CARGO := $(TARGET_ROOT)/snapshot/bin/cargo$(X)
 
 all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
@@ -58,7 +58,7 @@ endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
 $(CARGO): src/snapshots.txt
-	$(CFG_PYTHON) src/etc/dl-snapshot.py
+	$(CFG_PYTHON) src/etc/dl-snapshot.py $(CFG_BUILD)
 	touch $@
 
 
