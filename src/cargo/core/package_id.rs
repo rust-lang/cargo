@@ -1,5 +1,4 @@
 use semver;
-use url::Url;
 use std::hash::Hash;
 use std::fmt;
 use std::fmt::{Show,Formatter};
@@ -30,28 +29,6 @@ impl<'a> ToVersion for &'a str {
             Some(v) => Ok(v),
             None => Err(format!("cannot parse '{}' as a semver", self)),
         }
-    }
-}
-
-trait ToUrl {
-    fn to_url(self) -> Result<Url, String>;
-}
-
-impl<'a> ToUrl for &'a str {
-    fn to_url(self) -> Result<Url, String> {
-        Url::parse(self)
-    }
-}
-
-impl ToUrl for Url {
-    fn to_url(self) -> Result<Url, String> {
-        Ok(self)
-    }
-}
-
-impl<'a> ToUrl for &'a Url {
-    fn to_url(self) -> Result<Url, String> {
-        Ok(self.clone())
     }
 }
 

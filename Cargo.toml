@@ -27,6 +27,10 @@ rev = "a3c7f2c3"
 git = "https://github.com/carllerche/hamcrest-rust.git"
 rev = "05acf768"
 
+[dependencies.url]
+git = "https://github.com/servo/rust-url"
+rev = "98a28e85"
+
 [[bin]]
 name = "cargo"
 test = false
