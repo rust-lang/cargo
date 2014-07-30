@@ -3,7 +3,7 @@ use std::fmt::{Show, Formatter};
 use std::fmt;
 use std::io::fs;
 
-use core::{Package, PackageId, Summary, SourceId, Source};
+use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
 use util::{CargoResult, internal, internal_error};
 
@@ -65,6 +65,15 @@ impl Show for PathSource {
     }
 }
 
+impl Registry for PathSource {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        let mut summaries: Vec<Summary> = self.packages.iter()
+                                              .map(|p| p.get_summary().clone())
+                                              .collect();
+        summaries.query(dep)
+    }
+}
+
 impl Source for PathSource {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
@@ -74,12 +83,6 @@ impl Source for PathSource {
         }
 
         Ok(())
-    }
-
-    fn list(&self) -> CargoResult<Vec<Summary>> {
-        Ok(self.packages.iter()
-           .map(|p| p.get_summary().clone())
-           .collect())
     }
 
     fn download(&self, _: &[PackageId])  -> CargoResult<()>{
@@ -125,6 +128,7 @@ impl Source for PathSource {
             let mut max = 0;
             for dir in try!(fs::readdir(path)).iter() {
                 if is_root && dir.filename_str() == Some("target") { continue }
+                if is_root && dir.filename_str() == Some("Cargo.lock") { continue }
                 max = cmp::max(max, try!(walk(dir, false)));
             }
             return Ok(max)

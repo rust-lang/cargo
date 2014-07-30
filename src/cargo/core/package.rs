@@ -9,7 +9,7 @@ use core::{
     PackageId,
     Registry,
     Target,
-    Summary
+    Summary,
 };
 use core::dependency::SerializedDependency;
 use util::{CargoResult, graph};

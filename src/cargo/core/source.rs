@@ -1,34 +1,28 @@
-use std::collections::HashMap;
-use std::collections::hashmap::Values;
-use std::fmt;
-use std::fmt::{Show, Formatter};
-use std::hash;
 use std::c_str::CString;
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::collections::hashmap::{Values, MutEntries};
+use std::fmt::{Show, Formatter};
+use std::fmt;
+use std::hash;
+use std::iter;
+use std::mem;
 use serialize::{Decodable, Decoder, Encodable, Encoder};
 
-use url;
 use url::Url;
 
-use core::{Summary, Package, PackageId};
-use sources::{PathSource, GitSource};
+use core::{Summary, Package, PackageId, Registry, Dependency};
+use sources::{PathSource, GitSource, DummyRegistrySource};
 use sources::git;
-use util::{Config, CargoResult, CargoError};
-use util::errors::human;
+use util::{human, Config, CargoResult, CargoError, ToUrl};
 
 /// A Source finds and downloads remote packages based on names and
 /// versions.
-pub trait Source {
+pub trait Source: Registry {
     /// The update method performs any network operations required to
     /// get the entire list of all names, versions and dependencies of
     /// packages managed by the Source.
     fn update(&mut self) -> CargoResult<()>;
-
-    /// The list method lists all names, versions and dependencies of
-    /// packages managed by the source. It assumes that `update` has
-    /// already been called and no additional network operations are
-    /// required.
-    fn list(&self) -> CargoResult<Vec<Summary>>;
 
     /// The download method fetches the full package for each name and
     /// version specified.
@@ -117,7 +111,7 @@ impl Location {
         if s.starts_with("file:") {
             Ok(Local(Path::new(s.slice_from(5))))
         } else {
-            Url::parse(s).map(Remote).map_err(|e| {
+            s.to_url().map(Remote).map_err(|e| {
                 human(format!("invalid url `{}`: `{}", s, e))
             })
         }
@@ -203,7 +197,7 @@ impl<S: hash::Writer> hash::Hash<S> for SourceId {
             SourceId {
                 kind: ref kind @ GitKind(..),
                 location: Remote(ref url),
-                precise: None
+                precise: _,
             } => {
                 kind.hash(into);
                 git::canonicalize_url(url.to_string().as_slice()).hash(into);
@@ -223,39 +217,63 @@ impl SourceId {
 
     pub fn from_url(string: String) -> SourceId {
         let mut parts = string.as_slice().splitn('+', 1);
-        let kind = parts.nth(0).unwrap();
-        let mut url = Url::parse(parts.nth(0).unwrap()).ok().expect("Invalid URL");
+        let kind = parts.next().unwrap();
+        let url = parts.next().unwrap();
 
         match kind {
-            "git" => {
-                let reference = {
-                    url.path.query.iter()
-                        .find(|&&(ref k, ref v)| k.as_slice() == "ref")
-                        .map(|&(ref k, ref v)| v.to_string())
-                        .unwrap_or("master".to_string())
-                        .to_string()
+            "git" if url.starts_with("file:") => {
+                let url = url.slice_from(5);
+                let (url, precise) = match url.rfind('#') {
+                    Some(pos) => {
+                        (url.slice_to(pos), Some(url.slice_from(pos + 1)))
+                    }
+                    None => (url, None)
                 };
+                let (url, reference) = match url.find_str("?ref=") {
+                    Some(pos) => {
+                        (url.slice_to(pos), Some(url.slice_from(pos + 5)))
+                    }
+                    None => (url, None)
+                };
+                let reference = reference.unwrap_or("master");
+                let id = SourceId::new(GitKind(reference.to_string()),
+                                       Local(Path::new(url)));
+                match precise {
+                    Some(p) => id.with_precise(p.to_string()),
+                    None => id,
+                }
+            }
+            "git" => {
+                let mut url = url.to_url().unwrap();
+                let mut reference = "master".to_string();
+                let pairs = url.query_pairs().unwrap_or(Vec::new());
+                url.set_query_from_pairs(pairs.iter().filter(|&&(ref k, ref v)| {
+                    if k.as_slice() == "ref" {
+                        reference = v.clone();
+                        false
+                    } else {
+                        true
+                    }
+                }).map(|&(ref a, ref b)| (a.as_slice(), b.as_slice())));
 
-                url.path.query = url.path.query.iter()
-                    .filter(|&&(ref k,_)| k.as_slice() != "ref")
-                    .map(|q| q.clone())
-                    .collect();
-
-                let precise = url.path.fragment.clone();
-                url.path.fragment = None;
-
+                let precise = mem::replace(&mut url.fragment, None);
                 SourceId::for_git(&url, reference.as_slice(), precise)
             },
+            "registry" => SourceId::for_central(),
+            "path" => SourceId::for_path(&Path::new(url.slice_from(5))),
             _ => fail!("Unsupported serialized SourceId")
         }
     }
 
     pub fn to_url(&self) -> String {
         match *self {
-            SourceId { kind: PathKind, ref location, .. } => {
-                fail!("Path sources are not included in the lockfile, so this is unimplemented");
+            SourceId { kind: PathKind, .. } => {
+                fail!("Path sources are not included in the lockfile, \
+                       so this is unimplemented")
             },
-            SourceId { kind: GitKind(ref reference), ref location, ref precise, .. } => {
+            SourceId {
+                kind: GitKind(ref reference), ref location, ref precise, ..
+            } => {
                 let ref_str = if reference.as_slice() != "master" {
                     format!("?ref={}", reference)
                 } else {
@@ -293,7 +311,7 @@ impl SourceId {
 
     pub fn for_central() -> SourceId {
         SourceId::new(RegistryKind,
-                      Remote(Url::parse("https://example.com").unwrap()))
+                      Remote("https://example.com".to_url().unwrap()))
     }
 
     pub fn get_location(&self) -> &Location {
@@ -322,7 +340,7 @@ impl SourceId {
                 };
                 box PathSource::new(path, self) as Box<Source>
             },
-            RegistryKind => unimplemented!()
+            RegistryKind => box DummyRegistrySource::new(self) as Box<Source>,
         }
     }
 
@@ -339,6 +357,9 @@ pub struct SourceMap {
 }
 
 pub type Sources<'a> = Values<'a, SourceId, Box<Source>>;
+pub type SourcesMut<'a> = iter::Map<'static, (&'a SourceId, &'a mut Box<Source>),
+                                    &'a mut Source,
+                                    MutEntries<'a, SourceId, Box<Source>>>;
 
 impl SourceMap {
     pub fn new() -> SourceMap {
@@ -360,6 +381,13 @@ impl SourceMap {
         })
     }
 
+    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source> {
+        self.map.find_mut(id).map(|s| {
+            let s: &mut Source = *s;
+            s
+        })
+    }
+
     pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source> {
         self.get(pkg_id.get_source_id())
     }
@@ -375,6 +403,10 @@ impl SourceMap {
     pub fn sources(&self) -> Sources {
         self.map.values()
     }
+
+    pub fn sources_mut(&mut self) -> SourcesMut {
+        self.map.mut_iter().map(|(_, v)| { let s: &mut Source = *v; s })
+    }
 }
 
 pub struct SourceSet {
@@ -387,6 +419,18 @@ impl SourceSet {
     }
 }
 
+impl Registry for SourceSet {
+    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
+        let mut ret = Vec::new();
+
+        for source in self.sources.mut_iter() {
+            ret.push_all_move(try!(source.query(name)));
+        }
+
+        Ok(ret)
+    }
+}
+
 impl Source for SourceSet {
     fn update(&mut self) -> CargoResult<()> {
         for source in self.sources.mut_iter() {
@@ -394,16 +438,6 @@ impl Source for SourceSet {
         }
 
         Ok(())
-    }
-
-    fn list(&self) -> CargoResult<Vec<Summary>> {
-        let mut ret = Vec::new();
-
-        for source in self.sources.iter() {
-            ret.push_all(try!(source.list()).as_slice());
-        }
-
-        Ok(ret)
     }
 
     fn download(&self, packages: &[PackageId]) -> CargoResult<()> {

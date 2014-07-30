@@ -5,7 +5,7 @@ use std::hash::sip::SipHasher;
 use std::str;
 
 use core::source::{Source, SourceId, GitKind, Location, Remote, Local};
-use core::{Package,PackageId,Summary};
+use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
 use sources::git::utils::{GitReference,GitRemote,Master,Other};
@@ -139,6 +139,14 @@ impl<'a, 'b> Show for GitSource<'a, 'b> {
     }
 }
 
+impl<'a, 'b> Registry for GitSource<'a, 'b> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        let src = self.path_source.as_mut()
+                      .expect("BUG: update() must be called before query()");
+        src.query(dep)
+    }
+}
+
 impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
         let should_update = self.config.update_remotes() || {
@@ -162,10 +170,6 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
         self.path_source = Some(path_source);
         self.path_source.as_mut().unwrap().update()
-    }
-
-    fn list(&self) -> CargoResult<Vec<Summary>> {
-        self.path_source.as_ref().expect("BUG: update() must be called before list()").list()
     }
 
     fn download(&self, _: &[PackageId]) -> CargoResult<()> {

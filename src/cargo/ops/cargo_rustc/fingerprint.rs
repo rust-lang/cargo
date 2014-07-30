@@ -5,7 +5,7 @@ use std::io::{fs, File};
 use core::{Package, Target};
 use util;
 use util::hex::short_hash;
-use util::{CargoResult, Fresh, Dirty, Freshness};
+use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require};
 
 use super::job::Job;
 use super::context::Context;
@@ -105,10 +105,10 @@ fn is_fresh(dep: &Package, loc: &Path, cx: &mut Context, targets: &[&Target])
 }
 
 fn get_fingerprint(pkg: &Package, cx: &Context) -> CargoResult<String> {
-    let source = cx.sources
-        .get(pkg.get_package_id().get_source_id())
-        .expect("BUG: Missing package source");
-
+    let id = pkg.get_package_id().get_source_id();
+    let source = try!(cx.sources.get(id).require(|| {
+        internal(format!("Missing package source for: {}", id))
+    }));
     source.fingerprint(pkg)
 }
 

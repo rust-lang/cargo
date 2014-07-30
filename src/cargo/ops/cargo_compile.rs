@@ -26,6 +26,7 @@ use std::os;
 use std::collections::HashMap;
 use std::io::File;
 use serialize::Decodable;
+use rstoml = toml;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, Resolve, resolver};
@@ -66,14 +67,13 @@ pub fn compile(manifest_path: &Path,
                                                    manifest_path.dir_path()));
     let source_ids = package.get_source_ids();
 
-    let (packages, resolve, sources) = {
+    let (packages, resolve, resolve_with_overrides, sources) = {
         let lockfile = manifest_path.dir_path().join("Cargo.lock");
         let source_id = package.get_package_id().get_source_id();
 
         let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
 
-        let mut registry =
-            try!(PackageRegistry::new(source_ids, override_ids, &mut config));
+        let mut registry = try!(PackageRegistry::new(source_ids, &mut config));
 
         let resolved = match try!(load_lockfile(&lockfile, source_id)) {
             Some(r) => r,
@@ -84,12 +84,21 @@ pub fn compile(manifest_path: &Path,
             }
         };
 
-        let req: Vec<PackageId> = resolved.iter().map(|r| r.clone()).collect();
+        try!(registry.add_overrides(override_ids));
+
+        let resolved_with_overrides =
+                try!(resolver::resolve(package.get_package_id(),
+                                       package.get_dependencies(),
+                                       &mut registry));
+
+        let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
+            r.clone()
+        }).collect();
         let packages = try!(registry.get(req.as_slice()).wrap({
             human("Unable to get packages from source")
         }));
 
-        (packages, resolved, registry.move_sources())
+        (packages, resolved, resolved_with_overrides, registry.move_sources())
     };
 
     debug!("packages={}", packages);
@@ -107,10 +116,12 @@ pub fn compile(manifest_path: &Path,
         try!(scrape_target_config(&mut config, &user_configs));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
-             &PackageSet::new(packages.as_slice()), &resolve, &sources, &mut config));
+                                  &PackageSet::new(packages.as_slice()),
+                                  &resolve_with_overrides, &sources,
+                                  &mut config));
     }
 
-    try!(ops::generate_lockfile(manifest_path, *shell, false));
+    try!(ops::write_resolve(&package, &resolve));
 
     let test_executables: Vec<String> = targets.iter()
         .filter_map(|target| {
@@ -135,7 +146,8 @@ fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>> {
 
     let s = try!(f.read_to_string());
 
-    let mut d = ::toml::Decoder::new(::toml::Table(try!(toml::parse(s.as_slice(), path))));
+    let table = rstoml::Table(try!(toml::parse(s.as_slice(), path)));
+    let mut d = rstoml::Decoder::new(table);
     let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
     Ok(Some(try!(v.to_resolve(sid))))
 }

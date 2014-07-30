@@ -86,7 +86,7 @@ test!(cargo_compile_simple_git_dep {
     assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{})\n\
+                              {} dep1 v0.5.0 (file:{}#[..])\n\
                               {} foo v0.5.0 (file:{})\n",
                              UPDATING, git_root.display(),
                              COMPILING, git_root.display(),
@@ -98,60 +98,6 @@ test!(cargo_compile_simple_git_dep {
     assert_that(
       cargo::util::process(project.bin("foo")),
       execs().with_stdout("hello world\n"));
-})
-
-test!(override_git_dep {
-    let p = project("foo");
-    let root = p.root().clone();
-    let p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}/baz']
-        "#, root.display()))
-        .file("Cargo.toml", r#"
-            [package]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [dependencies.bar]
-            path = "bar"
-        "#)
-        .file("src/main.rs", "extern crate bar; fn main() {}")
-        .file("bar/Cargo.toml", r#"
-            [package]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [dependencies.baz]
-            git = 'git://example.com/path/to/nowhere'
-        "#)
-        .file("bar/src/lib.rs", "extern crate baz;")
-        .file("baz/Cargo.toml", r#"
-            [package]
-
-            name = "baz"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#)
-        .file("baz/src/lib.rs", "");
-
-    assert_that(p.cargo_process("cargo-build"),
-        execs()
-        .with_stdout(format!("{compiling} baz v0.5.0 (file:{dir}{sep}baz)\n\
-                              {compiling} bar v0.5.0 (file:{dir})\n\
-                              {compiling} foo v0.5.0 (file:{dir})\n",
-                             compiling = COMPILING, dir = root.display(),
-                             sep = path::SEP))
-        .with_stderr(""));
-
-    assert_that(&p.bin("foo"), existing_file());
-
-    assert_that(
-      cargo::util::process(p.bin("foo")),
-      execs().with_stdout(""));
 })
 
 test!(cargo_compile_git_dep_branch {
@@ -204,7 +150,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{}#ref=branchy)\n\
+                              {} dep1 v0.5.0 (file:{}?ref=branchy#[..])\n\
                               {} foo v0.5.0 (file:{})\n",
                              UPDATING, git_root.display(),
                              COMPILING, git_root.display(),
@@ -269,7 +215,7 @@ test!(cargo_compile_git_dep_tag {
     assert_that(project.cargo_process("cargo-build"),
         execs()
         .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{}#ref=v0.1.0)\n\
+                              {} dep1 v0.5.0 (file:{}?ref=v0.1.0#[..])\n\
                               {} foo v0.5.0 (file:{})\n",
                              UPDATING, git_root.display(),
                              COMPILING, git_root.display(),
@@ -575,7 +521,7 @@ test!(recompilation {
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             UPDATING, git_project.root().display(),
                                             COMPILING, git_project.root().display(),
@@ -583,7 +529,7 @@ test!(recompilation {
 
     // Don't recompile the second time
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
@@ -594,14 +540,14 @@ test!(recompilation {
     "#).assert();
 
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
     assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             UPDATING, git_project.root().display(),
                                             FRESH, git_project.root().display(),
@@ -617,7 +563,7 @@ test!(recompilation {
 
     assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{})\n\
+                                             {} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
                                             UPDATING, git_project.root().display(),
                                             COMPILING, git_project.root().display(),
