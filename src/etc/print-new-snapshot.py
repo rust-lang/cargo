@@ -11,13 +11,21 @@ print(date)
 if not os.path.isdir('target/dl'):
     os.makedirs('target/dl')
 
-snaps = ['mac', 'linux', 'win']
-for snap in snaps:
-    tarball = 'cargo-nightly-' + snap + '.tar.gz'
+snaps = {
+    'macos-i386': 'i686-apple-darwin',
+    'macos-x86_64': 'x86_64-apple-darwin',
+    'linux-i386': 'i686-unknown-linux-gnu',
+    'linux-x86_64': 'x86_64-unknown-linux-gnu',
+    'winnt-i386': 'i686-pc-mingw32',
+}
+
+for platform in sorted(snaps):
+    triple = snaps[platform]
+    tarball = 'cargo-nightly-' + triple + '.tar.gz'
     url = 'http://static.rust-lang.org/cargo-dist/' + date + '/' + tarball
     dl_path = "target/dl/" + tarball
     ret = subprocess.call(["curl", "-s", "-o", dl_path, url])
     if ret != 0:
         raise Exception("failed to fetch url")
     h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
-    print('  ' + snap + ' ' + h)
+    print('  ' + platform + ' ' + h)
