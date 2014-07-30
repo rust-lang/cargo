@@ -4,9 +4,10 @@ install:
   - sh ./.travis.install.deps.sh
 
 script:
+  - ./configure --local-rust-root=`pwd`/rustc
   - make
-  - make test -j4
-  - make install DESTDIR=${PWD}/destdir
+  - make test
+  - make distcheck
 
 env:
   - BITS=32
