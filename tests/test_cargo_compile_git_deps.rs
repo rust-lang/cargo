@@ -1,4 +1,4 @@
-use std::io::{fs, File};
+use std::io::File;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir};
@@ -544,11 +544,14 @@ test!(recompilation {
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
-    assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
-                execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{}#[..])\n\
+    assert_that(p.process(cargo_dir().join("cargo-update")),
+                execs().with_stdout(format!("{} git repository `file:{}`",
+                                            UPDATING,
+                                            git_project.root().display())));
+
+    assert_that(p.process(cargo_dir().join("cargo-build")),
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
-                                            UPDATING, git_project.root().display(),
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
@@ -558,23 +561,22 @@ test!(recompilation {
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
 
-    assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
-                execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{}#[..])\n\
+    println!("compile after commit");
+    assert_that(p.process(cargo_dir().join("cargo-build")),
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
-                                            UPDATING, git_project.root().display(),
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
-    println!("one last time");
-
-    // Remove the lockfile and make sure that we update
-    fs::unlink(&p.root().join("Cargo.lock")).assert();
-    assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
-                execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{}#[..])\n\
+    // Update the dependency and carry on!
+    assert_that(p.process(cargo_dir().join("cargo-update")),
+                execs().with_stdout(format!("{} git repository `file:{}`",
+                                            UPDATING,
+                                            git_project.root().display())));
+    println!("going for the last compile");
+    assert_that(p.process(cargo_dir().join("cargo-build")),
+                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
                                              {} foo v0.5.0 (file:{})\n",
-                                            UPDATING, git_project.root().display(),
                                             COMPILING, git_project.root().display(),
                                             COMPILING, p.root().display())));
 })

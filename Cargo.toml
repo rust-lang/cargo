@@ -83,5 +83,9 @@ test = false
 name = "cargo-generate-lockfile"
 test = false
 
+[[bin]]
+name = "cargo-update"
+test = false
+
 [[test]]
 name = "tests"
