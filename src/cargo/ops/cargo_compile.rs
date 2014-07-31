@@ -24,16 +24,14 @@
 
 use std::os;
 use std::collections::HashMap;
-use std::io::File;
-use serialize::Decodable;
-use rstoml = toml;
 
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId, Resolve, resolver};
+use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId};
+use core::resolver;
 use ops;
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
-use util::{CargoResult, Wrap, config, internal, human, ChainError, toml};
+use util::{CargoResult, Wrap, config, internal, human, ChainError};
 use util::profile;
 
 pub struct CompileOptions<'a> {
@@ -50,6 +48,11 @@ pub fn compile(manifest_path: &Path,
     let target = target.map(|s| s.to_string());
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
+
+    if options.update {
+        return Err(human("The -u flag has been deprecated, please use the \
+                          `cargo update` command instead"));
+    }
 
     let mut source = PathSource::for_path(&manifest_path.dir_path());
 
@@ -76,7 +79,7 @@ pub fn compile(manifest_path: &Path,
 
         let mut registry = PackageRegistry::new(&mut config);
 
-        let resolved = match try!(load_lockfile(&lockfile, source_id)) {
+        let resolved = match try!(ops::load_lockfile(&lockfile, source_id)) {
             Some(r) => {
                 try!(registry.add_sources(r.iter().map(|p| {
                     p.get_source_id().clone()
@@ -143,21 +146,6 @@ pub fn compile(manifest_path: &Path,
     }).collect();
 
     Ok(test_executables)
-}
-
-fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>> {
-    // If there is no lockfile, return none.
-    let mut f = match File::open(path) {
-        Ok(f) => f,
-        Err(_) => return Ok(None)
-    };
-
-    let s = try!(f.read_to_string());
-
-    let table = rstoml::Table(try!(toml::parse(s.as_slice(), path)));
-    let mut d = rstoml::Decoder::new(table);
-    let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
-    Ok(Some(try!(v.to_resolve(sid))))
 }
 
 fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,

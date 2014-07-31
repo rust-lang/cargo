@@ -161,18 +161,16 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
                                              self.reference.as_slice());
         let should_update = self.config.update_remotes() || actual_rev.is_err();
 
-        let repo = if should_update {
+        let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",
                 format!("git repository `{}`", self.remote.get_location())));
 
             log!(5, "updating git source `{}`", self.remote);
-            try!(self.remote.checkout(&self.db_path))
+            let repo = try!(self.remote.checkout(&self.db_path));
+            let rev = try!(repo.rev_for(self.reference.as_slice()));
+            (repo, rev)
         } else {
-            self.remote.db_at(&self.db_path)
-        };
-        let actual_rev = match actual_rev {
-            Ok(rev) => rev,
-            Err(..) => try!(repo.rev_for(self.reference.as_slice())),
+            (self.remote.db_at(&self.db_path), actual_rev.unwrap())
         };
 
         try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));

@@ -6,6 +6,7 @@ pub use self::cargo_run::run;
 pub use self::cargo_new::{new, NewOptions};
 pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_generate_lockfile::{generate_lockfile, write_resolve};
+pub use self::cargo_generate_lockfile::{update_lockfile, load_lockfile};
 
 mod cargo_clean;
 mod cargo_compile;

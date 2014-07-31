@@ -1,13 +1,17 @@
+#![warn(warnings)]
+use std::collections::HashSet;
 use std::io::File;
 
-use serialize::Encodable;
-use toml::{mod, Encoder};
+use serialize::{Encodable, Decodable};
+use toml::Encoder;
+use rstoml = toml;
 
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, Resolve, resolver, Package};
+use core::{MultiShell, Source, Resolve, resolver, Package, SourceId};
+use core::PackageId;
 use sources::{PathSource};
 use util::config::{Config};
-use util::{CargoResult};
+use util::{CargoResult, toml, human};
 
 pub fn generate_lockfile(manifest_path: &Path,
                          shell: &mut MultiShell,
@@ -43,9 +47,80 @@ pub fn write_resolve(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
     let mut e = Encoder::new();
     resolve.encode(&mut e).unwrap();
 
-    let out = toml::Table(e.toml).to_string();
+    let out = rstoml::Table(e.toml).to_string();
     let loc = pkg.get_root().join("Cargo.lock");
     try!(File::create(&loc).write_str(out.as_slice()));
 
     Ok(())
+}
+
+pub fn update_lockfile(manifest_path: &Path,
+                       shell: &mut MultiShell,
+                       to_update: Option<String>) -> CargoResult<()> {
+    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    try!(source.update());
+    let package = try!(source.get_root_package());
+
+    let lockfile = package.get_root().join("Cargo.lock");
+    let source_id = package.get_package_id().get_source_id();
+    let resolve = match try!(load_lockfile(&lockfile, source_id)) {
+        Some(resolve) => resolve,
+        None => return Err(human("A Cargo.lock must exist before it is updated"))
+    };
+
+    let mut config = try!(Config::new(shell, true, None, None));
+    let mut registry = PackageRegistry::new(&mut config);
+
+    let sources = match to_update {
+        Some(name) => {
+            let mut to_avoid = HashSet::new();
+            match resolve.deps(package.get_package_id()) {
+                Some(deps) => {
+                    for dep in deps.filter(|d| d.get_name() == name.as_slice()) {
+                        fill_with_deps(&resolve, dep, &mut to_avoid);
+                    }
+                }
+                None => {}
+            }
+            resolve.iter().filter(|pkgid| !to_avoid.contains(pkgid))
+                   .map(|pkgid| pkgid.get_source_id().clone()).collect()
+        }
+        None => package.get_source_ids(),
+    };
+    try!(registry.add_sources(sources));
+
+    let resolve = try!(resolver::resolve(package.get_package_id(),
+                                         package.get_dependencies(),
+                                         &mut registry));
+
+    try!(write_resolve(&package, &resolve));
+    return Ok(());
+
+    fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
+                          set: &mut HashSet<&'a PackageId>) {
+        if !set.insert(dep) { return }
+        match resolve.deps(dep) {
+            Some(mut deps) => {
+                for dep in deps {
+                    fill_with_deps(resolve, dep, set);
+                }
+            }
+            None => {}
+        }
+    }
+}
+
+pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>> {
+    // If there is no lockfile, return none.
+    let mut f = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(None)
+    };
+
+    let s = try!(f.read_to_string());
+
+    let table = rstoml::Table(try!(toml::parse(s.as_slice(), path)));
+    let mut d = rstoml::Decoder::new(table);
+    let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
+    Ok(Some(try!(v.to_resolve(sid))))
 }
