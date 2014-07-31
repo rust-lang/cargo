@@ -11,6 +11,7 @@ extern crate regex;
 extern crate semver;
 extern crate serialize;
 extern crate term;
+extern crate time;
 extern crate url;
 #[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;

@@ -5,7 +5,7 @@ use std::io::{fs, File};
 use core::{Package, Target};
 use util;
 use util::hex::short_hash;
-use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require};
+use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
 
 use super::job::Job;
 use super::context::Context;
@@ -24,6 +24,7 @@ use super::context::Context;
 pub fn prepare<'a, 'b>(cx: &mut Context<'a, 'b>, pkg: &'a Package,
                        targets: &[&'a Target])
                        -> CargoResult<(Freshness, Job, Job)> {
+    let _p = profile::start(format!("fingerprint: {}", pkg));
     let filename = format!(".{}.{}.fingerprint", pkg.get_name(),
                            short_hash(pkg.get_package_id()));
     let filename = filename.as_slice();

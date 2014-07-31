@@ -34,6 +34,7 @@ use ops;
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, Wrap, config, internal, human, ChainError, toml};
+use util::profile;
 
 pub struct CompileOptions<'a> {
     pub update: bool,
@@ -67,6 +68,7 @@ pub fn compile(manifest_path: &Path,
                                                    manifest_path.dir_path()));
 
     let (packages, resolve, resolve_with_overrides, sources) = {
+        let _p = profile::start("resolving...");
         let lockfile = manifest_path.dir_path().join("Cargo.lock");
         let source_id = package.get_package_id().get_source_id();
 
@@ -117,6 +119,7 @@ pub fn compile(manifest_path: &Path,
     }).collect::<Vec<&Target>>();
 
     {
+        let _p = profile::start("compiling");
         let mut config = try!(Config::new(*shell, update, jobs, target));
         try!(scrape_target_config(&mut config, &user_configs));
 
