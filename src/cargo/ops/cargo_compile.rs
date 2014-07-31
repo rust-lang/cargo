@@ -65,7 +65,6 @@ pub fn compile(manifest_path: &Path,
     let user_configs = try!(config::all_configs(os::getcwd()));
     let override_ids = try!(source_ids_from_config(&user_configs,
                                                    manifest_path.dir_path()));
-    let source_ids = package.get_source_ids();
 
     let (packages, resolve, resolve_with_overrides, sources) = {
         let lockfile = manifest_path.dir_path().join("Cargo.lock");
@@ -73,11 +72,17 @@ pub fn compile(manifest_path: &Path,
 
         let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
 
-        let mut registry = try!(PackageRegistry::new(source_ids, &mut config));
+        let mut registry = PackageRegistry::new(&mut config);
 
         let resolved = match try!(load_lockfile(&lockfile, source_id)) {
-            Some(r) => r,
+            Some(r) => {
+                try!(registry.add_sources(r.iter().map(|p| {
+                    p.get_source_id().clone()
+                }).collect()));
+                r
+            }
             None => {
+                try!(registry.add_sources(package.get_source_ids()));
                 try!(resolver::resolve(package.get_package_id(),
                                        package.get_dependencies(),
                                        &mut registry))

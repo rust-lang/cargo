@@ -22,20 +22,7 @@ pub struct PackageRegistry<'a> {
 }
 
 impl<'a> PackageRegistry<'a> {
-    pub fn new<'a>(source_ids: Vec<SourceId>,
-                   config: &'a mut Config<'a>) -> CargoResult<PackageRegistry<'a>> {
-
-        let mut reg = PackageRegistry::empty(config);
-        let source_ids = dedup(source_ids);
-
-        for id in source_ids.iter() {
-            try!(reg.load(id, false));
-        }
-
-        Ok(reg)
-    }
-
-    fn empty<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
+    pub fn new<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
             overrides: vec!(),
@@ -74,6 +61,13 @@ impl<'a> PackageRegistry<'a> {
         if self.sources.contains(namespace) { return Ok(()); }
 
         try!(self.load(namespace, false));
+        Ok(())
+    }
+
+    pub fn add_sources(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
+        for id in dedup(ids).iter() {
+            try!(self.load(id, false));
+        }
         Ok(())
     }
 

@@ -1,5 +1,4 @@
-use std::io::File;
-use std::path;
+use std::io::{fs, File};
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir};
@@ -553,14 +552,24 @@ test!(recompilation {
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
 
-    // Commit the changes and make sure we trigger a recompile
-    File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
-        pub fn bar() { println!("hello!"); }
-    "#).assert();
+    // Commit the changes and make sure we don't trigger a recompile because the
+    // lockfile says not to change
     git_project.process("git").args(["add", "."]).exec_with_output().assert();
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
 
+    assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
+                execs().with_stdout(format!("{} git repository `file:{}`\n\
+                                             {} bar v0.5.0 (file:{}#[..])\n\
+                                             {} foo v0.5.0 (file:{})\n",
+                                            UPDATING, git_project.root().display(),
+                                            FRESH, git_project.root().display(),
+                                            FRESH, p.root().display())));
+
+    println!("one last time");
+
+    // Remove the lockfile and make sure that we update
+    fs::unlink(&p.root().join("Cargo.lock")).assert();
     assert_that(p.process(cargo_dir().join("cargo-build")).arg("-u"),
                 execs().with_stdout(format!("{} git repository `file:{}`\n\
                                              {} bar v0.5.0 (file:{}#[..])\n\

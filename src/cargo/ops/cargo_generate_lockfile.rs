@@ -28,9 +28,8 @@ pub fn generate_lockfile(manifest_path: &Path,
     let resolve = {
         let mut config = try!(Config::new(shell, update, None, None));
 
-        let mut registry =
-            try!(PackageRegistry::new(source_ids, &mut config));
-
+        let mut registry = PackageRegistry::new(&mut config);
+        try!(registry.add_sources(source_ids));
         try!(resolver::resolve(package.get_package_id(),
                                package.get_dependencies(),
                                &mut registry))
