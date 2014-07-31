@@ -21,10 +21,8 @@ Usage:
 
 Options:
     -h, --help              Print this message
-    --manifest-path PATH    Path to the manifest to compile
+    --manifest-path PATH    Path to the manifest to generate a lockfile for
     -v, --verbose           Use verbose output
-
-All of the trailing arguments are passed as to the binary to run.
 ",  flag_manifest_path: Option<String>)
 
 fn main() {
@@ -32,7 +30,7 @@ fn main() {
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-clean; args={}", os::args());
+    debug!("executing; cmd=cargo-generate-lockfile; args={}", os::args());
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
