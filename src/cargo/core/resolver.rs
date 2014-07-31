@@ -104,7 +104,8 @@ impl<E, D: Decoder<E>> Decodable<D, E> for EncodablePackageId {
     fn decode(d: &mut D) -> Result<EncodablePackageId, E> {
         let string: String = raw_try!(Decodable::decode(d));
         let regex = regex!(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$");
-        let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
+        let captures = regex.captures(string.as_slice())
+                            .expect("invalid serialized PackageId");
 
         let name = captures.at(1);
         let version = captures.at(2);
