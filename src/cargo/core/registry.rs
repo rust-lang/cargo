@@ -1,5 +1,5 @@
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
-use util::{CargoResult, ChainError, Config, human};
+use util::{CargoResult, ChainError, Config, human, profile};
 
 pub trait Registry {
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
@@ -83,7 +83,9 @@ impl<'a> PackageRegistry<'a> {
             let mut source = source_id.load(self.config);
 
             // Ensure the source has fetched all necessary remote data.
+            let p = profile::start(format!("updating: {}", source_id));
             try!(source.update());
+            drop(p);
 
             if override {
                 self.overrides.push(source_id.clone());

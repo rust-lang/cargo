@@ -158,8 +158,11 @@ impl Show for SourceId {
                     try!(write!(f, "?ref={}", reference));
                 }
 
-                if precise.is_some() {
-                    try!(write!(f, "#{}", precise.get_ref()));
+                match *precise {
+                    Some(ref s) => {
+                        try!(write!(f, "#{}", s.as_slice().slice_to(8)));
+                    }
+                    None => {}
                 }
             },
             SourceId { kind: RegistryKind, .. } => {

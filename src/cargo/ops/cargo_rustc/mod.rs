@@ -7,7 +7,7 @@ use semver::Version;
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util;
 use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
-use util::{Config, Freshness, internal, ChainError};
+use util::{Config, Freshness, internal, ChainError, profile};
 
 use self::job::Job;
 use self::job_queue::JobQueue;
@@ -87,6 +87,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                    jobs: &mut Vec<(&'a Package, Freshness, (Job, Job))>)
                    -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
+    let _p = profile::start(format!("preparing: {}", pkg));
 
     if targets.is_empty() {
         return Ok(())

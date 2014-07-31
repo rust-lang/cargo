@@ -4,7 +4,7 @@ use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
-use util::CargoResult;
+use util::{CargoResult, profile};
 
 use super::job::Job;
 
@@ -51,6 +51,8 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
     pub fn execute(&mut self) -> CargoResult<()> {
+        let _p = profile::start("executing the job graph");
+
         // Iteratively execute the dependency graph. Each turn of this loop will
         // schedule as much work as possible and then wait for one job to finish,
         // possibly scheduling more work afterwards.

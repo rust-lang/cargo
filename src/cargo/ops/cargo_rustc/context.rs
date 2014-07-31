@@ -3,7 +3,7 @@ use std::str;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util;
-use util::{CargoResult, ChainError, internal, Config};
+use util::{CargoResult, ChainError, internal, Config, profile};
 
 use super::layout::{Layout, LayoutProxy};
 
@@ -100,6 +100,8 @@ impl<'a, 'b> Context<'a, 'b> {
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
     pub fn prepare(&mut self, pkg: &'a Package) -> CargoResult<()> {
+        let _p = profile::start("preparing layout");
+
         try!(self.host.prepare().chain_error(|| {
             internal(format!("couldn't prepare build directories for `{}`",
                              pkg.get_name()))
