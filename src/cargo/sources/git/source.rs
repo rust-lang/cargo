@@ -8,7 +8,7 @@ use core::source::{Source, SourceId, GitKind, Location, Remote, Local};
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
-use sources::git::utils::{GitReference,GitRemote,Master,Other};
+use sources::git::utils::{GitReference, GitRemote, Master, Other, GitRevision};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
@@ -19,7 +19,8 @@ pub struct GitSource<'a, 'b> {
     checkout_path: Path,
     source_id: SourceId,
     path_source: Option<PathSource>,
-    config: &'a mut Config<'b>
+    rev: Option<GitRevision>,
+    config: &'a mut Config<'b>,
 }
 
 impl<'a, 'b> GitSource<'a, 'b> {
@@ -53,7 +54,8 @@ impl<'a, 'b> GitSource<'a, 'b> {
             checkout_path: checkout_path,
             source_id: source_id.clone(),
             path_source: None,
-            config: config
+            rev: None,
+            config: config,
         }
     }
 
@@ -179,6 +181,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         let path_source = PathSource::new(&self.checkout_path, &source_id);
 
         self.path_source = Some(path_source);
+        self.rev = Some(actual_rev);
         self.path_source.as_mut().unwrap().update()
     }
 
@@ -193,8 +196,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
-        let db = self.remote.db_at(&self.db_path);
-        db.rev_for(self.reference.as_slice()).map(|r| r.to_string())
+        Ok(self.rev.get_ref().to_string())
     }
 }
 
