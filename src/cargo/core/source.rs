@@ -247,15 +247,12 @@ impl SourceId {
                 let mut url = url.to_url().unwrap();
                 let mut reference = "master".to_string();
                 let pairs = url.query_pairs().unwrap_or(Vec::new());
-                url.set_query_from_pairs(pairs.iter().filter(|&&(ref k, ref v)| {
+                for &(ref k, ref v) in pairs.iter() {
                     if k.as_slice() == "ref" {
                         reference = v.clone();
-                        false
-                    } else {
-                        true
                     }
-                }).map(|&(ref a, ref b)| (a.as_slice(), b.as_slice())));
-
+                }
+                url.query = None;
                 let precise = mem::replace(&mut url.fragment, None);
                 SourceId::for_git(&url, reference.as_slice(), precise)
             },
