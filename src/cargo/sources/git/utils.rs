@@ -13,6 +13,9 @@ pub enum GitReference {
     Other(String)
 }
 
+#[deriving(PartialEq,Clone,Encodable)]
+pub struct GitRevision(String);
+
 impl GitReference {
     pub fn for_str<S: Str>(string: S) -> GitReference {
         if string.as_slice() == "master" {
@@ -38,6 +41,18 @@ impl Show for GitReference {
     }
 }
 
+impl Str for GitRevision {
+    fn as_slice(&self) -> &str {
+        let GitRevision(ref me) = *self;
+        me.as_slice()
+    }
+}
+
+impl Show for GitRevision {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.as_slice().fmt(f)
+    }
+}
 
 macro_rules! git(
     ($config:expr, $($arg:expr),+) => (
@@ -104,15 +119,13 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
 pub struct GitCheckout {
     database: GitDatabase,
     location: Path,
-    reference: GitReference,
-    revision: String,
+    revision: GitRevision,
 }
 
 #[deriving(Encodable)]
 pub struct EncodableGitCheckout {
     database: GitDatabase,
     location: String,
-    reference: String,
     revision: String,
 }
 
@@ -121,7 +134,6 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
         EncodableGitCheckout {
             database: self.database.clone(),
             location: self.location.display().to_string(),
-            reference: self.reference.to_string(),
             revision: self.revision.to_string()
         }.encode(s)
     }
@@ -138,9 +150,9 @@ impl GitRemote {
         &self.location
     }
 
-    pub fn has_ref<S: Str>(&self, path: &Path, reference: S) -> CargoResult<()> {
-        git_output!(*path, "rev-parse", reference.as_slice());
-        Ok(())
+    pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
+                           -> CargoResult<GitRevision> {
+        Ok(GitRevision(git_output!(*path, "rev-parse", reference.as_slice())))
     }
 
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
@@ -177,34 +189,38 @@ impl GitDatabase {
         &self.path
     }
 
-    pub fn copy_to<S: Str>(&self, reference: S,
-                           dest: &Path) -> CargoResult<GitCheckout> {
+    pub fn copy_to(&self, rev: GitRevision, dest: &Path)
+                   -> CargoResult<GitCheckout> {
         let checkout = try!(GitCheckout::clone_into(dest, self.clone(),
-                                  GitReference::for_str(reference.as_slice())));
+                                                    rev.clone()));
 
-        if self.remote.has_ref(dest, reference.as_slice()).is_err() {
-            try!(checkout.fetch());
+        match self.remote.rev_for(dest, "HEAD") {
+            Ok(ref head) if rev == *head => return Ok(checkout),
+            _ => try!(checkout.fetch()),
         }
-        try!(checkout.reset(reference.as_slice()));
+
+        try!(checkout.reset());
         try!(checkout.update_submodules());
 
         Ok(checkout)
     }
 
-    pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<String> {
-        Ok(git_output!(self.path, "rev-parse", reference.as_slice()))
+    pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<GitRevision> {
+        self.remote.rev_for(&self.path, reference)
     }
 
+    pub fn has_ref<S: Str>(&self, reference: S) -> CargoResult<()> {
+        git_output!(self.path, "rev-parse", "--verify", reference.as_slice());
+        Ok(())
+    }
 }
 
 impl GitCheckout {
     fn clone_into(into: &Path, database: GitDatabase,
-                  reference: GitReference) -> CargoResult<GitCheckout> {
-        let revision = try!(database.rev_for(reference.as_slice()));
+                  revision: GitRevision) -> CargoResult<GitCheckout> {
         let checkout = GitCheckout {
             location: into.clone(),
             database: database,
-            reference: reference,
             revision: revision,
         };
 
@@ -241,6 +257,7 @@ impl GitCheckout {
 
         git!(dirname, "clone", "--no-checkout", "--quiet",
              self.get_source(), &self.location);
+        try!(self.reset());
 
         Ok(())
     }
@@ -270,8 +287,9 @@ impl GitCheckout {
         Ok(())
     }
 
-    fn reset(&self, revision: &str) -> CargoResult<()> {
-        Ok(git!(self.location, "reset", "-q", "--hard", revision))
+    fn reset(&self) -> CargoResult<()> {
+        Ok(git!(self.location, "reset", "-q", "--hard",
+                self.revision.as_slice()))
     }
 
     fn update_submodules(&self) -> CargoResult<()> {

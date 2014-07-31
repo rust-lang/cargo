@@ -155,9 +155,9 @@ impl<'a, 'b> Registry for GitSource<'a, 'b> {
 
 impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
-        let should_update = self.config.update_remotes() || {
-            !self.remote.has_ref(&self.db_path, self.reference.as_slice()).is_ok()
-        };
+        let actual_rev = self.remote.rev_for(&self.db_path,
+                                             self.reference.as_slice());
+        let should_update = self.config.update_remotes() || actual_rev.is_err();
 
         let repo = if should_update {
             try!(self.config.shell().status("Updating",
@@ -168,11 +168,14 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         } else {
             self.remote.db_at(&self.db_path)
         };
+        let actual_rev = match actual_rev {
+            Ok(rev) => rev,
+            Err(..) => try!(repo.rev_for(self.reference.as_slice())),
+        };
 
-        let checkout = try!(repo.copy_to(self.reference.as_slice(),
-                                         &self.checkout_path));
+        try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));
 
-        let source_id = self.source_id.with_precise(checkout.get_rev().to_string());
+        let source_id = self.source_id.with_precise(actual_rev.to_string());
         let path_source = PathSource::new(&self.checkout_path, &source_id);
 
         self.path_source = Some(path_source);
@@ -191,7 +194,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
         let db = self.remote.db_at(&self.db_path);
-        db.rev_for(self.reference.as_slice())
+        db.rev_for(self.reference.as_slice()).map(|r| r.to_string())
     }
 }
 
