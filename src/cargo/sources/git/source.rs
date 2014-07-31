@@ -23,7 +23,8 @@ pub struct GitSource<'a, 'b> {
 }
 
 impl<'a, 'b> GitSource<'a, 'b> {
-    pub fn new<'a, 'b>(source_id: &SourceId, config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
+    pub fn new<'a, 'b>(source_id: &SourceId,
+                       config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let reference = match source_id.kind {
@@ -39,6 +40,11 @@ impl<'a, 'b> GitSource<'a, 'b> {
 
         let checkout_path = config.git_checkout_path()
             .join(ident.as_slice()).join(reference.as_slice());
+
+        let reference = match source_id.precise {
+            Some(ref s) => s,
+            None => reference,
+        };
 
         GitSource {
             remote: remote,
@@ -163,7 +169,8 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
             self.remote.db_at(&self.db_path)
         };
 
-        let checkout = try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
+        let checkout = try!(repo.copy_to(self.reference.as_slice(),
+                                         &self.checkout_path));
 
         let source_id = self.source_id.with_precise(checkout.get_rev().to_string());
         let path_source = PathSource::new(&self.checkout_path, &source_id);

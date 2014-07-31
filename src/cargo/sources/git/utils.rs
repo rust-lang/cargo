@@ -182,7 +182,10 @@ impl GitDatabase {
         let checkout = try!(GitCheckout::clone_into(dest, self.clone(),
                                   GitReference::for_str(reference.as_slice())));
 
-        try!(checkout.fetch());
+        if self.remote.has_ref(dest, reference.as_slice()).is_err() {
+            try!(checkout.fetch());
+        }
+        try!(checkout.reset(reference.as_slice()));
         try!(checkout.update_submodules());
 
         Ok(checkout)
@@ -264,7 +267,6 @@ impl GitCheckout {
         // In this case we just use `origin` here instead of the database path.
         git!(self.location, "fetch", "--force", "--quiet", "origin");
         git!(self.location, "fetch", "--force", "--quiet", "--tags", "origin");
-        try!(self.reset(self.revision.as_slice()));
         Ok(())
     }
 
