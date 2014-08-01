@@ -44,7 +44,7 @@ pub struct CompileOptions<'a> {
 }
 
 pub fn compile(manifest_path: &Path,
-               options: &mut CompileOptions) -> CargoResult<Vec<String>> {
+               options: &mut CompileOptions) -> CargoResult<()> {
     let CompileOptions { update, env, ref mut shell, jobs, target } = *options;
     let target = target.map(|s| s.to_string());
 
@@ -127,18 +127,7 @@ pub fn compile(manifest_path: &Path,
 
     try!(ops::write_resolve(&package, &resolve));
 
-    let test_executables: Vec<String> = targets.iter()
-        .filter_map(|target| {
-            if target.get_profile().is_test() {
-                debug!("Run  Target: {}", target.get_name());
-                Some(target.file_stem())
-            } else {
-                debug!("Skip Target: {}", target.get_name());
-                None
-            }
-    }).collect();
-
-    Ok(test_executables)
+    Ok(())
 }
 
 fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
