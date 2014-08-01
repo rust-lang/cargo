@@ -580,3 +580,95 @@ test!(recompilation {
                                             COMPILING, git_project.root().display(),
                                             COMPILING, p.root().display())));
 })
+
+test!(update_with_shared_deps {
+    let git_project = git_repo("bar", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "bar"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [[lib]]
+                name = "bar"
+            "#)
+            .file("src/bar.rs", r#"
+                pub fn bar() {}
+            "#)
+    }).assert();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+            path = "dep1"
+            [dependencies.dep2]
+            path = "dep2"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate dep1;
+            extern crate dep2;
+            fn main() {}
+        "#)
+        .file("dep1/Cargo.toml", format!(r#"
+            [package]
+            name = "dep1"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+            version = "0.5.0"
+            git = 'file:{}'
+        "#, git_project.root().display()))
+        .file("dep1/src/lib.rs", "")
+        .file("dep2/Cargo.toml", format!(r#"
+            [package]
+            name = "dep2"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+            version = "0.5.0"
+            git = 'file:{}'
+        "#, git_project.root().display()))
+        .file("dep2/src/lib.rs", "");
+
+    // First time around we should compile both foo and bar
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_stdout(format!("\
+{updating} git repository `file:{git}`
+{compiling} bar v0.5.0 (file:{git}#[..])
+{compiling} [..] v0.5.0 (file:{dir})
+{compiling} [..] v0.5.0 (file:{dir})
+{compiling} foo v0.5.0 (file:{dir})\n",
+                    updating = UPDATING, git = git_project.root().display(),
+                    compiling = COMPILING, dir = p.root().display())));
+
+    // Modify a file manually, and commit it
+    File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
+        pub fn bar() { println!("hello!"); }
+    "#).assert();
+    git_project.process("git").args(["add", "."]).exec_with_output().assert();
+    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
+               .assert();
+    assert_that(p.process(cargo_dir().join("cargo-update")).arg("dep1"),
+                execs().with_stdout(format!("{} git repository `file:{}`",
+                                            UPDATING,
+                                            git_project.root().display())));
+
+    // Make sure we still only compile one version of the git repo
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_stdout(format!("\
+{compiling} bar v0.5.0 (file:{git}#[..])
+{compiling} [..] v0.5.0 (file:{dir})
+{compiling} [..] v0.5.0 (file:{dir})
+{compiling} foo v0.5.0 (file:{dir})\n",
+                    git = git_project.root().display(),
+                    compiling = COMPILING, dir = p.root().display())));
+})
