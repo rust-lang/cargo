@@ -32,11 +32,37 @@ impl<'a> ToVersion for &'a str {
     }
 }
 
-#[deriving(Clone, PartialEq)]
+#[deriving(Clone, PartialEq, PartialOrd, Ord)]
 pub struct PackageId {
     name: String,
     version: semver::Version,
     source_id: SourceId,
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for PackageId {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        let source = self.source_id.to_url();
+        let encoded = format!("{} {} ({})", self.name, self.version, source);
+        encoded.encode(s)
+    }
+}
+
+impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
+    fn decode(d: &mut D) -> Result<PackageId, E> {
+        let string: String = raw_try!(Decodable::decode(d));
+        let regex = regex!(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$");
+        let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
+
+        let name = captures.at(1);
+        let version = semver::parse(captures.at(2)).expect("invalid version");
+        let source_id = SourceId::from_url(captures.at(3).to_string());
+
+        Ok(PackageId {
+            name: name.to_string(),
+            version: version,
+            source_id: source_id
+        })
+    }
 }
 
 impl<S: hash::Writer> Hash<S> for PackageId {
@@ -125,22 +151,22 @@ impl Show for PackageId {
     }
 }
 
-impl<D: Decoder<Box<CargoError + Send>>>
-    Decodable<D,Box<CargoError + Send>>
-    for PackageId
-{
-    fn decode(d: &mut D) -> CargoResult<PackageId> {
-        let (name, version, source_id): (String, String, SourceId) = try!(Decodable::decode(d));
+//impl<D: Decoder<Box<CargoError + Send>>>
+    //Decodable<D,Box<CargoError + Send>>
+    //for PackageId
+//{
+    //fn decode(d: &mut D) -> CargoResult<PackageId> {
+        //let (name, version, source_id): (String, String, SourceId) = try!(Decodable::decode(d));
 
-        PackageId::new(name.as_slice(), version.as_slice(), &source_id)
-    }
-}
+        //PackageId::new(name.as_slice(), version.as_slice(), &source_id)
+    //}
+//}
 
-impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
-    fn encode(&self, e: &mut S) -> Result<(), E> {
-        (self.name.clone(), self.version.to_string(), self.source_id.clone()).encode(e)
-    }
-}
+//impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
+    //fn encode(&self, e: &mut S) -> Result<(), E> {
+        //(self.name.clone(), self.version.to_string(), self.source_id.clone()).encode(e)
+    //}
+//}
 
 #[cfg(test)]
 mod tests {

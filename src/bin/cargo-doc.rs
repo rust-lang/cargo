@@ -23,8 +23,8 @@ Options:
     -h, --help              Print this message
     --no-deps               Don't build documentation for dependencies
     -j N, --jobs N          The number of jobs to run in parallel
-    -u, --update-remotes    Update all remote packages before compiling
-    --manifest-path PATH    Path to the manifest to compile
+    -u, --update-remotes    Deprecated option, use `cargo update` instead
+    --manifest-path PATH    Path to the manifest to document
     -v, --verbose           Use verbose output
 
 By default the documentation for the local package and all dependencies is

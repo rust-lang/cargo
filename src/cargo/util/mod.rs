@@ -20,6 +20,7 @@ pub mod toml;
 pub mod paths;
 pub mod errors;
 pub mod hex;
+pub mod profile;
 mod pool;
 mod dependency_queue;
 mod to_url;

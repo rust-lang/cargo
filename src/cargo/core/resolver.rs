@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
+
+use serialize::{Encodable, Encoder, Decodable, Decoder};
 use util::graph::{Nodes,Edges};
 
 use core::{
@@ -14,12 +16,183 @@ use semver;
 use util::{CargoResult, Graph, human, internal};
 
 pub struct Resolve {
-    graph: Graph<PackageId>
+    graph: Graph<PackageId>,
+    root: PackageId
+}
+
+#[deriving(Encodable, Decodable, Show)]
+pub struct EncodableResolve {
+    package: Option<Vec<EncodableDependency>>,
+    root: EncodableDependency
+}
+
+impl EncodableResolve {
+    pub fn to_resolve(&self, default: &SourceId) -> CargoResult<Resolve> {
+        let mut g = Graph::new();
+
+        try!(add_pkg_to_graph(&mut g, &self.root, default));
+
+        match self.package {
+            Some(ref packages) => {
+                for dep in packages.iter() {
+                    try!(add_pkg_to_graph(&mut g, dep, default));
+                }
+            }
+            None => {}
+        }
+
+        let root = self.root.to_package_id(default);
+        Ok(Resolve { graph: g, root: try!(root) })
+    }
+}
+
+fn add_pkg_to_graph(g: &mut Graph<PackageId>,
+                    dep: &EncodableDependency,
+                    default: &SourceId)
+                    -> CargoResult<()>
+{
+    let package_id = try!(dep.to_package_id(default));
+    g.add(package_id.clone(), []);
+
+    match dep.dependencies {
+        Some(ref deps) => {
+            for edge in deps.iter() {
+                g.link(package_id.clone(), try!(edge.to_package_id(default)));
+            }
+        },
+        _ => ()
+    };
+
+    Ok(())
+}
+
+#[deriving(Encodable, Decodable, Show, PartialOrd, Ord, PartialEq, Eq)]
+pub struct EncodableDependency {
+    name: String,
+    version: String,
+    source: Option<SourceId>,
+    dependencies: Option<Vec<EncodablePackageId>>
+}
+
+impl EncodableDependency {
+    fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
+        PackageId::new(
+            self.name.as_slice(),
+            self.version.as_slice(),
+            self.source.as_ref().unwrap_or(default_source))
+    }
+}
+
+#[deriving(Show, PartialOrd, Ord, PartialEq, Eq)]
+pub struct EncodablePackageId {
+    name: String,
+    version: String,
+    source: Option<SourceId>
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for EncodablePackageId {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        let mut out = format!("{} {}", self.name, self.version);
+        self.source.as_ref().map(|s| {
+            out.push_str(format!(" ({})", s.to_url()).as_slice())
+        });
+        out.encode(s)
+    }
+}
+
+impl<E, D: Decoder<E>> Decodable<D, E> for EncodablePackageId {
+    fn decode(d: &mut D) -> Result<EncodablePackageId, E> {
+        let string: String = raw_try!(Decodable::decode(d));
+        let regex = regex!(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$");
+        let captures = regex.captures(string.as_slice())
+                            .expect("invalid serialized PackageId");
+
+        let name = captures.at(1);
+        let version = captures.at(2);
+
+        let source = captures.at(3);
+
+        let source_id = if source == "" {
+            None
+        } else {
+            Some(SourceId::from_url(source.to_string()))
+        };
+
+        Ok(EncodablePackageId {
+            name: name.to_string(),
+            version: version.to_string(),
+            source: source_id
+        })
+    }
+}
+
+impl EncodablePackageId {
+    fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
+        PackageId::new(
+            self.name.as_slice(),
+            self.version.as_slice(),
+            self.source.as_ref().unwrap_or(default_source))
+    }
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for Resolve {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        let mut ids: Vec<&PackageId> = self.graph.iter().collect();
+        ids.sort();
+
+        let encodable = ids.iter().filter_map(|&id| {
+            if self.root == *id { return None; }
+
+            Some(encodable_resolve_node(id, &self.root, &self.graph))
+        }).collect::<Vec<EncodableDependency>>();
+
+        EncodableResolve {
+            package: Some(encodable),
+            root: encodable_resolve_node(&self.root, &self.root, &self.graph)
+        }.encode(s)
+    }
+}
+
+fn encodable_resolve_node(id: &PackageId, root: &PackageId,
+                          graph: &Graph<PackageId>) -> EncodableDependency {
+    let deps = graph.edges(id).map(|edge| {
+        let mut deps = edge.map(|e| {
+            encodable_package_id(e, root)
+        }).collect::<Vec<EncodablePackageId>>();
+        deps.sort();
+        deps
+    });
+
+    let source = if id.get_source_id() == root.get_source_id() {
+        None
+    } else {
+        Some(id.get_source_id().clone())
+    };
+
+    EncodableDependency {
+        name: id.get_name().to_string(),
+        version: id.get_version().to_string(),
+        source: source,
+        dependencies: deps,
+    }
+}
+
+fn encodable_package_id(id: &PackageId, root: &PackageId) -> EncodablePackageId {
+    let source = if id.get_source_id() == root.get_source_id() {
+        None
+    } else {
+        Some(id.get_source_id().clone())
+    };
+    EncodablePackageId {
+        name: id.get_name().to_string(),
+        version: id.get_version().to_string(),
+        source: source,
+    }
 }
 
 impl Resolve {
-    fn new() -> Resolve {
-        Resolve { graph: Graph::new() }
+    fn new(root: PackageId) -> Resolve {
+        Resolve { graph: Graph::new(), root: root }
     }
 
     pub fn iter(&self) -> Nodes<PackageId> {
@@ -41,27 +214,27 @@ struct Context<'a, R> {
     registry: &'a mut R,
     resolve: Resolve,
 
-    // Eventually, we will have smarter logic for checking for conflicts in the resolve,
-    // but without the registry, conflicts should not exist in practice, so this is just
-    // a sanity check.
+    // Eventually, we will have smarter logic for checking for conflicts in the
+    // resolve, but without the registry, conflicts should not exist in
+    // practice, so this is just a sanity check.
     seen: HashMap<(String, SourceId), semver::Version>
 }
 
 impl<'a, R: Registry> Context<'a, R> {
-    fn new(registry: &'a mut R) -> Context<'a, R> {
+    fn new(registry: &'a mut R, root: PackageId) -> Context<'a, R> {
         Context {
             registry: registry,
-            resolve: Resolve::new(),
+            resolve: Resolve::new(root),
             seen: HashMap::new()
         }
     }
 }
 
-pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mut R)
-                            -> CargoResult<Resolve> {
+pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency],
+                            registry: &mut R) -> CargoResult<Resolve> {
     log!(5, "resolve; deps={}", deps);
 
-    let mut context = Context::new(registry);
+    let mut context = Context::new(registry, root.clone());
     try!(resolve_deps(root, deps, &mut context));
     log!(5, "  result={}", context.resolve);
     Ok(context.resolve)
@@ -69,7 +242,8 @@ pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency], registry: &mu
 
 fn resolve_deps<'a, R: Registry>(parent: &PackageId,
                                  deps: &[Dependency],
-                                 ctx: &mut Context<'a, R>) -> CargoResult<()> {
+                                 ctx: &mut Context<'a, R>)
+                                 -> CargoResult<()> {
     if deps.is_empty() {
         return Ok(());
     }
@@ -83,7 +257,7 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
                 Version required: {}",
                 dep.get_name(),
                 parent.get_name(),
-                dep.get_namespace(),
+                dep.get_source_id(),
                 dep.get_version_req())));
         }
 
@@ -92,7 +266,7 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
                 single source for a particular package name ({}).", dep)));
         }
 
-        let summary = pkgs[0].clone();
+        let summary = &pkgs[0];
         let name = summary.get_name().to_string();
         let source_id = summary.get_source_id().clone();
         let version = summary.get_version().clone();
@@ -137,7 +311,8 @@ mod test {
     use core::{Dependency, PackageId, Summary, Registry};
     use util::{CargoResult, ToUrl};
 
-    fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency], registry: &mut R)
+    fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency],
+                            registry: &mut R)
                             -> CargoResult<Vec<PackageId>> {
         Ok(try!(super::resolve(pkg, deps, registry)).iter().map(|p| p.clone()).collect())
     }
@@ -275,8 +450,8 @@ mod test {
 
     #[test]
     pub fn test_resolving_with_same_name() {
-        let list = vec!(pkg_loc("foo", "http://first.example.com"),
-                        pkg_loc("foo", "http://second.example.com"));
+        let list = vec![pkg_loc("foo", "http://first.example.com"),
+                        pkg_loc("foo", "http://second.example.com")];
 
         let mut reg = registry(list);
         let res = resolve(&pkg_id("root"),
@@ -285,7 +460,7 @@ mod test {
                            &mut reg);
 
         let mut names = loc_names([("foo", "http://first.example.com"),
-                              ("foo", "http://second.example.com")]);
+                                   ("foo", "http://second.example.com")]);
 
         names.push(pkg_id("root"));
 
