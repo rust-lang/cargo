@@ -8,9 +8,8 @@ extern crate docopt;
 use std::io::process::ExitStatus;
 
 use cargo::ops;
-use cargo::{execute_main_without_stdin};
-use cargo::core::{MultiShell};
-use cargo::util;
+use cargo::execute_main_without_stdin;
+use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, CargoError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
@@ -48,24 +47,18 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         target: None,
     };
 
-    let test_executables = try!(ops::compile(&root,
-                                             &mut compile_opts).map_err(|err| {
+    let err = try!(ops::run_tests(&root, &mut compile_opts,
+                                  options.arg_args.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
-
-    let test_dir = root.dir_path().join("target").join("test");
-
-    for file in test_executables.iter() {
-        try!(util::process(test_dir.join(file.as_slice()))
-                  .args(options.arg_args.as_slice())
-                  .exec().map_err(|e| {
-            let exit_status = match e.exit {
+    match err {
+        None => Ok(None),
+        Some(err) => {
+            let status = match err.exit {
                 Some(ExitStatus(i)) => i as uint,
-                _ => 1,
+                _ => 101,
             };
-            CliError::from_boxed(e.mark_human(), exit_status)
-        }));
+            Err(CliError::from_boxed(err.mark_human(), status))
+        }
     }
-
-    Ok(None)
 }
