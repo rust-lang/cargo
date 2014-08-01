@@ -623,7 +623,7 @@ fn normalize(libs: &[TomlLibTarget],
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         ([_, ..], []) => {
-            lib_targets(&mut ret, libs, test_dep, metadata);
+            lib_targets(&mut ret, libs, Needed, metadata);
         },
         ([], [_, ..]) => {
             bin_targets(&mut ret, bins, test_dep, metadata,

@@ -499,3 +499,4 @@ pub static RUNNING:   &'static str = "     Running";
 pub static COMPILING: &'static str = "   Compiling";
 pub static FRESH:     &'static str = "       Fresh";
 pub static UPDATING:  &'static str = "    Updating";
+pub static DOCTEST:   &'static str = "   Doc-tests";
