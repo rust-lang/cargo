@@ -25,6 +25,18 @@ test!(cargo_compile_simple {
       execs().with_stdout("i am foo\n"));
 })
 
+test!(cargo_compile_manifest_path {
+    let p = project("foo")
+        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice());
+
+    assert_that(p.cargo_process("cargo-build")
+                 .arg("--manifest-path").arg("foo/Cargo.toml")
+                 .cwd(p.root().dir_path()),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+})
+
 test!(cargo_compile_with_invalid_manifest {
     let p = project("foo")
         .file("Cargo.toml", "");
