@@ -26,7 +26,7 @@ Options:
     -j N, --jobs N          The number of jobs to run in parallel
     --release               Build artifacts in release mode, with optimizations
     --target TRIPLE         Build for the target triple
-    -u, --update-remotes    Update all remote packages before compiling
+    -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to compile
     -v, --verbose           Use verbose output
 ",  flag_jobs: Option<uint>, flag_target: Option<String>,
@@ -37,7 +37,7 @@ fn main() {
 }
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-compile; args={}", os::args());
+    debug!("executing; cmd=cargo-build; args={}", os::args());
     shell.set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));

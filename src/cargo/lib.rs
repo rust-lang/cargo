@@ -5,16 +5,19 @@
 #![feature(default_type_params)]
 #![deny(warnings)]
 
-extern crate debug;
-extern crate term;
 extern crate collections;
-extern crate url;
-extern crate serialize;
+extern crate debug;
+extern crate regex;
 extern crate semver;
+extern crate serialize;
+extern crate term;
+extern crate time;
+extern crate url;
+#[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
 
-extern crate toml;
 extern crate docopt;
+extern crate toml;
 #[cfg(test)] extern crate hamcrest;
 
 use std::os;

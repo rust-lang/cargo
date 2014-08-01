@@ -5,10 +5,10 @@ use std::hash::sip::SipHasher;
 use std::str;
 
 use core::source::{Source, SourceId, GitKind, Location, Remote, Local};
-use core::{Package,PackageId,Summary};
+use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
-use sources::git::utils::{GitReference,GitRemote,Master,Other};
+use sources::git::utils::{GitReference, GitRemote, Master, Other, GitRevision};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
@@ -17,12 +17,15 @@ pub struct GitSource<'a, 'b> {
     reference: GitReference,
     db_path: Path,
     checkout_path: Path,
-    path_source: PathSource,
-    config: &'a mut Config<'b>
+    source_id: SourceId,
+    path_source: Option<PathSource>,
+    rev: Option<GitRevision>,
+    config: &'a mut Config<'b>,
 }
 
 impl<'a, 'b> GitSource<'a, 'b> {
-    pub fn new<'a, 'b>(source_id: &SourceId, config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
+    pub fn new<'a, 'b>(source_id: &SourceId,
+                       config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let reference = match source_id.kind {
@@ -39,19 +42,24 @@ impl<'a, 'b> GitSource<'a, 'b> {
         let checkout_path = config.git_checkout_path()
             .join(ident.as_slice()).join(reference.as_slice());
 
-        let path_source = PathSource::new(&checkout_path, source_id);
+        let reference = match source_id.precise {
+            Some(ref s) => s,
+            None => reference,
+        };
 
         GitSource {
             remote: remote,
             reference: GitReference::for_str(reference.as_slice()),
             db_path: db_path,
             checkout_path: checkout_path,
-            path_source: path_source,
-            config: config
+            source_id: source_id.clone(),
+            path_source: None,
+            rev: None,
+            config: config,
         }
     }
 
-    pub fn get_namespace(&self) -> &Location {
+    pub fn get_location(&self) -> &Location {
         self.remote.get_location()
     }
 }
@@ -139,29 +147,40 @@ impl<'a, 'b> Show for GitSource<'a, 'b> {
     }
 }
 
+impl<'a, 'b> Registry for GitSource<'a, 'b> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        let src = self.path_source.as_mut()
+                      .expect("BUG: update() must be called before query()");
+        src.query(dep)
+    }
+}
+
 impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
-        let should_update = self.config.update_remotes() || {
-            !self.remote.has_ref(&self.db_path, self.reference.as_slice()).is_ok()
-        };
+        let actual_rev = self.remote.rev_for(&self.db_path,
+                                             self.reference.as_slice());
+        let should_update = self.config.update_remotes() || actual_rev.is_err();
 
-        let repo = if should_update {
+        let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",
                 format!("git repository `{}`", self.remote.get_location())));
 
             log!(5, "updating git source `{}`", self.remote);
-            try!(self.remote.checkout(&self.db_path))
+            let repo = try!(self.remote.checkout(&self.db_path));
+            let rev = try!(repo.rev_for(self.reference.as_slice()));
+            (repo, rev)
         } else {
-            self.remote.db_at(&self.db_path)
+            (self.remote.db_at(&self.db_path), actual_rev.unwrap())
         };
 
-        try!(repo.copy_to(self.reference.as_slice(), &self.checkout_path));
+        try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));
 
-        self.path_source.update()
-    }
+        let source_id = self.source_id.with_precise(actual_rev.to_string());
+        let path_source = PathSource::new(&self.checkout_path, &source_id);
 
-    fn list(&self) -> CargoResult<Vec<Summary>> {
-        self.path_source.list()
+        self.path_source = Some(path_source);
+        self.rev = Some(actual_rev);
+        self.path_source.as_mut().unwrap().update()
     }
 
     fn download(&self, _: &[PackageId]) -> CargoResult<()> {
@@ -171,12 +190,11 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
         log!(5, "getting packages for package ids `{}` from `{}`", ids, self.remote);
-        self.path_source.get(ids)
+        self.path_source.as_ref().expect("BUG: update() must be called before get()").get(ids)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
-        let db = self.remote.db_at(&self.db_path);
-        db.rev_for(self.reference.as_slice())
+        Ok(self.rev.get_ref().to_string())
     }
 }
 
