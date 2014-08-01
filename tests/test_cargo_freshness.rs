@@ -70,7 +70,6 @@ test!(modify_only_some_files {
 
     let lib = p.root().join("src/lib.rs");
     let bin = p.root().join("src/b.rs");
-    let test = p.root().join("tests/test.rs");
 
     File::create(&lib).write_str("invalid rust code").assert();
     lib.move_into_the_past().assert();
@@ -85,9 +84,4 @@ test!(modify_only_some_files {
 {compiling} foo v0.0.1 (file:{dir})
 ", compiling = COMPILING, dir = p.root().display())));
     assert_that(&p.bin("foo"), existing_file());
-
-    // Make sure the tests don't recompile the lib
-    File::create(&test).write_str("fn foo() {}").assert();
-    assert_that(p.process(cargo_dir().join("cargo-test")),
-                execs().with_status(0));
 })
