@@ -1,4 +1,4 @@
-use std::os::{getcwd};
+use std::os;
 use util::{CargoResult, CliError, CliResult, human};
 
 /// Iteratively search for `file` in `pwd` and its parents, returning
@@ -34,12 +34,12 @@ pub fn find_project_manifest(pwd: &Path, file: &str) -> CargoResult<Path> {
 pub fn find_root_manifest_for_cwd(manifest_path: Option<String>) -> CliResult<Path> {
     match manifest_path {
         Some(path) => Ok(Path::new(path)),
-        None => match find_project_manifest(&getcwd(), "Cargo.toml") {
-                    Ok(x) => Ok(x),
-                    Err(_) => Err(CliError::new("Could not find Cargo.toml in this \
-                                                 directory or any parent directory", 102))
-                }
-    }
+        None => match find_project_manifest(&os::getcwd(), "Cargo.toml") {
+            Ok(x) => Ok(x),
+            Err(_) => Err(CliError::new("Could not find Cargo.toml in this \
+                                         directory or any parent directory", 102))
+        }
+    }.map(|path| os::make_absolute(&path))
 }
 
 /// Return the path to the `file` in `pwd`, if it exists.
