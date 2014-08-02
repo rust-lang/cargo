@@ -56,6 +56,9 @@ for p in tar.getnames():
     fp = os.path.join(dst, name)
     print("extracting " + p)
     tar.extract(p, dst)
-    shutil.move(os.path.join(dst, p), fp)
+    tp = os.path.join(dst, p)
+    if os.path.isdir(tp) and os.path.exists(fp):
+        continue
+    shutil.move(tp, fp)
 tar.close()
 shutil.rmtree(os.path.join(dst, 'cargo-nightly-' + triple))
