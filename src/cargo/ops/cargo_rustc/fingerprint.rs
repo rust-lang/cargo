@@ -49,6 +49,8 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     let new_loc = new.join(filename.as_slice());
     let doc = target.get_profile().is_doc();
 
+    debug!("fingerprint at: {}", new_loc.display());
+
     // First bit of the freshness calculation, whether the dep-info file
     // indicates that the target is fresh.
     let (old_dep_info, new_dep_info) = dep_info_loc(cx, pkg, target, kind);
@@ -108,6 +110,8 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
     let (old, new) = dirs(cx, pkg, kind);
     let old_loc = old.join("build");
     let new_loc = new.join("build");
+
+    debug!("fingerprint at: {}", new_loc.display());
 
     let new_fingerprint = try!(calculate_build_cmd_fingerprint(cx, pkg));
     let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
@@ -195,16 +199,22 @@ fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
         Some(Ok(line)) => line,
         _ => return Ok(false),
     };
+    let line = line.as_slice();
     let mtime = try!(fs::stat(dep_info)).modified;
-    let deps = try!(line.as_slice().splitn(':', 1).skip(1).next().require(|| {
+    let pos = try!(line.find_str(": ").require(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
     }));
+    let deps = line.slice_from(pos + 2);
 
     for file in deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty()) {
         match fs::stat(&pkg.get_root().join(file)) {
             Ok(stat) if stat.modified <= mtime => {}
-            _ => { debug!("stale: {}", file); return Ok(false) }
+            Ok(stat) => {
+                debug!("stale: {} -- {} vs {}", file, stat.modified, mtime);
+                return Ok(false)
+            }
+            _ => { debug!("stale: {} -- missing", file); return Ok(false) }
         }
     }
 

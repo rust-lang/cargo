@@ -1,7 +1,6 @@
 #![feature(macro_rules)]
 #![feature(phase)]
 
-extern crate time;
 extern crate term;
 extern crate cargo;
 extern crate hamcrest;
