@@ -46,7 +46,11 @@ BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
 BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
 
 define DIST_TARGET
+ifdef CFG_ENABLE_OPTIMIZE
+TARGET_$(1) = $$(TARGET_ROOT)/$(1)/release
+else
 TARGET_$(1) = $$(TARGET_ROOT)/$(1)
+endif
 DISTDIR_$(1) = $$(TARGET_$(1))/dist
 PKGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)
 BIN_TARGETS_$(1) := $$(BIN_TARGETS:%=$$(TARGET_$(1))/%$$(X))
