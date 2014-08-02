@@ -386,7 +386,15 @@ impl ham::Matcher<ProcessBuilder> for Execs {
             Err(ProcessError { output: Some(ref out), .. }) => {
                 self.match_output(out)
             }
-            Err(e) => Err(format!("could not exec process {}: {}", process, e))
+            Err(e) => {
+                let mut s = format!("could not exec process {}: {}", process, e);
+                match e.cause {
+                    Some(cause) => s.push_str(format!("\ncaused by: {}",
+                                                      cause).as_slice()),
+                    None => {}
+                }
+                Err(s)
+            }
         }
     }
 }

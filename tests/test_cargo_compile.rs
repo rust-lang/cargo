@@ -1,7 +1,6 @@
 use std::io::{fs, TempDir};
 use std::os;
 use std::path;
-use std::str;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
@@ -1091,23 +1090,19 @@ test!(verbose_build {
             authors = []
         "#)
         .file("src/lib.rs", "");
-    let output = p.cargo_process("cargo-build").arg("-v")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
-    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 16);
-    let hash = hash.slice_to(16);
-    assert_eq!(out, format!("\
-{} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
-        -C metadata={hash} \
-        -C extra-filename=-{hash} \
+    assert_that(p.cargo_process("cargo-build").arg("-v"),
+                execs().with_status(0).with_stdout(format!("\
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+        -C metadata=[..] \
+        -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
+        --dep-info [..] \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
-{} test v0.0.0 (file:{dir})\n",
-                    RUNNING, COMPILING,
-                    dir = p.root().display(),
-                    sep = path::SEP,
-                    hash = hash).as_slice());
+{compiling} test v0.0.0 (file:{dir})\n",
+running = RUNNING, compiling = COMPILING, sep = path::SEP,
+dir = p.root().display()
+)));
 })
 
 test!(verbose_release_build {
@@ -1121,25 +1116,21 @@ test!(verbose_release_build {
             authors = []
         "#)
         .file("src/lib.rs", "");
-    let output = p.cargo_process("cargo-build").arg("-v").arg("--release")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
-    let hash = out.slice_from(out.find_str("extra-filename=").unwrap() + 16);
-    let hash = hash.slice_to(16);
-    assert_eq!(out, format!("\
-{} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+    assert_that(p.cargo_process("cargo-build").arg("-v").arg("--release"),
+                execs().with_status(0).with_stdout(format!("\
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
         --cfg ndebug \
-        -C metadata={hash} \
-        -C extra-filename=-{hash} \
+        -C metadata=[..] \
+        -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
+        --dep-info [..] \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps`
-{} test v0.0.0 (file:{dir})\n",
-                    RUNNING, COMPILING,
-                    dir = p.root().display(),
-                    sep = path::SEP,
-                    hash = hash).as_slice());
+{compiling} test v0.0.0 (file:{dir})\n",
+running = RUNNING, compiling = COMPILING, sep = path::SEP,
+dir = p.root().display()
+)));
 })
 
 test!(verbose_release_build_deps {
@@ -1168,44 +1159,38 @@ test!(verbose_release_build_deps {
             crate_type = ["dylib", "rlib"]
         "#)
         .file("foo/src/lib.rs", "");
-    let output = p.cargo_process("cargo-build").arg("-v").arg("--release")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
-    let pos1 = out.find_str("extra-filename=").unwrap();
-    let hash1 = out.slice_from(pos1 + 16).slice_to(16);
-    let pos2 = out.slice_from(pos1 + 10).find_str("extra-filename=").unwrap();
-    let hash2 = out.slice_from(pos1 + 10 + pos2 + 16).slice_to(16);
-    assert_eq!(out, format!("\
+    assert_that(p.cargo_process("cargo-build").arg("-v").arg("--release"),
+                execs().with_status(0).with_stdout(format!("\
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib \
         --opt-level 3 \
         --cfg ndebug \
-        -C metadata={hash1} \
-        -C extra-filename=-{hash1} \
+        -C metadata=[..] \
+        -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
+        --dep-info [..] \
         -L {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps`
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
         --cfg ndebug \
-        -C metadata={hash2} \
-        -C extra-filename=-{hash2} \
+        -C metadata=[..] \
+        -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
+        --dep-info [..] \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
-                     {prefix}foo-{hash1}{suffix} \
-        --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-{hash1}.rlib`
+                     {prefix}foo-[..]{suffix} \
+        --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`
 {compiling} foo v0.0.0 (file:{dir})
 {compiling} test v0.0.0 (file:{dir})\n",
                     running = RUNNING,
                     compiling = COMPILING,
                     dir = p.root().display(),
                     sep = path::SEP,
-                    hash1 = hash1,
-                    hash2 = hash2,
                     prefix = os::consts::DLL_PREFIX,
-                    suffix = os::consts::DLL_SUFFIX).as_slice());
+                    suffix = os::consts::DLL_SUFFIX).as_slice()));
 })
 
 test!(explicit_examples {
@@ -1269,7 +1254,7 @@ test!(implicit_examples {
             fn main() { println!("{}, {}!", world::get_goodbye(), world::get_world()); }
         "#);
 
-    assert_that(p.cargo_process("cargo-test"), execs());
+    assert_that(p.cargo_process("cargo-test"), execs().with_status(0));
     assert_that(process(p.bin("test/hello")), execs().with_stdout("Hello, World!\n"));
     assert_that(process(p.bin("test/goodbye")), execs().with_stdout("Goodbye, World!\n"));
 })

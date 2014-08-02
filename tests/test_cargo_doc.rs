@@ -130,7 +130,8 @@ test!(doc_deps {
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
 
-    assert_that(p.process(cargo_dir().join("cargo-doc")),
+    assert_that(p.process(cargo_dir().join("cargo-doc"))
+                 .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
                 execs().with_status(0).with_stdout(format!("\
 {fresh} bar v0.0.1 (file:{dir})
 {fresh} foo v0.0.1 (file:{dir})

@@ -28,6 +28,12 @@ else
 MAYBE_DISABLE_VERIFY=
 endif
 
+ifdef CFG_ENABLE_OPTIMIZE
+OPT_FLAG=--release
+else
+OPT_FLAG=
+endif
+
 export CFG_VERSION
 
 ifeq ($(OS),Windows_NT)
@@ -53,7 +59,7 @@ all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
 define CARGO_TARGET
 cargo-$(1): $$(CARGO)
-	$$(CARGO) build --target $(1) $$(ARGS)
+	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(ARGS)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 

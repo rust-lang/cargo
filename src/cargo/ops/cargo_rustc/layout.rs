@@ -22,6 +22,10 @@
 //!             $pkg2/
 //!             $pkg3/
 //!
+//!         # Hidden directory that holds all of the fingerprint files for all
+//!         # packages
+//!         .fingerprint/
+//!
 //!         # This is a temporary directory as part of the build process. When a
 //!         # build starts, it initially moves the old `deps` directory to this
 //!         # location. This is done to ensure that there are no stale artifacts
@@ -38,6 +42,7 @@
 //!
 //!         # Same as the two above old directories
 //!         old-native/
+//!         old-fingerprint/
 
 use std::io;
 use std::io::{fs, IoResult};
@@ -49,10 +54,12 @@ pub struct Layout {
     root: Path,
     deps: Path,
     native: Path,
+    fingerprint: Path,
 
     old_deps: Path,
     old_root: Path,
     old_native: Path,
+    old_fingerprint: Path,
 }
 
 pub struct LayoutProxy<'a> {
@@ -65,9 +72,11 @@ impl Layout {
         Layout {
             deps: root.join("deps"),
             native: root.join("native"),
+            fingerprint: root.join(".fingerprint"),
             old_deps: root.join("old-deps"),
             old_root: root.join("old-root"),
             old_native: root.join("old-native"),
+            old_fingerprint: root.join("old-fingerprint"),
             root: root,
         }
     }
@@ -86,15 +95,22 @@ impl Layout {
         if self.old_native.exists() {
             try!(fs::rmdir_recursive(&self.old_native));
         }
+        if self.old_fingerprint.exists() {
+            try!(fs::rmdir_recursive(&self.old_fingerprint));
+        }
         if self.deps.exists() {
             try!(fs::rename(&self.deps, &self.old_deps));
         }
         if self.native.exists() {
             try!(fs::rename(&self.native, &self.old_native));
         }
+        if self.fingerprint.exists() {
+            try!(fs::rename(&self.fingerprint, &self.old_fingerprint));
+        }
 
         try!(fs::mkdir(&self.deps, io::UserRWX));
         try!(fs::mkdir(&self.native, io::UserRWX));
+        try!(fs::mkdir(&self.fingerprint, io::UserRWX));
         try!(fs::mkdir(&self.old_root, io::UserRWX));
 
         for file in try!(fs::readdir(&self.root)).iter() {
@@ -111,12 +127,14 @@ impl Layout {
     pub fn native(&self, package: &Package) -> Path {
         self.native.join(self.native_name(package))
     }
+    pub fn fingerprint(&self) -> &Path { &self.fingerprint }
 
     pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
     pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
     pub fn old_native(&self, package: &Package) -> Path {
         self.old_native.join(self.native_name(package))
     }
+    pub fn old_fingerprint(&self) -> &Path { &self.old_fingerprint }
 
     fn native_name(&self, pkg: &Package) -> String {
         format!("{}-{}", pkg.get_name(), short_hash(pkg.get_package_id()))
@@ -128,6 +146,7 @@ impl Drop for Layout {
         let _ = fs::rmdir_recursive(&self.old_deps);
         let _ = fs::rmdir_recursive(&self.old_root);
         let _ = fs::rmdir_recursive(&self.old_native);
+        let _ = fs::rmdir_recursive(&self.old_fingerprint);
     }
 }
 
