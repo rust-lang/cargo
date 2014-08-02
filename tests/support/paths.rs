@@ -26,6 +26,7 @@ pub fn home() -> Path {
 pub trait PathExt {
     fn rm_rf(&self) -> IoResult<()>;
     fn mkdir_p(&self) -> IoResult<()>;
+    fn move_into_the_past(&self) -> IoResult<()>;
 }
 
 impl PathExt for Path {
@@ -57,6 +58,31 @@ impl PathExt for Path {
 
     fn mkdir_p(&self) -> IoResult<()> {
         fs::mkdir_recursive(self, io::UserDir)
+    }
+
+    fn move_into_the_past(&self) -> IoResult<()> {
+        if self.is_file() {
+            try!(time_travel(self));
+        } else {
+            for f in try!(fs::walk_dir(self)) {
+                if !f.is_file() { continue }
+                try!(time_travel(&f));
+            }
+        }
+        return Ok(());
+
+        fn time_travel(path: &Path) -> IoResult<()> {
+            let stat = try!(path.stat());
+
+            let hour = 1000 * 3600;
+            let mut newtime = stat.modified - hour;
+            // FIXME: this looks like a bug on windows that needs to be fixed
+            // upstream
+            if cfg!(windows) {
+                newtime = newtime * 1000;
+            }
+            fs::change_file_times(path, newtime, newtime)
+        }
     }
 }
 

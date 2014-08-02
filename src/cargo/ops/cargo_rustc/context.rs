@@ -5,6 +5,7 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util;
 use util::{CargoResult, ChainError, internal, Config, profile};
 
+use super::{Kind, KindPlugin, KindTarget};
 use super::layout::{Layout, LayoutProxy};
 
 #[deriving(Show)]
@@ -155,12 +156,12 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn layout(&self, plugin: bool) -> LayoutProxy {
-        if plugin {
-            LayoutProxy::new(&self.host, self.primary)
-        } else {
-            LayoutProxy::new(self.target.as_ref().unwrap_or(&self.host),
-                             self.primary)
+    pub fn layout(&self, kind: Kind) -> LayoutProxy {
+        match kind {
+            KindPlugin => LayoutProxy::new(&self.host, self.primary),
+            KindTarget =>  LayoutProxy::new(self.target.as_ref()
+                                                .unwrap_or(&self.host),
+                                            self.primary)
         }
     }
 
@@ -168,8 +169,8 @@ impl<'a, 'b> Context<'a, 'b> {
     ///
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
-    fn dylib(&self, plugin: bool) -> (&str, &str) {
-        let pair = if plugin {&self.host_dylib} else {&self.target_dylib};
+    fn dylib(&self, kind: Kind) -> (&str, &str) {
+        let pair = if kind == KindPlugin {&self.host_dylib} else {&self.target_dylib};
         (pair.ref0().as_slice(), pair.ref1().as_slice())
     }
 
@@ -182,7 +183,9 @@ impl<'a, 'b> Context<'a, 'b> {
             ret.push(format!("{}{}", stem, self.target_exe));
         } else {
             if target.is_dylib() {
-                let (prefix, suffix) = self.dylib(target.get_profile().is_plugin());
+                let plugin = target.get_profile().is_plugin();
+                let kind = if plugin {KindPlugin} else {KindTarget};
+                let (prefix, suffix) = self.dylib(kind);
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
             }
             if target.is_rlib() {
@@ -233,20 +236,6 @@ impl PlatformRequirement {
             (Target, Target) => Target,
             (Plugin, Plugin) => Plugin,
             _ => PluginAndTarget,
-        }
-    }
-
-    pub fn is_target(&self) -> bool {
-        match *self {
-            Target | PluginAndTarget => true,
-            Plugin => false
-        }
-    }
-
-    pub fn is_plugin(&self) -> bool {
-        match *self {
-            Plugin | PluginAndTarget => true,
-            Target => false
         }
     }
 }

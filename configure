@@ -290,6 +290,7 @@ BOOL_OPTIONS=""
 VAL_OPTIONS=""
 
 opt debug 1 "build with extra debug fun"
+opt optimize 0 "build with optimizations"
 opt nightly 0 "build nightly packages"
 opt verify-install 1 "verify installed binaries work"
 valopt prefix "/usr/local" "set installation prefix"
@@ -309,7 +310,7 @@ if [ $HELP -eq 0 ]; then
     else
         probe_need CFG_RUSTC        rustc
     fi
-    DEFAULT_BUILD=$(${CFG_RUSTC} --version verbose | grep 'host: ' | sed 's/host: //')
+    DEFAULT_BUILD=$("${CFG_RUSTC}" --version verbose | grep 'host: ' | sed 's/host: //')
 fi
 
 valopt build "${DEFAULT_BUILD}" "GNUs ./configure syntax LLVM build triple"

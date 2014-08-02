@@ -1,6 +1,6 @@
 #![warn(warnings)]
 use std::collections::HashSet;
-use std::io::File;
+use std::io::{mod, File};
 
 use serialize::{Encodable, Decodable};
 use toml::Encoder;
@@ -138,7 +138,12 @@ pub fn write_resolve(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
     }
 
     let loc = pkg.get_root().join("Cargo.lock");
-    try!(File::create(&loc).write_str(out.as_slice()));
+    let mut f = try!(File::open_mode(&loc, io::Open, io::ReadWrite));
+    let prev = try!(f.read_to_string());
+    if prev != out {
+        try!(f.seek(0, io::SeekSet));
+        try!(f.write_str(out.as_slice()));
+    }
     Ok(())
 }
 

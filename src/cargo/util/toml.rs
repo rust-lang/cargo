@@ -537,6 +537,12 @@ fn normalize(libs: &[TomlLibTarget],
         });
 
         for profile in target_profiles(l, dep).iter() {
+            let mut metadata = metadata.clone();
+            // Libs and their tests are built in parallel, so we need to make
+            // sure that their metadata is different.
+            if profile.is_test() {
+                metadata.mix(&"test");
+            }
             dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
                                         &path.to_path(), profile,
                                         metadata));
