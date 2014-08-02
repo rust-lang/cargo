@@ -290,6 +290,7 @@ BOOL_OPTIONS=""
 VAL_OPTIONS=""
 
 opt debug 1 "build with extra debug fun"
+opt optimize 0 "build with optimizations"
 opt nightly 0 "build nightly packages"
 opt verify-install 1 "verify installed binaries work"
 valopt prefix "/usr/local" "set installation prefix"
