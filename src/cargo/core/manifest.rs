@@ -344,13 +344,13 @@ impl Target {
 
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
                       src_path: &Path, profile: &Profile,
-                      metadata: &Metadata) -> Target {
+                      metadata: Metadata) -> Target {
         Target {
             kind: LibTarget(crate_targets),
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
-            metadata: Some(metadata.clone())
+            metadata: Some(metadata)
         }
     }
 

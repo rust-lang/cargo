@@ -1,8 +1,8 @@
 use std::io::File;
-use std::io::timer;
 
 use support::{ResultTest, project, execs, main_file, cargo_dir};
 use support::{COMPILING, FRESH};
+use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};
@@ -231,6 +231,7 @@ test!(no_rebuild_dependency {
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, bar.display(),
                                             FRESH, p.root().display())));
+    p.root().move_into_the_past().assert();
 
     p.build(); // rebuild the files (rewriting them in the process)
     assert_that(p.process(cargo_dir().join("cargo-build")),
@@ -312,7 +313,7 @@ test!(deep_dependencies_trigger_rebuild {
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
-    timer::sleep(1000);
+    p.root().move_into_the_past().assert();
     File::create(&p.root().join("baz/src/baz.rs")).write_str(r#"
         pub fn baz() { println!("hello!"); }
     "#).assert();
@@ -325,6 +326,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, p.root().display())));
 
     // Make sure an update to bar doesn't trigger baz
+    p.root().move_into_the_past().assert();
     File::create(&p.root().join("bar/src/bar.rs")).write_str(r#"
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
@@ -448,8 +450,8 @@ test!(nested_deps_recompile {
                                              {} foo v0.5.0 (file:{})\n",
                                             COMPILING, bar.display(),
                                             COMPILING, p.root().display())));
-    // See comments for the above `sleep`
-    timer::sleep(1000);
+    p.root().move_into_the_past().assert();
+
     File::create(&p.root().join("src/foo.rs")).write_str(r#"
         fn main() {}
     "#).assert();

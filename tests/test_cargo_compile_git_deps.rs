@@ -3,6 +3,7 @@ use std::io::File;
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir};
 use support::{COMPILING, FRESH, UPDATING};
+use support::paths::PathExt;
 use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::{ProcessError, process};
@@ -567,6 +568,7 @@ test!(recompilation {
                                              {} foo v0.5.0 (file:{})\n",
                                             FRESH, git_project.root().display(),
                                             FRESH, p.root().display())));
+    p.root().move_into_the_past().assert();
 
     // Update the dependency and carry on!
     assert_that(p.process(cargo_dir().join("cargo-update")),

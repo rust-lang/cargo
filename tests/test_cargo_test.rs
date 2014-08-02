@@ -3,6 +3,7 @@ use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
 use support::{COMPILING, cargo_dir, ResultTest, FRESH};
+use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -418,7 +419,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
                        compiling = COMPILING, dir = p.root().display());
 
     assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
-            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
+            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice(),
+            "bad output: {}", out);
 })
 
 test!(lib_with_standard_name {
@@ -551,6 +553,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING,
                        dir = p.root().display()).as_slice()));
+    p.root().move_into_the_past().assert();
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\
@@ -591,6 +594,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING,
                        dir = p.root().display()).as_slice()));
+
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\

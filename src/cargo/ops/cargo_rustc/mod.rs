@@ -7,10 +7,11 @@ use semver::Version;
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util;
 use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
-use util::{Config, Freshness, internal, ChainError, profile};
+use util::{Config, internal, ChainError, Fresh, profile};
 
-use self::job::Job;
-use self::job_queue::JobQueue;
+use self::job::{Job, Work};
+use self::job_queue::{JobQueue, StageStart, StageCustomBuild, StageLibraries};
+use self::job_queue::{StageBinaries, StageEnd};
 use self::context::{Context, PlatformRequirement, Target, Plugin, PluginAndTarget};
 
 mod context;
@@ -18,6 +19,9 @@ mod fingerprint;
 mod job;
 mod job_queue;
 mod layout;
+
+#[deriving(PartialEq, Eq)]
+enum Kind { KindPlugin, KindTarget }
 
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
@@ -55,6 +59,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
                                    host_layout, target_layout));
+    let mut queue = JobQueue::new(cx.resolve, cx.config);
 
     // First ensure that the destination directory exists
     try!(cx.prepare(pkg));
@@ -63,29 +68,27 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     // particular package. No actual work is executed as part of this, that's
     // all done later as part of the `execute` function which will run
     // everything in order with proper parallelism.
-    let mut jobs = Vec::new();
     for dep in deps.iter() {
-        if dep == pkg { continue; }
+        if dep == pkg { continue }
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
             cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
-        try!(compile(targets.as_slice(), dep, &mut cx, &mut jobs));
+        try!(compile(targets.as_slice(), dep, &mut cx, &mut queue));
     }
 
     cx.primary();
-    try!(compile(targets, pkg, &mut cx, &mut jobs));
+    try!(compile(targets, pkg, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
-    JobQueue::new(cx.config, cx.resolve, jobs).execute()
+    queue.execute(cx.config)
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                    cx: &mut Context<'a, 'b>,
-                   jobs: &mut Vec<(&'a Package, Freshness, (Job, Job))>)
-                   -> CargoResult<()> {
+                   jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
     let _p = profile::start(format!("preparing: {}", pkg));
 
@@ -93,64 +96,66 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         return Ok(())
     }
 
+    // Prepare the fingerprint directory as the first step of building a package
+    let (target1, target2) = fingerprint::prepare_init(cx, pkg, KindTarget);
+    let mut init = vec![(Job::new(target1, target2), Fresh)];
+    if cx.config.target().is_some() {
+        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindPlugin);
+        init.push((Job::new(plugin1, plugin2), Fresh));
+    }
+    jobs.enqueue(pkg, StageStart, init);
+
     // First part of the build step of a target is to execute all of the custom
     // build commands.
-    //
-    // TODO: Should this be on the target or the package?
     let mut build_cmds = Vec::new();
     for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
-        build_cmds.push(try!(compile_custom(pkg, build_cmd.as_slice(),
-                                            cx, i == 0)));
+        let work = try!(compile_custom(pkg, build_cmd.as_slice(), cx, i == 0));
+        build_cmds.push(work);
     }
+    let (freshness, dirty, fresh) =
+        try!(fingerprint::prepare_build_cmd(cx, pkg));
+    let dirty = proc() {
+        for cmd in build_cmds.move_iter() { try!(cmd()) }
+        dirty()
+    };
+    jobs.enqueue(pkg, StageCustomBuild, vec![(Job::new(dirty, fresh), freshness)]);
 
     // After the custom command has run, execute rustc for all targets of our
     // package.
     //
-    // Note that bins can all be built in parallel because they all depend on
-    // one another, but libs must be built sequentially because they may have
-    // interdependencies.
+    // Each target has its own concept of freshness to ensure incremental
+    // rebuilds on the *target* granularity, not the *package* granularity.
     let (mut libs, mut bins) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
-        let jobs = if target.get_profile().is_doc() {
-            vec![rustdoc(pkg, target, cx)]
+        let work = if target.get_profile().is_doc() {
+            vec![(rustdoc(pkg, target, cx), KindTarget)]
         } else {
             let req = cx.get_requirement(pkg, target);
             rustc(pkg, target, cx, req)
         };
-        if target.is_lib() {
-            libs.push_all_move(jobs);
-        } else {
-            bins.push_all_move(jobs);
+
+        let dst = if target.is_lib() {&mut libs} else {&mut bins};
+        for (work, kind) in work.move_iter() {
+            let (freshness, dirty, fresh) =
+                try!(fingerprint::prepare_target(cx, pkg, target, kind));
+
+            let dirty = proc() { try!(work()); dirty() };
+            dst.push((Job::new(dirty, fresh), freshness));
         }
     }
-
-    // Only after all the binaries have been built can we actually write the
-    // fingerprint. Currently fingerprints are transactionally done per package,
-    // not per-target.
-    //
-    // TODO: Can a fingerprint be per-target instead of per-package? Doing so
-    //       would likely involve altering the granularity of key for the
-    //       dependency queue that is later used to run jobs.
-    let (freshness, write_fingerprint, copy_old) =
-        try!(fingerprint::prepare(cx, pkg, targets));
-
-    // Note that we build the job backwards because each job will produce more
-    // work.
-    let bins = Job::after(bins, write_fingerprint);
-    let build_libs = Job::all(libs, bins);
-    let job = Job::all(build_cmds, vec![build_libs]);
-
-    jobs.push((pkg, freshness, (job, copy_old)));
+    jobs.enqueue(pkg, StageLibraries, libs);
+    jobs.enqueue(pkg, StageBinaries, bins);
+    jobs.enqueue(pkg, StageEnd, Vec::new());
     Ok(())
 }
 
 fn compile_custom(pkg: &Package, cmd: &str,
-                  cx: &Context, first: bool) -> CargoResult<Job> {
+                  cx: &Context, first: bool) -> CargoResult<Work> {
     // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
-    // TODO: this shouldn't explicitly pass `false` for dest/deps_dir, we may
-    //       be building a C lib for a plugin
-    let layout = cx.layout(false);
+    // TODO: this shouldn't explicitly pass `KindTarget` for dest/deps_dir, we
+    //       may be building a C lib for a plugin
+    let layout = cx.layout(KindTarget);
     let output = layout.native(pkg);
     let mut p = process(cmd.next().unwrap(), pkg, cx)
                      .env("OUT_DIR", Some(&output))
@@ -159,19 +164,19 @@ fn compile_custom(pkg: &Package, cmd: &str,
     for arg in cmd {
         p = p.arg(arg);
     }
-    Ok(Job::new(proc() {
+    Ok(proc() {
         if first {
             try!(fs::mkdir(&output, UserRWX).chain_error(|| {
                 internal("failed to create output directory for build command")
             }));
         }
         try!(p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human()));
-        Ok(Vec::new())
-    }))
+        Ok(())
+    })
 }
 
 fn rustc(package: &Package, target: &Target,
-         cx: &mut Context, req: PlatformRequirement) -> Vec<Job> {
+         cx: &mut Context, req: PlatformRequirement) -> Vec<(Work, Kind)> {
     let crate_types = target.rustc_crate_types();
     let root = package.get_root();
 
@@ -181,22 +186,22 @@ fn rustc(package: &Package, target: &Target,
     let primary = cx.primary;
     let rustcs = prepare_rustc(package, target, crate_types, cx, req);
 
-    log!(5, "commands={}", rustcs);
-
     let _ = cx.config.shell().verbose(|shell| {
-        for rustc in rustcs.iter() {
+        for &(ref rustc, _) in rustcs.iter() {
             try!(shell.status("Running", rustc.to_string()));
         }
         Ok(())
     });
 
-    rustcs.move_iter().map(|rustc| {
+    rustcs.move_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
 
-        Job::new(proc() {
+        (proc() {
             if primary {
                 log!(5, "executing primary");
-                try!(rustc.exec().chain_error(|| human(format!("Could not compile `{}`.", name))))
+                try!(rustc.exec().chain_error(|| {
+                    human(format!("Could not compile `{}`.", name))
+                }))
             } else {
                 log!(5, "executing deps");
                 try!(rustc.exec_with_output().and(Ok(())).map_err(|err| {
@@ -204,44 +209,48 @@ fn rustc(package: &Package, target: &Target,
                                          name, err.output().unwrap()), err)
                 }))
             }
-            Ok(Vec::new())
-        })
+            Ok(())
+        }, kind)
     }).collect()
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
-                 cx: &Context, req: PlatformRequirement) -> Vec<ProcessBuilder> {
+                 cx: &Context, req: PlatformRequirement)
+                 -> Vec<(ProcessBuilder, Kind)> {
     let base = process("rustc", package, cx);
     let base = build_base_args(base, target, crate_types.as_slice());
 
-    let target_cmd = build_plugin_args(base.clone(), cx, false);
-    let plugin_cmd = build_plugin_args(base, cx, true);
-    let target_cmd = build_deps_args(target_cmd, target, package, cx, false);
-    let plugin_cmd = build_deps_args(plugin_cmd, target, package, cx, true);
+    let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
+    let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
+    let target_cmd = build_deps_args(target_cmd, target, package, cx, KindTarget);
+    let plugin_cmd = build_deps_args(plugin_cmd, target, package, cx, KindPlugin);
 
     match req {
-        Target => vec![target_cmd],
-        Plugin => vec![plugin_cmd],
-        PluginAndTarget if cx.config.target().is_none() => vec![target_cmd],
-        PluginAndTarget => vec![target_cmd, plugin_cmd],
+        Target => vec![(target_cmd, KindTarget)],
+        Plugin => vec![(plugin_cmd, KindPlugin)],
+        PluginAndTarget if cx.config.target().is_none() =>
+            vec![(target_cmd, KindTarget)],
+        PluginAndTarget => vec![(target_cmd, KindTarget),
+                                (plugin_cmd, KindPlugin)],
     }
 }
 
 
-fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Job {
+fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
     // Can't document binaries, but they have a doc target listed so we can
     // build documentation of dependencies even when `cargo doc` is run.
     if target.is_bin() {
-        return Job::new(proc() Ok(Vec::new()))
+        return proc() Ok(())
     }
 
+    let kind = KindTarget;
     let pkg_root = package.get_root();
-    let cx_root = cx.layout(false).proxy().dest().dir_path().join("doc");
+    let cx_root = cx.layout(kind).proxy().dest().dir_path().join("doc");
     let rustdoc = util::process("rustdoc").cwd(pkg_root.clone());
     let rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
-    let rustdoc = build_deps_args(rustdoc, target, package, cx, false);
+    let rustdoc = build_deps_args(rustdoc, target, package, cx, kind);
 
     log!(5, "commands={}", rustdoc);
 
@@ -251,7 +260,7 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Job {
 
     let primary = cx.primary;
     let name = package.get_name().to_string();
-    Job::new(proc() {
+    proc() {
         if primary {
             try!(rustdoc.exec().chain_error(|| {
                 human(format!("Could not document `{}`.", name))
@@ -262,9 +271,10 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Job {
                                      name, err.output().unwrap()), err)
             }))
         }
-        Ok(Vec::new())
-    })
+        Ok(())
+    }
 }
+
 fn build_base_args(mut cmd: ProcessBuilder,
                    target: &Target,
                    crate_types: &[&str]) -> ProcessBuilder {
@@ -305,16 +315,20 @@ fn build_base_args(mut cmd: ProcessBuilder,
         }
         None => {}
     }
+
     return cmd;
 }
 
 
-fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context,
-                     plugin: bool) -> ProcessBuilder {
+fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
+                     target: &Target, kind: Kind) -> ProcessBuilder {
     cmd = cmd.arg("--out-dir");
-    cmd = cmd.arg(cx.layout(plugin).root());
+    cmd = cmd.arg(cx.layout(kind).root());
 
-    if !plugin {
+    let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
+    cmd = cmd.arg("--dep-info").arg(dep_info_loc);
+
+    if kind == KindTarget {
         fn opt(cmd: ProcessBuilder, key: &str, prefix: &str,
                val: Option<&str>) -> ProcessBuilder {
             match val {
@@ -335,10 +349,10 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context,
 }
 
 fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
-                   cx: &Context, plugin: bool) -> ProcessBuilder {
+                   cx: &Context, kind: Kind) -> ProcessBuilder {
     enum LinkReason { Dependency, LocalLib }
 
-    let layout = cx.layout(plugin);
+    let layout = cx.layout(kind);
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
 
@@ -347,7 +361,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     cmd = push_native_dirs(cmd, &layout, package, cx, &mut HashSet::new());
 
     for &(_, target) in cx.dep_targets(package).iter() {
-        cmd = link_to(cmd, target, cx, plugin, Dependency);
+        cmd = link_to(cmd, target, cx, kind, Dependency);
     }
 
     let mut targets = package.get_targets().iter().filter(|target| {
@@ -356,18 +370,22 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     if target.is_bin() {
         for target in targets {
-            cmd = link_to(cmd, target, cx, plugin, LocalLib);
+            cmd = link_to(cmd, target, cx, kind, LocalLib);
         }
     }
 
     return cmd;
 
     fn link_to(mut cmd: ProcessBuilder, target: &Target,
-               cx: &Context, plugin: bool, reason: LinkReason) -> ProcessBuilder {
+               cx: &Context, kind: Kind, reason: LinkReason) -> ProcessBuilder {
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
-        let layout = cx.layout(plugin || target.get_profile().is_plugin());
+        let layout = cx.layout(match kind {
+            KindPlugin => KindPlugin,
+            KindTarget if target.get_profile().is_plugin() => KindPlugin,
+            KindTarget => KindTarget,
+        });
 
         for filename in cx.target_filenames(target).iter() {
             let mut v = Vec::new();
@@ -409,7 +427,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let mut search_path = DynamicLibrary::search_path();
-    search_path.push(cx.layout(true).deps().clone());
+    search_path.push(cx.layout(KindPlugin).deps().clone());
     let search_path = os::join_paths(search_path.as_slice()).unwrap();
 
     util::process(cmd)
