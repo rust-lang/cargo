@@ -1,8 +1,8 @@
 use std::io::{fs, File};
-use time;
 
 use support::{project, execs};
 use support::{COMPILING, cargo_dir, ResultTest, FRESH};
+use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {}
@@ -29,6 +29,7 @@ test!(modifying_and_moving {
                 execs().with_status(0).with_stdout(format!("\
 {fresh} foo v0.0.1 (file:{dir})
 ", fresh = FRESH, dir = p.root().display())));
+    p.root().move_into_the_past().assert();
 
     File::create(&p.root().join("src/a.rs")).write_str("fn main() {}").assert();
     assert_that(p.process(cargo_dir().join("cargo-build")),
@@ -67,19 +68,19 @@ test!(modify_only_some_files {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    let past = time::precise_time_ns() / 1_000_000 - 5000;
-
     let lib = p.root().join("src/lib.rs");
     let bin = p.root().join("src/b.rs");
     let test = p.root().join("tests/test.rs");
 
     File::create(&lib).write_str("invalid rust code").assert();
-    fs::change_file_times(&lib, past, past).assert();
+    lib.move_into_the_past().assert();
+    p.root().move_into_the_past().assert();
 
     File::create(&bin).write_str("fn foo() {}").assert();
 
     // Make sure the binary is rebuilt, not the lib
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo-build"))
+                 .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
 ", compiling = COMPILING, dir = p.root().display())));
