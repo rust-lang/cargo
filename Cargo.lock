@@ -1,0 +1,53 @@
+[root]
+name = "cargo"
+version = "0.0.1-pre"
+dependencies = [
+ "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
+ "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
+ "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764)",
+ "semver 0.0.1 (git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8)",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#7e1c1e127d952066bda5fbc94e3cbdb40e912119)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#3d54552e06062835edf8b8e3a8664272e2fdab61)",
+]
+
+[[package]]
+name = "docopt"
+version = "0.6.0"
+source = "git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e"
+
+[[package]]
+name = "docopt_macros"
+version = "0.6.0"
+source = "git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e"
+dependencies = [
+ "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
+]
+
+[[package]]
+name = "encoding"
+version = "0.1.0"
+source = "git+https://github.com/lifthrasiir/rust-encoding#12b6610adff6eddc060691888c36017cd3ad57f7"
+
+[[package]]
+name = "hamcrest"
+version = "0.1.0"
+source = "git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764"
+
+[[package]]
+name = "semver"
+version = "0.0.1"
+source = "git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8"
+
+[[package]]
+name = "toml"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/toml-rs#7e1c1e127d952066bda5fbc94e3cbdb40e912119"
+
+[[package]]
+name = "url"
+version = "0.1.0"
+source = "git+https://github.com/servo/rust-url#3d54552e06062835edf8b8e3a8664272e2fdab61"
+dependencies = [
+ "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#12b6610adff6eddc060691888c36017cd3ad57f7)",
+]
+
