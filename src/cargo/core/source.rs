@@ -184,8 +184,9 @@ impl PartialEq for SourceId {
         if self.location == other.location { return true }
 
         match (&self.kind, &other.kind, &self.location, &other.location) {
-            (&GitKind(..), &GitKind(..),
+            (&GitKind(ref ref1), &GitKind(ref ref2),
              &Remote(ref u1), &Remote(ref u2)) => {
+                ref1 == ref2 &&
                 git::canonicalize_url(u1.to_string().as_slice()) ==
                     git::canonicalize_url(u2.to_string().as_slice())
             }
