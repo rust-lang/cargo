@@ -15,6 +15,7 @@ use semver;
 
 use util::{CargoResult, Graph, human, internal};
 
+#[deriving(PartialEq, Eq)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     root: PackageId
