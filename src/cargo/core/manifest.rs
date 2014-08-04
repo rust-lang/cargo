@@ -416,6 +416,13 @@ impl Target {
         }
     }
 
+    pub fn is_staticlib(&self) -> bool {
+        match self.kind {
+            LibTarget(ref kinds) => kinds.iter().any(|&k| k == StaticLib),
+            _ => false
+        }
+    }
+
     pub fn is_bin(&self) -> bool {
         match self.kind {
             BinTarget => true,
