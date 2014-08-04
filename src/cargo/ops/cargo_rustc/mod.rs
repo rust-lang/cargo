@@ -237,12 +237,6 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
 
 
 fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
-    // Can't document binaries, but they have a doc target listed so we can
-    // build documentation of dependencies even when `cargo doc` is run.
-    if target.is_bin() {
-        return proc() Ok(())
-    }
-
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(kind).proxy().dest().dir_path().join("doc");
