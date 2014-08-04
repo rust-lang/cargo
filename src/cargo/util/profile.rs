@@ -54,9 +54,9 @@ impl Drop for Profiler {
             print(0, msgs.as_slice());
         } else {
             msgs.push((stack.len(), end - start, msg));
+            messages.replace(Some(msgs));
         }
         profile_stack.replace(Some(stack));
-        messages.replace(Some(msgs));
 
     }
 }
