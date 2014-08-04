@@ -86,3 +86,8 @@ impl<N: fmt::Show + Eq + Hash> fmt::Show for Graph<N> {
         Ok(())
     }
 }
+
+impl<N: Eq + Hash> PartialEq for Graph<N> {
+    fn eq(&self, other: &Graph<N>) -> bool { self.nodes.eq(&other.nodes) }
+}
+impl<N: Eq + Hash> Eq for Graph<N> {}
