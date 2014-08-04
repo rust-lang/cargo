@@ -193,12 +193,16 @@ fn encodable_package_id(id: &PackageId, root: &PackageId) -> EncodablePackageId 
 
 impl Resolve {
     fn new(root: PackageId) -> Resolve {
-        Resolve { graph: Graph::new(), root: root }
+        let mut g = Graph::new();
+        g.add(root.clone(), []);
+        Resolve { graph: g, root: root }
     }
 
     pub fn iter(&self) -> Nodes<PackageId> {
         self.graph.iter()
     }
+
+    pub fn root(&self) -> &PackageId { &self.root }
 
     pub fn deps(&self, pkg: &PackageId) -> Option<Edges<PackageId>> {
         self.graph.edges(pkg)
@@ -406,7 +410,7 @@ mod test {
     pub fn test_resolving_empty_dependency_list() {
         let res = resolve(&pkg_id("root"), [], &mut registry(vec!())).unwrap();
 
-        assert_that(&res, equal_to(&names([])));
+        assert_that(&res, equal_to(&names(["root"])));
     }
 
     #[test]
