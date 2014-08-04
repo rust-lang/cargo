@@ -10,31 +10,23 @@ authors = ["Yehuda Katz <wycats@gmail.com>",
 name = "cargo"
 path = "src/cargo/lib.rs"
 
-# TODO: remove all these `rev` markers once we have an official lockfile
 [dependencies.docopt]
 git = "https://github.com/burntsushi/docopt.rs"
-rev = "fd2377d"
 
 [dependencies.docopt_macros]
 git = "https://github.com/burntsushi/docopt.rs"
-rev = "fd2377d"
 
 [dependencies.toml]
 git = "https://github.com/alexcrichton/toml-rs"
-rev = "7e1c1e1"
 
 [dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"
-rev = "c23b876"
 
 [dependencies.url]
 git = "https://github.com/servo/rust-url"
-rev = "3d54552"
 
 [dependencies.semver]
 git = "https://github.com/rust-lang/semver"
-rev = "e17191f"
-
 
 [[bin]]
 name = "cargo"
