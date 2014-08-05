@@ -14,10 +14,10 @@ use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 docopt!(Options, "
-Run the main binary of the local package (src/main.rs)
+Build and run a binary from the local package
 
 Usage:
-    cargo-run [options] [--] [<args>...]
+    cargo-run [BIN] [options] [--] [<args>...]
 
 Options:
     -h, --help              Print this message
@@ -36,6 +36,14 @@ fn main() {
 
 fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
+
+    let bin =
+        if options.arg_BIN.is_empty() {
+            None
+        } else {
+            Some(options.arg_BIN.as_slice())
+        };
+
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let mut compile_opts = ops::CompileOptions {
@@ -46,7 +54,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         target: None,
     };
 
-    let err = try!(ops::run(&root, &mut compile_opts,
+    let err = try!(ops::run(&root, bin, &mut compile_opts,
                             options.arg_args.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
