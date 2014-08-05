@@ -30,7 +30,7 @@ fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder)
     git_project.build();
 
     log!(5, "git init");
-    try!(git_project.process("git").args(["init"]).exec_with_output());
+    try!(git_project.process("git").args(["init", "--template="]).exec_with_output());
     log!(5, "building git project");
     log!(5, "git add .");
     try!(git_project.process("git").args(["add", "."]).exec_with_output());
