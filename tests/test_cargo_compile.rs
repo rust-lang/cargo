@@ -3,7 +3,7 @@ use std::os;
 use std::path;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
+use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder, path2url};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process, realpath};
@@ -197,10 +197,10 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     assert_that(p.cargo_process("cargo-build"),
         execs()
-        .with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                              {} foo v0.5.0 (file:{})\n",
-                             COMPILING, bar.display(),
-                             COMPILING, main.display()))
+        .with_stdout(format!("{} bar v0.5.0 ({})\n\
+                              {} foo v0.5.0 ({})\n",
+                             COMPILING, path2url(bar),
+                             COMPILING, path2url(main)))
         .with_stderr(""));
 
     assert_that(&p.bin("foo"), existing_file());
@@ -522,9 +522,9 @@ test!(cargo_compile_with_dep_name_mismatch {
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(101).with_stderr(format!(
 r#"No package named `notquitebar` found (required by `foo`).
-Location searched: file:{proj_dir}
+Location searched: {proj_dir}
 Version required: *
-"#, proj_dir = p.root().display())));
+"#, proj_dir = p.url())));
 })
 
 // test!(compiling_project_with_invalid_manifest)
@@ -565,8 +565,8 @@ test!(custom_build {
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0)
-                       .with_stdout(format!("   Compiling foo v0.5.0 (file:{})\n",
-                                            p.root().display()))
+                       .with_stdout(format!("   Compiling foo v0.5.0 ({})\n",
+                                            p.url()))
                        .with_stderr(""));
 })
 
@@ -629,8 +629,8 @@ test!(custom_multiple_build {
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0)
-                       .with_stdout(format!("   Compiling foo v0.5.0 (file:{})\n",
-                                            p.root().display()))
+                       .with_stdout(format!("   Compiling foo v0.5.0 ({})\n",
+                                            p.url()))
                        .with_stderr(""));
 })
 
@@ -1111,9 +1111,10 @@ test!(verbose_build {
         --dep-info [..] \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
-{compiling} test v0.0.0 (file:{dir})\n",
+{compiling} test v0.0.0 ({url})\n",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
-dir = p.root().display()
+dir = p.root().display(),
+url = p.url(),
 )));
 })
 
@@ -1139,9 +1140,10 @@ test!(verbose_release_build {
         --dep-info [..] \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps`
-{compiling} test v0.0.0 (file:{dir})\n",
+{compiling} test v0.0.0 ({url})\n",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
-dir = p.root().display()
+dir = p.root().display(),
+url = p.url(),
 )));
 })
 
@@ -1195,11 +1197,12 @@ test!(verbose_release_build_deps {
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`
-{compiling} foo v0.0.0 (file:{dir})
-{compiling} test v0.0.0 (file:{dir})\n",
+{compiling} foo v0.0.0 ({url})
+{compiling} test v0.0.0 ({url})\n",
                     running = RUNNING,
                     compiling = COMPILING,
                     dir = p.root().display(),
+                    url = p.url(),
                     sep = path::SEP,
                     prefix = os::consts::DLL_PREFIX,
                     suffix = os::consts::DLL_SUFFIX).as_slice()));
@@ -1391,10 +1394,10 @@ test!(lib_with_standard_name {
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} syntax v0.0.1 (file:{dir})
+{compiling} syntax v0.0.1 ({dir})
 ",
                        compiling = COMPILING,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 test!(simple_staticlib {

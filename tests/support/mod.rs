@@ -6,6 +6,7 @@ use std::path::{Path,BytesContainer};
 use std::str;
 use std::vec::Vec;
 use std::fmt::Show;
+use url::Url;
 use ham = hamcrest;
 use cargo::util::{process,ProcessBuilder};
 use cargo::util::ProcessError;
@@ -94,6 +95,8 @@ impl ProjectBuilder {
     pub fn root(&self) -> Path {
         self.root.clone()
     }
+
+    pub fn url(&self) -> Url { path2url(self.root()) }
 
     pub fn bin(&self, b: &str) -> Path {
         self.build_dir().join(format!("{}{}", b, os::consts::EXE_SUFFIX))
@@ -493,6 +496,10 @@ pub fn basic_lib_manifest(name: &str) -> String {
 
         name = "{}"
     "#, name, name)
+}
+
+pub fn path2url(p: Path) -> Url {
+    Url::from_file_path(&p).unwrap()
 }
 
 pub static RUNNING:   &'static str = "     Running";

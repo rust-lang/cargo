@@ -151,31 +151,15 @@ impl Show for PackageId {
     }
 }
 
-//impl<D: Decoder<Box<CargoError + Send>>>
-    //Decodable<D,Box<CargoError + Send>>
-    //for PackageId
-//{
-    //fn decode(d: &mut D) -> CargoResult<PackageId> {
-        //let (name, version, source_id): (String, String, SourceId) = try!(Decodable::decode(d));
-
-        //PackageId::new(name.as_slice(), version.as_slice(), &source_id)
-    //}
-//}
-
-//impl<E, S: Encoder<E>> Encodable<S,E> for PackageId {
-    //fn encode(&self, e: &mut S) -> Result<(), E> {
-        //(self.name.clone(), self.version.to_string(), self.source_id.clone()).encode(e)
-    //}
-//}
-
 #[cfg(test)]
 mod tests {
     use super::{PackageId, central_repo};
-    use core::source::{Location, RegistryKind, SourceId};
+    use core::source::{RegistryKind, SourceId};
+    use util::ToUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        let loc = Location::parse(central_repo).unwrap();
+        let loc = central_repo.to_url().unwrap();
         let repo = SourceId::new(RegistryKind, loc);
 
         assert!(PackageId::new("foo", "1.0", &repo).is_err());

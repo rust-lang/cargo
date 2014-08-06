@@ -18,9 +18,9 @@ pub struct PathSource {
 // mut and packages are discovered in update
 impl PathSource {
 
-    pub fn for_path(path: &Path) -> PathSource {
+    pub fn for_path(path: &Path) -> CargoResult<PathSource> {
         log!(5, "PathSource::for_path; path={}", path.display());
-        PathSource::new(path, &SourceId::for_path(path))
+        Ok(PathSource::new(path, &try!(SourceId::for_path(path))))
     }
 
     /// Invoked with an absolute path to a directory that contains a Cargo.toml.

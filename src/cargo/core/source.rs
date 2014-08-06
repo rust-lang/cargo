@@ -1,4 +1,3 @@
-use std::c_str::CString;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::hashmap::{Values, MutEntries};
@@ -56,42 +55,14 @@ pub enum SourceKind {
     RegistryKind
 }
 
-#[deriving(Clone, PartialEq, Eq, Hash)]
-pub enum Location {
-    Local(Path),
-    Remote(Url),
-}
-
 type Error = Box<CargoError + Send>;
-
-impl<E, D: Decoder<E>> Decodable<D, E> for Location {
-    fn decode(d: &mut D) -> Result<Location, E> {
-        let url: String  = raw_try!(Decodable::decode(d));
-        Ok(Location::parse(url.as_slice()).unwrap())
-    }
-}
-
-impl<E, S: Encoder<E>> Encodable<S, E> for Location {
-    fn encode(&self, e: &mut S) -> Result<(), E> {
-        self.to_string().encode(e)
-    }
-}
 
 #[deriving(Clone, Eq)]
 pub struct SourceId {
-    pub location: Location,
+    pub url: Url,
     pub kind: SourceKind,
     // e.g. the exact git revision of the specified branch for a Git Source
     pub precise: Option<String>
-}
-
-impl Show for Location {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match *self {
-            Local(ref p) => write!(f, "file:{}", p.display()),
-            Remote(ref u) => write!(f, "{}", u),
-        }
-    }
 }
 
 impl PartialOrd for SourceId {
@@ -104,29 +75,6 @@ impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
         self.to_string().cmp(&other.to_string())
     }
-}
-
-impl Location {
-    pub fn parse(s: &str) -> CargoResult<Location> {
-        if s.starts_with("file:") {
-            Ok(Local(Path::new(s.slice_from(5))))
-        } else {
-            s.to_url().map(Remote).map_err(|e| {
-                human(format!("invalid url `{}`: `{}", s, e))
-            })
-        }
-    }
-}
-
-impl<'a> ToCStr for &'a Location {
-    fn to_c_str(&self) -> CString {
-        match **self {
-            Local(ref p) => p.to_c_str(),
-            Remote(ref u) => u.to_string().to_c_str(),
-        }
-    }
-
-    unsafe fn to_c_str_unchecked(&self) -> CString { self.to_c_str() }
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for SourceId {
@@ -149,11 +97,9 @@ impl<E, D: Decoder<E>> Decodable<D, E> for SourceId {
 impl Show for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
-            SourceId { kind: PathKind, ref location, .. } => {
-                try!(write!(f, "{}", location))
-            },
-            SourceId { kind: GitKind(ref reference), ref location, ref precise, .. } => {
-                try!(write!(f, "{}", location));
+            SourceId { kind: PathKind, ref url, .. } => url.fmt(f),
+            SourceId { kind: GitKind(ref reference), ref url, ref precise, .. } => {
+                try!(write!(f, "{}", url));
                 if reference.as_slice() != "master" {
                     try!(write!(f, "?ref={}", reference));
                 }
@@ -164,14 +110,13 @@ impl Show for SourceId {
                     }
                     None => {}
                 }
+                Ok(())
             },
             SourceId { kind: RegistryKind, .. } => {
                 // TODO: Central registry vs. alternates
-                try!(write!(f, "the package registry"));
+                write!(f, "the package registry")
             }
         }
-
-        Ok(())
     }
 }
 
@@ -181,14 +126,12 @@ impl Show for SourceId {
 impl PartialEq for SourceId {
     fn eq(&self, other: &SourceId) -> bool {
         if self.kind != other.kind { return false }
-        if self.location == other.location { return true }
+        if self.url == other.url { return true }
 
-        match (&self.kind, &other.kind, &self.location, &other.location) {
-            (&GitKind(ref ref1), &GitKind(ref ref2),
-             &Remote(ref u1), &Remote(ref u2)) => {
+        match (&self.kind, &other.kind, &self.url, &other.url) {
+            (&GitKind(ref ref1), &GitKind(ref ref2), u1, u2) => {
                 ref1 == ref2 &&
-                git::canonicalize_url(u1.to_string().as_slice()) ==
-                    git::canonicalize_url(u2.to_string().as_slice())
+                git::canonicalize_url(u1) == git::canonicalize_url(u2)
             }
             _ => false,
         }
@@ -197,26 +140,19 @@ impl PartialEq for SourceId {
 
 impl<S: hash::Writer> hash::Hash<S> for SourceId {
     fn hash(&self, into: &mut S) {
+        self.kind.hash(into);
         match *self {
-            SourceId {
-                kind: ref kind @ GitKind(..),
-                location: Remote(ref url),
-                precise: _,
-            } => {
-                kind.hash(into);
-                git::canonicalize_url(url.to_string().as_slice()).hash(into);
+            SourceId { kind: GitKind(..), ref url, .. } => {
+                git::canonicalize_url(url).hash(into)
             }
-            _ => {
-                self.kind.hash(into);
-                self.location.hash(into);
-            }
+            _ => self.url.hash(into),
         }
     }
 }
 
 impl SourceId {
-    pub fn new(kind: SourceKind, location: Location) -> SourceId {
-        SourceId { kind: kind, location: location, precise: None }
+    pub fn new(kind: SourceKind, url: Url) -> SourceId {
+        SourceId { kind: kind, url: url, precise: None }
     }
 
     pub fn from_url(string: String) -> SourceId {
@@ -225,28 +161,6 @@ impl SourceId {
         let url = parts.next().unwrap();
 
         match kind {
-            "git" if url.starts_with("file:") => {
-                let url = url.slice_from(5);
-                let (url, precise) = match url.rfind('#') {
-                    Some(pos) => {
-                        (url.slice_to(pos), Some(url.slice_from(pos + 1)))
-                    }
-                    None => (url, None)
-                };
-                let (url, reference) = match url.find_str("?ref=") {
-                    Some(pos) => {
-                        (url.slice_to(pos), Some(url.slice_from(pos + 5)))
-                    }
-                    None => (url, None)
-                };
-                let reference = reference.unwrap_or("master");
-                let id = SourceId::new(GitKind(reference.to_string()),
-                                       Local(Path::new(url)));
-                match precise {
-                    Some(p) => id.with_precise(p.to_string()),
-                    None => id,
-                }
-            }
             "git" => {
                 let mut url = url.to_url().unwrap();
                 let mut reference = "master".to_string();
@@ -261,7 +175,7 @@ impl SourceId {
                 SourceId::for_git(&url, reference.as_slice(), precise)
             },
             "registry" => SourceId::for_central(),
-            "path" => SourceId::for_path(&Path::new(url.slice_from(5))),
+            "path" => SourceId::for_path(&Path::new(url.slice_from(5))).unwrap(),
             _ => fail!("Unsupported serialized SourceId")
         }
     }
@@ -273,7 +187,7 @@ impl SourceId {
                        so this is unimplemented")
             },
             SourceId {
-                kind: GitKind(ref reference), ref location, ref precise, ..
+                kind: GitKind(ref reference), ref url, ref precise, ..
             } => {
                 let ref_str = if reference.as_slice() != "master" {
                     format!("?ref={}", reference)
@@ -287,7 +201,7 @@ impl SourceId {
                     "".to_string()
                 };
 
-                format!("git+{}{}{}", location, ref_str, precise_str)
+                format!("git+{}{}{}", url, ref_str, precise_str)
             },
             SourceId { kind: RegistryKind, .. } => {
                 // TODO: Central registry vs. alternates
@@ -297,12 +211,15 @@ impl SourceId {
     }
 
     // Pass absolute path
-    pub fn for_path(path: &Path) -> SourceId {
-        SourceId::new(PathKind, Local(path.clone()))
+    pub fn for_path(path: &Path) -> CargoResult<SourceId> {
+        let url = try!(Url::from_file_path(path).map_err(|()| {
+            human(format!("not a valid path for a URL: {}", path.display()))
+        }));
+        Ok(SourceId::new(PathKind, url))
     }
 
     pub fn for_git(url: &Url, reference: &str, precise: Option<String>) -> SourceId {
-        let mut id = SourceId::new(GitKind(reference.to_string()), Remote(url.clone()));
+        let mut id = SourceId::new(GitKind(reference.to_string()), url.clone());
         if precise.is_some() {
             id = id.with_precise(precise.unwrap());
         }
@@ -312,11 +229,11 @@ impl SourceId {
 
     pub fn for_central() -> SourceId {
         SourceId::new(RegistryKind,
-                      Remote("https://example.com".to_url().unwrap()))
+                      "https://example.com".to_url().unwrap())
     }
 
-    pub fn get_location(&self) -> &Location {
-        &self.location
+    pub fn get_url(&self) -> &Url {
+        &self.url
     }
 
     pub fn is_path(&self) -> bool {
@@ -335,11 +252,11 @@ impl SourceId {
         match self.kind {
             GitKind(..) => box GitSource::new(self, config) as Box<Source>,
             PathKind => {
-                let path = match self.location {
-                    Local(ref p) => p,
-                    Remote(..) => fail!("path sources cannot be remote"),
+                let path = match self.url.to_file_path() {
+                    Ok(p) => p,
+                    Err(()) => fail!("path sources cannot be remote"),
                 };
-                box PathSource::new(path, self) as Box<Source>
+                box PathSource::new(&path, self) as Box<Source>
             },
             RegistryKind => box DummyRegistrySource::new(self) as Box<Source>,
         }
@@ -470,15 +387,15 @@ impl Source for SourceSet {
 
 #[cfg(test)]
 mod tests {
-    use super::{SourceId, Remote, GitKind};
+    use super::{SourceId, GitKind};
     use util::ToUrl;
 
     #[test]
     fn github_sources_equal() {
-        let loc = Remote("https://github.com/foo/bar".to_url().unwrap());
+        let loc = "https://github.com/foo/bar".to_url().unwrap();
         let s1 = SourceId::new(GitKind("master".to_string()), loc);
 
-        let loc = Remote("git://github.com/foo/bar".to_url().unwrap());
+        let loc = "git://github.com/foo/bar".to_url().unwrap();
         let mut s2 = SourceId::new(GitKind("master".to_string()), loc);
 
         assert_eq!(s1, s2);

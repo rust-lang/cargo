@@ -7,7 +7,7 @@ use util::{CargoResult, human, ChainError};
 /// Cleans the project from build artifacts.
 
 pub fn clean(manifest_path: &Path) -> CargoResult<()> {
-    let mut src = PathSource::for_path(&manifest_path.dir_path());
+    let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(src.update());
     let root = try!(src.get_root_package());
     let manifest = root.get_manifest();
