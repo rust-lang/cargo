@@ -27,11 +27,8 @@ test!(ignores_carriage_return {
     let lock = lock.assert();
     let lock = lock.as_slice().replace("\n", "\r\n");
     File::create(&lockfile).write_str(lock.as_slice()).assert();
-    lockfile.move_into_the_past().assert();
-    let mtime = lockfile.stat().assert().modified;
     assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_status(0));
-    assert_eq!(lockfile.stat().assert().modified, mtime);
 })
 
 test!(adding_and_removing_packages {
