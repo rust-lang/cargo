@@ -25,7 +25,9 @@ fn main() {
 
 fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
     let path = Path::new(options.flag_manifest_path.as_slice());
-    let mut source = PathSource::for_path(&path);
+    let mut source = try!(PathSource::for_path(&path).map_err(|e| {
+        CliError::new(e.description(), 1)
+    }));
 
     try!(source.update().map_err(|err| CliError::new(err.description(), 1)));
 

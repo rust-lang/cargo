@@ -24,6 +24,7 @@
 
 use std::os;
 use std::collections::{HashMap, HashSet};
+use std::result;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId};
@@ -56,8 +57,7 @@ pub fn compile(manifest_path: &Path,
                           `cargo update` command instead"));
     }
 
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
-
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
 
     // TODO: Move this into PathSource
@@ -144,11 +144,9 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 
     // Make sure we don't override the local package, even if it's in the list
     // of override paths
-    Ok(paths.iter().filter(|p| {
+    result::collect(paths.iter().filter(|p| {
         cur_path != os::make_absolute(&Path::new(p.as_slice()))
-    }).map(|p| {
-        SourceId::for_path(&Path::new(p.as_slice()))
-    }).collect())
+    }).map(|p| SourceId::for_path(&Path::new(p.as_slice()))))
 }
 
 fn scrape_target_config(config: &mut Config,

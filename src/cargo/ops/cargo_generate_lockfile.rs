@@ -21,7 +21,7 @@ pub fn generate_lockfile(manifest_path: &Path,
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
 
     // TODO: Move this into PathSource
@@ -47,7 +47,7 @@ pub fn generate_lockfile(manifest_path: &Path,
 pub fn update_lockfile(manifest_path: &Path,
                        shell: &mut MultiShell,
                        to_update: Option<String>) -> CargoResult<()> {
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
 

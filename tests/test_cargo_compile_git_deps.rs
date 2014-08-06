@@ -1,7 +1,7 @@
 use std::io::File;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
-use support::{cargo_dir};
+use support::{cargo_dir, path2url};
 use support::{COMPILING, FRESH, UPDATING};
 use support::paths::PathExt;
 use hamcrest::{assert_that,existing_file};
@@ -72,12 +72,12 @@ test!(cargo_compile_simple_git_dep {
 
             [dependencies.dep1]
 
-            git = 'file:{}'
+            git = '{}'
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, git_project.url()))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -85,12 +85,12 @@ test!(cargo_compile_simple_git_dep {
 
     assert_that(project.cargo_process("cargo-build"),
         execs()
-        .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{}#[..])\n\
-                              {} foo v0.5.0 (file:{})\n",
-                             UPDATING, git_root.display(),
-                             COMPILING, git_root.display(),
-                             COMPILING, root.display()))
+        .with_stdout(format!("{} git repository `{}`\n\
+                              {} dep1 v0.5.0 ({}#[..])\n\
+                              {} foo v0.5.0 ({})\n",
+                             UPDATING, path2url(git_root.clone()),
+                             COMPILING, path2url(git_root),
+                             COMPILING, path2url(root)))
         .with_stderr(""));
 
     assert_that(&project.bin("foo"), existing_file());
@@ -135,13 +135,13 @@ test!(cargo_compile_git_dep_branch {
 
             [dependencies.dep1]
 
-            git = 'file:{}'
+            git = '{}'
             branch = "branchy"
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, git_project.url()))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -149,12 +149,12 @@ test!(cargo_compile_git_dep_branch {
 
     assert_that(project.cargo_process("cargo-build"),
         execs()
-        .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{}?ref=branchy#[..])\n\
-                              {} foo v0.5.0 (file:{})\n",
-                             UPDATING, git_root.display(),
-                             COMPILING, git_root.display(),
-                             COMPILING, root.display()))
+        .with_stdout(format!("{} git repository `{}`\n\
+                              {} dep1 v0.5.0 ({}?ref=branchy#[..])\n\
+                              {} foo v0.5.0 ({})\n",
+                             UPDATING, path2url(git_root.clone()),
+                             COMPILING, path2url(git_root),
+                             COMPILING, path2url(root)))
         .with_stderr(""));
 
     assert_that(&project.bin("foo"), existing_file());
@@ -200,13 +200,13 @@ test!(cargo_compile_git_dep_tag {
 
             [dependencies.dep1]
 
-            git = 'file:{}'
+            git = '{}'
             tag = "v0.1.0"
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, git_project.url()))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
     let root = project.root();
@@ -214,12 +214,12 @@ test!(cargo_compile_git_dep_tag {
 
     assert_that(project.cargo_process("cargo-build"),
         execs()
-        .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{}?ref=v0.1.0#[..])\n\
-                              {} foo v0.5.0 (file:{})\n",
-                             UPDATING, git_root.display(),
-                             COMPILING, git_root.display(),
-                             COMPILING, root.display()))
+        .with_stdout(format!("{} git repository `{}`\n\
+                              {} dep1 v0.5.0 ({}?ref=v0.1.0#[..])\n\
+                              {} foo v0.5.0 ({})\n",
+                             UPDATING, path2url(git_root.clone()),
+                             COMPILING, path2url(git_root),
+                             COMPILING, path2url(root)))
         .with_stderr(""));
 
     assert_that(&project.bin("foo"), existing_file());
@@ -284,12 +284,12 @@ test!(cargo_compile_with_nested_paths {
             [dependencies.dep1]
 
             version = "0.5.0"
-            git = 'file:{}'
+            git = '{}'
 
             [[bin]]
 
             name = "parent"
-        "#, git_project.root().display()))
+        "#, git_project.url()))
         .file("src/parent.rs",
               main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
 
@@ -352,17 +352,17 @@ test!(cargo_compile_with_meta_package {
             [dependencies.dep1]
 
             version = "0.5.0"
-            git = 'file:{}'
+            git = '{}'
 
             [dependencies.dep2]
 
             version = "0.5.0"
-            git = 'file:{}'
+            git = '{}'
 
             [[bin]]
 
             name = "parent"
-        "#, git_project.root().display(), git_project.root().display()))
+        "#, git_project.url(), git_project.url()))
         .file("src/parent.rs",
               main_file(r#""{} {}", dep1::hello(), dep2::hello()"#, ["dep1", "dep2"]).as_slice());
 
@@ -402,7 +402,7 @@ test!(cargo_compile_with_short_ssh_git {
         execs()
         .with_stdout("")
         .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
-                              invalid url `{}`: `Relative URL without a base\n", url)));
+                              invalid url `{}`: Relative URL without a base\n", url)));
 })
 
 test!(two_revs_same_deps {
@@ -439,12 +439,12 @@ test!(two_revs_same_deps {
             authors = []
 
             [dependencies.bar]
-            git = 'file:{}'
+            git = '{}'
             rev = "{}"
 
             [dependencies.baz]
             path = "../baz"
-        "#, bar.root().display(), rev1.as_slice().trim()).as_slice())
+        "#, bar.url(), rev1.as_slice().trim()).as_slice())
         .file("src/main.rs", r#"
             extern crate bar;
             extern crate baz;
@@ -463,9 +463,9 @@ test!(two_revs_same_deps {
             authors = []
 
             [dependencies.bar]
-            git = 'file:{}'
+            git = '{}'
             rev = "{}"
-        "#, bar.root().display(), rev2.as_slice().trim()).as_slice())
+        "#, bar.url(), rev2.as_slice().trim()).as_slice())
         .file("src/lib.rs", r#"
             extern crate bar;
             pub fn baz() -> int { bar::bar() }
@@ -509,30 +509,30 @@ test!(recompilation {
             [dependencies.bar]
 
             version = "0.5.0"
-            git = 'file:{}'
+            git = '{}'
 
             [[bin]]
 
             name = "foo"
-        "#, git_project.root().display()))
+        "#, git_project.url()))
         .file("src/foo.rs",
               main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("cargo-build"),
-                execs().with_stdout(format!("{} git repository `file:{}`\n\
-                                             {} bar v0.5.0 (file:{}#[..])\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            UPDATING, git_project.root().display(),
-                                            COMPILING, git_project.root().display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} git repository `{}`\n\
+                                             {} bar v0.5.0 ({}#[..])\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            UPDATING, git_project.url(),
+                                            COMPILING, git_project.url(),
+                                            COMPILING, p.url())));
 
     // Don't recompile the second time
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, git_project.root().display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, git_project.url(),
+                                            FRESH, p.url())));
 
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
@@ -540,21 +540,21 @@ test!(recompilation {
     "#).assert();
 
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, git_project.root().display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, git_project.url(),
+                                            FRESH, p.url())));
 
     assert_that(p.process(cargo_dir().join("cargo-update")),
-                execs().with_stdout(format!("{} git repository `file:{}`",
+                execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
-                                            git_project.root().display())));
+                                            git_project.url())));
 
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, git_project.root().display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, git_project.url(),
+                                            FRESH, p.url())));
 
     // Commit the changes and make sure we don't trigger a recompile because the
     // lockfile says not to change
@@ -564,23 +564,23 @@ test!(recompilation {
 
     println!("compile after commit");
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, git_project.root().display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, git_project.url(),
+                                            FRESH, p.url())));
     p.root().move_into_the_past().assert();
 
     // Update the dependency and carry on!
     assert_that(p.process(cargo_dir().join("cargo-update")),
-                execs().with_stdout(format!("{} git repository `file:{}`",
+                execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
-                                            git_project.root().display())));
+                                            git_project.url())));
     println!("going for the last compile");
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{}#[..])\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, git_project.root().display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, git_project.url(),
+                                            COMPILING, p.url())));
 })
 
 test!(update_with_shared_deps {
@@ -626,8 +626,8 @@ test!(update_with_shared_deps {
 
             [dependencies.bar]
             version = "0.5.0"
-            git = 'file:{}'
-        "#, git_project.root().display()))
+            git = '{}'
+        "#, git_project.url()))
         .file("dep1/src/lib.rs", "")
         .file("dep2/Cargo.toml", format!(r#"
             [package]
@@ -637,20 +637,20 @@ test!(update_with_shared_deps {
 
             [dependencies.bar]
             version = "0.5.0"
-            git = 'file:{}'
-        "#, git_project.root().display()))
+            git = '{}'
+        "#, git_project.url()))
         .file("dep2/src/lib.rs", "");
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("\
-{updating} git repository `file:{git}`
-{compiling} bar v0.5.0 (file:{git}#[..])
-{compiling} [..] v0.5.0 (file:{dir})
-{compiling} [..] v0.5.0 (file:{dir})
-{compiling} foo v0.5.0 (file:{dir})\n",
-                    updating = UPDATING, git = git_project.root().display(),
-                    compiling = COMPILING, dir = p.root().display())));
+{updating} git repository `{git}`
+{compiling} bar v0.5.0 ({git}#[..])
+{compiling} [..] v0.5.0 ({dir})
+{compiling} [..] v0.5.0 ({dir})
+{compiling} foo v0.5.0 ({dir})\n",
+                    updating = UPDATING, git = git_project.url(),
+                    compiling = COMPILING, dir = p.url())));
 
     // Modify a file manually, and commit it
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
@@ -660,19 +660,19 @@ test!(update_with_shared_deps {
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
     assert_that(p.process(cargo_dir().join("cargo-update")).arg("dep1"),
-                execs().with_stdout(format!("{} git repository `file:{}`",
+                execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
-                                            git_project.root().display())));
+                                            git_project.url())));
 
     // Make sure we still only compile one version of the git repo
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_stdout(format!("\
-{compiling} bar v0.5.0 (file:{git}#[..])
-{compiling} [..] v0.5.0 (file:{dir})
-{compiling} [..] v0.5.0 (file:{dir})
-{compiling} foo v0.5.0 (file:{dir})\n",
-                    git = git_project.root().display(),
-                    compiling = COMPILING, dir = p.root().display())));
+{compiling} bar v0.5.0 ({git}#[..])
+{compiling} [..] v0.5.0 ({dir})
+{compiling} [..] v0.5.0 ({dir})
+{compiling} foo v0.5.0 ({dir})\n",
+                    git = git_project.url(),
+                    compiling = COMPILING, dir = p.url())));
 })
 
 test!(dep_with_submodule {
@@ -707,23 +707,23 @@ test!(dep_with_submodule {
 
             [dependencies.dep1]
 
-            git = 'file:{}'
-        "#, git_project.root().display()))
+            git = '{}'
+        "#, git_project.url()))
         .file("src/lib.rs", "
             extern crate dep1;
             pub fn foo() { dep1::dep() }
         ");
 
-    let root = project.root();
-    let git_root = git_project.root();
+    let root = project.url();
+    let git_root = git_project.url();
 
     assert_that(project.cargo_process("cargo-build"),
         execs()
-        .with_stdout(format!("{} git repository `file:{}`\n\
-                              {} dep1 v0.5.0 (file:{}#[..])\n\
-                              {} foo v0.5.0 (file:{})\n",
-                             UPDATING, git_root.display(),
-                             COMPILING, git_root.display(),
-                             COMPILING, root.display()))
+        .with_stdout(format!("{} git repository `{}`\n\
+                              {} dep1 v0.5.0 ({}#[..])\n\
+                              {} foo v0.5.0 ({})\n",
+                             UPDATING, git_root,
+                             COMPILING, git_root,
+                             COMPILING, root))
         .with_stderr(""));
 })

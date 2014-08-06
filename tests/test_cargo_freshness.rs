@@ -1,6 +1,6 @@
 use std::io::{fs, File};
 
-use support::{project, execs};
+use support::{project, execs, path2url};
 use support::{COMPILING, cargo_dir, ResultTest, FRESH};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
@@ -22,20 +22,20 @@ test!(modifying_and_moving {
 
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
-", compiling = COMPILING, dir = p.root().display())));
+{compiling} foo v0.0.1 ({dir})
+", compiling = COMPILING, dir = path2url(p.root()))));
 
     assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_status(0).with_stdout(format!("\
-{fresh} foo v0.0.1 (file:{dir})
-", fresh = FRESH, dir = p.root().display())));
+{fresh} foo v0.0.1 ({dir})
+", fresh = FRESH, dir = path2url(p.root()))));
     p.root().move_into_the_past().assert();
 
     File::create(&p.root().join("src/a.rs")).write_str("fn main() {}").assert();
     assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
-", compiling = COMPILING, dir = p.root().display())));
+{compiling} foo v0.0.1 ({dir})
+", compiling = COMPILING, dir = path2url(p.root()))));
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).assert();
     assert_that(p.process(cargo_dir().join("cargo-build")),
@@ -61,8 +61,8 @@ test!(modify_only_some_files {
 
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
-", compiling = COMPILING, dir = p.root().display())));
+{compiling} foo v0.0.1 ({dir})
+", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0));
 
@@ -81,7 +81,7 @@ test!(modify_only_some_files {
     assert_that(p.process(cargo_dir().join("cargo-build"))
                  .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
-", compiling = COMPILING, dir = p.root().display())));
+{compiling} foo v0.0.1 ({dir})
+", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 })

@@ -6,6 +6,7 @@ use std::str;
 
 use docopt;
 use TomlError = toml::Error;
+use url;
 
 pub trait CargoError: Send {
     fn description(&self) -> String;
@@ -286,6 +287,12 @@ impl CargoError for docopt::Error {
 }
 
 from_error!(docopt::Error)
+
+impl CargoError for url::ParseError {
+    fn description(&self) -> String { self.to_string() }
+}
+
+from_error!(url::ParseError)
 
 impl CliError {
     pub fn new<S: Str>(error: S, code: uint) -> CliError {

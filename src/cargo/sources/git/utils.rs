@@ -3,8 +3,8 @@ use std::fmt::{Show,Formatter};
 use std::io::{UserDir};
 use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use serialize::{Encodable,Encoder};
+use url::Url;
 
-use core::source::Location;
 use util::{CargoResult, ChainError, ProcessBuilder, process, human};
 
 #[deriving(PartialEq,Clone,Encodable)]
@@ -74,18 +74,18 @@ macro_rules! errln(
 /// GitDatabase.
 #[deriving(PartialEq,Clone,Show)]
 pub struct GitRemote {
-    location: Location,
+    url: Url,
 }
 
 #[deriving(PartialEq,Clone,Encodable)]
 struct EncodableGitRemote {
-    location: String,
+    url: String,
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitRemote {
-            location: self.location.to_string()
+            url: self.url.to_string()
         }.encode(s)
     }
 }
@@ -142,12 +142,12 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
 // Implementations
 
 impl GitRemote {
-    pub fn new(location: &Location) -> GitRemote {
-        GitRemote { location: location.clone() }
+    pub fn new(url: &Url) -> GitRemote {
+        GitRemote { url: url.clone() }
     }
 
-    pub fn get_location(&self) -> &Location {
-        &self.location
+    pub fn get_url(&self) -> &Url {
+        &self.url
     }
 
     pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
@@ -171,7 +171,7 @@ impl GitRemote {
 
     fn fetch_into(&self, path: &Path) -> CargoResult<()> {
         Ok(git!(*path, "fetch", "--force", "--quiet", "--tags",
-                &self.location, "refs/heads/*:refs/heads/*"))
+                self.url.to_string(), "refs/heads/*:refs/heads/*"))
     }
 
     fn clone_into(&self, path: &Path) -> CargoResult<()> {
@@ -179,7 +179,7 @@ impl GitRemote {
 
         try!(mkdir_recursive(path, UserDir));
 
-        Ok(git!(dirname, "clone", &self.location, path, "--bare",
+        Ok(git!(dirname, "clone", self.url.to_string(), path, "--bare",
                 "--no-hardlinks", "--quiet"))
     }
 }
