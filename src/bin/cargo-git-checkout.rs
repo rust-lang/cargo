@@ -38,7 +38,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
 
     let source_id = SourceId::for_git(&url, reference.as_slice(), None);
 
-    let mut config = try!(Config::new(shell, true, None, None).map_err(|e| {
+    let mut config = try!(Config::new(shell, None, None).map_err(|e| {
         CliError::from_boxed(e, 1)
     }));
     let mut source = GitSource::new(&source_id, &mut config);

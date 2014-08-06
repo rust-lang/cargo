@@ -159,7 +159,8 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
         let actual_rev = self.remote.rev_for(&self.db_path,
                                              self.reference.as_slice());
-        let should_update = self.config.update_remotes() || actual_rev.is_err();
+        let should_update = actual_rev.is_err() ||
+                            self.source_id.precise.is_none();
 
         let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",
