@@ -240,7 +240,7 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(kind).proxy().dest().dir_path().join("doc");
-    let rustdoc = util::process("rustdoc").cwd(pkg_root.clone());
+    let rustdoc = process("rustdoc", package, cx).cwd(pkg_root.clone());
     let rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());

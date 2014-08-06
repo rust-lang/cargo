@@ -1,4 +1,4 @@
-use support::{project, execs};
+use support::{project, execs, cargo_dir};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -12,14 +12,24 @@ test!(plugin_to_the_max {
             version = "0.0.1"
             authors = []
 
+            [[lib]]
+            name = "foo_lib"
+
             [dependencies.bar]
             path = "../bar"
         "#)
         .file("src/main.rs", r#"
             #![feature(phase)]
             #[phase(plugin)] extern crate bar;
+            extern crate foo_lib;
 
-            fn main() {}
+            fn main() { foo_lib::foo(); }
+        "#)
+        .file("src/foo_lib.rs", r#"
+            #![feature(phase)]
+            #[phase(plugin)] extern crate bar;
+
+            pub fn foo() {}
         "#);
     let bar = project("bar")
         .file("Cargo.toml", r#"
@@ -64,5 +74,7 @@ test!(plugin_to_the_max {
     baz.build();
 
     assert_that(foo.cargo_process("cargo-build"),
+                execs().with_status(0));
+    assert_that(foo.process(cargo_dir().join("cargo-doc")),
                 execs().with_status(0));
 })
