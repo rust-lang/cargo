@@ -109,11 +109,24 @@ pub struct Profile {
     opt_level: uint,
     debug: bool,
     test: bool,
+    doc: bool,
     dest: Option<String>,
     plugin: bool,
 }
 
 impl Profile {
+    fn default() -> Profile {
+        Profile {
+            env: String::new(),
+            opt_level: 0,
+            debug: false,
+            test: false,
+            doc: false,
+            dest: None,
+            plugin: false,
+        }
+    }
+
     pub fn default_dev() -> Profile {
         Profile {
             env: "compile".to_string(), // run in the default environment only
@@ -122,50 +135,45 @@ impl Profile {
             test: false, // whether or not to pass --test
             dest: None,
             plugin: false,
+            doc: false,
         }
     }
 
     pub fn default_test() -> Profile {
         Profile {
-            env: "test".to_string(), // run in the default environment only
-            opt_level: 0,
+            env: "test".to_string(),
             debug: true,
-            test: true, // whether or not to pass --test
+            test: true,
             dest: Some("test".to_string()),
-            plugin: false,
+            .. Profile::default()
         }
     }
 
     pub fn default_bench() -> Profile {
         Profile {
-            env: "bench".to_string(), // run in the default environment only
+            env: "bench".to_string(),
             opt_level: 3,
-            debug: false,
-            test: true, // whether or not to pass --test
+            test: true,
             dest: Some("bench".to_string()),
-            plugin: false,
+            .. Profile::default()
         }
     }
 
     pub fn default_release() -> Profile {
         Profile {
-            env: "release".to_string(), // run in the default environment only
+            env: "release".to_string(),
             opt_level: 3,
-            debug: false,
-            test: false, // whether or not to pass --test
             dest: Some("release".to_string()),
-            plugin: false,
+            .. Profile::default()
         }
     }
 
     pub fn default_doc() -> Profile {
         Profile {
             env: "doc".to_string(),
-            opt_level: 0,
-            debug: false,
-            test: false,
             dest: Some("doc-build".to_string()),
-            plugin: false,
+            doc: true,
+            .. Profile::default()
         }
     }
 
@@ -174,7 +182,7 @@ impl Profile {
     }
 
     pub fn is_doc(&self) -> bool {
-        self.env.as_slice() == "doc"
+        self.doc
     }
 
     pub fn is_test(&self) -> bool {
@@ -213,6 +221,11 @@ impl Profile {
 
     pub fn test(mut self, test: bool) -> Profile {
         self.test = test;
+        self
+    }
+
+    pub fn doc(mut self, doc: bool) -> Profile {
+        self.doc = doc;
         self
     }
 
