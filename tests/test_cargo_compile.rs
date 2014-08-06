@@ -1396,3 +1396,20 @@ test!(lib_with_standard_name {
                        compiling = COMPILING,
                        dir = p.root().display()).as_slice()));
 })
+
+test!(simple_staticlib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+
+              [[lib]]
+              name = "foo"
+              crate-type = ["staticlib"]
+        "#)
+        .file("src/lib.rs", "pub fn foo() {}");
+
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+})

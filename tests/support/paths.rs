@@ -76,11 +76,6 @@ impl PathExt for Path {
 
             let hour = 1000 * 3600;
             let mut newtime = stat.modified - hour;
-            // FIXME: this looks like a bug on windows that needs to be fixed
-            // upstream
-            if cfg!(windows) {
-                newtime = newtime * 1000;
-            }
             fs::change_file_times(path, newtime, newtime)
         }
     }

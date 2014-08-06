@@ -191,6 +191,9 @@ impl<'a, 'b> Context<'a, 'b> {
             if target.is_rlib() {
                 ret.push(format!("lib{}.rlib", stem));
             }
+            if target.is_staticlib() {
+                ret.push(format!("lib{}.a", stem));
+            }
         }
         assert!(ret.len() > 0);
         return ret;
