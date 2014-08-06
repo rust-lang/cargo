@@ -195,11 +195,10 @@ impl GitDatabase {
                                                     rev.clone()));
 
         match self.remote.rev_for(dest, "HEAD") {
-            Ok(ref head) if rev == *head => return Ok(checkout),
+            Ok(ref head) if rev == *head => {}
             _ => try!(checkout.fetch()),
         }
 
-        try!(checkout.reset());
         try!(checkout.update_submodules());
 
         Ok(checkout)
@@ -284,6 +283,7 @@ impl GitCheckout {
         // In this case we just use `origin` here instead of the database path.
         git!(self.location, "fetch", "--force", "--quiet", "origin");
         git!(self.location, "fetch", "--force", "--quiet", "--tags", "origin");
+        try!(self.reset());
         Ok(())
     }
 
