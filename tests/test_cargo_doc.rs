@@ -27,29 +27,6 @@ test!(simple {
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 })
 
-test!(no_build_main {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/lib.rs", r#"
-            pub fn foo() {}
-        "#)
-        .file("src/main.rs", r#"
-            bad code
-        "#);
-
-    assert_that(p.cargo_process("cargo-doc"),
-                execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
-",
-        compiling = COMPILING,
-        dir = p.root().display()).as_slice()));
-})
-
 test!(doc_no_libs {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -57,6 +34,10 @@ test!(doc_no_libs {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [[bin]]
+            name = "foo"
+            doc = false
         "#)
         .file("src/main.rs", r#"
             bad code
@@ -212,4 +193,24 @@ test!(doc_only_bin {
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
+})
+
+test!(doc_lib_bin_same_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "fn foo() {}");
+
+    assert_that(p.cargo_process("cargo-doc"),
+                execs().with_status(101)
+                       .with_stderr("\
+Cannot document a package where a library and a binary have the same name. \
+Consider renaming one or marking the target as `doc = false`
+"));
 })
