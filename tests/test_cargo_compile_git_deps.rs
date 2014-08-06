@@ -674,3 +674,56 @@ test!(update_with_shared_deps {
                     git = git_project.root().display(),
                     compiling = COMPILING, dir = p.root().display())));
 })
+
+test!(dep_with_submodule {
+    let project = project("foo");
+    let git_project = git_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+            "#)
+    }).assert();
+    let git_project2 = git_repo("dep2", |project| {
+        project
+            .file("lib.rs", "pub fn dep() {}")
+    }).assert();
+
+    git_project.process("git").args(["submodule", "add"])
+               .arg(git_project2.root()).arg("src").exec_with_output().assert();
+    git_project.process("git").args(["add", "."]).exec_with_output().assert();
+    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
+               .assert();
+
+    let project = project
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            git = 'file:{}'
+        "#, git_project.root().display()))
+        .file("src/lib.rs", "
+            extern crate dep1;
+            pub fn foo() { dep1::dep() }
+        ");
+
+    let root = project.root();
+    let git_root = git_project.root();
+
+    assert_that(project.cargo_process("cargo-build"),
+        execs()
+        .with_stdout(format!("{} git repository `file:{}`\n\
+                              {} dep1 v0.5.0 (file:{}#[..])\n\
+                              {} foo v0.5.0 (file:{})\n",
+                             UPDATING, git_root.display(),
+                             COMPILING, git_root.display(),
+                             COMPILING, root.display()))
+        .with_stderr(""));
+})
