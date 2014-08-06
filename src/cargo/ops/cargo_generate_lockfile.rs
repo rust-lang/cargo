@@ -116,11 +116,6 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
 
 pub fn write_resolve(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
     let loc = pkg.get_root().join("Cargo.lock");
-    match load_lockfile(&loc, pkg.get_package_id().get_source_id()) {
-        Ok(Some(ref prev_resolve)) if prev_resolve == resolve => return Ok(()),
-        _ => {}
-    }
-
 
     let mut e = Encoder::new();
     resolve.encode(&mut e).unwrap();
