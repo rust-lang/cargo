@@ -227,7 +227,8 @@ impl<'a, 'b> Context<'a, 'b> {
             // doc-all == document everything, so look for doc targets and
             //            compile targets in dependencies
             "doc-all" => target.get_profile().is_compile() ||
-                         target.get_profile().is_doc(),
+                         (target.get_profile().get_env() == "doc" &&
+                          target.get_profile().is_doc()),
             _ => target.get_profile().get_env() == self.env,
         }
     }
