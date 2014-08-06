@@ -32,7 +32,11 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
 
     if opts.git {
         try!(git!("init", path));
-        try!(File::create(&path.join(".gitignore")).write(b"/target\n"));
+        let mut gitignore = "/target\n".to_string();
+        if !opts.bin {
+            gitignore.push_str("/Cargo.lock\n");
+        }
+        try!(File::create(&path.join(".gitignore")).write(gitignore.as_bytes()));
     } else {
         try!(fs::mkdir(path, io::UserRWX));
     }
