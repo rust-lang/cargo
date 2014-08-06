@@ -52,7 +52,7 @@ pub fn compile(manifest_path: &Path,
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    if options.update {
+    if update {
         return Err(human("The -u flag has been deprecated, please use the \
                           `cargo update` command instead"));
     }
@@ -77,7 +77,7 @@ pub fn compile(manifest_path: &Path,
         let lockfile = manifest_path.dir_path().join("Cargo.lock");
         let source_id = package.get_package_id().get_source_id();
 
-        let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
+        let mut config = try!(Config::new(*shell, jobs, target.clone()));
         let mut registry = PackageRegistry::new(&mut config);
 
         match try!(ops::load_lockfile(&lockfile, source_id)) {
@@ -117,7 +117,7 @@ pub fn compile(manifest_path: &Path,
 
     let ret = {
         let _p = profile::start("compiling");
-        let mut config = try!(Config::new(*shell, update, jobs, target));
+        let mut config = try!(Config::new(*shell, jobs, target));
         try!(scrape_target_config(&mut config, &user_configs));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,

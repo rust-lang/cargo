@@ -15,8 +15,7 @@ use util::{CargoResult, human};
 use cargo_toml = util::toml;
 
 pub fn generate_lockfile(manifest_path: &Path,
-                         shell: &mut MultiShell,
-                         update: bool)
+                         shell: &mut MultiShell)
                          -> CargoResult<()> {
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
@@ -31,7 +30,7 @@ pub fn generate_lockfile(manifest_path: &Path,
     let source_ids = package.get_source_ids();
 
     let resolve = {
-        let mut config = try!(Config::new(shell, update, None, None));
+        let mut config = try!(Config::new(shell, None, None));
 
         let mut registry = PackageRegistry::new(&mut config);
         try!(registry.add_sources(source_ids));
@@ -58,7 +57,7 @@ pub fn update_lockfile(manifest_path: &Path,
         None => return Err(human("A Cargo.lock must exist before it is updated"))
     };
 
-    let mut config = try!(Config::new(shell, true, None, None));
+    let mut config = try!(Config::new(shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
 
     let sources = match to_update {

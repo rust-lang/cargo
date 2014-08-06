@@ -665,7 +665,7 @@ test!(update_with_shared_deps {
                                             git_project.url())));
 
     // Make sure we still only compile one version of the git repo
-    assert_that(p.cargo_process("cargo-build"),
+    assert_that(p.process(cargo_dir().join("cargo-build")),
                 execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({git}#[..])
 {compiling} [..] v0.5.0 ({dir})
@@ -725,5 +725,71 @@ test!(dep_with_submodule {
                              UPDATING, git_root,
                              COMPILING, git_root,
                              COMPILING, root))
+        .with_stderr(""));
+})
+
+test!(two_deps_only_update_one {
+    let project = project("foo");
+    let git1 = git_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+            "#)
+            .file("src/lib.rs", "")
+    }).assert();
+    let git2 = git_repo("dep2", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep2"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+            "#)
+            .file("src/lib.rs", "")
+    }).assert();
+
+    let project = project
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+            git = '{}'
+            [dependencies.dep2]
+            git = '{}'
+        "#, git1.url(), git2.url()))
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(project.cargo_process("cargo-build"),
+        execs()
+        .with_stdout(format!("{} git repository `[..]`\n\
+                              {} git repository `[..]`\n\
+                              {} [..] v0.5.0 ([..])\n\
+                              {} [..] v0.5.0 ([..])\n\
+                              {} foo v0.5.0 ({})\n",
+                             UPDATING,
+                             UPDATING,
+                             COMPILING,
+                             COMPILING,
+                             COMPILING, project.url()))
+        .with_stderr(""));
+
+    File::create(&git1.root().join("src/lib.rs")).write_str(r#"
+        pub fn foo() {}
+    "#).assert();
+    git1.process("git").args(["add", "."]).exec_with_output().assert();
+    git1.process("git").args(["commit", "-m", "test"]).exec_with_output()
+        .assert();
+
+    assert_that(project.process(cargo_dir().join("cargo-update")).arg("dep1"),
+        execs()
+        .with_stdout(format!("{} git repository `{}`\n",
+                             UPDATING, git1.url()))
         .with_stderr(""));
 })
