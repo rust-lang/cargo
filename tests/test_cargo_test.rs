@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, FRESH};
+use support::{COMPILING, cargo_dir, ResultTest, FRESH, RUNNING, DOCTEST};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -34,11 +34,16 @@ test!(cargo_test_simple {
         execs().with_stdout("hello\n"));
 
     assert_that(p.process(cargo_dir().join("cargo-test")),
-        execs().with_stdout(format!("{} foo v0.5.0 (file:{})\n\n\
-                                    running 1 test\n\
-                                    test test_hello ... ok\n\n\
-                                    test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n",
-                                    COMPILING, p.root().display())));
+        execs().with_stdout(format!("\
+{} foo v0.5.0 (file:{})
+{} target[..]test[..]foo
+
+running 1 test
+test test_hello ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n",
+        COMPILING, p.root().display(),
+        RUNNING)));
 })
 
 test!(many_similar_names {
@@ -95,19 +100,30 @@ test!(cargo_test_failing_test {
         execs().with_stdout("hello\n"));
 
     assert_that(p.process(cargo_dir().join("cargo-test")),
-        execs().with_stdout(format!("{} foo v0.5.0 (file:{})\n\n\
-                                    running 1 test\n\
-                                    test test_hello ... FAILED\n\n\
-                                    failures:\n\n\
-                                    ---- test_hello stdout ----\n<tab>\
-                                    task 'test_hello' failed at 'assertion failed: \
-                                    `(left == right) && (right == left)` (left: \
-                                    `hello`, right: `nope`)', src{sep}foo.rs:12\n<tab>\n<tab>\n\n\
-                                    failures:\n    test_hello\n\n\
-                                    test result: FAILED. 0 passed; 1 failed; \
-                                    0 ignored; 0 measured\n\n",
-                                    COMPILING, p.root().display(),
-                                    sep = path::SEP))
+        execs().with_stdout(format!("\
+{} foo v0.5.0 (file:{})
+{} target[..]test[..]foo
+
+running 1 test
+test test_hello ... FAILED
+
+failures:
+
+---- test_hello stdout ----
+<tab>task 'test_hello' failed at 'assertion failed: \
+    `(left == right) && (right == left)` (left: \
+    `hello`, right: `nope`)', src{sep}foo.rs:12
+<tab>
+<tab>
+
+failures:
+    test_hello
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.root().display(), RUNNING,
+        sep = path::SEP))
               .with_stderr(format!("\
 task '<main>' failed at 'Some tests failed', [..]
 Could not execute process `{test}[..]` (status=101)
@@ -127,10 +143,18 @@ test!(test_with_lib_dep {
             name = "baz"
             path = "src/main.rs"
         "#)
-        .file("src/lib.rs", "
+        .file("src/lib.rs", r#"
+            ///
+            /// ```rust
+            /// extern crate foo;
+            /// fn main() {
+            ///     println!("{}", foo::foo());
+            /// }
+            /// ```
+            ///
             pub fn foo(){}
             #[test] fn lib_test() {}
-        ")
+        "#)
         .file("src/main.rs", "
             extern crate foo;
 
@@ -140,26 +164,32 @@ test!(test_with_lib_dep {
             fn bin_test() {}
         ");
 
-    let output = p.cargo_process("cargo-test")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
+    assert_that(p.cargo_process("cargo-test"),
+        execs().with_stdout(format!("\
+{} foo v0.0.1 (file:{})
+{running} target[..]test[..]baz-[..]
 
-    let bin = "\
 running 1 test
 test bin_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
-    let lib = "\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]test[..]foo
+
 running 1 test
 test lib_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
-                       compiling = COMPILING, dir = p.root().display());
+{doctest} foo
 
-    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
-            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice());
+running 1 test
+test foo_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(test_with_deep_lib_dep {
@@ -200,13 +230,21 @@ test!(test_with_deep_lib_dep {
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
 {compiling} bar v0.0.1 (file:{dir})
+{running} target[..]
 
 running 1 test
 test bar_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measure
+
+{doctest} bar
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
 })
 
@@ -235,26 +273,31 @@ test!(external_test_explicit {
             fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
         "#);
 
-    let output = p.cargo_process("cargo-test")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
+    assert_that(p.cargo_process("cargo-test"),
+        execs().with_stdout(format!("\
+{} foo v0.0.1 (file:{})
+{running} target[..]test[..]foo-[..]
 
-    let internal = "\
 running 1 test
 test internal_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
-    let external = "\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]test[..]test-[..]
+
 running 1 test
 test external_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
-                       compiling = COMPILING, dir = p.root().display());
+{doctest} foo
 
-    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, internal, external).as_slice() ||
-            out == format!("{}\n\n{}\n\n\n{}\n\n", head, external, internal).as_slice());
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(external_test_implicit {
@@ -278,26 +321,31 @@ test!(external_test_implicit {
             fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
         "#);
 
-    let output = p.cargo_process("cargo-test")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
+    assert_that(p.cargo_process("cargo-test"),
+        execs().with_stdout(format!("\
+{} foo v0.0.1 (file:{})
+{running} target[..]test[..]external-[..]
 
-    let internal = "\
-running 1 test
-test internal_test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
-    let external = "\
 running 1 test
 test external_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
-                       compiling = COMPILING, dir = p.root().display());
+{running} target[..]test[..]foo-[..]
 
-    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, internal, external).as_slice() ||
-            out == format!("{}\n\n{}\n\n\n{}\n\n", head, external, internal).as_slice());
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(dont_run_examples {
@@ -334,26 +382,42 @@ test!(pass_through_command_line {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
+{running} target[..]test[..]foo
 
 running 1 test
 test bar ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
 
     assert_that(p.cargo_process("cargo-test").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
+{running} target[..]test[..]foo
 
 running 1 test
 test foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
 })
 
@@ -400,27 +464,31 @@ test!(lib_bin_same_name {
             fn bin_test() {}
         ");
 
-    let output = p.cargo_process("cargo-test")
-                  .exec_with_output().assert();
-    let out = str::from_utf8(output.output.as_slice()).assert();
+    assert_that(p.cargo_process("cargo-test"),
+        execs().with_stdout(format!("\
+{} foo v0.0.1 (file:{})
+{running} target[..]test[..]foo-[..]
 
-    let bin = "\
 running 1 test
-test bin_test ... ok
+test [..] ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
-    let lib = "\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]test[..]foo-[..]
+
 running 1 test
-test lib_test ... ok
+test [..] ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured";
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-    let head = format!("{compiling} foo v0.0.1 (file:{dir})",
-                       compiling = COMPILING, dir = p.root().display());
+{doctest} foo
 
-    assert!(out == format!("{}\n\n{}\n\n\n{}\n\n", head, bin, lib).as_slice() ||
-            out == format!("{}\n\n{}\n\n\n{}\n\n", head, lib, bin).as_slice(),
-            "bad output: {}", out);
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(lib_with_standard_name {
@@ -449,13 +517,14 @@ test!(lib_with_standard_name {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 (file:{dir})
+{running} target[..]test[..]test-[..]
 
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
                        dir = p.root().display()).as_slice()));
 })
 
@@ -487,13 +556,14 @@ test!(lib_with_standard_name2 {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 (file:{dir})
+{running} target[..]test[..]syntax-[..]
 
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
                        dir = p.root().display()).as_slice()));
 })
 
@@ -545,26 +615,42 @@ test!(test_dylib {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
+{running} target[..]test[..]foo-[..]
 
 running 1 test
 test foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
     p.root().move_into_the_past().assert();
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 (file:{dir})
+{running} target[..]test[..]foo-[..]
 
 running 1 test
 test foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       fresh = FRESH,
+                       fresh = FRESH, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
 })
 
@@ -586,25 +672,41 @@ test!(test_twice_with_build_cmd {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 (file:{dir})
+{running} target[..]test[..]foo-[..]
 
 running 1 test
 test foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       compiling = COMPILING,
+                       compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 (file:{dir})
+{running} target[..]test[..]foo-[..]
 
 running 1 test
 test foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
-                       fresh = FRESH,
+                       fresh = FRESH, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.root().display()).as_slice()));
 })
