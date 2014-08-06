@@ -17,6 +17,7 @@ extern crate url;
 #[phase(plugin, link)] extern crate log;
 
 extern crate docopt;
+extern crate git2;
 extern crate toml;
 #[cfg(test)] extern crate hamcrest;
 

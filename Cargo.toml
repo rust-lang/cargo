@@ -19,7 +19,7 @@ git = "https://github.com/burntsushi/docopt.rs"
 [dependencies.toml]
 git = "https://github.com/alexcrichton/toml-rs"
 
-[dependencies.hamcrest]
+[dev-dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"
 
 [dependencies.url]
@@ -27,6 +27,9 @@ git = "https://github.com/servo/rust-url"
 
 [dependencies.semver]
 git = "https://github.com/rust-lang/semver"
+
+[dependencies.git2]
+git = "https://github.com/alexcrichton/git2-rs"
 
 [[bin]]
 name = "cargo"

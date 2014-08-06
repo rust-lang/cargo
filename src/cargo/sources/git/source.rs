@@ -171,7 +171,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
             let rev = try!(repo.rev_for(self.reference.as_slice()));
             (repo, rev)
         } else {
-            (self.remote.db_at(&self.db_path), actual_rev.unwrap())
+            (try!(self.remote.db_at(&self.db_path)), actual_rev.unwrap())
         };
 
         try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));
