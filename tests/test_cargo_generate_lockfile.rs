@@ -1,7 +1,6 @@
 use std::io::File;
 
 use support::{project, execs, cargo_dir, ResultTest};
-use support::paths::PathExt;
 use hamcrest::assert_that;
 
 fn setup() {}
