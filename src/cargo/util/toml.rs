@@ -513,7 +513,10 @@ fn normalize(libs: &[TomlLibTarget],
         }
 
         match dep {
-            Needed => ret.push(Profile::default_test().test(false)),
+            Needed => {
+                ret.push(Profile::default_test().test(false));
+                ret.push(Profile::default_doc().doc(false));
+            }
             _ => {}
         }
 

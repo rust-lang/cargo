@@ -75,7 +75,7 @@ impl PathExt for Path {
             let stat = try!(path.stat());
 
             let hour = 1000 * 3600;
-            let mut newtime = stat.modified - hour;
+            let newtime = stat.modified - hour;
             fs::change_file_times(path, newtime, newtime)
         }
     }
