@@ -8,7 +8,7 @@ use util::{process, CargoResult, ProcessError};
 pub fn run_tests(manifest_path: &Path,
                  options: &mut ops::CompileOptions,
                  args: &[String]) -> CargoResult<Option<ProcessError>> {
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
 
