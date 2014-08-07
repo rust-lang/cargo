@@ -1,5 +1,6 @@
 use support::{project, execs};
 use hamcrest::assert_that;
+use cargo;
 
 fn setup() {}
 
@@ -8,5 +9,5 @@ test!(simple {
 
     assert_that(p.cargo_process("cargo-version"),
                 execs().with_status(0).with_stdout(format!("{}\n",
-        env!("CFG_VERSION")).as_slice()));
+        cargo::version()).as_slice()));
 })
