@@ -2,10 +2,8 @@ use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, UserRWX};
 use std::os;
-use semver::Version;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util;
 use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile};
 
@@ -433,26 +431,9 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
     search_path.push(cx.layout(KindPlugin).deps().clone());
     let search_path = os::join_paths(search_path.as_slice()).unwrap();
 
-    util::process(cmd)
-        .cwd(pkg.get_root())
-        .env(DynamicLibrary::envvar(), Some(search_path.as_slice()))
-        .env("CARGO_PKG_VERSION_MAJOR", Some(pkg.get_version().major.to_string()))
-        .env("CARGO_PKG_VERSION_MINOR", Some(pkg.get_version().minor.to_string()))
-        .env("CARGO_PKG_VERSION_PATCH", Some(pkg.get_version().patch.to_string()))
-        .env("CARGO_PKG_VERSION_PRE", pre_version_component(pkg.get_version()))
-}
-
-fn pre_version_component(v: &Version) -> Option<String> {
-    if v.pre.is_empty() {
-        return None;
-    }
-
-    let mut ret = String::new();
-
-    for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 { ret.push_char('.') };
-        ret.push_str(x.to_string().as_slice());
-    }
-
-    Some(ret)
+    // We want to use the same environment and such as normal processes, but we
+    // want to override the dylib search path with the one we just calculated.
+    cx.compilation.process(cmd).cwd(pkg.get_root())
+                               .env(DynamicLibrary::envvar(),
+                                    Some(search_path.as_slice()))
 }

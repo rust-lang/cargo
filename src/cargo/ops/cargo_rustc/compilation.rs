@@ -30,6 +30,10 @@ pub struct Compilation {
 
     /// Output directory for rust dependencies
     pub deps_output: Path,
+
+    /// Extra environment variables that were passed to compilations and should
+    /// be passed to future invocations of programs.
+    pub extra_env: HashMap<String, Option<String>>,
 }
 
 impl Compilation {
@@ -41,6 +45,7 @@ impl Compilation {
             deps_output: Path::new("/"),
             tests: Vec::new(),
             binaries: Vec::new(),
+            extra_env: HashMap::new(),
         }
     }
 
@@ -54,7 +59,11 @@ impl Compilation {
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
         let search_path = os::join_paths(search_path.as_slice()).unwrap();
-        util::process(cmd).env(DynamicLibrary::envvar(),
-                               Some(search_path.as_slice()))
+        let mut cmd = util::process(cmd).env(DynamicLibrary::envvar(),
+                                             Some(search_path.as_slice()));
+        for (k, v) in self.extra_env.iter() {
+            cmd = cmd.env(k.as_slice(), v.as_ref().map(|s| s.as_slice()));
+        }
+        return cmd;
     }
 }
