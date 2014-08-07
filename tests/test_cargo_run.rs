@@ -82,3 +82,34 @@ test!(no_main_file {
                        .with_stderr("`src/main.rs` must be present for \
                                      `cargo run`\n"));
 })
+
+test!(run_dylib_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            fn main() { bar::bar(); }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "bar"
+            crate-type = ["dylib"]
+        "#)
+        .file("bar/src/lib.rs", "pub fn bar() {}");
+
+    assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
+                execs().with_status(0));
+})
