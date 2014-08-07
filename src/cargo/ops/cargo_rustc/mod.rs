@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, UserRWX};
 use std::os;
@@ -14,7 +14,10 @@ use self::job_queue::{JobQueue, StageStart, StageCustomBuild, StageLibraries};
 use self::job_queue::{StageBinaries, StageEnd};
 use self::context::{Context, PlatformRequirement, Target, Plugin, PluginAndTarget};
 
+pub use self::compilation::Compilation;
+
 mod context;
+mod compilation;
 mod fingerprint;
 mod job;
 mod job_queue;
@@ -47,9 +50,9 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
                            sources: &'a SourceMap,
                            config: &'a mut Config<'a>)
-                           -> CargoResult<HashMap<PackageId, Vec<Path>>> {
+                           -> CargoResult<Compilation> {
     if targets.is_empty() {
-        return Ok(HashMap::new());
+        return Ok(Compilation::new())
     }
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
@@ -86,12 +89,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     cx.primary();
     try!(compile(targets, pkg, &mut cx, &mut queue));
 
-    let ret = build_return_map(&cx, pkg, deps);
-
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
 
-    Ok(ret)
+    Ok(cx.compilation)
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
@@ -454,37 +455,4 @@ fn pre_version_component(v: &Version) -> Option<String> {
     }
 
     Some(ret)
-}
-
-fn build_return_map(cx: &Context, root: &Package, deps: &PackageSet)
-                    -> HashMap<PackageId, Vec<Path>> {
-    let mut ret = HashMap::new();
-    match cx.resolve.deps(root.get_package_id()) {
-        Some(mut my_deps) => {
-            for dep in my_deps {
-                let pkg = deps.iter().find(|p| p.get_package_id() == dep).unwrap();
-                ret.insert(dep.clone(), build_paths(cx, pkg, false));
-            }
-        }
-        None => {}
-    }
-    ret.insert(root.get_package_id().clone(), build_paths(cx, root, true));
-    return ret;
-
-    fn build_paths(cx: &Context, pkg: &Package, root: bool) -> Vec<Path> {
-        pkg.get_targets().iter().filter(|target| {
-            target.get_profile().is_compile() && target.is_lib()
-        }).flat_map(|target| {
-            let kind = if target.get_profile().is_plugin() {
-                KindPlugin
-            } else {
-                KindTarget
-            };
-            let layout = cx.layout(kind);
-            cx.target_filenames(target).move_iter().map(|filename| {
-                let root = if root {layout.root()} else {layout.deps()};
-                root.join(filename)
-            }).collect::<Vec<Path>>().move_iter()
-        }).collect()
-    }
 }

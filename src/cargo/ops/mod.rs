@@ -1,7 +1,7 @@
 pub use self::cargo_clean::clean;
 pub use self::cargo_compile::{compile, CompileOptions};
 pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
-pub use self::cargo_rustc::compile_targets;
+pub use self::cargo_rustc::{compile_targets, Compilation};
 pub use self::cargo_run::run;
 pub use self::cargo_new::{new, NewOptions};
 pub use self::cargo_doc::{doc, DocOptions};

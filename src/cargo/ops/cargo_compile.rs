@@ -46,7 +46,7 @@ pub struct CompileOptions<'a> {
 
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
-               -> CargoResult<HashMap<PackageId, Vec<Path>>> {
+               -> CargoResult<ops::Compilation> {
     let CompileOptions { update, env, ref mut shell, jobs, target } = *options;
     let target = target.map(|s| s.to_string());
 
