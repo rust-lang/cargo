@@ -498,13 +498,15 @@ test!(lib_with_standard_name {
             name = "syntax"
             version = "0.0.1"
             authors = []
-
-            [[lib]]
-            name = "syntax"
-            test = false
         "#)
         .file("src/lib.rs", "
+            /// ```
+            /// syntax::foo();
+            /// ```
             pub fn foo() {}
+
+            #[test]
+            fn foo_test() {}
         ")
         .file("tests/test.rs", "
             extern crate syntax;
@@ -517,15 +519,29 @@ test!(lib_with_standard_name {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
+{running} target[..]test[..]syntax-[..]
+
+running 1 test
+test foo_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+
 {running} target[..]test[..]test-[..]
 
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+
+{doctest} syntax
+
+running 1 test
+test foo_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       doctest = DOCTEST, dir = p.url()).as_slice()));
 })
 
 test!(lib_with_standard_name2 {

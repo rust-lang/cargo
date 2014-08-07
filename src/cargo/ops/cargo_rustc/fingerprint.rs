@@ -82,7 +82,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
                 cx.compilation.tests.push(dst.clone());
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst.clone());
-            } else if target.is_lib() && target.get_profile().is_compile() {
+            } else if target.is_lib() {
                 let pkgid = pkg.get_package_id().clone();
                 cx.compilation.libraries.find_or_insert(pkgid, Vec::new())
                                         .push(root.join(filename));
