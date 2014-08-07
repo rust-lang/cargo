@@ -4,6 +4,7 @@
 extern crate term;
 extern crate cargo;
 extern crate hamcrest;
+extern crate url;
 
 #[phase(plugin, link)]
 extern crate log;

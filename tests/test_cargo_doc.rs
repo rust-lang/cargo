@@ -1,4 +1,4 @@
-use support::{project, execs, cargo_dir};
+use support::{project, execs, cargo_dir, path2url};
 use support::{COMPILING, FRESH};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
@@ -19,10 +19,10 @@ test!(simple {
 
     assert_that(p.cargo_process("cargo-doc"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
-        dir = p.root().display()).as_slice()));
+        dir = path2url(p.root())).as_slice()));
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 })
@@ -61,17 +61,17 @@ test!(doc_twice {
 
     assert_that(p.cargo_process("cargo-doc"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
-        dir = p.root().display()).as_slice()));
+        dir = path2url(p.root())).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo-doc")),
                 execs().with_status(0).with_stdout(format!("\
-{fresh} foo v0.0.1 (file:{dir})
+{fresh} foo v0.0.1 ({dir})
 ",
         fresh = FRESH,
-        dir = p.root().display()).as_slice()));
+        dir = path2url(p.root())).as_slice()));
 })
 
 test!(doc_deps {
@@ -101,11 +101,11 @@ test!(doc_deps {
 
     assert_that(p.cargo_process("cargo-doc"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 (file:{dir})
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} bar v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
-        dir = p.root().display()).as_slice()));
+        dir = path2url(p.root())).as_slice()));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
@@ -114,11 +114,11 @@ test!(doc_deps {
     assert_that(p.process(cargo_dir().join("cargo-doc"))
                  .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
                 execs().with_status(0).with_stdout(format!("\
-{fresh} bar v0.0.1 (file:{dir})
-{fresh} foo v0.0.1 (file:{dir})
+{fresh} bar v0.0.1 ({dir})
+{fresh} foo v0.0.1 ({dir})
 ",
         fresh = FRESH,
-        dir = p.root().display()).as_slice()));
+        dir = path2url(p.root())).as_slice()));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
@@ -152,11 +152,11 @@ test!(doc_no_deps {
 
     assert_that(p.cargo_process("cargo-doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 (file:{dir})
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} bar v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
-        dir = p.root().display()).as_slice()));
+        dir = path2url(p.root())).as_slice()));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());

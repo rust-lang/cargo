@@ -24,6 +24,7 @@
 
 use std::os;
 use std::collections::{HashMap, HashSet};
+use std::result;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId};
@@ -51,13 +52,12 @@ pub fn compile(manifest_path: &Path,
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    if options.update {
+    if update {
         return Err(human("The -u flag has been deprecated, please use the \
                           `cargo update` command instead"));
     }
 
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
-
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
 
     // TODO: Move this into PathSource
@@ -77,7 +77,7 @@ pub fn compile(manifest_path: &Path,
         let lockfile = manifest_path.dir_path().join("Cargo.lock");
         let source_id = package.get_package_id().get_source_id();
 
-        let mut config = try!(Config::new(*shell, update, jobs, target.clone()));
+        let mut config = try!(Config::new(*shell, jobs, target.clone()));
         let mut registry = PackageRegistry::new(&mut config);
 
         match try!(ops::load_lockfile(&lockfile, source_id)) {
@@ -117,7 +117,7 @@ pub fn compile(manifest_path: &Path,
 
     let ret = {
         let _p = profile::start("compiling");
-        let mut config = try!(Config::new(*shell, update, jobs, target));
+        let mut config = try!(Config::new(*shell, jobs, target));
         try!(scrape_target_config(&mut config, &user_configs));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
@@ -144,11 +144,9 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 
     // Make sure we don't override the local package, even if it's in the list
     // of override paths
-    Ok(paths.iter().filter(|p| {
+    result::collect(paths.iter().filter(|p| {
         cur_path != os::make_absolute(&Path::new(p.as_slice()))
-    }).map(|p| {
-        SourceId::for_path(&Path::new(p.as_slice()))
-    }).collect())
+    }).map(|p| SourceId::for_path(&Path::new(p.as_slice()))))
 }
 
 fn scrape_target_config(config: &mut Config,

@@ -1,6 +1,6 @@
 use std::io::File;
 
-use support::{ResultTest, project, execs, main_file, cargo_dir};
+use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
 use support::{COMPILING, FRESH};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
@@ -71,12 +71,12 @@ test!(cargo_compile_with_nested_deps_shorthand {
         "#);
 
     assert_that(p.cargo_process("cargo-build"),
-        execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                     {} bar v0.5.0 (file:{})\n\
-                                     {} foo v0.5.0 (file:{})\n",
-                                    COMPILING, p.root().display(),
-                                    COMPILING, p.root().display(),
-                                    COMPILING, p.root().display())));
+        execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                     {} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -120,10 +120,10 @@ test!(cargo_compile_with_root_dev_deps {
 
     p2.build();
     assert_that(p.cargo_process("cargo-build"),
-        execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                     {} foo v0.5.0 (file:{})\n",
-                                    COMPILING, p.root().display(),
-                                    COMPILING, p.root().display())));
+        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -174,10 +174,10 @@ test!(cargo_compile_with_transitive_dev_deps {
         "#);
 
     assert_that(p.cargo_process("cargo-build"),
-        execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                     {} foo v0.5.0 (file:{})\n",
-                                    COMPILING, p.root().display(),
-                                    COMPILING, p.root().display())));
+        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -219,26 +219,27 @@ test!(no_rebuild_dependency {
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
         "#);
+    let bar = path2url(bar);
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("cargo-build"),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
     // This time we shouldn't compile bar
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, bar.display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, bar,
+                                            FRESH, p.url())));
     p.root().move_into_the_past().assert();
 
     p.build(); // rebuild the files (rewriting them in the process)
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
 })
 
 test!(deep_dependencies_trigger_rebuild {
@@ -294,20 +295,22 @@ test!(deep_dependencies_trigger_rebuild {
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
         "#);
+    let baz = path2url(baz);
+    let bar = path2url(bar);
     assert_that(p.cargo_process("cargo-build"),
-                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                             {} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, baz.display(),
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                             {} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, baz,
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                             {} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, baz.display(),
-                                            FRESH, bar.display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                             {} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, baz,
+                                            FRESH, bar,
+                                            FRESH, p.url())));
 
     // Make sure an update to baz triggers a rebuild of bar
     //
@@ -318,12 +321,12 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn baz() { println!("hello!"); }
     "#).assert();
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                             {} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, baz.display(),
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                             {} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, baz,
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
 
     // Make sure an update to bar doesn't trigger baz
     p.root().move_into_the_past().assert();
@@ -332,12 +335,12 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).assert();
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                             {} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, baz.display(),
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                             {} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, baz,
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
 })
 
 test!(no_rebuild_two_deps {
@@ -393,21 +396,23 @@ test!(no_rebuild_two_deps {
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
         "#);
+    let baz = path2url(baz);
+    let bar = path2url(bar);
     assert_that(p.cargo_process("cargo-build"),
-                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                             {} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, baz.display(),
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                             {} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, baz,
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
     assert_that(&p.bin("foo"), existing_file());
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} baz v0.5.0 (file:{})\n\
-                                             {} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, baz.display(),
-                                            FRESH, bar.display(),
-                                            FRESH, p.root().display())));
+                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+                                             {} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, baz,
+                                            FRESH, bar,
+                                            FRESH, p.url())));
     assert_that(&p.bin("foo"), existing_file());
 })
 
@@ -443,13 +448,13 @@ test!(nested_deps_recompile {
             name = "bar"
         "#)
         .file("src/bar/src/bar.rs", "pub fn gimme() {}");
-    let bar = p.root();
+    let bar = p.url();
 
     assert_that(p.cargo_process("cargo-build"),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            COMPILING, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            COMPILING, bar,
+                                            COMPILING, p.url())));
     p.root().move_into_the_past().assert();
 
     File::create(&p.root().join("src/foo.rs")).write_str(r#"
@@ -458,10 +463,10 @@ test!(nested_deps_recompile {
 
     // This shouldn't recompile `bar`
     assert_that(p.process(cargo_dir().join("cargo-build")),
-                execs().with_stdout(format!("{} bar v0.5.0 (file:{})\n\
-                                             {} foo v0.5.0 (file:{})\n",
-                                            FRESH, bar.display(),
-                                            COMPILING, p.root().display())));
+                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                             {} foo v0.5.0 ({})\n",
+                                            FRESH, bar,
+                                            COMPILING, p.url())));
 })
 
 test!(error_message_for_missing_manifest {

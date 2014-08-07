@@ -34,6 +34,6 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    ops::generate_lockfile(&root, shell, true)
+    ops::generate_lockfile(&root, shell)
         .map(|_| None).map_err(|err| CliError::from_boxed(err, 101))
 }

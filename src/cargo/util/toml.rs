@@ -9,8 +9,7 @@ use core::{SourceId, GitKind};
 use core::manifest::{LibKind, Lib, Dylib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::package_id::Metadata;
-use core::source::Location;
-use util::{CargoResult, Require, human};
+use util::{CargoResult, Require, human, ToUrl};
 
 /// Representation of the projects file layout.
 ///
@@ -425,7 +424,9 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
                 let new_source_id = match details.git {
                     Some(ref git) => {
                         let kind = GitKind(reference.clone());
-                        let loc = try!(Location::parse(git.as_slice()));
+                        let loc = try!(git.as_slice().to_url().map_err(|e| {
+                            human(e)
+                        }));
                         let source_id = SourceId::new(kind, loc);
                         // TODO: Don't do this for path
                         cx.source_ids.push(source_id.clone());

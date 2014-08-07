@@ -20,7 +20,7 @@ impl<'a> ToUrl for &'a Url {
 impl<'a> ToUrl for &'a str {
     fn to_url(self) -> Result<Url, String> {
         UrlParser::new().scheme_type_mapper(mapper).parse(self).map_err(|s| {
-            s.to_string()
+            format!("invalid url `{}`: {}", self, s)
         })
     }
 }
