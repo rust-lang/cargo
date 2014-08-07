@@ -39,6 +39,9 @@ test!(simple_with_args {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [[bin]]
+            name = "main"
         "#)
         .file("src/main.rs", r#"
             fn main() {
@@ -47,7 +50,7 @@ test!(simple_with_args {
             }
         "#);
 
-    assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
+    assert_that(p.cargo_process("cargo-run").arg("main").arg("hello").arg("world"),
                 execs().with_status(0));
 })
 
@@ -67,18 +70,3 @@ test!(exit_code {
                 execs().with_status(2));
 })
 
-test!(no_main_file {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/lib.rs", "");
-
-    assert_that(p.cargo_process("cargo-run"),
-                execs().with_status(101)
-                       .with_stderr("`src/main.rs` must be present for \
-                                     `cargo run`\n"));
-})
