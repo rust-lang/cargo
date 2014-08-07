@@ -65,14 +65,29 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     };
     let is_rustc_fresh = try!(is_fresh(&old_loc, rustc_fingerprint.as_slice()));
 
-    let layout = cx.layout(kind);
+    let (old_root, root) = {
+        let layout = cx.layout(kind);
+        (layout.old_root().clone(), layout.root().clone())
+    };
     let mut pairs = vec![(old_loc, new_loc.clone())];
     if !target.get_profile().is_doc() {
         pairs.push((old_dep_info, new_dep_info));
-        pairs.extend(cx.target_filenames(target).iter().map(|filename| {
+
+        for filename in cx.target_filenames(target).iter() {
             let filename = filename.as_slice();
-            ((layout.old_root().join(filename), layout.root().join(filename)))
-        }));
+            let dst = root.join(filename);
+            pairs.push((old_root.join(filename), root.join(filename)));
+
+            if target.get_profile().is_test() {
+                cx.compilation.tests.push(dst.clone());
+            } else if target.is_bin() {
+                cx.compilation.binaries.push(dst.clone());
+            } else if target.is_lib() && target.get_profile().is_compile() {
+                let pkgid = pkg.get_package_id().clone();
+                cx.compilation.libraries.find_or_insert(pkgid, Vec::new())
+                                        .push(root.join(filename));
+            }
+        }
     }
 
     Ok(prepare(is_rustc_fresh && are_files_fresh, new_loc, rustc_fingerprint,
@@ -117,9 +132,12 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
     let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
 
     let is_fresh = try!(is_fresh(&old_loc, new_fingerprint.as_slice()));
-    let layout = cx.layout(kind);
     let pairs = vec![(old_loc, new_loc.clone()),
-                     (layout.old_native(pkg), layout.native(pkg))];
+                     (cx.layout(kind).old_native(pkg),
+                      cx.layout(kind).native(pkg))];
+
+    let native_dir = cx.layout(kind).native(pkg);
+    cx.compilation.native_dirs.insert(pkg.get_package_id().clone(), native_dir);
 
     Ok(prepare(is_fresh, new_loc, new_fingerprint, pairs))
 }
