@@ -5,7 +5,7 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util;
 use util::{CargoResult, ChainError, internal, Config, profile};
 
-use super::{Kind, KindPlugin, KindTarget};
+use super::{Kind, KindPlugin, KindTarget, Compilation};
 use super::layout::{Layout, LayoutProxy};
 
 #[deriving(Show)]
@@ -21,6 +21,7 @@ pub struct Context<'a, 'b> {
     pub config: &'b mut Config<'b>,
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap,
+    pub compilation: Compilation,
 
     env: &'a str,
     host: Layout,
@@ -59,6 +60,7 @@ impl<'a, 'b> Context<'a, 'b> {
             target_exe: target_exe,
             host_dylib: host_dylib,
             requirements: HashMap::new(),
+            compilation: Compilation::new(),
         })
     }
 
@@ -121,6 +123,9 @@ impl<'a, 'b> Context<'a, 'b> {
         for target in targets.filter(|t| t.get_profile().is_compile()) {
             self.build_requirements(pkg, target, Target, &mut HashSet::new());
         }
+
+        self.compilation.root_output = self.layout(KindTarget).proxy().dest().clone();
+        self.compilation.deps_output = self.layout(KindTarget).proxy().deps().clone();
 
         Ok(())
     }

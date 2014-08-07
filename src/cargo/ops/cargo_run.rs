@@ -16,13 +16,13 @@ pub fn run(manifest_path: &Path,
     try!(src.update());
     let root = try!(src.get_root_package());
 
-    try!(ops::compile(manifest_path, options));
+    let compile = try!(ops::compile(manifest_path, options));
     let exe = manifest_path.dir_path().join("target").join(root.get_name());
     let exe = match exe.path_relative_from(&os::getcwd()) {
         Some(path) => path,
         None => exe,
     };
-    let process = process(exe).args(args);
+    let process = compile.process(exe).args(args);
 
     try!(options.shell.status("Running", process.to_string()));
     Ok(process.exec().err())

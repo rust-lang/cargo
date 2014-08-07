@@ -605,17 +605,51 @@ test!(test_dylib {
             [[lib]]
             name = "foo"
             crate_type = ["dylib"]
+
+            [dependencies.bar]
+            path = "bar"
         "#)
         .file("src/lib.rs", "
+              extern crate bar;
+
+              pub fn bar() { bar::baz(); }
+
             #[test]
-            fn foo() {}
+            fn foo() { bar(); }
+        ")
+        .file("tests/test.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn foo() { foo::bar(); }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "bar"
+            crate_type = ["dylib"]
+        "#)
+        .file("bar/src/lib.rs", "
+             pub fn baz() {}
         ");
 
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
+{compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo-[..]
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]test[..]test-[..]
 
 running 1 test
 test foo ... ok
@@ -635,8 +669,16 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\
+{fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo-[..]
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]test[..]test-[..]
 
 running 1 test
 test foo ... ok
