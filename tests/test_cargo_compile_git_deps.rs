@@ -718,14 +718,7 @@ test!(dep_with_submodule {
     let git_root = git_project.url();
 
     assert_that(project.cargo_process("cargo-build"),
-        execs()
-        .with_stdout(format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}#[..])\n\
-                              {} foo v0.5.0 ({})\n",
-                             UPDATING, git_root,
-                             COMPILING, git_root,
-                             COMPILING, root))
-        .with_stderr(""));
+        execs().with_stderr("").with_status(0));
 })
 
 test!(two_deps_only_update_one {
