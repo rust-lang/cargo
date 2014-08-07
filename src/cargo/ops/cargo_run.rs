@@ -12,7 +12,7 @@ pub fn run(manifest_path: &Path,
         return Err(human("`src/main.rs` must be present for `cargo run`"))
     }
 
-    let mut src = PathSource::for_path(&manifest_path.dir_path());
+    let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(src.update());
     let root = try!(src.get_root_package());
 

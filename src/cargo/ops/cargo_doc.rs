@@ -12,7 +12,7 @@ pub struct DocOptions<'a> {
 
 pub fn doc(manifest_path: &Path,
            options: &mut DocOptions) -> CargoResult<()> {
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
 

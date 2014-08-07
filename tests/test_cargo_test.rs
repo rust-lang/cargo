@@ -35,14 +35,14 @@ test!(cargo_test_simple {
 
     assert_that(p.process(cargo_dir().join("cargo-test")),
         execs().with_stdout(format!("\
-{} foo v0.5.0 (file:{})
+{} foo v0.5.0 ({})
 {} target[..]test[..]foo
 
 running 1 test
 test test_hello ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n",
-        COMPILING, p.root().display(),
+        COMPILING, p.url(),
         RUNNING)));
 })
 
@@ -101,7 +101,7 @@ test!(cargo_test_failing_test {
 
     assert_that(p.process(cargo_dir().join("cargo-test")),
         execs().with_stdout(format!("\
-{} foo v0.5.0 (file:{})
+{} foo v0.5.0 ({})
 {} target[..]test[..]foo
 
 running 1 test
@@ -122,7 +122,7 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
 
 ",
-        COMPILING, p.root().display(), RUNNING,
+        COMPILING, p.url(), RUNNING,
         sep = path::SEP))
               .with_stderr(format!("\
 task '<main>' failed at 'Some tests failed', [..]
@@ -166,7 +166,7 @@ test!(test_with_lib_dep {
 
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
-{} foo v0.0.1 (file:{})
+{} foo v0.0.1 ({})
 {running} target[..]test[..]baz-[..]
 
 running 1 test
@@ -189,7 +189,7 @@ test foo_0 ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(test_with_deep_lib_dep {
@@ -228,8 +228,8 @@ test!(test_with_deep_lib_dep {
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
-{compiling} bar v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir})
 {running} target[..]
 
 running 1 test
@@ -245,7 +245,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 test!(external_test_explicit {
@@ -275,7 +275,7 @@ test!(external_test_explicit {
 
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
-{} foo v0.0.1 (file:{})
+{} foo v0.0.1 ({})
 {running} target[..]test[..]foo-[..]
 
 running 1 test
@@ -297,7 +297,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(external_test_implicit {
@@ -323,7 +323,7 @@ test!(external_test_implicit {
 
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
-{} foo v0.0.1 (file:{})
+{} foo v0.0.1 ({})
 {running} target[..]test[..]external-[..]
 
 running 1 test
@@ -345,7 +345,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(dont_run_examples {
@@ -381,7 +381,7 @@ test!(pass_through_command_line {
     assert_that(p.cargo_process("cargo-test").arg("bar"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo
 
 running 1 test
@@ -397,12 +397,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 
     assert_that(p.cargo_process("cargo-test").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo
 
 running 1 test
@@ -418,7 +418,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 // Regression test for running cargo-test twice with
@@ -466,7 +466,7 @@ test!(lib_bin_same_name {
 
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
-{} foo v0.0.1 (file:{})
+{} foo v0.0.1 ({})
 {running} target[..]test[..]foo-[..]
 
 running 1 test
@@ -488,7 +488,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        COMPILING, p.root().display(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 })
 
 test!(lib_with_standard_name {
@@ -516,7 +516,7 @@ test!(lib_with_standard_name {
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} syntax v0.0.1 (file:{dir})
+{compiling} syntax v0.0.1 ({dir})
 {running} target[..]test[..]test-[..]
 
 running 1 test
@@ -525,7 +525,7 @@ test test ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 test!(lib_with_standard_name2 {
@@ -555,7 +555,7 @@ test!(lib_with_standard_name2 {
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} syntax v0.0.1 (file:{dir})
+{compiling} syntax v0.0.1 ({dir})
 {running} target[..]test[..]syntax-[..]
 
 running 1 test
@@ -564,7 +564,7 @@ test test ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 test!(bin_there_for_integration {
@@ -614,7 +614,7 @@ test!(test_dylib {
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo-[..]
 
 running 1 test
@@ -630,12 +630,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
     p.root().move_into_the_past().assert();
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{fresh} foo v0.0.1 (file:{dir})
+{fresh} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo-[..]
 
 running 1 test
@@ -651,7 +651,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        fresh = FRESH, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 test!(test_twice_with_build_cmd {
@@ -671,7 +671,7 @@ test!(test_twice_with_build_cmd {
     assert_that(p.cargo_process("cargo-test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo-[..]
 
 running 1 test
@@ -687,12 +687,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo-test")),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{fresh} foo v0.0.1 (file:{dir})
+{fresh} foo v0.0.1 ({dir})
 {running} target[..]test[..]foo-[..]
 
 running 1 test
@@ -708,5 +708,5 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        fresh = FRESH, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.root().display()).as_slice()));
+                       dir = p.url()).as_slice()));
 })

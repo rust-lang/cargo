@@ -9,7 +9,6 @@ use cargo_toml = util::toml;
 
 pub struct Config<'a> {
     home_path: Path,
-    update_remotes: bool,
     shell: &'a mut MultiShell,
     jobs: uint,
     target: Option<String>,
@@ -19,7 +18,6 @@ pub struct Config<'a> {
 
 impl<'a> Config<'a> {
     pub fn new<'a>(shell: &'a mut MultiShell,
-                   update_remotes: bool,
                    jobs: Option<uint>,
                    target: Option<String>) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
@@ -30,7 +28,6 @@ impl<'a> Config<'a> {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
-            update_remotes: update_remotes,
             shell: shell,
             jobs: jobs.unwrap_or(os::num_cpus()),
             target: target,
@@ -51,10 +48,6 @@ impl<'a> Config<'a> {
 
     pub fn shell(&mut self) -> &mut MultiShell {
         &mut *self.shell
-    }
-
-    pub fn update_remotes(&mut self) -> bool {
-        self.update_remotes
     }
 
     pub fn jobs(&self) -> uint {

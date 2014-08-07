@@ -2,9 +2,10 @@ use std::fmt::{Show,Formatter};
 use std::fmt;
 use std::hash::Hasher;
 use std::hash::sip::SipHasher;
-use std::str;
+use std::mem;
+use url::{mod, Url};
 
-use core::source::{Source, SourceId, GitKind, Location, Remote, Local};
+use core::source::{Source, SourceId, GitKind};
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
@@ -33,8 +34,8 @@ impl<'a, 'b> GitSource<'a, 'b> {
             _ => fail!("Not a git source; id={}", source_id)
         };
 
-        let remote = GitRemote::new(source_id.get_location());
-        let ident = ident(source_id.get_location());
+        let remote = GitRemote::new(source_id.get_url());
+        let ident = ident(source_id.get_url());
 
         let db_path = config.git_db_path()
             .join(ident.as_slice());
@@ -59,28 +60,20 @@ impl<'a, 'b> GitSource<'a, 'b> {
         }
     }
 
-    pub fn get_location(&self) -> &Location {
-        self.remote.get_location()
+    pub fn get_url(&self) -> &Url {
+        self.remote.get_url()
     }
 }
 
-fn ident(location: &Location) -> String {
+fn ident(url: &Url) -> String {
     let hasher = SipHasher::new_with_keys(0,0);
 
     // FIXME: this really should be able to not use to_str() everywhere, but the
     //        compiler seems to currently ask for static lifetimes spuriously.
     //        Perhaps related to rust-lang/rust#15144
-    let ident = match *location {
-        Local(ref path) => {
-            let last = path.components().last().unwrap();
-            str::from_utf8(last).unwrap().to_string()
-        }
-        Remote(ref url) => {
-            let path = url.path().unwrap().connect("/");
-            let path = canonicalize_url(path.as_slice());
-            path.as_slice().split('/').last().unwrap().to_string()
-        }
-    };
+    let url = canonicalize_url(url);
+    let ident = url.path().unwrap_or(&[])
+                   .last().map(|a| a.clone()).unwrap_or(String::new());
 
     let ident = if ident.as_slice() == "" {
         "_empty".to_string()
@@ -88,57 +81,64 @@ fn ident(location: &Location) -> String {
         ident
     };
 
-    let location = canonicalize_url(location.to_string().as_slice());
-
-    format!("{}-{}", ident, to_hex(hasher.hash(&location.as_slice())))
-}
-
-fn strip_trailing_slash(path: &str) -> &str {
-    // Remove the trailing '/' so that 'split' doesn't give us
-    // an empty string, making '../foo/' and '../foo' both
-    // result in the name 'foo' (#84)
-    if path.as_bytes().last() != Some(&('/' as u8)) {
-        path.clone()
-    } else {
-        path.slice(0, path.len() - 1)
-    }
+    format!("{}-{}", ident, to_hex(hasher.hash(&url)))
 }
 
 // Some hacks and heuristics for making equivalent URLs hash the same
-pub fn canonicalize_url(url: &str) -> String {
-    let url = strip_trailing_slash(url);
+pub fn canonicalize_url(url: &Url) -> Url {
+    let mut url = url.clone();
+
+    // Strip a trailing slash
+    match url.scheme_data {
+        url::RelativeSchemeData(ref mut rel) => {
+            if rel.path.last().map(|s| s.is_empty()).unwrap_or(false) {
+                rel.path.pop();
+            }
+        }
+        _ => {}
+    }
 
     // HACKHACK: For github URL's specifically just lowercase
-    // everything.  GitHub traits both the same, but they hash
+    // everything.  GitHub treats both the same, but they hash
     // differently, and we're gonna be hashing them. This wants a more
     // general solution, and also we're almost certainly not using the
     // same case conversion rules that GitHub does. (#84)
-
-    let lower_url = url.chars().map(|c|c.to_lowercase()).collect::<String>();
-    let url = if lower_url.as_slice().contains("github.com") {
-        if lower_url.as_slice().starts_with("https") {
-            lower_url
-        } else {
-            let pos = lower_url.as_slice().find_str("://").unwrap_or(0);
-            "https".to_string() + lower_url.as_slice().slice_from(pos)
+    if url.domain() == Some("github.com") {
+        url.scheme = "https".to_string();
+        match url.scheme_data {
+            url::RelativeSchemeData(ref mut rel) => {
+                rel.port = "443".to_string();
+                let path = mem::replace(&mut rel.path, Vec::new());
+                rel.path = path.move_iter().map(|s| {
+                    s.as_slice().chars().map(|c| c.to_lowercase()).collect()
+                }).collect();
+            }
+            _ => {}
         }
-    } else {
-        url.to_string()
-    };
+    }
 
     // Repos generally can be accessed with or w/o '.git'
-    let url = if !url.as_slice().ends_with(".git") {
-        url
-    } else {
-        url.as_slice().slice(0, url.len() - 4).to_string()
-    };
+    match url.scheme_data {
+        url::RelativeSchemeData(ref mut rel) => {
+            let needs_chopping = {
+                let last = rel.path.last().map(|s| s.as_slice()).unwrap_or("");
+                last.ends_with(".git")
+            };
+            if needs_chopping {
+                let last = rel.path.pop().unwrap();
+                let last = last.as_slice();
+                rel.path.push(last.slice_to(last.len() - 4).to_string())
+            }
+        }
+        _ => {}
+    }
 
     return url;
 }
 
 impl<'a, 'b> Show for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.get_location()));
+        try!(write!(f, "git repo at {}", self.remote.get_url()));
 
         match self.reference {
             Master => Ok(()),
@@ -159,11 +159,12 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
         let actual_rev = self.remote.rev_for(&self.db_path,
                                              self.reference.as_slice());
-        let should_update = self.config.update_remotes() || actual_rev.is_err();
+        let should_update = actual_rev.is_err() ||
+                            self.source_id.precise.is_none();
 
         let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",
-                format!("git repository `{}`", self.remote.get_location())));
+                format!("git repository `{}`", self.remote.get_url())));
 
             log!(5, "updating git source `{}`", self.remote);
             let repo = try!(self.remote.checkout(&self.db_path));
@@ -201,47 +202,46 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 #[cfg(test)]
 mod test {
     use url::Url;
-    use core::source::Remote;
     use super::ident;
     use util::ToUrl;
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {
-        let ident = ident(&Remote(url("https://github.com/carlhuda/cargo")));
-        assert_eq!(ident.as_slice(), "cargo-0eed735c8ffd7c88");
+        let ident = ident(&url("https://github.com/carlhuda/cargo"));
+        assert_eq!(ident.as_slice(), "cargo-51d6ede913e3e1d5");
     }
 
     #[test]
     pub fn test_url_to_path_ident_without_path() {
-        let ident = ident(&Remote(url("https://github.com")));
-        assert_eq!(ident.as_slice(), "_empty-fc065c9b6b16fc00");
+        let ident = ident(&url("https://github.com"));
+        assert_eq!(ident.as_slice(), "_empty-eba8a1ec0f6907fb");
     }
 
     #[test]
     fn test_canonicalize_idents_by_stripping_trailing_url_slash() {
-        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston/")));
-        let ident2 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
+        let ident1 = ident(&url("https://github.com/PistonDevelopers/piston/"));
+        let ident2 = ident(&url("https://github.com/PistonDevelopers/piston"));
         assert_eq!(ident1, ident2);
     }
 
     #[test]
     fn test_canonicalize_idents_by_lowercasing_github_urls() {
-        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
-        let ident2 = ident(&Remote(url("https://github.com/pistondevelopers/piston")));
+        let ident1 = ident(&url("https://github.com/PistonDevelopers/piston"));
+        let ident2 = ident(&url("https://github.com/pistondevelopers/piston"));
         assert_eq!(ident1, ident2);
     }
 
     #[test]
     fn test_canonicalize_idents_by_stripping_dot_git() {
-        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
-        let ident2 = ident(&Remote(url("https://github.com/PistonDevelopers/piston.git")));
+        let ident1 = ident(&url("https://github.com/PistonDevelopers/piston"));
+        let ident2 = ident(&url("https://github.com/PistonDevelopers/piston.git"));
         assert_eq!(ident1, ident2);
     }
 
     #[test]
     fn test_canonicalize_idents_different_protocls() {
-        let ident1 = ident(&Remote(url("https://github.com/PistonDevelopers/piston")));
-        let ident2 = ident(&Remote(url("git://github.com/PistonDevelopers/piston")));
+        let ident1 = ident(&url("https://github.com/PistonDevelopers/piston"));
+        let ident2 = ident(&url("git://github.com/PistonDevelopers/piston"));
         assert_eq!(ident1, ident2);
     }
 

@@ -15,13 +15,12 @@ use util::{CargoResult, human};
 use cargo_toml = util::toml;
 
 pub fn generate_lockfile(manifest_path: &Path,
-                         shell: &mut MultiShell,
-                         update: bool)
+                         shell: &mut MultiShell)
                          -> CargoResult<()> {
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
 
     // TODO: Move this into PathSource
@@ -31,7 +30,7 @@ pub fn generate_lockfile(manifest_path: &Path,
     let source_ids = package.get_source_ids();
 
     let resolve = {
-        let mut config = try!(Config::new(shell, update, None, None));
+        let mut config = try!(Config::new(shell, None, None));
 
         let mut registry = PackageRegistry::new(&mut config);
         try!(registry.add_sources(source_ids));
@@ -47,7 +46,7 @@ pub fn generate_lockfile(manifest_path: &Path,
 pub fn update_lockfile(manifest_path: &Path,
                        shell: &mut MultiShell,
                        to_update: Option<String>) -> CargoResult<()> {
-    let mut source = PathSource::for_path(&manifest_path.dir_path());
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
 
@@ -58,7 +57,7 @@ pub fn update_lockfile(manifest_path: &Path,
         None => return Err(human("A Cargo.lock must exist before it is updated"))
     };
 
-    let mut config = try!(Config::new(shell, true, None, None));
+    let mut config = try!(Config::new(shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
 
     let sources = match to_update {
@@ -117,11 +116,6 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
 
 pub fn write_resolve(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
     let loc = pkg.get_root().join("Cargo.lock");
-    match load_lockfile(&loc, pkg.get_package_id().get_source_id()) {
-        Ok(Some(ref prev_resolve)) if prev_resolve == resolve => return Ok(()),
-        _ => {}
-    }
-
 
     let mut e = Encoder::new();
     resolve.encode(&mut e).unwrap();

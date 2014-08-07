@@ -263,11 +263,12 @@ test!(linker_and_ar {
     -C ar=my-ar-tool -C linker=my-linker-tool \
     -L {dir}{sep}target{sep}{target} \
     -L {dir}{sep}target{sep}{target}{sep}deps`
-{compiling} foo v0.5.0 (file:{dir})
+{compiling} foo v0.5.0 ({url})
 ",
                             running = RUNNING,
                             compiling = COMPILING,
                             dir = p.root().display(),
+                            url = p.url(),
                             target = target,
                             sep = path::SEP,
                             ).as_slice()));

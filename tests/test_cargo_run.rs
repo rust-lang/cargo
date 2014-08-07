@@ -1,6 +1,6 @@
 use std::path;
 
-use support::{project, execs};
+use support::{project, execs, path2url};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that, existing_file};
 
@@ -21,13 +21,13 @@ test!(simple {
 
     assert_that(p.cargo_process("cargo-run"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 (file:{dir})
+{compiling} foo v0.0.1 ({dir})
 {running} `target{sep}foo`
 hello
 ",
         compiling = COMPILING,
         running = RUNNING,
-        dir = p.root().display(),
+        dir = path2url(p.root()),
         sep = path::SEP).as_slice()));
     assert_that(&p.bin("foo"), existing_file());
 })
