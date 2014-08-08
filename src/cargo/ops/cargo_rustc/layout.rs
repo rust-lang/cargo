@@ -3,46 +3,48 @@
 //! The directory layout is a little tricky at times, hence a separate file to
 //! house this logic. The current layout looks like this:
 //!
-//!     # This is the root directory for all output, the top-level package
-//!     # places all of its output here.
-//!     target/
+//! ```ignore
+//! # This is the root directory for all output, the top-level package
+//! # places all of its output here.
+//! target/
 //!
-//!         # This is the root directory for all output of *dependencies*
-//!         deps/
+//!     # This is the root directory for all output of *dependencies*
+//!     deps/
 //!
-//!         # This is the location at which the output of all custom build
-//!         # commands are rooted
-//!         native/
+//!     # This is the location at which the output of all custom build
+//!     # commands are rooted
+//!     native/
 //!
-//!             # Each package gets its own directory for where its output is
-//!             # placed. We can't track exactly what's getting put in here, so
-//!             # we just assume that all relevant output is in these
-//!             # directories.
-//!             $pkg1/
-//!             $pkg2/
-//!             $pkg3/
+//!         # Each package gets its own directory for where its output is
+//!         # placed. We can't track exactly what's getting put in here, so
+//!         # we just assume that all relevant output is in these
+//!         # directories.
+//!         $pkg1/
+//!         $pkg2/
+//!         $pkg3/
 //!
-//!         # Hidden directory that holds all of the fingerprint files for all
-//!         # packages
-//!         .fingerprint/
+//!     # Hidden directory that holds all of the fingerprint files for all
+//!     # packages
+//!     .fingerprint/
 //!
-//!         # This is a temporary directory as part of the build process. When a
-//!         # build starts, it initially moves the old `deps` directory to this
-//!         # location. This is done to ensure that there are no stale artifacts
-//!         # lying around in the build directory which may cause a build to
-//!         # succeed where it would fail elsewhere.
-//!         #
-//!         # If a package is determined to be fresh, its files are moved out of
-//!         # this directory and back into `deps`.
-//!         old-deps/
+//!     # This is a temporary directory as part of the build process. When a
+//!     # build starts, it initially moves the old `deps` directory to this
+//!     # location. This is done to ensure that there are no stale artifacts
+//!     # lying around in the build directory which may cause a build to
+//!     # succeed where it would fail elsewhere.
+//!     #
+//!     # If a package is determined to be fresh, its files are moved out of
+//!     # this directory and back into `deps`.
+//!     old-deps/
 //!
-//!         # Similar to old-deps, this is where all of the output under
-//!         # `target/` is moved at the start of a build.
-//!         old-root/
+//!     # Similar to old-deps, this is where all of the output under
+//!     # `target/` is moved at the start of a build.
+//!     old-root/
 //!
-//!         # Same as the two above old directories
-//!         old-native/
-//!         old-fingerprint/
+//!     # Same as the two above old directories
+//!     old-native/
+//!     old-fingerprint/
+//! ```
 
 use std::io;
 use std::io::{fs, IoResult};
