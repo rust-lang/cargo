@@ -522,7 +522,7 @@ code:not(.highlight) {
 main {
   display: flex;
   flex-direction: column;
-  width: 900px;
+  max-width: 900px;
   margin-bottom: 10px;
   background-color: #f9f7ec;
   padding: 15px;
@@ -569,29 +569,31 @@ pre {
   margin: 10px 0;
   border: 1px solid #cad0d0;
   border-radius: 4px;
-  line-height: 120%; }
+  line-height: 120%;
+  max-width: calc(100vw - 45px);
+  overflow-x: auto; }
 
-/* line 139, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 141, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 footer {
   margin-top: 10px;
   border-top: 1px solid #b64790;
   padding-top: 10px;
   width: 100%;
   text-align: center; }
-  /* line 146, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+  /* line 148, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
   footer a {
     color: #b64790;
     text-decoration: none; }
-    /* line 150, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+    /* line 152, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
     footer a:hover {
       text-decoration: underline; }
 
-/* line 156, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 158, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 .headerlink {
   display: none;
   text-decoration: none; }
 
-/* line 161, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
+/* line 163, /home/wycats/Code/cargo-website/source/stylesheets/all.css.scss */
 .fork-me {
   position: absolute;
   top: 0;

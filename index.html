@@ -27,97 +27,78 @@ the <code>rustup</code> script:</p>
 <pre><code class="highlight shell"><span class="gp">$ </span>curl www.rust-lang.org/rustup.sh | sudo bash
 </code></pre>
 
-<p>This will get you the latest nightly build for your platform along with
-the latest Cargo. You can run this every day to get the latest updates.</p>
+<p>This will get you the latest Rust nightly for your platform along with
+the latest Cargo. You should run this script almost every day to get the latest updates.</p>
+
+<p>If you are on Windows, you can directly download the latest <a href="http://static.rust-lang.org/dist/rust-nightly-install.exe">Rust</a>
+and <a href="http://static.rust-lang.org/cargo-dist/cargo-nightly-win.tar.gz">Cargo</a> nightlies.  </p>
+
+<p>Alternatively, you can build Cargo from source.</p>
 
 <h1>Let&rsquo;s Get Started</h1>
 
-<p>To start, add a <code>Cargo.toml</code> to the root of your project. Here&rsquo;s a
-simple one to get you started.</p>
-<pre><code class="highlight toml"><span class="nn">[package]</span>
-
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
-<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@example.com"</span> <span class="p">]</span>
+<p>To start a new project with Cargo, use <code>cargo new</code>:</p>
+<pre><code class="highlight shell"><span class="gp">$ </span>cargo new hello_world --bin
 </code></pre>
 
-<p>Next, add <code>src/main.rs</code> to your project.</p>
+<p>We&rsquo;re passing <code>--bin</code> because we&rsquo;re making a binary program: if we
+were making a library, we&rsquo;d leave it off.</p>
+
+<p>Let&rsquo;s check out what Cargo has generated for us:</p>
+<pre><code class="highlight shell"><span class="gp">$ </span><span class="nb">cd </span>hello_world
+<span class="gp">$ </span>tree .
+.
+├── Cargo.toml
+└── src
+    └── main.rs
+
+1 directory, 2 files
+</code></pre>
+
+<p>This is all we need to get started. First, let&rsquo;s check out <code>Cargo.toml</code>:</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+
+<span class="py">name</span> <span class="p">=</span> <span class="s">"hello_world"</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
+<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span><span class="s">"Yehuda Katz &lt;wycats@example.com&gt;"</span><span class="p">]</span>
+</code></pre>
+
+<p>This is called a <strong>manifest</strong>, and it contains all of the metadata that Cargo
+needs to compile your project. </p>
+
+<p>Here&rsquo;s what&rsquo;s in <code>src/main.rs</code>:</p>
 <pre><code class="highlight rust"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
     <span class="nd">println!</span><span class="p">(</span><span class="s">"Hello world!"</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre>
 
-<p>And compile it:</p>
+<p>Cargo generated a &lsquo;hello world&rsquo; for us. Let&rsquo;s compile it:</p>
 
 <pre><code class="highlight"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
+
+<p>And then run it:</p>
 <pre><code class="highlight shell"><span class="gp">$ </span>./target/hello-world
 Hello world!
 </code></pre>
 
-<h1>Depend on a Library</h1>
+<p>We can also use <code>cargo run</code> to compile and then run it, all in one step:</p>
 
-<p>To depend on a library, add it to your <code>Cargo.toml</code>.</p>
-<pre><code class="highlight toml"><span class="nn">[package]</span>
+<pre><code class="highlight"><span class="gp">$</span> cargo run
+<span style="font-weight: bold"
+class="s1">   Fresh</span> hello-world v0.1.0
+<span style="font-weight: bold"
+class="s1">   Running</span> `target/hello_world`
+Hello world!</code></pre>
 
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
-<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@example.com"</span> <span class="p">]</span>
+<h1>Going Further</h1>
 
-<span class="nn">[dependencies.color]</span>
-
-<span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/bjz/color-rs.git"</span>
-</code></pre>
-
-<p>You added the <code>color</code> library, which provides simple conversions
-between different color types.</p>
-
-<p>Now, you can pull in that library using <code>extern crate</code> in
-<code>main.rs</code>.</p>
-<pre><code class="highlight rust"><span class="k">extern</span> <span class="n">crate</span> <span class="n">color</span><span class="p">;</span>
-
-<span class="k">use</span> <span class="nn">color</span><span class="p">::{</span><span class="n">RGB</span><span class="p">,</span> <span class="n">ToHSV</span><span class="p">};</span>
-
-<span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nd">println!</span><span class="p">(</span><span class="s">"Converting RGB to HSV!"</span><span class="p">);</span>
-    <span class="k">let</span> <span class="n">red</span> <span class="o">=</span> <span class="nn">RGB</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">255u8</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-    <span class="nd">println!</span><span class="p">(</span><span class="s">"HSV: {}"</span><span class="p">,</span> <span class="n">red</span><span class="py">.to_hsv</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;</span><span class="p">());</span>
-<span class="p">}</span>
-</code></pre>
-
-<p>Compile it:</p>
-
-<pre><code class="highlight"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`
-<span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
-<pre><code class="highlight shell"><span class="gp">$ </span>./target/hello-world
-Converting RGB to HSV!
-HSV: HSV <span class="o">{</span> h: 0, s: 1, v: 1 <span class="o">}</span>
-</code></pre>
-
-<h1>Recompiling</h1>
-
-<p>If you modify <code>main.rs</code> and recompile, Cargo will intelligently
-skip recompiling <code>color</code>, which is still fresh.</p>
-
-<pre><code class="highlight"><span class="gp">$</span> touch src/main.rs
-<span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">       Fresh</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
-
-<p>To update the repository from Github, pass the <code>--update-remotes</code> (or
-<code>-u</code>) flag to <code>cargo build</code>.</p>
-
-<pre><code class="highlight"><span class="gp">$</span> touch src/main.rs
-<span class="gp">$</span> cargo build -u
-<span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`
-<span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
+<p>For more details on using Cargo, check out the <a href="guide.html">Cargo Guide</a></p>
 
 
       <footer>
+        <a href="guide.html">Guide</a> |
         <a href="faq.html">Frequently Asked Questions</a> |
         <a href="manifest.html">Manifest Format</a>
       </footer>
