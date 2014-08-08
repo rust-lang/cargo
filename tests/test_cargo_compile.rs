@@ -787,16 +787,12 @@ test!(crate_version_env_vars {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
-
             name = "foo"
             version = "0.5.1-alpha.1"
             authors = ["wycats@example.com"]
-
-            [[bin]]
-            name = "foo"
         "#)
-        .file("src/foo.rs", r#"
-            use std::os;
+        .file("src/main.rs", r#"
+            extern crate foo;
 
             static VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
             static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
@@ -804,11 +800,19 @@ test!(crate_version_env_vars {
             static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
 
             fn main() {
-                println!("{}-{}-{} @ {}",
-                         VERSION_MAJOR,
-                         VERSION_MINOR,
-                         VERSION_PATCH,
-                         VERSION_PRE);
+                let s = format!("{}-{}-{} @ {}", VERSION_MAJOR, VERSION_MINOR,
+                                VERSION_PATCH, VERSION_PRE);
+                assert_eq!(s, foo::version());
+                println!("{}", s);
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn version() -> String {
+                format!("{}-{}-{} @ {}",
+                        env!("CARGO_PKG_VERSION_MAJOR"),
+                        env!("CARGO_PKG_VERSION_MINOR"),
+                        env!("CARGO_PKG_VERSION_PATCH"),
+                        env!("CARGO_PKG_VERSION_PRE"))
             }
         "#);
 
@@ -817,6 +821,8 @@ test!(crate_version_env_vars {
     assert_that(
       process(p.bin("foo")),
       execs().with_stdout("0-5-1 @ alpha.1\n"));
+
+    assert_that(p.process(cargo_dir().join("cargo-test")), execs().with_status(0));
 })
 
 test!(custom_build_in_dependency {

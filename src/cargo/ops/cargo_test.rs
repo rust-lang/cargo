@@ -21,8 +21,14 @@ pub fn run_tests(manifest_path: &Path,
             Some(path) => path,
             None => exe.clone(),
         };
-        try!(options.shell.status("Running", to_display.display()));
-        match compile.process(exe).args(args).exec() {
+        let cmd = compile.process(exe).args(args);
+        try!(options.shell.concise(|shell| {
+            shell.status("Running", to_display.display().to_string())
+        }));
+        try!(options.shell.verbose(|shell| {
+            shell.status("Running", cmd.to_string())
+        }));
+        match cmd.exec() {
             Ok(()) => {}
             Err(e) => return Ok(Some(e))
         }
@@ -58,6 +64,9 @@ pub fn run_tests(manifest_path: &Path,
             }
         }
 
+        try!(options.shell.verbose(|shell| {
+            shell.status("Running", p.to_string())
+        }));
         match p.exec() {
             Ok(()) => {}
             Err(e) => return Ok(Some(e)),
