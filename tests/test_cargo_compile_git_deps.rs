@@ -714,9 +714,6 @@ test!(dep_with_submodule {
             pub fn foo() { dep1::dep() }
         ");
 
-    let root = project.url();
-    let git_root = git_project.url();
-
     assert_that(project.cargo_process("cargo-build"),
         execs().with_stderr("").with_status(0));
 })
