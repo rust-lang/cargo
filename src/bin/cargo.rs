@@ -7,7 +7,10 @@ extern crate cargo;
 extern crate docopt;
 #[phase(plugin)] extern crate docopt_macros;
 
+use std::collections::TreeSet;
 use std::os;
+use std::io;
+use std::io::fs;
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use serialize::Encodable;
 use docopt::FlagParser;
@@ -28,10 +31,12 @@ Usage:
     cargo <command> [<args>...]
     cargo -h | --help
     cargo -V | --version
+    cargo --list
 
 Options:
     -h, --help       Display this message
     -V, --version    Print version info and exit
+    --list           List installed commands
     -v, --verbose    Use verbose output
 
 Some common cargo commands are:
@@ -54,6 +59,14 @@ See 'cargo help <command>' for more information on a specific command.
 fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo; args={}", os::args());
     shell.set_verbose(flags.flag_verbose);
+    if flags.flag_list {
+        println!("Installed Commands:");
+        for command in list_commands().iter() {
+            println!("    {}", command);
+            // TODO: it might be helpful to add result of -h to each command.
+        };
+        return Ok(None)
+    }
     let mut args = flags.arg_args.clone();
     args.insert(0, flags.arg_command.clone());
     match flags.arg_command.as_slice() {
@@ -82,29 +95,25 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
             let r = cargo::call_main_without_stdin(execute, shell,
                                                    ["-h".to_string()], false);
             cargo::process_executed(r, shell)
-        }
+        },
         orig_cmd => {
-            let cmd = if orig_cmd == "help" {
+            let is_help = orig_cmd == "help";
+            let cmd = if is_help {
                 flags.arg_args[0].as_slice()
             } else {
                 orig_cmd
             };
-            let command = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
-            let mut command = match os::self_exe_path() {
-                Some(path) => {
-                    let p1 = path.join("../lib/cargo").join(command.as_slice());
-                    let p2 = path.join(command.as_slice());
-                    if p1.exists() {
-                        Command::new(p1)
-                    } else if p2.exists() {
-                        Command::new(p2)
-                    } else {
-                        Command::new(command)
-                    }
-                }
-                None => Command::new(command),
-            };
-            let command = if orig_cmd == "help" {
+            execute_subcommand(cmd, is_help, &flags, shell)
+        }
+    }
+    Ok(None)
+}
+
+fn execute_subcommand(cmd: &str, is_help: bool, flags: &Flags, shell: &mut MultiShell) -> () {
+    match find_command(cmd) {
+        Some(command) => {
+            let mut command = Command::new(command);
+            let command = if is_help {
                 command.arg("-h")
             } else {
                 command.args(flags.arg_args.as_slice())
@@ -124,12 +133,81 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
                     let msg = format!("subcommand failed with signal: {}", i);
                     handle_error(CliError::new(msg, i as uint), shell)
                 }
-                Err(_) => handle_error(CliError::new("No such subcommand", 127),
-                                       shell)
+                Err(io::IoError{kind, ..}) if kind == io::FileNotFound =>
+                    handle_error(CliError::new("No such subcommand", 127), shell),
+                Err(err) => handle_error(
+                    CliError::new(
+                        format!("Subcommand failed to run: {}", err), 127),
+                    shell)
+            }
+        },
+        None => handle_error(CliError::new("No such subcommand", 127), shell)
+    }
+}
+
+/// List all runnable commands. find_command should always succeed
+/// if given one of returned command.
+fn list_commands() -> TreeSet<String> {
+    let command_prefix = "cargo-";
+    let mut commands = TreeSet::new();
+    for dir in list_command_directory().iter() {
+        let entries = match fs::readdir(dir) {
+            Ok(entries) => entries,
+            _ => continue
+        };
+        for entry in entries.iter() {
+            let filename = match entry.filename_str() {
+                Some(filename) => filename,
+                _ => continue
+            };
+            if filename.starts_with(command_prefix) &&
+                    filename.ends_with(os::consts::EXE_SUFFIX) &&
+                    is_executable(entry) {
+                let command = filename.slice(
+                    command_prefix.len(),
+                    filename.len() - os::consts::EXE_SUFFIX.len());
+                commands.insert(String::from_str(command));
             }
         }
     }
-    Ok(None)
+    commands
+}
+
+fn is_executable(path: &Path) -> bool {
+    match fs::stat(path) {
+        Ok(io::FileStat{kind, perm, ..}) =>
+            (kind == io::TypeFile) && perm.contains(io::OtherExecute),
+        _ => false
+    }
+}
+
+/// Get `Command` to run given command.
+fn find_command(cmd: &str) -> Option<Path> {
+    let command_exe = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
+    let dirs = list_command_directory();
+    let mut command_paths = dirs.iter().map(|dir| dir.join(command_exe.as_slice()));
+    command_paths.find(|path| path.exists())
+}
+
+/// List candidate locations where subcommands might be installed.
+fn list_command_directory() -> Vec<Path> {
+    let mut dirs = vec![];
+    match os::self_exe_path() {
+        Some(path) => {
+            dirs.push(path.join("../lib/cargo"));
+            dirs.push(path);
+        },
+        None => {}
+    };
+    match std::os::getenv("PATH") {
+        Some(val) => {
+            for dir in os::split_paths(val).iter() {
+                dirs.push(Path::new(dir))
+            }
+        },
+        None => {}
+    };
+    dirs
 }
 
 #[deriving(Encodable)]
