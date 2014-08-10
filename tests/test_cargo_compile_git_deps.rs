@@ -783,3 +783,72 @@ test!(two_deps_only_update_one {
                              UPDATING, git1.url()))
         .with_stderr(""));
 })
+
+test!(stale_cached_version {
+    let bar = git_repo("meta-dep", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+    }).assert();
+
+    // Update the git database in the cache with the current state of the git
+    // repo
+    let foo = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.bar]
+            git = '{}'
+        "#, bar.url()))
+        .file("src/main.rs", r#"
+            extern crate bar;
+
+            fn main() { assert_eq!(bar::bar(), 1) }
+        "#);
+
+    assert_that(foo.cargo_process("cargo-build"), execs().with_status(0));
+    assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
+
+    // Update the repo, and simulate someone else updating the lockfile and then
+    // us pulling it down.
+    File::create(&bar.root().join("src/lib.rs")).write_str(r#"
+        pub fn bar() -> int { 1 + 0 }
+    "#).assert();
+    bar.process("git").args(["add", "."]).exec_with_output().assert();
+    bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
+       .assert();
+    let rev = bar.process("git").args(["rev-parse", "HEAD"])
+                 .exec_with_output().assert();
+    let rev = String::from_utf8(rev.output).unwrap();
+
+    File::create(&foo.root().join("Cargo.lock")).write_str(format!(r#"
+        [root]
+        name = "foo"
+        version = "0.0.0"
+        dependencies = [
+         'bar 0.0.0 (git+{url}#{hash})'
+        ]
+
+        [[package]]
+        name = "bar"
+        version = "0.0.0"
+        source = 'git+{url}#{hash}'
+    "#, url = bar.url(), hash = rev).as_slice()).assert();
+
+    // Now build!
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} git repository `{bar}`
+{compiling} bar v0.0.0 ({bar}#[..])
+{compiling} foo v0.0.0 ({foo})
+", updating = UPDATING, compiling = COMPILING, bar = bar.url(), foo = foo.url())));
+    assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
+})

@@ -152,6 +152,10 @@ impl GitRemote {
 
     pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
                            -> CargoResult<GitRevision> {
+        // Make sure we only rev-parse a success if the reference is actually
+        // an object in the git database. Git will otherwise just verify that
+        // it's a 40-length hex string (almost always true)
+        let reference = format!("{}^{{object}}", reference.as_slice());
         Ok(GitRevision(git_output!(*path, "rev-parse", reference.as_slice())))
     }
 
