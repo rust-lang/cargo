@@ -7,7 +7,7 @@ dependencies = [
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#934e093047ae15432fcc772d4e01fdf5fd56d2fb)",
- "url 0.1.0 (git+https://github.com/servo/rust-url#143d902a9c35694e0b4835313db238c3833f0f52)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#678bb4d52638b1cfdab78ef8e521566c9240fb1a)",
 ]
 
 [[package]]
@@ -26,7 +26,7 @@ dependencies = [
 [[package]]
 name = "encoding"
 version = "0.1.0"
-source = "git+https://github.com/lifthrasiir/rust-encoding#eae7c261f50cfbdc699e9b234d2b13d4d255fd42"
+source = "git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd227fb9328b2ff8c20ca9"
 
 [[package]]
 name = "hamcrest"
@@ -46,8 +46,8 @@ source = "git+https://github.com/alexcrichton/toml-rs#934e093047ae15432fcc772d4e
 [[package]]
 name = "url"
 version = "0.1.0"
-source = "git+https://github.com/servo/rust-url#143d902a9c35694e0b4835313db238c3833f0f52"
+source = "git+https://github.com/servo/rust-url#678bb4d52638b1cfdab78ef8e521566c9240fb1a"
 dependencies = [
- "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#eae7c261f50cfbdc699e9b234d2b13d4d255fd42)",
+ "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd227fb9328b2ff8c20ca9)",
 ]
 
