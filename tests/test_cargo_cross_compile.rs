@@ -7,7 +7,7 @@ use std::os;
 use std::path;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING, cargo_dir};
+use support::{RUNNING, COMPILING, DOCTEST, cargo_dir};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -336,4 +336,55 @@ test!(plugin_with_extra_dylib_dep {
     let target = alternate();
     assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
                 execs().with_status(0));
+})
+
+test!(cross_tests {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate foo;
+            use std::os;
+            fn main() {
+                assert_eq!(os::consts::ARCH, "x86");
+            }
+            #[test] fn test() { main() }
+        "#)
+        .file("src/lib.rs", r#"
+            use std::os;
+            pub fn foo() { assert_eq!(os::consts::ARCH, "x86"); }
+            #[test] fn test_foo() { foo() }
+        "#);
+
+    let target = alternate();
+    assert_that(p.cargo_process("cargo-test").arg("--target").arg(target),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 ({foo})
+{running} target[..]{triple}[..]test[..]foo-[..]
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]{triple}[..]test[..]foo-[..]
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
+   doctest = DOCTEST)));
 })
