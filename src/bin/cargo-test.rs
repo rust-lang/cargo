@@ -56,11 +56,10 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     match err {
         None => Ok(None),
         Some(err) => {
-            let status = match err.exit {
-                Some(ExitStatus(i)) => i as uint,
-                _ => 101,
-            };
-            Err(CliError::from_boxed(err.mark_human(), status))
+            Err(match err.exit {
+                Some(ExitStatus(i)) => CliError::new("", i as uint),
+                _ => CliError::from_boxed(err.mark_human(), 101)
+            })
         }
     }
 }
