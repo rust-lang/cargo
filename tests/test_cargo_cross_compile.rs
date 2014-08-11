@@ -366,6 +366,9 @@ test!(cross_tests {
             name = "foo"
             authors = []
             version = "0.0.0"
+
+            [[bin]]
+            name = "bar"
         "#)
         .file("src/main.rs", r#"
             extern crate foo;
@@ -386,7 +389,7 @@ test!(cross_tests {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.0 ({foo})
-{running} target[..]{triple}[..]test[..]foo-[..]
+{running} target[..]{triple}[..]test[..]bar-[..]
 
 running 1 test
 test test ... ok
