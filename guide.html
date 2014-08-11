@@ -293,6 +293,62 @@ re-calculate the dependencies, and update things for us:</p>
 
 <h1>Overriding Dependencies</h1>
 
+<p>Sometimes, you may want to override one of Cargo&rsquo;s dependencies. For example,
+let&rsquo;s say you&rsquo;re working on a project, <code>conduit-static</code>, which depends on
+the package <code>conduit</code>. You find a bug in <code>conduit</code>, and you want to write a
+patch. Here&rsquo;s what <code>conduit-static</code>&rsquo;s <code>Cargo.toml</code> looks like:</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+
+<span class="py">name</span> <span class="p">=</span> <span class="s">"conduit-static"</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
+<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span><span class="s">"Yehuda Katz &lt;wycats@example.com&gt;"</span><span class="p">]</span>
+
+<span class="nn">[dependencies.conduit]</span>
+
+<span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/conduit-rust/conduit.git"</span>
+</code></pre>
+
+<p>You check out a local copy of <code>conduit</code>, let&rsquo;s say in your <code>~/src</code> directory:</p>
+<pre><code class="highlight shell"><span class="gp">$ </span><span class="nb">cd</span> ~/src
+<span class="gp">$ </span>git clone https://github.com/conduit-rust/conduit.git
+</code></pre>
+
+<p>You&rsquo;d like to have <code>conduit-static</code> use your local version of <code>conduit</code>,
+rather than the one on GitHub, while you fix the bug.</p>
+
+<p>Cargo solves this problem by allowing you to have a local configuration
+that specifies an <strong>override</strong>. If Cargo finds this configuration when
+building your package, it will use the override on your local machine
+instead of the source specified in your <code>Cargo.toml</code>.</p>
+
+<p>Cargo looks for a directory named <code>.cargo</code> up the directory hierarchy of
+your project. If your project is in <code>/Users/wycats/src/conduit-static</code>,
+it will search for a <code>.cargo</code> in:</p>
+
+<ul>
+<li><code>/Users/wycats/src/conduit-static</code></li>
+<li><code>/Users/wycats/src</code></li>
+<li><code>/Users/wycats</code></li>
+<li><code>/Users</code></li>
+<li><code>/</code></li>
+</ul>
+
+<p>This allows you to specify your overrides in a parent directory that
+includes commonly used packages that you work on locally, and share them
+with all projects.</p>
+
+<p>To specify overrides, create a <code>.cargo/config</code> file in some ancestor of
+your project&rsquo;s directory (common places to put it is in the root of
+your code directory or in your home directory).</p>
+
+<p>Inside that file, put this:</p>
+<pre><code class="highlight plaintext">paths = ["/home/you/src/conduit"]
+</code></pre>
+
+<p>This array should be filled with directories that contain a <code>Cargo.toml</code>. In
+this instance, we&rsquo;re just adding <code>conduit</code>, so it will be the only one that&rsquo;s
+overridden.</p>
+
 <h1>Tests</h1>
 
 <p>Cargo can run your tests with the <code>cargo test</code> command. Cargo runs tests in two
@@ -322,8 +378,6 @@ correct number of tests.</p>
 script:
   - cargo build --verbose
   - cargo test --verbose
-env:
-  - LD_LIBRARY_PATH=/usr/local/lib
 </code></pre>
 
 
