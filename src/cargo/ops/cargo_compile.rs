@@ -42,12 +42,14 @@ pub struct CompileOptions<'a> {
     pub shell: &'a mut MultiShell,
     pub jobs: Option<uint>,
     pub target: Option<&'a str>,
+    pub dev_deps: bool,
 }
 
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
                -> CargoResult<ops::Compilation> {
-    let CompileOptions { update, env, ref mut shell, jobs, target } = *options;
+    let CompileOptions { update, env, ref mut shell, jobs, target,
+                         dev_deps } = *options;
     let target = target.map(|s| s.to_string());
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
@@ -79,6 +81,9 @@ pub fn compile(manifest_path: &Path,
 
         let mut config = try!(Config::new(*shell, jobs, target.clone()));
         let mut registry = PackageRegistry::new(&mut config);
+        let dependencies = package.get_dependencies().iter().filter(|dep| {
+            dep.is_transitive() || dev_deps
+        }).map(|d| d.clone()).collect::<Vec<_>>();
 
         match try!(ops::load_lockfile(&lockfile, source_id)) {
             Some(r) => try!(add_lockfile_sources(&mut registry, &package, &r)),
@@ -86,13 +91,13 @@ pub fn compile(manifest_path: &Path,
         }
 
         let resolved = try!(resolver::resolve(package.get_package_id(),
-                                              package.get_dependencies(),
+                                              dependencies.as_slice(),
                                               &mut registry));
 
         try!(registry.add_overrides(override_ids));
         let resolved_with_overrides =
                 try!(resolver::resolve(package.get_package_id(),
-                                       package.get_dependencies(),
+                                       dependencies.as_slice(),
                                        &mut registry));
 
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {

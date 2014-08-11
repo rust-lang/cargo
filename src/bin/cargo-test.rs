@@ -46,6 +46,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         shell: shell,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|s| s.as_slice()),
+        dev_deps: true,
     };
 
     let err = try!(ops::run_tests(&root, &mut compile_opts,
