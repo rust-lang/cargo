@@ -47,6 +47,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
             shell: shell,
             jobs: options.flag_jobs,
             target: None,
+            dev_deps: false,
         },
     };
 

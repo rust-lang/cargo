@@ -1,7 +1,7 @@
 use std::io::File;
 
 use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
-use support::{COMPILING, FRESH};
+use support::{COMPILING, FRESH, RUNNING};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo;
@@ -120,16 +120,54 @@ test!(cargo_compile_with_root_dev_deps {
 
     p2.build();
     assert_that(p.cargo_process("cargo-build"),
-        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
-                                     {} foo v0.5.0 ({})\n",
-                                    COMPILING, p.url(),
-                                    COMPILING, p.url())));
+                execs().with_status(101))
+})
 
-    assert_that(&p.bin("foo"), existing_file());
+test!(cargo_compile_with_root_dev_deps_with_testing {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
 
-    assert_that(
-      cargo::util::process(p.bin("foo")),
-      execs().with_stdout("zoidberg\n"));
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dev-dependencies.bar]
+
+            version = "0.5.0"
+            path = "../bar"
+
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("src/main.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice());
+    let p2 = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn gimme() -> &'static str {
+                "zoidberg"
+            }
+        "#);
+
+    p2.build();
+    assert_that(p.cargo_process("cargo-test"),
+        execs().with_stdout(format!("\
+{compiling} bar v0.5.0 ({url})
+{compiling} foo v0.5.0 ({url})
+{running} target[..]test[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, url = p.url(), running = RUNNING)));
 })
 
 test!(cargo_compile_with_transitive_dev_deps {
