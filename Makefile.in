@@ -35,6 +35,7 @@ OPT_FLAG=
 endif
 
 export CFG_VERSION
+export CFG_DISABLE_CROSS_TESTS
 
 ifeq ($(OS),Windows_NT)
 X = .exe

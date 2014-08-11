@@ -14,6 +14,13 @@ use cargo::util::process;
 fn setup() {
 }
 
+fn disabled() -> bool {
+    match os::getenv("CFG_DISABLE_CROSS_TESTS") {
+        Some(ref s) if s.as_slice() == "1" => true,
+        _ => false,
+    }
+}
+
 fn alternate() -> &'static str {
     match os::consts::SYSNAME {
         "linux" => "i686-unknown-linux-gnu",
@@ -23,6 +30,8 @@ fn alternate() -> &'static str {
 }
 
 test!(simple_cross {
+    if disabled() { return }
+
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
@@ -43,6 +52,8 @@ test!(simple_cross {
 })
 
 test!(simple_deps {
+    if disabled() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -78,6 +89,8 @@ test!(simple_deps {
 })
 
 test!(plugin_deps {
+    if disabled() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -154,6 +167,8 @@ test!(plugin_deps {
 })
 
 test!(plugin_to_the_max {
+    if disabled() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -237,6 +252,8 @@ test!(plugin_to_the_max {
 })
 
 test!(linker_and_ar {
+    if disabled() { return }
+
     let target = alternate();
     let p = project("foo")
         .file(".cargo/config", format!(r#"
@@ -275,6 +292,8 @@ test!(linker_and_ar {
 })
 
 test!(plugin_with_extra_dylib_dep {
+    if disabled() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -339,6 +358,8 @@ test!(plugin_with_extra_dylib_dep {
 })
 
 test!(cross_tests {
+    if disabled() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
