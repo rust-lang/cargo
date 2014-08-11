@@ -391,8 +391,8 @@ impl TomlManifest {
         Ok((Manifest::new(
                 &summary,
                 targets.as_slice(),
-                &Path::new("target"),
-                &Path::new("doc"),
+                &layout.root.join("target"),
+                &layout.root.join("doc"),
                 sources,
                 match project.build {
                     Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
