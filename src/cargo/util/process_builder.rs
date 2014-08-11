@@ -59,34 +59,36 @@ impl ProcessBuilder {
                .stderr(InheritFd(2))
                .stdin(InheritFd(0));
 
-        let msg = || format!("Could not execute process `{}`",
-                             self.debug_string());
-
-        let exit = try!(command.status().map_err(|e|
-            process_error(msg(), Some(e), None, None)));
+        let exit = try!(command.status().map_err(|e| {
+            process_error(format!("Could not execute process `{}`",
+                                  self.debug_string()),
+                          Some(e), None, None)
+        }));
 
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(msg(), None, Some(&exit), None))
+            Err(process_error(format!("Process didn't exit successfully: `{}`",
+                                      self.debug_string()),
+                              None, Some(&exit), None))
         }
     }
 
     pub fn exec_with_output(&self) -> Result<ProcessOutput, ProcessError> {
         let command = self.build_command();
 
-        let msg = || format!("Could not execute process `{}`",
-                             self.debug_string());
-
         let output = try!(command.output().map_err(|e| {
-            process_error(msg(), Some(e), None, None)
+            process_error(format!("Could not execute process `{}`",
+                                  self.debug_string()),
+                          Some(e), None, None)
         }));
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(msg(), None, Some(&output.status),
-                              Some(&output)))
+            Err(process_error(format!("Process didn't exit successfully: `{}`",
+                                      self.debug_string()),
+                              None, Some(&output.status), Some(&output)))
         }
     }
 

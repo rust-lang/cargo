@@ -671,7 +671,7 @@ test!(custom_build_failure {
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(101).with_stderr(format!("\
-Could not execute process `{}` (status=101)\n\
+Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
 task '<main>' failed at 'nope', {filename}:2\n\
 \n\
@@ -732,7 +732,7 @@ test!(custom_second_build_failure {
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(101).with_stderr(format!("\
-Could not execute process `{}` (status=101)\n\
+Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
 task '<main>' failed at 'nope', {filename}:2\n\
 \n\
