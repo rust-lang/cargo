@@ -223,6 +223,10 @@ test!(test_with_deep_lib_dep {
 
             [dependencies.foo]
             path = "../foo"
+
+            [[lib]]
+            name = "bar"
+            doctest = false
         "#)
         .file("src/lib.rs", "
             extern crate foo;
@@ -256,16 +260,9 @@ test!(test_with_deep_lib_dep {
 running 1 test
 test bar_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measure
-
-{doctest} bar
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
                        ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
 
@@ -576,6 +573,7 @@ test!(lib_with_standard_name2 {
             [[lib]]
             name = "syntax"
             test = false
+            doctest = false
         "#)
         .file("src/lib.rs", "
             pub fn foo() {}
