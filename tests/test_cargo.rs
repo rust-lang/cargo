@@ -33,12 +33,23 @@ fn copied_executable_process(proj: &ProjectBuilder, name: &str, dir: &Path) -> P
         .env("HOME", Some(paths::home().as_vec()))
 }
 
+// We can't entirely obliterate PATH because windows needs it for paths to
+// things like libgcc, but we want to filter out everything which has a `cargo`
+// installation as we don't want it to muck with the --list tests
+fn new_path() -> Vec<Path> {
+    let path = os::getenv_as_bytes("PATH").unwrap_or(Vec::new());
+    os::split_paths(path).move_iter().filter(|p| {
+        !p.join(format!("cargo{}", os::consts::EXE_SUFFIX)).exists()
+    }).collect()
+}
+
 test!(list_commands_empty {
     let proj = project("list-runs");
-    let pr = copied_executable_process(&proj, "cargo", &Path::new("bin")).arg("--list");
-    assert_that(pr, execs()
-        .with_status(0)
-        .with_stdout("Installed Commands:\n"));
+    let pr = copied_executable_process(&proj, "cargo", &Path::new("bin"));
+    let new_path = os::join_paths(new_path().as_slice()).unwrap();
+    assert_that(pr.arg("--list").env("PATH", Some(new_path.as_slice())),
+                execs().with_status(0)
+                       .with_stdout("Installed Commands:\n"));
 })
 
 test!(list_commands_non_overlapping {
@@ -51,19 +62,12 @@ test!(list_commands_non_overlapping {
     let proj = fake_executable(proj, &Path::new("lib/cargo"), "cargo-3");
     let proj = fake_executable(proj, &Path::new("bin"), "cargo-2");
     let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
-    let pr = copied_executable_process(&proj, "cargo", &Path::new("bin")).arg("--list");
+    let pr = copied_executable_process(&proj, "cargo", &Path::new("bin"));
 
-    let path_test = proj.root().join("path-test");
-    // On Windows, cargo.exe seems to require some directory (
-    // I don't know which) to run properly.
-    // That's why we append to $PATH here, instead of overwriting.
-    let path = os::getenv_as_bytes("PATH").unwrap();
-    let mut components = os::split_paths(path);
-    components.push(path_test);
-    let path_var = os::join_paths(components.as_slice()).assert();
-    assert_that(
-        pr.env("PATH", Some(path_var.as_slice())),
-        execs()
-            .with_status(0)
-            .with_stdout("Installed Commands:\n   1\n   2\n   3\n"));
+    let mut path = new_path();
+    path.push(proj.root().join("path-test"));
+    let path = os::join_paths(path.as_slice()).unwrap();
+    assert_that(pr.arg("--list").env("PATH", Some(path.as_slice())),
+                execs().with_status(0)
+                       .with_stdout("Installed Commands:\n   1\n   2\n   3\n"));
 })
