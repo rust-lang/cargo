@@ -54,6 +54,7 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         shell: shell,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
+        dev_deps: false,
     };
 
     ops::compile(&root, &mut opts).map(|_| None).map_err(|err| {

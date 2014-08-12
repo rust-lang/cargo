@@ -109,6 +109,7 @@ pub struct Profile {
     opt_level: uint,
     debug: bool,
     test: bool,
+    doctest: bool,
     doc: bool,
     dest: Option<String>,
     plugin: bool,
@@ -124,6 +125,7 @@ impl Profile {
             doc: false,
             dest: None,
             plugin: false,
+            doctest: false,
         }
     }
 
@@ -132,10 +134,7 @@ impl Profile {
             env: "compile".to_string(), // run in the default environment only
             opt_level: 0,
             debug: true,
-            test: false, // whether or not to pass --test
-            dest: None,
-            plugin: false,
-            doc: false,
+            .. Profile::default()
         }
     }
 
@@ -189,6 +188,10 @@ impl Profile {
         self.test
     }
 
+    pub fn is_doctest(&self) -> bool {
+        self.doctest
+    }
+
     pub fn is_plugin(&self) -> bool {
         self.plugin
     }
@@ -221,6 +224,11 @@ impl Profile {
 
     pub fn test(mut self, test: bool) -> Profile {
         self.test = test;
+        self
+    }
+
+    pub fn doctest(mut self, doctest: bool) -> Profile {
+        self.doctest = doctest;
         self
     }
 

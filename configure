@@ -293,6 +293,7 @@ opt debug 1 "build with extra debug fun"
 opt optimize 0 "build with optimizations"
 opt nightly 0 "build nightly packages"
 opt verify-install 1 "verify installed binaries work"
+opt cross-tests 1 "run cross-compilation tests"
 valopt prefix "/usr/local" "set installation prefix"
 valopt local-rust-root "" "set prefix for local rust binary"
 

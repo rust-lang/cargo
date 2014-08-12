@@ -7,11 +7,18 @@ use std::os;
 use std::path;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING, cargo_dir};
+use support::{RUNNING, COMPILING, DOCTEST, cargo_dir};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
 fn setup() {
+}
+
+fn disabled() -> bool {
+    match os::getenv("CFG_DISABLE_CROSS_TESTS") {
+        Some(ref s) if s.as_slice() == "1" => true,
+        _ => false,
+    }
 }
 
 fn alternate() -> &'static str {
@@ -23,6 +30,8 @@ fn alternate() -> &'static str {
 }
 
 test!(simple_cross {
+    if disabled() { return }
+
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
@@ -43,6 +52,8 @@ test!(simple_cross {
 })
 
 test!(simple_deps {
+    if disabled() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -78,6 +89,8 @@ test!(simple_deps {
 })
 
 test!(plugin_deps {
+    if disabled() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -154,6 +167,8 @@ test!(plugin_deps {
 })
 
 test!(plugin_to_the_max {
+    if disabled() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -237,6 +252,8 @@ test!(plugin_to_the_max {
 })
 
 test!(linker_and_ar {
+    if disabled() { return }
+
     let target = alternate();
     let p = project("foo")
         .file(".cargo/config", format!(r#"
@@ -275,6 +292,8 @@ test!(linker_and_ar {
 })
 
 test!(plugin_with_extra_dylib_dep {
+    if disabled() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -336,4 +355,60 @@ test!(plugin_with_extra_dylib_dep {
     let target = alternate();
     assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
                 execs().with_status(0));
+})
+
+test!(cross_tests {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate foo;
+            use std::os;
+            fn main() {
+                assert_eq!(os::consts::ARCH, "x86");
+            }
+            #[test] fn test() { main() }
+        "#)
+        .file("src/lib.rs", r#"
+            use std::os;
+            pub fn foo() { assert_eq!(os::consts::ARCH, "x86"); }
+            #[test] fn test_foo() { foo() }
+        "#);
+
+    let target = alternate();
+    assert_that(p.cargo_process("cargo-test").arg("--target").arg(target),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 ({foo})
+{running} target[..]{triple}[..]test[..]bar-[..]
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]{triple}[..]test[..]foo-[..]
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
+   doctest = DOCTEST)));
 })
