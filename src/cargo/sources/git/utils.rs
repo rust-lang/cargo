@@ -152,11 +152,22 @@ impl GitRemote {
 
     pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
                            -> CargoResult<GitRevision> {
-        // Make sure we only rev-parse a success if the reference is actually
-        // an object in the git database. Git will otherwise just verify that
-        // it's a 40-length hex string (almost always true)
-        let reference = format!("{}^{{object}}", reference.as_slice());
-        Ok(GitRevision(git_output!(*path, "rev-parse", reference.as_slice())))
+        // We simultaneously want to transform the reference into a resolved
+        // revision as well as verify that the reference itself is inside the
+        // repository. Sadly for a 40-character SHA1 the call to `rev-parse`
+        // will *always* return the same string with a 0 exit status, regardless
+        // of whether it's present in the database.
+        //
+        // Later versions of git introduced a syntax for this query via
+        // `$sha1^{object}`, but older versions of git do not support this. To
+        // get around this limitation, we chop 40-character sha revisions to 39
+        // characters to get an error'd exit status if the revision is indeed
+        // not present.
+        let mut reference = reference.as_slice();
+        if reference.len() == 40 {
+            reference = reference.slice_to(39);
+        }
+        Ok(GitRevision(git_output!(*path, "rev-parse", reference)))
     }
 
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
