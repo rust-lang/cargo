@@ -33,7 +33,8 @@ else:
 platform, hash = me.strip().split(' ')
 
 tarball = 'cargo-nightly-' + triple + '.tar.gz'
-url = 'http://static.rust-lang.org/cargo-dist/' + date.strip() + '/' + tarball
+# TODO: switch this to static.rust-lang.org when the mac bots are fixed
+url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/' + date.strip() + '/' + tarball
 dl_path = "target/dl/" + tarball
 dst = "target/snapshot"
 
