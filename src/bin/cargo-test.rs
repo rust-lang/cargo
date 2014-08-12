@@ -22,6 +22,7 @@ Usage:
 Options:
     -h, --help              Print this message
     -j N, --jobs N          The number of jobs to run in parallel
+    --target TRIPLE         Build for the target triple
     -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to build tests for
     -v, --verbose           Use verbose output
@@ -44,7 +45,8 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
         env: "test",
         shell: shell,
         jobs: options.flag_jobs,
-        target: None,
+        target: options.flag_target.as_ref().map(|s| s.as_slice()),
+        dev_deps: true,
     };
 
     let err = try!(ops::run_tests(&root, &mut compile_opts,
@@ -54,11 +56,10 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     match err {
         None => Ok(None),
         Some(err) => {
-            let status = match err.exit {
-                Some(ExitStatus(i)) => i as uint,
-                _ => 101,
-            };
-            Err(CliError::from_boxed(err.mark_human(), status))
+            Err(match err.exit {
+                Some(ExitStatus(i)) => CliError::new("", i as uint),
+                _ => CliError::from_boxed(err.mark_human(), 101)
+            })
         }
     }
 }

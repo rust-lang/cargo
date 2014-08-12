@@ -35,7 +35,7 @@ pub fn run_tests(manifest_path: &Path,
     }
 
     let mut libs = package.get_targets().iter().filter_map(|target| {
-        if !target.get_profile().is_test() || !target.is_lib() {
+        if !target.get_profile().is_doctest() || !target.is_lib() {
             return None
         }
         Some((target.get_src_path(), target.get_name()))

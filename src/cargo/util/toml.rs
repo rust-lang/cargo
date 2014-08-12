@@ -229,11 +229,8 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Vec<TomlTarget> {
     layout.lib.as_ref().map(|lib| {
         vec![TomlTarget {
             name: name.to_string(),
-            crate_type: None,
             path: Some(TomlPath(lib.clone())),
-            test: None,
-            plugin: None,
-            doc: None,
+            .. TomlTarget::new()
         }]
     }).unwrap_or(Vec::new())
 }
@@ -250,11 +247,8 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
         name.map(|name| {
             TomlTarget {
                 name: name,
-                crate_type: None,
                 path: Some(TomlPath(bin.clone())),
-                test: None,
-                plugin: None,
-                doc: None,
+                .. TomlTarget::new()
             }
         })
     }).collect()
@@ -265,11 +259,8 @@ fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
-                crate_type: None,
                 path: Some(TomlPath(ex.clone())),
-                test: None,
-                plugin: None,
-                doc: None,
+                .. TomlTarget::new()
             }
         })
     }).collect()
@@ -280,11 +271,8 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
-                crate_type: None,
                 path: Some(TomlPath(ex.clone())),
-                test: None,
-                plugin: None,
-                doc: None,
+                .. TomlTarget::new()
             }
         })
     }).collect()
@@ -314,12 +302,8 @@ impl TomlManifest {
             self.lib.get_ref().iter().map(|t| {
                 if layout.lib.is_some() && t.path.is_none() {
                     TomlTarget {
-                        name: t.name.clone(),
-                        crate_type: t.crate_type.clone(),
                         path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
-                        test: t.test,
-                        plugin: t.plugin,
-                        doc: t.doc,
+                        .. t.clone()
                     }
                 } else {
                     t.clone()
@@ -335,12 +319,8 @@ impl TomlManifest {
             self.bin.get_ref().iter().map(|t| {
                 if bin.is_some() && t.path.is_none() {
                     TomlTarget {
-                        name: t.name.clone(),
-                        crate_type: t.crate_type.clone(),
                         path: bin.as_ref().map(|&p| TomlPath(p.clone())),
-                        test: t.test,
-                        plugin: None,
-                        doc: t.doc,
+                        .. t.clone()
                     }
                 } else {
                     t.clone()
@@ -391,8 +371,8 @@ impl TomlManifest {
         Ok((Manifest::new(
                 &summary,
                 targets.as_slice(),
-                &Path::new("target"),
-                &Path::new("doc"),
+                &layout.root.join("target"),
+                &layout.root.join("doc"),
                 sources,
                 match project.build {
                     Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
@@ -462,6 +442,7 @@ struct TomlTarget {
     crate_type: Option<Vec<String>>,
     path: Option<TomlPath>,
     test: Option<bool>,
+    doctest: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
 }
@@ -470,6 +451,20 @@ struct TomlTarget {
 enum TomlPath {
     TomlString(String),
     TomlPath(Path),
+}
+
+impl TomlTarget {
+    fn new() -> TomlTarget {
+        TomlTarget {
+            name: String::new(),
+            crate_type: None,
+            path: None,
+            test: None,
+            doctest: None,
+            doc: None,
+            plugin: None,
+        }
+    }
 }
 
 impl TomlPath {
@@ -508,8 +503,11 @@ fn normalize(libs: &[TomlLibTarget],
             Some(false) => {}
         }
 
+        let doctest = target.doctest.unwrap_or(true);
         match target.doc {
-            Some(true) | None => ret.push(Profile::default_doc()),
+            Some(true) | None => {
+                ret.push(Profile::default_doc().doctest(doctest));
+            }
             Some(false) => {}
         }
 
