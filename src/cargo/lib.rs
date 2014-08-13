@@ -17,6 +17,7 @@ extern crate url;
 #[phase(plugin, link)] extern crate log;
 
 extern crate docopt;
+extern crate ipc;
 extern crate toml;
 #[cfg(test)] extern crate hamcrest;
 
@@ -30,7 +31,7 @@ use docopt::FlagParser;
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK};
 
-pub use util::{CargoError, CliError, CliResult, human};
+pub use util::{CargoError, CliError, CliResult, human, internal};
 
 macro_rules! some(
     ($e:expr) => (

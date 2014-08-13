@@ -34,7 +34,7 @@ use ops;
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, Wrap, config, internal, human, ChainError};
-use util::profile;
+use util::{profile, global_lock};
 
 pub struct CompileOptions<'a> {
     pub update: bool,
@@ -58,6 +58,8 @@ pub fn compile(manifest_path: &Path,
         return Err(human("The -u flag has been deprecated, please use the \
                           `cargo update` command instead"));
     }
+
+    let _guard = try!(global_lock(*shell));
 
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
