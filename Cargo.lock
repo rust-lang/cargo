@@ -5,6 +5,7 @@ dependencies = [
  "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
  "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764)",
+ "ipc 0.0.1 (git+https://github.com/alexcrichton/ipc-rs#498a0dc5984b7b36e2085f4026e0c22969abcd0e)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#934e093047ae15432fcc772d4e01fdf5fd56d2fb)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#678bb4d52638b1cfdab78ef8e521566c9240fb1a)",
@@ -32,6 +33,11 @@ source = "git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd2
 name = "hamcrest"
 version = "0.1.0"
 source = "git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764"
+
+[[package]]
+name = "ipc"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/ipc-rs#498a0dc5984b7b36e2085f4026e0c22969abcd0e"
 
 [[package]]
 name = "semver"
