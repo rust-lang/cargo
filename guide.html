@@ -78,7 +78,7 @@ needs to compile your project. </p>
 
 <p>Here&rsquo;s what&rsquo;s in <code>src/main.rs</code>:</p>
 <pre><code class="highlight rust"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nd">println!</span><span class="p">(</span><span class="s">"Hello world!"</span><span class="p">);</span>
+    <span class="nd">println!</span><span class="p">(</span><span class="s">"Hello world!"</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre>
 
@@ -86,10 +86,10 @@ needs to compile your project. </p>
 
 <pre><code class="highlight"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///Users/wycats/src/hello_world)</code></pre>
 
 <p>And then run it:</p>
-<pre><code class="highlight shell"><span class="gp">$ </span>./target/hello-world
+<pre><code class="highlight shell"><span class="gp">$ </span>./target/hello_world
 Hello world!
 </code></pre>
 
@@ -97,7 +97,7 @@ Hello world!
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">   Fresh</span> hello-world v0.1.0
+class="s1">   Fresh</span> hello-world v0.1.0 (file:///Users/wycats/src/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
 Hello world!</code></pre>
@@ -118,7 +118,7 @@ to get going.</p>
 <p>To build, just use <code>cargo build</code>:</p>
 
 <pre><code class="highlight"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git)</code></pre>
+<span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (file:///Users/wycats/src/color-rs)</code></pre>
 
 <p>This will fetch all of the dependencies and then build them, along with the
 project.</p>
@@ -161,9 +161,9 @@ between different color types.</p>
 <p>Compile it:</p>
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
-<span style="font-weight: bold" class="s1">   Compiling</span> color v1.0.0 (https://github.com/bjz/color-rs.git#bf739419)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0
-$ ./target/hello-world
+<span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
+<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0 (file:///Users/wycats/src/hello_world)
+<span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
 Converting RGB to HSV!
 HSV: HSV { h: 0, s: 1, v: 1 }</code></pre>
 
@@ -173,13 +173,14 @@ contains the exact information about which revision we used:</p>
 <span class="py">name</span> <span class="p">=</span> <span class="s">"hello_world"</span>
 <span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
 <span class="py">dependencies</span> <span class="p">=</span> <span class="p">[</span>
- <span class="s">"color 0.0.1 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4)"</span><span class="p">,</span>
+ <span class="s">"color 0.0.1 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)"</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="nn">[[package]]</span>
 <span class="py">name</span> <span class="p">=</span> <span class="s">"color"</span>
 <span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
-<span class="py">source</span> <span class="p">=</span> <span class="s">"git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4"</span>
+<span class="py">source</span> <span class="p">=</span> <span class="s">"git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98"</span>
+
 </code></pre>
 
 <p>Now, if <code>color-rs</code> gets updated, we will still build with the same revision, until
@@ -218,8 +219,8 @@ different metadata about our project. For example, we can say that we depend
 on another project:</p>
 <pre><code class="highlight toml"><span class="nn">[package]</span>
 
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
+<span class="py">name</span> <span class="p">=</span> <span class="s">"hello_world"</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
 <span class="py">authors</span> <span class="p">=</span> <span class="p">[</span><span class="s">"Yehuda Katz &lt;wycats@example.com&gt;"</span><span class="p">]</span>
 
 <span class="nn">[dependencies.color]</span>
@@ -254,8 +255,8 @@ keep track of the exact revisions: Cargo will do it for us. When we have a
 manifest like this:</p>
 <pre><code class="highlight toml"><span class="nn">[package]</span>
 
-<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span>
-<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
+<span class="py">name</span> <span class="p">=</span> <span class="s">"hello_world"</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
 <span class="py">authors</span> <span class="p">=</span> <span class="p">[</span><span class="s">"Yehuda Katz &lt;wycats@example.com&gt;"</span><span class="p">]</span>
 
 <span class="nn">[dependencies.color]</span>
@@ -269,13 +270,14 @@ manifest like this:</p>
 <span class="py">name</span> <span class="p">=</span> <span class="s">"hello_world"</span>
 <span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
 <span class="py">dependencies</span> <span class="p">=</span> <span class="p">[</span>
- <span class="s">"color 0.0.1 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b47426)"</span><span class="p">,</span>
+ <span class="s">"color 0.0.1 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)"</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="nn">[[package]]</span>
 <span class="py">name</span> <span class="p">=</span> <span class="s">"color"</span>
 <span class="py">version</span> <span class="p">=</span> <span class="s">"0.0.1"</span>
-<span class="py">source</span> <span class="p">=</span> <span class="s">"git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b47426"</span>
+<span class="py">source</span> <span class="p">=</span> <span class="s">"git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98"</span>
+
 </code></pre>
 
 <p>You can see that there&rsquo;s a lot more information here, including the exact
@@ -342,7 +344,7 @@ your project&rsquo;s directory (common places to put it is in the root of
 your code directory or in your home directory).</p>
 
 <p>Inside that file, put this:</p>
-<pre><code class="highlight plaintext">paths = ["/home/you/src/conduit"]
+<pre><code class="highlight plaintext">paths = ["/Users/wycats/src/conduit"]
 </code></pre>
 
 <p>This array should be filled with directories that contain a <code>Cargo.toml</code>. In
@@ -361,7 +363,12 @@ the files in <code>tests</code>.</p>
 
 <pre><code class="highlight"><span class="gp">$</span> cargo test
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello-world v0.1.0
+class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
+<span style="font-weight: bold"
+class="s1">   Compiling</span> hello-world v0.0.1 (file:///Users/wycats/src/hello_world)
+<span style="font-weight: bold"
+class="s1">     Running</span> target/test/hello_world-9c2b65bbb79eabce
+
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured

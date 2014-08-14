@@ -24,14 +24,14 @@
 
 <p>The easiest way to get Cargo is to get the Rust nightly build by using
 the <code>rustup</code> script:</p>
-<pre><code class="highlight shell"><span class="gp">$ </span>curl www.rust-lang.org/rustup.sh | sudo bash
+<pre><code class="highlight shell"><span class="gp">$ </span>curl https://static.rust-lang.org/rustup.sh | sudo bash
 </code></pre>
 
 <p>This will get you the latest Rust nightly for your platform along with
 the latest Cargo. You should run this script almost every day to get the latest updates.</p>
 
 <p>If you are on Windows, you can directly download the latest <a href="http://static.rust-lang.org/dist/rust-nightly-install.exe">Rust</a>
-and <a href="http://static.rust-lang.org/cargo-dist/cargo-nightly-win.tar.gz">Cargo</a> nightlies.  </p>
+and <a href="http://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-mingw32.tar.gz">Cargo</a> nightlies.  </p>
 
 <p>Alternatively, you can build Cargo from source.</p>
 
@@ -68,7 +68,7 @@ needs to compile your project. </p>
 
 <p>Here&rsquo;s what&rsquo;s in <code>src/main.rs</code>:</p>
 <pre><code class="highlight rust"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nd">println!</span><span class="p">(</span><span class="s">"Hello world!"</span><span class="p">);</span>
+    <span class="nd">println!</span><span class="p">(</span><span class="s">"Hello world!"</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre>
 
@@ -76,10 +76,10 @@ needs to compile your project. </p>
 
 <pre><code class="highlight"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello-world v0.1.0</code></pre>
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///Users/wycats/src/hello_world)</code></pre>
 
 <p>And then run it:</p>
-<pre><code class="highlight shell"><span class="gp">$ </span>./target/hello-world
+<pre><code class="highlight shell"><span class="gp">$ </span>./target/hello_world
 Hello world!
 </code></pre>
 
@@ -87,7 +87,7 @@ Hello world!
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">   Fresh</span> hello-world v0.1.0
+class="s1">   Fresh</span> hello-world v0.1.0 (file:///Users/wycats/src/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
 Hello world!</code></pre>
