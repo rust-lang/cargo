@@ -41,7 +41,9 @@ test!(cargo_test_simple {
 running 1 test
 test test_hello ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n",
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
         COMPILING, p.url(),
         RUNNING)));
 })
@@ -63,7 +65,9 @@ test!(cargo_test_verbose {
 running 1 test
 test test_hello ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n",
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
         compiling = COMPILING, url = p.url(), running = RUNNING)));
 })
 
@@ -259,8 +263,9 @@ test!(test_with_deep_lib_dep {
 running 1 test
 test bar_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
 })
@@ -410,8 +415,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
@@ -431,8 +437,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
@@ -541,22 +548,23 @@ test!(lib_with_standard_name {
 running 1 test
 test foo_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 {running} target[..]test[..]test-[..]
 
 running 1 test
 test test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 {doctest} syntax
 
 running 1 test
 test foo_0 ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST, dir = p.url()).as_slice()));
 })
@@ -595,8 +603,9 @@ test!(lib_with_standard_name2 {
 running 1 test
 test test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
 })
@@ -644,9 +653,9 @@ test!(test_dylib {
             path = "bar"
         "#)
         .file("src/lib.rs", "
-              extern crate bar;
+            extern crate bar;
 
-              pub fn bar() { bar::baz(); }
+            pub fn bar() { bar::baz(); }
 
             #[test]
             fn foo() { bar(); }
@@ -694,8 +703,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
@@ -723,8 +733,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        fresh = FRESH, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
@@ -759,8 +770,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
@@ -780,8 +792,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n\n\
-                       ",
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
                        fresh = FRESH, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
