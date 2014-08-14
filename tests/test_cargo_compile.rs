@@ -1422,3 +1422,49 @@ test!(simple_staticlib {
 
     assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
 })
+
+test!(opt_out_of_lib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              lib = []
+
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "bad syntax")
+        .file("src/main.rs", "fn main() {}");
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+})
+
+test!(opt_out_of_bin {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              bin = []
+
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "bad syntax");
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+})
+
+test!(single_lib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+
+              [lib]
+              name = "foo"
+              path = "src/bar.rs"
+        "#)
+        .file("src/bar.rs", "");
+    assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+})
