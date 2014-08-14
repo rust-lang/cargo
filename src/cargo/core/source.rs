@@ -156,7 +156,7 @@ impl SourceId {
     }
 
     pub fn from_url(string: String) -> SourceId {
-        let mut parts = string.as_slice().splitn('+', 1);
+        let mut parts = string.as_slice().splitn(1, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
 
