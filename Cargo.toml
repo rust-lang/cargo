@@ -61,6 +61,10 @@ name = "cargo-test"
 test = false
 
 [[bin]]
+name = "cargo-bench"
+test = false
+
+[[bin]]
 name = "cargo-verify-project"
 test = false
 

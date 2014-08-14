@@ -22,6 +22,7 @@ macro_rules! test(
 )
 
 mod test_cargo;
+mod test_cargo_bench;
 mod test_cargo_clean;
 mod test_cargo_compile;
 mod test_cargo_compile_git_deps;
