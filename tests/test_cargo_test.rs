@@ -223,7 +223,7 @@ test!(test_with_deep_lib_dep {
             [dependencies.foo]
             path = "../foo"
 
-            [[lib]]
+            [lib]
             name = "bar"
             doctest = false
         "#)
@@ -466,7 +466,7 @@ test!(lib_bin_same_name {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "foo"
             [[bin]]
             name = "foo"
@@ -569,7 +569,7 @@ test!(lib_with_standard_name2 {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "syntax"
             test = false
             doctest = false
@@ -636,7 +636,7 @@ test!(test_dylib {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "foo"
             crate_type = ["dylib"]
 
@@ -663,7 +663,7 @@ test!(test_dylib {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "bar"
             crate_type = ["dylib"]
         "#)

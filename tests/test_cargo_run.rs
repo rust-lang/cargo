@@ -104,7 +104,7 @@ test!(run_dylib_dep {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "bar"
             crate-type = ["dylib"]
         "#)

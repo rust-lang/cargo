@@ -492,7 +492,7 @@ pub fn basic_lib_manifest(name: &str) -> String {
         version = "0.5.0"
         authors = ["wycats@example.com"]
 
-        [[lib]]
+        [lib]
 
         name = "{}"
     "#, name, name)

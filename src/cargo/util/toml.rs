@@ -104,7 +104,7 @@ pub fn to_manifest(contents: &[u8],
         None => {}
     }
     if manifest.get_targets().len() == 0 {
-        return Err(human(format!("either a [[lib]] or [[bin]] section must \
+        return Err(human(format!("either a [lib] or [[bin]] section must \
                                   be present")))
     }
     return Ok((manifest, paths));
@@ -125,7 +125,7 @@ pub fn to_manifest(contents: &[u8],
                     add_unused_keys(m, v, key.clone());
                 }
             }
-            _ => m.add_unused_key(key),
+            _ => m.add_warning(format!("unused manifest key: {}", key)),
         }
     }
 }
@@ -312,8 +312,13 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
 
+        let mut used_deprecated_lib = false;
         let lib = match self.lib {
             Some(ref libs) => {
+                match *libs {
+                    Many(..) => used_deprecated_lib = true,
+                    _ => {}
+                }
                 libs.as_slice().iter().map(|t| {
                     if layout.lib.is_some() && t.path.is_none() {
                         TomlTarget {
@@ -383,19 +388,24 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
         }
 
+        let build = match project.build {
+            Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
+            Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
+            None => Vec::new()
+        };
+
         let summary = Summary::new(&pkgid, deps.as_slice());
-        Ok((Manifest::new(
-                &summary,
-                targets.as_slice(),
-                &layout.root.join("target"),
-                &layout.root.join("doc"),
-                sources,
-                match project.build {
-                    Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
-                    Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
-                    None => Vec::new()
-                }),
-           nested_paths))
+        let mut manifest = Manifest::new(&summary,
+                                         targets.as_slice(),
+                                         &layout.root.join("target"),
+                                         &layout.root.join("doc"),
+                                         sources,
+                                         build);
+        if used_deprecated_lib {
+            manifest.add_warning(format!("the [[lib]] section has been \
+                                          deprecated in favor of [lib]"));
+        }
+        Ok((manifest, nested_paths))
     }
 }
 

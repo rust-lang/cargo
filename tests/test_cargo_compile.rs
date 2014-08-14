@@ -180,7 +180,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "bar"
         "#)
@@ -383,7 +383,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
             baz = "0.5.0"
 
-            [[lib]]
+            [lib]
 
             name = "bar"
         "#)
@@ -401,7 +401,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "baz"
         "#)
@@ -459,7 +459,7 @@ test!(cargo_compile_with_nested_deps_longhand {
 
             version = "0.5.0"
 
-            [[lib]]
+            [lib]
 
             name = "bar"
         "#)
@@ -477,7 +477,7 @@ test!(cargo_compile_with_nested_deps_longhand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "baz"
         "#)
@@ -933,7 +933,7 @@ test!(many_crate_types_old_style_lib_location {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "foo"
             crate_type = ["rlib", "dylib"]
@@ -971,7 +971,7 @@ test!(many_crate_types_correct {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "foo"
             crate_type = ["rlib", "dylib"]
@@ -1010,7 +1010,7 @@ test!(unused_keys {
             authors = ["wycats@example.com"]
             bulid = "foo"
 
-            [[lib]]
+            [lib]
 
             name = "foo"
         "#)
@@ -1030,7 +1030,7 @@ test!(unused_keys {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "foo"
             build = "foo"
@@ -1057,7 +1057,7 @@ test!(self_dependency {
 
             path = "."
 
-            [[lib]]
+            [lib]
 
             name = "test"
         "#)
@@ -1093,7 +1093,7 @@ test!(missing_lib_and_bin {
         "#);
     assert_that(p.cargo_process("cargo-build"),
                 execs().with_status(101)
-                       .with_stderr("either a [[lib]] or [[bin]] section \
+                       .with_stderr("either a [lib] or [[bin]] section \
                                      must be present\n"));
 })
 
@@ -1174,7 +1174,7 @@ test!(verbose_release_build_deps {
             version = "0.0.0"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "foo"
             crate_type = ["dylib", "rlib"]
         "#)
@@ -1222,7 +1222,7 @@ test!(explicit_examples {
             version = "1.0.0"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "world"
             path = "src/lib.rs"
 
@@ -1414,7 +1414,7 @@ test!(simple_staticlib {
               authors = []
               version = "0.0.1"
 
-              [[lib]]
+              [lib]
               name = "foo"
               crate-type = ["staticlib"]
         "#)
@@ -1467,4 +1467,22 @@ test!(single_lib {
         "#)
         .file("src/bar.rs", "");
     assert_that(p.cargo_process("cargo-build"), execs().with_status(0));
+})
+
+test!(deprecated_lib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+
+              [[lib]]
+              name = "foo"
+        "#)
+        .file("src/foo.rs", "");
+    assert_that(p.cargo_process("cargo-build"),
+                execs().with_status(0)
+                       .with_stderr("\
+the [[lib]] section has been deprecated in favor of [lib]\n"));
 })
