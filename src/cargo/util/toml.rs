@@ -2,6 +2,7 @@ use serialize::Decodable;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::fs;
+use std::slice;
 use std::str;
 use toml;
 
@@ -183,12 +184,27 @@ pub struct DetailedTomlDependency {
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
-    lib: Option<Vec<TomlLibTarget>>,
+    lib: Option<ManyOrOne<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>
+}
+
+#[deriving(Encodable,Decodable,PartialEq,Clone)]
+pub enum ManyOrOne<T> {
+    Many(Vec<T>),
+    One(T),
+}
+
+impl<T> ManyOrOne<T> {
+    fn as_slice(&self) -> &[T] {
+        match *self {
+            Many(ref v) => v.as_slice(),
+            One(ref t) => slice::ref_slice(t),
+        }
+    }
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
@@ -296,48 +312,48 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
 
-        let lib = if self.lib.is_none() || self.lib.get_ref().is_empty() {
-            inferred_lib_target(project.name.as_slice(), layout)
-        } else {
-            self.lib.get_ref().iter().map(|t| {
-                if layout.lib.is_some() && t.path.is_none() {
-                    TomlTarget {
-                        path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
-                        .. t.clone()
+        let lib = match self.lib {
+            Some(ref libs) => {
+                libs.as_slice().iter().map(|t| {
+                    if layout.lib.is_some() && t.path.is_none() {
+                        TomlTarget {
+                            path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
+                            .. t.clone()
+                        }
+                    } else {
+                        t.clone()
                     }
-                } else {
-                    t.clone()
-                }
-            }).collect()
+                }).collect()
+            }
+            None => inferred_lib_target(project.name.as_slice(), layout),
         };
 
-        let bins = if self.bin.is_none() || self.bin.get_ref().is_empty() {
-            inferred_bin_targets(project.name.as_slice(), layout)
-        } else {
-            let bin = layout.main();
+        let bins = match self.bin {
+            Some(ref bins) => {
+                let bin = layout.main();
 
-            self.bin.get_ref().iter().map(|t| {
-                if bin.is_some() && t.path.is_none() {
-                    TomlTarget {
-                        path: bin.as_ref().map(|&p| TomlPath(p.clone())),
-                        .. t.clone()
+                bins.iter().map(|t| {
+                    if bin.is_some() && t.path.is_none() {
+                        TomlTarget {
+                            path: bin.as_ref().map(|&p| TomlPath(p.clone())),
+                            .. t.clone()
+                        }
+                    } else {
+                        t.clone()
                     }
-                } else {
-                    t.clone()
-                }
-            }).collect()
+                }).collect()
+            }
+            None => inferred_bin_targets(project.name.as_slice(), layout)
         };
 
-        let examples = if self.example.is_none() || self.example.get_ref().is_empty() {
-            inferred_example_targets(layout)
-        } else {
-            self.example.get_ref().iter().map(|t| t.clone()).collect()
+        let examples = match self.example {
+            Some(ref examples) => examples.clone(),
+            None => inferred_example_targets(layout),
         };
 
-        let tests = if self.test.is_none() || self.test.get_ref().is_empty() {
-            inferred_test_targets(layout)
-        } else {
-            self.test.get_ref().iter().map(|t| t.clone()).collect()
+        let tests = match self.test {
+            Some(ref tests) => tests.clone(),
+            None => inferred_test_targets(layout),
         };
 
         // Get targets
