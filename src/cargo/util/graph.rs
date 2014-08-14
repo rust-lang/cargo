@@ -56,7 +56,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
 
         marks.insert(node.clone(), InProgress);
 
-        for child in self.nodes.get(node).iter() {
+        for child in self.nodes[*node].iter() {
             self.visit(child, dst, marks);
         }
 
