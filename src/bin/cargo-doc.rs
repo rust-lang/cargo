@@ -15,7 +15,7 @@ docopt!(Options, "
 Build a package's documentation
 
 Usage:
-    cargo-doc [options]
+    cargo doc [options]
 
 Options:
     -h, --help              Print this message

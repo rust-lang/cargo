@@ -19,7 +19,7 @@ docopt!(Options, "
 Compile a local package and all of its dependencies
 
 Usage:
-    cargo-build [options]
+    cargo build [options]
 
 Options:
     -h, --help              Print this message

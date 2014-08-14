@@ -12,7 +12,7 @@ use cargo::sources::{PathSource};
 
 docopt!(Options, "
 Usage:
-    cargo-clean [options] --manifest-path=PATH
+    cargo clean [options] --manifest-path=PATH
 
 Options:
     -h, --help              Print this message

@@ -17,7 +17,7 @@ docopt!(Options, "
 Execute all unit and integration tests of a local package
 
 Usage:
-    cargo-test [options] [--] [<args>...]
+    cargo test [options] [--] [<args>...]
 
 Options:
     -h, --help              Print this message

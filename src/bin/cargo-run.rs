@@ -17,7 +17,7 @@ docopt!(Options, "
 Run the main binary of the local package (src/main.rs)
 
 Usage:
-    cargo-run [options] [--] [<args>...]
+    cargo run [options] [--] [<args>...]
 
 Options:
     -h, --help              Print this message

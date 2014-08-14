@@ -18,7 +18,7 @@ docopt!(Options, "
 Remove artifacts that cargo has generated in the past
 
 Usage:
-    cargo-clean [options]
+    cargo clean [options]
 
 Options:
     -h, --help              Print this message

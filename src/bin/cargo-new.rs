@@ -15,8 +15,8 @@ docopt!(Options, "
 Create a new cargo package at <path>
 
 Usage:
-    cargo-new [options] <path>
-    cargo-new -h | --help
+    cargo new [options] <path>
+    cargo new -h | --help
 
 Options:
     -h, --help          Print this message

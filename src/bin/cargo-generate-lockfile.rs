@@ -17,7 +17,7 @@ docopt!(Options, "
 Generate the lockfile for a project
 
 Usage:
-    cargo-generate-lockfile [options]
+    cargo generate-lockfile [options]
 
 Options:
     -h, --help              Print this message
