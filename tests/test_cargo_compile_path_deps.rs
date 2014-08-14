@@ -42,7 +42,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             version = "0.5.0"
             path = "baz"
 
-            [[lib]]
+            [lib]
 
             name = "bar"
         "#)
@@ -60,7 +60,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "baz"
         "#)
@@ -201,7 +201,7 @@ test!(cargo_compile_with_transitive_dev_deps {
 
             git = "git://example.com/path/to/nowhere"
 
-            [[lib]]
+            [lib]
 
             name = "bar"
         "#)
@@ -252,7 +252,7 @@ test!(no_rebuild_dependency {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]] name = "bar"
+            [lib] name = "bar"
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
@@ -311,7 +311,7 @@ test!(deep_dependencies_trigger_rebuild {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
             name = "bar"
             [dependencies]
             baz = "0.5.0"
@@ -327,7 +327,7 @@ test!(deep_dependencies_trigger_rebuild {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
             name = "baz"
         "#)
         .file("baz/src/baz.rs", r#"
@@ -413,7 +413,7 @@ test!(no_rebuild_two_deps {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
             name = "bar"
             [dependencies]
             baz = "0.5.0"
@@ -428,7 +428,7 @@ test!(no_rebuild_two_deps {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
             name = "baz"
         "#)
         .file("baz/src/baz.rs", r#"
@@ -481,7 +481,7 @@ test!(nested_deps_recompile {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[lib]]
+            [lib]
 
             name = "bar"
         "#)
@@ -520,7 +520,7 @@ test!(error_message_for_missing_manifest {
 
             path = "src/bar"
 
-            [[lib]]
+            [lib]
 
             name = "foo"
         "#)

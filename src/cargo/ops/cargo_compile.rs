@@ -66,8 +66,8 @@ pub fn compile(manifest_path: &Path,
     let package = try!(source.get_root_package());
     debug!("loaded package; package={}", package);
 
-    for key in package.get_manifest().get_unused_keys().iter() {
-        try!(shell.warn(format!("unused manifest key: {}", key)));
+    for key in package.get_manifest().get_warnings().iter() {
+        try!(shell.warn(key))
     }
 
     let user_configs = try!(config::all_configs(os::getcwd()));
