@@ -1,4 +1,6 @@
 use std::io::File;
+use std::io::timer;
+use std::time::Duration;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir, path2url};
@@ -659,6 +661,9 @@ test!(update_with_shared_deps {
     git_project.process("git").args(["add", "."]).exec_with_output().assert();
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
+
+    timer::sleep(Duration::milliseconds(1000));
+
     assert_that(p.process(cargo_dir().join("cargo-update")).arg("dep1"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
@@ -824,6 +829,9 @@ test!(stale_cached_version {
     bar.process("git").args(["add", "."]).exec_with_output().assert();
     bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
        .assert();
+
+    timer::sleep(Duration::milliseconds(1000));
+
     let rev = bar.process("git").args(["rev-parse", "HEAD"])
                  .exec_with_output().assert();
     let rev = String::from_utf8(rev.output).unwrap();
