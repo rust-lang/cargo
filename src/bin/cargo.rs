@@ -46,6 +46,7 @@ Some common cargo commands are:
     new         Create a new cargo project
     run         Build and execute src/main.rs
     test        Run the tests
+    bench       Run the benchmarks
     update      Update dependencies listed in Cargo.lock
 
 See 'cargo help <command>' for more information on a specific command.

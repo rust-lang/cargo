@@ -75,3 +75,12 @@ pub fn run_tests(manifest_path: &Path,
 
     Ok(None)
 }
+
+pub fn run_benches(manifest_path: &Path,
+                   options: &mut ops::CompileOptions,
+                   args: &[String]) -> CargoResult<Option<ProcessError>> {
+    let mut args = args.to_vec();
+    args.push("--bench".to_string());
+
+    run_tests(manifest_path, options, args.as_slice())
+}

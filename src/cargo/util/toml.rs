@@ -22,6 +22,7 @@ pub struct Layout {
     bins: Vec<Path>,
     examples: Vec<Path>,
     tests: Vec<Path>,
+    benches: Vec<Path>,
 }
 
 impl Layout {
@@ -58,6 +59,7 @@ pub fn project_layout(root_path: &Path) -> Layout {
     let mut bins = vec!();
     let mut examples = vec!();
     let mut tests = vec!();
+    let mut benches = vec!();
 
     if root_path.join("src/lib.rs").exists() {
         lib = Some(root_path.join("src/lib.rs"));
@@ -69,6 +71,7 @@ pub fn project_layout(root_path: &Path) -> Layout {
     try_add_files(&mut examples, root_path, "examples");
 
     try_add_files(&mut tests, root_path, "tests");
+    try_add_files(&mut benches, root_path, "benches");
 
     Layout {
         root: root_path.clone(),
@@ -76,6 +79,7 @@ pub fn project_layout(root_path: &Path) -> Layout {
         bins: bins,
         examples: examples,
         tests: tests,
+        benches: benches,
     }
 }
 
@@ -157,6 +161,7 @@ type TomlLibTarget = TomlTarget;
 type TomlBinTarget = TomlTarget;
 type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
+type TomlBenchTarget = TomlTarget;
 
 /*
  * TODO: Make all struct fields private
@@ -187,6 +192,7 @@ pub struct TomlManifest {
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
+    bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>
 }
@@ -278,6 +284,18 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
     }).collect()
 }
 
+fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
+    layout.benches.iter().filter_map(|ex| {
+        ex.filestem_str().map(|name| {
+            TomlTarget {
+                name: name.to_string(),
+                path: Some(TomlPath(ex.clone())),
+                .. TomlTarget::new()
+            }
+        })
+    }).collect()
+}
+
 impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
         -> CargoResult<(Manifest, Vec<Path>)> {
@@ -340,11 +358,18 @@ impl TomlManifest {
             self.test.get_ref().iter().map(|t| t.clone()).collect()
         };
 
+        let benches = if self.bench.is_none() || self.bench.get_ref().is_empty() {
+            inferred_bench_targets(layout)
+        } else {
+            self.bench.get_ref().iter().map(|t| t.clone()).collect()
+        };
+
         // Get targets
         let targets = normalize(lib.as_slice(),
                                 bins.as_slice(),
                                 examples.as_slice(),
                                 tests.as_slice(),
+                                benches.as_slice(),
                                 &metadata);
 
         if targets.is_empty() {
@@ -443,6 +468,7 @@ struct TomlTarget {
     path: Option<TomlPath>,
     test: Option<bool>,
     doctest: Option<bool>,
+    bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
 }
@@ -461,6 +487,7 @@ impl TomlTarget {
             path: None,
             test: None,
             doctest: None,
+            bench: None,
             doc: None,
             plugin: None,
         }
@@ -489,9 +516,10 @@ fn normalize(libs: &[TomlLibTarget],
              bins: &[TomlBinTarget],
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
+             benches: &[TomlBenchTarget],
              metadata: &Metadata) -> Vec<Target> {
-    log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}",
-         libs, bins, examples, tests);
+    log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}, benches={}",
+         libs, bins, examples, tests, benches);
 
     enum TestDep { Needed, NotNeeded }
 
@@ -511,10 +539,16 @@ fn normalize(libs: &[TomlLibTarget],
             Some(false) => {}
         }
 
+        match target.bench {
+            Some(true) | None => ret.push(Profile::default_bench()),
+            Some(false) => {}
+        }
+
         match dep {
             Needed => {
                 ret.push(Profile::default_test().test(false));
                 ret.push(Profile::default_doc().doc(false));
+                ret.push(Profile::default_bench().test(false));
             }
             _ => {}
         }
@@ -610,9 +644,29 @@ fn normalize(libs: &[TomlLibTarget],
         }
     }
 
+    fn bench_targets(dst: &mut Vec<Target>, benches: &[TomlBenchTarget],
+                     metadata: &Metadata,
+                     default: |&TomlBenchTarget| -> String) {
+        for bench in benches.iter() {
+            let path = bench.path.clone().unwrap_or_else(|| {
+                TomlString(default(bench))
+            });
+
+            // make sure this metadata is different from any same-named libs.
+            let mut metadata = metadata.clone();
+            metadata.mix(&format!("bench-{}", bench.name));
+
+            let profile = &Profile::default_bench();
+            dst.push(Target::bench_target(bench.name.as_slice(),
+                                         &path.to_path(),
+                                         profile,
+                                         metadata));
+        }
+    }
+
     let mut ret = Vec::new();
 
-    let test_dep = if examples.len() > 0 || tests.len() > 0 {
+    let test_dep = if examples.len() > 0 || tests.len() > 0 || benches.len() > 0 {
         Needed
     } else {
         NotNeeded
@@ -645,6 +699,14 @@ fn normalize(libs: &[TomlLibTarget],
                     } else {
                         format!("tests/{}.rs", test.name)
                     }});
+
+    bench_targets(&mut ret, benches, metadata,
+                 |bench| {
+                     if bench.name.as_slice() == "bench" {
+                         "src/bench.rs".to_string()
+                     } else {
+                         format!("benches/{}.rs", bench.name)
+                     }});
 
     ret
 }
