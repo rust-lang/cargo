@@ -9,10 +9,12 @@ use cargo::util::process;
 
 fn setup() {}
 
-test!(cargo_test_simple {
+test!(cargo_bench_simple {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
+            extern crate test;
+
             fn hello() -> &'static str {
                 "hello"
             }
@@ -21,8 +23,8 @@ test!(cargo_test_simple {
                 println!("{}", hello())
             }
 
-            #[test]
-            fn test_hello() {
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
                 assert_eq!(hello(), "hello")
             }"#);
 
@@ -33,39 +35,40 @@ test!(cargo_test_simple {
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo-bench")),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]test[..]foo
+{} target[..]bench[..]foo
 
 running 1 test
-test test_hello ... ok
+test bench_hello ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         COMPILING, p.url(),
         RUNNING)));
 })
 
-test!(cargo_test_verbose {
+test!(cargo_bench_verbose {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
+            extern crate test;
             fn main() {}
-            #[test] fn test_hello() {}
+            #[bench] fn bench_hello(_b: &mut test::Bencher) {}
         "#);
 
-    assert_that(p.cargo_process("cargo-test").arg("-v").arg("hello"),
+    assert_that(p.cargo_process("cargo-bench").arg("-v").arg("hello"),
         execs().with_stdout(format!("\
 {running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
-{running} `[..]target[..]test[..]foo-[..] hello`
+{running} `[..]target[..]bench[..]foo-[..] hello --bench`
 
 running 1 test
-test test_hello ... ok
+test bench_hello ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         compiling = COMPILING, url = p.url(), running = RUNNING)));
@@ -80,30 +83,34 @@ test!(many_similar_names {
             authors = []
         "#)
         .file("src/lib.rs", "
+            extern crate test;
             pub fn foo() {}
-            #[test] fn lib_test() {}
+            #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
             extern crate foo;
+            extern crate test;
             fn main() {}
-            #[test] fn bin_test() { foo::foo() }
+            #[bench] fn bin_bench(_b: &mut test::Bencher) { foo::foo() }
         ")
-        .file("tests/foo.rs", r#"
+        .file("benches/foo.rs", r#"
             extern crate foo;
-            #[test] fn test_test() { foo::foo() }
+            extern crate test;
+            #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
         "#);
 
-    let output = p.cargo_process("cargo-test").exec_with_output().assert();
+    let output = p.cargo_process("cargo-bench").exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
-    assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
-    assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
-    assert!(output.contains("test test_test"), "test_test missing\n{}", output);
+    assert!(output.contains("test bin_bench"), "bin_bench missing\n{}", output);
+    assert!(output.contains("test lib_bench"), "lib_bench missing\n{}", output);
+    assert!(output.contains("test bench_bench"), "bench_bench missing\n{}", output);
 })
 
-test!(cargo_test_failing_test {
+test!(cargo_bench_failing_test {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
+            extern crate test;
             fn hello() -> &'static str {
                 "hello"
             }
@@ -112,8 +119,8 @@ test!(cargo_test_failing_test {
                 println!("{}", hello())
             }
 
-            #[test]
-            fn test_hello() {
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
                 assert_eq!(hello(), "nope")
             }"#);
 
@@ -124,38 +131,23 @@ test!(cargo_test_failing_test {
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo-bench")),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]test[..]foo
+{} target[..]bench[..]foo
 
 running 1 test
-test test_hello ... FAILED
-
-failures:
-
----- test_hello stdout ----
-<tab>task 'test_hello' failed at 'assertion failed: \
-    `(left == right) && (right == left)` (left: \
-    `hello`, right: `nope`)', src{sep}foo.rs:12
-<tab>
-<tab>
-
-failures:
-    test_hello
-
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
-
-",
-        COMPILING, p.url(), RUNNING,
-        sep = path::SEP))
+test bench_hello ... ",
+        COMPILING, p.url(), RUNNING))
               .with_stderr(format!("\
-task '<main>' failed at 'Some tests failed', [..]
-"))
+task '<main>' failed at 'assertion failed: \
+    `(left == right) && (right == left)` (left: \
+    `hello`, right: `nope`)', src{sep}foo.rs:13
+", sep = path::SEP))
               .with_status(101));
 })
 
-test!(test_with_lib_dep {
+test!(bench_with_lib_dep {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -168,6 +160,7 @@ test!(test_with_lib_dep {
             path = "src/main.rs"
         "#)
         .file("src/lib.rs", r#"
+            extern crate test;
             ///
             /// ```rust
             /// extern crate foo;
@@ -177,46 +170,47 @@ test!(test_with_lib_dep {
             /// ```
             ///
             pub fn foo(){}
-            #[test] fn lib_test() {}
+            #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         "#)
         .file("src/main.rs", "
             extern crate foo;
+            extern crate test;
 
             fn main() {}
 
-            #[test]
-            fn bin_test() {}
+            #[bench]
+            fn bin_bench(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]baz-[..]
+{running} target[..]bench[..]baz-[..]
 
 running 1 test
-test bin_test ... ok
+test bin_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]foo
+{running} target[..]bench[..]foo
 
 running 1 test
-test lib_test ... ok
+test lib_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
 running 1 test
-test foo_0 ... ok
+test foo_0 ... ignored
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured
 
 ",
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 })
 
-test!(test_with_deep_lib_dep {
+test!(bench_with_deep_lib_dep {
     let p = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -226,15 +220,12 @@ test!(test_with_deep_lib_dep {
 
             [dependencies.foo]
             path = "../foo"
-
-            [[lib]]
-            name = "bar"
-            doctest = false
         "#)
         .file("src/lib.rs", "
             extern crate foo;
-            #[test]
-            fn bar_test() {
+            extern crate test;
+            #[bench]
+            fn bar_bench(_b: &mut test::Bencher) {
                 foo::foo();
             }
         ");
@@ -246,14 +237,16 @@ test!(test_with_deep_lib_dep {
             authors = []
         "#)
         .file("src/lib.rs", "
+            extern crate test;
+
             pub fn foo() {}
 
-            #[test]
-            fn foo_test() {}
+            #[bench]
+            fn foo_bench(_b: &mut test::Bencher) {}
         ");
 
     p2.build();
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -261,16 +254,23 @@ test!(test_with_deep_lib_dep {
 {running} target[..]
 
 running 1 test
-test bar_test ... ok
+test bar_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+{doctest} bar
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
 
-test!(external_test_explicit {
+test!(external_bench_explicit {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -278,39 +278,41 @@ test!(external_test_explicit {
             version = "0.0.1"
             authors = []
 
-            [[test]]
-            name = "test"
-            path = "src/test.rs"
+            [[bench]]
+            name = "bench"
+            path = "src/bench.rs"
         "#)
         .file("src/lib.rs", r#"
+            extern crate test;
             pub fn get_hello() -> &'static str { "Hello" }
 
-            #[test]
-            fn internal_test() {}
+            #[bench]
+            fn internal_bench(_b: &mut test::Bencher) {}
         "#)
-        .file("src/test.rs", r#"
+        .file("src/bench.rs", r#"
             extern crate foo;
+            extern crate test;
 
-            #[test]
-            fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
+            #[bench]
+            fn external_bench(_b: &mut test::Bencher) {}
         "#);
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]bench-[..]
 
 running 1 test
-test internal_test ... ok
+test external_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test external_test ... ok
+test internal_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -322,7 +324,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 })
 
-test!(external_test_implicit {
+test!(external_bench_implicit {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -331,34 +333,37 @@ test!(external_test_implicit {
             authors = []
         "#)
         .file("src/lib.rs", r#"
+            extern crate test;
+
             pub fn get_hello() -> &'static str { "Hello" }
 
-            #[test]
-            fn internal_test() {}
+            #[bench]
+            fn internal_bench(_b: &mut test::Bencher) {}
         "#)
-        .file("tests/external.rs", r#"
+        .file("benches/external.rs", r#"
             extern crate foo;
+            extern crate test;
 
-            #[test]
-            fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
+            #[bench]
+            fn external_bench(_b: &mut test::Bencher) {}
         "#);
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]external-[..]
+{running} target[..]bench[..]external-[..]
 
 running 1 test
-test external_test ... ok
+test external_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test internal_test ... ok
+test internal_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -383,7 +388,7 @@ test!(dont_run_examples {
         .file("examples/dont-run-me-i-will-fail.rs", r#"
             fn main() { fail!("Examples should not be run by 'cargo test'"); }
         "#);
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
                 execs().with_status(0));
 })
 
@@ -396,20 +401,22 @@ test!(pass_through_command_line {
             authors = []
         "#)
         .file("src/lib.rs", "
-            #[test] fn foo() {}
-            #[test] fn bar() {}
+            extern crate test;
+
+            #[bench] fn foo(_b: &mut test::Bencher) {}
+            #[bench] fn bar(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-test").arg("bar"),
+    assert_that(p.cargo_process("cargo-bench").arg("bar"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo
+{running} target[..]bench[..]foo
 
 running 1 test
-test bar ... ok
+test bar ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -422,16 +429,16 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.cargo_process("cargo-test").arg("foo"),
+    assert_that(p.cargo_process("cargo-bench").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo
+{running} target[..]bench[..]foo
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -445,22 +452,24 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        dir = p.url()).as_slice()));
 })
 
-// Regression test for running cargo-test twice with
+// Regression test for running cargo-bench twice with
 // tests in an rlib
-test!(cargo_test_twice {
+test!(cargo_bench_twice {
     let p = project("test_twice")
         .file("Cargo.toml", basic_lib_manifest("test_twice").as_slice())
         .file("src/test_twice.rs", r#"
             #![crate_type = "rlib"]
 
-            #[test]
-            fn dummy_test() { }
+            extern crate test;
+
+            #[bench]
+            fn dummy_bench(b: &mut test::Bencher) { }
             "#);
 
     p.cargo_process("cargo-build");
 
     for _ in range(0u, 2) {
-        assert_that(p.process(cargo_dir().join("cargo-test")),
+        assert_that(p.process(cargo_dir().join("cargo-bench")),
                     execs().with_status(0));
     }
 })
@@ -479,31 +488,33 @@ test!(lib_bin_same_name {
             name = "foo"
         "#)
         .file("src/lib.rs", "
-            #[test] fn lib_test() {}
+            extern crate test;
+            #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
             extern crate foo;
+            extern crate test;
 
-            #[test]
-            fn bin_test() {}
+            #[bench]
+            fn bin_bench(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test [..] ... ok
+test [..] ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test [..] ... ok
+test [..] ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -524,45 +535,48 @@ test!(lib_with_standard_name {
             authors = []
         "#)
         .file("src/lib.rs", "
+            extern crate test;
+
             /// ```
             /// syntax::foo();
             /// ```
             pub fn foo() {}
 
-            #[test]
-            fn foo_test() {}
+            #[bench]
+            fn foo_bench(_b: &mut test::Bencher) {}
         ")
-        .file("tests/test.rs", "
+        .file("benches/bench.rs", "
             extern crate syntax;
+            extern crate test;
 
-            #[test]
-            fn test() { syntax::foo() }
+            #[bench]
+            fn bench(_b: &mut test::Bencher) { syntax::foo() }
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
-{running} target[..]test[..]syntax-[..]
+{running} target[..]bench[..]bench-[..]
 
 running 1 test
-test foo_test ... ok
+test bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]bench[..]syntax-[..]
 
 running 1 test
-test test ... ok
+test foo_bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} syntax
 
 running 1 test
-test foo_0 ... ok
+test foo_0 ... ignored
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
@@ -579,7 +593,7 @@ test!(lib_with_standard_name2 {
 
             [[lib]]
             name = "syntax"
-            test = false
+            bench = false
             doctest = false
         "#)
         .file("src/lib.rs", "
@@ -587,23 +601,24 @@ test!(lib_with_standard_name2 {
         ")
         .file("src/main.rs", "
             extern crate syntax;
+            extern crate test;
 
             fn main() {}
 
-            #[test]
-            fn test() { syntax::foo() }
+            #[bench]
+            fn bench(_b: &mut test::Bencher) { syntax::foo() }
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
-{running} target[..]test[..]syntax-[..]
+{running} target[..]bench[..]syntax-[..]
 
 running 1 test
-test test ... ok
+test bench ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
@@ -619,25 +634,31 @@ test!(bin_there_for_integration {
             authors = []
         "#)
         .file("src/main.rs", "
+            extern crate test;
             fn main() { std::os::set_exit_status(1); }
-            #[test] fn main_test() {}
+            #[bench] fn main_bench(_b: &mut test::Bencher) {}
         ")
-        .file("tests/foo.rs", r#"
+        .file("benches/foo.rs", r#"
+            extern crate test;
             use std::io::Command;
-            #[test]
-            fn test_test() {
-                let status = Command::new("target/test/foo").status().unwrap();
+            #[bench]
+            fn bench_bench(_b: &mut test::Bencher) {
+                let status = Command::new("target/bench/foo").status().unwrap();
                 assert!(status.matches_exit_status(1));
             }
         "#);
 
-    let output = p.cargo_process("cargo-test").exec_with_output().assert();
+    let output = p.cargo_process("cargo-bench").exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
-    assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
-    assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
+    assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
+                            "no main_bench\n{}",
+                            output);
+    assert!(output.contains("bench_bench ... bench:         0 ns/iter (+/- 0)"),
+                            "no bench_bench\n{}",
+                            output);
 })
 
-test!(test_dylib {
+test!(bench_dylib {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -654,17 +675,19 @@ test!(test_dylib {
         "#)
         .file("src/lib.rs", "
             extern crate bar;
+            extern crate test;
 
             pub fn bar() { bar::baz(); }
 
-            #[test]
-            fn foo() { bar(); }
+            #[bench]
+            fn foo(_b: &mut test::Bencher) {}
         ")
-        .file("tests/test.rs", r#"
+        .file("benches/bench.rs", r#"
             extern crate foo;
+            extern crate test;
 
-            #[test]
-            fn foo() { foo::bar(); }
+            #[bench]
+            fn foo(_b: &mut test::Bencher) { foo::bar(); }
         "#)
         .file("bar/Cargo.toml", r#"
             [package]
@@ -680,24 +703,24 @@ test!(test_dylib {
              pub fn baz() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]bench-[..]
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -710,24 +733,24 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().assert();
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo-bench")),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]bench-[..]
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -741,7 +764,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        dir = p.url()).as_slice()));
 })
 
-test!(test_twice_with_build_cmd {
+test!(bench_twice_with_build_cmd {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -751,20 +774,21 @@ test!(test_twice_with_build_cmd {
             build = 'true'
         "#)
         .file("src/lib.rs", "
-            #[test]
-            fn foo() {}
+            extern crate test;
+            #[bench]
+            fn foo(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("cargo-bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
@@ -777,16 +801,16 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo-bench")),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]bench[..]foo-[..]
 
 running 1 test
-test foo ... ok
+test foo ... bench:         0 ns/iter (+/- 0)
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
 
