@@ -2,6 +2,7 @@ use serialize::Decodable;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::fs;
+use std::slice;
 use std::str;
 use toml;
 
@@ -107,7 +108,7 @@ pub fn to_manifest(contents: &[u8],
         None => {}
     }
     if manifest.get_targets().len() == 0 {
-        return Err(human(format!("either a [[lib]] or [[bin]] section must \
+        return Err(human(format!("either a [lib] or [[bin]] section must \
                                   be present")))
     }
     return Ok((manifest, paths));
@@ -128,7 +129,7 @@ pub fn to_manifest(contents: &[u8],
                     add_unused_keys(m, v, key.clone());
                 }
             }
-            _ => m.add_unused_key(key),
+            _ => m.add_warning(format!("unused manifest key: {}", key)),
         }
     }
 }
@@ -188,13 +189,28 @@ pub struct DetailedTomlDependency {
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
-    lib: Option<Vec<TomlLibTarget>>,
+    lib: Option<ManyOrOne<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>
+}
+
+#[deriving(Encodable,Decodable,PartialEq,Clone)]
+pub enum ManyOrOne<T> {
+    Many(Vec<T>),
+    One(T),
+}
+
+impl<T> ManyOrOne<T> {
+    fn as_slice(&self) -> &[T] {
+        match *self {
+            Many(ref v) => v.as_slice(),
+            One(ref t) => slice::ref_slice(t),
+        }
+    }
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
@@ -314,48 +330,53 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
 
-        let lib = if self.lib.is_none() || self.lib.get_ref().is_empty() {
-            inferred_lib_target(project.name.as_slice(), layout)
-        } else {
-            self.lib.get_ref().iter().map(|t| {
-                if layout.lib.is_some() && t.path.is_none() {
-                    TomlTarget {
-                        path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
-                        .. t.clone()
-                    }
-                } else {
-                    t.clone()
+        let mut used_deprecated_lib = false;
+        let lib = match self.lib {
+            Some(ref libs) => {
+                match *libs {
+                    Many(..) => used_deprecated_lib = true,
+                    _ => {}
                 }
-            }).collect()
-        };
-
-        let bins = if self.bin.is_none() || self.bin.get_ref().is_empty() {
-            inferred_bin_targets(project.name.as_slice(), layout)
-        } else {
-            let bin = layout.main();
-
-            self.bin.get_ref().iter().map(|t| {
-                if bin.is_some() && t.path.is_none() {
-                    TomlTarget {
-                        path: bin.as_ref().map(|&p| TomlPath(p.clone())),
-                        .. t.clone()
+                libs.as_slice().iter().map(|t| {
+                    if layout.lib.is_some() && t.path.is_none() {
+                        TomlTarget {
+                            path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
+                            .. t.clone()
+                        }
+                    } else {
+                        t.clone()
                     }
-                } else {
-                    t.clone()
-                }
-            }).collect()
+                }).collect()
+            }
+            None => inferred_lib_target(project.name.as_slice(), layout),
         };
 
-        let examples = if self.example.is_none() || self.example.get_ref().is_empty() {
-            inferred_example_targets(layout)
-        } else {
-            self.example.get_ref().iter().map(|t| t.clone()).collect()
+        let bins = match self.bin {
+            Some(ref bins) => {
+                let bin = layout.main();
+
+                bins.iter().map(|t| {
+                    if bin.is_some() && t.path.is_none() {
+                        TomlTarget {
+                            path: bin.as_ref().map(|&p| TomlPath(p.clone())),
+                            .. t.clone()
+                        }
+                    } else {
+                        t.clone()
+                    }
+                }).collect()
+            }
+            None => inferred_bin_targets(project.name.as_slice(), layout)
         };
 
-        let tests = if self.test.is_none() || self.test.get_ref().is_empty() {
-            inferred_test_targets(layout)
-        } else {
-            self.test.get_ref().iter().map(|t| t.clone()).collect()
+        let examples = match self.example {
+            Some(ref examples) => examples.clone(),
+            None => inferred_example_targets(layout),
+        };
+
+        let tests = match self.test {
+            Some(ref tests) => tests.clone(),
+            None => inferred_test_targets(layout),
         };
 
         let benches = if self.bench.is_none() || self.bench.get_ref().is_empty() {
@@ -392,19 +413,24 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
         }
 
+        let build = match project.build {
+            Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
+            Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
+            None => Vec::new()
+        };
+
         let summary = Summary::new(&pkgid, deps.as_slice());
-        Ok((Manifest::new(
-                &summary,
-                targets.as_slice(),
-                &layout.root.join("target"),
-                &layout.root.join("doc"),
-                sources,
-                match project.build {
-                    Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
-                    Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
-                    None => Vec::new()
-                }),
-           nested_paths))
+        let mut manifest = Manifest::new(&summary,
+                                         targets.as_slice(),
+                                         &layout.root.join("target"),
+                                         &layout.root.join("doc"),
+                                         sources,
+                                         build);
+        if used_deprecated_lib {
+            manifest.add_warning(format!("the [[lib]] section has been \
+                                          deprecated in favor of [lib]"));
+        }
+        Ok((manifest, nested_paths))
     }
 }
 

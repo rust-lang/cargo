@@ -12,7 +12,7 @@ test!(plugin_to_the_max {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "foo_lib"
 
             [dependencies.bar]
@@ -38,7 +38,7 @@ test!(plugin_to_the_max {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "bar"
             plugin = true
 
@@ -65,7 +65,7 @@ test!(plugin_to_the_max {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "baz"
             crate_type = ["dylib"]
         "#)

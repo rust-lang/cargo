@@ -22,7 +22,7 @@ pub struct Manifest {
     doc_dir: Path,
     sources: Vec<SourceId>,
     build: Vec<String>,
-    unused_keys: Vec<String>,
+    warnings: Vec<String>,
 }
 
 impl Show for Manifest {
@@ -298,7 +298,7 @@ impl Manifest {
             doc_dir: doc_dir.clone(),
             sources: sources,
             build: build,
-            unused_keys: Vec::new(),
+            warnings: Vec::new(),
         }
     }
 
@@ -346,12 +346,12 @@ impl Manifest {
         self.build.as_slice()
     }
 
-    pub fn add_unused_key(&mut self, s: String) {
-        self.unused_keys.push(s)
+    pub fn add_warning(&mut self, s: String) {
+        self.warnings.push(s)
     }
 
-    pub fn get_unused_keys(&self) -> &[String] {
-        self.unused_keys.as_slice()
+    pub fn get_warnings(&self) -> &[String] {
+        self.warnings.as_slice()
     }
 }
 

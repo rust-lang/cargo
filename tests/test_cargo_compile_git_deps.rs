@@ -53,7 +53,7 @@ test!(cargo_compile_simple_git_dep {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
 
                 name = "dep1"
             "#)
@@ -113,7 +113,7 @@ test!(cargo_compile_git_dep_branch {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
 
                 name = "dep1"
             "#)
@@ -177,7 +177,7 @@ test!(cargo_compile_git_dep_tag {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
 
                 name = "dep1"
             "#)
@@ -246,7 +246,7 @@ test!(cargo_compile_with_nested_paths {
                 version = "0.5.0"
                 path = "vendor/dep2"
 
-                [[lib]]
+                [lib]
 
                 name = "dep1"
             "#)
@@ -264,7 +264,7 @@ test!(cargo_compile_with_nested_paths {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
 
                 name = "dep2"
             "#)
@@ -316,7 +316,7 @@ test!(cargo_compile_with_meta_package {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
 
                 name = "dep1"
             "#)
@@ -332,7 +332,7 @@ test!(cargo_compile_with_meta_package {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
 
                 name = "dep2"
             "#)
@@ -492,7 +492,7 @@ test!(recompilation {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
                 name = "bar"
             "#)
             .file("src/bar.rs", r#"
@@ -595,7 +595,7 @@ test!(update_with_shared_deps {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
 
-                [[lib]]
+                [lib]
                 name = "bar"
             "#)
             .file("src/bar.rs", r#"
