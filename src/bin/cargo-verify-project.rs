@@ -8,7 +8,7 @@ use std::os::{args, set_exit_status};
 use getopts::{reqopt, getopts};
 
 /**
-    cargo-verify-project --manifest=LOCATION
+    cargo verify-project --manifest=LOCATION
 */
 
 fn main() {

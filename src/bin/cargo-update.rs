@@ -17,7 +17,7 @@ docopt!(Options, "
 Update dependencies as recorded in the local lock file.
 
 Usage:
-    cargo-update [options] [<name>]
+    cargo update [options] [<name>]
 
 Options:
     -h, --help              Print this message

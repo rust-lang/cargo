@@ -13,7 +13,7 @@ use cargo::util::CliResult;
 
 docopt!(Options, "
 Usage:
-    cargo-version [options]
+    cargo version [options]
 
 Options:
     -h, --help              Print this message
