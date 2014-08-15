@@ -19,9 +19,9 @@ fi
 # just install the right ones? This should enable cross compilation in the
 # future anyway.
 if [ -z "${windows}" ]; then
-    curl -O https://static-rust-lang-org.s3.amazonaws.com/dist/rust-nightly-i686-$target.tar.gz
+    curl -O https://static.rust-lang.org/dist/rust-nightly-i686-$target.tar.gz
     tar xfz rust-nightly-i686-$target.tar.gz
-    curl -O https://static-rust-lang-org.s3.amazonaws.com/dist/rust-nightly-x86_64-$target.tar.gz
+    curl -O https://static.rust-lang.org/dist/rust-nightly-x86_64-$target.tar.gz
     tar xfz rust-nightly-x86_64-$target.tar.gz
 
     if [ "${BITS}" = "32" ]; then
