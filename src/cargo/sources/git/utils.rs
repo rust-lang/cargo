@@ -206,17 +206,17 @@ impl GitDatabase {
 
     pub fn copy_to(&self, rev: GitRevision, dest: &Path)
                    -> CargoResult<GitCheckout> {
-        let checkout = try!(GitCheckout::clone_into(dest, self.clone(),
-                                                    rev.clone()));
 
-        match self.remote.rev_for(dest, "HEAD") {
-            Ok(ref head) if rev == *head => {}
-            _ => try!(checkout.fetch()),
+        if dest.exists() {
+            match self.remote.rev_for(dest, "HEAD") {
+                Ok(ref head) if rev == *head => {
+                    return Ok(GitCheckout::new(dest, self.clone(), rev.clone()));
+                }
+                _ => {}
+            }
         }
 
-        try!(checkout.update_submodules());
-
-        Ok(checkout)
+        GitCheckout::clone_into(dest, self.clone(), rev.clone())
     }
 
     pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<GitRevision> {
@@ -230,18 +230,24 @@ impl GitDatabase {
 }
 
 impl GitCheckout {
-    fn clone_into(into: &Path, database: GitDatabase,
-                  revision: GitRevision) -> CargoResult<GitCheckout> {
-        let checkout = GitCheckout {
-            location: into.clone(),
+    fn new(path: &Path, database: GitDatabase, revision: GitRevision)
+           -> GitCheckout
+    {
+        GitCheckout {
+            location: path.clone(),
             database: database,
             revision: revision,
-        };
-
-        // If the git checkout already exists, we don't need to clone it again
-        if !checkout.location.join(".git").exists() {
-            try!(checkout.clone_repo());
         }
+    }
+
+    fn clone_into(into: &Path, database: GitDatabase,
+                  revision: GitRevision)
+                  -> CargoResult<GitCheckout>
+    {
+        let checkout = GitCheckout::new(into, database, revision);
+
+        try!(checkout.clone_repo());
+        try!(checkout.update_submodules());
 
         Ok(checkout)
     }
@@ -276,38 +282,13 @@ impl GitCheckout {
         Ok(())
     }
 
-    fn fetch(&self) -> CargoResult<()> {
-        // In git 1.8, apparently --tags explicitly *only* fetches tags, it does
-        // not fetch anything else. In git 1.9, however, git apparently fetches
-        // everything when --tags is passed.
-        //
-        // This means that if we want to fetch everything we need to execute
-        // both with and without --tags on 1.8 (apparently), and only with
-        // --tags on 1.9. For simplicity, we execute with and without --tags for
-        // all gits.
-        //
-        // FIXME: This is suspicious. I have been informed that, for example,
-        //        bundler does not do this, yet bundler appears to work!
-        //
-        // And to continue the fun, git before 1.7.3 had the fun bug that if a
-        // branch was tracking a remote, then `git fetch $url` doesn't work!
-        //
-        // For details, see
-        // https://www.kernel.org/pub/software/scm/git/docs/RelNotes-1.7.3.txt
-        //
-        // In this case we just use `origin` here instead of the database path.
-        git!(self.location, "fetch", "--force", "--quiet", "origin");
-        git!(self.location, "fetch", "--force", "--quiet", "--tags", "origin");
-        try!(self.reset());
-        Ok(())
-    }
-
     fn reset(&self) -> CargoResult<()> {
         Ok(git!(self.location, "reset", "-q", "--hard",
                 self.revision.as_slice()))
     }
 
     fn update_submodules(&self) -> CargoResult<()> {
+        git!(self.location, "submodule", "sync", "--quiet");
         Ok(git!(self.location, "submodule", "update", "--init",
                 "--recursive", "--quiet"))
     }
