@@ -2,6 +2,7 @@ use std::cmp;
 use std::fmt::{Show, Formatter};
 use std::fmt;
 use std::io::fs;
+use glob::Pattern;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
@@ -68,61 +69,69 @@ impl PathSource {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-        // TODO: add an `excludes` section to the manifest which is another way
-        // to filter files out of this set that is returned.
-        return if self.path.join(".git").exists() {
+        let candidates = try!(if self.path.join(".git").exists() {
             self.list_files_git(pkg)
         } else {
             self.list_files_walk(pkg)
-        };
+        });
 
-        fn list_files_git(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-            let cwd = pkg.get_manifest_path().dir_path();
-            let mut cmd = process("git").cwd(cwd.clone());
-            cmd = cmd.arg("ls-files").arg("-z");
+        let pats = pkg.get_manifest().get_exclude().iter().map(|p| {
+            Pattern::new(p.as_slice())
+        }).collect::<Vec<Pattern>>();
 
-            // Filter out all other packages with a filter directive
-            for pkg in self.packages.iter().filter(|p| *p != pkg) {
-                if cwd.is_ancestor_of(pkg.get_manifest_path()) {
-                    let filter = pkg.get_manifest_path().dir_path()
-                                    .path_relative_from(&self.path).unwrap();
-                    cmd = cmd.arg("-x").arg(filter);
-                }
+        let root = pkg.get_manifest_path().dir_path();
+        Ok(candidates.move_iter().filter(|candidate| {
+            let candidate = candidate.path_relative_from(&root).unwrap();
+            !pats.iter().any(|p| p.matches_path(&candidate))
+        }).collect())
+    }
+
+    fn list_files_git(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+        let cwd = pkg.get_manifest_path().dir_path();
+        let mut cmd = process("git").cwd(cwd.clone());
+        cmd = cmd.arg("ls-files").arg("-z");
+
+        // Filter out all other packages with a filter directive
+        for pkg in self.packages.iter().filter(|p| *p != pkg) {
+            if cwd.is_ancestor_of(pkg.get_manifest_path()) {
+                let filter = pkg.get_manifest_path().dir_path()
+                                .path_relative_from(&self.path).unwrap();
+                cmd = cmd.arg("-x").arg(filter);
             }
-
-            log!(5, "listing git files with: {}", cmd);
-            let output = try!(cmd.arg(".").exec_with_output());
-            let output = output.output.as_slice();
-            Ok(output.split(|x| *x == 0).map(Path::new).collect())
         }
 
-        fn list_files_walk(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-            let mut ret = Vec::new();
-            for pkg in self.packages.iter().filter(|p| *p == pkg) {
-                let loc = pkg.get_manifest_path().dir_path();
-                try!(walk(&loc, &mut ret, true));
-            }
-            return Ok(ret);
+        log!(5, "listing git files with: {}", cmd);
+        let output = try!(cmd.arg(".").exec_with_output());
+        let output = output.output.as_slice();
+        Ok(output.split(|x| *x == 0).map(|p| cwd.join(p)).collect())
+    }
 
-            fn walk(path: &Path, ret: &mut Vec<Path>,
-                    is_root: bool) -> CargoResult<()> {
-                if !path.is_dir() {
-                    ret.push(path.clone());
-                    return Ok(())
-                }
-                // Don't recurse into any sub-packages that we have
-                if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
-                for dir in try!(fs::readdir(path)).iter() {
-                    match (is_root, dir.filename_str()) {
-                        (_,    Some(".git")) |
-                        (true, Some("target")) |
-                        (true, Some("Cargo.lock")) => continue,
-                        _ => {}
-                    }
-                    try!(walk(dir, ret, false));
-                }
+    fn list_files_walk(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+        let mut ret = Vec::new();
+        for pkg in self.packages.iter().filter(|p| *p == pkg) {
+            let loc = pkg.get_manifest_path().dir_path();
+            try!(walk(&loc, &mut ret, true));
+        }
+        return Ok(ret);
+
+        fn walk(path: &Path, ret: &mut Vec<Path>,
+                is_root: bool) -> CargoResult<()> {
+            if !path.is_dir() {
+                ret.push(path.clone());
                 return Ok(())
             }
+            // Don't recurse into any sub-packages that we have
+            if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
+            for dir in try!(fs::readdir(path)).iter() {
+                match (is_root, dir.filename_str()) {
+                    (_,    Some(".git")) |
+                    (true, Some("target")) |
+                    (true, Some("Cargo.lock")) => continue,
+                    _ => {}
+                }
+                try!(walk(dir, ret, false));
+            }
+            return Ok(())
         }
     }
 }

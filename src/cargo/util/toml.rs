@@ -195,7 +195,7 @@ pub struct TomlManifest {
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
-    dev_dependencies: Option<HashMap<String, TomlDependency>>
+    dev_dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
 #[deriving(Encodable,Decodable,PartialEq,Clone)]
@@ -220,6 +220,7 @@ pub struct TomlProject {
     pub version: String,
     pub authors: Vec<String>,
     build: Option<TomlBuildCommandsList>,
+    exclude: Option<Vec<String>>,
 }
 
 #[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
@@ -418,6 +419,7 @@ impl TomlManifest {
             Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
             None => Vec::new()
         };
+        let exclude = project.exclude.clone().unwrap_or(Vec::new());
 
         let summary = Summary::new(&pkgid, deps.as_slice());
         let mut manifest = Manifest::new(&summary,
@@ -425,7 +427,8 @@ impl TomlManifest {
                                          &layout.root.join("target"),
                                          &layout.root.join("doc"),
                                          sources,
-                                         build);
+                                         build,
+                                         exclude);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));
