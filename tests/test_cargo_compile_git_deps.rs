@@ -678,6 +678,12 @@ test!(update_with_shared_deps {
 {compiling} foo v0.5.0 ({dir})\n",
                     git = git_project.url(),
                     compiling = COMPILING, dir = p.url())));
+
+    // We should be able to update transitive deps
+    assert_that(p.process(cargo_dir().join("cargo-update")).arg("bar"),
+                execs().with_stdout(format!("{} git repository `{}`",
+                                            UPDATING,
+                                            git_project.url())));
 })
 
 test!(dep_with_submodule {
