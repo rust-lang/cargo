@@ -25,6 +25,14 @@ impl<'a> ToUrl for &'a str {
     }
 }
 
+impl<'a> ToUrl for &'a Path {
+    fn to_url(self) -> Result<Url, String> {
+        Url::from_file_path(self).map_err(|()| {
+            format!("invalid path url `{}`", self.display())
+        })
+    }
+}
+
 fn mapper(s: &str) -> url::SchemeType {
     match s {
         "git" => url::RelativeScheme("9418"),
