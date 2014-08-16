@@ -482,7 +482,7 @@ test!(lib_bin_same_name {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "foo"
             [[bin]]
             name = "foo"
@@ -591,7 +591,7 @@ test!(lib_with_standard_name2 {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "syntax"
             bench = false
             doctest = false
@@ -666,7 +666,7 @@ test!(bench_dylib {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "foo"
             crate_type = ["dylib"]
 
@@ -695,7 +695,7 @@ test!(bench_dylib {
             version = "0.0.1"
             authors = []
 
-            [[lib]]
+            [lib]
             name = "bar"
             crate_type = ["dylib"]
         "#)
