@@ -907,7 +907,7 @@ test!(dep_with_changed_submodule {
                 .with_stdout(format!("{} git repository `[..]`\n\
                                       {} dep1 v0.5.0 ([..])\n\
                                       {} foo v0.5.0 ([..])\n\
-                                      {} `target/foo`\n\
+                                      {} `target[..]foo`\n\
                                       project2\
                                       ",
                                       UPDATING,
@@ -919,7 +919,7 @@ test!(dep_with_changed_submodule {
 
     let mut file = File::create(&git_project.root().join(".gitmodules"));
     file.write_str(format!("[submodule \"src\"]\n\tpath = src\n\turl={}",
-                           git_project3.root().display()).as_slice());
+                           git_project3.url()).as_slice());
 
     git_project.process("git").args(["submodule", "sync"]).exec_with_output().assert();
     git_project.process("git").args(["fetch"]).cwd(git_project.root().join("src"))
@@ -942,7 +942,7 @@ test!(dep_with_changed_submodule {
                 .with_stdout(format!("{} git repository `[..]`\n\
                                       {} dep1 v0.5.0 ([..])\n\
                                       {} foo v0.5.0 ([..])\n\
-                                      {} `target/foo`\n\
+                                      {} `target[..]foo`\n\
                                       project3\
                                       ",
                                       UPDATING,

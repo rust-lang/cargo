@@ -148,10 +148,14 @@ impl GitRemote {
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
         let repo = if into.exists() {
             let r = try!(git2::Repository::open(into));
-            try!(self.fetch_into(&r));
+            try!(self.fetch_into(&r).chain_error(|| {
+                internal(format!("failed to fetch into {}", into.display()))
+            }));
             r
         } else {
-            try!(self.clone_into(into))
+            try!(self.clone_into(into).chain_error(|| {
+                internal(format!("failed to clone into: {}", into.display()))
+            }))
         };
 
         Ok(GitDatabase { remote: self.clone(), path: into.clone(), repo: repo })
@@ -179,6 +183,7 @@ impl GitRemote {
 
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
         let url = self.url.to_string();
+        try!(mkdir_recursive(dst, UserDir));
         let repo = try!(git2::build::RepoBuilder::new().bare(true)
                                                        .hardlinks(false)
                                                        .clone(url.as_slice(), dst));
@@ -222,7 +227,10 @@ impl<'a> GitCheckout<'a> {
         // If the git checkout already exists, we don't need to clone it again
         let repo = match git2::Repository::open(into) {
             Ok(repo) => repo,
-            Err(..) => try!(GitCheckout::clone_repo(database.get_path(), into)),
+            Err(..) => {
+                try!(mkdir_recursive(&into.dir_path(), UserDir));
+                try!(GitCheckout::clone_repo(database.get_path(), into))
+            }
         };
         Ok(GitCheckout {
             location: into.clone(),
@@ -251,7 +259,11 @@ impl<'a> GitCheckout<'a> {
 
         let url = try!(source.to_url().map_err(human));
         let url = url.to_string();
-        let repo = try!(git2::Repository::clone(url.as_slice(), into));
+        let repo = try!(git2::Repository::clone(url.as_slice(),
+                                                into).chain_error(|| {
+            internal(format!("failed to clone {} into {}", source.display(),
+                             into.display()))
+        }));
         Ok(repo)
     }
 
