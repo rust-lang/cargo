@@ -164,6 +164,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     //       may be building a C lib for a plugin
     let layout = cx.layout(KindTarget);
     let output = layout.native(pkg);
+    let old_output = layout.proxy().old_native(pkg);
     let mut p = process(cmd.next().unwrap(), pkg, cx)
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
@@ -173,7 +174,11 @@ fn compile_custom(pkg: &Package, cmd: &str,
     }
     Ok(proc() {
         if first {
-            try!(fs::mkdir(&output, UserRWX).chain_error(|| {
+            try!(if old_output.exists() {
+                fs::rename(&old_output, &output)
+            } else {
+                fs::mkdir(&output, UserRWX)
+            }.chain_error(|| {
                 internal("failed to create output directory for build command")
             }));
         }
