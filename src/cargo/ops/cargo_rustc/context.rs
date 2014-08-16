@@ -4,7 +4,7 @@ use semver::Version;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util;
-use util::{CargoResult, ChainError, internal, Config, profile};
+use util::{CargoResult, ChainError, internal, Config, profile, Require};
 
 use super::{Kind, KindPlugin, KindTarget, Compilation};
 use super::layout::{Layout, LayoutProxy};
@@ -27,6 +27,7 @@ pub struct Context<'a, 'b> {
     env: &'a str,
     host: Layout,
     target: Option<Layout>,
+    target_triple: String,
     host_dylib: (String, String),
     package_set: &'a PackageSet,
     target_dylib: (String, String),
@@ -47,8 +48,10 @@ impl<'a, 'b> Context<'a, 'b> {
             let (dylib, _) = try!(Context::filename_parts(None));
             dylib
         };
+        let (rustc_version, target_triple) = try!(Context::rustc_version());
         Ok(Context {
-            rustc_version: try!(Context::rustc_version()),
+            rustc_version: rustc_version,
+            target_triple: target_triple,
             env: env,
             host: host,
             target: target,
@@ -65,11 +68,26 @@ impl<'a, 'b> Context<'a, 'b> {
         })
     }
 
-    /// Run `rustc` to figure out what its current version string is
-    fn rustc_version() -> CargoResult<String> {
+    /// Run `rustc` to figure out what its current version string is.
+    ///
+    /// The second element of the tuple returned is the target triple that rustc
+    /// is a host for.
+    fn rustc_version() -> CargoResult<(String, String)> {
         let output = try!(util::process("rustc").arg("-v").arg("verbose")
                                .exec_with_output());
-        Ok(String::from_utf8(output.output).unwrap())
+        let output = try!(String::from_utf8(output.output).map_err(|_| {
+            internal("rustc -v didn't return utf8 output")
+        }));
+        let triple = {
+            let triple = output.as_slice().lines().filter(|l| {
+                l.starts_with("host: ")
+            }).map(|l| l.slice_from(6)).next();
+            let triple = try!(triple.require(|| {
+                internal("rustc -v didn't have a line for `host:`")
+            }));
+            triple.to_string()
+        };
+        Ok((output, triple))
     }
 
     /// Run `rustc` to discover the dylib prefix/suffix for the target
@@ -203,6 +221,11 @@ impl<'a, 'b> Context<'a, 'b> {
     fn dylib(&self, kind: Kind) -> (&str, &str) {
         let pair = if kind == KindPlugin {&self.host_dylib} else {&self.target_dylib};
         (pair.ref0().as_slice(), pair.ref1().as_slice())
+    }
+
+    /// Return the target triple which this context is targeting.
+    pub fn target_triple(&self) -> &str {
+        self.target_triple.as_slice()
     }
 
     /// Return the exact filename of the target.

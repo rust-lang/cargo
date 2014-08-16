@@ -167,7 +167,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     let mut p = process(cmd.next().unwrap(), pkg, cx)
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
-                     .env("TARGET", cx.config.target());
+                     .env("TARGET", Some(cx.target_triple()));
     for arg in cmd {
         p = p.arg(arg);
     }
