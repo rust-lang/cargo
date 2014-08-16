@@ -7,6 +7,7 @@
 
 extern crate collections;
 extern crate debug;
+extern crate glob;
 extern crate regex;
 extern crate semver;
 extern crate serialize;
