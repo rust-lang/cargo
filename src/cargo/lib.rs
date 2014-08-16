@@ -17,6 +17,7 @@ extern crate url;
 #[phase(plugin, link)] extern crate log;
 
 extern crate docopt;
+extern crate git2;
 extern crate toml;
 #[cfg(test)] extern crate hamcrest;
 
@@ -83,7 +84,10 @@ pub fn execute_main<'a,
                     V: Encodable<json::Encoder<'a>, io::IoError>>(
                         exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
                         options_first: bool) {
-    process::<V>(|rest, shell| call_main(exec, shell, rest, options_first));
+    // see comments below
+    off_the_main_thread(proc() {
+        process::<V>(|rest, shell| call_main(exec, shell, rest, options_first));
+    });
 }
 
 pub fn call_main<'a,
@@ -105,8 +109,11 @@ pub fn execute_main_without_stdin<'a,
                                   V: Encodable<json::Encoder<'a>, io::IoError>>(
                                       exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
                                       options_first: bool) {
-    process::<V>(|rest, shell| call_main_without_stdin(exec, shell, rest,
-                                                       options_first));
+    // see comments below
+    off_the_main_thread(proc() {
+        process::<V>(|rest, shell| call_main_without_stdin(exec, shell, rest,
+                                                           options_first));
+    });
 }
 
 pub fn call_main_without_stdin<'a,
@@ -238,4 +245,17 @@ fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
     Decodable::decode(&mut decoder).map_err(|_| {
         CliError::new("Could not process standard in as input", 1)
     })
+}
+
+// Seems curious to run cargo off the main thread, right? Well do I have a story
+// for you. Turns out rustdoc does a similar thing, and already has a good
+// explanation [1] though, so I'll just point you over there.
+//
+// [1]: https://github.com/rust-lang/rust/blob/85fd37f/src/librustdoc/lib.rs#L92-L122
+fn off_the_main_thread(p: proc():Send) {
+    let (tx, rx) = channel();
+    spawn(proc() { p(); tx.send(()); });
+    if rx.recv_opt().is_err() {
+        std::os::set_exit_status(std::rt::DEFAULT_ERROR_CODE);
+    }
 }

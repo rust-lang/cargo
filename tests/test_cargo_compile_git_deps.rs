@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir, path2url};
-use support::{COMPILING, FRESH, UPDATING};
+use support::{COMPILING, FRESH, UPDATING, RUNNING};
 use support::paths::PathExt;
 use hamcrest::{assert_that,existing_file};
 use cargo;
@@ -859,4 +859,96 @@ test!(stale_cached_version {
 {compiling} foo v0.0.0 ({foo})
 ", updating = UPDATING, compiling = COMPILING, bar = bar.url(), foo = foo.url())));
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
+})
+
+test!(dep_with_changed_submodule {
+    let project = project("foo");
+    let git_project = git_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+            "#)
+    }).assert();
+
+    let git_project2 = git_repo("dep2", |project| {
+        project
+            .file("lib.rs", "pub fn dep() -> &'static str { \"project2\" }")
+    }).assert();
+
+    let git_project3 = git_repo("dep3", |project| {
+        project
+            .file("lib.rs", "pub fn dep() -> &'static str { \"project3\" }")
+    }).assert();
+
+    git_project.process("git").args(["submodule", "add"])
+               .arg(git_project2.root()).arg("src").exec_with_output().assert();
+    git_project.process("git").args(["add", "."]).exec_with_output().assert();
+    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
+               .assert();
+
+    let project = project
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            [dependencies.dep1]
+            git = '{}'
+        "#, git_project.url()))
+        .file("src/main.rs", "
+            extern crate dep1;
+            pub fn main() { println!(\"{}\", dep1::dep()) }
+        ");
+
+    assert_that(project.cargo_process("cargo-run"), execs()
+                .with_stdout(format!("{} git repository `[..]`\n\
+                                      {} dep1 v0.5.0 ([..])\n\
+                                      {} foo v0.5.0 ([..])\n\
+                                      {} `target[..]foo`\n\
+                                      project2\
+                                      ",
+                                      UPDATING,
+                                      COMPILING,
+                                      COMPILING,
+                                      RUNNING))
+                .with_stderr("")
+                .with_status(0));
+
+    let mut file = File::create(&git_project.root().join(".gitmodules"));
+    file.write_str(format!("[submodule \"src\"]\n\tpath = src\n\turl={}",
+                           git_project3.url()).as_slice());
+
+    git_project.process("git").args(["submodule", "sync"]).exec_with_output().assert();
+    git_project.process("git").args(["fetch"]).cwd(git_project.root().join("src"))
+               .exec_with_output().assert();
+    git_project.process("git").args(["reset", "--hard", "origin/master"])
+               .cwd(git_project.root().join("src")).exec_with_output().assert();
+    git_project.process("git").args(["add", "."]).exec_with_output().assert();
+    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
+               .assert();
+
+    timer::sleep(Duration::milliseconds(1000));
+    // Update the dependency and carry on!
+    assert_that(project.process(cargo_dir().join("cargo-update")), execs()
+                .with_stderr("")
+                .with_stdout(format!("{} git repository `{}`",
+                                     UPDATING,
+                                     git_project.url())));
+
+    assert_that(project.cargo_process("cargo-run"), execs()
+                .with_stdout(format!("{} git repository `[..]`\n\
+                                      {} dep1 v0.5.0 ([..])\n\
+                                      {} foo v0.5.0 ([..])\n\
+                                      {} `target[..]foo`\n\
+                                      project3\
+                                      ",
+                                      UPDATING,
+                                      COMPILING,
+                                      COMPILING,
+                                      RUNNING))
+                .with_stderr("")
+                .with_status(0));
 })
