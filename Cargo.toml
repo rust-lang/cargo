@@ -5,7 +5,7 @@ version = "0.0.1-pre"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>"]
 
-[[lib]]
+[lib]
 
 name = "cargo"
 path = "src/cargo/lib.rs"
