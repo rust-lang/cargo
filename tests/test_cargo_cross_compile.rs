@@ -32,9 +32,31 @@ fn alternate() -> &'static str {
 test!(simple_cross {
     if disabled() { return }
 
+    let mut build = project("builder");
+    build = build
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/main.rs", format!(r#"
+            fn main() {{
+                assert_eq!(std::os::getenv("TARGET").unwrap().as_slice(), "{}");
+            }}
+        "#, alternate()).as_slice());
+    assert_that(build.cargo_process("cargo-build"),
+                execs().with_status(0));
+
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", r#"
+        .file("Cargo.toml", format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = '{}'
+        "#, build.bin("foo").display()))
+        .file("src/main.rs", r#"
             use std::os;
             fn main() {
                 assert_eq!(os::consts::ARCH, "x86");

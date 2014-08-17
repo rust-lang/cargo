@@ -919,7 +919,7 @@ test!(dep_with_changed_submodule {
 
     let mut file = File::create(&git_project.root().join(".gitmodules"));
     file.write_str(format!("[submodule \"src\"]\n\tpath = src\n\turl={}",
-                           git_project3.url()).as_slice());
+                           git_project3.url()).as_slice()).assert();
 
     git_project.process("git").args(["submodule", "sync"]).exec_with_output().assert();
     git_project.process("git").args(["fetch"]).cwd(git_project.root().join("src"))

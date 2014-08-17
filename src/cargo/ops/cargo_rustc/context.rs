@@ -48,7 +48,9 @@ impl<'a, 'b> Context<'a, 'b> {
             let (dylib, _) = try!(Context::filename_parts(None));
             dylib
         };
-        let (rustc_version, target_triple) = try!(Context::rustc_version());
+        let (rustc_version, rustc_host) = try!(Context::rustc_version());
+        let target_triple = config.target().map(|s| s.to_string());
+        let target_triple = target_triple.unwrap_or(rustc_host);
         Ok(Context {
             rustc_version: rustc_version,
             target_triple: target_triple,
