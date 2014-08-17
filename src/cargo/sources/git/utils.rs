@@ -4,9 +4,8 @@ use std::io::{UserDir};
 use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use serialize::{Encodable,Encoder};
 use url::Url;
-use git2;
 
-use util::{CargoResult, ChainError, human, ToUrl, internal, Require};
+use util::{CargoResult, ChainError, ProcessBuilder, process, human};
 
 #[deriving(PartialEq,Clone,Encodable)]
 pub enum GitReference {
@@ -55,6 +54,22 @@ impl Show for GitRevision {
     }
 }
 
+macro_rules! git(
+    ($config:expr, $($arg:expr),+) => (
+        try!(git_inherit(&$config, process("git")$(.arg($arg))*))
+    )
+)
+
+macro_rules! git_output(
+    ($config:expr, $($arg:expr),*) => ({
+        try!(git_output(&$config, process("git")$(.arg($arg))*))
+    })
+)
+
+macro_rules! errln(
+    ($($arg:tt)*) => (let _ = writeln!(::std::io::stdio::stderr(), $($arg)*))
+)
+
 /// GitRemote represents a remote repository. It gets cloned into a local
 /// GitDatabase.
 #[deriving(PartialEq,Clone,Show)]
@@ -77,10 +92,10 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
 
 /// GitDatabase is a local clone of a remote repository's database. Multiple
 /// GitCheckouts can be cloned from this GitDatabase.
+#[deriving(PartialEq,Clone)]
 pub struct GitDatabase {
     remote: GitRemote,
     path: Path,
-    repo: git2::Repository,
 }
 
 #[deriving(Encodable)]
@@ -101,29 +116,25 @@ impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
 /// GitCheckout is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
 /// and return a CargoError if no revision for that reference was found.
-pub struct GitCheckout<'a> {
-    database: &'a GitDatabase,
+pub struct GitCheckout {
+    database: GitDatabase,
     location: Path,
     revision: GitRevision,
-    repo: git2::Repository,
 }
 
 #[deriving(Encodable)]
 pub struct EncodableGitCheckout {
-    database: EncodableGitDatabase,
+    database: GitDatabase,
     location: String,
     revision: String,
 }
 
-impl<'a, E, S: Encoder<E>> Encodable<S, E> for GitCheckout<'a> {
+impl<E, S: Encoder<E>> Encodable<S, E> for GitCheckout {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         EncodableGitCheckout {
+            database: self.database.clone(),
             location: self.location.display().to_string(),
-            revision: self.revision.to_string(),
-            database: EncodableGitDatabase {
-                remote: self.database.remote.clone(),
-                path: self.database.path.display().to_string(),
-            },
+            revision: self.revision.to_string()
         }.encode(s)
     }
 }
@@ -141,53 +152,50 @@ impl GitRemote {
 
     pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
                            -> CargoResult<GitRevision> {
-        let db = try!(self.db_at(path));
-        db.rev_for(reference)
+        // We simultaneously want to transform the reference into a resolved
+        // revision as well as verify that the reference itself is inside the
+        // repository. Sadly for a 40-character SHA1 the call to `rev-parse`
+        // will *always* return the same string with a 0 exit status, regardless
+        // of whether it's present in the database.
+        //
+        // Later versions of git introduced a syntax for this query via
+        // `$sha1^{object}`, but older versions of git do not support this. To
+        // get around this limitation, we chop 40-character sha revisions to 39
+        // characters to get an error'd exit status if the revision is indeed
+        // not present.
+        let mut reference = reference.as_slice();
+        if reference.len() == 40 {
+            reference = reference.slice_to(39);
+        }
+        Ok(GitRevision(git_output!(*path, "rev-parse", reference)))
     }
 
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
-        let repo = if into.exists() {
-            let r = try!(git2::Repository::open(into));
-            try!(self.fetch_into(&r).chain_error(|| {
-                internal(format!("failed to fetch into {}", into.display()))
-            }));
-            r
+        if into.exists() {
+            try!(self.fetch_into(into));
         } else {
-            try!(self.clone_into(into).chain_error(|| {
-                internal(format!("failed to clone into: {}", into.display()))
-            }))
-        };
+            try!(self.clone_into(into));
+        }
 
-        Ok(GitDatabase { remote: self.clone(), path: into.clone(), repo: repo })
+        Ok(GitDatabase { remote: self.clone(), path: into.clone() })
     }
 
-    pub fn db_at(&self, db_path: &Path) -> CargoResult<GitDatabase> {
-        let repo = try!(git2::Repository::open(db_path));
-        Ok(GitDatabase {
-            remote: self.clone(),
-            path: db_path.clone(),
-            repo: repo,
-        })
+    pub fn db_at(&self, db_path: &Path) -> GitDatabase {
+        GitDatabase { remote: self.clone(), path: db_path.clone() }
     }
 
-    fn fetch_into(&self, dst: &git2::Repository) -> CargoResult<()> {
-        let url = self.url.to_string();
-        let refspec = "refs/heads/*:refs/heads/*";
-        let mut remote = try!(dst.remote_create_anonymous(url.as_slice(),
-                                                          refspec));
-        try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        let sig = try!(git2::Signature::default(dst));
-        try!(remote.fetch(&sig, None));
-        Ok(())
+    fn fetch_into(&self, path: &Path) -> CargoResult<()> {
+        Ok(git!(*path, "fetch", "--force", "--quiet", "--tags",
+                self.url.to_string(), "refs/heads/*:refs/heads/*"))
     }
 
-    fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
-        let url = self.url.to_string();
-        try!(mkdir_recursive(dst, UserDir));
-        let repo = try!(git2::build::RepoBuilder::new().bare(true)
-                                                       .hardlinks(false)
-                                                       .clone(url.as_slice(), dst));
-        Ok(repo)
+    fn clone_into(&self, path: &Path) -> CargoResult<()> {
+        let dirname = Path::new(path.dirname());
+
+        try!(mkdir_recursive(path, UserDir));
+
+        Ok(git!(dirname, "clone", self.url.to_string(), path, "--bare",
+                "--no-hardlinks", "--quiet"))
     }
 }
 
@@ -198,7 +206,8 @@ impl GitDatabase {
 
     pub fn copy_to(&self, rev: GitRevision, dest: &Path)
                    -> CargoResult<GitCheckout> {
-        let checkout = try!(GitCheckout::clone_into(dest, self, rev.clone()));
+        let checkout = try!(GitCheckout::clone_into(dest, self.clone(),
+                                                    rev.clone()));
 
         match self.remote.rev_for(dest, "HEAD") {
             Ok(ref head) if rev == *head => {}
@@ -211,133 +220,121 @@ impl GitDatabase {
     }
 
     pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<GitRevision> {
-        let rev = try!(self.repo.revparse_single(reference.as_slice()));
-        Ok(GitRevision(rev.id().to_string()))
+        self.remote.rev_for(&self.path, reference)
     }
 
     pub fn has_ref<S: Str>(&self, reference: S) -> CargoResult<()> {
-        try!(self.repo.revparse_single(reference.as_slice()));
+        git_output!(self.path, "rev-parse", "--verify", reference.as_slice());
         Ok(())
     }
 }
 
-impl<'a> GitCheckout<'a> {
-    fn clone_into<'a>(into: &Path, database: &'a GitDatabase,
-                      revision: GitRevision) -> CargoResult<GitCheckout<'a>> {
-        // If the git checkout already exists, we don't need to clone it again
-        let repo = match git2::Repository::open(into) {
-            Ok(repo) => repo,
-            Err(..) => {
-                try!(mkdir_recursive(&into.dir_path(), UserDir));
-                try!(GitCheckout::clone_repo(database.get_path(), into))
-            }
-        };
-        Ok(GitCheckout {
+impl GitCheckout {
+    fn clone_into(into: &Path, database: GitDatabase,
+                  revision: GitRevision) -> CargoResult<GitCheckout> {
+        let checkout = GitCheckout {
             location: into.clone(),
             database: database,
             revision: revision,
-            repo: repo,
-        })
+        };
+
+        // If the git checkout already exists, we don't need to clone it again
+        if !checkout.location.join(".git").exists() {
+            try!(checkout.clone_repo());
+        }
+
+        Ok(checkout)
+    }
+
+    fn get_source(&self) -> &Path {
+        self.database.get_path()
     }
 
     pub fn get_rev(&self) -> &str {
         self.revision.as_slice()
     }
 
-    fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
-        let dirname = into.dir_path();
+    fn clone_repo(&self) -> CargoResult<()> {
+        let dirname = Path::new(self.location.dirname());
 
         try!(mkdir_recursive(&dirname, UserDir).chain_error(|| {
-            human(format!("Couldn't mkdir {}", dirname.display()))
+            human(format!("Couldn't mkdir {}",
+                          Path::new(self.location.dirname()).display()))
         }));
 
-        if into.exists() {
-            try!(rmdir_recursive(into).chain_error(|| {
-                human(format!("Couldn't rmdir {}", into.display()))
+        if self.location.exists() {
+            try!(rmdir_recursive(&self.location).chain_error(|| {
+                human(format!("Couldn't rmdir {}",
+                              Path::new(&self.location).display()))
             }));
         }
 
-        let url = try!(source.to_url().map_err(human));
-        let url = url.to_string();
-        let repo = try!(git2::Repository::clone(url.as_slice(),
-                                                into).chain_error(|| {
-            internal(format!("failed to clone {} into {}", source.display(),
-                             into.display()))
-        }));
-        Ok(repo)
+        git!(dirname, "clone", "--no-checkout", "--quiet",
+             self.get_source(), &self.location);
+        try!(self.reset());
+
+        Ok(())
     }
 
     fn fetch(&self) -> CargoResult<()> {
-        info!("fetch {}", self.repo.path().display());
-        let mut remote = try!(self.repo.remote_load("origin"));
-        try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        let sig = try!(git2::Signature::default(&self.repo));
-        try!(remote.fetch(&sig, None));
+        // In git 1.8, apparently --tags explicitly *only* fetches tags, it does
+        // not fetch anything else. In git 1.9, however, git apparently fetches
+        // everything when --tags is passed.
+        //
+        // This means that if we want to fetch everything we need to execute
+        // both with and without --tags on 1.8 (apparently), and only with
+        // --tags on 1.9. For simplicity, we execute with and without --tags for
+        // all gits.
+        //
+        // FIXME: This is suspicious. I have been informed that, for example,
+        //        bundler does not do this, yet bundler appears to work!
+        //
+        // And to continue the fun, git before 1.7.3 had the fun bug that if a
+        // branch was tracking a remote, then `git fetch $url` doesn't work!
+        //
+        // For details, see
+        // https://www.kernel.org/pub/software/scm/git/docs/RelNotes-1.7.3.txt
+        //
+        // In this case we just use `origin` here instead of the database path.
+        git!(self.location, "fetch", "--force", "--quiet", "origin");
+        git!(self.location, "fetch", "--force", "--quiet", "--tags", "origin");
         try!(self.reset());
         Ok(())
     }
 
     fn reset(&self) -> CargoResult<()> {
-        info!("reset {} to {}", self.repo.path().display(),
-              self.revision.as_slice());
-        let sig = try!(git2::Signature::default(&self.repo));
-        let oid = try!(git2::Oid::from_str(self.revision.as_slice()));
-        let object = try!(git2::Object::lookup(&self.repo, oid, None));
-        try!(self.repo.reset(&object, git2::Hard, &sig, None));
-        Ok(())
+        Ok(git!(self.location, "reset", "-q", "--hard",
+                self.revision.as_slice()))
     }
 
     fn update_submodules(&self) -> CargoResult<()> {
-        let sig = try!(git2::Signature::default(&self.repo));
-        return update_submodules(&self.repo, &sig);
-
-        fn update_submodules(repo: &git2::Repository,
-                             sig: &git2::Signature) -> CargoResult<()> {
-            info!("update submodules for: {}", repo.path().display());
-
-            for mut child in try!(repo.submodules()).move_iter() {
-                try!(child.init(false));
-
-                // A submodule which is listed in .gitmodules but not actually
-                // checked out will not have a head id, so we should ignore it.
-                let head = match child.head_id() {
-                    Some(head) => head,
-                    None => continue,
-                };
-
-                // If the submodule hasn't been checked out yet, we need to
-                // clone it. If it has been checked out and the head is the same
-                // as the submodule's head, then we can bail out and go to the
-                // next submodule.
-                let repo = match child.open() {
-                    Ok(repo) => {
-                        if child.head_id() == try!(repo.head()).target() {
-                            continue
-                        }
-                        repo
-                    }
-                    Err(..) => {
-                        let path = repo.path().dir_path().join(child.path());
-                        let url = try!(child.url().require(|| {
-                            internal("invalid submodule url")
-                        }));
-                        try!(git2::Repository::clone(url, &path))
-                    }
-                };
-
-                // Fetch data from origin and reset to the head commit
-                let url = try!(child.url().require(|| {
-                    internal("repo with non-utf8 url")
-                }));
-                let refspec = "refs/heads/*:refs/heads/*";
-                let mut remote = try!(repo.remote_create_anonymous(url, refspec));
-                try!(remote.fetch(sig, None));
-
-                let obj = try!(git2::Object::lookup(&repo, head, None));
-                try!(repo.reset(&obj, git2::Hard, sig, None));
-                try!(update_submodules(&repo, sig));
-            }
-            Ok(())
-        }
+        Ok(git!(self.location, "submodule", "update", "--init",
+                "--recursive", "--quiet"))
     }
 }
+
+fn git(path: &Path, cmd: ProcessBuilder) -> ProcessBuilder {
+    debug!("Executing {} @ {}", cmd, path.display());
+
+    cmd.cwd(path.clone())
+}
+
+fn git_inherit(path: &Path, cmd: ProcessBuilder) -> CargoResult<()> {
+    let cmd = git(path, cmd);
+    cmd.exec().chain_error(|| {
+        human(format!("Executing {} failed", cmd))
+    })
+}
+
+fn git_output(path: &Path, cmd: ProcessBuilder) -> CargoResult<String> {
+    let cmd = git(path, cmd);
+    let output = try!(cmd.exec_with_output().chain_error(||
+        human(format!("Executing {} failed", cmd))));
+
+    Ok(to_str(output.output.as_slice()).as_slice().trim_right().to_string())
+}
+
+fn to_str(vec: &[u8]) -> String {
+    String::from_utf8_lossy(vec).into_string()
+}
+
