@@ -91,7 +91,7 @@ pub fn compile(manifest_path: &Path,
         }
 
         let resolved = try!(resolver::resolve(package.get_package_id(),
-                                              dependencies.as_slice(),
+                                              package.get_dependencies(),
                                               &mut registry));
 
         try!(registry.add_overrides(override_ids));

@@ -952,3 +952,62 @@ test!(dep_with_changed_submodule {
                 .with_stderr("")
                 .with_status(0));
 })
+
+test!(dev_deps_with_testing {
+    let p2 = git_repo("bar", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn gimme() -> &'static str { "zoidberg" }
+        "#)
+    }).assert();
+
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dev-dependencies.bar]
+            version = "0.5.0"
+            git = '{}'
+        "#, p2.url()).as_slice())
+        .file("src/main.rs", r#"
+            fn main() {}
+
+            #[cfg(test)]
+            mod tests {
+                extern crate bar;
+                #[test] fn foo() { bar::gimme(); }
+            }
+        "#);
+
+    // Generate a lockfile which did not use `bar` to compile, but had to update
+    // `bar` to generate the lockfile
+    assert_that(p.cargo_process("cargo-build"),
+        execs().with_stdout(format!("\
+{updating} git repository `{bar}`
+{compiling} foo v0.5.0 ({url})
+", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
+
+    // Make sure we use the previous resolution of `bar` instead of updating it
+    // a second time.
+    assert_that(p.process(cargo_dir().join("cargo-test")),
+        execs().with_stdout(format!("\
+{compiling} bar v0.5.0 ({bar}#[..])
+{compiling} foo v0.5.0 ({url})
+{running} target[..]test[..]foo-[..]
+
+running 1 test
+test tests::foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, url = p.url(), running = RUNNING, bar = p2.url())));
+})
