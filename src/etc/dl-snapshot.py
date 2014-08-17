@@ -43,7 +43,7 @@ if not os.path.isdir('target/dl'):
 if os.path.isdir(dst):
     shutil.rmtree(dst)
 
-ret = subprocess.call(["curl", "-o", dl_path, url])
+ret = subprocess.call(["curl", "-k", "-o", dl_path, url])
 if ret != 0:
     raise Exception("failed to fetch url")
 h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()

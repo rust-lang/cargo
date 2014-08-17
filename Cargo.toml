@@ -29,7 +29,7 @@ git = "https://github.com/servo/rust-url"
 git = "https://github.com/rust-lang/semver"
 
 [dependencies.git2]
-git = "https://github.com/alexcrichton/git2-rs"
+git = "https://github.com/cmr/git2-rs"
 
 [[bin]]
 name = "cargo"
