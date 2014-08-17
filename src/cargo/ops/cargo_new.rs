@@ -2,10 +2,12 @@ use std::os;
 use std::io;
 use std::io::{fs, File};
 
-use git2::{Repository, Config};
-
-use util::{CargoResult, human, ChainError};
+use util::{CargoResult, human, ChainError, process};
 use core::shell::MultiShell;
+
+macro_rules! git( ($($a:expr),*) => ({
+    process("git") $(.arg($a))* .exec_with_output()
+}) )
 
 pub struct NewOptions<'a> {
     pub git: bool,
@@ -29,7 +31,7 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
 fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
 
     if opts.git {
-        try!(Repository::init(path));
+        try!(git!("init", path));
         let mut gitignore = "/target\n".to_string();
         if !opts.bin {
             gitignore.push_str("/Cargo.lock\n");
@@ -68,17 +70,19 @@ fn it_works() {
 }
 
 fn discover_author() -> CargoResult<String> {
-    let git_config = Config::open_default().ok();
-    let git_config = git_config.as_ref();
-    let name = git_config.and_then(|g| g.get_str("user.name").ok())
-                         .map(|s| s.to_string())
-                         .or_else(|| os::getenv("USER"));
-    let name = match name {
-        Some(name) => name,
-        None => return Err(human("could not determine the current user, \
-                                  please set $USER"))
+    let name = match git!("config", "user.name") {
+        Ok(out) => String::from_utf8_lossy(out.output.as_slice()).into_string(),
+        Err(..) => match os::getenv("USER") {
+            Some(user) => user,
+            None => return Err(human("could not determine the current user, \
+                                      please set $USER"))
+        }
     };
-    let email = git_config.and_then(|g| g.get_str("user.email").ok());
+
+    let email = match git!("config", "user.email") {
+        Ok(out) => Some(String::from_utf8_lossy(out.output.as_slice()).into_string()),
+        Err(..) => None,
+    };
 
     let name = name.as_slice().trim().to_string();
     let email = email.map(|s| s.as_slice().trim().to_string());

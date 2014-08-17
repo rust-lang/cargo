@@ -212,7 +212,9 @@ impl SourceId {
 
     // Pass absolute path
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
-        let url = try!(path.to_url().map_err(human));
+        let url = try!(Url::from_file_path(path).map_err(|()| {
+            human(format!("not a valid path for a URL: {}", path.display()))
+        }));
         Ok(SourceId::new(PathKind, url))
     }
 
