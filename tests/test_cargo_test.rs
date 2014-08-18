@@ -652,19 +652,19 @@ test!(test_dylib {
             [dependencies.bar]
             path = "bar"
         "#)
-        .file("src/lib.rs", "
-            extern crate bar;
+        .file("src/lib.rs", r#"
+            extern crate the_bar = "bar";
 
-            pub fn bar() { bar::baz(); }
+            pub fn bar() { the_bar::baz(); }
 
             #[test]
             fn foo() { bar(); }
-        ")
+        "#)
         .file("tests/test.rs", r#"
-            extern crate foo;
+            extern crate the_foo = "foo";
 
             #[test]
-            fn foo() { foo::bar(); }
+            fn foo() { the_foo::bar(); }
         "#)
         .file("bar/Cargo.toml", r#"
             [package]

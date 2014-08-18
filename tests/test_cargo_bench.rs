@@ -673,21 +673,21 @@ test!(bench_dylib {
             [dependencies.bar]
             path = "bar"
         "#)
-        .file("src/lib.rs", "
-            extern crate bar;
+        .file("src/lib.rs", r#"
+            extern crate the_bar = "bar";
             extern crate test;
 
-            pub fn bar() { bar::baz(); }
+            pub fn bar() { the_bar::baz(); }
 
             #[bench]
             fn foo(_b: &mut test::Bencher) {}
-        ")
+        "#)
         .file("benches/bench.rs", r#"
-            extern crate foo;
+            extern crate the_foo = "foo";
             extern crate test;
 
             #[bench]
-            fn foo(_b: &mut test::Bencher) { foo::bar(); }
+            fn foo(_b: &mut test::Bencher) { the_foo::bar(); }
         "#)
         .file("bar/Cargo.toml", r#"
             [package]
