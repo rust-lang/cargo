@@ -5,7 +5,7 @@ use toml;
 use core::MultiShell;
 use util::{CargoResult, ChainError, Require, internal, human};
 
-use cargo_toml = util::toml;
+use util::toml as cargo_toml;
 
 pub struct Config<'a> {
     home_path: Path,
