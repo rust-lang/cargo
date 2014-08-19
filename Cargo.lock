@@ -4,7 +4,6 @@ version = "0.0.1-pre"
 dependencies = [
  "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
  "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#e7c7bba846fea549fe4e93de4c9d21e851a9882f)",
@@ -30,30 +29,9 @@ version = "0.1.0"
 source = "git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd227fb9328b2ff8c20ca9"
 
 [[package]]
-name = "git2"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec"
-dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec)",
-]
-
-[[package]]
 name = "hamcrest"
 version = "0.1.0"
 source = "git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42"
-
-[[package]]
-name = "libgit2"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec"
-dependencies = [
- "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9)",
-]
-
-[[package]]
-name = "link-config"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9"
 
 [[package]]
 name = "semver"
