@@ -63,13 +63,8 @@ pub fn update_lockfile(manifest_path: &Path,
     let sources = match to_update {
         Some(name) => {
             let mut to_avoid = HashSet::new();
-            match resolve.deps(package.get_package_id()) {
-                Some(deps) => {
-                    for dep in deps.filter(|d| d.get_name() == name.as_slice()) {
-                        fill_with_deps(&resolve, dep, &mut to_avoid);
-                    }
-                }
-                None => {}
+            for dep in resolve.iter().filter(|d| d.get_name() == name.as_slice()) {
+                fill_with_deps(&resolve, dep, &mut to_avoid);
             }
             resolve.iter().filter(|pkgid| !to_avoid.contains(pkgid))
                    .map(|pkgid| pkgid.get_source_id().clone()).collect()

@@ -2,10 +2,11 @@ use std::cmp;
 use std::fmt::{Show, Formatter};
 use std::fmt;
 use std::io::fs;
+use glob::Pattern;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{CargoResult, internal, internal_error};
+use util::{CargoResult, internal, internal_error, process};
 
 pub struct PathSource {
     id: SourceId,
@@ -57,6 +58,85 @@ impl PathSource {
             ops::read_packages(&self.path, &self.id)
         }
     }
+
+    /// List all files relevant to building this package inside this source.
+    ///
+    /// This function will use the appropriate methods to determine what is the
+    /// set of files underneath this source's directory which are relevant for
+    /// building `pkg`.
+    ///
+    /// The basic assumption of this method is that all files in the directory
+    /// are relevant for building this package, but it also contains logic to
+    /// use other methods like .gitignore to filter the list of files.
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+        let candidates = try!(if self.path.join(".git").exists() {
+            self.list_files_git(pkg)
+        } else {
+            self.list_files_walk(pkg)
+        });
+
+        let pats = pkg.get_manifest().get_exclude().iter().map(|p| {
+            Pattern::new(p.as_slice())
+        }).collect::<Vec<Pattern>>();
+
+        let root = pkg.get_manifest_path().dir_path();
+        Ok(candidates.move_iter().filter(|candidate| {
+            let candidate = candidate.path_relative_from(&root).unwrap();
+            !pats.iter().any(|p| p.matches_path(&candidate)) &&
+                candidate.is_file()
+        }).collect())
+    }
+
+    fn list_files_git(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+        let cwd = pkg.get_manifest_path().dir_path();
+        let mut cmd = process("git").cwd(cwd.clone());
+        cmd = cmd.arg("ls-files").arg("-z")
+                 .arg("-x").arg("/target")
+                 .arg("-x").arg("/Cargo.lock");
+
+        // Filter out all other packages with a filter directive
+        for pkg in self.packages.iter().filter(|p| *p != pkg) {
+            if cwd.is_ancestor_of(pkg.get_manifest_path()) {
+                let filter = pkg.get_manifest_path().dir_path()
+                                .path_relative_from(&self.path).unwrap();
+                cmd = cmd.arg("-x").arg(filter);
+            }
+        }
+
+        log!(5, "listing git files with: {}", cmd);
+        let output = try!(cmd.arg(".").exec_with_output());
+        let output = output.output.as_slice();
+        Ok(output.split(|x| *x == 0).map(|p| cwd.join(p)).collect())
+    }
+
+    fn list_files_walk(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+        let mut ret = Vec::new();
+        for pkg in self.packages.iter().filter(|p| *p == pkg) {
+            let loc = pkg.get_manifest_path().dir_path();
+            try!(walk(&loc, &mut ret, true));
+        }
+        return Ok(ret);
+
+        fn walk(path: &Path, ret: &mut Vec<Path>,
+                is_root: bool) -> CargoResult<()> {
+            if !path.is_dir() {
+                ret.push(path.clone());
+                return Ok(())
+            }
+            // Don't recurse into any sub-packages that we have
+            if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
+            for dir in try!(fs::readdir(path)).iter() {
+                match (is_root, dir.filename_str()) {
+                    (_,    Some(".git")) |
+                    (true, Some("target")) |
+                    (true, Some("Cargo.lock")) => continue,
+                    _ => {}
+                }
+                try!(walk(dir, ret, false));
+            }
+            return Ok(())
+        }
+    }
 }
 
 impl Show for PathSource {
@@ -105,33 +185,15 @@ impl Source for PathSource {
         }
 
         let mut max = 0;
-
-        for pkg in self.packages.iter().filter(|p| *p == pkg) {
-            let loc = pkg.get_manifest_path().dir_path();
-            max = cmp::max(max, try!(walk(&loc, true)));
+        for file in try!(self.list_files(pkg)).iter() {
+            // An fs::stat error here is either because path is a
+            // broken symlink, a permissions error, or a race
+            // condition where this path was rm'ed - either way,
+            // we can ignore the error and treat the path's mtime
+            // as 0.
+            max = cmp::max(max, file.stat().map(|s| s.modified).unwrap_or(0));
         }
-
-        return Ok(max.to_string());
-
-        fn walk(path: &Path, is_root: bool) -> CargoResult<u64> {
-            if !path.is_dir() {
-                // An fs::stat error here is either because path is a
-                // broken symlink, a permissions error, or a race
-                // condition where this path was rm'ed - either way,
-                // we can ignore the error and treat the path's mtime
-                // as 0.
-                return Ok(fs::stat(path).map(|s| s.modified).unwrap_or(0))
-            }
-            // Don't recurse into any sub-packages that we have
-            if !is_root && path.join("Cargo.toml").exists() { return Ok(0) }
-
-            let mut max = 0;
-            for dir in try!(fs::readdir(path)).iter() {
-                if is_root && dir.filename_str() == Some("target") { continue }
-                if is_root && dir.filename_str() == Some("Cargo.lock") { continue }
-                max = cmp::max(max, try!(walk(dir, false)));
-            }
-            return Ok(max)
-        }
+        log!(5, "fingerprint {}: {}", self.path.display(), max);
+        Ok(max.to_string())
     }
 }
