@@ -38,7 +38,7 @@ test!(cargo_bench_simple {
     assert_that(p.process(cargo_dir().join("cargo-bench")),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]bench[..]foo
+{} target[..]release[..]foo
 
 running 1 test
 test bench_hello ... bench:         0 ns/iter (+/- 0)
@@ -63,7 +63,7 @@ test!(cargo_bench_verbose {
         execs().with_stdout(format!("\
 {running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
-{running} `[..]target[..]bench[..]foo-[..] hello --bench`
+{running} `[..]target[..]release[..]foo-[..] hello --bench`
 
 running 1 test
 test bench_hello ... bench:         0 ns/iter (+/- 0)
@@ -134,7 +134,7 @@ test!(cargo_bench_failing_test {
     assert_that(p.process(cargo_dir().join("cargo-bench")),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]bench[..]foo
+{} target[..]release[..]foo
 
 running 1 test
 test bench_hello ... ",
@@ -185,14 +185,14 @@ test!(bench_with_lib_dep {
     assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]bench[..]baz-[..]
+{running} target[..]release[..]baz-[..]
 
 running 1 test
 test bin_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]foo
+{running} target[..]release[..]foo
 
 running 1 test
 test lib_bench ... bench:         0 ns/iter (+/- 0)
@@ -300,14 +300,14 @@ test!(external_bench_explicit {
     assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]bench[..]bench-[..]
+{running} target[..]release[..]bench-[..]
 
 running 1 test
 test external_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test internal_bench ... bench:         0 ns/iter (+/- 0)
@@ -351,14 +351,14 @@ test!(external_bench_implicit {
     assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]bench[..]external-[..]
+{running} target[..]release[..]external-[..]
 
 running 1 test
 test external_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test internal_bench ... bench:         0 ns/iter (+/- 0)
@@ -411,7 +411,7 @@ test!(pass_through_command_line {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]bench[..]foo
+{running} target[..]release[..]foo
 
 running 1 test
 test bar ... bench:         0 ns/iter (+/- 0)
@@ -433,7 +433,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]bench[..]foo
+{running} target[..]release[..]foo
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
@@ -502,14 +502,14 @@ test!(lib_bin_same_name {
     assert_that(p.cargo_process("cargo-bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test [..] ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test [..] ... bench:         0 ns/iter (+/- 0)
@@ -557,14 +557,14 @@ test!(lib_with_standard_name {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
-{running} target[..]bench[..]bench-[..]
+{running} target[..]release[..]bench-[..]
 
 running 1 test
 test bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]syntax-[..]
+{running} target[..]release[..]syntax-[..]
 
 running 1 test
 test foo_bench ... bench:         0 ns/iter (+/- 0)
@@ -613,7 +613,7 @@ test!(lib_with_standard_name2 {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
-{running} target[..]bench[..]syntax-[..]
+{running} target[..]release[..]syntax-[..]
 
 running 1 test
 test bench ... bench:         0 ns/iter (+/- 0)
@@ -643,7 +643,7 @@ test!(bin_there_for_integration {
             use std::io::Command;
             #[bench]
             fn bench_bench(_b: &mut test::Bencher) {
-                let status = Command::new("target/bench/foo").status().unwrap();
+                let status = Command::new("target/release/foo").status().unwrap();
                 assert!(status.matches_exit_status(1));
             }
         "#);
@@ -708,14 +708,14 @@ test!(bench_dylib {
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]bench[..]bench-[..]
+{running} target[..]release[..]bench-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
@@ -738,14 +738,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        .with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]bench[..]bench-[..]
+{running} target[..]release[..]bench-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
@@ -783,7 +783,7 @@ test!(bench_twice_with_build_cmd {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
@@ -805,7 +805,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]bench[..]foo-[..]
+{running} target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)

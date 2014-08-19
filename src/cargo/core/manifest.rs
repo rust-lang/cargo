@@ -1,3 +1,4 @@
+use std::hash;
 use std::result;
 use std::fmt;
 use std::fmt::{Show,Formatter};
@@ -103,7 +104,7 @@ pub enum TargetKind {
     BinTarget
 }
 
-#[deriving(Encodable, Decodable, Clone, Hash, PartialEq, Show)]
+#[deriving(Encodable, Decodable, Clone, PartialEq, Show)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
@@ -143,7 +144,7 @@ impl Profile {
             env: "test".to_string(),
             debug: true,
             test: true,
-            dest: Some("test".to_string()),
+            dest: None,
             .. Profile::default()
         }
     }
@@ -153,7 +154,7 @@ impl Profile {
             env: "bench".to_string(),
             opt_level: 3,
             test: true,
-            dest: Some("bench".to_string()),
+            dest: Some("release".to_string()),
             .. Profile::default()
         }
     }
@@ -170,7 +171,7 @@ impl Profile {
     pub fn default_doc() -> Profile {
         Profile {
             env: "doc".to_string(),
-            dest: Some("doc-build".to_string()),
+            dest: None,
             doc: true,
             .. Profile::default()
         }
@@ -240,6 +241,28 @@ impl Profile {
     pub fn plugin(mut self, plugin: bool) -> Profile {
         self.plugin = plugin;
         self
+    }
+}
+
+impl<H: hash::Writer> hash::Hash<H> for Profile {
+    fn hash(&self, into: &mut H) {
+        // Be sure to match all fields explicitly, but ignore those not relevant
+        // to the actual hash of a profile.
+        let Profile {
+            opt_level,
+            debug,
+            plugin,
+            dest: ref dest,
+
+            // test flags are separated by file, not by profile hash, and
+            // env/doc also don't matter for the actual contents of the output
+            // file, just where the output file is located.
+            doc: _,
+            env: _,
+            test: _,
+            doctest: _,
+        } = *self;
+        (opt_level, debug, plugin, dest).hash(into)
     }
 }
 
