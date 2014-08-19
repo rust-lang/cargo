@@ -4,8 +4,8 @@ version = "0.0.1-pre"
 dependencies = [
  "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
  "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#7f03391f1dc9258daa30cc0d2d3433e05826f692)",
- "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec)",
+ "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#e7c7bba846fea549fe4e93de4c9d21e851a9882f)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#678bb4d52638b1cfdab78ef8e521566c9240fb1a)",
@@ -32,28 +32,28 @@ source = "git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd2
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#7f03391f1dc9258daa30cc0d2d3433e05826f692"
+source = "git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec"
 dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#7f03391f1dc9258daa30cc0d2d3433e05826f692)",
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec)",
 ]
 
 [[package]]
 name = "hamcrest"
 version = "0.1.0"
-source = "git+https://github.com/carllerche/hamcrest-rust.git#c23b8769f20f306c59a96b22532bb09b33faa764"
+source = "git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42"
 
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#7f03391f1dc9258daa30cc0d2d3433e05826f692"
+source = "git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec"
 dependencies = [
- "link-config 0.0.1 (git+http://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9)",
+ "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9)",
 ]
 
 [[package]]
 name = "link-config"
 version = "0.0.1"
-source = "git+http://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9"
+source = "git+https://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9"
 
 [[package]]
 name = "semver"
