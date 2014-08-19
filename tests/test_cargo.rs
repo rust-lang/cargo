@@ -47,7 +47,7 @@ test!(list_commands_empty {
     let proj = project("list-runs");
     let pr = copied_executable_process(&proj, "cargo", &Path::new("bin"));
     let new_path = os::join_paths(new_path().as_slice()).unwrap();
-    assert_that(pr.arg("--list").env("PATH", Some(new_path.as_slice())),
+    assert_that(pr.arg("-v").arg("--list").env("PATH", Some(new_path.as_slice())),
                 execs().with_status(0)
                        .with_stdout("Installed Commands:\n"));
 })
@@ -67,7 +67,7 @@ test!(list_commands_non_overlapping {
     let mut path = new_path();
     path.push(proj.root().join("path-test"));
     let path = os::join_paths(path.as_slice()).unwrap();
-    assert_that(pr.arg("--list").env("PATH", Some(path.as_slice())),
+    assert_that(pr.arg("-v").arg("--list").env("PATH", Some(path.as_slice())),
                 execs().with_status(0)
                        .with_stdout("Installed Commands:\n   1\n   2\n   3\n"));
 })

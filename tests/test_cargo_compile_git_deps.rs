@@ -1030,10 +1030,11 @@ test!(git_build_cmd_freshness {
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
         .file(".gitignore", "
             src/bar.rs
-            Cargo.lock
         ")
     }).assert();
     foo.root().move_into_the_past().assert();
+
+    timer::sleep(Duration::milliseconds(1000));
 
     assert_that(foo.process(cargo_dir().join("cargo-build")),
                 execs().with_status(0)
