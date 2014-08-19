@@ -226,13 +226,14 @@ test!(test_with_deep_lib_dep {
 
             [dependencies.foo]
             path = "../foo"
-
-            [lib]
-            name = "bar"
-            doctest = false
         "#)
         .file("src/lib.rs", "
             extern crate foo;
+            /// ```
+            /// bar::bar();
+            /// ```
+            pub fn bar() {}
+
             #[test]
             fn bar_test() {
                 foo::foo();
@@ -265,8 +266,16 @@ test bar_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
+{doctest} bar
+
+running 1 test
+test bar_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
 ",
                        compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
 
