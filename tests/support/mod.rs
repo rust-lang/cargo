@@ -7,7 +7,7 @@ use std::str;
 use std::vec::Vec;
 use std::fmt::Show;
 use url::Url;
-use ham = hamcrest;
+use hamcrest as ham;
 use cargo::util::{process,ProcessBuilder};
 use cargo::util::ProcessError;
 
