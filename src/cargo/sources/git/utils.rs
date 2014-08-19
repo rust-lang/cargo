@@ -289,8 +289,11 @@ impl GitCheckout {
 
     fn update_submodules(&self) -> CargoResult<()> {
         git!(self.location, "submodule", "sync", "--quiet");
-        Ok(git!(self.location, "submodule", "update", "--init",
-                "--recursive", "--quiet"))
+        // Sadly older versions of git don't actually respect --quiet for *all*
+        // operations and still print some thing here and there.
+        git_output!(self.location, "submodule", "update", "--init",
+                    "--recursive", "--quiet");
+        Ok(())
     }
 }
 
