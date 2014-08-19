@@ -76,6 +76,14 @@ impl PathExt for Path {
 
             let hour = 1000 * 3600;
             let newtime = stat.modified - hour;
+
+            // Sadly change_file_times has the same failure mode as the above
+            // rmdir_recursive :(
+            match fs::change_file_times(path, newtime, newtime) {
+                Err(io::IoError { kind: io::PermissionDenied, .. }) => {}
+                e => return e,
+            }
+            try!(fs::chmod(path, stat.perm | io::UserWrite));
             fs::change_file_times(path, newtime, newtime)
         }
     }

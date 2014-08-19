@@ -1,10 +1,11 @@
-use std::io::{fs, TempDir};
+use std::io::{fs, TempDir, File};
 use std::os;
 use std::path;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder, path2url};
+use support::{COMPILING, RUNNING, FRESH, cargo_dir, ProjectBuilder, path2url};
 use hamcrest::{assert_that, existing_file};
+use support::paths::PathExt;
 use cargo;
 use cargo::util::{process, realpath};
 
@@ -1485,4 +1486,93 @@ test!(deprecated_lib {
                 execs().with_status(0)
                        .with_stderr("\
 the [[lib]] section has been deprecated in favor of [lib]\n"));
+})
+
+test!(freshness_ignores_excluded {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "true"
+            exclude = ["src/b*.rs"]
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }");
+    foo.build();
+    foo.root().move_into_the_past().assert();
+
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 ({url})
+", compiling = COMPILING, url = foo.url())));
+
+    // Smoke test to make sure it doesn't compile again
+    println!("first pass");
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.0 ({url})
+", fresh = FRESH, url = foo.url())));
+
+    // Modify an ignored file and make sure we don't rebuild
+    println!("second pass");
+    File::create(&foo.root().join("src/bar.rs")).assert();
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.0 ({url})
+", fresh = FRESH, url = foo.url())));
+})
+
+test!(rebuild_preserves_out_dir {
+    let mut build = project("builder");
+    build = build
+        .file("Cargo.toml", r#"
+            [package]
+            name = "build"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/main.rs", r#"
+            use std::os;
+            use std::io::File;
+
+            fn main() {{
+                let path = Path::new(os::getenv("OUT_DIR").unwrap()).join("foo");
+                if os::getenv("FIRST").is_some() {
+                    File::create(&path).unwrap();
+                } else {
+                    File::create(&path).unwrap();
+                }
+            }}
+        "#);
+    assert_that(build.cargo_process("cargo-build"), execs().with_status(0));
+
+    let foo = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = '{}'
+        "#, build.bin("build").display()).as_slice())
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }");
+    foo.build();
+    foo.root().move_into_the_past().assert();
+
+    assert_that(foo.process(cargo_dir().join("cargo-build"))
+                   .env("FIRST", Some("1")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 ({url})
+", compiling = COMPILING, url = foo.url())));
+
+    File::create(&foo.root().join("src/bar.rs")).assert();
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 ({url})
+", compiling = COMPILING, url = foo.url())));
 })

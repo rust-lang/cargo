@@ -678,6 +678,12 @@ test!(update_with_shared_deps {
 {compiling} foo v0.5.0 ({dir})\n",
                     git = git_project.url(),
                     compiling = COMPILING, dir = p.url())));
+
+    // We should be able to update transitive deps
+    assert_that(p.process(cargo_dir().join("cargo-update")).arg("bar"),
+                execs().with_stdout(format!("{} git repository `{}`",
+                                            UPDATING,
+                                            git_project.url())));
 })
 
 test!(dep_with_submodule {
@@ -1010,4 +1016,46 @@ test tests::foo ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, url = p.url(), running = RUNNING, bar = p2.url())));
+})
+
+test!(git_build_cmd_freshness {
+    let foo = git_repo("foo", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "true"
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file(".gitignore", "
+            src/bar.rs
+        ")
+    }).assert();
+    foo.root().move_into_the_past().assert();
+
+    timer::sleep(Duration::milliseconds(1000));
+
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 ({url})
+", compiling = COMPILING, url = foo.url())));
+
+    // Smoke test to make sure it doesn't compile again
+    println!("first pass");
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.0 ({url})
+", fresh = FRESH, url = foo.url())));
+
+    // Modify an ignored file and make sure we don't rebuild
+    println!("second pass");
+    File::create(&foo.root().join("src/bar.rs")).assert();
+    assert_that(foo.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.0 ({url})
+", fresh = FRESH, url = foo.url())));
 })
