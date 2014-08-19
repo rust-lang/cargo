@@ -1002,7 +1002,7 @@ test!(dev_deps_with_testing {
         execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({bar}#[..])
 {compiling} foo v0.5.0 ({url})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test tests::foo ... ok

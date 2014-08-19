@@ -411,14 +411,14 @@ test!(cross_tests {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.0 ({foo})
-{running} target[..]{triple}[..]test[..]bar-[..]
+{running} target[..]{triple}[..]bar-[..]
 
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]{triple}[..]test[..]foo-[..]
+{running} target[..]{triple}[..]foo-[..]
 
 running 1 test
 test test_foo ... ok

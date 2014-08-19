@@ -246,7 +246,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
 fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
     let kind = KindTarget;
     let pkg_root = package.get_root();
-    let cx_root = cx.layout(kind).proxy().dest().dir_path().join("doc");
+    let cx_root = cx.layout(kind).proxy().dest().join("doc");
     let rustdoc = process("rustdoc", package, cx).cwd(pkg_root.clone());
     let rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
