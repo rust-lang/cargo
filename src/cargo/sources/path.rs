@@ -82,14 +82,17 @@ impl PathSource {
         let root = pkg.get_manifest_path().dir_path();
         Ok(candidates.move_iter().filter(|candidate| {
             let candidate = candidate.path_relative_from(&root).unwrap();
-            !pats.iter().any(|p| p.matches_path(&candidate))
+            !pats.iter().any(|p| p.matches_path(&candidate)) &&
+                candidate.is_file()
         }).collect())
     }
 
     fn list_files_git(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
         let cwd = pkg.get_manifest_path().dir_path();
         let mut cmd = process("git").cwd(cwd.clone());
-        cmd = cmd.arg("ls-files").arg("-z");
+        cmd = cmd.arg("ls-files").arg("-z")
+                 .arg("-x").arg("/target")
+                 .arg("-x").arg("/Cargo.lock");
 
         // Filter out all other packages with a filter directive
         for pkg in self.packages.iter().filter(|p| *p != pkg) {
@@ -190,6 +193,7 @@ impl Source for PathSource {
             // as 0.
             max = cmp::max(max, file.stat().map(|s| s.modified).unwrap_or(0));
         }
+        log!(5, "fingerprint {}: {}", self.path.display(), max);
         Ok(max.to_string())
     }
 }

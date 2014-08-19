@@ -29,9 +29,7 @@ Rust's package manager
 
 Usage:
     cargo <command> [<args>...]
-    cargo -h | --help
-    cargo -V | --version
-    cargo --list
+    cargo [options]
 
 Options:
     -h, --help       Display this message
