@@ -1249,8 +1249,8 @@ test!(explicit_examples {
         "#);
 
     assert_that(p.cargo_process("cargo-test"), execs());
-    assert_that(process(p.bin("test/hello")), execs().with_stdout("Hello, World!\n"));
-    assert_that(process(p.bin("test/goodbye")), execs().with_stdout("Goodbye, World!\n"));
+    assert_that(process(p.bin("hello")), execs().with_stdout("Hello, World!\n"));
+    assert_that(process(p.bin("goodbye")), execs().with_stdout("Goodbye, World!\n"));
 })
 
 test!(implicit_examples {
@@ -1276,8 +1276,8 @@ test!(implicit_examples {
         "#);
 
     assert_that(p.cargo_process("cargo-test"), execs().with_status(0));
-    assert_that(process(p.bin("test/hello")), execs().with_stdout("Hello, World!\n"));
-    assert_that(process(p.bin("test/goodbye")), execs().with_stdout("Goodbye, World!\n"));
+    assert_that(process(p.bin("hello")), execs().with_stdout("Hello, World!\n"));
+    assert_that(process(p.bin("goodbye")), execs().with_stdout("Goodbye, World!\n"));
 })
 
 test!(standard_build_no_ndebug {

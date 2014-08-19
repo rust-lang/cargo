@@ -161,7 +161,7 @@ test!(cargo_compile_with_root_dev_deps_with_testing {
         execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({url})
 {compiling} foo v0.5.0 ({url})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 0 tests
 

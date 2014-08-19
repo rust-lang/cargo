@@ -36,7 +36,7 @@ test!(cargo_test_simple {
     assert_that(p.process(cargo_dir().join("cargo-test")),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]test[..]foo
+{} target[..]foo
 
 running 1 test
 test test_hello ... ok
@@ -60,7 +60,7 @@ test!(cargo_test_verbose {
         execs().with_stdout(format!("\
 {running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
-{running} `[..]target[..]test[..]foo-[..] hello`
+{running} `[..]target[..]foo-[..] hello`
 
 running 1 test
 test test_hello ... ok
@@ -127,7 +127,7 @@ test!(cargo_test_failing_test {
     assert_that(p.process(cargo_dir().join("cargo-test")),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]test[..]foo
+{} target[..]foo
 
 running 1 test
 test test_hello ... FAILED
@@ -191,14 +191,14 @@ test!(test_with_lib_dep {
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]baz-[..]
+{running} target[..]baz-[..]
 
 running 1 test
 test bin_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]foo
+{running} target[..]foo
 
 running 1 test
 test lib_test ... ok
@@ -298,14 +298,14 @@ test!(external_test_explicit {
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test internal_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]test-[..]
 
 running 1 test
 test external_test ... ok
@@ -346,14 +346,14 @@ test!(external_test_implicit {
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]external-[..]
+{running} target[..]external-[..]
 
 running 1 test
 test external_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test internal_test ... ok
@@ -404,7 +404,7 @@ test!(pass_through_command_line {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo
+{running} target[..]foo
 
 running 1 test
 test bar ... ok
@@ -426,7 +426,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo
+{running} target[..]foo
 
 running 1 test
 test foo ... ok
@@ -491,14 +491,14 @@ test!(lib_bin_same_name {
     assert_that(p.cargo_process("cargo-test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test [..] ... ok
@@ -543,14 +543,14 @@ test!(lib_with_standard_name {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
-{running} target[..]test[..]syntax-[..]
+{running} target[..]syntax-[..]
 
 running 1 test
 test foo_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]test-[..]
 
 running 1 test
 test test ... ok
@@ -598,7 +598,7 @@ test!(lib_with_standard_name2 {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
-{running} target[..]test[..]syntax-[..]
+{running} target[..]syntax-[..]
 
 running 1 test
 test test ... ok
@@ -626,7 +626,7 @@ test!(bin_there_for_integration {
             use std::io::Command;
             #[test]
             fn test_test() {
-                let status = Command::new("target/test/foo").status().unwrap();
+                let status = Command::new("target/foo").status().unwrap();
                 assert!(status.matches_exit_status(1));
             }
         "#);
@@ -685,14 +685,14 @@ test!(test_dylib {
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]test-[..]
 
 running 1 test
 test foo ... ok
@@ -715,14 +715,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        .with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]test[..]test-[..]
+{running} target[..]test-[..]
 
 running 1 test
 test foo ... ok
@@ -759,7 +759,7 @@ test!(test_twice_with_build_cmd {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test foo ... ok
@@ -781,7 +781,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]test[..]foo-[..]
+{running} target[..]foo-[..]
 
 running 1 test
 test foo ... ok
@@ -797,5 +797,49 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        fresh = FRESH, running = RUNNING,
                        doctest = DOCTEST,
+                       dir = p.url()).as_slice()));
+})
+
+test!(test_then_build {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            #[test]
+            fn foo() {}
+        ");
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]foo-[..]
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+                       compiling = COMPILING, running = RUNNING,
+                       doctest = DOCTEST,
+                       dir = p.url()).as_slice()));
+
+    assert_that(p.process(cargo_dir().join("cargo-build")),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} foo v0.0.1 ({dir})
+",
+                       fresh = FRESH,
                        dir = p.url()).as_slice()));
 })
