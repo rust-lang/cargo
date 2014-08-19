@@ -4,7 +4,7 @@ use std::io::File;
 
 use serialize::{Encodable, Decodable};
 use toml::Encoder;
-use toml = toml;
+use toml as toml;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, Resolve, resolver, Package, SourceId};
@@ -12,7 +12,7 @@ use core::PackageId;
 use sources::{PathSource};
 use util::config::{Config};
 use util::{CargoResult, human};
-use cargo_toml = util::toml;
+use util::toml as cargo_toml;
 
 pub fn generate_lockfile(manifest_path: &Path,
                          shell: &mut MultiShell)

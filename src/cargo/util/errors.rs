@@ -5,7 +5,7 @@ use std::fmt::{Show, Formatter, FormatError};
 use std::str;
 
 use docopt;
-use TomlError = toml::Error;
+use toml::Error as TomlError;
 use url;
 use git2;
 
