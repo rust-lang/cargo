@@ -136,6 +136,18 @@ impl PathSource {
             return Ok(())
         }
     }
+
+    /// Collect all paths to documentation in a source
+    pub fn documentation(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+        let mut ret = Vec::new();
+        for p in self.packages.iter().filter(|p| *p == pkg) {
+            match p.get_manifest().get_readme() {
+                Some(p) => ret.push(p.clone()),
+                None => {}
+            }
+        }
+        return Ok(ret);
+    }
 }
 
 impl Show for PathSource {

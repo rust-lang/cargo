@@ -24,6 +24,7 @@ pub struct Manifest {
     build: Vec<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
+    readme: Option<Path>,
 }
 
 impl Show for Manifest {
@@ -312,7 +313,8 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: &Summary, targets: &[Target],
                target_dir: &Path, doc_dir: &Path, sources: Vec<SourceId>,
-               build: Vec<String>, exclude: Vec<String>) -> Manifest {
+               build: Vec<String>, exclude: Vec<String>,
+               readme: Option<Path>) -> Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
@@ -323,6 +325,7 @@ impl Manifest {
             build: build,
             warnings: Vec::new(),
             exclude: exclude,
+            readme: readme,
         }
     }
 
@@ -380,6 +383,10 @@ impl Manifest {
 
     pub fn get_exclude(&self) -> &[String] {
         self.exclude.as_slice()
+    }
+
+    pub fn get_readme(&self) -> Option<&Path> {
+        self.readme.as_ref()
     }
 }
 

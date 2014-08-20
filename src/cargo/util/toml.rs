@@ -221,12 +221,19 @@ pub struct TomlProject {
     pub authors: Vec<String>,
     build: Option<TomlBuildCommandsList>,
     exclude: Option<Vec<String>>,
+    readme: Option<Readme>,
 }
 
 #[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
 pub enum TomlBuildCommandsList {
     SingleBuildCommand(String),
     MultipleBuildCommands(Vec<String>)
+}
+
+#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
+enum Readme {
+    ReadmePath(String),
+    ReadmePresent(bool),
 }
 
 impl TomlProject {
@@ -420,6 +427,15 @@ impl TomlManifest {
             None => Vec::new()
         };
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
+        let readme = match project.readme {
+            Some(ReadmePath(ref p)) => Some(layout.root.join(p.as_slice())),
+            Some(ReadmePresent(true)) => Some(layout.root.join("README.md")),
+            Some(ReadmePresent(false)) => None,
+            None => {
+                let guess = layout.root.join("README.md");
+                if guess.exists() {Some(guess)} else {None}
+            }
+        };
 
         let summary = Summary::new(&pkgid, deps.as_slice());
         let mut manifest = Manifest::new(&summary,
@@ -428,7 +444,8 @@ impl TomlManifest {
                                          &layout.root.join("doc"),
                                          sources,
                                          build,
-                                         exclude);
+                                         exclude,
+                                         readme);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));

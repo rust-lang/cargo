@@ -43,29 +43,40 @@ pub fn run_tests(manifest_path: &Path,
         Some((target.get_src_path(), target.get_name()))
     });
 
+    let mut rustdoc = compile.process("rustdoc", &package)
+                             .arg("--test")
+                             .arg("--test-args").arg(args.connect(" "))
+                             .arg("-L").arg(&compile.root_output)
+                             .arg("-L").arg(&compile.deps_output)
+                             .cwd(package.get_root());
+    for (pkg, libs) in compile.libraries.iter() {
+        for lib in libs.iter() {
+            let mut arg = pkg.get_name().as_bytes().to_vec();
+            arg.push(b'=');
+            arg.push_all(lib.as_vec());
+            rustdoc = rustdoc.arg("--extern").arg(arg.as_slice());
+        }
+    }
+
     for (lib, name) in libs {
         try!(options.shell.status("Doc-tests", name));
-        let mut p = compile.process("rustdoc", &package)
-                           .arg("--test").arg(lib)
-                           .arg("--crate-name").arg(name)
-                           .arg("-L").arg(&compile.root_output)
-                           .arg("-L").arg(&compile.deps_output)
-                           .cwd(package.get_root());
-
-        // FIXME(rust-lang/rust#16272): this should just always be passed.
-        if args.len() > 0 {
-            p = p.arg("--test-args").arg(args.connect(" "));
+        let p = rustdoc.clone().arg(lib).arg("--crate-name").arg(name);
+        try!(options.shell.verbose(|shell| {
+            shell.status("Running", p.to_string())
+        }));
+        match p.exec() {
+            Ok(()) => {}
+            Err(e) => return Ok(Some(e)),
         }
+    }
 
-        for (pkg, libs) in compile.libraries.iter() {
-            for lib in libs.iter() {
-                let mut arg = pkg.get_name().as_bytes().to_vec();
-                arg.push(b'=');
-                arg.push_all(lib.as_vec());
-                p = p.arg("--extern").arg(arg.as_slice());
-            }
-        }
-
+    for doc in try!(source.documentation(&package)).iter() {
+        let to_display = match doc.path_relative_from(&cwd) {
+            Some(path) => path,
+            None => doc.clone(),
+        };
+        try!(options.shell.status("Doc-tests", to_display.display().to_string()));
+        let p = rustdoc.clone().arg(doc);
         try!(options.shell.verbose(|shell| {
             shell.status("Running", p.to_string())
         }));
