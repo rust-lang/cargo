@@ -87,9 +87,10 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
                                                    args.as_slice(), false);
             cargo::process_executed(r, shell)
         },
-        // If we have `help` with no arguments, re-invoke ourself with `-h` to
-        // get the help message printed
-        "help" if flags.arg_args.len() == 0 => {
+        // If we are invoked with no arguments or with `help` with no
+        // arguments, re-invoke ourself with `-h` to get the help
+        // message printed
+        "" | "help" if flags.arg_args.len() == 0 => {
             shell.set_verbose(true);
             let r = cargo::call_main_without_stdin(execute, shell,
                                                    ["-h".to_string()], false);
