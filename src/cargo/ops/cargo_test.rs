@@ -46,8 +46,8 @@ pub fn run_tests(manifest_path: &Path,
         let mut p = compile.process("rustdoc")
                            .arg("--test").arg(lib)
                            .arg("--crate-name").arg(name)
-                           .arg("-L").arg("target/test")
-                           .arg("-L").arg("target/test/deps")
+                           .arg("-L").arg(&compile.root_output)
+                           .arg("-L").arg(&compile.deps_output)
                            .cwd(package.get_root());
 
         // FIXME(rust-lang/rust#16272): this should just always be passed.
