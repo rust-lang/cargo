@@ -3,3 +3,4 @@
 /config.stamp
 /Makefile
 /config.mk
+src/doc/build
