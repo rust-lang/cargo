@@ -548,7 +548,7 @@ test!(recompilation {
                                             FRESH, git_project.url(),
                                             FRESH, p.url())));
 
-    assert_that(p.process(cargo_dir().join("cargo-update")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
@@ -574,7 +574,7 @@ test!(recompilation {
     p.root().move_into_the_past().assert();
 
     // Update the dependency and carry on!
-    assert_that(p.process(cargo_dir().join("cargo-update")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
@@ -665,7 +665,7 @@ test!(update_with_shared_deps {
 
     timer::sleep(Duration::milliseconds(1000));
 
-    assert_that(p.process(cargo_dir().join("cargo-update")).arg("dep1"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
@@ -681,7 +681,7 @@ test!(update_with_shared_deps {
                     compiling = COMPILING, dir = p.url())));
 
     // We should be able to update transitive deps
-    assert_that(p.process(cargo_dir().join("cargo-update")).arg("bar"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
@@ -789,7 +789,7 @@ test!(two_deps_only_update_one {
     git1.process("git").args(["commit", "-m", "test"]).exec_with_output()
         .assert();
 
-    assert_that(project.process(cargo_dir().join("cargo-update")).arg("dep1"),
+    assert_that(project.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n",
                              UPDATING, git1.url()))
@@ -939,7 +939,7 @@ test!(dep_with_changed_submodule {
 
     timer::sleep(Duration::milliseconds(1000));
     // Update the dependency and carry on!
-    assert_that(project.process(cargo_dir().join("cargo-update")), execs()
+    assert_that(project.process(cargo_dir().join("cargo")).arg("update"), execs()
                 .with_stderr("")
                 .with_stdout(format!("{} git repository `{}`",
                                      UPDATING,
