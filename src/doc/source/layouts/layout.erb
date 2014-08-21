@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    
+    <!-- Always force latest IE rendering engine or request Chrome Frame -->
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    
+    <!-- Use title if it's in the page YAML frontmatter -->
+    <title><%= current_page.data.title || "The Middleman" %></title>
+    
+    <%= stylesheet_link_tag "all" %>
+    <%= javascript_include_tag  "all" %>
+  </head>
+  
+  <body class="<%= page_classes %>">
+    <%= link_to image_tag("forkme.png", class: "fork-me"), "https://github.com/rust-lang/cargo" %>
+    <%= link_to image_tag("Cargo-Logo-Small.png", class: "logo"), "index.html" %>
+
+    <main>
+      <p>Cargo downloads your <a href="http://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
+
+      <%= yield %>
+
+      <footer>
+        <%= link_to "Guide", "guide.html" %> |
+        <%= link_to "Frequently Asked Questions", "faq.html" %> |
+        <%= link_to "Manifest Format", "manifest.html" %> |
+        <%= link_to "Building Non-Rust Code", "native-build.html" %>
+      </footer>
+    </main>
+
+  </body>
+</html>

@@ -2,7 +2,8 @@ set -x
 
 if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${PLATFORM}" = "mac" ]; then
     target=apple-darwin
-elif [ "${TRAVIS_OS_NAME}" = "linux" ] || [ "${PLATFORM}" = "linux" ]; then
+elif [ "${TRAVIS_OS_NAME}" = "linux" ] || [ "${PLATFORM}" = "linux" ] ||
+     [ "${TRAVIS_OS_NAME}" = "" ]; then
     target=unknown-linux-gnu
 elif [ "${OS}" = "Windows_NT" ] || [ "${PLATFORM}" = "win" ]; then
     target=pc-mingw32

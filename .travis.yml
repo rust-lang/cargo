@@ -1,18 +1,29 @@
 language: rust
-
 install:
   - sh ./.travis.install.deps.sh
-
 script:
   - ./configure --local-rust-root=`pwd`/rustc
   - make
   - make test
   - make distcheck
-
+after_success: |
+  [ $TRAVIS_BRANCH = master ] &&
+  [ $TRAVIS_PULL_REQUEST = false ] &&
+  [ $BITS = 64 ] &&
+  [ $(uname -s) = Linux ] &&
+  (cd src/doc &&
+   bundle &&
+   bundle exec middleman build) &&
+  echo crates.io >> src/doc/build/CNAME &&
+  sudo pip install ghp-import
+  ghp-import -n src/doc/build &&
+  git push -f https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
-  - BITS=32
-  - BITS=64
-
+  matrix:
+    - BITS=32
+    - BITS=64
+  global:
+    secure: fV37lqpHoVgHJHBdPegut8uf5sfaK/SrLx+Npn1ngPPzUuIh+BZkgqX11FdAxIu05YfI/C/M3smG5SOxb5X0ojK8VQdRtvb8KM6b2G839jegxGk2Bs+bAWMFVrJDl5JCZec+zU/rPlZPXLLnOv23ReGv9UvwgxLw1AJjZ2WkJ5M=
 os:
   - linux
   - osx
