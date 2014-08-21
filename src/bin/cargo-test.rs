@@ -21,6 +21,7 @@ Usage:
 
 Options:
     -h, --help              Print this message
+    --no-run                Compile, but don't run tests
     -j N, --jobs N          The number of jobs to run in parallel
     --target TRIPLE         Build for the target triple
     -u, --update-remotes    Deprecated option, use `cargo update` instead
@@ -40,16 +41,19 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     shell.set_verbose(options.flag_verbose);
 
-    let mut compile_opts = ops::CompileOptions {
-        update: options.flag_update_remotes,
-        env: "test",
-        shell: shell,
-        jobs: options.flag_jobs,
-        target: options.flag_target.as_ref().map(|s| s.as_slice()),
-        dev_deps: true,
+    let mut ops = ops::TestOptions {
+        no_run: options.flag_no_run,
+        compile_opts: ops::CompileOptions {
+            update: options.flag_update_remotes,
+            env: "test",
+            shell: shell,
+            jobs: options.flag_jobs,
+            target: options.flag_target.as_ref().map(|s| s.as_slice()),
+            dev_deps: true,
+        },
     };
 
-    let err = try!(ops::run_tests(&root, &mut compile_opts,
+    let err = try!(ops::run_tests(&root, &mut ops,
                                   options.arg_args.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));

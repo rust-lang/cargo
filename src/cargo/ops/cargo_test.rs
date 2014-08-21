@@ -5,14 +5,20 @@ use sources::PathSource;
 use ops;
 use util::{CargoResult, ProcessError};
 
+pub struct TestOptions<'a> {
+    pub compile_opts: ops::CompileOptions<'a>,
+    pub no_run: bool,
+}
+
 pub fn run_tests(manifest_path: &Path,
-                 options: &mut ops::CompileOptions,
-                 args: &[String]) -> CargoResult<Option<ProcessError>> {
+                 options: &mut TestOptions,
+                 test_args: &[String]) -> CargoResult<Option<ProcessError>> {
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
 
-    let mut compile = try!(ops::compile(manifest_path, options));
+    let mut compile = try!(ops::compile(manifest_path, &mut options.compile_opts));
+    if options.no_run { return Ok(None) }
     compile.tests.sort();
 
     let cwd = os::getcwd();
@@ -21,11 +27,11 @@ pub fn run_tests(manifest_path: &Path,
             Some(path) => path,
             None => exe.clone(),
         };
-        let cmd = compile.process(exe, &package).args(args);
-        try!(options.shell.concise(|shell| {
+        let cmd = compile.process(exe, &package).args(test_args);
+        try!(options.compile_opts.shell.concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));
-        try!(options.shell.verbose(|shell| {
+        try!(options.compile_opts.shell.verbose(|shell| {
             shell.status("Running", cmd.to_string())
         }));
         match cmd.exec() {
@@ -42,7 +48,7 @@ pub fn run_tests(manifest_path: &Path,
     });
 
     for (lib, name) in libs {
-        try!(options.shell.status("Doc-tests", name));
+        try!(options.compile_opts.shell.status("Doc-tests", name));
         let mut p = compile.process("rustdoc", &package)
                            .arg("--test").arg(lib)
                            .arg("--crate-name").arg(name)
@@ -51,8 +57,8 @@ pub fn run_tests(manifest_path: &Path,
                            .cwd(package.get_root());
 
         // FIXME(rust-lang/rust#16272): this should just always be passed.
-        if args.len() > 0 {
-            p = p.arg("--test-args").arg(args.connect(" "));
+        if test_args.len() > 0 {
+            p = p.arg("--test-args").arg(test_args.connect(" "));
         }
 
         for (pkg, libs) in compile.libraries.iter() {
@@ -64,7 +70,7 @@ pub fn run_tests(manifest_path: &Path,
             }
         }
 
-        try!(options.shell.verbose(|shell| {
+        try!(options.compile_opts.shell.verbose(|shell| {
             shell.status("Running", p.to_string())
         }));
         match p.exec() {
@@ -77,7 +83,7 @@ pub fn run_tests(manifest_path: &Path,
 }
 
 pub fn run_benches(manifest_path: &Path,
-                   options: &mut ops::CompileOptions,
+                   options: &mut TestOptions,
                    args: &[String]) -> CargoResult<Option<ProcessError>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());
