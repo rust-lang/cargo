@@ -852,3 +852,25 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        fresh = FRESH,
                        dir = p.url()).as_slice()));
 })
+
+test!(test_no_run {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            #[test]
+            fn foo() { fail!() }
+        ");
+
+    assert_that(p.cargo_process("cargo-test").arg("--no-run"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+",
+                       compiling = COMPILING,
+                       dir = p.url()).as_slice()));
+})

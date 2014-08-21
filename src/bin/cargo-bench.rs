@@ -21,7 +21,9 @@ Usage:
 
 Options:
     -h, --help              Print this message
+    --no-run                Compile, but don't run benchmarks
     -j N, --jobs N          The number of jobs to run in parallel
+    --target TRIPLE         Build for the target triple
     --manifest-path PATH    Path to the manifest to build benchmarks for
     -v, --verbose           Use verbose output
 
@@ -39,16 +41,19 @@ fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     shell.set_verbose(options.flag_verbose);
 
-    let mut compile_opts = ops::CompileOptions {
-        update: false,
-        env: "bench",
-        shell: shell,
-        jobs: options.flag_jobs,
-        target: None,
-        dev_deps: true,
+    let mut ops = ops::TestOptions {
+        no_run: options.flag_no_run,
+        compile_opts: ops::CompileOptions {
+            update: false,
+            env: "bench",
+            shell: shell,
+            jobs: options.flag_jobs,
+            target: options.flag_target.as_ref().map(|s| s.as_slice()),
+            dev_deps: true,
+        },
     };
 
-    let err = try!(ops::run_benches(&root, &mut compile_opts,
+    let err = try!(ops::run_benches(&root, &mut ops,
                                     options.arg_args.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
