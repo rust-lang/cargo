@@ -1,25 +1,17 @@
-#![feature(phase)]
-
-extern crate serialize;
-#[phase(plugin, link)] extern crate log;
-
-extern crate cargo;
-extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
-
 use std::os;
-use cargo::{execute_main_without_stdin};
-use cargo::ops;
-use cargo::ops::CompileOptions;
+
 use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::ops::CompileOptions;
+use cargo::ops;
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
+use cargo::util::{CliResult, CliError};
+use docopt;
 
 docopt!(Options, "
 Compile a local package and all of its dependencies
 
 Usage:
-    cargo-build [options]
+    cargo build [options]
 
 Options:
     -h, --help              Print this message
@@ -32,11 +24,7 @@ Options:
 ",  flag_jobs: Option<uint>, flag_target: Option<String>,
     flag_manifest_path: Option<String>)
 
-fn main() {
-    execute_main_without_stdin(execute, false);
-}
-
-fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-build; args={}", os::args());
     shell.set_verbose(options.flag_verbose);
 

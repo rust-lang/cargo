@@ -73,8 +73,8 @@ test!(plugin_to_the_max {
     bar.build();
     baz.build();
 
-    assert_that(foo.cargo_process("cargo-build"),
+    assert_that(foo.cargo_process("build"),
                 execs().with_status(0));
-    assert_that(foo.process(cargo_dir().join("cargo-doc")),
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("doc"),
                 execs().with_status(0));
 })

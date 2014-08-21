@@ -117,9 +117,9 @@ impl ProjectBuilder {
             .env("HOME", Some(paths::home().display().to_string().as_slice()))
     }
 
-    pub fn cargo_process(&self, program: &str) -> ProcessBuilder {
+    pub fn cargo_process(&self, cmd: &str) -> ProcessBuilder {
         self.build();
-        self.process(cargo_dir().join(program))
+        self.process(cargo_dir().join("cargo")).arg(cmd)
     }
 
     pub fn file<B: BytesContainer, S: Str>(mut self, path: B,

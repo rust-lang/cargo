@@ -18,7 +18,7 @@ test!(ignores_carriage_return {
         "#)
         .file("src/a.rs", "");
 
-    assert_that(p.cargo_process("cargo-build"),
+    assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 
     let lockfile = p.root().join("Cargo.lock");
@@ -26,7 +26,7 @@ test!(ignores_carriage_return {
     let lock = lock.assert();
     let lock = lock.as_slice().replace("\n", "\r\n");
     File::create(&lockfile).write_str(lock.as_slice()).assert();
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 })
 
@@ -40,7 +40,7 @@ test!(adding_and_removing_packages {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("cargo-generate-lockfile"),
+    assert_that(p.cargo_process("generate-lockfile"),
                 execs().with_status(0));
 
     let lockfile = p.root().join("Cargo.lock");
@@ -57,7 +57,7 @@ test!(adding_and_removing_packages {
         [dependencies]
         bar = "0.5.0"
     "#).assert();
-    assert_that(p.process(cargo_dir().join("cargo-generate-lockfile")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
     let lock2 = File::open(&lockfile).read_to_string().assert();
     assert!(lock1 != lock2);
@@ -72,7 +72,7 @@ test!(adding_and_removing_packages {
         [dependencies]
         bar = "0.2.0"
     "#).assert();
-    assert_that(p.process(cargo_dir().join("cargo-generate-lockfile")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
     let lock3 = File::open(&lockfile).read_to_string().assert();
     assert!(lock1 != lock3);
@@ -85,7 +85,7 @@ test!(adding_and_removing_packages {
         authors = []
         version = "0.0.1"
     "#).assert();
-    assert_that(p.process(cargo_dir().join("cargo-generate-lockfile")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
     let lock4 = File::open(&lockfile).read_to_string().assert();
     assert_eq!(lock1, lock4);

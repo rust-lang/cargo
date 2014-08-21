@@ -16,34 +16,34 @@ fn my_process(s: &str) -> ProcessBuilder {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    process(cargo_dir().join(s))
+    process(cargo_dir().join("cargo")).arg(s)
         .cwd(paths::root())
         .env("HOME", Some(paths::home()))
 }
 
 test!(simple_lib {
     os::setenv("USER", "foo");
-    assert_that(cargo_process("cargo-new").arg("foo"),
+    assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
 
-    assert_that(cargo_process("cargo-build").cwd(paths::root().join("foo")),
+    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
 })
 
 test!(simple_bin {
     os::setenv("USER", "foo");
-    assert_that(cargo_process("cargo-new").arg("foo").arg("--bin"),
+    assert_that(cargo_process("new").arg("foo").arg("--bin"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
 
-    assert_that(cargo_process("cargo-build").cwd(paths::root().join("foo")),
+    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
     assert_that(&paths::root().join(format!("foo/target/foo{}",
                                             os::consts::EXE_SUFFIX)),
@@ -52,7 +52,7 @@ test!(simple_bin {
 
 test!(simple_git {
     os::setenv("USER", "foo");
-    assert_that(cargo_process("cargo-new").arg("foo").arg("--git"),
+    assert_that(cargo_process("new").arg("foo").arg("--git"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -61,31 +61,31 @@ test!(simple_git {
     assert_that(&paths::root().join("foo/.git"), existing_dir());
     assert_that(&paths::root().join("foo/.gitignore"), existing_file());
 
-    assert_that(cargo_process("cargo-build").cwd(paths::root().join("foo")),
+    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
 })
 
 test!(no_argument {
-    assert_that(cargo_process("cargo-new"),
+    assert_that(cargo_process("new"),
                 execs().with_status(1)
                        .with_stderr("Invalid arguments.
 Usage:
-    cargo-new [options] <path>
-    cargo-new -h | --help
+    cargo new [options] <path>
+    cargo new -h | --help
 "));
 })
 
 test!(existing {
     let dst = paths::root().join("foo");
     fs::mkdir(&dst, UserRWX).assert();
-    assert_that(cargo_process("cargo-new").arg("foo"),
+    assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
                        .with_stderr(format!("Destination `{}` already exists\n",
                                             dst.display())));
 })
 
 test!(finds_author_user {
-    assert_that(cargo_process("cargo-new").arg("foo").env("USER", Some("foo")),
+    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
                 execs().with_status(0));
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -98,7 +98,7 @@ test!(finds_author_git {
                      .exec().assert();
     my_process("git").args(["config", "--global", "user.email", "baz"])
                      .exec().assert();
-    assert_that(cargo_process("cargo-new").arg("foo").env("USER", Some("foo")),
+    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
                 execs().with_status(0));
 
     let toml = paths::root().join("foo/Cargo.toml");

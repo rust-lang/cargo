@@ -86,7 +86,7 @@ test!(cargo_compile_simple_git_dep {
     let root = project.root();
     let git_root = git_project.root();
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
                               {} dep1 v0.5.0 ({}#[..])\n\
@@ -150,7 +150,7 @@ test!(cargo_compile_git_dep_branch {
     let root = project.root();
     let git_root = git_project.root();
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
                               {} dep1 v0.5.0 ({}?ref=branchy#[..])\n\
@@ -215,7 +215,7 @@ test!(cargo_compile_git_dep_tag {
     let root = project.root();
     let git_root = git_project.root();
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
                               {} dep1 v0.5.0 ({}?ref=v0.1.0#[..])\n\
@@ -296,7 +296,7 @@ test!(cargo_compile_with_nested_paths {
         .file("src/parent.rs",
               main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
 
-    p.cargo_process("cargo-build")
+    p.cargo_process("build")
         .exec_with_output()
         .assert();
 
@@ -369,7 +369,7 @@ test!(cargo_compile_with_meta_package {
         .file("src/parent.rs",
               main_file(r#""{} {}", dep1::hello(), dep2::hello()"#, ["dep1", "dep2"]).as_slice());
 
-    p.cargo_process("cargo-build")
+    p.cargo_process("build")
         .exec_with_output()
         .assert();
 
@@ -401,7 +401,7 @@ test!(cargo_compile_with_short_ssh_git {
         "#, url))
         .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("build"),
         execs()
         .with_stdout("")
         .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
@@ -477,7 +477,7 @@ test!(two_revs_same_deps {
     baz.build();
 
     // TODO: -j1 is a hack
-    assert_that(foo.cargo_process("cargo-build").arg("-j").arg("1"),
+    assert_that(foo.cargo_process("build").arg("-j").arg("1"),
                 execs().with_status(0));
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
@@ -522,7 +522,7 @@ test!(recompilation {
               main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
 
     // First time around we should compile both foo and bar
-    assert_that(p.cargo_process("cargo-build"),
+    assert_that(p.cargo_process("build"),
                 execs().with_stdout(format!("{} git repository `{}`\n\
                                              {} bar v0.5.0 ({}#[..])\n\
                                              {} foo v0.5.0 ({})\n",
@@ -531,7 +531,7 @@ test!(recompilation {
                                             COMPILING, p.url())));
 
     // Don't recompile the second time
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
                                              {} foo v0.5.0 ({})\n",
                                             FRESH, git_project.url(),
@@ -542,18 +542,18 @@ test!(recompilation {
         pub fn bar() { println!("hello!"); }
     "#).assert();
 
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
                                              {} foo v0.5.0 ({})\n",
                                             FRESH, git_project.url(),
                                             FRESH, p.url())));
 
-    assert_that(p.process(cargo_dir().join("cargo-update")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
 
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
                                              {} foo v0.5.0 ({})\n",
                                             FRESH, git_project.url(),
@@ -566,7 +566,7 @@ test!(recompilation {
                .assert();
 
     println!("compile after commit");
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
                                              {} foo v0.5.0 ({})\n",
                                             FRESH, git_project.url(),
@@ -574,12 +574,12 @@ test!(recompilation {
     p.root().move_into_the_past().assert();
 
     // Update the dependency and carry on!
-    assert_that(p.process(cargo_dir().join("cargo-update")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
     println!("going for the last compile");
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, git_project.url(),
@@ -645,7 +645,7 @@ test!(update_with_shared_deps {
         .file("dep2/src/lib.rs", "");
 
     // First time around we should compile both foo and bar
-    assert_that(p.cargo_process("cargo-build"),
+    assert_that(p.cargo_process("build"),
                 execs().with_stdout(format!("\
 {updating} git repository `{git}`
 {compiling} bar v0.5.0 ({git}#[..])
@@ -665,13 +665,13 @@ test!(update_with_shared_deps {
 
     timer::sleep(Duration::milliseconds(1000));
 
-    assert_that(p.process(cargo_dir().join("cargo-update")).arg("dep1"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
 
     // Make sure we still only compile one version of the git repo
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({git}#[..])
 {compiling} [..] v0.5.0 ({dir})
@@ -681,7 +681,7 @@ test!(update_with_shared_deps {
                     compiling = COMPILING, dir = p.url())));
 
     // We should be able to update transitive deps
-    assert_that(p.process(cargo_dir().join("cargo-update")).arg("bar"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
@@ -726,7 +726,7 @@ test!(dep_with_submodule {
             pub fn foo() { dep1::dep() }
         ");
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("build"),
         execs().with_stderr("").with_status(0));
 })
 
@@ -768,7 +768,7 @@ test!(two_deps_only_update_one {
         "#, git1.url(), git2.url()))
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(project.cargo_process("cargo-build"),
+    assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `[..]`\n\
                               {} git repository `[..]`\n\
@@ -789,7 +789,7 @@ test!(two_deps_only_update_one {
     git1.process("git").args(["commit", "-m", "test"]).exec_with_output()
         .assert();
 
-    assert_that(project.process(cargo_dir().join("cargo-update")).arg("dep1"),
+    assert_that(project.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n",
                              UPDATING, git1.url()))
@@ -825,7 +825,7 @@ test!(stale_cached_version {
             fn main() { assert_eq!(bar::bar(), 1) }
         "#);
 
-    assert_that(foo.cargo_process("cargo-build"), execs().with_status(0));
+    assert_that(foo.cargo_process("build"), execs().with_status(0));
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
 
     // Update the repo, and simulate someone else updating the lockfile and then
@@ -858,7 +858,7 @@ test!(stale_cached_version {
     "#, url = bar.url(), hash = rev).as_slice()).assert();
 
     // Now build!
-    assert_that(foo.process(cargo_dir().join("cargo-build")),
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {updating} git repository `{bar}`
@@ -910,7 +910,7 @@ test!(dep_with_changed_submodule {
             pub fn main() { println!(\"{}\", dep1::dep()) }
         ");
 
-    assert_that(project.cargo_process("cargo-run"), execs()
+    assert_that(project.cargo_process("run"), execs()
                 .with_stdout(format!("{} git repository `[..]`\n\
                                       {} dep1 v0.5.0 ([..])\n\
                                       {} foo v0.5.0 ([..])\n\
@@ -939,13 +939,13 @@ test!(dep_with_changed_submodule {
 
     timer::sleep(Duration::milliseconds(1000));
     // Update the dependency and carry on!
-    assert_that(project.process(cargo_dir().join("cargo-update")), execs()
+    assert_that(project.process(cargo_dir().join("cargo")).arg("update"), execs()
                 .with_stderr("")
                 .with_stdout(format!("{} git repository `{}`",
                                      UPDATING,
                                      git_project.url())));
 
-    assert_that(project.cargo_process("cargo-run"), execs()
+    assert_that(project.cargo_process("run"), execs()
                 .with_stdout(format!("{} git repository `[..]`\n\
                                       {} dep1 v0.5.0 ([..])\n\
                                       {} foo v0.5.0 ([..])\n\
@@ -997,7 +997,7 @@ test!(dev_deps_with_testing {
 
     // Generate a lockfile which did not use `bar` to compile, but had to update
     // `bar` to generate the lockfile
-    assert_that(p.cargo_process("cargo-build"),
+    assert_that(p.cargo_process("build"),
         execs().with_stdout(format!("\
 {updating} git repository `{bar}`
 {compiling} foo v0.5.0 ({url})
@@ -1005,7 +1005,7 @@ test!(dev_deps_with_testing {
 
     // Make sure we use the previous resolution of `bar` instead of updating it
     // a second time.
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
         execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({bar}#[..])
 {compiling} foo v0.5.0 ({url})
@@ -1037,7 +1037,7 @@ test!(git_build_cmd_freshness {
 
     timer::sleep(Duration::milliseconds(1000));
 
-    assert_that(foo.process(cargo_dir().join("cargo-build")),
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.0 ({url})
@@ -1045,7 +1045,7 @@ test!(git_build_cmd_freshness {
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
-    assert_that(foo.process(cargo_dir().join("cargo-build")),
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.0 ({url})
@@ -1054,7 +1054,7 @@ test!(git_build_cmd_freshness {
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     File::create(&foo.root().join("src/bar.rs")).assert();
-    assert_that(foo.process(cargo_dir().join("cargo-build")),
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.0 ({url})

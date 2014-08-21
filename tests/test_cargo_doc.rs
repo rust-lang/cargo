@@ -17,7 +17,7 @@ test!(simple {
             pub fn foo() {}
         "#);
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 ",
@@ -43,7 +43,7 @@ test!(doc_no_libs {
             bad code
         "#);
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
 })
 
@@ -59,14 +59,14 @@ test!(doc_twice {
             pub fn foo() {}
         "#);
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
         dir = path2url(p.root())).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo-doc")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("doc"),
                 execs().with_status(0).with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})
 ",
@@ -99,7 +99,7 @@ test!(doc_deps {
             pub fn bar() {}
         "#);
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
@@ -111,7 +111,7 @@ test!(doc_deps {
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
 
-    assert_that(p.process(cargo_dir().join("cargo-doc"))
+    assert_that(p.process(cargo_dir().join("cargo")).arg("doc")
                  .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
                 execs().with_status(0).with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
@@ -150,7 +150,7 @@ test!(doc_no_deps {
             pub fn bar() {}
         "#);
 
-    assert_that(p.cargo_process("cargo-doc").arg("--no-deps"),
+    assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
@@ -188,7 +188,7 @@ test!(doc_only_bin {
             pub fn bar() {}
         "#);
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -207,7 +207,7 @@ test!(doc_lib_bin_same_name {
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "fn foo() {}");
 
-    assert_that(p.cargo_process("cargo-doc"),
+    assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
                        .with_stderr("\
 Cannot document a package where a library and a binary have the same name. \
