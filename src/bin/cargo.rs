@@ -60,12 +60,17 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(flags.flag_verbose);
     if flags.flag_list {
         println!("Installed Commands:");
-        for command in list_commands().iter() {
+        for command in list_commands().move_iter() {
+            let command = if command.as_slice() == "updat" {
+                "update".to_string()
+            } else {
+                command
+            };
             println!("    {}", command);
-            // TODO: it might be helpful to add result of -h to each command.
         };
         return Ok(None)
     }
+
     let mut args = flags.arg_args.clone();
     args.insert(0, flags.arg_command.clone());
     match flags.arg_command.as_slice() {
@@ -109,7 +114,8 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     Ok(None)
 }
 
-fn execute_subcommand(cmd: &str, is_help: bool, flags: &Flags, shell: &mut MultiShell) -> () {
+fn execute_subcommand(cmd: &str, is_help: bool, flags: &Flags,
+                      shell: &mut MultiShell) -> () {
     match find_command(cmd) {
         Some(command) => {
             let mut command = Command::new(command);
@@ -183,6 +189,7 @@ fn is_executable(path: &Path) -> bool {
 
 /// Get `Command` to run given command.
 fn find_command(cmd: &str) -> Option<Path> {
+    let cmd = if cmd == "update" {"updat"} else {cmd};
     let command_exe = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
     let dirs = list_command_directory();
     let mut command_paths = dirs.iter().map(|dir| dir.join(command_exe.as_slice()));

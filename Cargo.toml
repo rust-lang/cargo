@@ -97,8 +97,11 @@ name = "cargo-generate-lockfile"
 test = false
 doc = false
 
+# Note that this is named `updat`, not `update`, this is sadly because windows
+# will require elevated privileges for any executable with the string "update"
+# in its name.
 [[bin]]
-name = "cargo-update"
+name = "cargo-updat"
 test = false
 doc = false
 
