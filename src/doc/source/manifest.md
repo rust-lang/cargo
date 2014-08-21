@@ -30,14 +30,40 @@ basic rules:
 
 You can specify a script that Cargo should execute before invoking
 `rustc`. You can use this to compile C code that you will [link][1] into
-your Rust code, for example.
+your Rust code, for example. More information can be found in the building
+non-rust code [guide][2]
 
 [1]: http://doc.rust-lang.org/rust.html#external-blocks
+[2]: native-build.html
 
 ```toml
 [package]
 # ...
 build = "make"
+```
+
+```toml
+[package]
+# ...
+
+# Specify two commands to be run sequentially
+build = ["./configure", "make"]
+```
+
+## The `exclude` Field (optional)
+
+You can explicitly specify to Cargo that a set of globs should be ignored for
+the purposes of packaging and rebuilding a package. The globs specified in this
+field identify a set of files that are not included when a package is published
+as well as ignored for the purposes of detecting when to rebuild a package.
+
+If a VCS is being used for a package, the `exclude` field will be seeded with
+the VCS's ignore settings (`.gitignore` for git for example).
+
+```toml
+[package]
+# ...
+exclude = ["build/**/*.o", "doc/**/*.html"]
 ```
 
 # The `[dependencies.*]` Sections
@@ -67,6 +93,15 @@ You can specify the source of a dependency in one of two ways at the moment:
 
 Soon, you will be able to load packages from the Cargo registry as well.
 
+# The `[dev-dependencies.*]` Sections
+
+The format of this section is equivalent to `[dependencies.*]`. Dev-dependencies
+are not used when compiling a package for building, but are used for compiling
+tests and benchmarks.
+
+These dependencies are *not* propagated to other packages which depend on this
+package.
+
 # The Project Layout
 
 If your project is an executable, name the main source file `src/main.rs`.
@@ -87,6 +122,8 @@ the `target` directory.
 ▾ examples/     # (optional) examples
   *.rs
 ▾ tests/        # (optional) integration tests
+  *.rs
+▾ benches/      # (optional) benchmarks
   *.rs
 ```
 
@@ -110,7 +147,46 @@ When you run `cargo test`, Cargo will:
   <library-name>` like any other code that depends on it.
 * Compile your library's examples.
 
-# Building Dynamic Libraries
+# Configuring a target
+
+Both `[[bin]]` and `[lib]` sections support similar configuration for specifying
+how a target should be built. The example below uses `[lib]`, but it also
+applies to all `[[bin]]` sections as well. All values listed ar the defaults for
+that option unless otherwise specified.
+
+```toml
+[package]
+# ...
+
+[lib]
+
+# The name of a target is the name of the library that will be generated. This
+# is defaulted to the name of the package or project.
+name = "foo"
+
+# This field points at where the crate is located, relative to the Cargo.toml.
+path = "src/lib.rs"
+
+# A flag for enabling unit tests for this target. This is used by `cargo test`.
+test = true
+
+# A flag for enabling documentation tests for this target. This is only
+# relevant for libraries, it has no effect on [[bin]] sections. This is used by
+# `cargo test`.
+doctest = true
+
+# A flag for enabling benchmarks for this target. This is used by `cargo bench`.
+bench = true
+
+# A flag for enabling documentation of this target. This is used by `cargo doc`.
+doc = true
+
+# If the target is meant to be a compiler plugin, this field must be set to true
+# for cargo to correctly compile it and make it available for all dependencies.
+plugin = false
+```
+
+# Building Dynamic or Static Libraries
 
 If your project produces a library, you can specify which kind of
 library to build by explicitly listing the library in your `Cargo.toml`:
@@ -118,13 +194,13 @@ library to build by explicitly listing the library in your `Cargo.toml`:
 ```toml
 # ...
 
-[[lib]]
+[lib]
 
 name = "..."
-crate-types = [ "dylib" ]
+# this could be "staticlib" as well
+crate-type = ["dylib"]
 ```
 
-The available options are `dylib` and `rlib`. You should only use
-this option in a project. Cargo will always compile **packages**
-(dependencies) based on the requirements of the project that includes
-them.
+The available options are `dylib`, `rlib`, and `staticlib`. You should only use
+this option in a project. Cargo will always compile **packages** (dependencies)
+based on the requirements of the project that includes them.

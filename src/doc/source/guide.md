@@ -60,7 +60,7 @@ authors = ["Yehuda Katz <wycats@example.com>"]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
-needs to compile your project. 
+needs to compile your project.
 
 Here's what's in `src/main.rs`:
 
