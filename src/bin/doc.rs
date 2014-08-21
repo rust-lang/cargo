@@ -1,12 +1,6 @@
-#![feature(phase)]
-
-extern crate serialize;
-extern crate cargo;
-extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
+use docopt;
 
 use cargo::ops;
-use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
@@ -15,7 +9,7 @@ docopt!(Options, "
 Build a package's documentation
 
 Usage:
-    cargo-doc [options]
+    cargo doc [options]
 
 Options:
     -h, --help              Print this message
@@ -30,11 +24,7 @@ built. The output is all placed in `target/doc` in rustdoc's usual format.
 ",  flag_jobs: Option<uint>,
     flag_manifest_path: Option<String>)
 
-fn main() {
-    execute_main_without_stdin(execute, false)
-}
-
-fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));

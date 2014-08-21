@@ -7,7 +7,7 @@ fn setup() {}
 test!(simple {
     let p = project("foo");
 
-    assert_that(p.cargo_process("cargo-version"),
+    assert_that(p.cargo_process("version"),
                 execs().with_status(0).with_stdout(format!("{}\n",
         cargo::version()).as_slice()));
 })

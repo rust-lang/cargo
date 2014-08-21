@@ -1,10 +1,11 @@
-use cargo::util::{process, ProcessBuilder};
-use hamcrest::{assert_that};
-use std::io;
 use std::io::fs;
+use std::io;
 use std::os;
+use std::str;
+use cargo::util::{process, ProcessBuilder};
+
 use support::paths;
-use support::{project, execs, cargo_dir, mkdir_recursive, ProjectBuilder, ResultTest};
+use support::{project, cargo_dir, mkdir_recursive, ProjectBuilder, ResultTest};
 
 fn setup() {
 }
@@ -42,16 +43,6 @@ fn new_path() -> Vec<Path> {
         !p.join(format!("cargo{}", os::consts::EXE_SUFFIX)).exists()
     }).collect()
 }
-
-test!(list_commands_empty {
-    let proj = project("list-runs");
-    let pr = copied_executable_process(&proj, "cargo", &Path::new("bin"));
-    let new_path = os::join_paths(new_path().as_slice()).unwrap();
-    assert_that(pr.arg("-v").arg("--list").env("PATH", Some(new_path.as_slice())),
-                execs().with_status(0)
-                       .with_stdout("Installed Commands:\n"));
-})
-
 test!(list_commands_non_overlapping {
     // lib/cargo | cargo-3
     // bin/       | cargo-2
@@ -67,7 +58,10 @@ test!(list_commands_non_overlapping {
     let mut path = new_path();
     path.push(proj.root().join("path-test"));
     let path = os::join_paths(path.as_slice()).unwrap();
-    assert_that(pr.arg("-v").arg("--list").env("PATH", Some(path.as_slice())),
-                execs().with_status(0)
-                       .with_stdout("Installed Commands:\n   1\n   2\n   3\n"));
+    let output = pr.arg("-v").arg("--list").env("PATH", Some(path.as_slice()));
+    let output = output.exec_with_output().assert();
+    let output = str::from_utf8(output.output.as_slice()).assert();
+    assert!(output.contains("\n    1\n"), "missing 1: {}", output);
+    assert!(output.contains("\n    2\n"), "missing 2: {}", output);
+    assert!(output.contains("\n    3\n"), "missing 3: {}", output);
 })

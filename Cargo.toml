@@ -1,12 +1,10 @@
 [project]
-
 name = "cargo"
 version = "0.0.1-pre"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>"]
 
 [lib]
-
 name = "cargo"
 path = "src/cargo/lib.rs"
 
@@ -30,75 +28,6 @@ git = "https://github.com/rust-lang/semver"
 
 [[bin]]
 name = "cargo"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-build"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-clean"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-git-checkout"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-read-manifest"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-run"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-rustc"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-test"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-bench"
-test = false
-
-[[bin]]
-name = "cargo-verify-project"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-version"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-new"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-doc"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-generate-lockfile"
-test = false
-doc = false
-
-[[bin]]
-name = "cargo-update"
 test = false
 doc = false
 

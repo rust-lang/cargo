@@ -1,29 +1,19 @@
-#![feature(phase)]
+use docopt;
 
-extern crate serialize;
-extern crate cargo;
-extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
-
-use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell, Package, Source};
 use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 
 docopt!(Options, "
 Usage:
-    cargo-clean [options] --manifest-path=PATH
+    cargo clean [options] --manifest-path=PATH
 
 Options:
     -h, --help              Print this message
     -v, --verbose           Use verbose output
 ")
 
-fn main() {
-    execute_main_without_stdin(execute, false);
-}
-
-fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
+pub fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
     let path = Path::new(options.flag_manifest_path.as_slice());
     let mut source = try!(PathSource::for_path(&path).map_err(|e| {
         CliError::new(e.description(), 1)
