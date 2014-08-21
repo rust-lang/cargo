@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    
+    <!-- Always force latest IE rendering engine or request Chrome Frame -->
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    
+    <!-- Use title if it's in the page YAML frontmatter -->
+    <title>The Manifest Format</title>
+    
+    <link href="stylesheets/all.css" rel="stylesheet" type="text/css" />
+    <script src="javascripts/all.js" type="text/javascript"></script>
+  </head>
+  
+  <body class="manifest">
+    <a href="https://github.com/rust-lang/cargo"><img class="fork-me" alt="" width="149" height="149" src="images/forkme.png" /></a>
+    <a href="./"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
+
+    <main>
+      <p>Cargo downloads your <a href="http://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
+
+      <h1>The <code>[package]</code> Section</h1>
+
+<p>The first section in a <code>Cargo.toml</code> is <code>[package]</code>.</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world"</span> <span class="c"># the name of the package</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"1.0.0"</span>    <span class="c"># the current version, obeying semver</span>
+<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@example.com"</span> <span class="p">]</span>
+</code></pre>
+
+<p>All three of these fields are mandatory. Cargo bakes in the concept of
+<a href="http://semver.org/">Semantic Versioning</a>, so make sure you follow some
+basic rules:</p>
+
+<ul>
+<li>Before you reach 1.0.0, anything goes.</li>
+<li>After 1.0.0, only make breaking changes when you increment the major
+version. In Rust, breaking changes include adding fields to structs or
+variants to enums. Don&rsquo;t break the build.</li>
+<li>After 1.0.0, don&rsquo;t add any new public API (no new <code>pub</code> anything) in
+tiny versions. Always increment the minor version if you add any new
+<code>pub</code> structs, traits, fields, types, functions, methods or anything else.</li>
+<li>Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.</li>
+</ul>
+
+<h2>The <code>build</code> Field (optional)</h2>
+
+<p>You can specify a script that Cargo should execute before invoking
+<code>rustc</code>. You can use this to compile C code that you will <a href="http://doc.rust-lang.org/rust.html#external-blocks">link</a> into
+your Rust code, for example.</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+<span class="c"># ...</span>
+<span class="py">build</span> <span class="p">=</span> <span class="s">"make"</span>
+</code></pre>
+
+<h1>The <code>[dependencies.*]</code> Sections</h1>
+
+<p>You list dependencies using <code>[dependencies.&lt;name&gt;]</code>. For example, if you
+wanted to depend on both <code>hammer</code> and <code>color</code>:</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+<span class="c"># ...</span>
+
+<span class="nn">[dependencies.hammer]</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.5.0"</span> <span class="c"># optional</span>
+<span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/wycats/hammer.rs"</span>
+
+<span class="nn">[dependencies.color]</span>
+<span class="py">git</span> <span class="p">=</span> <span class="s">"https://github.com/bjz/color-rs"</span>
+</code></pre>
+
+<p>You can specify the source of a dependency in one of two ways at the moment:</p>
+
+<ul>
+<li><code>git = &quot;&lt;git-url&gt;&quot;</code>: A git repository with a <code>Cargo.toml</code> in its root. The
+<code>rev</code>, <code>tag</code>, and <code>branch</code> options are also recognized to use something other
+than the <code>master</code> branch.</li>
+<li><code>path = &quot;&lt;relative-path&gt;&quot;</code>: A path relative to the current <code>Cargo.toml</code>
+with a <code>Cargo.toml</code> in its root.</li>
+</ul>
+
+<p>Soon, you will be able to load packages from the Cargo registry as well.</p>
+
+<h1>The Project Layout</h1>
+
+<p>If your project is an executable, name the main source file <code>src/main.rs</code>.
+If it is a library, name the main source file <code>src/lib.rs</code>.</p>
+
+<p>Cargo will also treat any files located in <code>src/bin/*.rs</code> as
+executables.</p>
+
+<p>When you run <code>cargo build</code>, Cargo will compile all of these files into
+the <code>target</code> directory.</p>
+<pre><code class="highlight plaintext">▾ src/          # directory containing source files
+  ▾ bin/        # (optional) directory containing executables
+    *.rs
+  lib.rs        # the main entry point for libraries and packages
+  main.rs       # the main entry point for projects producing executables
+▾ examples/     # (optional) examples
+  *.rs
+▾ tests/        # (optional) integration tests
+  *.rs
+</code></pre>
+
+<h1>Examples</h1>
+
+<p>Files located under <code>examples</code> are example uses of the functionality
+provided by the library.</p>
+
+<p>They must compile as executables (with <code>main.rs</code>) and load in the
+library by using <code>extern crate &lt;library-name&gt;</code>. They are compiled when
+you run your tests to protect them from bitrotting.</p>
+
+<h1>Tests</h1>
+
+<p>When you run <code>cargo test</code>, Cargo will:</p>
+
+<ul>
+<li>Compile your library&rsquo;s unit tests, which are in files reachable from
+<code>lib.rs</code>. Any sections marked with <code>#[cfg(test)]</code> will be included.</li>
+<li>Compile your library&rsquo;s integration tests, which are located in
+<code>tests</code>. Files in <code>tests</code> load in your library by using <code>extern crate
+&lt;library-name&gt;</code> like any other code that depends on it.</li>
+<li>Compile your library&rsquo;s examples.</li>
+</ul>
+
+<h1>Building Dynamic Libraries</h1>
+
+<p>If your project produces a library, you can specify which kind of
+library to build by explicitly listing the library in your <code>Cargo.toml</code>:</p>
+<pre><code class="highlight toml"><span class="c"># ...</span>
+
+<span class="nn">[[lib]]</span>
+
+<span class="py">name</span> <span class="p">=</span> <span class="s">"..."</span>
+<span class="py">crate-types</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"dylib"</span> <span class="p">]</span>
+</code></pre>
+
+<p>The available options are <code>dylib</code> and <code>rlib</code>. You should only use
+this option in a project. Cargo will always compile <strong>packages</strong>
+(dependencies) based on the requirements of the project that includes
+them.</p>
+
+
+      <footer>
+        <a href="guide.html">Guide</a> |
+        <a href="faq.html">Frequently Asked Questions</a> |
+        <a href="manifest.html">Manifest Format</a> |
+        <a href="native-build.html">Building Non-Rust Code</a>
+      </footer>
+    </main>
+
+  </body>
+</html>
