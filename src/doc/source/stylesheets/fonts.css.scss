@@ -1,0 +1,39 @@
+@import "compass/css3";
+
+@include font-face("Consolas", inline-font-files("Consolas.woff", woff), $weight: 400);
+@include font-face("Consolas", inline-font-files("Consolas-Bold.woff", woff), $weight: 700);
+@include font-face("Roboto", inline-font-files("Roboto/Roboto-Regular.woff", woff), $weight: 400);
+@include font-face("Roboto", inline-font-files("Roboto/Roboto-Bold.woff", woff), $weight: 700);
+@include font-face("Roboto", inline-font-files("Roboto/Roboto-Medium.woff", woff), $weight: 500);
+
+@font-face {
+  src: url("../fonts/Consolas-Italic.woff");
+  font-family: "Consolas";
+  font-style: italic;
+}
+
+@font-face {
+  src: url("../fonts/Consolas-Bold-Italic.woff");
+  font-family: "Consolas";
+  font-weight: bold;
+  font-style: italic;
+}
+
+@font-face {
+  src: url("../fonts/Roboto/Roboto-Thin.woff");
+  font-family: "Roboto";
+  font-weight: 100;
+}
+
+@font-face {
+  src: url("../fonts/Roboto/Roboto-Light.woff");
+  font-family: "Roboto";
+  font-weight: 200;
+}
+
+@font-face {
+  src: url("../fonts/Roboto/Roboto-Black.woff");
+  font-family: "Roboto";
+  font-weight: 800;
+}
+
