@@ -113,3 +113,33 @@ test!(run_dylib_dep {
     assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
                 execs().with_status(0));
 })
+
+test!(with_different_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+
+            name = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("bar"); }
+        "#)
+        ;
+
+    assert_that(p.cargo_process("cargo-run"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} `target{sep}bar`
+bar
+",
+        compiling = COMPILING,
+        running = RUNNING,
+        dir = path2url(p.root()),
+        sep = path::SEP)));
+})
