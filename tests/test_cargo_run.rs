@@ -79,8 +79,26 @@ test!(no_main_file {
 
     assert_that(p.cargo_process("cargo-run"),
                 execs().with_status(101)
-                       .with_stderr("`src/main.rs` must be present for \
-                                     `cargo run`\n"));
+                       .with_stderr("a bin target must be available \
+                                     for `cargo run`\n"));
+})
+
+test!(too_many_bins {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "")
+        .file("src/bin/b.rs", "");
+
+    assert_that(p.cargo_process("cargo-run"),
+                execs().with_status(101)
+                       .with_stderr("`cargo run` requires that a project only \
+                                     have one executable\n"));
 })
 
 test!(run_dylib_dep {
@@ -112,4 +130,22 @@ test!(run_dylib_dep {
 
     assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
                 execs().with_status(0));
+})
+
+test!(run_bin_different_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/bar.rs", r#"
+            fn main() { }
+        "#);
+
+    assert_that(p.cargo_process("cargo-run"), execs().with_status(0));
 })
