@@ -1,7 +1,6 @@
 use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::io::IoError;
-use std::fmt;
-use std::fmt::{Show, Formatter, FormatError};
+use std::fmt::{mod, Show, Formatter, FormatError};
 use std::str;
 
 use docopt;

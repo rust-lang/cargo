@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 use std::io::{File, fs};
-use util;
 use core::{Package,Manifest,SourceId};
-use util::{CargoResult, human};
+use util::{mod, CargoResult, human};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 
