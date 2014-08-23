@@ -390,8 +390,7 @@ correct number of tests.
 To test your project on Travis-CI, here is a sample `.travis.yml` file:
 
 ```
-install:
-  - curl http://www.rust-lang.org/rustup.sh | sudo sh -
+language: rust
 script:
   - cargo build --verbose
   - cargo test --verbose
