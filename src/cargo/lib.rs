@@ -23,8 +23,7 @@ extern crate toml;
 
 use std::os;
 use std::io::stdio::{stdout_raw, stderr_raw};
-use std::io::{stdout, stderr};
-use std::io;
+use std::io::{mod, stdout, stderr};
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
 use docopt::FlagParser;
 

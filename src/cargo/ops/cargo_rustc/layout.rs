@@ -46,8 +46,7 @@
 //!     old-fingerprint/
 //! ```
 
-use std::io;
-use std::io::{fs, IoResult};
+use std::io::{mod, fs, IoResult};
 
 use core::Package;
 use util::hex::short_hash;

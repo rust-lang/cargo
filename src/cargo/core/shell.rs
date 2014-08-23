@@ -1,5 +1,4 @@
-use term;
-use term::{Terminal,color};
+use term::{mod, Terminal, color};
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};
 use term::attr::{Attr, Bold};
 use std::io::{IoResult, stderr};

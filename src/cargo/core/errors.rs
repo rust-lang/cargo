@@ -1,5 +1,4 @@
-use std::fmt;
-use std::fmt::{Show,Formatter};
+use std::fmt::{mod, Show, Formatter};
 use std::io::IoError;
 
 /*

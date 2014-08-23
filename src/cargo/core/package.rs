@@ -1,5 +1,4 @@
-use std::fmt::{Show,Formatter};
-use std::fmt;
+use std::fmt::{mod, Show, Formatter};
 use std::slice;
 use semver::Version;
 
