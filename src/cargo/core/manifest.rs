@@ -1,7 +1,6 @@
 use std::hash;
 use std::result;
-use std::fmt;
-use std::fmt::{Show,Formatter};
+use std::fmt::{mod, Show, Formatter};
 use semver::Version;
 use serialize::{Encoder,Encodable};
 use core::source::SourceId;

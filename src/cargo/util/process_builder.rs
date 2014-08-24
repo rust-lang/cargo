@@ -1,5 +1,4 @@
-use std::fmt;
-use std::fmt::{Show, Formatter};
+use std::fmt::{mod, Show, Formatter};
 use std::os;
 use std::c_str::CString;
 use std::io::process::{Command, ProcessOutput, InheritFd};

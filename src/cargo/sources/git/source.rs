@@ -1,5 +1,4 @@
-use std::fmt::{Show,Formatter};
-use std::fmt;
+use std::fmt::{mod, Show, Formatter};
 use std::hash::Hasher;
 use std::hash::sip::SipHasher;
 use std::mem;

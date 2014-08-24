@@ -1,8 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::hashmap::{Values, MutEntries};
-use std::fmt::{Show, Formatter};
-use std::fmt;
+use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use std::iter;
 use std::mem;

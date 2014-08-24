@@ -28,13 +28,11 @@ use std::result;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId};
-use core::{Package, Summary, Resolve};
-use core::resolver;
+use core::{Package, Summary, Resolve, resolver};
 use ops;
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
-use util::{CargoResult, Wrap, config, internal, human, ChainError};
-use util::profile;
+use util::{CargoResult, Wrap, config, internal, human, ChainError, profile};
 
 pub struct CompileOptions<'a> {
     pub update: bool,

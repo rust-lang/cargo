@@ -3,8 +3,7 @@ use std::collections::HashSet;
 use std::io::File;
 
 use serialize::{Encodable, Decodable};
-use toml::Encoder;
-use toml as toml;
+use toml::{mod, Encoder};
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, Resolve, resolver, Package, SourceId};

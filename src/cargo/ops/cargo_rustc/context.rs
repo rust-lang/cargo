@@ -3,8 +3,7 @@ use std::str;
 use semver::Version;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
-use util;
-use util::{CargoResult, ChainError, internal, Config, profile, Require};
+use util::{mod, CargoResult, ChainError, internal, Config, profile, Require};
 
 use super::{Kind, KindPlugin, KindTarget, Compilation};
 use super::layout::{Layout, LayoutProxy};

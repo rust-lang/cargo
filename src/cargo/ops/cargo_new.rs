@@ -1,6 +1,5 @@
 use std::os;
-use std::io;
-use std::io::{fs, File};
+use std::io::{mod, fs, File};
 
 use util::{CargoResult, human, ChainError, process};
 use core::shell::MultiShell;
