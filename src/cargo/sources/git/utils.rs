@@ -1,5 +1,4 @@
-use std::fmt;
-use std::fmt::{Show,Formatter};
+use std::fmt::{mod, Show, Formatter};
 use std::io::{UserDir};
 use std::io::fs::{mkdir_recursive,rmdir_recursive};
 use serialize::{Encodable,Encoder};
