@@ -113,3 +113,27 @@ test!(run_dylib_dep {
     assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
                 execs().with_status(0));
 })
+
+test!(release_works {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { if !cfg!(ndebug) { fail!() } }
+        "#);
+
+    assert_that(p.cargo_process("cargo-run").arg("--release"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} `target{sep}release{sep}foo`
+",
+        compiling = COMPILING,
+        running = RUNNING,
+        dir = path2url(p.root()),
+        sep = path::SEP).as_slice()));
+    assert_that(&p.release_bin("foo"), existing_file());
+})

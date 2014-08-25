@@ -17,7 +17,11 @@ pub fn run(manifest_path: &Path,
     let root = try!(src.get_root_package());
 
     let compile = try!(ops::compile(manifest_path, options));
-    let exe = manifest_path.dir_path().join("target").join(root.get_name());
+    let mut exe = manifest_path.dir_path().join("target");
+    if options.env == "release" {
+        exe = exe.join("release");
+    }
+    let exe = exe.join(root.get_name());
     let exe = match exe.path_relative_from(&os::getcwd()) {
         Some(path) => path,
         None => exe,
