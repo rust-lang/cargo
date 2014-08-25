@@ -102,6 +102,10 @@ impl ProjectBuilder {
         self.build_dir().join(format!("{}{}", b, os::consts::EXE_SUFFIX))
     }
 
+    pub fn release_bin(&self, b: &str) -> Path {
+        self.build_dir().join("release").join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+    }
+
     pub fn target_bin(&self, target: &str, b: &str) -> Path {
         self.build_dir().join(target).join(format!("{}{}", b,
                                                    os::consts::EXE_SUFFIX))
