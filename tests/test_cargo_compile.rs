@@ -799,21 +799,24 @@ test!(crate_version_env_vars {
             static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
             static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
             static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
+            static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
 
             fn main() {
-                let s = format!("{}-{}-{} @ {}", VERSION_MAJOR, VERSION_MINOR,
-                                VERSION_PATCH, VERSION_PRE);
+                let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
+                                VERSION_MINOR, VERSION_PATCH, VERSION_PRE,
+                                CARGO_MANIFEST_DIR);
                 assert_eq!(s, foo::version());
                 println!("{}", s);
             }
         "#)
         .file("src/lib.rs", r#"
             pub fn version() -> String {
-                format!("{}-{}-{} @ {}",
+                format!("{}-{}-{} @ {} in {}",
                         env!("CARGO_PKG_VERSION_MAJOR"),
                         env!("CARGO_PKG_VERSION_MINOR"),
                         env!("CARGO_PKG_VERSION_PATCH"),
-                        env!("CARGO_PKG_VERSION_PRE"))
+                        env!("CARGO_PKG_VERSION_PRE"),
+                        env!("CARGO_MANIFEST_DIR"))
             }
         "#);
 
@@ -821,7 +824,8 @@ test!(crate_version_env_vars {
 
     assert_that(
       process(p.bin("foo")),
-      execs().with_stdout("0-5-1 @ alpha.1\n"));
+      execs().with_stdout(format!("0-5-1 @ alpha.1 in {}\n",
+                                  p.root().display()).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo-test")), execs().with_status(0));
 })
