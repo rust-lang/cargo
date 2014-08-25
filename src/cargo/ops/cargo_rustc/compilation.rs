@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::dynamic_lib::DynamicLibrary;
 use std::os;
+use semver::Version;
 
-use core::PackageId;
+use core::{PackageId, Package};
 use util;
 
 /// A structure returning the result of a compilation.
@@ -51,7 +52,11 @@ impl Compilation {
 
     /// Prepares a new process with an appropriate environment to run against
     /// the artifacts produced by the build process.
-    pub fn process<T: ToCStr>(&self, cmd: T) -> util::ProcessBuilder {
+    ///
+    /// The package argument is also used to configure environment variables as
+    /// well as the working directory of the child process.
+    pub fn process<T: ToCStr>(&self, cmd: T, pkg: &Package)
+                              -> util::ProcessBuilder {
         let mut search_path = DynamicLibrary::search_path();
         for dir in self.native_dirs.values() {
             search_path.push(dir.clone());
@@ -64,6 +69,31 @@ impl Compilation {
         for (k, v) in self.extra_env.iter() {
             cmd = cmd.env(k.as_slice(), v.as_ref().map(|s| s.as_slice()));
         }
-        return cmd;
+
+        cmd.env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path().dir_path()))
+           .env("CARGO_PKG_VERSION_MAJOR",
+                Some(pkg.get_version().major.to_string()))
+           .env("CARGO_PKG_VERSION_MINOR",
+                Some(pkg.get_version().minor.to_string()))
+           .env("CARGO_PKG_VERSION_PATCH",
+                Some(pkg.get_version().patch.to_string()))
+           .env("CARGO_PKG_VERSION_PRE",
+                pre_version_component(pkg.get_version()))
+           .cwd(pkg.get_root())
     }
+}
+
+fn pre_version_component(v: &Version) -> Option<String> {
+    if v.pre.is_empty() {
+        return None;
+    }
+
+    let mut ret = String::new();
+
+    for (i, x) in v.pre.iter().enumerate() {
+        if i != 0 { ret.push_char('.') };
+        ret.push_str(x.to_string().as_slice());
+    }
+
+    Some(ret)
 }
