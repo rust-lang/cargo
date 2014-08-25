@@ -874,3 +874,33 @@ test!(test_no_run {
                        compiling = COMPILING,
                        dir = p.url()).as_slice()));
 })
+
+test!(test_no_harness {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name = "foo"
+            test = false
+
+            [[test]]
+            name = "bar"
+            path = "foo.rs"
+            harness = false
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("foo.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]bar-[..]
+",
+                       compiling = COMPILING, running = RUNNING,
+                       dir = p.url()).as_slice()));
+})
