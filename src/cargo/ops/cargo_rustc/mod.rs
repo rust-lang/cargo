@@ -438,7 +438,6 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.
-    cx.compilation.process(cmd).cwd(pkg.get_root())
-                               .env(DynamicLibrary::envvar(),
-                                    Some(search_path.as_slice()))
+    cx.compilation.process(cmd, pkg)
+                  .env(DynamicLibrary::envvar(), Some(search_path.as_slice()))
 }

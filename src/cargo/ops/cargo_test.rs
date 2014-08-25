@@ -21,7 +21,7 @@ pub fn run_tests(manifest_path: &Path,
             Some(path) => path,
             None => exe.clone(),
         };
-        let cmd = compile.process(exe).args(args);
+        let cmd = compile.process(exe, &package).args(args);
         try!(options.shell.concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));
@@ -43,7 +43,7 @@ pub fn run_tests(manifest_path: &Path,
 
     for (lib, name) in libs {
         try!(options.shell.status("Doc-tests", name));
-        let mut p = compile.process("rustdoc")
+        let mut p = compile.process("rustdoc", &package)
                            .arg("--test").arg(lib)
                            .arg("--crate-name").arg(name)
                            .arg("-L").arg(&compile.root_output)

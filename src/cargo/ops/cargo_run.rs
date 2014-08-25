@@ -22,7 +22,7 @@ pub fn run(manifest_path: &Path,
         Some(path) => path,
         None => exe,
     };
-    let process = compile.process(exe).args(args);
+    let process = compile.process(exe, &root).args(args).cwd(os::getcwd());
 
     try!(options.shell.status("Running", process.to_string()));
     Ok(process.exec().err())

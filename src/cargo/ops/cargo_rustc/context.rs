@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::str;
-use semver::Version;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile, Require};
@@ -147,32 +146,7 @@ impl<'a, 'b> Context<'a, 'b> {
         self.compilation.root_output = self.layout(KindTarget).proxy().dest().clone();
         self.compilation.deps_output = self.layout(KindTarget).proxy().deps().clone();
 
-        let env = &mut self.compilation.extra_env;
-        env.insert("CARGO_PKG_VERSION_MAJOR".to_string(),
-                   Some(pkg.get_version().major.to_string()));
-        env.insert("CARGO_PKG_VERSION_MINOR".to_string(),
-                   Some(pkg.get_version().minor.to_string()));
-        env.insert("CARGO_PKG_VERSION_PATCH".to_string(),
-                   Some(pkg.get_version().patch.to_string()));
-        env.insert("CARGO_PKG_VERSION_PRE".to_string(),
-                   pre_version_component(pkg.get_version()));
-
         return Ok(());
-
-        fn pre_version_component(v: &Version) -> Option<String> {
-            if v.pre.is_empty() {
-                return None;
-            }
-
-            let mut ret = String::new();
-
-            for (i, x) in v.pre.iter().enumerate() {
-                if i != 0 { ret.push_char('.') };
-                ret.push_str(x.to_string().as_slice());
-            }
-
-            Some(ret)
-        }
     }
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
