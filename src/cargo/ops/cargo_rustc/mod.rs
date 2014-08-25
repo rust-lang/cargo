@@ -310,7 +310,7 @@ fn build_base_args(mut cmd: ProcessBuilder,
         cmd = cmd.args(["--cfg", "ndebug"]);
     }
 
-    if profile.is_test() {
+    if profile.is_test() && profile.uses_test_harness() {
         cmd = cmd.arg("--test");
     }
 
