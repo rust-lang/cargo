@@ -76,7 +76,8 @@ test!(cargo_compile_with_invalid_version {
                 execs()
                 .with_status(101)
                 .with_stderr("Cargo.toml is not a valid manifest\n\n\
-                              invalid version: cannot parse '1.0' as a semver\n"))
+                              cannot parse '1.0' as a semver for the key \
+                              `project.version`\n"))
 
 })
 
