@@ -13,12 +13,13 @@ extern crate time;
 #[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
 
-extern crate semver;
 extern crate docopt;
 extern crate flate2;
+extern crate git2;
+extern crate semver;
 extern crate tar;
-extern crate url;
 extern crate toml;
+extern crate url;
 #[cfg(test)] extern crate hamcrest;
 
 use std::os;

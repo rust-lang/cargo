@@ -5,6 +5,7 @@ dependencies = [
  "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36)",
  "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#12593d1b9ccf09c2eabac176a6e233b171eed843)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#c78b40d7fdf8acd99b503e6ce394fbcf9eb8982f)",
  "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#689bbc003ae47feae5bc99c53b56736e4ad994ba)",
@@ -31,14 +32,36 @@ version = "0.1.0"
 source = "git+https://github.com/lifthrasiir/rust-encoding#7e7950ddbd46428a439db3e2594fa78f0972ef2e"
 
 [[package]]
+<<<<<<< HEAD
 name = "flate2"
 version = "0.0.1"
 source = "git+https://github.com/alexcrichton/flate2-rs#12593d1b9ccf09c2eabac176a6e233b171eed843"
+=======
+name = "git2"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec"
+dependencies = [
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec)",
+]
+>>>>>>> Revert "Revert "Use libgit2 for driving git instead of the CLI""
 
 [[package]]
 name = "hamcrest"
 version = "0.1.0"
 source = "git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42"
+
+[[package]]
+name = "libgit2"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/git2-rs#66ddeb423f5534817ec254b54eaeb50e506f87ec"
+dependencies = [
+ "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9)",
+]
+
+[[package]]
+name = "link-config"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/link-config#f08103ea7d2e2d3369c2c5e66b0220c8d16b92c9"
 
 [[package]]
 name = "semver"
