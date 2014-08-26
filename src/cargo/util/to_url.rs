@@ -26,8 +26,8 @@ impl<'a> ToUrl for &'a str {
 
 fn mapper(s: &str) -> url::SchemeType {
     match s {
-        "git" => url::RelativeScheme("9418"),
-        "ssh" => url::RelativeScheme("22"),
+        "git" => url::RelativeScheme(9418),
+        "ssh" => url::RelativeScheme(22),
         s => url::whatwg_scheme_type_mapper(s),
     }
 }
