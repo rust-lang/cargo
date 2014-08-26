@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 use serialize::{Encodable, Encoder, Decodable, Decoder};
-use util::graph::{Nodes,Edges};
+use util::profile;
+use util::graph::{Nodes, Edges};
 
 use core::{
     Dependency,
@@ -238,6 +239,7 @@ impl<'a, R: Registry> Context<'a, R> {
 pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency],
                             registry: &mut R) -> CargoResult<Resolve> {
     log!(5, "resolve; deps={}", deps);
+    let _p = profile::start(format!("resolving: {}", root));
 
     let mut context = Context::new(registry, root.clone());
     try!(resolve_deps(root, deps, &mut context));
