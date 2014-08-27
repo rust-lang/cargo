@@ -13,7 +13,7 @@ fi
 if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     # Install a 32-bit compiler for linux
     sudo apt-get update
-    sudo apt-get install g++-multilib lib32stdc++6
+    sudo apt-get install g++-multilib lib32stdc++6 libssl1.0.0 libssl-dev
 fi
 
 # Install both 64 and 32 bit libraries. Apparently travis barfs if you try to
