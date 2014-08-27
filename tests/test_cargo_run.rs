@@ -144,7 +144,7 @@ test!(release_works {
             fn main() { if !cfg!(ndebug) { fail!() } }
         "#);
 
-    assert_that(p.cargo_process("cargo-run").arg("--release"),
+    assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}release{sep}foo`

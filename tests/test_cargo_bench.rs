@@ -658,6 +658,7 @@ test!(bin_there_for_integration {
                             output);
 })
 
+#[cfg(not(windows))] // FIXME(#456)
 test!(bench_dylib {
     let p = project("foo")
         .file("Cargo.toml", r#"
