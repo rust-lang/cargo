@@ -738,19 +738,23 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().assert();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
+{running} [..]
+{running} [..]
+{running} [..]
+{running} [..]
 {fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
-{running} target[..]release[..]bench-[..]
+{running} [..]target[..]release[..]bench-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]release[..]foo-[..]
+{running} [..]target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench:         0 ns/iter (+/- 0)
@@ -758,6 +762,7 @@ test foo ... bench:         0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {doctest} foo
+{running} [..]
 
 running 0 tests
 
