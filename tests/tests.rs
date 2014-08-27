@@ -37,3 +37,4 @@ mod test_cargo_compile_plugins;
 mod test_cargo_doc;
 mod test_cargo_freshness;
 mod test_cargo_generate_lockfile;
+mod test_cargo_package;
