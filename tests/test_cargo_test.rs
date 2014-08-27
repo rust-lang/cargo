@@ -852,3 +852,78 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        fresh = FRESH,
                        dir = p.url()).as_slice()));
 })
+
+test!(test_readme {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[lib]]
+            name = "foo"
+            test = false
+            doctest = false
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("README.md", r#"
+```
+extern crate foo;
+
+# fn main() {
+foo::foo();
+# }
+```
+        "#);
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{doctest} README.md
+
+running 1 test
+test _0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+                       compiling = COMPILING,
+                       doctest = DOCTEST,
+                       dir = p.url()).as_slice()));
+})
+
+test!(test_readme_opt_out {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            readme = false
+
+            [[lib]]
+            name = "foo"
+            test = false
+            doctest = false
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("README.md", r#"
+```
+code!
+```
+        "#);
+
+    assert_that(p.cargo_process("cargo-test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+",
+                       compiling = COMPILING,
+                       dir = p.url()).as_slice()));
+})

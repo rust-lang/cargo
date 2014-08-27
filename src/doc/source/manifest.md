@@ -40,6 +40,26 @@ your Rust code, for example.
 build = "make"
 ```
 
+## The `readme` Field (optional)
+
+By default Cargo will attempt to run any documentation tests located in your
+README in order to ensure that it is up to date. The `readme` field of a
+`package` can be either a boolean or a string representing the path to the
+readme. For example:
+
+```toml
+[package]
+# Don't run documentation tests on the readme
+readme = false
+```
+
+```toml
+[package]
+# This package's readme is located in a nonstandard location (default is
+# README.md)
+readme = "path/to/README.md"
+```
+
 # The `[dependencies.*]` Sections
 
 You list dependencies using `[dependencies.<name>]`. For example, if you
