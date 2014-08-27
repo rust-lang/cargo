@@ -59,6 +59,7 @@ macro_rules! each_subcommand( ($macro:ident) => ({
     $macro!(git_checkout)
     $macro!(locate_project)
     $macro!(new)
+    $macro!(package)
     $macro!(read_manifest)
     $macro!(run)
     $macro!(test)
