@@ -891,7 +891,8 @@ test!(dep_with_changed_submodule {
     }).assert();
 
     git_project.process("git").args(["submodule", "add"])
-               .arg(git_project2.root()).arg("src").exec_with_output().assert();
+               .arg(git_project2.url().to_string()).arg("src").exec_with_output()
+               .assert();
     git_project.process("git").args(["add", "."]).exec_with_output().assert();
     git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
                .assert();
@@ -910,6 +911,7 @@ test!(dep_with_changed_submodule {
             pub fn main() { println!(\"{}\", dep1::dep()) }
         ");
 
+    println!("first run");
     assert_that(project.cargo_process("run"), execs()
                 .with_stdout(format!("{} git repository `[..]`\n\
                                       {} dep1 v0.5.0 ([..])\n\
@@ -939,23 +941,22 @@ test!(dep_with_changed_submodule {
 
     timer::sleep(Duration::milliseconds(1000));
     // Update the dependency and carry on!
-    assert_that(project.process(cargo_dir().join("cargo")).arg("update"), execs()
+    println!("update");
+    assert_that(project.process(cargo_dir().join("cargo")).arg("update").arg("-v"),
+                execs()
                 .with_stderr("")
                 .with_stdout(format!("{} git repository `{}`",
                                      UPDATING,
                                      git_project.url())));
 
-    assert_that(project.cargo_process("run"), execs()
-                .with_stdout(format!("{} git repository `[..]`\n\
-                                      {} dep1 v0.5.0 ([..])\n\
-                                      {} foo v0.5.0 ([..])\n\
-                                      {} `target[..]foo`\n\
+    println!("last run");
+    assert_that(project.process(cargo_dir().join("cargo")).arg("run"), execs()
+                .with_stdout(format!("{compiling} dep1 v0.5.0 ([..])\n\
+                                      {compiling} foo v0.5.0 ([..])\n\
+                                      {running} `target[..]foo`\n\
                                       project3\
                                       ",
-                                      UPDATING,
-                                      COMPILING,
-                                      COMPILING,
-                                      RUNNING))
+                                      compiling = COMPILING, running = RUNNING))
                 .with_stderr("")
                 .with_status(0));
 })
