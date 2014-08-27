@@ -87,7 +87,7 @@ We can also use `cargo run` to compile and then run it, all in one step:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">   Fresh</span> hello-world v0.1.0 (file:///Users/wycats/src/hello_world)
+class="s1">   Fresh</span> hello-world v0.0.1 (file:///Users/wycats/src/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
 Hello world!</code></pre>
@@ -123,7 +123,7 @@ To depend on a library, add it to your `Cargo.toml`.
 [package]
 
 name = "hello-world"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Yehuda Katz <wycats@example.com>"]
 
 [dependencies.color]
@@ -158,7 +158,7 @@ Compile it:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.1.0 (file:///Users/wycats/src/hello_world)
+<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.0.1 (file:///Users/wycats/src/hello_world)
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
 Converting RGB to HSV!
 HSV: HSV { h: 0, s: 1, v: 1 }</code></pre>
@@ -308,7 +308,7 @@ patch. Here's what `conduit-static`'s `Cargo.toml` looks like:
 [package]
 
 name = "conduit-static"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Yehuda Katz <wycats@example.com>"]
 
 [dependencies.conduit]
