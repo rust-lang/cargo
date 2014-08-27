@@ -438,31 +438,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 test!(simple_cargo_run {
     if disabled() { return }
 
-    let target = alternate();
-
-    let build = project("builder")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#)
-        .file("src/main.rs", format!(r#"
-            fn main() {{
-                assert_eq!(std::os::getenv("TARGET").unwrap().as_slice(), "{}");
-            }}
-        "#, target).as_slice());
-    assert_that(build.cargo_process("cargo-run").arg("--target").arg(target),
-                execs().with_status(0));
-
     let p = project("foo")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", r#"
             [package]
             name = "foo"
             version = "0.0.0"
             authors = []
-            build = '{}'
-        "#, build.bin("foo").display()))
+        "#)
         .file("src/main.rs", r#"
             use std::os;
             fn main() {
@@ -471,6 +453,6 @@ test!(simple_cargo_run {
         "#);
 
     let target = alternate();
-    assert_that(p.cargo_process("cargo-run").arg("--target").arg(target),
+    assert_that(p.cargo_process("run").arg("--target").arg(target),
                 execs().with_status(0));
 })
