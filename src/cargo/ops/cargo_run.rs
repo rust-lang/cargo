@@ -8,6 +8,7 @@ use sources::PathSource;
 pub fn run(manifest_path: &Path,
            options: &mut ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
+
     if !manifest_path.dir_path().join("src").join("main.rs").exists() {
         return Err(human("`src/main.rs` must be present for `cargo run`"))
     }
@@ -16,8 +17,20 @@ pub fn run(manifest_path: &Path,
     try!(src.update());
     let root = try!(src.get_root_package());
 
+    let target = root.get_targets().iter()
+        .find(|t| t.is_bin() && t.get_profile().is_compile());
+
+    let target = match target {
+        Some(t) => t,
+        None => {
+            return Err(human("no executable targets defined in Cargo.toml to run"));
+        }
+    };
+
+    // Compile the package
     let compile = try!(ops::compile(manifest_path, options));
-    let exe = manifest_path.dir_path().join("target").join(root.get_name());
+
+    let exe = manifest_path.dir_path().join("target").join(target.get_name());
     let exe = match exe.path_relative_from(&os::getcwd()) {
         Some(path) => path,
         None => exe,
