@@ -42,7 +42,7 @@ X = .exe
 endif
 
 TARGET_ROOT = target
-BIN_TARGETS := $(wildcard src/bin/*.rs)
+BIN_TARGETS := cargo
 BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
 BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
 
@@ -119,7 +119,7 @@ $$(PKGDIR_$(1))/lib/cargo/manifest.in: all
 	rm -rf $$(PKGDIR_$(1))
 	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
-	cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
+	#cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
 	(cd $$(PKGDIR_$(1)) && find . -type f | sed 's/^\.\///') \
 		> $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in
 	cp src/etc/install.sh $$(PKGDIR_$(1))

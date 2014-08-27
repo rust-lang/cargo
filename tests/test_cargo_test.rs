@@ -26,14 +26,14 @@ test!(cargo_test_simple {
                 assert_eq!(hello(), "hello")
             }"#);
 
-    assert_that(p.cargo_process("cargo-build"), execs());
+    assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]foo
@@ -56,7 +56,7 @@ test!(cargo_test_verbose {
             #[test] fn test_hello() {}
         "#);
 
-    assert_that(p.cargo_process("cargo-test").arg("-v").arg("hello"),
+    assert_that(p.cargo_process("test").arg("-v").arg("hello"),
         execs().with_stdout(format!("\
 {running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
@@ -93,7 +93,7 @@ test!(many_similar_names {
             #[test] fn test_test() { foo::foo() }
         "#);
 
-    let output = p.cargo_process("cargo-test").exec_with_output().assert();
+    let output = p.cargo_process("test").exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
@@ -117,14 +117,14 @@ test!(cargo_test_failing_test {
                 assert_eq!(hello(), "nope")
             }"#);
 
-    assert_that(p.cargo_process("cargo-build"), execs());
+    assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]foo
@@ -188,7 +188,7 @@ test!(test_with_lib_dep {
             fn bin_test() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]baz-[..]
@@ -254,7 +254,7 @@ test!(test_with_deep_lib_dep {
         ");
 
     p2.build();
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -304,7 +304,7 @@ test!(external_test_explicit {
             fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
         "#);
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]foo-[..]
@@ -352,7 +352,7 @@ test!(external_test_implicit {
             fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
         "#);
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]external-[..]
@@ -392,7 +392,7 @@ test!(dont_run_examples {
         .file("examples/dont-run-me-i-will-fail.rs", r#"
             fn main() { fail!("Examples should not be run by 'cargo test'"); }
         "#);
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0));
 })
 
@@ -409,7 +409,7 @@ test!(pass_through_command_line {
             #[test] fn bar() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test").arg("bar"),
+    assert_that(p.cargo_process("test").arg("bar"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -431,7 +431,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.cargo_process("cargo-test").arg("foo"),
+    assert_that(p.cargo_process("test").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -466,10 +466,10 @@ test!(cargo_test_twice {
             fn dummy_test() { }
             "#);
 
-    p.cargo_process("cargo-build");
+    p.cargo_process("build");
 
     for _ in range(0u, 2) {
-        assert_that(p.process(cargo_dir().join("cargo-test")),
+        assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                     execs().with_status(0));
     }
 })
@@ -497,7 +497,7 @@ test!(lib_bin_same_name {
             fn bin_test() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]foo-[..]
@@ -548,7 +548,7 @@ test!(lib_with_standard_name {
             fn test() { syntax::foo() }
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
@@ -603,7 +603,7 @@ test!(lib_with_standard_name2 {
             fn test() { syntax::foo() }
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
@@ -640,7 +640,7 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("cargo-test").exec_with_output().assert();
+    let output = p.cargo_process("test").exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
@@ -689,7 +689,7 @@ test!(test_dylib {
              pub fn baz() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
@@ -719,7 +719,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().assert();
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
@@ -764,7 +764,7 @@ test!(test_twice_with_build_cmd {
             fn foo() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -786,7 +786,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo-test")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})
@@ -822,7 +822,7 @@ test!(test_then_build {
             fn foo() {}
         ");
 
-    assert_that(p.cargo_process("cargo-test"),
+    assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -844,7 +844,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo-build")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})
@@ -866,7 +866,7 @@ test!(test_no_run {
             fn foo() { fail!() }
         ");
 
-    assert_that(p.cargo_process("cargo-test").arg("--no-run"),
+    assert_that(p.cargo_process("test").arg("--no-run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})

@@ -1,14 +1,7 @@
-#![feature(phase)]
-
-extern crate serialize;
-extern crate cargo;
-extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
-
 use std::io::process::ExitStatus;
+use docopt;
 
 use cargo::ops;
-use cargo::{execute_main_without_stdin};
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
@@ -17,7 +10,7 @@ docopt!(Options, "
 Run the main binary of the local package (src/main.rs)
 
 Usage:
-    cargo-run [options] [--] [<args>...]
+    cargo run [options] [--] [<args>...]
 
 Options:
     -h, --help              Print this message
@@ -30,11 +23,7 @@ All of the trailing arguments are passed as to the binary to run.
 ",  flag_jobs: Option<uint>, flag_target: Option<String>,
     flag_manifest_path: Option<String>)
 
-fn main() {
-    execute_main_without_stdin(execute, true);
-}
-
-fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 

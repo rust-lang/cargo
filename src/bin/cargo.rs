@@ -1,4 +1,4 @@
-#![feature(phase)]
+#![feature(phase, macro_rules)]
 
 extern crate serialize;
 #[phase(plugin, link)] extern crate log;
@@ -12,13 +12,11 @@ use std::os;
 use std::io;
 use std::io::fs;
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
-use serialize::Encodable;
 use docopt::FlagParser;
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
-use cargo::util::important_paths::find_project;
-use cargo::util::{CliError, CliResult, Require, config, human};
+use cargo::util::{CliError, CliResult};
 
 fn main() {
     execute_main_without_stdin(execute, true)
@@ -50,6 +48,25 @@ Some common cargo commands are:
 See 'cargo help <command>' for more information on a specific command.
 ")
 
+macro_rules! each_subcommand( ($macro:ident) => ({
+    $macro!(bench)
+    $macro!(build)
+    $macro!(clean)
+    $macro!(config_for_key)
+    $macro!(config_list)
+    $macro!(doc)
+    $macro!(generate_lockfile)
+    $macro!(git_checkout)
+    $macro!(locate_project)
+    $macro!(new)
+    $macro!(read_manifest)
+    $macro!(run)
+    $macro!(test)
+    $macro!(update)
+    $macro!(verify_project)
+    $macro!(version)
+}) )
+
 /**
   The top-level `cargo` command handles configuration and project location
   because they are fundamental (and intertwined). Other commands can rely
@@ -58,90 +75,73 @@ See 'cargo help <command>' for more information on a specific command.
 fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo; args={}", os::args());
     shell.set_verbose(flags.flag_verbose);
+
     if flags.flag_list {
         println!("Installed Commands:");
-        for command in list_commands().iter() {
+        for command in list_commands().move_iter() {
             println!("    {}", command);
-            // TODO: it might be helpful to add result of -h to each command.
         };
         return Ok(None)
     }
-    let mut args = flags.arg_args.clone();
-    args.insert(0, flags.arg_command.clone());
-    match flags.arg_command.as_slice() {
-        "config-for-key" => {
-            log!(4, "cmd == config-for-key");
-            let r = cargo::call_main_without_stdin(config_for_key, shell,
-                                                   args.as_slice(), false);
-            cargo::process_executed(r, shell)
-        },
-        "config-list" => {
-            log!(4, "cmd == config-list");
-            let r = cargo::call_main_without_stdin(config_list, shell,
-                                                   args.as_slice(), false);
-            cargo::process_executed(r, shell)
-        },
-        "locate-project" => {
-            log!(4, "cmd == locate-project");
-            let r = cargo::call_main_without_stdin(locate_project, shell,
-                                                   args.as_slice(), false);
-            cargo::process_executed(r, shell)
-        },
-        // If we are invoked with no arguments or with `help` with no
-        // arguments, re-invoke ourself with `-h` to get the help
-        // message printed
+
+    let (mut args, command) = match flags.arg_command.as_slice() {
         "" | "help" if flags.arg_args.len() == 0 => {
             shell.set_verbose(true);
             let r = cargo::call_main_without_stdin(execute, shell,
                                                    ["-h".to_string()], false);
-            cargo::process_executed(r, shell)
-        },
-        orig_cmd => {
-            let is_help = orig_cmd == "help";
-            let cmd = if is_help {
-                flags.arg_args[0].as_slice()
-            } else {
-                orig_cmd
-            };
-            execute_subcommand(cmd, is_help, &flags, shell)
+            cargo::process_executed(r, shell);
+            return Ok(None)
         }
-    }
+        "help" => (vec!["-h".to_string()], flags.arg_args[0].as_slice()),
+        s => (flags.arg_args.clone(), s),
+    };
+    args.insert(0, command.to_string());
+
+    macro_rules! cmd( ($name:ident) => (
+        if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {
+            mod $name;
+            shell.set_verbose(true);
+            let r = cargo::call_main_without_stdin($name::execute, shell,
+                                                   args.as_slice(),
+                                                   false);
+            cargo::process_executed(r, shell);
+            return Ok(None)
+        }
+    ) )
+    each_subcommand!(cmd)
+
+    execute_subcommand(command.as_slice(), args.as_slice(), shell);
     Ok(None)
 }
 
-fn execute_subcommand(cmd: &str, is_help: bool, flags: &Flags, shell: &mut MultiShell) -> () {
-    match find_command(cmd) {
-        Some(command) => {
-            let mut command = Command::new(command);
-            let command = if is_help {
-                command.arg("-h")
-            } else {
-                command.args(flags.arg_args.as_slice())
-            };
-            let status = command
-                .stdin(InheritFd(0))
-                .stdout(InheritFd(1))
-                .stderr(InheritFd(2))
-                .status();
+fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
+    let command = match find_command(cmd) {
+        Some(command) => command,
+        None => return handle_error(CliError::new("No such subcommand", 127),
+                                    shell)
+    };
+    let status = Command::new(command)
+                         .args(args)
+                         .stdin(InheritFd(0))
+                         .stdout(InheritFd(1))
+                         .stderr(InheritFd(2))
+                         .status();
 
-            match status {
-                Ok(ExitStatus(0)) => (),
-                Ok(ExitStatus(i)) => {
-                    handle_error(CliError::new("", i as uint), shell)
-                }
-                Ok(ExitSignal(i)) => {
-                    let msg = format!("subcommand failed with signal: {}", i);
-                    handle_error(CliError::new(msg, i as uint), shell)
-                }
-                Err(io::IoError{kind, ..}) if kind == io::FileNotFound =>
-                    handle_error(CliError::new("No such subcommand", 127), shell),
-                Err(err) => handle_error(
-                    CliError::new(
-                        format!("Subcommand failed to run: {}", err), 127),
-                    shell)
-            }
-        },
-        None => handle_error(CliError::new("No such subcommand", 127), shell)
+    match status {
+        Ok(ExitStatus(0)) => (),
+        Ok(ExitStatus(i)) => {
+            handle_error(CliError::new("", i as uint), shell)
+        }
+        Ok(ExitSignal(i)) => {
+            let msg = format!("subcommand failed with signal: {}", i);
+            handle_error(CliError::new(msg, i as uint), shell)
+        }
+        Err(io::IoError{kind, ..}) if kind == io::FileNotFound =>
+            handle_error(CliError::new("No such subcommand", 127), shell),
+        Err(err) => handle_error(
+            CliError::new(
+                format!("Subcommand failed to run: {}", err), 127),
+            shell)
     }
 }
 
@@ -170,13 +170,18 @@ fn list_commands() -> TreeSet<String> {
             }
         }
     }
+
+    macro_rules! add_cmd( ($cmd:ident) => ({
+        commands.insert(stringify!($cmd).replace("_", "-"));
+    }) )
+    each_subcommand!(add_cmd);
     commands
 }
 
 fn is_executable(path: &Path) -> bool {
     match fs::stat(path) {
-        Ok(io::FileStat{kind, perm, ..}) =>
-            (kind == io::TypeFile) && perm.contains(io::OtherExecute),
+        Ok(io::FileStat{ kind: io::TypeFile, perm, ..}) =>
+            perm.contains(io::OtherExecute),
         _ => false
     }
 }
@@ -208,71 +213,4 @@ fn list_command_directory() -> Vec<Path> {
         None => {}
     };
     dirs
-}
-
-#[deriving(Encodable)]
-struct ConfigOut {
-    values: std::collections::HashMap<String, config::ConfigValue>
-}
-
-docopt!(ConfigForKeyFlags, "
-Usage: cargo config-for-key --human --key=<key>
-")
-
-fn config_for_key(args: ConfigForKeyFlags,
-                  _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
-    let value = try!(config::get_config(os::getcwd(),
-                                        args.flag_key.as_slice()).map_err(|_| {
-        CliError::new("Couldn't load configuration",  1)
-    }));
-
-    if args.flag_human {
-        println!("{}", value);
-        Ok(None)
-    } else {
-        let mut map = std::collections::HashMap::new();
-        map.insert(args.flag_key.clone(), value);
-        Ok(Some(ConfigOut { values: map }))
-    }
-}
-
-docopt!(ConfigListFlags, "
-Usage: cargo config-list --human
-")
-
-fn config_list(args: ConfigListFlags, _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
-    let configs = try!(config::all_configs(os::getcwd()).map_err(|_|
-        CliError::new("Couldn't load configuration", 1)));
-
-    if args.flag_human {
-        for (key, value) in configs.iter() {
-            println!("{} = {}", key, value);
-        }
-        Ok(None)
-    } else {
-        Ok(Some(ConfigOut { values: configs }))
-    }
-}
-
-docopt!(LocateProjectFlags, "
-Usage: cargo locate-project
-")
-
-#[deriving(Encodable)]
-struct ProjectLocation {
-    root: String
-}
-
-fn locate_project(_: LocateProjectFlags,
-                  _: &mut MultiShell) -> CliResult<Option<ProjectLocation>> {
-    let root = try!(find_project(&os::getcwd(), "Cargo.toml").map_err(|e| {
-        CliError::from_boxed(e, 1)
-    }));
-
-    let string = try!(root.as_str()
-                      .require(|| human("Your project path contains characters \
-                                         not representable in Unicode"))
-                      .map_err(|e| CliError::from_boxed(e, 1)));
-
-    Ok(Some(ProjectLocation { root: string.to_string() }))
 }
