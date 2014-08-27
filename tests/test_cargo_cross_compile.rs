@@ -434,3 +434,25 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
    doctest = DOCTEST)));
 })
+
+test!(simple_cargo_run {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            use std::os;
+            fn main() {
+                assert_eq!(os::consts::ARCH, "x86");
+            }
+        "#);
+
+    let target = alternate();
+    assert_that(p.cargo_process("run").arg("--target").arg(target),
+                execs().with_status(0));
+})
