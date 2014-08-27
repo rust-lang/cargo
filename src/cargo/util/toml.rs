@@ -1,10 +1,11 @@
-use serialize::Decodable;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::fs;
 use std::slice;
 use std::str;
 use toml;
+use semver;
+use serialize::{Decodable, Decoder};
 
 use core::{SourceId, GitKind};
 use core::manifest::{LibKind, Lib, Dylib, Profile};
@@ -168,14 +169,14 @@ type TomlBenchTarget = TomlTarget;
  * TODO: Make all struct fields private
  */
 
-#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
+#[deriving(Decodable)]
 pub enum TomlDependency {
     SimpleDep(String),
     DetailedDep(DetailedTomlDependency)
 }
 
 
-#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
+#[deriving(Decodable)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -185,7 +186,7 @@ pub struct DetailedTomlDependency {
     rev: Option<String>
 }
 
-#[deriving(Encodable,Decodable,PartialEq,Clone)]
+#[deriving(Decodable)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -198,7 +199,7 @@ pub struct TomlManifest {
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
-#[deriving(Encodable,Decodable,PartialEq,Clone)]
+#[deriving(Decodable)]
 pub enum ManyOrOne<T> {
     Many(Vec<T>),
     One(T),
@@ -213,25 +214,40 @@ impl<T> ManyOrOne<T> {
     }
 }
 
-#[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
+#[deriving(Decodable)]
 pub struct TomlProject {
-    pub name: String,
-    // FIXME #54: should be a Version to be able to be Decodable'd directly.
-    pub version: String,
+    name: String,
+    version: TomlVersion,
     pub authors: Vec<String>,
     build: Option<TomlBuildCommandsList>,
     exclude: Option<Vec<String>>,
 }
 
-#[deriving(Encodable,Decodable,PartialEq,Clone,Show)]
+#[deriving(Decodable)]
 pub enum TomlBuildCommandsList {
     SingleBuildCommand(String),
     MultipleBuildCommands(Vec<String>)
 }
 
+pub struct TomlVersion {
+    version: semver::Version,
+}
+
+impl<E, D: Decoder<E>> Decodable<D, E> for TomlVersion {
+    fn decode(d: &mut D) -> Result<TomlVersion, E> {
+        let s = raw_try!(d.read_str());
+        match semver::parse(s.as_slice()) {
+            Some(s) => Ok(TomlVersion { version: s }),
+            None => Err(d.error(format!("cannot parse '{}' as a semver",
+                                        s).as_slice())),
+        }
+    }
+}
+
 impl TomlProject {
     pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
-        PackageId::new(self.name.as_slice(), self.version.as_slice(), source_id)
+        PackageId::new(self.name.as_slice(), self.version.version.clone(),
+                       source_id)
     }
 }
 
@@ -395,7 +411,7 @@ impl TomlManifest {
                                 &metadata);
 
         if targets.is_empty() {
-            debug!("manifest has no build targets; project={}", self.project);
+            debug!("manifest has no build targets");
         }
 
         let mut deps = Vec::new();
@@ -490,7 +506,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
     Ok(())
 }
 
-#[deriving(Decodable,Encodable,PartialEq,Clone,Show)]
+#[deriving(Decodable, Show, Clone)]
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
@@ -503,7 +519,7 @@ struct TomlTarget {
     harness: Option<bool>,
 }
 
-#[deriving(Decodable,Encodable,PartialEq,Clone)]
+#[deriving(Decodable, Clone)]
 enum TomlPath {
     TomlString(String),
     TomlPath(Path),
