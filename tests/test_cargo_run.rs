@@ -19,7 +19,7 @@ test!(simple {
             fn main() { println!("hello"); }
         "#);
 
-    assert_that(p.cargo_process("cargo-run"),
+    assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}foo`
@@ -47,7 +47,7 @@ test!(simple_with_args {
             }
         "#);
 
-    assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
+    assert_that(p.cargo_process("run").arg("hello").arg("world"),
                 execs().with_status(0));
 })
 
@@ -63,7 +63,7 @@ test!(exit_code {
             fn main() { std::os::set_exit_status(2); }
         "#);
 
-    assert_that(p.cargo_process("cargo-run"),
+    assert_that(p.cargo_process("run"),
                 execs().with_status(2));
 })
 
@@ -77,7 +77,7 @@ test!(no_main_file {
         "#)
         .file("src/lib.rs", "");
 
-    assert_that(p.cargo_process("cargo-run"),
+    assert_that(p.cargo_process("run"),
                 execs().with_status(101)
                        .with_stderr("a bin target must be available \
                                      for `cargo run`\n"));
@@ -95,7 +95,7 @@ test!(too_many_bins {
         .file("src/bin/a.rs", "")
         .file("src/bin/b.rs", "");
 
-    assert_that(p.cargo_process("cargo-run"),
+    assert_that(p.cargo_process("run"),
                 execs().with_status(101)
                        .with_stderr("`cargo run` requires that a project only \
                                      have one executable\n"));
@@ -128,7 +128,7 @@ test!(run_dylib_dep {
         "#)
         .file("bar/src/lib.rs", "pub fn bar() {}");
 
-    assert_that(p.cargo_process("cargo-run").arg("hello").arg("world"),
+    assert_that(p.cargo_process("run").arg("hello").arg("world"),
                 execs().with_status(0));
 })
 
@@ -147,5 +147,5 @@ test!(run_bin_different_name {
             fn main() { }
         "#);
 
-    assert_that(p.cargo_process("cargo-run"), execs().with_status(0));
+    assert_that(p.cargo_process("run"), execs().with_status(0));
 })

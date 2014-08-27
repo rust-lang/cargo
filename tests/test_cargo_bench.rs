@@ -28,14 +28,14 @@ test!(cargo_bench_simple {
                 assert_eq!(hello(), "hello")
             }"#);
 
-    assert_that(p.cargo_process("cargo-build"), execs());
+    assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo-bench")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo
@@ -59,7 +59,7 @@ test!(cargo_bench_verbose {
             #[bench] fn bench_hello(_b: &mut test::Bencher) {}
         "#);
 
-    assert_that(p.cargo_process("cargo-bench").arg("-v").arg("hello"),
+    assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
         execs().with_stdout(format!("\
 {running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
@@ -99,7 +99,7 @@ test!(many_similar_names {
             #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
         "#);
 
-    let output = p.cargo_process("cargo-bench").exec_with_output().assert();
+    let output = p.cargo_process("bench").exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("test bin_bench"), "bin_bench missing\n{}", output);
     assert!(output.contains("test lib_bench"), "lib_bench missing\n{}", output);
@@ -124,14 +124,14 @@ test!(cargo_bench_failing_test {
                 assert_eq!(hello(), "nope")
             }"#);
 
-    assert_that(p.cargo_process("cargo-build"), execs());
+    assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
         process(p.bin("foo")),
         execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo-bench")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo
@@ -182,7 +182,7 @@ test!(bench_with_lib_dep {
             fn bin_bench(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]baz-[..]
@@ -246,7 +246,7 @@ test!(bench_with_deep_lib_dep {
         ");
 
     p2.build();
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -297,7 +297,7 @@ test!(external_bench_explicit {
             fn external_bench(_b: &mut test::Bencher) {}
         "#);
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]bench-[..]
@@ -348,7 +348,7 @@ test!(external_bench_implicit {
             fn external_bench(_b: &mut test::Bencher) {}
         "#);
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]external-[..]
@@ -388,7 +388,7 @@ test!(dont_run_examples {
         .file("examples/dont-run-me-i-will-fail.rs", r#"
             fn main() { fail!("Examples should not be run by 'cargo test'"); }
         "#);
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
                 execs().with_status(0));
 })
 
@@ -407,7 +407,7 @@ test!(pass_through_command_line {
             #[bench] fn bar(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-bench").arg("bar"),
+    assert_that(p.cargo_process("bench").arg("bar"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -429,7 +429,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.cargo_process("cargo-bench").arg("foo"),
+    assert_that(p.cargo_process("bench").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -466,10 +466,10 @@ test!(cargo_bench_twice {
             fn dummy_bench(b: &mut test::Bencher) { }
             "#);
 
-    p.cargo_process("cargo-build");
+    p.cargo_process("build");
 
     for _ in range(0u, 2) {
-        assert_that(p.process(cargo_dir().join("cargo-bench")),
+        assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
                     execs().with_status(0));
     }
 })
@@ -499,7 +499,7 @@ test!(lib_bin_same_name {
             fn bin_bench(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
         execs().with_stdout(format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]foo-[..]
@@ -553,7 +553,7 @@ test!(lib_with_standard_name {
             fn bench(_b: &mut test::Bencher) { syntax::foo() }
         ");
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
@@ -609,7 +609,7 @@ test!(lib_with_standard_name2 {
             fn bench(_b: &mut test::Bencher) { syntax::foo() }
         ");
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} syntax v0.0.1 ({dir})
@@ -648,7 +648,7 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("cargo-bench").exec_with_output().assert();
+    let output = p.cargo_process("bench").exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
                             "no main_bench\n{}",
@@ -703,7 +703,7 @@ test!(bench_dylib {
              pub fn baz() {}
         ");
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
@@ -733,7 +733,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().assert();
-    assert_that(p.process(cargo_dir().join("cargo-bench")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
@@ -779,7 +779,7 @@ test!(bench_twice_with_build_cmd {
             fn foo(_b: &mut test::Bencher) {}
         ");
 
-    assert_that(p.cargo_process("cargo-bench"),
+    assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -801,7 +801,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo-bench")),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} foo v0.0.1 ({dir})

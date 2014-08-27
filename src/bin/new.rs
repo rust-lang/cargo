@@ -1,12 +1,6 @@
-#![feature(phase)]
-
-extern crate serialize;
-extern crate cargo;
-extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
-#[phase(plugin, link)] extern crate log;
-
 use std::os;
+use docopt;
+
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
@@ -15,8 +9,8 @@ docopt!(Options, "
 Create a new cargo package at <path>
 
 Usage:
-    cargo-new [options] <path>
-    cargo-new -h | --help
+    cargo new [options] <path>
+    cargo new -h | --help
 
 Options:
     -h, --help          Print this message
@@ -25,11 +19,7 @@ Options:
     -v, --verbose       Use verbose output
 ")
 
-fn main() {
-    cargo::execute_main_without_stdin(execute, false)
-}
-
-fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={}", os::args());
     shell.set_verbose(options.flag_verbose);
 

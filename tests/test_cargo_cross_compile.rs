@@ -45,7 +45,7 @@ test!(simple_cross {
                 assert_eq!(std::os::getenv("TARGET").unwrap().as_slice(), "{}");
             }}
         "#, alternate()).as_slice());
-    assert_that(build.cargo_process("cargo-build"),
+    assert_that(build.cargo_process("build"),
                 execs().with_status(0));
 
     let p = project("foo")
@@ -64,7 +64,7 @@ test!(simple_cross {
         "#);
 
     let target = alternate();
-    assert_that(p.cargo_process("cargo-build").arg("--target").arg(target),
+    assert_that(p.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&p.target_bin(target, "foo"), existing_file());
 
@@ -101,7 +101,7 @@ test!(simple_deps {
     p2.build();
 
     let target = alternate();
-    assert_that(p.cargo_process("cargo-build").arg("--target").arg(target),
+    assert_that(p.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&p.target_bin(target, "foo"), existing_file());
 
@@ -179,7 +179,7 @@ test!(plugin_deps {
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+    assert_that(foo.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(target, "foo"), existing_file());
 
@@ -261,9 +261,9 @@ test!(plugin_to_the_max {
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+    assert_that(foo.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
-    assert_that(foo.process(cargo_dir().join("cargo-build"))
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build")
                    .arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(target, "foo"), existing_file());
@@ -291,7 +291,7 @@ test!(linker_and_ar {
             }
         "#);
 
-    assert_that(p.cargo_process("cargo-build").arg("--target").arg(target)
+    assert_that(p.cargo_process("build").arg("--target").arg(target)
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stdout(format!("\
@@ -375,7 +375,7 @@ test!(plugin_with_extra_dylib_dep {
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("cargo-build").arg("--target").arg(target),
+    assert_that(foo.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
 })
 
@@ -407,7 +407,7 @@ test!(cross_tests {
         "#);
 
     let target = alternate();
-    assert_that(p.cargo_process("cargo-test").arg("--target").arg(target),
+    assert_that(p.cargo_process("test").arg("--target").arg(target),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.0 ({foo})
