@@ -106,7 +106,8 @@ pub fn canonicalize_url(url: &Url) -> Url {
         url.scheme = "https".to_string();
         match url.scheme_data {
             url::RelativeSchemeData(ref mut rel) => {
-                rel.port = "443".to_string();
+                rel.port = Some(443);
+                rel.default_port = Some(443);
                 let path = mem::replace(&mut rel.path, Vec::new());
                 rel.path = path.move_iter().map(|s| {
                     s.as_slice().chars().map(|c| c.to_lowercase()).collect()

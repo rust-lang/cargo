@@ -100,7 +100,7 @@ test!(cargo_compile_with_invalid_code {
         execs()
         .with_status(101)
         .with_stderr(format!("\
-{filename}:1:1: 1:8 error: expected item but found `invalid`
+{filename}:1:1: 1:8 error: expected item[..]found `invalid`
 {filename}:1 invalid rust code!
              ^~~~~~~
 Could not compile `foo`.
