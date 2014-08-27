@@ -500,6 +500,7 @@ struct TomlTarget {
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
+    harness: Option<bool>,
 }
 
 #[deriving(Decodable,Encodable,PartialEq,Clone)]
@@ -519,6 +520,7 @@ impl TomlTarget {
             bench: None,
             doc: None,
             plugin: None,
+            harness: None,
         }
     }
 }
@@ -660,12 +662,13 @@ fn normalize(libs: &[TomlLibTarget],
             let path = test.path.clone().unwrap_or_else(|| {
                 TomlString(default(test))
             });
+            let harness = test.harness.unwrap_or(true);
 
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
             metadata.mix(&format!("test-{}", test.name));
 
-            let profile = &Profile::default_test();
+            let profile = &Profile::default_test().harness(harness);
             dst.push(Target::test_target(test.name.as_slice(),
                                          &path.to_path(),
                                          profile,
@@ -680,12 +683,13 @@ fn normalize(libs: &[TomlLibTarget],
             let path = bench.path.clone().unwrap_or_else(|| {
                 TomlString(default(bench))
             });
+            let harness = bench.harness.unwrap_or(true);
 
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
             metadata.mix(&format!("bench-{}", bench.name));
 
-            let profile = &Profile::default_bench();
+            let profile = &Profile::default_bench().harness(harness);
             dst.push(Target::bench_target(bench.name.as_slice(),
                                          &path.to_path(),
                                          profile,
