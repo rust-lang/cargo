@@ -114,6 +114,7 @@ pub struct Profile {
     doc: bool,
     dest: Option<String>,
     plugin: bool,
+    harness: bool, // whether to use the test harness (--test)
 }
 
 impl Profile {
@@ -127,6 +128,7 @@ impl Profile {
             dest: None,
             plugin: false,
             doctest: false,
+            harness: true,
         }
     }
 
@@ -189,6 +191,10 @@ impl Profile {
         self.test
     }
 
+    pub fn uses_test_harness(&self) -> bool {
+        self.harness
+    }
+
     pub fn is_doctest(&self) -> bool {
         self.doctest
     }
@@ -242,6 +248,11 @@ impl Profile {
         self.plugin = plugin;
         self
     }
+
+    pub fn harness(mut self, harness: bool) -> Profile {
+        self.harness = harness;
+        self
+    }
 }
 
 impl<H: hash::Writer> hash::Hash<H> for Profile {
@@ -253,6 +264,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             debug,
             plugin,
             dest: ref dest,
+            harness: harness,
 
             // test flags are separated by file, not by profile hash, and
             // env/doc also don't matter for the actual contents of the output
@@ -262,7 +274,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             test: _,
             doctest: _,
         } = *self;
-        (opt_level, debug, plugin, dest).hash(into)
+        (opt_level, debug, plugin, dest, harness).hash(into)
     }
 }
 
