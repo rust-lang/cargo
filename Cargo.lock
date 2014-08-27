@@ -2,31 +2,31 @@
 name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
- "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
- "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
+ "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36)",
+ "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a12658ab8602b5c827cc3a42)",
- "semver 0.0.1 (git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8)",
- "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#e7c7bba846fea549fe4e93de4c9d21e851a9882f)",
- "url 0.1.0 (git+https://github.com/servo/rust-url#678bb4d52638b1cfdab78ef8e521566c9240fb1a)",
+ "semver 0.0.1 (git+https://github.com/rust-lang/semver#c78b40d7fdf8acd99b503e6ce394fbcf9eb8982f)",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#8c128cb550ba66d4962cd81acca93857c605eaa0)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#23fb9ec22cca9d643ad2cce9894a947c005b7fe2)",
 ]
 
 [[package]]
 name = "docopt"
 version = "0.6.0"
-source = "git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e"
+source = "git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36"
 
 [[package]]
 name = "docopt_macros"
 version = "0.6.0"
-source = "git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e"
+source = "git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36"
 dependencies = [
- "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fd2377d1c36b2671136cd36566aad5d54c2fb17e)",
+ "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#fc7ba2f1a5a351f7874257d880223d2ff5c75d36)",
 ]
 
 [[package]]
 name = "encoding"
 version = "0.1.0"
-source = "git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd227fb9328b2ff8c20ca9"
+source = "git+https://github.com/lifthrasiir/rust-encoding#7e7950ddbd46428a439db3e2594fa78f0972ef2e"
 
 [[package]]
 name = "hamcrest"
@@ -36,18 +36,18 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#f0fd1546b0a7a278a1
 [[package]]
 name = "semver"
 version = "0.0.1"
-source = "git+https://github.com/rust-lang/semver#e17191f51d543529a6f07e6731802b77977fcef8"
+source = "git+https://github.com/rust-lang/semver#c78b40d7fdf8acd99b503e6ce394fbcf9eb8982f"
 
 [[package]]
 name = "toml"
 version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#e7c7bba846fea549fe4e93de4c9d21e851a9882f"
+source = "git+https://github.com/alexcrichton/toml-rs#8c128cb550ba66d4962cd81acca93857c605eaa0"
 
 [[package]]
 name = "url"
 version = "0.1.0"
-source = "git+https://github.com/servo/rust-url#678bb4d52638b1cfdab78ef8e521566c9240fb1a"
+source = "git+https://github.com/servo/rust-url#23fb9ec22cca9d643ad2cce9894a947c005b7fe2"
 dependencies = [
- "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#b82ad2104b2d079620bd227fb9328b2ff8c20ca9)",
+ "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#7e7950ddbd46428a439db3e2594fa78f0972ef2e)",
 ]
 

@@ -64,6 +64,7 @@ all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
 define CARGO_TARGET
 cargo-$(1): $$(CARGO)
+	$$(CFG_RUSTC) -v
 	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(ARGS)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
