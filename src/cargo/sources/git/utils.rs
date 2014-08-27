@@ -244,8 +244,12 @@ impl<'a> GitCheckout<'a> {
         let repo = try!(GitCheckout::clone_repo(database.get_path(), into));
         let checkout = GitCheckout::new(into, database, revision, repo);
 
-        try!(checkout.reset());
-        try!(checkout.update_submodules());
+        try!(checkout.reset().chain_error(|| {
+            internal("failed to reset to the right revision")
+        }));
+        try!(checkout.update_submodules().chain_error(|| {
+            internal("failed to update submodules")
+        }));
 
         Ok(checkout)
     }
@@ -297,6 +301,9 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in try!(repo.submodules()).move_iter() {
                 try!(child.init(false));
+                let url = try!(child.url().require(|| {
+                    internal("non-utf8 url for submodule")
+                }));
 
                 // A submodule which is listed in .gitmodules but not actually
                 // checked out will not have a head id, so we should ignore it.
@@ -318,20 +325,17 @@ impl<'a> GitCheckout<'a> {
                     }
                     Err(..) => {
                         let path = repo.path().dir_path().join(child.path());
-                        let url = try!(child.url().require(|| {
-                            internal("invalid submodule url")
-                        }));
                         try!(git2::Repository::clone(url, &path))
                     }
                 };
 
                 // Fetch data from origin and reset to the head commit
-                let url = try!(child.url().require(|| {
-                    internal("repo with non-utf8 url")
-                }));
                 let refspec = "refs/heads/*:refs/heads/*";
                 let mut remote = try!(repo.remote_create_anonymous(url, refspec));
-                try!(remote.fetch(sig, None));
+                try!(remote.fetch(sig, None).chain_error(|| {
+                    internal(format!("failed to fetch submodule `{}` from {}",
+                                     child.name().unwrap_or(""), url))
+                }));
 
                 let obj = try!(git2::Object::lookup(&repo, head, None));
                 try!(repo.reset(&obj, git2::Hard, sig, None));
