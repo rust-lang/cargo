@@ -15,6 +15,8 @@ Usage:
 Options:
     -h, --help              Print this message
     -j N, --jobs N          The number of jobs to run in parallel
+    --release               Build artifacts in release mode, with optimizations
+    --target TRIPLE         Build for the target triple
     -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to execute
     -v, --verbose           Use verbose output
@@ -29,10 +31,10 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
 
     let mut compile_opts = ops::CompileOptions {
         update: options.flag_update_remotes,
-        env: "compile",
+        env: if options.flag_release { "release" } else { "compile" },
         shell: shell,
         jobs: options.flag_jobs,
-        target: None,
+        target: options.flag_target.as_ref().map(|t| t.as_slice()),
         dev_deps: true,
     };
 
