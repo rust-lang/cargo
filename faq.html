@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    
+    <!-- Always force latest IE rendering engine or request Chrome Frame -->
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    
+    <!-- Use title if it's in the page YAML frontmatter -->
+    <title>Frequently Asked Questions</title>
+    
+    <link href="stylesheets/all.css" rel="stylesheet" type="text/css" />
+    <script src="javascripts/all.js" type="text/javascript"></script>
+  </head>
+  
+  <body class="faq">
+    <a href="https://github.com/rust-lang/cargo"><img class="fork-me" alt="" width="149" height="149" src="images/forkme.png" /></a>
+    <a href="./"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
+
+    <main>
+      <p>Cargo downloads your <a href="http://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
+
+      <h1>Is the plan to use Github as a package repository? <a href="#github" id="github" class="headerlink">¶</a></h1>
+
+<p>No. The plan for Cargo is to have a central registry of packages, like
+npm or Rubygems.</p>
+
+<p>We plan to support git repositories as a source of packages forever,
+because they can be used for early development and temporary patches,
+even when people use the registry as the primary source of packages.</p>
+
+<p>At the moment, the Rust team is still making regular changes to the
+language, and the Rust project recommends using nightly builds. This
+means that for now, package authors make regular changes in order to
+track the latest Rust. This makes downloading the latest <code>master</code> from
+Github the best approach to getting packages at the current point in the
+community&rsquo;s lifecycle.</p>
+
+<h1>Why build a package registry rather than use Github as a registry? <a href="#why-not-github" id="why-not-github" class="headerlink">¶</a></h1>
+
+<p>We think that it&rsquo;s very important to support multiple ways to download
+packages, including downloading from Github and copying packages into
+your project itself.</p>
+
+<p>That said, we think that a central registry offers a number of important
+benefits, and will likely become the primary way that people download
+packages in Cargo.</p>
+
+<p>For precedent, both Node.js&rsquo;s <a href="https://www.npmjs.org">npm</a> and Ruby&rsquo;s <a href="https://bundler.io">bundler</a> support both a
+central registry model as well as a Git-based model, and most packages
+are downloaded through the registry in those ecosystems, with an
+important minority of packages making use of git-based packages.</p>
+
+<p>Some of the advantages that make a central registry popular in other
+languages include:</p>
+
+<ul>
+<li><strong>Discoverability</strong>. A central registry provides an easy place to look
+for existing packages. Combined with tagging, this also makes it
+possible for a registry to provide ecosystem-wide information, such as a
+list of the most popular or most-depended-on packages.</li>
+<li><strong>Speed</strong>. A central registry makes it possible to easily fetch just
+the metadata for packages quickly and efficiently, and then to
+efficiently download just the published package, and not other bloat
+that happens to exist in the repository. This adds up to a significant
+improvement in the speed of dependency resolution and fetching. As
+dependency graphs scale up, downloading all of the git repositories bogs
+down fast. Also remember that not everybody has a high-speed,
+low-latency Internet connection.</li>
+</ul>
+
+<h1>Will Cargo work with C code (or other languages)? <a href="#c" id="c" class="headerlink">¶</a></h1>
+
+<p>Yes!</p>
+
+<p>Cargo handles compiling Rust code, but we know that many Rust projects
+link against C code. We also know that there are decades of tooling
+built up around compiling languages other than Rust.</p>
+
+<p>Our solution: Cargo allows a package to specify a script to run
+before invoking <code>rustc</code>. We plan to add support for platform-specific
+configuration, so you can use <code>make</code> on Linux and <code>cmake</code> on BSD, for
+example.</p>
+
+<h1>Can Cargo be used inside of <code>make</code> (or <code>ninja</code>, or &hellip;) <a href="#make" id="make" class="headerlink">¶</a></h1>
+
+<p>Indeed. While we intend Cargo to be useful as a standalone way to
+compile Rust projects at the top-level, we know that some people will
+want to invoke Cargo from other build tools.</p>
+
+<p>We have designed Cargo to work well in those contexts, paying attention
+to things like error codes and machine-readable output modes. We still
+have some work to do on those fronts, but using Cargo in the context of
+conventional scripts is something we designed for from the beginning and
+will continue to prioritize.</p>
+
+<h1>Does Cargo handle multi-platform projects or cross-compilation? <a href="#multi-platform" id="multi-platform" class="headerlink">¶</a></h1>
+
+<p>Rust itself provides facilities for configuring sections of code based
+on the platform. We plan to support per-platform configuration in
+<code>Cargo.toml</code>, including platform-specific dependencies, in the near
+future.</p>
+
+<p>In the longer-term, we&rsquo;re looking at ways to conveniently cross-compile
+projects using Cargo.</p>
+
+<h1>Does Cargo support environments, like <code>production</code> or <code>test</code>? <a href="#environments" id="environments" class="headerlink">¶</a></h1>
+
+<p>We are planning on support environments in the near future, that can
+support:</p>
+
+<ul>
+<li>environment-specific flags (like <code>-g --opt-level=0</code> for development
+and <code>--opt-level=3</code> for production).</li>
+<li>environment-specific dependencies (like <code>hamcrest</code> for test assertions).</li>
+<li>environment-specific <code>#[cfg]</code></li>
+<li>a <code>cargo test</code> command</li>
+</ul>
+
+<p>We also plan to make it possible to specify &ldquo;profiles&rdquo;, which can
+specify flags or dependencies for a combination of multiple environments
+and platforms (&ldquo;use <code>fsevents</code>, but only in OSX in <code>development</code> or
+<code>test</code>&rdquo;).</p>
+
+<h1>Does Cargo work on Windows? <a href="#windows" id="windows" class="headerlink">¶</a></h1>
+
+<p>Yes!</p>
+
+<p>All commits to Cargo are required to pass the local test suite on Windows.
+If, however, you find a Windows issue, we consider it a bug, so <a href="https://github.com/rust-lang/cargo/issues">please file an
+issue</a>.</p>
+
+
+      <footer>
+        <a href="guide.html">Guide</a> |
+        <a href="faq.html">Frequently Asked Questions</a> |
+        <a href="manifest.html">Manifest Format</a> |
+        <a href="native-build.html">Building Non-Rust Code</a>
+      </footer>
+    </main>
+
+  </body>
+</html>

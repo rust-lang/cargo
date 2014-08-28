@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    
+    <!-- Always force latest IE rendering engine or request Chrome Frame -->
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    
+    <!-- Use title if it's in the page YAML frontmatter -->
+    <title>Building external code</title>
+    
+    <link href="stylesheets/all.css" rel="stylesheet" type="text/css" />
+    <script src="javascripts/all.js" type="text/javascript"></script>
+  </head>
+  
+  <body class="native-build">
+    <a href="https://github.com/rust-lang/cargo"><img class="fork-me" alt="" width="149" height="149" src="images/forkme.png" /></a>
+    <a href="./"><img class="logo" alt="" width="306" height="275" src="images/Cargo-Logo-Small.png" /></a>
+
+    <main>
+      <p>Cargo downloads your <a href="http://rust-lang.org">Rust</a> project's dependencies and builds your project</p>
+
+      <p>Some packages need to compile third-party non-Rust code that you will
+link into your Rust code using <code>#[link]</code> (more information on <code>#[link]</code>
+can be found in <a href="http://doc.rust-lang.org/rust.html#linkage">the Rust manual</a>).</p>
+
+<p>Cargo does not aim to replace other tools that are well-optimized for
+building C or C++ code, but it does integrate with them with the <code>build</code>
+configuration option.</p>
+<pre><code class="highlight toml"><span class="nn">[package]</span>
+
+<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world-from-c"</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
+<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@gmail.com"</span> <span class="p">]</span>
+<span class="py">build</span> <span class="p">=</span> <span class="s">"make"</span>
+</code></pre>
+
+<p>The <code>build</code> command will be invoked before <code>rustc</code>, allowing your Rust
+code to depend on the built artifacts.</p>
+
+<p>Here&rsquo;s what you need to know:</p>
+
+<ul>
+<li>Cargo passes your build script an environment variable named
+<code>OUT_DIR</code>, which is where you should put any compiled artifacts. It
+will be different for different Cargo commands, but Cargo will always
+pass that output directory as a lib directory to <code>rustc</code>.</li>
+<li>Cargo will retain all output in <code>OUT_DIR</code> for clean packages across
+builds (intelligently discarding the compiled artifacts for dirty
+dependencies). Do not put the output of a build command in any other
+directory.</li>
+<li>The actual location of <code>$OUT_DIR</code> is
+<code>/path/to/project/target/native/$your-out-dir</code>.</li>
+<li>The target triple that the build command should compile for is specified by
+the <code>TARGET</code> environment variable.</li>
+</ul>
+
+<p>What this means is that the normal workflow for build dependencies is:</p>
+
+<ul>
+<li>The first time a user types <code>cargo build</code> for a project that contains
+your package, your <code>build</code> script will be invoked. Place any artifacts
+into the provided <code>$OUT_DIR</code>.</li>
+<li>The next time a user runs <code>cargo build</code>, if the dependency has not
+changed (via <code>cargo update &lt;your-package&gt;</code>), Cargo will reuse the
+output you provided before. Your build command will not be invoked.</li>
+<li>If the user updates your package to a new version (or git revision),
+Cargo will <strong>not</strong> remove the old <code>$OUT_DIR</code> will re-invoke your build script.
+Your build script is responsible for bringing the state of the old directory
+up to date with the current state of the input files.</li>
+</ul>
+
+<p>In general, build scripts may not be as portable as we&rsquo;d like today. We
+encourage package authors to write build scripts that can work in both
+Windows and Unix environments.</p>
+
+<p>Several people who work on Cargo are also working on a project called
+<a href="https://github.com/alexcrichton/link-config">link-config</a>, which is a Rust syntax extension whose goal is to
+enable portable external compilation and linkage against system
+packages. We intend for it to eventually serve this purpose for Cargo
+projects.</p>
+
+<h1>A complete example</h1>
+
+<p>The code blocks below lay out a cargo project which has a small and simple C
+dependency along with the necessary infrastructure for linking that to the rust
+program.</p>
+<pre><code class="highlight toml"><span class="c"># Cargo.toml</span>
+<span class="nn">[package]</span>
+
+<span class="py">name</span> <span class="p">=</span> <span class="s">"hello-world-from-c"</span>
+<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
+<span class="py">authors</span> <span class="p">=</span> <span class="p">[</span> <span class="s">"wycats@gmail.com"</span> <span class="p">]</span>
+<span class="py">build</span> <span class="p">=</span> <span class="s">"make -C build"</span>
+</code></pre>
+<pre><code class="highlight make"><span class="c"># build/Makefile
+</span>
+<span class="c"># Support cross compilation to/from 32/64 bit.
+</span><span class="nv">ARCH</span> <span class="o">:=</span> <span class="err">$</span><span class="o">(</span>word 1, <span class="err">$</span><span class="o">(</span>subst -, ,<span class="nv">$(TARGET)</span><span class="o">))</span>
+<span class="err">ifeq</span> <span class="err">($(ARCH),i686)</span>
+<span class="nv">CFLAGS</span> <span class="o">+=</span> -m32 -fPIC
+<span class="err">else</span>
+<span class="nv">CFLAGS</span> <span class="o">+=</span> -m64 -fPIC
+<span class="err">endif</span>
+
+<span class="nl">all</span><span class="o">:</span>
+    <span class="err">$(CC)</span> <span class="err">$(CFLAGS)</span> <span class="err">hello.c</span> <span class="err">-c</span> <span class="err">-o</span> <span class="err">$(OUT_DIR)/hello.o</span>
+    <span class="err">$(AR)</span> <span class="err">crus</span> <span class="err">$(OUT_DIR)/libhello.a</span> <span class="err">$(OUT_DIR)/hello.o</span>
+
+</code></pre>
+<pre><code class="highlight c"><span class="c1">// build/hello.c
+</span><span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
+</code></pre>
+<pre><code class="highlight rust"><span class="c">// src/main.rs</span>
+
+<span class="cp">#[link(name</span> <span class="cp">=</span> <span class="s">"hello"</span><span class="cp">,</span> <span class="cp">kind</span> <span class="cp">=</span> <span class="s">"static"</span><span class="cp">)]</span>
+<span class="k">extern</span> <span class="p">{</span>
+    <span class="k">fn</span> <span class="nf">foo</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">i32</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="n">number</span> <span class="o">=</span> <span class="k">unsafe</span> <span class="p">{</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">};</span>
+    <span class="nd">println!</span><span class="p">(</span><span class="s">"found {} from C!"</span><span class="p">,</span> <span class="n">number</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+
+
+      <footer>
+        <a href="guide.html">Guide</a> |
+        <a href="faq.html">Frequently Asked Questions</a> |
+        <a href="manifest.html">Manifest Format</a> |
+        <a href="native-build.html">Building Non-Rust Code</a>
+      </footer>
+    </main>
+
+  </body>
+</html>
