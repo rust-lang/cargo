@@ -34,7 +34,8 @@ $ cargo new hello_world --bin
 ```
 
 We're passing `--bin` because we're making a binary program: if we
-were making a library, we'd leave it off.
+were making a library, we'd leave it off. If you'd like to not initialize a new
+git repository as well (the default), you can also pass `--no-git`.
 
 Let's check out what Cargo has generated for us:
 
@@ -358,6 +359,9 @@ paths = ["/Users/wycats/src/conduit"]
 This array should be filled with directories that contain a `Cargo.toml`. In
 this instance, we're just adding `conduit`, so it will be the only one that's
 overridden.
+
+More information about local configuration can be found in the [configuration
+documentation](config.html).
 
 # Tests
 
