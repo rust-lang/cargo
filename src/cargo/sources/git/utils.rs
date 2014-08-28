@@ -175,8 +175,7 @@ impl GitRemote {
         let mut remote = try!(dst.remote_create_anonymous(url.as_slice(),
                                                           refspec));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        let sig = try!(git2::Signature::default(dst));
-        try!(remote.fetch(&sig, None));
+        try!(remote.fetch(None, None));
         Ok(())
     }
 
@@ -284,19 +283,16 @@ impl<'a> GitCheckout<'a> {
     fn reset(&self) -> CargoResult<()> {
         info!("reset {} to {}", self.repo.path().display(),
               self.revision.as_slice());
-        let sig = try!(git2::Signature::default(&self.repo));
         let oid = try!(git2::Oid::from_str(self.revision.as_slice()));
         let object = try!(git2::Object::lookup(&self.repo, oid, None));
-        try!(self.repo.reset(&object, git2::Hard, &sig, None));
+        try!(self.repo.reset(&object, git2::Hard, None, None));
         Ok(())
     }
 
     fn update_submodules(&self) -> CargoResult<()> {
-        let sig = try!(git2::Signature::default(&self.repo));
-        return update_submodules(&self.repo, &sig);
+        return update_submodules(&self.repo);
 
-        fn update_submodules(repo: &git2::Repository,
-                             sig: &git2::Signature) -> CargoResult<()> {
+        fn update_submodules(repo: &git2::Repository) -> CargoResult<()> {
             info!("update submodules for: {}", repo.path().display());
 
             for mut child in try!(repo.submodules()).move_iter() {
@@ -332,14 +328,14 @@ impl<'a> GitCheckout<'a> {
                 // Fetch data from origin and reset to the head commit
                 let refspec = "refs/heads/*:refs/heads/*";
                 let mut remote = try!(repo.remote_create_anonymous(url, refspec));
-                try!(remote.fetch(sig, None).chain_error(|| {
+                try!(remote.fetch(None, None).chain_error(|| {
                     internal(format!("failed to fetch submodule `{}` from {}",
                                      child.name().unwrap_or(""), url))
                 }));
 
                 let obj = try!(git2::Object::lookup(&repo, head, None));
-                try!(repo.reset(&obj, git2::Hard, sig, None));
-                try!(update_submodules(&repo, sig));
+                try!(repo.reset(&obj, git2::Hard, None, None));
+                try!(update_submodules(&repo));
             }
             Ok(())
         }
