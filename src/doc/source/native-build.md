@@ -34,6 +34,8 @@ Here's what you need to know:
   directory.
 * The actual location of `$OUT_DIR` is
   `/path/to/project/target/native/$your-out-dir`.
+* The target triple that the build command should compile for is specified by
+  the `TARGET` environment variable.
 
 What this means is that the normal workflow for build dependencies is:
 
@@ -42,9 +44,11 @@ What this means is that the normal workflow for build dependencies is:
   into the provided `$OUT_DIR`.
 * The next time a user runs `cargo build`, if the dependency has not
   changed (via `cargo update <your-package>`), Cargo will reuse the
-  output you provided before.
+  output you provided before. Your build command will not be invoked.
 * If the user updates your package to a new version (or git revision),
-  Cargo will wipe the old `$OUT_DIR` and re-invoke your build script.
+  Cargo will **not** remove the old `$OUT_DIR` will re-invoke your build script.
+  Your build script is responsible for bringing the state of the old directory
+  up to date with the current state of the input files.
 
 In general, build scripts may not be as portable as we'd like today. We
 encourage package authors to write build scripts that can work in both
@@ -56,5 +60,57 @@ enable portable external compilation and linkage against system
 packages. We intend for it to eventually serve this purpose for Cargo
 projects.
 
-[1]: http://doc.rust-lang.org/rust.html#runtime-services,-linkage-and-debugging
+[1]: http://doc.rust-lang.org/rust.html#linkage
 [2]: https://github.com/alexcrichton/link-config
+
+# A complete example
+
+The code blocks below lay out a cargo project which has a small and simple C
+dependency along with the necessary infrastructure for linking that to the rust
+program.
+
+```toml
+# Cargo.toml
+[package]
+
+name = "hello-world-from-c"
+version = "0.1.0"
+authors = [ "wycats@gmail.com" ]
+build = "make -C build"
+```
+
+```make
+# build/Makefile
+
+# Support cross compilation to/from 32/64 bit.
+ARCH := $(word 1, $(subst -, ,$(TARGET)))
+ifeq ($(ARCH),i686)
+CFLAGS += -m32 -fPIC
+else
+CFLAGS += -m64 -fPIC
+endif
+
+all:
+    $(CC) $(CFLAGS) hello.c -c -o $(OUT_DIR)/hello.o
+    $(AR) crus $(OUT_DIR)/libhello.a $(OUT_DIR)/hello.o
+
+```
+
+```c
+// build/hello.c
+int foo() { return 1; }
+```
+
+```rust
+// src/main.rs
+
+#[link(name = "hello", kind = "static")]
+extern {
+    fn foo() -> i32;
+}
+
+fn main() {
+    let number = unsafe { foo() };
+    println!("found {} from C!", number);
+}
+```

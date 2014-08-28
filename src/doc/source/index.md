@@ -13,9 +13,9 @@ $ curl https://static.rust-lang.org/rustup.sh | sudo bash
 
 This will get you the latest Rust nightly for your platform along with
 the latest Cargo. You should run this script almost every day to get the latest updates.
-   
+
 If you are on Windows, you can directly download the latest [Rust](http://static.rust-lang.org/dist/rust-nightly-install.exe)
-and [Cargo](http://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-mingw32.tar.gz) nightlies.  
+and [Cargo](http://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-mingw32.tar.gz) nightlies.
 
 Alternatively, you can build Cargo from source.
 
@@ -24,11 +24,12 @@ Alternatively, you can build Cargo from source.
 To start a new project with Cargo, use `cargo new`:
 
 ```shell
-$ cargo new hello_world --bin
+$ cargo new hello_world --bin --git
 ```
 
 We're passing `--bin` because we're making a binary program: if we
-were making a library, we'd leave it off.
+were making a library, we'd leave it off. We also pass `--git` to auto-generate
+a `.gitignore` and set up the git repository, but nothing will be committed.
 
 Let's check out what Cargo has generated for us:
 
@@ -54,7 +55,7 @@ authors = ["Yehuda Katz <wycats@example.com>"]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
-needs to compile your project. 
+needs to compile your project.
 
 Here's what's in `src/main.rs`:
 
