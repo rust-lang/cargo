@@ -172,6 +172,17 @@ fn compile_custom(pkg: &Package, cmd: &str,
     for arg in cmd {
         p = p.arg(arg);
     }
+    for &(pkg, _) in cx.dep_targets(pkg).iter() {
+        let name: String = pkg.get_name().chars().map(|c| {
+            match c {
+                '-' => '_',
+                c => c.to_uppercase(),
+            }
+        }).collect();
+        p = p.env(format!("DEP_{}_OUT_DIR", name).as_slice(),
+                  Some(&layout.native(pkg)));
+    }
+
     Ok(proc() {
         if first {
             try!(if old_output.exists() {
