@@ -135,10 +135,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     let (mut libs, mut bins) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
         let work = if target.get_profile().is_doc() {
-            vec![(rustdoc(pkg, target, cx), KindTarget)]
+            vec![(try!(rustdoc(pkg, target, cx)), KindTarget)]
         } else {
             let req = cx.get_requirement(pkg, target);
-            rustc(pkg, target, cx, req)
+            try!(rustc(pkg, target, cx, req))
         };
 
         let dst = if target.is_lib() {&mut libs} else {&mut bins};
@@ -188,7 +188,8 @@ fn compile_custom(pkg: &Package, cmd: &str,
 }
 
 fn rustc(package: &Package, target: &Target,
-         cx: &mut Context, req: PlatformRequirement) -> Vec<(Work, Kind)> {
+         cx: &mut Context, req: PlatformRequirement)
+         -> CargoResult<Vec<(Work, Kind)> >{
     let crate_types = target.rustc_crate_types();
     let root = package.get_root();
 
@@ -196,7 +197,7 @@ fn rustc(package: &Package, target: &Target,
          root.display(), target, crate_types, cx.primary, req);
 
     let primary = cx.primary;
-    let rustcs = prepare_rustc(package, target, crate_types, cx, req);
+    let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
     let _ = cx.config.shell().verbose(|shell| {
         for &(ref rustc, _) in rustcs.iter() {
@@ -205,7 +206,7 @@ fn rustc(package: &Package, target: &Target,
         Ok(())
     });
 
-    rustcs.move_iter().map(|(rustc, kind)| {
+    Ok(rustcs.move_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
 
         (proc() {
@@ -223,32 +224,35 @@ fn rustc(package: &Package, target: &Target,
             }
             Ok(())
         }, kind)
-    }).collect()
+    }).collect())
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement)
-                 -> Vec<(ProcessBuilder, Kind)> {
+                 -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
     let base = process("rustc", package, cx);
     let base = build_base_args(base, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
     let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
-    let target_cmd = build_deps_args(target_cmd, target, package, cx, KindTarget);
-    let plugin_cmd = build_deps_args(plugin_cmd, target, package, cx, KindPlugin);
+    let target_cmd = try!(build_deps_args(target_cmd, target, package, cx,
+                                          KindTarget));
+    let plugin_cmd = try!(build_deps_args(plugin_cmd, target, package, cx,
+                                          KindPlugin));
 
-    match req {
+    Ok(match req {
         Target => vec![(target_cmd, KindTarget)],
         Plugin => vec![(plugin_cmd, KindPlugin)],
         PluginAndTarget if cx.config.target().is_none() =>
             vec![(target_cmd, KindTarget)],
         PluginAndTarget => vec![(target_cmd, KindTarget),
                                 (plugin_cmd, KindPlugin)],
-    }
+    })
 }
 
 
-fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
+fn rustdoc(package: &Package, target: &Target,
+           cx: &mut Context) -> CargoResult<Work> {
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(kind).proxy().dest().join("doc");
@@ -256,7 +260,7 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
     let rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
-    let rustdoc = build_deps_args(rustdoc, target, package, cx, kind);
+    let rustdoc = try!(build_deps_args(rustdoc, target, package, cx, kind));
 
     log!(5, "commands={}", rustdoc);
 
@@ -266,7 +270,7 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
 
     let primary = cx.primary;
     let name = package.get_name().to_string();
-    proc() {
+    Ok(proc() {
         if primary {
             try!(rustdoc.exec().chain_error(|| {
                 human(format!("Could not document `{}`.", name))
@@ -278,7 +282,7 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
             }))
         }
         Ok(())
-    }
+    })
 }
 
 fn build_base_args(mut cmd: ProcessBuilder,
@@ -355,7 +359,8 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
 }
 
 fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
-                   cx: &Context, kind: Kind) -> ProcessBuilder {
+                   cx: &Context,
+                   kind: Kind) -> CargoResult<ProcessBuilder> {
     enum LinkReason { Dependency, LocalLib }
 
     let layout = cx.layout(kind);
@@ -367,7 +372,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     cmd = push_native_dirs(cmd, &layout, package, cx, &mut HashSet::new());
 
     for &(_, target) in cx.dep_targets(package).iter() {
-        cmd = link_to(cmd, target, cx, kind, Dependency);
+        cmd = try!(link_to(cmd, target, cx, kind, Dependency));
     }
 
     let mut targets = package.get_targets().iter().filter(|target| {
@@ -376,14 +381,15 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     if target.is_bin() {
         for target in targets {
-            cmd = link_to(cmd, target, cx, kind, LocalLib);
+            cmd = try!(link_to(cmd, target, cx, kind, LocalLib));
         }
     }
 
-    return cmd;
+    return Ok(cmd);
 
     fn link_to(mut cmd: ProcessBuilder, target: &Target,
-               cx: &Context, kind: Kind, reason: LinkReason) -> ProcessBuilder {
+               cx: &Context, kind: Kind,
+               reason: LinkReason) -> CargoResult<ProcessBuilder> {
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
@@ -393,7 +399,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             KindTarget => KindTarget,
         });
 
-        for filename in cx.target_filenames(target).iter() {
+        for filename in try!(cx.target_filenames(target)).iter() {
             let mut v = Vec::new();
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');
@@ -405,7 +411,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             v.push_all(filename.as_bytes());
             cmd = cmd.arg("--extern").arg(v.as_slice());
         }
-        return cmd;
+        return Ok(cmd);
     }
 
     fn push_native_dirs(mut cmd: ProcessBuilder, layout: &layout::LayoutProxy,
