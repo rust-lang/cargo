@@ -1,5 +1,4 @@
-use std::io::File;
-use std::io::timer;
+use std::io::{timer, fs, File};
 use std::time::Duration;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
@@ -1060,4 +1059,40 @@ test!(git_build_cmd_freshness {
                        .with_stdout(format!("\
 {fresh} foo v0.0.0 ({url})
 ", fresh = FRESH, url = foo.url())));
+})
+
+test!(git_name_not_always_needed {
+    let p2 = git_repo("bar", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn gimme() -> &'static str { "zoidberg" }
+        "#)
+    }).assert();
+
+    fs::unlink(&paths::home().join(".gitconfig")).assert();
+
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dev-dependencies.bar]
+            git = '{}'
+        "#, p2.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    // Generate a lockfile which did not use `bar` to compile, but had to update
+    // `bar` to generate the lockfile
+    assert_that(p.cargo_process("build"),
+        execs().with_stdout(format!("\
+{updating} git repository `{bar}`
+{compiling} foo v0.5.0 ({url})
+", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
 })
