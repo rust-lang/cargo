@@ -14,8 +14,7 @@ after_success: |
   (cd src/doc &&
    bundle &&
    bundle exec middleman build) &&
-  echo crates.io >> src/doc/build/CNAME &&
-  sudo pip install ghp-import
+  sudo pip install ghp-import &&
   ghp-import -n src/doc/build &&
   git push -f https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
