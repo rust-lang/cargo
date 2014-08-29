@@ -10,34 +10,34 @@ pub struct ShellConfig {
     pub tty: bool
 }
 
-enum AdequateTerminal {
-    NoColor(Box<Writer>),
-    Color(Box<Terminal<Box<Writer>>>)
+enum AdequateTerminal<'a> {
+    NoColor(Box<Writer+'a>),
+    Color(Box<Terminal<Box<Writer+'a>>+'a>)
 }
 
-pub struct Shell {
-    terminal: AdequateTerminal,
+pub struct Shell<'a> {
+    terminal: AdequateTerminal<'a>,
     config: ShellConfig
 }
 
-pub struct MultiShell {
-    out: Shell,
-    err: Shell,
+pub struct MultiShell<'a> {
+    out: Shell<'a>,
+    err: Shell<'a>,
     verbose: bool
 }
 
 pub type Callback<'a> = |&mut MultiShell|:'a -> IoResult<()>;
 
-impl MultiShell {
-    pub fn new(out: Shell, err: Shell, verbose: bool) -> MultiShell {
+impl<'a> MultiShell<'a> {
+    pub fn new(out: Shell<'a>, err: Shell<'a>, verbose: bool) -> MultiShell<'a> {
         MultiShell { out: out, err: err, verbose: verbose }
     }
 
-    pub fn out(&mut self) -> &mut Shell {
+    pub fn out(&mut self) -> &mut Shell<'a> {
         &mut self.out
     }
 
-    pub fn err(&mut self) -> &mut Shell {
+    pub fn err(&mut self) -> &mut Shell<'a> {
         &mut self.err
     }
 
@@ -72,17 +72,17 @@ impl MultiShell {
     }
 }
 
-pub type ShellCallback<'a> = |&mut Shell|:'a -> IoResult<()>;
+pub type ShellCallback<'a> = |&mut Shell<'a>|:'a -> IoResult<()>;
 
-impl Shell {
-    pub fn create(out: Box<Writer>, config: ShellConfig) -> Shell {
+impl<'a> Shell<'a> {
+    pub fn create(out: Box<Writer+'a>, config: ShellConfig) -> Shell<'a> {
         if config.tty && config.color {
-            let term: Option<term::TerminfoTerminal<Box<Writer>>> = Terminal::new(out);
+            let term: Option<term::TerminfoTerminal<Box<Writer+'a>>> = Terminal::new(out);
             term.map(|t| Shell {
-                terminal: Color(box t as Box<Terminal<Box<Writer>>>),
+                terminal: Color(box t as Box<Terminal<Box<Writer+'a>>>),
                 config: config
             }).unwrap_or_else(|| {
-                Shell { terminal: NoColor(box stderr() as Box<Writer>), config: config }
+                Shell { terminal: NoColor(box stderr() as Box<Writer+'a>), config: config }
             })
         } else {
             Shell { terminal: NoColor(out), config: config }
@@ -121,8 +121,8 @@ impl Shell {
     }
 }
 
-impl Terminal<Box<Writer>> for Shell {
-    fn new(out: Box<Writer>) -> Option<Shell> {
+impl<'a> Terminal<Box<Writer+'a>> for Shell<'a> {
+    fn new(out: Box<Writer+'a>) -> Option<Shell<'a>> {
         Some(Shell {
             terminal: NoColor(out),
             config: ShellConfig {
@@ -168,18 +168,18 @@ impl Terminal<Box<Writer>> for Shell {
         }
     }
 
-    fn unwrap(self) -> Box<Writer> {
+    fn unwrap(self) -> Box<Writer+'a> {
         fail!("Can't unwrap a Shell");
     }
 
-    fn get_ref<'a>(&'a self) -> &'a Box<Writer> {
+    fn get_ref<'b>(&'b self) -> &'b Box<Writer+'a> {
         match self.terminal {
             Color(ref c) => c.get_ref(),
             NoColor(ref w) => w
         }
     }
 
-    fn get_mut<'a>(&'a mut self) -> &'a mut Box<Writer> {
+    fn get_mut<'b>(&'b mut self) -> &'b mut Box<Writer+'a> {
         match self.terminal {
             Color(ref mut c) => c.get_mut(),
             NoColor(ref mut w) => w
@@ -187,7 +187,7 @@ impl Terminal<Box<Writer>> for Shell {
     }
 }
 
-impl Writer for Shell {
+impl<'a> Writer for Shell<'a> {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
         match self.terminal {
             Color(ref mut c) => c.write(buf),
