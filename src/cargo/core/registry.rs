@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
 
@@ -100,11 +102,14 @@ impl<'a> PackageRegistry<'a> {
 
     fn query_overrides(&mut self, dep: &Dependency)
                        -> CargoResult<Vec<Summary>> {
+        let mut seen = HashSet::new();
         let mut ret = Vec::new();
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.get_name(), s);
-            ret.push_all_move(try!(src.query(&dep)));
+            ret.extend(try!(src.query(&dep)).move_iter().filter(|s| {
+                seen.insert(s.get_name().to_string())
+            }));
         }
         Ok(ret)
     }
