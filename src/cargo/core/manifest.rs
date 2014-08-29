@@ -1,5 +1,4 @@
 use std::hash;
-use std::result;
 use std::fmt::{mod, Show, Formatter};
 use semver::Version;
 use serialize::{Encoder,Encodable};
@@ -85,7 +84,7 @@ impl LibKind {
     }
 
     pub fn from_strs<S: Str>(strings: Vec<S>) -> CargoResult<Vec<LibKind>> {
-        result::collect(strings.iter().map(|s| LibKind::from_str(s.as_slice())))
+        strings.iter().map(|s| LibKind::from_str(s.as_slice())).collect()
     }
 
     pub fn crate_type(&self) -> &'static str {

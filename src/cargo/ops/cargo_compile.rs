@@ -24,7 +24,6 @@
 
 use std::os;
 use std::collections::{HashMap, HashSet};
-use std::result;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId};
@@ -147,9 +146,9 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 
     // Make sure we don't override the local package, even if it's in the list
     // of override paths
-    result::collect(paths.iter().filter(|p| {
+    paths.iter().filter(|p| {
         cur_path != os::make_absolute(&Path::new(p.as_slice()))
-    }).map(|p| SourceId::for_path(&Path::new(p.as_slice()))))
+    }).map(|p| SourceId::for_path(&Path::new(p.as_slice()))).collect()
 }
 
 fn scrape_target_config(config: &mut Config,
