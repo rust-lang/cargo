@@ -890,6 +890,7 @@ test!(dep_with_changed_submodule {
     }).assert();
 
     git_project.process("git").args(["submodule", "add"])
+               .arg("--name").arg("bar")
                .arg(git_project2.url().to_string()).arg("src").exec_with_output()
                .assert();
     git_project.process("git").args(["add", "."]).exec_with_output().assert();
@@ -926,7 +927,7 @@ test!(dep_with_changed_submodule {
                 .with_status(0));
 
     let mut file = File::create(&git_project.root().join(".gitmodules"));
-    file.write_str(format!("[submodule \"src\"]\n\tpath = src\n\turl={}",
+    file.write_str(format!("[submodule \"bar\"]\n\tpath = src\n\turl={}",
                            git_project3.url()).as_slice()).assert();
 
     git_project.process("git").args(["submodule", "sync"]).exec_with_output().assert();
