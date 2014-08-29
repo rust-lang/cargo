@@ -244,10 +244,10 @@ impl SourceId {
         }
     }
 
-    pub fn load(&self, config: &mut Config) -> Box<Source> {
+    pub fn load<'a>(&self, config: &'a mut Config) -> Box<Source+'a> {
         log!(5, "loading SourceId; {}", self);
         match self.kind {
-            GitKind(..) => box GitSource::new(self, config) as Box<Source>,
+            GitKind(..) => box GitSource::new(self, config) as Box<Source+'a>,
             PathKind => {
                 let path = match self.url.to_file_path() {
                     Ok(p) => p,
@@ -255,7 +255,7 @@ impl SourceId {
                 };
                 box PathSource::new(&path, self) as Box<Source>
             },
-            RegistryKind => box DummyRegistrySource::new(self) as Box<Source>,
+            RegistryKind => box DummyRegistrySource::new(self) as Box<Source+'a>,
         }
     }
 
@@ -267,17 +267,17 @@ impl SourceId {
     }
 }
 
-pub struct SourceMap {
-    map: HashMap<SourceId, Box<Source>>
+pub struct SourceMap<'a> {
+    map: HashMap<SourceId, Box<Source+'a>>
 }
 
-pub type Sources<'a> = Values<'a, SourceId, Box<Source>>;
-pub type SourcesMut<'a> = iter::Map<'static, (&'a SourceId, &'a mut Box<Source>),
-                                    &'a mut Source,
-                                    MutEntries<'a, SourceId, Box<Source>>>;
+pub type Sources<'a> = Values<'a, SourceId, Box<Source+'a>>;
+pub type SourcesMut<'a> = iter::Map<'static, (&'a SourceId, &'a mut Box<Source+'a>),
+                                    &'a mut Source+'a,
+                                    MutEntries<'a, SourceId, Box<Source+'a>>>;
 
-impl SourceMap {
-    pub fn new() -> SourceMap {
+impl<'a> SourceMap<'a> {
+    pub fn new() -> SourceMap<'a> {
         SourceMap {
             map: HashMap::new()
         }
@@ -287,27 +287,27 @@ impl SourceMap {
         self.map.contains_key(id)
     }
 
-    pub fn get(&self, id: &SourceId) -> Option<&Source> {
+    pub fn get(&self, id: &SourceId) -> Option<&Source+'a> {
         let source = self.map.find(id);
 
         source.map(|s| {
-            let s: &Source = *s;
+            let s: &Source+'a = *s;
             s
         })
     }
 
-    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source> {
+    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source+'a> {
         self.map.find_mut(id).map(|s| {
-            let s: &mut Source = *s;
+            let s: &mut Source+'a = *s;
             s
         })
     }
 
-    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source> {
+    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source+'a> {
         self.get(pkg_id.get_source_id())
     }
 
-    pub fn insert(&mut self, id: &SourceId, source: Box<Source>) {
+    pub fn insert(&mut self, id: &SourceId, source: Box<Source+'a>) {
         self.map.insert(id.clone(), source);
     }
 
@@ -315,26 +315,26 @@ impl SourceMap {
         self.map.len()
     }
 
-    pub fn sources(&self) -> Sources {
+    pub fn sources(&'a self) -> Sources<'a> {
         self.map.values()
     }
 
-    pub fn sources_mut(&mut self) -> SourcesMut {
-        self.map.mut_iter().map(|(_, v)| { let s: &mut Source = *v; s })
+    pub fn sources_mut(&'a mut self) -> SourcesMut<'a> {
+        self.map.mut_iter().map(|(_, v)| { let s: &mut Source+'a = *v; s })
     }
 }
 
-pub struct SourceSet {
-    sources: Vec<Box<Source>>
+pub struct SourceSet<'a> {
+    sources: Vec<Box<Source+'a>>
 }
 
-impl SourceSet {
-    pub fn new(sources: Vec<Box<Source>>) -> SourceSet {
+impl<'a> SourceSet<'a> {
+    pub fn new(sources: Vec<Box<Source+'a>>) -> SourceSet<'a> {
         SourceSet { sources: sources }
     }
 }
 
-impl Registry for SourceSet {
+impl<'a> Registry for SourceSet<'a> {
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
 
@@ -346,7 +346,7 @@ impl Registry for SourceSet {
     }
 }
 
-impl Source for SourceSet {
+impl<'a> Source for SourceSet<'a> {
     fn update(&mut self) -> CargoResult<()> {
         for source in self.sources.mut_iter() {
             try!(source.update());

@@ -36,7 +36,7 @@ use util::{CargoResult, Wrap, config, internal, human, ChainError, profile};
 pub struct CompileOptions<'a> {
     pub update: bool,
     pub env: &'a str,
-    pub shell: &'a mut MultiShell,
+    pub shell: &'a mut MultiShell<'a>,
     pub jobs: Option<uint>,
     pub target: Option<&'a str>,
     pub dev_deps: bool,

@@ -12,7 +12,7 @@ use sources::git::utils::{GitReference, GitRemote, Master, Other, GitRevision};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
-pub struct GitSource<'a, 'b> {
+pub struct GitSource<'a, 'b:'a> {
     remote: GitRemote,
     reference: GitReference,
     db_path: Path,
