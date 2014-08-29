@@ -1,8 +1,8 @@
-use std::io::File;
+use std::io::{fs, File, UserRWX};
 
 use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
 use support::{COMPILING, FRESH, RUNNING};
-use support::paths::PathExt;
+use support::paths::{mod, PathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};
@@ -531,6 +531,39 @@ test!(error_message_for_missing_manifest {
                 .with_status(101)
                 .with_stderr(format!("Could not find `Cargo.toml` in `{}`\n",
                                      p.root().join_many(&["src", "bar"]).display())));
+
+})
+
+test!(override_relative {
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+       .file("src/lib.rs", "");
+
+    fs::mkdir(&paths::root().join(".cargo"), UserRWX).assert();
+    File::create(&paths::root().join(".cargo/config")).write_str(r#"
+        paths = ["bar"]
+    "#).assert();
+
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [package]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+            path = '{}'
+        "#, bar.root().display()))
+       .file("src/lib.rs", "");
+    bar.build();
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 
 })
 
