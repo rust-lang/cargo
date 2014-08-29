@@ -16,7 +16,7 @@ impl Registry for Vec<Summary> {
 }
 
 pub struct PackageRegistry<'a> {
-    sources: SourceMap,
+    sources: SourceMap<'a>,
     overrides: Vec<SourceId>,
     config: &'a mut Config<'a>
 }
@@ -53,7 +53,7 @@ impl<'a> PackageRegistry<'a> {
         Ok(ret)
     }
 
-    pub fn move_sources(self) -> SourceMap {
+    pub fn move_sources(self) -> SourceMap<'a> {
         self.sources
     }
 

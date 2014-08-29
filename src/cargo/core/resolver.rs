@@ -216,7 +216,7 @@ impl fmt::Show for Resolve {
     }
 }
 
-struct Context<'a, R> {
+struct Context<'a, R:'a> {
     registry: &'a mut R,
     resolve: Resolve,
 
