@@ -396,10 +396,10 @@ impl TomlManifest {
             None => inferred_test_targets(layout),
         };
 
-        let benches = if self.bench.is_none() || self.bench.get_ref().is_empty() {
+        let benches = if self.bench.is_none() || self.bench.as_ref().unwrap().is_empty() {
             inferred_bench_targets(layout)
         } else {
-            self.bench.get_ref().iter().map(|t| t.clone()).collect()
+            self.bench.as_ref().unwrap().iter().map(|t| t.clone()).collect()
         };
 
         // Get targets
