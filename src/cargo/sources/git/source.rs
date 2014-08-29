@@ -195,7 +195,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
-        Ok(self.rev.get_ref().to_string())
+        Ok(self.rev.as_ref().unwrap().to_string())
     }
 }
 
