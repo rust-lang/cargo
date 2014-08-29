@@ -19,7 +19,7 @@ pub struct Context<'a, 'b> {
     pub rustc_version: String,
     pub config: &'b mut Config<'b>,
     pub resolve: &'a Resolve,
-    pub sources: &'a SourceMap,
+    pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
 
     env: &'a str,

@@ -11,8 +11,8 @@ pub struct ShellConfig {
 }
 
 enum AdequateTerminal {
-    NoColor(Box<Writer>),
-    Color(Box<Terminal<Box<Writer>>>)
+    NoColor(Box<Writer+'static>),
+    Color(Box<Terminal<Box<Writer+'static>>+'static>)
 }
 
 pub struct Shell {
@@ -75,14 +75,14 @@ impl MultiShell {
 pub type ShellCallback<'a> = |&mut Shell|:'a -> IoResult<()>;
 
 impl Shell {
-    pub fn create(out: Box<Writer>, config: ShellConfig) -> Shell {
+    pub fn create(out: Box<Writer+'static>, config: ShellConfig) -> Shell {
         if config.tty && config.color {
-            let term: Option<term::TerminfoTerminal<Box<Writer>>> = Terminal::new(out);
+            let term: Option<term::TerminfoTerminal<Box<Writer+'static>>> = Terminal::new(out);
             term.map(|t| Shell {
-                terminal: Color(box t as Box<Terminal<Box<Writer>>>),
+                terminal: Color(box t as Box<Terminal<Box<Writer+'static>>>),
                 config: config
             }).unwrap_or_else(|| {
-                Shell { terminal: NoColor(box stderr() as Box<Writer>), config: config }
+                Shell { terminal: NoColor(box stderr() as Box<Writer+'static>), config: config }
             })
         } else {
             Shell { terminal: NoColor(out), config: config }
@@ -121,8 +121,8 @@ impl Shell {
     }
 }
 
-impl Terminal<Box<Writer>> for Shell {
-    fn new(out: Box<Writer>) -> Option<Shell> {
+impl Terminal<Box<Writer+'static>> for Shell {
+    fn new(out: Box<Writer+'static>) -> Option<Shell> {
         Some(Shell {
             terminal: NoColor(out),
             config: ShellConfig {
@@ -168,18 +168,18 @@ impl Terminal<Box<Writer>> for Shell {
         }
     }
 
-    fn unwrap(self) -> Box<Writer> {
+    fn unwrap(self) -> Box<Writer+'static> {
         fail!("Can't unwrap a Shell");
     }
 
-    fn get_ref<'a>(&'a self) -> &'a Box<Writer> {
+    fn get_ref<'b>(&'b self) -> &'b Box<Writer+'static> {
         match self.terminal {
             Color(ref c) => c.get_ref(),
             NoColor(ref w) => w
         }
     }
 
-    fn get_mut<'a>(&'a mut self) -> &'a mut Box<Writer> {
+    fn get_mut<'b>(&'b mut self) -> &'b mut Box<Writer+'static> {
         match self.terminal {
             Color(ref mut c) => c.get_mut(),
             NoColor(ref mut w) => w
