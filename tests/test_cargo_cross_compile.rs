@@ -163,7 +163,7 @@ test!(plugin_deps {
             }
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
-                          -> Box<MacResult> {
+                          -> Box<MacResult + 'static> {
                 MacExpr::new(quote_expr!(cx, 1i))
             }
         "#);
@@ -245,7 +245,7 @@ test!(plugin_to_the_max {
             }
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
-                          -> Box<MacResult> {
+                          -> Box<MacResult + 'static> {
                 MacExpr::new(quote_expr!(cx, baz::baz()))
             }
         "#);
