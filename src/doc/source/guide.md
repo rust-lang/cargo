@@ -292,7 +292,7 @@ re-calculate the dependencies, and update things for us:
 
 ```shell
 $ cargo update       # updates all dependencies
-$ cargo update color # updtes just 'color'
+$ cargo update color # updates just 'color'
 ```
 
 This will write out a new `Cargo.lock` with the new version information.
