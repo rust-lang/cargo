@@ -273,8 +273,15 @@ fn rustdoc(package: &Package, target: &Target, cx: &mut Context) -> Work {
             }))
         } else {
             try!(rustdoc.exec_with_output().and(Ok(())).map_err(|err| {
-                caused_human(format!("Could not document `{}`.\n{}",
-                                     name, err.output().unwrap()), err)
+                match err.output() {
+                    Some(output) => {
+                        caused_human(format!("Could not document `{}`.\n{}",
+                                             name, output), err)
+                    }
+                    None => {
+                        caused_human("Failed to run rustdoc", err)
+                    }
+                }
             }))
         }
         Ok(())
