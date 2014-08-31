@@ -895,7 +895,7 @@ test!(test_no_harness {
         .file("src/main.rs", "fn main() {}")
         .file("foo.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})

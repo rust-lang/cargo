@@ -2,8 +2,8 @@
 name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
- "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#e20dceb065949fe563781daa205626820717359b)",
- "docopt_macros 0.6.0 (git+https://github.com/burntsushi/docopt.rs#e20dceb065949fe563781daa205626820717359b)",
+ "docopt 0.6.2 (git+https://github.com/burntsushi/docopt.rs#3bf52a9f9cf13e00cca00ff49da39d5c9caa48e9)",
+ "docopt_macros 0.6.2 (git+https://github.com/burntsushi/docopt.rs#3bf52a9f9cf13e00cca00ff49da39d5c9caa48e9)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#12593d1b9ccf09c2eabac176a6e233b171eed843)",
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#f2b79dd951e92171b151100d69c32c0bf137a328)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#c4495d9f2f2a1b22173b860f907760ba8c419843)",
@@ -16,15 +16,20 @@ dependencies = [
 
 [[package]]
 name = "docopt"
-version = "0.6.0"
-source = "git+https://github.com/burntsushi/docopt.rs#e20dceb065949fe563781daa205626820717359b"
+version = "0.6.2"
+source = "git+https://github.com/burntsushi/docopt.rs#3bf52a9f9cf13e00cca00ff49da39d5c9caa48e9"
+
+[[package]]
+name = "docopt"
+version = "0.6.2"
+source = "git+https://github.com/docopt/docopt.rs#3bf52a9f9cf13e00cca00ff49da39d5c9caa48e9"
 
 [[package]]
 name = "docopt_macros"
-version = "0.6.0"
-source = "git+https://github.com/burntsushi/docopt.rs#e20dceb065949fe563781daa205626820717359b"
+version = "0.6.2"
+source = "git+https://github.com/burntsushi/docopt.rs#3bf52a9f9cf13e00cca00ff49da39d5c9caa48e9"
 dependencies = [
- "docopt 0.6.0 (git+https://github.com/burntsushi/docopt.rs#e20dceb065949fe563781daa205626820717359b)",
+ "docopt 0.6.2 (git+https://github.com/docopt/docopt.rs#3bf52a9f9cf13e00cca00ff49da39d5c9caa48e9)",
 ]
 
 [[package]]
