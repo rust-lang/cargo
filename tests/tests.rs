@@ -1,9 +1,10 @@
 #![feature(macro_rules)]
 #![feature(phase)]
 
-extern crate term;
 extern crate cargo;
+extern crate git2;
 extern crate hamcrest;
+extern crate term;
 extern crate url;
 
 #[phase(plugin, link)]
@@ -39,3 +40,4 @@ mod test_cargo_freshness;
 mod test_cargo_generate_lockfile;
 mod test_cargo_profiles;
 mod test_cargo_package;
+mod test_cargo_build_auth;

@@ -430,7 +430,6 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
     fn matches(&self, actual: &[u8])
         -> ham::MatchResult
     {
-        println!("{}", actual);
         let actual = String::from_utf8_lossy(actual);
         let actual = actual.to_string();
         ham::expect(actual == self.expected, actual)

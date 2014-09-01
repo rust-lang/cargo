@@ -22,7 +22,7 @@ snaps = {
 for platform in sorted(snaps):
     triple = snaps[platform]
     tarball = 'cargo-nightly-' + triple + '.tar.gz'
-    url = 'http://static.rust-lang.org/cargo-dist/' + date + '/' + tarball
+    url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/' + date + '/' + tarball
     dl_path = "target/dl/" + tarball
     ret = subprocess.call(["curl", "-s", "-o", dl_path, url])
     if ret != 0:
