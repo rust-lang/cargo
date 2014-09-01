@@ -145,16 +145,18 @@ impl GitRemote {
     }
 
     pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
-        let repo = if into.exists() {
-            let r = try!(git2::Repository::open(into));
-            try!(self.fetch_into(&r).chain_error(|| {
-                internal(format!("failed to fetch into {}", into.display()))
-            }));
-            r
-        } else {
-            try!(self.clone_into(into).chain_error(|| {
-                internal(format!("failed to clone into: {}", into.display()))
-            }))
+        let repo = match git2::Repository::open(into) {
+            Ok(repo) => {
+                try!(self.fetch_into(&repo).chain_error(|| {
+                    internal(format!("failed to fetch into {}", into.display()))
+                }));
+                repo
+            }
+            Err(..) => {
+                try!(self.clone_into(into).chain_error(|| {
+                    internal(format!("failed to clone into: {}", into.display()))
+                }))
+            }
         };
 
         Ok(GitDatabase { remote: self.clone(), path: into.clone(), repo: repo })
@@ -181,6 +183,9 @@ impl GitRemote {
 
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
         let url = self.url.to_string();
+        if dst.exists() {
+            try!(rmdir_recursive(dst));
+        }
         try!(mkdir_recursive(dst, UserDir));
         let repo = try!(git2::build::RepoBuilder::new().bare(true)
                                                        .hardlinks(false)
