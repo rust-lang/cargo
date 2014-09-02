@@ -19,7 +19,7 @@ after_success: |
   git push -f https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
   matrix:
-    - BITS=32
+    - BITS=32 PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
     - BITS=64
   global:
     secure: fV37lqpHoVgHJHBdPegut8uf5sfaK/SrLx+Npn1ngPPzUuIh+BZkgqX11FdAxIu05YfI/C/M3smG5SOxb5X0ojK8VQdRtvb8KM6b2G839jegxGk2Bs+bAWMFVrJDl5JCZec+zU/rPlZPXLLnOv23ReGv9UvwgxLw1AJjZ2WkJ5M=

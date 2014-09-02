@@ -13,6 +13,9 @@ fi
 if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     # Install a 32-bit compiler for linux
     sudo apt-get update
+    if [ "${BITS}" = "32" ]; then
+        sudo apt-get install libssl-dev:i386
+    fi
     sudo apt-get install g++-multilib lib32stdc++6
 fi
 
