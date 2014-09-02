@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::io::fs;
+use std::os;
 use std::slice;
 use std::str;
 use toml;
@@ -89,19 +90,26 @@ pub fn to_manifest(contents: &[u8],
                    source_id: &SourceId,
                    layout: Layout)
                    -> CargoResult<(Manifest, Vec<Path>)> {
+    let manifest = layout.root.join("Cargo.toml");
+    let manifest = match manifest.path_relative_from(&os::getcwd()) {
+        Some(path) => path,
+        None => manifest,
+    };
     let contents = try!(str::from_utf8(contents).require(|| {
-        human("Cargo.toml is not valid UTF-8")
+        human(format!("{} is not valid UTF-8", manifest.display()))
     }));
-    let root = try!(parse(contents, &Path::new("Cargo.toml")));
+    let root = try!(parse(contents, &manifest));
     let mut d = toml::Decoder::new(toml::Table(root));
     let toml_manifest: TomlManifest = match Decodable::decode(&mut d) {
         Ok(t) => t,
-        Err(e) => return Err(human(format!("Cargo.toml is not a valid \
-                                            manifest\n\n{}", e)))
+        Err(e) => return Err(human(format!("{} is not a valid \
+                                            manifest\n\n{}",
+                                           manifest.display(), e)))
     };
 
     let pair = try!(toml_manifest.to_manifest(source_id, &layout).map_err(|err| {
-        human(format!("Cargo.toml is not a valid manifest\n\n{}", err))
+        human(format!("{} is not a valid manifest\n\n{}",
+                      manifest.display(), err))
     }));
     let (mut manifest, paths) = pair;
     match d.toml {
@@ -146,7 +154,7 @@ pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
         let (loline, locol) = parser.to_linecol(error.lo);
         let (hiline, hicol) = parser.to_linecol(error.hi);
         error_str.push_str(format!("{}:{}:{}{} {}\n",
-                                   file.filename_display(),
+                                   file.display(),
                                    loline + 1, locol + 1,
                                    if loline != hiline || locol != hicol {
                                        format!("-{}:{}", hiline + 1,

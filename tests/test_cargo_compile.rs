@@ -48,7 +48,6 @@ test!(cargo_compile_with_invalid_manifest {
                       No `package` or `project` section found.\n"))
 })
 
-
 test!(cargo_compile_with_invalid_manifest2 {
     let p = project("foo")
         .file("Cargo.toml", r"
@@ -61,6 +60,24 @@ test!(cargo_compile_with_invalid_manifest2 {
         .with_status(101)
         .with_stderr("could not parse input TOML\n\
                       Cargo.toml:3:19-3:20 expected a value\n\n"))
+})
+
+test!(cargo_compile_with_invalid_manifest3 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/Cargo.toml", "a = bar");
+
+    assert_that(p.cargo_process("build").arg("--manifest-path")
+                 .arg("src/Cargo.toml"),
+        execs()
+        .with_status(101)
+        .with_stderr("could not parse input TOML\n\
+                      src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
 })
 
 test!(cargo_compile_with_invalid_version {
