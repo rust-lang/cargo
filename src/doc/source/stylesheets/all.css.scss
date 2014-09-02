@@ -11,11 +11,12 @@ html {
 }
 
 pre {
-  font-family: "Consolas";
+  font-family: monospace;
+  font-size: 110%;
 }
 
 body {
-  font-family: "Roboto";
+  font-family: sans-serif;
 }
 
 * {
@@ -70,7 +71,8 @@ h2 {
 }
 
 code:not(.highlight) {
-  font-family: Consolas;
+  font-family: monospace;
+  font-size: 110%;
   color: $purple;
 }
 
