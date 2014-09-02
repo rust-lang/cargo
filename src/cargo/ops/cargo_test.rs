@@ -40,6 +40,8 @@ pub fn run_tests(manifest_path: &Path,
         }
     }
 
+    if options.compile_opts.env == "bench" { return Ok(None) }
+
     let mut libs = package.get_targets().iter().filter_map(|target| {
         if !target.get_profile().is_doctest() || !target.is_lib() {
             return None
