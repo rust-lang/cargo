@@ -81,6 +81,7 @@ pub enum ConfigValue {
     String(String, Path),
     List(Vec<(String, Path)>),
     Table(HashMap<String, ConfigValue>),
+    Boolean(bool, Path),
 }
 
 impl fmt::Show for ConfigValue {
@@ -98,6 +99,7 @@ impl fmt::Show for ConfigValue {
                 write!(f, "]")
             }
             Table(ref table) => write!(f, "{}", table),
+            Boolean(b, ref path) => write!(f, "{} (from {})", b, path.display()),
         }
     }
 }
@@ -111,6 +113,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
                 list.encode(s)
             }
             Table(ref table) => table.encode(s),
+            Boolean(b, _) => b.encode(s),
         }
     }
 }
@@ -119,6 +122,7 @@ impl ConfigValue {
     fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
             toml::String(val) => Ok(String(val, path.clone())),
+            toml::Boolean(b) => Ok(Boolean(b, path.clone())),
             toml::Array(val) => {
                 Ok(List(try!(result::collect(val.move_iter().map(|toml| {
                     match toml {
@@ -140,6 +144,7 @@ impl ConfigValue {
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
             (me @ &String(..), from @ String(..)) => *me = from,
+            (me @ &Boolean(..), from @ Boolean(..)) => *me = from,
             (&List(ref mut old), List(ref mut new)) => {
                 let new = mem::replace(new, Vec::new());
                 old.extend(new.move_iter());
@@ -165,25 +170,33 @@ impl ConfigValue {
 
     pub fn string(&self) -> CargoResult<(&str, &Path)> {
         match *self {
-            Table(..) => Err(internal("expected a string, but found a table")),
-            List(..) => Err(internal("expected a string, but found a list")),
             String(ref s, ref p) => Ok((s.as_slice(), p)),
+            _ => Err(internal(format!("expected a string, but found a {}",
+                                      self.desc()))),
         }
     }
 
     pub fn table(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         match *self {
-            String(..) => Err(internal("expected a table, but found a string")),
-            List(..) => Err(internal("expected a table, but found a list")),
             Table(ref table) => Ok(table),
+            _ => Err(internal(format!("expected a table, but found a {}",
+                                      self.desc()))),
         }
     }
 
     pub fn list(&self) -> CargoResult<&[(String, Path)]> {
         match *self {
-            String(..) => Err(internal("expected a list, but found a string")),
-            Table(..) => Err(internal("expected a list, but found a table")),
             List(ref list) => Ok(list.as_slice()),
+            _ => Err(internal(format!("expected a list, but found a {}",
+                                      self.desc()))),
+        }
+    }
+
+    pub fn boolean(&self) -> CargoResult<(bool, &Path)> {
+        match *self {
+            Boolean(b, ref p) => Ok((b, p)),
+            _ => Err(internal(format!("expected a bool, but found a {}",
+                                      self.desc()))),
         }
     }
 
@@ -192,6 +205,7 @@ impl ConfigValue {
             Table(..) => "table",
             List(..) => "array",
             String(..) => "string",
+            Boolean(..) => "boolean",
         }
     }
 }
