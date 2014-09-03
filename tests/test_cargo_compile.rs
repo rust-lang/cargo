@@ -125,6 +125,7 @@ Could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n",
             filename = format!("src{}foo.rs", path::SEP)).as_slice()));
+    assert_that(&p.root().join("Cargo.lock"), existing_file());
 })
 
 test!(cargo_compile_with_invalid_code_in_deps {
