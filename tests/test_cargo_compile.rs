@@ -759,6 +759,17 @@ task '<main>' failed at 'nope', {filename}:2\n\
 })
 
 test!(custom_build_env_vars {
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar-bar"
+            version = "0.0.1"
+            authors = []
+            build = "true"
+        "#)
+        .file("src/lib.rs", "");
+    bar.build();
+
     let mut p = project("foo");
     let mut build = project("builder");
     build = build
@@ -776,11 +787,15 @@ test!(custom_build_env_vars {
             use std::os;
             fn main() {{
                 let out = os::getenv("OUT_DIR").unwrap();
-                assert!(out.as_slice().starts_with(r"{}"));
+                assert!(out.as_slice().starts_with(r"{0}"));
+                assert!(Path::new(out).is_dir());
+
+                let out = os::getenv("DEP_BAR_BAR_OUT_DIR").unwrap();
+                assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());
             }}
         "#,
-        p.root().join("target").join("native").join("foo-").display()));
+        p.root().join("target").join("native").display()));
     assert_that(build.cargo_process("build"), execs().with_status(0));
 
 
@@ -795,7 +810,10 @@ test!(custom_build_env_vars {
 
             [[bin]]
             name = "foo"
-        "#, build.bin("foo").display()))
+
+            [dependencies.bar-bar]
+            path = '{}'
+        "#, build.bin("foo").display(), bar.root().display()))
         .file("src/foo.rs", r#"
             fn main() {}
         "#);

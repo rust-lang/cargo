@@ -63,6 +63,22 @@ projects.
 [1]: http://doc.rust-lang.org/rust.html#linkage
 [2]: https://github.com/alexcrichton/link-config
 
+# Environment Variables
+
+The following environment variables are always available for build
+commands.
+
+* `OUT_DIR` - the folder in which all output should be placed.
+* `TARGET` - the target triple that is being compiled for. Native code should be
+             compiled for this triple.
+* `DEP_<name>_OUT_DIR` - This variable is present for all immediate dependencies
+                         of the package being built. The `<name>` will be the
+                         package's name, in uppercase, with `-` characters
+                         translated to a `_`. The value of this variable is the
+                         directory in which all the output of the dependency's
+                         build command was placed. This is useful for picking up
+                         things like header files and such from other packages.
+
 # A complete example
 
 The code blocks below lay out a cargo project which has a small and simple C
