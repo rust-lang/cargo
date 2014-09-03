@@ -8,6 +8,7 @@ use core::shell::MultiShell;
 
 pub struct NewOptions<'a> {
     pub git: bool,
+    pub travis: bool,
     pub bin: bool,
     pub path: &'a str,
 }
@@ -36,6 +37,10 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
         try!(File::create(&path.join(".gitignore")).write(gitignore.as_bytes()));
     } else {
         try!(fs::mkdir(path, io::UserRWX));
+    }
+
+    if opts.travis {
+        try!(File::create(&path.join(".travis.yml")).write_str("language: rust\n"));
     }
 
     let author = try!(discover_author());
