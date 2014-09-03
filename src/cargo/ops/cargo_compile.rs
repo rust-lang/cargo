@@ -137,18 +137,24 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
                           cur_path: Path) -> CargoResult<Vec<SourceId>> {
     debug!("loaded config; configs={}", configs);
 
-    let config_paths = configs.find_equiv(&"paths").map(|v| v.clone());
-    let config_paths = config_paths.unwrap_or_else(|| ConfigValue::new());
-
+    let config_paths = match configs.find_equiv(&"paths") {
+        Some(cfg) => cfg,
+        None => return Ok(Vec::new())
+    };
     let paths = try!(config_paths.list().chain_error(|| {
-        internal("invalid configuration for the key `path`")
+        internal("invalid configuration for the key `paths`")
     }));
 
-    // Make sure we don't override the local package, even if it's in the list
-    // of override paths
-    paths.iter().filter(|p| {
-        cur_path != os::make_absolute(&Path::new(p.as_slice()))
-    }).map(|p| SourceId::for_path(&Path::new(p.as_slice()))).collect()
+    paths.iter().map(|&(ref s, ref p)| {
+        // The path listed next to the string is the config file in which the
+        // key was located, so we want to pop off the `.cargo/config` component
+        // to get the directory containing the `.cargo` folder.
+        p.dir_path().dir_path().join(s.as_slice())
+    }).filter(|p| {
+        // Make sure we don't override the local package, even if it's in the
+        // list of override paths.
+        cur_path != *p
+    }).map(|p| SourceId::for_path(&p)).collect()
 }
 
 fn scrape_target_config(config: &mut Config,
@@ -176,7 +182,7 @@ fn scrape_target_config(config: &mut Config,
         Some(ar) => {
             config.set_ar(try!(ar.string().chain_error(|| {
                 internal("invalid configuration for key `ar`")
-            })).to_string());
+            })).ref0().to_string());
         }
     }
 
@@ -185,7 +191,7 @@ fn scrape_target_config(config: &mut Config,
         Some(linker) => {
             config.set_linker(try!(linker.string().chain_error(|| {
                 internal("invalid configuration for key `ar`")
-            })).to_string());
+            })).ref0().to_string());
         }
     }
 

@@ -77,80 +77,72 @@ pub enum Location {
 }
 
 #[deriving(Eq,PartialEq,Clone,Decodable)]
-pub enum ConfigValueValue {
-    String(String),
-    List(Vec<String>),
+pub enum ConfigValue {
+    String(String, Path),
+    List(Vec<(String, Path)>),
     Table(HashMap<String, ConfigValue>),
 }
 
-impl fmt::Show for ConfigValueValue {
+impl fmt::Show for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            String(ref string) => write!(f, "{}", string),
-            List(ref list) => write!(f, "{}", list),
+            String(ref string, ref path) => {
+                write!(f, "{} (from {})", string, path.display())
+            }
+            List(ref list) => {
+                try!(write!(f, "["));
+                for (i, &(ref s, ref path)) in list.iter().enumerate() {
+                    if i > 0 { try!(write!(f, ", ")); }
+                    try!(write!(f, "{} (from {})", s, path.display()));
+                }
+                write!(f, "]")
+            }
             Table(ref table) => write!(f, "{}", table),
         }
     }
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValueValue {
+impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         match *self {
-            String(ref string) => string.encode(s),
-            List(ref list) => list.encode(s),
+            String(ref string, _) => string.encode(s),
+            List(ref list) => {
+                let list: Vec<&String> = list.iter().map(|s| s.ref0()).collect();
+                list.encode(s)
+            }
             Table(ref table) => table.encode(s),
         }
     }
 }
 
-#[deriving(Eq,PartialEq,Clone,Decodable)]
-pub struct ConfigValue {
-    value: ConfigValueValue,
-    path: Vec<Path>
-}
-
 impl ConfigValue {
-    pub fn new() -> ConfigValue {
-        ConfigValue { value: List(vec!()), path: vec!() }
-    }
-
-    pub fn get_value(&self) -> &ConfigValueValue {
-        &self.value
-    }
-
     fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
-        let value = match toml {
-            toml::String(val) => String(val),
+        match toml {
+            toml::String(val) => Ok(String(val, path.clone())),
             toml::Array(val) => {
-                List(try!(result::collect(val.move_iter().map(|toml| {
+                Ok(List(try!(result::collect(val.move_iter().map(|toml| {
                     match toml {
-                        toml::String(val) => Ok(val),
+                        toml::String(val) => Ok((val, path.clone())),
                         _ => Err(internal("")),
                     }
-                }))))
+                })))))
             }
             toml::Table(val) => {
-                Table(try!(result::collect(val.move_iter().map(|(key, value)| {
+                Ok(Table(try!(result::collect(val.move_iter().map(|(key, value)| {
                     let value = raw_try!(ConfigValue::from_toml(path, value));
                     Ok((key, value))
-                }))))
+                })))))
             }
             _ => return Err(internal(""))
-        };
-
-        Ok(ConfigValue { value: value, path: vec![path.clone()] })
+        }
     }
 
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
-        let ConfigValue { value, path } = from;
-        match (&mut self.value, value) {
-            (&String(ref mut old), String(ref mut new)) => {
-                mem::swap(old, new);
-                self.path = path;
-            }
+        match (self, from) {
+            (me @ &String(..), from @ String(..)) => *me = from,
             (&List(ref mut old), List(ref mut new)) => {
-                old.extend(mem::replace(new, Vec::new()).move_iter());
-                self.path.extend(path.move_iter());
+                let new = mem::replace(new, Vec::new());
+                old.extend(new.move_iter());
             }
             (&Table(ref mut old), Table(ref mut new)) => {
                 let new = mem::replace(new, HashMap::new());
@@ -161,7 +153,6 @@ impl ConfigValue {
                                                  |_, new| new);
                     try!(err);
                 }
-                self.path.extend(path.move_iter());
             }
             (expected, found) => {
                 return Err(internal(format!("expected {}, but found {}",
@@ -172,57 +163,36 @@ impl ConfigValue {
         Ok(())
     }
 
-    pub fn string(&self) -> CargoResult<&str> {
-        match self.value {
-            Table(_) => Err(internal("expected a string, but found a table")),
-            List(_) => Err(internal("expected a string, but found a list")),
-            String(ref s) => Ok(s.as_slice()),
+    pub fn string(&self) -> CargoResult<(&str, &Path)> {
+        match *self {
+            Table(..) => Err(internal("expected a string, but found a table")),
+            List(..) => Err(internal("expected a string, but found a list")),
+            String(ref s, ref p) => Ok((s.as_slice(), p)),
         }
     }
 
     pub fn table(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
-        match self.value {
-            String(_) => Err(internal("expected a table, but found a string")),
-            List(_) => Err(internal("expected a table, but found a list")),
+        match *self {
+            String(..) => Err(internal("expected a table, but found a string")),
+            List(..) => Err(internal("expected a table, but found a list")),
             Table(ref table) => Ok(table),
         }
     }
 
-    pub fn list(&self) -> CargoResult<&[String]> {
-        match self.value {
-            String(_) => Err(internal("expected a list, but found a string")),
-            Table(_) => Err(internal("expected a list, but found a table")),
+    pub fn list(&self) -> CargoResult<&[(String, Path)]> {
+        match *self {
+            String(..) => Err(internal("expected a list, but found a string")),
+            Table(..) => Err(internal("expected a list, but found a table")),
             List(ref list) => Ok(list.as_slice()),
         }
     }
-}
 
-impl ConfigValueValue {
-    fn desc(&self) -> &'static str {
+    pub fn desc(&self) -> &'static str {
         match *self {
             Table(..) => "table",
             List(..) => "array",
             String(..) => "string",
         }
-    }
-}
-
-impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
-        s.emit_map(2, |s| {
-            raw_try!(s.emit_map_elt_key(0, |s| "value".encode(s)));
-            raw_try!(s.emit_map_elt_val(0, |s| self.value.encode(s)));
-            Ok(())
-        })
-    }
-}
-
-impl fmt::Show for ConfigValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let paths: Vec<String> = self.path.iter().map(|p| {
-            p.display().to_string()
-        }).collect();
-        write!(f, "{} (from {})", self.value, paths)
     }
 }
 
@@ -232,7 +202,7 @@ pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
 }
 
 pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
-    let mut cfg = ConfigValue { value: Table(HashMap::new()), path: Vec::new() };
+    let mut cfg = Table(HashMap::new());
 
     try!(walk_tree(&pwd, |mut file| {
         let path = file.path().clone();
@@ -247,7 +217,7 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
     }).map_err(|_| human("Couldn't load Cargo configuration")));
 
 
-    match cfg.value {
+    match cfg {
         Table(map) => Ok(map),
         _ => unreachable!(),
     }
