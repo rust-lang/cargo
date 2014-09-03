@@ -332,12 +332,9 @@ fn build_base_args(cx: &Context, mut cmd: ProcessBuilder,
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
 
-    // Right now -g is a little buggy, so we're not passing -g just yet
-    // if profile.get_debug() {
-    //     into.push("-g".to_string());
-    // }
-
-    if !profile.get_debug() {
+    if profile.get_debug() {
+        cmd = cmd.arg("-g");
+    } else {
         cmd = cmd.args(["--cfg", "ndebug"]);
     }
 
