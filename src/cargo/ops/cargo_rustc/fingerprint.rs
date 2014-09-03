@@ -73,7 +73,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     if !target.get_profile().is_doc() {
         pairs.push((old_dep_info, new_dep_info));
 
-        for filename in cx.target_filenames(target).iter() {
+        for filename in try!(cx.target_filenames(target)).iter() {
             let filename = filename.as_slice();
             let dst = root.join(filename);
             pairs.push((old_root.join(filename), root.join(filename)));

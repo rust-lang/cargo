@@ -3,6 +3,7 @@ use std::str;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile, Require};
+use util::human;
 
 use super::{Kind, KindPlugin, KindTarget, Compilation};
 use super::layout::{Layout, LayoutProxy};
@@ -26,9 +27,10 @@ pub struct Context<'a, 'b> {
     host: Layout,
     target: Option<Layout>,
     target_triple: String,
-    host_dylib: (String, String),
+    host_triple: String,
+    host_dylib: Option<(String, String)>,
     package_set: &'a PackageSet,
-    target_dylib: (String, String),
+    target_dylib: Option<(String, String)>,
     target_exe: String,
     requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
 }
@@ -48,10 +50,11 @@ impl<'a, 'b> Context<'a, 'b> {
         };
         let (rustc_version, rustc_host) = try!(Context::rustc_version());
         let target_triple = config.target().map(|s| s.to_string());
-        let target_triple = target_triple.unwrap_or(rustc_host);
+        let target_triple = target_triple.unwrap_or(rustc_host.clone());
         Ok(Context {
             rustc_version: rustc_version,
             target_triple: target_triple,
+            host_triple: rustc_host,
             env: env,
             host: host,
             target: target,
@@ -93,7 +96,7 @@ impl<'a, 'b> Context<'a, 'b> {
     /// Run `rustc` to discover the dylib prefix/suffix for the target
     /// specified as well as the exe suffix
     fn filename_parts(target: Option<&str>)
-                      -> CargoResult<((String, String), String)> {
+                      -> CargoResult<(Option<(String, String)>, String)> {
         let process = util::process("rustc")
                            .arg("-")
                            .arg("--crate-name").arg("-")
@@ -106,17 +109,22 @@ impl<'a, 'b> Context<'a, 'b> {
         };
         let output = try!(process.exec_with_output());
 
+        let error = str::from_utf8(output.error.as_slice()).unwrap();
         let output = str::from_utf8(output.output.as_slice()).unwrap();
         let mut lines = output.lines();
-        let dylib_parts: Vec<&str> = lines.next().unwrap().trim()
-                                          .split('-').collect();
-        assert!(dylib_parts.len() == 2,
-                "rustc --print-file-name output has changed");
+        let dylib = if error.contains("dropping unsupported crate type `dylib`") {
+            None
+        } else {
+            let dylib_parts: Vec<&str> = lines.next().unwrap().trim()
+                                              .split('-').collect();
+            assert!(dylib_parts.len() == 2,
+                    "rustc --print-file-name output has changed");
+            Some((dylib_parts[0].to_string(), dylib_parts[1].to_string()))
+        };
+
         let exe_suffix = lines.next().unwrap().trim()
                               .split('-').skip(1).next().unwrap().to_string();
-
-        Ok(((dylib_parts[0].to_string(), dylib_parts[1].to_string()),
-            exe_suffix.to_string()))
+        Ok((dylib, exe_suffix.to_string()))
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in
@@ -193,9 +201,17 @@ impl<'a, 'b> Context<'a, 'b> {
     ///
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
-    fn dylib(&self, kind: Kind) -> (&str, &str) {
-        let pair = if kind == KindPlugin {&self.host_dylib} else {&self.target_dylib};
-        (pair.ref0().as_slice(), pair.ref1().as_slice())
+    fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
+        let (triple, pair) = if kind == KindPlugin {
+            (&self.host_triple, &self.host_dylib)
+        } else {
+            (&self.target_triple, &self.target_dylib)
+        };
+        match *pair {
+            None => return Err(human(format!("dylib outputs are not supported \
+                                              for {}", triple))),
+            Some((ref s1, ref s2)) => Ok((s1.as_slice(), s2.as_slice())),
+        }
     }
 
     /// Return the target triple which this context is targeting.
@@ -204,7 +220,7 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 
     /// Return the exact filename of the target.
-    pub fn target_filenames(&self, target: &Target) -> Vec<String> {
+    pub fn target_filenames(&self, target: &Target) -> CargoResult<Vec<String>> {
         let stem = target.file_stem();
 
         let mut ret = Vec::new();
@@ -214,7 +230,7 @@ impl<'a, 'b> Context<'a, 'b> {
             if target.is_dylib() {
                 let plugin = target.get_profile().is_plugin();
                 let kind = if plugin {KindPlugin} else {KindTarget};
-                let (prefix, suffix) = self.dylib(kind);
+                let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
             }
             if target.is_rlib() {
@@ -225,7 +241,7 @@ impl<'a, 'b> Context<'a, 'b> {
             }
         }
         assert!(ret.len() > 0);
-        return ret;
+        return Ok(ret);
     }
 
     /// For a package, return all targets which are registered as dependencies
