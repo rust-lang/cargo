@@ -15,6 +15,8 @@ Options:
     -h, --help              Print this message
     --no-deps               Don't build documentation for dependencies
     -j N, --jobs N          The number of jobs to run in parallel
+    --features FEATURES     Space-separated list of features to also build
+    --no-default-features   Do not build the `default` feature
     -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to document
     -v, --verbose           Use verbose output
@@ -22,7 +24,8 @@ Options:
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
 ",  flag_jobs: Option<uint>,
-    flag_manifest_path: Option<String>)
+    flag_manifest_path: Option<String>,
+    flag_features: Vec<String>)
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
@@ -38,6 +41,8 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
             jobs: options.flag_jobs,
             target: None,
             dev_deps: false,
+            features: options.flag_features.as_slice(),
+            no_default_features: options.flag_no_default_features,
         },
     };
 

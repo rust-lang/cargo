@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::File;
 use std::os;
 use std::str;
-use serialize::json;
+use serialize::json::{mod, ToJson};
 
 use curl::http;
 use git2;
@@ -84,11 +84,20 @@ fn transmit(pkg: &Package, mut tarball: File,
                                       from {} instead", dep.get_name(),
                                      dep.get_source_id())))
         }
-        let header = format!("{}|{}", dep.get_name(), dep.get_version_req());
+
+        // See Registry::parse_registry_dependency for format
+        let opt = if dep.is_optional() {"-"} else {""};
+        let default = if dep.uses_default_features() {""} else {"*"};
+        let features = dep.get_features().connect(",");
+        let header = format!("{}{}{}|{}|{}", opt, default, dep.get_name(),
+                             features, dep.get_version_req());
         if i > 0 { dep_header.push_str(";"); }
         dep_header.push_str(header.as_slice());
     }
     req = req.header("X-Cargo-Pkg-Dep", dep_header.as_slice());
+
+    let feature_header = pkg.get_summary().get_features().to_json().to_string();
+    req = req.header("X-Cargo-Pkg-Feature", feature_header.as_slice());
 
     let response = try!(req.exec());
 

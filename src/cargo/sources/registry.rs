@@ -1,11 +1,9 @@
-#![allow(unused)]
 use std::io::{mod, fs, File, MemReader};
 use std::io::fs::PathExtensions;
 use std::collections::HashMap;
 
 use curl::http;
 use git2;
-use semver::Version;
 use flate2::reader::GzDecoder;
 use serialize::json;
 use serialize::hex::ToHex;
@@ -43,6 +41,7 @@ struct RegistryPackage {
     name: String,
     vers: String,
     deps: Vec<String>,
+    features: HashMap<String, Vec<String>>,
     cksum: String,
 }
 
@@ -97,7 +96,6 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
         try!(fs::mkdir_recursive(&self.checkout_path, io::UserDir));
         let _ = fs::rmdir_recursive(&self.checkout_path);
-        let url = self.source_id.get_url().to_string();
         let repo = try!(git2::Repository::init(&self.checkout_path));
         Ok(repo)
     }
@@ -177,6 +175,62 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         try!(File::create(&dst.join(".cargo-ok")));
         Ok(dst)
     }
+
+    /// Parse a line from the registry's index file into a Summary for a
+    /// package.
+    fn parse_registry_package(&mut self, line: &str) -> CargoResult<Summary> {
+        let pkg = try!(json::decode::<RegistryPackage>(line));
+        let pkgid = try!(PackageId::new(pkg.name.as_slice(),
+                                        pkg.vers.as_slice(),
+                                        &self.source_id));
+        let deps: CargoResult<Vec<Dependency>> = pkg.deps.iter().map(|dep| {
+            self.parse_registry_dependency(dep.as_slice())
+        }).collect();
+        let deps = try!(deps);
+        let RegistryPackage { name, vers, cksum, .. } = pkg;
+        self.hashes.insert((name, vers), cksum);
+        Summary::new(pkgid, deps, pkg.features)
+    }
+
+    /// Parse a dependency listed in the registry into a `Dependency`.
+    ///
+    /// Currently the format for dependencies is:
+    ///
+    /// ```notrust
+    /// dep := ['-'] ['*'] name '|' [ name ',' ] * '|' version_req
+    /// ```
+    ///
+    /// The '-' indicates that this is an optional dependency, and the '*'
+    /// indicates that the dependency does *not* use the default features
+    /// provided. The comma-separate list of names in brackets are the enabled
+    /// features for the dependency, and the final element is the version
+    /// requirement of the dependency.
+    fn parse_registry_dependency(&self, dep: &str) -> CargoResult<Dependency> {
+        let mut parts = dep.as_slice().splitn(2, '|');
+        let name = parts.next().unwrap();
+        let features = try!(parts.next().require(|| {
+            human(format!("malformed dependency in registry: {}", dep))
+        }));
+        let vers = try!(parts.next().require(|| {
+            human(format!("malformed dependency in registry: {}", dep))
+        }));
+        let (name, optional) = if name.starts_with("-") {
+            (name.slice_from(1), true)
+        } else {
+            (name, false)
+        };
+        let (name, default_features) = if name.starts_with("*") {
+            (name.slice_from(1), false)
+        } else {
+            (name, true)
+        };
+        let features = features.split(',').filter(|s| !s.is_empty())
+                               .map(|s| s.to_string()).collect();
+        let dep = try!(Dependency::parse(name, Some(vers), &self.source_id));
+        Ok(dep.optional(optional)
+              .default_features(default_features)
+              .features(features))
+    }
 }
 
 impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
@@ -198,25 +252,8 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
 
         let ret: CargoResult<Vec<Summary>>;
         ret = contents.as_slice().lines().filter(|l| l.trim().len() > 0)
-                      .map(|l| {
-
-            let pkg = try!(json::decode::<RegistryPackage>(l));
-            let pkgid = try!(PackageId::new(pkg.name.as_slice(),
-                                            pkg.vers.as_slice(),
-                                            &self.source_id));
-            let deps: CargoResult<Vec<Dependency>> = pkg.deps.iter().map(|dep| {
-                let mut parts = dep.as_slice().splitn(1, '|');
-                let name = parts.next().unwrap();
-                let vers = try!(parts.next().require(|| {
-                    human(format!("malformed dependency in registry: {}", dep))
-                }));
-                Dependency::parse(name, Some(vers), &self.source_id)
-            }).collect();
-            let deps = try!(deps);
-            let RegistryPackage { name, vers, cksum, .. } = pkg;
-            self.hashes.insert((name, vers), cksum);
-            Ok(Summary::new(&pkgid, deps.as_slice()))
-        }).collect();
+                      .map(|l| self.parse_registry_package(l))
+                      .collect();
         let mut summaries = try!(ret.chain_error(|| {
             internal(format!("Failed to parse registry's information for: {}",
                              dep.get_name()))

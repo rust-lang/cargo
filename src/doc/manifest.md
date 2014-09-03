@@ -130,6 +130,137 @@ opt-level = 0
 debug = true
 ```
 
+# The `[features]` Section
+
+Cargo supports **features** to allow expression of:
+
+* Optional dependencies, which enhance a package, but are not required
+* Clusters of optional dependencies, such as "postgres", that would include the
+  `postgres` package, the `postgres-macros` package, and possibly other packages
+  (such as development-time mocking libraries, debugging tools, etc.)
+
+The format for specifying features is:
+
+```toml
+[package]
+name = "awesome"
+
+[features]
+
+# The "default" set of optional packages. Most people will
+# want to use these packages, but they are strictly optional
+default = ["jquery", "uglifier"]
+
+# The "secure-password" feature depends on the bcrypt package.
+# This aliasing will allow people to talk about the feature in
+# a higher-level way and allow this package to add more
+# requirements to the feature in the future.
+secure-password = ["bcrypt"]
+
+[dependencies]
+
+# These packages are mandatory and form the core of this
+# package's distribution
+cookie = "1.2.0"
+oauth = "1.1.0"
+route-recognizer = "=2.1.0"
+
+# A list of all of the optional dependencies, some of which
+# are included in the above "features". They can be opted
+# into by apps.
+[dependencies.jquery]
+version = "1.0.2"
+optional = true
+
+[dependencies.uglifier]
+version = "1.5.3"
+optional = true
+
+[dependencies.bcrypt]
+version = "*"
+optional = true
+
+[dependencies.civet]
+version = "*"
+optional = true
+```
+
+To use the package `awesome`:
+
+```toml
+[dependencies.awesome]
+version = "1.3.5"
+features = ["secure-password", "civet"]
+
+# do not include the default features, and optionally
+# cherry-pick individual features
+default-features = false
+```
+
+## Rules
+
+The usage of features is subject to a few rules:
+
+1. Feature names must not conflict with other package names in the manifest.
+   This is because they are opted into via `features = [...]`, which only has a
+   single namespace
+2. With the exception of the `default` feature, all features are opt-in. To opt
+   out of the default feature, use `default-features = false` and cherry-pick
+   individual features.
+3. Feature groups are not allowed to cyclicly depend on one another.
+4. Dev-dependencies cannot be optional
+5. Features groups can only reference optional dependencies
+6. When a feature is selected, Cargo will call `rustc` with
+   `--cfg feature="${feature_name}"`. If a feature group is included,
+   it and all of its individual features will be included. This can be
+   tested in code via `#[cfg(feature = "foo")]`
+
+Note that it is explicitly allowed for features to not actually activate any
+optional dependencies. This allows packages to internally enable/disable
+features without requiring a new dependency.
+
+## Usage In End Products
+
+One major use-case for this feature is specifying optional features in
+end-products. For example, the Servo project may want to include optional
+features that people can enable or disable when they build it.
+
+In that case, Servo will describe features in its `Cargo.toml` and they can be
+enabled using command-line flags:
+
+```
+$ cargo build --release --features "shumway pdf"
+```
+
+Default features could be excluded using `--no-default-features`.
+
+## Usage In Packages
+
+In most cases, the concept of "optional dependency" in a library is best
+expressed as a separate package that the top-level application depends on.
+
+However, high-level packages, like Iron or Piston, may want the ability to
+curate a number of packages for easy installation. The current Cargo system
+allows them to curate a number of mandatory dependencies into a single package
+for easy installation.
+
+In some cases, packages may want to provide additional curation for **optional**
+dependencies:
+
+* Grouping a number of low-level optional dependencies together into a single
+  high-level "feature".
+* Specifying packages that are recommended (or suggested) to be included by
+  users of the package.
+* Including a feature (like `secure-password` in the motivating example) that
+  will only work if an optional dependency is available, and would be difficult
+  to implement as a separate package. For example, it may be overly difficult to
+  design an IO package to be completely decoupled from OpenSSL, with opt-in via
+  the inclusion of a separate package.
+
+In almost all cases, it is an antipattern to use these features outside of
+high-level packages that are designed for curation. If a feature is optional, it
+can almost certainly be expressed as a separate package.
+
 # The `[dev-dependencies.*]` Sections
 
 The format of this section is equivalent to `[dependencies.*]`. Dev-dependencies
