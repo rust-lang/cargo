@@ -4,6 +4,7 @@ use std::io::fs;
 use std::os;
 use std::slice;
 use std::str;
+use std::default::Default;
 use toml;
 use semver;
 use serialize::{Decodable, Decoder};
@@ -198,6 +199,7 @@ pub struct DetailedTomlDependency {
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
+    profile: Option<TomlProfiles>,
     lib: Option<ManyOrOne<TomlLibTarget>>,
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
@@ -205,6 +207,21 @@ pub struct TomlManifest {
     bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
+}
+
+#[deriving(Decodable, Clone, Default)]
+pub struct TomlProfiles {
+    test: Option<TomlProfile>,
+    doc: Option<TomlProfile>,
+    bench: Option<TomlProfile>,
+    dev: Option<TomlProfile>,
+    release: Option<TomlProfile>,
+}
+
+#[deriving(Decodable, Clone, Default)]
+pub struct TomlProfile {
+    opt_level: Option<uint>,
+    debug: Option<bool>,
 }
 
 #[deriving(Decodable)]
@@ -411,12 +428,14 @@ impl TomlManifest {
         };
 
         // Get targets
+        let profiles = self.profile.clone().unwrap_or(Default::default());
         let targets = normalize(lib.as_slice(),
                                 bins.as_slice(),
                                 examples.as_slice(),
                                 tests.as_slice(),
                                 benches.as_slice(),
-                                &metadata);
+                                &metadata,
+                                &profiles);
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -572,38 +591,61 @@ fn normalize(libs: &[TomlLibTarget],
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget],
-             metadata: &Metadata) -> Vec<Target> {
+             metadata: &Metadata,
+             profiles: &TomlProfiles) -> Vec<Target> {
     log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}, benches={}",
          libs, bins, examples, tests, benches);
 
     enum TestDep { Needed, NotNeeded }
 
-    fn target_profiles(target: &TomlTarget, dep: TestDep) -> Vec<Profile> {
-        let mut ret = vec![Profile::default_dev(), Profile::default_release()];
+    fn merge(profile: Profile, toml: &Option<TomlProfile>) -> Profile {
+        let toml = match *toml {
+            Some(ref toml) => toml,
+            None => return profile,
+        };
+        let opt_level = toml.opt_level.unwrap_or(profile.get_opt_level());
+        let debug = toml.debug.unwrap_or(profile.get_debug());
+        profile.opt_level(opt_level).debug(debug)
+    }
+
+    fn target_profiles(target: &TomlTarget, profiles: &TomlProfiles,
+                       dep: TestDep) -> Vec<Profile> {
+        let mut ret = vec![
+            merge(Profile::default_dev(), &profiles.dev),
+            merge(Profile::default_release(), &profiles.release),
+        ];
 
         match target.test {
-            Some(true) | None => ret.push(Profile::default_test()),
+            Some(true) | None => {
+                ret.push(merge(Profile::default_test(), &profiles.test));
+            }
             Some(false) => {}
         }
 
         let doctest = target.doctest.unwrap_or(true);
         match target.doc {
             Some(true) | None => {
-                ret.push(Profile::default_doc().doctest(doctest));
+                ret.push(merge(Profile::default_doc().doctest(doctest),
+                               &profiles.doc));
             }
             Some(false) => {}
         }
 
         match target.bench {
-            Some(true) | None => ret.push(Profile::default_bench()),
+            Some(true) | None => {
+                ret.push(merge(Profile::default_bench(), &profiles.bench));
+            }
             Some(false) => {}
         }
 
         match dep {
             Needed => {
-                ret.push(Profile::default_test().test(false));
-                ret.push(Profile::default_doc().doc(false));
-                ret.push(Profile::default_bench().test(false));
+                ret.push(merge(Profile::default_test().test(false),
+                               &profiles.test));
+                ret.push(merge(Profile::default_doc().doc(false),
+                               &profiles.doc));
+                ret.push(merge(Profile::default_bench().test(false),
+                               &profiles.bench));
             }
             _ => {}
         }
@@ -616,7 +658,7 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget],
-                   dep: TestDep, metadata: &Metadata) {
+                   dep: TestDep, metadata: &Metadata, profiles: &TomlProfiles) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| {
             TomlString(format!("src/{}.rs", l.name))
@@ -627,7 +669,7 @@ fn normalize(libs: &[TomlLibTarget],
             vec![if l.plugin == Some(true) {Dylib} else {Lib}]
         });
 
-        for profile in target_profiles(l, dep).iter() {
+        for profile in target_profiles(l, profiles, dep).iter() {
             let mut metadata = metadata.clone();
             // Libs and their tests are built in parallel, so we need to make
             // sure that their metadata is different.
@@ -641,14 +683,14 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                   dep: TestDep, metadata: &Metadata,
+                   dep: TestDep, metadata: &Metadata, profiles: &TomlProfiles,
                    default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 TomlString(default(bin))
             });
 
-            for profile in target_profiles(bin, dep).iter() {
+            for profile in target_profiles(bin, profiles, dep).iter() {
                 let metadata = if profile.is_test() {
                     // Make sure that the name of this test executable doesn't
                     // conflicts with a library that has the same name and is
@@ -668,19 +710,21 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     fn example_targets(dst: &mut Vec<Target>, examples: &[TomlExampleTarget],
+                       profiles: &TomlProfiles,
                        default: |&TomlExampleTarget| -> String) {
         for ex in examples.iter() {
             let path = ex.path.clone().unwrap_or_else(|| TomlString(default(ex)));
 
-            let profile = &Profile::default_test().test(false);
+            let profile = Profile::default_test().test(false);
+            let profile = merge(profile, &profiles.test);
             dst.push(Target::example_target(ex.name.as_slice(),
                                             &path.to_path(),
-                                            profile));
+                                            &profile));
         }
     }
 
     fn test_targets(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
-                    metadata: &Metadata,
+                    metadata: &Metadata, profiles: &TomlProfiles,
                     default: |&TomlTestTarget| -> String) {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
@@ -692,16 +736,17 @@ fn normalize(libs: &[TomlLibTarget],
             let mut metadata = metadata.clone();
             metadata.mix(&format!("test-{}", test.name));
 
-            let profile = &Profile::default_test().harness(harness);
+            let profile = Profile::default_test().harness(harness);
+            let profile = merge(profile, &profiles.test);
             dst.push(Target::test_target(test.name.as_slice(),
                                          &path.to_path(),
-                                         profile,
+                                         &profile,
                                          metadata));
         }
     }
 
     fn bench_targets(dst: &mut Vec<Target>, benches: &[TomlBenchTarget],
-                     metadata: &Metadata,
+                     metadata: &Metadata, profiles: &TomlProfiles,
                      default: |&TomlBenchTarget| -> String) {
         for bench in benches.iter() {
             let path = bench.path.clone().unwrap_or_else(|| {
@@ -713,11 +758,12 @@ fn normalize(libs: &[TomlLibTarget],
             let mut metadata = metadata.clone();
             metadata.mix(&format!("bench-{}", bench.name));
 
-            let profile = &Profile::default_bench().harness(harness);
+            let profile = Profile::default_bench().harness(harness);
+            let profile = merge(profile, &profiles.bench);
             dst.push(Target::bench_target(bench.name.as_slice(),
-                                         &path.to_path(),
-                                         profile,
-                                         metadata));
+                                          &path.to_path(),
+                                          &profile,
+                                          metadata));
         }
     }
 
@@ -731,25 +777,25 @@ fn normalize(libs: &[TomlLibTarget],
 
     match (libs, bins) {
         ([_, ..], [_, ..]) => {
-            lib_targets(&mut ret, libs, Needed, metadata);
-            bin_targets(&mut ret, bins, test_dep, metadata,
+            lib_targets(&mut ret, libs, Needed, metadata, profiles);
+            bin_targets(&mut ret, bins, test_dep, metadata, profiles,
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         ([_, ..], []) => {
-            lib_targets(&mut ret, libs, Needed, metadata);
+            lib_targets(&mut ret, libs, Needed, metadata, profiles);
         },
         ([], [_, ..]) => {
-            bin_targets(&mut ret, bins, test_dep, metadata,
+            bin_targets(&mut ret, bins, test_dep, metadata, profiles,
                         |bin| format!("src/{}.rs", bin.name));
         },
         ([], []) => ()
     }
 
 
-    example_targets(&mut ret, examples,
+    example_targets(&mut ret, examples, profiles,
                     |ex| format!("examples/{}.rs", ex.name));
 
-    test_targets(&mut ret, tests, metadata,
+    test_targets(&mut ret, tests, metadata, profiles,
                 |test| {
                     if test.name.as_slice() == "test" {
                         "src/test.rs".to_string()
@@ -757,7 +803,7 @@ fn normalize(libs: &[TomlLibTarget],
                         format!("tests/{}.rs", test.name)
                     }});
 
-    bench_targets(&mut ret, benches, metadata,
+    bench_targets(&mut ret, benches, metadata, profiles,
                  |bench| {
                      if bench.name.as_slice() == "bench" {
                          "src/bench.rs".to_string()

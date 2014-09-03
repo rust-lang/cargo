@@ -1153,7 +1153,7 @@ test!(verbose_build {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
