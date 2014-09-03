@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, FRESH, RUNNING, DOCTEST};
+use support::{COMPILING, cargo_dir, ResultTest, FRESH, RUNNING};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -199,15 +199,8 @@ test lib_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 1 test
-test foo_0 ... ignored
-
-test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured
-
 ",
-        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING)))
 })
 
 test!(bench_with_deep_lib_dep {
@@ -258,15 +251,8 @@ test bar_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} bar
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
 
@@ -314,14 +300,8 @@ test internal_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
-        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING)))
 })
 
 test!(external_bench_implicit {
@@ -365,14 +345,8 @@ test internal_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
-        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING)))
 })
 
 test!(dont_run_examples {
@@ -418,15 +392,8 @@ test bar ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
     assert_that(p.cargo_process("bench").arg("foo"),
@@ -440,15 +407,8 @@ test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
 
@@ -516,14 +476,8 @@ test [..] ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
-        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
+        COMPILING, p.url(), running = RUNNING)))
 })
 
 test!(lib_with_standard_name {
@@ -571,16 +525,9 @@ test foo_bench ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} syntax
-
-running 1 test
-test foo_0 ... ignored
-
-test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST, dir = p.url()).as_slice()));
+                       dir = p.url()).as_slice()));
 })
 
 test!(lib_with_standard_name2 {
@@ -727,16 +674,8 @@ test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-{running} [..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().assert();
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench").arg("-v"),
@@ -762,16 +701,8 @@ test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-{running} [..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        fresh = FRESH, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
 
@@ -801,15 +732,8 @@ test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
@@ -823,14 +747,7 @@ test foo ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        fresh = FRESH, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 })
