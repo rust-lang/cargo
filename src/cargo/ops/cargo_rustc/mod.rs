@@ -405,6 +405,10 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     if target.is_bin() {
         for target in targets {
+            if target.is_staticlib() {
+                continue;
+            }
+
             cmd = try!(link_to(cmd, target, cx, kind, LocalLib));
         }
     }

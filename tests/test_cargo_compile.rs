@@ -1466,6 +1466,29 @@ test!(simple_staticlib {
     assert_that(p.cargo_process("build"), execs().with_status(0));
 })
 
+test!(staticlib_rlib_and_bin {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+
+              [lib]
+              name = "foo"
+              crate-type = ["staticlib", "rlib"]
+        "#)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("src/main.rs", r#"
+              extern crate foo;
+
+              fn main() {
+                  foo::foo();
+              }"#);
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+})
+
 test!(opt_out_of_lib {
     let p = project("foo")
         .file("Cargo.toml", r#"
