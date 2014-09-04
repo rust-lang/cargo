@@ -9,6 +9,7 @@ use core::shell::MultiShell;
 pub struct NewOptions<'a> {
     pub no_git: bool,
     pub git: bool,
+    pub travis: bool,
     pub bin: bool,
     pub path: &'a str,
 }
@@ -55,6 +56,10 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
         (Some(name), None, _, None) |
         (None, None, name, None) => name,
     };
+
+    if opts.travis {
+        try!(File::create(&path.join(".travis.yml")).write_str("language: rust\n"));
+    }
 
     try!(File::create(&path.join("Cargo.toml")).write_str(format!(
 r#"[package]

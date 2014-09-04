@@ -66,6 +66,20 @@ test!(simple_git {
                 execs().with_status(0));
 })
 
+test!(simple_travis {
+    os::setenv("USER", "foo");
+    assert_that(cargo_process("new").arg("foo").arg("--travis"),
+                execs().with_status(0));
+
+    assert_that(&paths::root().join("foo"), existing_dir());
+    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+    assert_that(&paths::root().join("foo/.travis.yml"), existing_file());
+
+    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
+                execs().with_status(0));
+})
+
 test!(no_argument {
     assert_that(cargo_process("new"),
                 execs().with_status(1)
