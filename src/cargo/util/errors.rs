@@ -197,7 +197,7 @@ impl CargoError for ProcessError {
     }
 
     fn cause(&self) -> Option<&CargoError> {
-        self.cause.as_ref().map(|c| { let err: &CargoError = *c; err })
+        self.cause.as_ref().map(|c| { let err: &CargoError = &**c; err })
     }
 
     fn with_cause<E: CargoError + Send>(mut self,
@@ -230,7 +230,7 @@ impl CargoError for ConcreteCargoError {
     }
 
     fn cause(&self) -> Option<&CargoError> {
-        self.cause.as_ref().map(|c| { let err: &CargoError = *c; err })
+        self.cause.as_ref().map(|c| { let err: &CargoError = &**c; err })
     }
 
     fn with_cause<E: CargoError + Send>(mut self,
