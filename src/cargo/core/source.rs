@@ -291,14 +291,14 @@ impl<'a> SourceMap<'a> {
         let source = self.map.find(id);
 
         source.map(|s| {
-            let s: &Source+'a = *s;
+            let s: &Source+'a = &**s;
             s
         })
     }
 
     pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source+'a> {
         self.map.find_mut(id).map(|s| {
-            let s: &mut Source+'a = *s;
+            let s: &mut Source+'a = &mut **s;
             s
         })
     }
@@ -320,7 +320,7 @@ impl<'a> SourceMap<'a> {
     }
 
     pub fn sources_mut(&'a mut self) -> SourcesMut<'a> {
-        self.map.mut_iter().map(|(_, v)| { let s: &mut Source+'a = *v; s })
+        self.map.mut_iter().map(|(_, v)| { let s: &mut Source+'a = &mut **v; s })
     }
 }
 
