@@ -242,7 +242,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement)
                  -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
     let base = process("rustc", package, cx);
-    let base = build_base_args(base, target, crate_types.as_slice());
+    let base = build_base_args(cx, base, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
     let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
@@ -303,7 +303,7 @@ fn rustdoc(package: &Package, target: &Target,
     })
 }
 
-fn build_base_args(mut cmd: ProcessBuilder,
+fn build_base_args(cx: &Context, mut cmd: ProcessBuilder,
                    target: &Target,
                    crate_types: &[&str]) -> ProcessBuilder {
     let metadata = target.get_metadata();
@@ -317,18 +317,24 @@ fn build_base_args(mut cmd: ProcessBuilder,
         cmd = cmd.arg("--crate-type").arg(*crate_type);
     }
 
-    let profile = target.get_profile();
+    // Despite whatever this target's profile says, we need to configure it
+    // based off the profile found in the root package's targets.
+    let mut profile = target.get_profile().clone();
+    let root_package = cx.get_package(cx.resolve.root());
+    for target in root_package.get_manifest().get_targets().iter() {
+        let root_profile = target.get_profile();
+        if root_profile.get_env() != profile.get_env() { continue }
+        profile = profile.opt_level(root_profile.get_opt_level())
+                         .debug(root_profile.get_debug());
+    }
 
     if profile.get_opt_level() != 0 {
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
 
-    // Right now -g is a little buggy, so we're not passing -g just yet
-    // if profile.get_debug() {
-    //     into.push("-g".to_string());
-    // }
-
-    if !profile.get_debug() {
+    if profile.get_debug() {
+        cmd = cmd.arg("-g");
+    } else {
         cmd = cmd.args(["--cfg", "ndebug"]);
     }
 
@@ -399,6 +405,10 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     if target.is_bin() {
         for target in targets {
+            if target.is_staticlib() {
+                continue;
+            }
+
             cmd = try!(link_to(cmd, target, cx, kind, LocalLib));
         }
     }

@@ -93,6 +93,45 @@ You can specify the source of a dependency in one of two ways at the moment:
 
 Soon, you will be able to load packages from the Cargo registry as well.
 
+# The `[profile.*]` Sections
+
+Cargo supports custom configuration of how rustc is invoked through **profiles**
+at the top level. Any manifest may declare a profile, but only the **top level**
+project's profiles are actually read. All dependencies' profiles will be
+overridden. This is done so the top-level project has control over how its
+dependencies are compiled.
+
+There are five currently supported profile names, all of which have the same
+configuration available to them. Listed below is the configuration available,
+along with the defaults for each profile.
+
+```toml
+# The development profile, used for `cargo build`
+[profile.dev]
+opt-level = 0  # Controls the --opt-level the compiler builds with
+debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
+
+# The release profile, used for `cargo build --release`
+[profile.release]
+opt-level = 3
+debug = false
+
+# The testing profile, used for `cargo test`
+[profile.test]
+opt-level = 0
+debug = true
+
+# The benchmarking profile, used for `cargo bench`
+[profile.bench]
+opt-level = 3
+debug = false
+
+# The documentation profile, used for `cargo doc`
+[profile.doc]
+opt-level = 0
+debug = true
+```
+
 # The `[dev-dependencies.*]` Sections
 
 The format of this section is equivalent to `[dependencies.*]`. Dev-dependencies

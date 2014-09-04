@@ -24,12 +24,11 @@ Alternatively, you can build Cargo from source.
 To start a new project with Cargo, use `cargo new`:
 
 ```shell
-$ cargo new hello_world --bin --git
+$ cargo new hello_world --bin
 ```
 
 We're passing `--bin` because we're making a binary program: if we
-were making a library, we'd leave it off. We also pass `--git` to auto-generate
-a `.gitignore` and set up the git repository, but nothing will be committed.
+were making a library, we'd leave it off.
 
 Let's check out what Cargo has generated for us:
 

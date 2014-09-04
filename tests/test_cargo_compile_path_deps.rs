@@ -602,3 +602,47 @@ test!(override_self {
     assert_that(p.cargo_process("build"), execs().with_status(0));
 
 })
+
+test!(override_path_dep {
+    let bar = project("bar")
+       .file("p1/Cargo.toml", r#"
+            [package]
+            name = "p1"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies.p2]
+            path = "../p2"
+       "#)
+       .file("p1/src/lib.rs", "")
+       .file("p2/Cargo.toml", r#"
+            [package]
+            name = "p2"
+            version = "0.5.0"
+            authors = []
+       "#)
+       .file("p2/src/lib.rs", "");
+
+    let p = project("foo")
+        .file(".cargo/config", format!(r#"
+            paths = ['{}', '{}']
+        "#, bar.root().join("p1").display(),
+            bar.root().join("p2").display()))
+        .file("Cargo.toml", format!(r#"
+            [package]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.p2]
+            path = '{}'
+
+        "#, bar.root().join("p2").display()))
+       .file("src/lib.rs", "");
+
+    bar.build();
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+
+})

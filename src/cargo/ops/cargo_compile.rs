@@ -71,7 +71,7 @@ pub fn compile(manifest_path: &Path,
     let override_ids = try!(source_ids_from_config(&user_configs,
                                                    manifest_path.dir_path()));
 
-    let (packages, resolve, resolve_with_overrides, sources) = {
+    let (packages, resolve_with_overrides, sources) = {
         let _p = profile::start("resolving...");
         let lockfile = manifest_path.dir_path().join("Cargo.lock");
         let source_id = package.get_package_id().get_source_id();
@@ -90,6 +90,7 @@ pub fn compile(manifest_path: &Path,
         let resolved = try!(resolver::resolve(package.get_package_id(),
                                               package.get_dependencies(),
                                               &mut registry));
+        try!(ops::write_resolve(&package, &resolved));
 
         try!(registry.add_overrides(override_ids));
         let resolved_with_overrides =
@@ -104,7 +105,7 @@ pub fn compile(manifest_path: &Path,
             human("Unable to get packages from source")
         }));
 
-        (packages, resolved, resolved_with_overrides, registry.move_sources())
+        (packages, resolved_with_overrides, registry.move_sources())
     };
 
     debug!("packages={}", packages);
@@ -127,8 +128,6 @@ pub fn compile(manifest_path: &Path,
                                   &resolve_with_overrides, &sources,
                                   &mut config))
     };
-
-    try!(ops::write_resolve(&package, &resolve));
 
     return Ok(ret);
 }

@@ -35,7 +35,7 @@ dependencies = [
 [[package]]
 name = "encoding"
 version = "0.1.0"
-source = "git+https://github.com/lifthrasiir/rust-encoding#15de58b9cb1fb5998aa6217e794d557eaf80a31f"
+source = "git+https://github.com/lifthrasiir/rust-encoding#35f0d70f65f73ba16f296f9ec675eddee661ba79"
 
 [[package]]
 name = "flate2"
@@ -99,6 +99,6 @@ name = "url"
 version = "0.1.0"
 source = "git+https://github.com/servo/rust-url#bb68de835ad945a72fba44979944a587ba83941a"
 dependencies = [
- "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#15de58b9cb1fb5998aa6217e794d557eaf80a31f)",
+ "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#35f0d70f65f73ba16f296f9ec675eddee661ba79)",
 ]
 

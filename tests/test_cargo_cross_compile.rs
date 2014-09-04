@@ -295,7 +295,7 @@ test!(linker_and_ar {
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stdout(format!("\
-{running} `rustc src/foo.rs --crate-name foo --crate-type bin \
+{running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}{sep}target{sep}{target} \
     --dep-info [..] \
     --target {target} \

@@ -125,6 +125,7 @@ Could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n",
             filename = format!("src{}foo.rs", path::SEP)).as_slice()));
+    assert_that(&p.root().join("Cargo.lock"), existing_file());
 })
 
 test!(cargo_compile_with_invalid_code_in_deps {
@@ -1152,7 +1153,7 @@ test!(verbose_build {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
@@ -1461,6 +1462,29 @@ test!(simple_staticlib {
               crate-type = ["staticlib"]
         "#)
         .file("src/lib.rs", "pub fn foo() {}");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+})
+
+test!(staticlib_rlib_and_bin {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              [package]
+              name = "foo"
+              authors = []
+              version = "0.0.1"
+
+              [lib]
+              name = "foo"
+              crate-type = ["staticlib", "rlib"]
+        "#)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("src/main.rs", r#"
+              extern crate foo;
+
+              fn main() {
+                  foo::foo();
+              }"#);
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
 })
