@@ -172,13 +172,9 @@ impl GitRemote {
     }
 
     fn fetch_into(&self, dst: &git2::Repository) -> CargoResult<()> {
+        // Create a local anonymous remote in the repository to fetch the url
         let url = self.url.to_string();
-        let refspec = "refs/heads/*:refs/heads/*";
-        let mut remote = try!(dst.remote_create_anonymous(url.as_slice(),
-                                                          refspec));
-        try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        try!(remote.fetch(None, None));
-        Ok(())
+        fetch(dst, url.as_slice())
     }
 
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
@@ -187,10 +183,15 @@ impl GitRemote {
             try!(rmdir_recursive(dst));
         }
         try!(mkdir_recursive(dst, UserDir));
-        let repo = try!(git2::build::RepoBuilder::new().bare(true)
-                                                       .hardlinks(false)
-                                                       .clone(url.as_slice(), dst));
-        Ok(repo)
+        let cfg = try!(git2::Config::open_default());
+        with_authentication(url.as_slice(), &cfg, |f| {
+            let repo = try!(git2::build::RepoBuilder::new()
+                                                     .bare(true)
+                                                     .hardlinks(false)
+                                                     .credentials(f)
+                                                     .clone(url.as_slice(), dst));
+            Ok(repo)
+        })
     }
 }
 
@@ -331,9 +332,7 @@ impl<'a> GitCheckout<'a> {
                 };
 
                 // Fetch data from origin and reset to the head commit
-                let refspec = "refs/heads/*:refs/heads/*";
-                let mut remote = try!(repo.remote_create_anonymous(url, refspec));
-                try!(remote.fetch(None, None).chain_error(|| {
+                try!(fetch(&repo, url).chain_error(|| {
                     internal(format!("failed to fetch submodule `{}` from {}",
                                      child.name().unwrap_or(""), url))
                 }));
@@ -345,4 +344,67 @@ impl<'a> GitCheckout<'a> {
             Ok(())
         }
     }
+}
+
+fn with_authentication<T>(url: &str,
+                          cfg: &git2::Config,
+                          f: |git2::Credentials| -> CargoResult<T>)
+                          -> CargoResult<T> {
+    // Prepare the authentication callbacks.
+    //
+    // We check the `allowed` types of credentials, and we try to do as much as
+    // possible based on that:
+    //
+    // * Prioritize SSH keys from the local ssh agent as they're likely the most
+    //   reliable. The username here is prioritized from the credential
+    //   callback, then from whatever is configured in git itself, and finally
+    //   we fall back to the generic user of `git`.
+    //
+    // * If a username/password is allowed, then we fallback to git2-rs's
+    //   implementation of the credential helper. This is what is configured
+    //   with `credential.helper` in git, and is the interface for the OSX
+    //   keychain, for example.
+    //
+    // * After the above two have failed, we just kinda grapple attempting to
+    //   return *something*.
+    let mut cred_helper = git2::CredentialHelper::new(url);
+    cred_helper.config(cfg);
+    let mut cred_error = false;
+    let ret = f(|url, username, allowed| {
+        let creds = if allowed.contains(git2::SshKey) {
+            let user = username.map(|s| s.to_string())
+                               .or_else(|| cred_helper.username.clone())
+                               .unwrap_or("git".to_string());
+            git2::Cred::ssh_key_from_agent(user.as_slice())
+        } else if allowed.contains(git2::UserPassPlaintext) {
+            git2::Cred::credential_helper(cfg, url, username)
+        } else if allowed.contains(git2::Default) {
+            git2::Cred::default()
+        } else {
+            Err(git2::Error::from_str("no authentication available"))
+        };
+        cred_error = creds.is_err();
+        creds
+    });
+    if cred_error {
+        ret.chain_error(|| {
+            human("Failed to authenticate when downloading repository")
+        })
+    } else {
+        ret
+    }
+}
+
+fn fetch(repo: &git2::Repository, url: &str) -> CargoResult<()> {
+    // Create a local anonymous remote in the repository to fetch the url
+    let refspec = "refs/heads/*:refs/heads/*";
+
+    with_authentication(url, &try!(repo.config()), |f| {
+        let mut remote = try!(repo.remote_create_anonymous(url.as_slice(),
+                                                           refspec));
+        try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
+        remote.set_credentials(f);
+        try!(remote.fetch(None, None));
+        Ok(())
+    })
 }
