@@ -147,9 +147,12 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         let id = pkg.get_package_id().clone();
 
         if stage == StageStart {
-            let fresh = fresh.combine(self.state[pkg.get_package_id()]);
-            let msg = match fresh { Fresh => "Fresh", Dirty => "Compiling" };
-            try!(config.shell().status(msg, pkg));
+            match fresh.combine(self.state[pkg.get_package_id()]) {
+                Fresh => try!(config.shell().verbose(|c| {
+                    c.status("Fresh", pkg)
+                })),
+                Dirty => try!(config.shell().status("Compiling", pkg))
+            }
         }
 
         // While the jobs are all running, we maintain some metadata about how
