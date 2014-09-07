@@ -691,11 +691,13 @@ test!(custom_build_failure {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+Failed to run custom build command for `foo v0.5.0 ({dir})
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
 task '<main>' failed at 'nope', {filename}:2\n\
 \n\
-", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP))));
+", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP),
+   dir = p.url())));
 })
 
 test!(custom_second_build_failure {
@@ -752,11 +754,13 @@ test!(custom_second_build_failure {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+Failed to run custom build command for `foo v0.5.0 ({dir})
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
 task '<main>' failed at 'nope', {filename}:2\n\
 \n\
-", build2.bin("bar").display(), filename = format!("src{}bar.rs", path::SEP))));
+", build2.bin("bar").display(), filename = format!("src{}bar.rs", path::SEP),
+   dir = p.url())));
 })
 
 test!(custom_build_env_vars {
