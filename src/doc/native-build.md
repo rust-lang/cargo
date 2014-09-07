@@ -1,6 +1,4 @@
----
-title: Building external code
----
+% Building external code
 
 Some packages need to compile third-party non-Rust code that you will
 link into your Rust code using `#[link]` (more information on `#[link]`

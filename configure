@@ -342,6 +342,12 @@ step_msg "looking for build programs"
 probe_need CFG_CURLORWGET  curl wget
 probe_need CFG_PYTHON      python
 
+if [ ! -z "${CFG_LOCAL_RUST_ROOT}" ]; then
+    CFG_RUSTDOC="${CFG_LOCAL_RUST_ROOT}/bin/rustdoc"
+else
+    probe_need CFG_RUSTDOC        rustdoc
+fi
+
 # a little post-processing of various config values
 CFG_PREFIX=${CFG_PREFIX%/}
 CFG_MANDIR=${CFG_MANDIR%/}
@@ -372,6 +378,7 @@ putvar CFG_TARGET
 putvar CFG_LIBDIR
 putvar CFG_MANDIR
 putvar CFG_RUSTC
+putvar CFG_RUSTDOC
 
 msg
 copy_if_changed ${CFG_SRC_DIR}Makefile.in ./Makefile

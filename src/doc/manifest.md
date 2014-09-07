@@ -1,6 +1,4 @@
----
-title: The Manifest Format
----
+% The Manifest Format
 
 # The `[package]` Section
 
@@ -152,7 +150,7 @@ executables.
 When you run `cargo build`, Cargo will compile all of these files into
 the `target` directory.
 
-```
+```notrust
 ▾ src/          # directory containing source files
   ▾ bin/        # (optional) directory containing executables
     *.rs

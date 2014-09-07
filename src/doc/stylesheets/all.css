@@ -1,0 +1,147 @@
+html {
+  background: url("../images/noise.png");
+  background-color: #3b6837;
+}
+
+body {
+  font-family: sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+a { color: #f3bb00; }
+a:hover { color: #b64790; }
+
+h1 {
+  font-size: 24px;
+  margin: 20px 0 10px 0;
+  font-weight: bold;
+  color: #b64790;
+}
+
+h1 code:not(.highlight) {
+  color: #d9a700;
+  vertical-align: bottom;
+}
+h1 a, h2 a { color: #b64790; text-decoration: none; }
+h1:hover a:after,
+h2:hover a:after{ content: '\2002\00a7\2002'; }
+h1.title { display: none; } /* hide rustdoc-generated title */
+:target { background: rgba(239, 242, 178, 1); padding: 5px; }
+
+h2 {
+  font-size: 18px;
+  margin: 15px 0 5px 0;
+  color: #b64790;
+  font-weight: bold;
+}
+
+h2 code:not(.highlight) { color: #d9a700; }
+
+code:not(.highlight) {
+  font-family: monospace;
+  color: #b64790;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+
+  max-width: 900px;
+  margin-bottom: 10px;
+
+  background-color: #f9f7ec;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0px 0px 5px 2px #3b6837;
+}
+
+main p:first-child {
+  color: #199b5c;
+  font-weight: 500;
+  margin-top: 3px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #62865f;
+  text-align: center;
+}
+
+main p:first-child a { color: #3b6837; }
+main p:first-child a:hover { color: #62865f; }
+
+main p, main ul {
+  color: #3b6837;
+  margin: 10px 0;
+  line-height: 150%;
+}
+
+main ul { margin-left: 20px; }
+main li { list-style-type: disc; }
+main strong { font-weight: bold; }
+
+img.logo {
+  align-self: center;
+  margin-bottom: 10px;
+}
+
+pre {
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #cad0d0;
+  border-radius: 4px;
+  max-width: calc(100vw - 45px);
+  overflow-x: auto;
+
+  /* override prism.js styles for fonts */
+  font-size: 1em !important;
+  background: #eeecdd !important;
+}
+
+footer {
+  margin-top: 10px;
+  border-top: 1px solid #b64790;
+  padding-top: 10px;
+  width: 100%;
+  text-align: center;
+
+}
+footer a {
+  color: #b64790;
+  text-decoration: none;
+}
+footer a:hover {
+  text-decoration: underline;
+}
+
+.headerlink {
+  display: none;
+  text-decoration: none;
+}
+
+.fork-me {
+  position:absolute;
+  top:0;
+  right:0;
+}
+
+.token.toml-section { color: #CB4B16; }
+.token.toml-key { color: #268BD2; }
+
+/* Rust code highlighting */
+pre.rust .kw { color: #8959A8; }
+pre.rust .kw-2, pre.rust .prelude-ty { color: #4271AE; }
+pre.rust .number, pre.rust .string { color: #718C00; }
+pre.rust .self, pre.rust .boolval, pre.rust .prelude-val,
+pre.rust .attribute, pre.rust .attribute .ident { color: #C82829; }
+pre.rust .comment { color: #8E908C; }
+pre.rust .doccomment { color: #4D4D4C; }
+pre.rust .macro, pre.rust .macro-nonterminal { color: #3E999F; }
+pre.rust .lifetime { color: #B76514; }
+code span.s1 { color: #2AA198; }

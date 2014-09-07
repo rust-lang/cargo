@@ -1,6 +1,4 @@
----
-title: Guide
----
+% Guide
 
 Welcome to the Cargo guide. This guide will give you all that you need to know
 about how to use Cargo to develop Rust projects.
@@ -65,7 +63,7 @@ needs to compile your project.
 
 Here's what's in `src/main.rs`:
 
-```rs
+```
 fn main() {
     println!("Hello, world!")
 }
@@ -73,7 +71,7 @@ fn main() {
 
 Cargo generated a 'hello world' for us. Let's compile it:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo build
+<pre><code class="language-shell"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
 
@@ -86,7 +84,7 @@ Hello, world!
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo run
+<pre><code class="language-shell"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
 class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
@@ -110,7 +108,7 @@ $ cd color-rs
 
 To build, just use `cargo build`:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo build
+<pre><code class="language-shell"><span class="gp">$</span> cargo build
 <span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (file:///path/to/project/color-rs)</code></pre>
 
 This will fetch all of the dependencies and then build them, along with the
@@ -138,7 +136,7 @@ between different color types.
 Now, you can pull in that library using `extern crate` in
 `main.rs`.
 
-```rs
+```
 extern crate color;
 
 use color::{Rgb, ToHsv};
@@ -152,12 +150,12 @@ fn main() {
 
 Let's tell Cargo to fetch this new dependency and update the `Cargo.lock`:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo update color
+<pre><code class="language-shell"><span class="gp">$</span> cargo update color
 <span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`</code></pre>
 
 Compile it:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo run
+<pre><code class="language-shell"><span class="gp">$</span> cargo run
 <span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
 <span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
@@ -373,7 +371,7 @@ the files in `tests`.
 
 To run your tests, just run `cargo test`:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo test
+<pre><code class="language-shell"><span class="gp">$</span> cargo test
 <span style="font-weight: bold"
 class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
 <span style="font-weight: bold"

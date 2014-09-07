@@ -96,6 +96,31 @@ clean-all: clean
 clean:
 	rm -rf $(TARGET_ROOT)
 
+# === Documentation
+
+DOCS := index faq config guide manifest native-build
+DOC_DIR := target/doc
+DOC_OPTS := --markdown-no-toc \
+		--markdown-css stylesheets/normalize.css \
+		--markdown-css stylesheets/all.css \
+		--markdown-css stylesheets/prism.css \
+		--html-before-content src/doc/header.html \
+		--html-after-content src/doc/footer.html
+ASSETS := CNAME images/noise.png images/forkme.png images/Cargo-Logo-Small.png \
+	stylesheets/all.css stylesheets/normalize.css javascripts/prism.js \
+	javascripts/all.js stylesheets/prism.css
+
+doc: $(foreach doc,$(DOCS),target/doc/$(doc).html) \
+	$(foreach asset,$(ASSETS),target/doc/$(asset))
+
+$(DOC_DIR)/%.html: src/doc/%.md src/doc/header.html src/doc/footer.html
+	@mkdir -p $(@D)
+	"$(CFG_RUSTDOC)" $< -o $(@D) $(DOC_OPTS)
+
+$(DOC_DIR)/%: src/doc/%
+	@mkdir -p $(@D)
+	cp $< $@
+
 # === Distribution
 
 define DO_DIST_TARGET
