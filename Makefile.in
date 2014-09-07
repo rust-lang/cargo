@@ -115,7 +115,9 @@ distcheck-$(1): dist-$(1)
 $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: $$(PKGDIR_$(1))/lib/cargo/manifest.in
 	tar -czvf $$@ -C $$(@D) $$(PKG_NAME)-$(1)
 
-$$(PKGDIR_$(1))/lib/cargo/manifest.in: all
+$$(PKGDIR_$(1))/lib/cargo/manifest.in:
+	@[ -f $$(TARGET_$(1))/cargo$$(X) ] || echo 'Please run `make` first'
+	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
 	rm -rf $$(PKGDIR_$(1))
 	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
@@ -128,16 +130,23 @@ $$(PKGDIR_$(1))/lib/cargo/manifest.in: all
 	mv $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in \
 		$$(PKGDIR_$(1))/lib/cargo/manifest.in
 
-install-$(1): $$(PKGDIR_$(1))/lib/cargo/manifest.in
+ifeq (root user, $$(USER) $$(patsubst %,user,$$(SUDO_USER)))
+prepare-manifest-$(1):
+	@sudo -u "$$$$SUDO_USER" $$(MAKE) prepare-manifest-$(1)
+else
+prepare-manifest-$(1): $$(PKGDIR_$(1))/lib/cargo/manifest.in
+endif
+
+install-$(1): prepare-manifest-$(1)
 	$$(PKGDIR_$(1))/install.sh \
 		--prefix="$$(CFG_PREFIX)" \
 		--destdir="$$(DESTDIR)/" $$(MAYBE_DISABLE_VERIFY)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
 
-dist: $(CARGO) $(foreach target,$(CFG_TARGET),dist-$(target))
-distcheck: $(CARGO) $(foreach target,$(CFG_TARGET),distcheck-$(target))
-install: $(CARGO) $(foreach target,$(CFG_TARGET),install-$(target))
+dist: $(foreach target,$(CFG_TARGET),dist-$(target))
+distcheck: $(foreach target,$(CFG_TARGET),distcheck-$(target))
+install: $(foreach target,$(CFG_TARGET),install-$(target))
 
 # Setup phony tasks
 .PHONY: all clean test test-unit style
