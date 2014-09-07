@@ -1,55 +1,50 @@
-use std::io::{MemWriter, IoResult, ChanReader, ChanWriter};
-
-use term::{Terminal, TerminfoTerminal, color};
+use support::{ResultTest,Tap,shell_writes};
 use hamcrest::{assert_that};
-
-use support::{ResultTest, Tap, shell_writes};
+use std::io::{MemWriter, BufWriter, IoResult};
 use cargo::core::shell::{Shell,ShellConfig};
+use term::{Terminal,TerminfoTerminal,color};
 
 fn setup() {
 }
 
-fn io_channel() -> (Box<Writer + 'static>, Box<Reader + 'static>) {
-    let (tx, rx) = channel();
-    (box ChanWriter::new(tx), box ChanReader::new(rx))
+fn writer(buf: &mut [u8]) -> Box<Writer> {
+    box BufWriter::new(buf) as Box<Writer>
 }
 
 test!(non_tty {
     let config = ShellConfig { color: true, verbose: true, tty: false };
-    let (tx, mut rx) = io_channel();
+    let mut buf: Vec<u8> = Vec::from_elem(9, 0 as u8);
 
-    Shell::create(tx, config).tap(|shell| {
+    Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
+        assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
     });
-    assert_that(rx.read_to_end().unwrap().as_slice(),
-                shell_writes("Hey Alex\n"));
 })
 
 test!(color_explicitly_disabled {
     let config = ShellConfig { color: false, verbose: true, tty: true };
-    let (tx, mut rx) = io_channel();
+    let mut buf: Vec<u8> = Vec::from_elem(9, 0 as u8);
 
-    Shell::create(tx, config).tap(|shell| {
+    Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
+        assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
     });
-    assert_that(rx.read_to_end().unwrap().as_slice(),
-                shell_writes("Hey Alex\n"));
 })
 
 test!(colored_shell {
     let term: Option<TerminfoTerminal<MemWriter>> =
         Terminal::new(MemWriter::new());
     if term.is_none() { return }
-    let (tx, mut rx) = io_channel();
 
     let config = ShellConfig { color: true, verbose: true, tty: true };
+    let mut buf: Vec<u8> = Vec::from_elem(100, 0 as u8);
 
-    Shell::create(tx, config).tap(|shell| {
+    Shell::create(writer(buf.as_mut_slice()), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).assert();
+        let buf = buf.as_slice().slice_to(buf.iter().position(|a| *a == 0).unwrap());
+        assert_that(buf, shell_writes(colored_output("Hey Alex\n",
+                                                     color::RED).assert()));
     });
-    assert_that(rx.read_to_end().unwrap().as_slice(),
-                shell_writes(colored_output("Hey Alex\n",
-                                            color::RED).assert()));
 })
 
 fn colored_output<S: Str>(string: S, color: color::Color) -> IoResult<String> {

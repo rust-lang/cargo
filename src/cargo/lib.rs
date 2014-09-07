@@ -150,7 +150,7 @@ pub fn process_executed<'a,
     }
 }
 
-pub fn shell(verbose: bool) -> MultiShell {
+pub fn shell(verbose: bool) -> MultiShell<'static> {
     let tty = stderr_raw().isatty();
     let stderr = box stderr() as Box<Writer>;
 
