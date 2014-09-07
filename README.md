@@ -28,7 +28,16 @@ as well as MSYS. The installation script needs to be run inside the MSYS shell.
 
 ## Compiling cargo
 
-Cargo can be compiled like many other standard unix-like projects:
+Cargo requires the following tools and packages to build:
+
+* `rustc`
+* `python`
+* `curl` or `wget`
+* `cmake`
+* `pkg-config`
+* OpenSSL headers (`libssl-dev` package on ubuntu)
+
+Cargo can then be compiled like many other standard unix-like projects:
 
 ```sh
 git clone https://github.com/rust-lang/cargo
