@@ -57,7 +57,7 @@ This is all we need to get started. First, let's check out `Cargo.toml`:
 
 name = "hello_world"
 version = "0.0.1"
-authors = ["Yehuda Katz <wycats@example.com>"]
+authors = ["Your Name <you@example.com>"]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
@@ -67,7 +67,7 @@ Here's what's in `src/main.rs`:
 
 ```rs
 fn main() {
-    println!("Hello world!")
+    println!("Hello, world!")
 }
 ```
 
@@ -75,23 +75,23 @@ Cargo generated a 'hello world' for us. Let's compile it:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.0.1 (file:///Users/wycats/src/hello_world)</code></pre>
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
 
 And then run it:
 
 ```shell
 $ ./target/hello_world
-Hello world!
+Hello, world!
 ```
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">   Fresh</span> hello-world v0.0.1 (file:///Users/wycats/src/hello_world)
+class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
-Hello world!</code></pre>
+Hello, world!</code></pre>
 
 You'll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don't have any yet, it's not very interesting.
@@ -111,7 +111,7 @@ $ cd color-rs
 To build, just use `cargo build`:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (file:///Users/wycats/src/color-rs)</code></pre>
+<span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (file:///path/to/project/color-rs)</code></pre>
 
 This will fetch all of the dependencies and then build them, along with the
 project.
@@ -123,9 +123,9 @@ To depend on a library, add it to your `Cargo.toml`.
 ```toml
 [package]
 
-name = "hello-world"
+name = "hello_world"
 version = "0.0.1"
-authors = ["Yehuda Katz <wycats@example.com>"]
+authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
 
@@ -159,7 +159,7 @@ Compile it:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.0.1 (file:///Users/wycats/src/hello_world)
+<span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
 Converting RGB to HSV!
 HSV: HSV { h: 0, s: 1, v: 1 }</code></pre>
@@ -218,7 +218,7 @@ on another project:
 
 name = "hello_world"
 version = "0.0.1"
-authors = ["Yehuda Katz <wycats@example.com>"]
+authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
 
@@ -258,7 +258,7 @@ manifest like this:
 
 name = "hello_world"
 version = "0.0.1"
-authors = ["Yehuda Katz <wycats@example.com>"]
+authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
 
@@ -333,13 +333,13 @@ building your package, it will use the override on your local machine
 instead of the source specified in your `Cargo.toml`.
 
 Cargo looks for a directory named `.cargo` up the directory hierarchy of
-your project. If your project is in `/Users/wycats/src/conduit-static`,
+your project. If your project is in `/path/to/project/conduit-static`,
 it will search for a `.cargo` in:
 
-* `/Users/wycats/src/conduit-static`
-* `/Users/wycats/src`
-* `/Users/wycats`
-* `/Users`
+* `/path/to/project/conduit-static`
+* `/path/to/project`
+* `/path/to`
+* `/path`
 * `/`
 
 This allows you to specify your overrides in a parent directory that
@@ -353,7 +353,7 @@ your code directory or in your home directory).
 Inside that file, put this:
 
 ```
-paths = ["/Users/wycats/src/conduit"]
+paths = ["/path/to/project/conduit"]
 ```
 
 This array should be filled with directories that contain a `Cargo.toml`. In
@@ -377,7 +377,7 @@ To run your tests, just run `cargo test`:
 <span style="font-weight: bold"
 class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello-world v0.0.1 (file:///Users/wycats/src/hello_world)
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">     Running</span> target/test/hello_world-9c2b65bbb79eabce
 
