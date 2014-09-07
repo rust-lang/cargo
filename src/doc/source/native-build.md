@@ -15,7 +15,7 @@ configuration option.
 
 name = "hello-world-from-c"
 version = "0.1.0"
-authors = [ "wycats@gmail.com" ]
+authors = [ "you@example.com" ]
 build = "make"
 ```
 
@@ -91,7 +91,7 @@ program.
 
 name = "hello-world-from-c"
 version = "0.1.0"
-authors = [ "wycats@gmail.com" ]
+authors = [ "you@example.com" ]
 build = "make -C build"
 ```
 
