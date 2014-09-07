@@ -14,7 +14,7 @@ configuration option.
 [package]
 
 name = "hello-world-from-c"
-version = "0.1.0"
+version = "0.0.1"
 authors = [ "you@example.com" ]
 build = "make"
 ```
@@ -90,7 +90,7 @@ program.
 [package]
 
 name = "hello-world-from-c"
-version = "0.1.0"
+version = "0.0.1"
 authors = [ "you@example.com" ]
 build = "make -C build"
 ```

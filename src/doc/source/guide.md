@@ -67,7 +67,7 @@ Here's what's in `src/main.rs`:
 
 ```rs
 fn main() {
-    println!("Hello world!")
+    println!("Hello, world!")
 }
 ```
 
@@ -81,17 +81,17 @@ And then run it:
 
 ```shell
 $ ./target/hello_world
-Hello world!
+Hello, world!
 ```
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">   Fresh</span> hello-world v0.0.1 (file:///path/to/project/hello_world)
+class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
-Hello world!</code></pre>
+Hello, world!</code></pre>
 
 You'll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don't have any yet, it's not very interesting.
@@ -123,7 +123,7 @@ To depend on a library, add it to your `Cargo.toml`.
 ```toml
 [package]
 
-name = "hello-world"
+name = "hello_world"
 version = "0.0.1"
 authors = ["Your Name <you@example.com>"]
 
@@ -159,7 +159,7 @@ Compile it:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello-world v0.0.1 (file:///path/to/project/hello_world)
+<span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
 Converting RGB to HSV!
 HSV: HSV { h: 0, s: 1, v: 1 }</code></pre>
@@ -377,7 +377,7 @@ To run your tests, just run `cargo test`:
 <span style="font-weight: bold"
 class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello-world v0.0.1 (file:///path/to/project/hello_world)
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">     Running</span> target/test/hello_world-9c2b65bbb79eabce
 

@@ -8,8 +8,8 @@ The first section in a `Cargo.toml` is `[package]`.
 
 ```toml
 [package]
-name = "hello-world" # the name of the package
-version = "1.0.0"    # the current version, obeying semver
+name = "hello_world" # the name of the package
+version = "0.0.1"    # the current version, obeying semver
 authors = [ "you@example.com" ]
 ```
 

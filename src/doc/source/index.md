@@ -60,7 +60,7 @@ Here's what's in `src/main.rs`:
 
 ```rs
 fn main() {
-    println!("Hello world!")
+    println!("Hello, world!")
 }
 ```
 
@@ -74,17 +74,17 @@ And then run it:
 
 ```shell
 $ ./target/hello_world
-Hello world!
+Hello, world!
 ```
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
 <pre><code class="highlight"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">   Fresh</span> hello-world v0.0.1 (file:///path/to/project/hello_world)
+class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
-Hello world!</code></pre>
+Hello, world!</code></pre>
 
 # Going Further
 
