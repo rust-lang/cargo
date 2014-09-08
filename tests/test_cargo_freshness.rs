@@ -1,7 +1,7 @@
 use std::io::{fs, File};
 
 use support::{project, execs, path2url};
-use support::{COMPILING, cargo_dir, ResultTest, FRESH};
+use support::{COMPILING, cargo_dir, ResultTest};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 
@@ -26,9 +26,7 @@ test!(modifying_and_moving {
 ", compiling = COMPILING, dir = path2url(p.root()))));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_status(0).with_stdout(format!("\
-{fresh} foo v0.0.1 ({dir})
-", fresh = FRESH, dir = path2url(p.root()))));
+                execs().with_status(0).with_stdout(""));
     p.root().move_into_the_past().assert();
 
     File::create(&p.root().join("src/a.rs")).write_str("fn main() {}").assert();

@@ -3,7 +3,7 @@ use std::os;
 use std::path;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING, FRESH, cargo_dir, ProjectBuilder, path2url};
+use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder, path2url};
 use hamcrest::{assert_that, existing_file};
 use support::paths::PathExt;
 use cargo;
@@ -1577,18 +1577,14 @@ test!(freshness_ignores_excluded {
     println!("first pass");
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
-{fresh} foo v0.0.0 ({url})
-", fresh = FRESH, url = foo.url())));
+                       .with_stdout(""));
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     File::create(&foo.root().join("src/bar.rs")).assert();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
-{fresh} foo v0.0.0 ({url})
-", fresh = FRESH, url = foo.url())));
+                       .with_stdout(""));
 })
 
 test!(rebuild_preserves_out_dir {

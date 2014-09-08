@@ -739,7 +739,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{fresh} foo v0.0.1 ({dir})
 {running} target[..]release[..]foo-[..]
 
 running 1 test
@@ -748,6 +747,5 @@ test foo ... bench:         0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       fresh = FRESH, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       running = RUNNING)));
 })

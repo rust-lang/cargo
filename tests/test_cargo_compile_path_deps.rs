@@ -1,7 +1,7 @@
 use std::io::{fs, File, UserRWX};
 
 use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
-use support::{COMPILING, FRESH, RUNNING};
+use support::{COMPILING, RUNNING};
 use support::paths::{mod, PathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo;
@@ -266,10 +266,7 @@ test!(no_rebuild_dependency {
                                             COMPILING, p.url())));
     // This time we shouldn't compile bar
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, bar,
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
     p.root().move_into_the_past().assert();
 
     p.build(); // rebuild the files (rewriting them in the process)
@@ -343,12 +340,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, bar,
                                             COMPILING, p.url())));
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
-                                             {} bar v0.5.0 ({})\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, baz,
-                                            FRESH, bar,
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
 
     // Make sure an update to baz triggers a rebuild of bar
     //
@@ -373,12 +365,11 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).assert();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
-                                             {} bar v0.5.0 ({})\n\
+                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            FRESH, baz,
                                             COMPILING, bar,
                                             COMPILING, p.url())));
+
 })
 
 test!(no_rebuild_two_deps {
@@ -445,12 +436,7 @@ test!(no_rebuild_two_deps {
                                             COMPILING, p.url())));
     assert_that(&p.bin("foo"), existing_file());
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
-                                             {} bar v0.5.0 ({})\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, baz,
-                                            FRESH, bar,
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
     assert_that(&p.bin("foo"), existing_file());
 })
 
@@ -501,9 +487,7 @@ test!(nested_deps_recompile {
 
     // This shouldn't recompile `bar`
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, bar,
+                execs().with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
 })
 

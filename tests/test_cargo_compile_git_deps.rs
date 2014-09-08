@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
 use support::{cargo_dir, path2url};
-use support::{COMPILING, FRESH, UPDATING, RUNNING};
+use support::{COMPILING, UPDATING, RUNNING};
 use support::paths::PathExt;
 use hamcrest::{assert_that,existing_file};
 use cargo;
@@ -531,10 +531,7 @@ test!(recompilation {
 
     // Don't recompile the second time
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, git_project.url(),
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
 
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
@@ -542,10 +539,7 @@ test!(recompilation {
     "#).assert();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, git_project.url(),
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_stdout(format!("{} git repository `{}`",
@@ -553,10 +547,7 @@ test!(recompilation {
                                             git_project.url())));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, git_project.url(),
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
 
     // Commit the changes and make sure we don't trigger a recompile because the
     // lockfile says not to change
@@ -566,10 +557,7 @@ test!(recompilation {
 
     println!("compile after commit");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({}#[..])\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            FRESH, git_project.url(),
-                                            FRESH, p.url())));
+                execs().with_stdout(""));
     p.root().move_into_the_past().assert();
 
     // Update the dependency and carry on!
@@ -1047,18 +1035,14 @@ test!(git_build_cmd_freshness {
     println!("first pass");
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
-{fresh} foo v0.0.0 ({url})
-", fresh = FRESH, url = foo.url())));
+                       .with_stdout(""));
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     File::create(&foo.root().join("src/bar.rs")).assert();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
-{fresh} foo v0.0.0 ({url})
-", fresh = FRESH, url = foo.url())));
+                       .with_stdout(""));
 })
 
 test!(git_name_not_always_needed {

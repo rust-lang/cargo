@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, FRESH, RUNNING, DOCTEST};
+use support::{COMPILING, cargo_dir, ResultTest, RUNNING, DOCTEST};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -722,8 +722,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{fresh} bar v0.0.1 ({dir})
-{fresh} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
 running 1 test
@@ -745,9 +743,9 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       fresh = FRESH, running = RUNNING,
-                       doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       running = RUNNING,
+                       doctest = DOCTEST)));
+
 })
 
 test!(test_twice_with_build_cmd {
@@ -789,7 +787,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{fresh} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
 running 1 test
@@ -804,9 +801,8 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       fresh = FRESH, running = RUNNING,
-                       doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       running = RUNNING,
+                       doctest = DOCTEST)));
 })
 
 test!(test_then_build {
@@ -846,11 +842,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
-{fresh} foo v0.0.1 ({dir})
-",
-                       fresh = FRESH,
-                       dir = p.url()).as_slice()));
+                       .with_stdout(""));
 })
 
 test!(test_no_run {

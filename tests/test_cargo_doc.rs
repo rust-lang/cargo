@@ -1,5 +1,5 @@
 use support::{project, execs, cargo_dir, path2url};
-use support::{COMPILING, FRESH};
+use support::COMPILING;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -67,11 +67,7 @@ test!(doc_twice {
         dir = path2url(p.root())).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("doc"),
-                execs().with_status(0).with_stdout(format!("\
-{fresh} foo v0.0.1 ({dir})
-",
-        fresh = FRESH,
-        dir = path2url(p.root())).as_slice()));
+                execs().with_status(0).with_stdout(""))
 })
 
 test!(doc_deps {
@@ -113,12 +109,7 @@ test!(doc_deps {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("doc")
                  .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
-                execs().with_status(0).with_stdout(format!("\
-{fresh} bar v0.0.1 ({dir})
-{fresh} foo v0.0.1 ({dir})
-",
-        fresh = FRESH,
-        dir = path2url(p.root())).as_slice()));
+                execs().with_status(0).with_stdout(""));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
