@@ -182,6 +182,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
         p = p.env(format!("DEP_{}_OUT_DIR", name).as_slice(),
                   Some(&layout.native(pkg)));
     }
+    let pkg = pkg.to_string();
 
     Ok(proc() {
         if first {
@@ -193,7 +194,11 @@ fn compile_custom(pkg: &Package, cmd: &str,
                 internal("failed to create output directory for build command")
             }));
         }
-        try!(p.exec_with_output().map(|_| ()).map_err(|e| e.mark_human()));
+        try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
+            e.msg = format!("Failed to run custom build command for `{}`\n{}",
+                            pkg, e.msg);
+            e.mark_human()
+        }));
         Ok(())
     })
 }
