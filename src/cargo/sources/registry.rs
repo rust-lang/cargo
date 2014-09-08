@@ -1,10 +1,13 @@
 #![allow(unused)]
 use std::io::{mod, fs, File, MemReader};
+use std::collections::HashMap;
+
 use curl::http;
 use git2;
 use semver::Version;
 use flate2::reader::GzDecoder;
 use serialize::json;
+use serialize::hex::ToHex;
 use tar::Archive;
 use url::Url;
 
@@ -12,7 +15,7 @@ use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::Dependency;
 use sources::PathSource;
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
-use util::{hex, Require};
+use util::{hex, Require, Sha256};
 use ops;
 
 static CENTRAL: &'static str = "https://example.com";
@@ -25,11 +28,20 @@ pub struct RegistrySource<'a, 'b:'a> {
     config: &'a mut Config<'b>,
     handle: http::Handle,
     sources: Vec<PathSource>,
+    hashes: HashMap<(String, String), String>, // (name, vers) => cksum
 }
 
 #[deriving(Decodable)]
 struct RegistryConfig {
     dl_url: String,
+}
+
+#[deriving(Decodable)]
+struct RegistryPackage {
+    name: String,
+    vers: String,
+    deps: Vec<String>,
+    cksum: String,
 }
 
 impl<'a, 'b> RegistrySource<'a, 'b> {
@@ -46,6 +58,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             source_id: source_id.clone(),
             handle: http::Handle::new(),
             sources: Vec::new(),
+            hashes: HashMap::new(),
         }
     }
 
@@ -116,6 +129,23 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             return Err(internal(format!("Failed to get 200 reponse from {}\n{}",
                                         url, resp)))
         }
+
+        // Verify what we just downloaded
+        let expected = self.hashes.find(&(pkg.get_name().to_string(),
+                                          pkg.get_version().to_string()));
+        let expected = try!(expected.require(|| {
+            internal(format!("no hash listed for {}", pkg))
+        }));
+        let actual = {
+            let mut state = Sha256::new();
+            state.update(resp.get_body());
+            state.final()
+        };
+        if actual.as_slice().to_hex() != *expected {
+            return Err(human(format!("Failed to verify the checksum of `{}`",
+                                     pkg)))
+        }
+
         try!(File::create(&dst).write(resp.get_body()));
         Ok(dst)
     }
@@ -150,8 +180,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
 impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let path = &self.checkout_path;
         let mut chars = dep.get_name().chars();
+        let path = self.checkout_path.clone();
         let path = path.join(format!("{}{}", chars.next().unwrap_or('X'),
                                      chars.next().unwrap_or('X')));
         let path = path.join(format!("{}{}", chars.next().unwrap_or('X'),
@@ -165,10 +195,8 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
         let ret: CargoResult<Vec<Summary>>;
         ret = contents.as_slice().lines().filter(|l| l.trim().len() > 0)
                       .map(|l| {
-            #[deriving(Decodable)]
-            struct Package { name: String, vers: String, deps: Vec<String> }
 
-            let pkg = try!(json::decode::<Package>(l));
+            let pkg = try!(json::decode::<RegistryPackage>(l));
             let pkgid = try!(PackageId::new(pkg.name.as_slice(),
                                             pkg.vers.as_slice(),
                                             &self.source_id));
@@ -181,6 +209,8 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
                 Dependency::parse(name, Some(vers), &self.source_id)
             }).collect();
             let deps = try!(deps);
+            let RegistryPackage { name, vers, cksum, .. } = pkg;
+            self.hashes.insert((name, vers), cksum);
             Ok(Summary::new(&pkgid, deps.as_slice()))
         }).collect();
         let mut summaries = try!(ret.chain_error(|| {

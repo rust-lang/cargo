@@ -5,7 +5,7 @@
 #![feature(default_type_params)]
 #![deny(warnings)]
 
-extern crate glob;
+extern crate libc;
 extern crate regex;
 extern crate serialize;
 extern crate term;
@@ -17,6 +17,7 @@ extern crate curl;
 extern crate docopt;
 extern crate flate2;
 extern crate git2;
+extern crate glob;
 extern crate semver;
 extern crate tar;
 extern crate toml;
