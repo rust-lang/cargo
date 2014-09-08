@@ -45,7 +45,6 @@ pub use self::dependency::{
 pub use self::version_req::VersionReq;
 pub use self::resolver::Resolve;
 
-pub mod errors;
 pub mod source;
 pub mod package;
 pub mod package_id;
