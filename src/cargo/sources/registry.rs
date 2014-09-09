@@ -26,7 +26,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     cache_path: Path,
     src_path: Path,
     config: &'a mut Config<'b>,
-    handle: http::Handle,
+    handle: Option<http::Handle>,
     sources: Vec<PathSource>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
 }
@@ -56,7 +56,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             src_path: config.registry_source_path().join(part.as_slice()),
             config: config,
             source_id: source_id.clone(),
-            handle: http::Handle::new(),
+            handle: None,
             sources: Vec::new(),
             hashes: HashMap::new(),
         }
@@ -123,8 +123,15 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         try!(self.config.shell().status("Downloading", pkg));
 
         try!(fs::mkdir_recursive(&dst.dir_path(), io::UserDir));
+        let handle = match self.handle {
+            Some(ref mut handle) => handle,
+            None => {
+                self.handle = Some(try!(ops::http_handle()));
+                self.handle.as_mut().unwrap()
+            }
+        };
         // TODO: don't download into memory
-        let resp = try!(self.handle.get(url.to_string()).exec());
+        let resp = try!(handle.get(url.to_string()).exec());
         if resp.get_code() != 200 {
             return Err(internal(format!("Failed to get 200 reponse from {}\n{}",
                                         url, resp)))

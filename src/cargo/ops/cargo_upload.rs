@@ -5,6 +5,7 @@ use std::str;
 use serialize::json;
 
 use curl::http;
+use git2;
 
 use core::source::Source;
 use core::{Package, MultiShell, SourceId};
@@ -55,7 +56,7 @@ fn transmit(pkg: &Package, mut tarball: File,
     let registry_src = SourceId::for_registry(&url);
 
     let url = format!("{}/packages/new", host.trim_right_chars('/'));
-    let mut handle = http::handle();
+    let mut handle = try!(http_handle());
     let mut req = handle.post(url.as_slice(), &mut tarball)
                         .content_length(stat.size as uint)
                         .content_type("application/x-tar")
@@ -127,6 +128,48 @@ pub fn upload_configuration() -> CargoResult<UploadConfig> {
         }
     };
     Ok(UploadConfig { host: host, token: token })
+}
+
+/// Create a new HTTP handle with appropriate global configuration for cargo.
+pub fn http_handle() -> CargoResult<http::Handle> {
+    Ok(match try!(http_proxy()) {
+        Some(proxy) => http::handle().proxy(proxy),
+        None => http::handle(),
+    })
+}
+
+/// Find a globally configured HTTP proxy if one is available.
+///
+/// Favor cargo's `http.proxy`, then git's `http.proxy`, then finally a
+/// HTTP_PROXY env var.
+pub fn http_proxy() -> CargoResult<Option<String>> {
+    let configs = try!(config::all_configs(os::getcwd()));
+    match configs.find_equiv(&"http") {
+        Some(http) => {
+            let http = try!(http.table().chain_error(|| {
+                internal("invalid configuration for the key `http`")
+            }));
+            match http.find_equiv(&"proxy") {
+                Some(proxy) => {
+                    return Ok(Some(try!(proxy.string().chain_error(|| {
+                        internal("invalid configuration for key `http.proxy`")
+                    })).ref0().to_string()))
+                }
+                None => {},
+            }
+        }
+        None => {}
+    }
+    match git2::Config::open_default() {
+        Ok(cfg) => {
+            match cfg.get_str("http.proxy") {
+                Ok(s) => return Ok(Some(s.to_string())),
+                Err(..) => {}
+            }
+        }
+        Err(..) => {}
+    }
+    Ok(os::getenv("HTTP_PROXY"))
 }
 
 pub fn upload_login(shell: &mut MultiShell, token: String) -> CargoResult<()> {
