@@ -81,6 +81,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
             cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
+        if targets.len() == 0 {
+            return Err(human(format!("Package `{}` has no library targets", dep)))
+        }
+
         try!(compile(targets.as_slice(), dep, &mut cx, &mut queue));
     }
 

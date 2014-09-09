@@ -1641,3 +1641,28 @@ test!(rebuild_preserves_out_dir {
 {compiling} foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 })
+
+test!(dep_no_libs {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "");
+    assert_that(foo.cargo_process("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+Package `bar v0.0.0 ([..])` has no library targets"));
+})
