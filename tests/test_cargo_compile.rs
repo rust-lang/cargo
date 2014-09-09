@@ -791,6 +791,7 @@ test!(custom_build_env_vars {
         .file("src/foo.rs", format!(r#"
             use std::os;
             fn main() {{
+                let _ncpus = os::getenv("NUM_JOBS").unwrap();
                 let out = os::getenv("OUT_DIR").unwrap();
                 assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());

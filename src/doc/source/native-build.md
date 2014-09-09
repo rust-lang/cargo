@@ -71,6 +71,8 @@ commands.
 * `OUT_DIR` - the folder in which all output should be placed.
 * `TARGET` - the target triple that is being compiled for. Native code should be
              compiled for this triple.
+* `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
+               be useful to pass a `-j` parameter to a system like `make`.
 * `DEP_<name>_OUT_DIR` - This variable is present for all immediate dependencies
                          of the package being built. The `<name>` will be the
                          package's name, in uppercase, with `-` characters
