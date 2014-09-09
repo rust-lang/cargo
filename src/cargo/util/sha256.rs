@@ -1,3 +1,5 @@
+#![allow(bad_style)]
+
 pub use self::imp::Sha256;
 
 // Someone upstream will link to OpenSSL, so we don't need to explicitly
