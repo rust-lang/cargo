@@ -42,6 +42,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
     // Put all package files into a compressed archive
     let ar = Archive::new(encoder);
     for file in try!(src.list_files(pkg)).iter() {
+        if file == dst { continue }
         let relative = file.path_relative_from(&dst.dir_path()).unwrap();
         let relative = try!(relative.as_str().require(|| {
             human(format!("non-utf8 path in source directory: {}",
