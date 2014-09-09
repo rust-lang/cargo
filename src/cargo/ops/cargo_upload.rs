@@ -8,7 +8,7 @@ use curl::http;
 use git2;
 
 use core::source::Source;
-use core::{Package, MultiShell, SourceId};
+use core::{Package, MultiShell, SourceId, RegistryKind};
 use ops;
 use sources::{PathSource, RegistrySource};
 use util::config;
@@ -34,6 +34,16 @@ pub fn upload(manifest_path: &Path,
         human("no upload token found, please run `cargo login`")
     }));
     let host = host.unwrap_or(try!(RegistrySource::url()).to_string());
+    let host = try!(host.as_slice().to_url().map_err(human));
+    let upload = {
+        let sid = SourceId::new(RegistryKind, host.clone());
+        let mut config = try!(Config::new(shell, None, None));
+        let mut src = RegistrySource::new(&sid, &mut config);
+        try!(src.update().chain_error(|| {
+            human(format!("Failed to update registry {}", host))
+        }));
+        (try!(src.config())).upload
+    };
 
     // First, prepare a tarball
     let tarball = try!(ops::package(manifest_path, shell));
@@ -42,8 +52,8 @@ pub fn upload(manifest_path: &Path,
     // Upload said tarball to the specified destination
     try!(shell.status("Uploading", pkg.get_package_id().to_string()));
     try!(transmit(&pkg, tarball, token.as_slice(),
-                  host.as_slice()).chain_error(|| {
-        human(format!("failed to upload package to registry: {}", host))
+                  upload.as_slice()).chain_error(|| {
+        human(format!("failed to upload package to registry: {}", upload))
     }));
 
     Ok(())
@@ -55,9 +65,8 @@ fn transmit(pkg: &Package, mut tarball: File,
     let url = try!(host.to_url().map_err(human));
     let registry_src = SourceId::for_registry(&url);
 
-    let url = format!("{}/packages/new", host.trim_right_chars('/'));
     let mut handle = try!(http_handle());
-    let mut req = handle.post(url.as_slice(), &mut tarball)
+    let mut req = handle.put(host, &mut tarball)
                         .content_length(stat.size as uint)
                         .content_type("application/x-tar")
                         .header("Content-Encoding", "x-gzip")
@@ -83,6 +92,7 @@ fn transmit(pkg: &Package, mut tarball: File,
 
     let response = try!(req.exec());
 
+    if response.get_code() == 0 { return Ok(()) } // file upload url
     if response.get_code() != 200 {
         return Err(internal(format!("failed to get a 200 response: {}",
                                     response)))

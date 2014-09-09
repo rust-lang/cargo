@@ -14,6 +14,7 @@ use cargo::util::ProcessError;
 use support::paths::PathExt;
 
 pub mod paths;
+pub mod git;
 
 /*
  *
@@ -512,3 +513,4 @@ pub static UPDATING:    &'static str = "    Updating";
 pub static DOCTEST:     &'static str = "   Doc-tests";
 pub static PACKAGING:   &'static str = "   Packaging";
 pub static DOWNLOADING: &'static str = " Downloading";
+pub static UPLOADING:   &'static str = "   Uploading";

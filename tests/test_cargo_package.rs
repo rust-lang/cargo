@@ -1,7 +1,7 @@
-extern crate tar;
-extern crate flate2;
-
 use std::io::{File, MemReader};
+
+use tar::Archive;
+use flate2::reader::GzDecoder;
 
 use support::{project, execs, cargo_dir, ResultTest};
 use support::{PACKAGING};
@@ -35,9 +35,9 @@ test!(simple {
                 execs().with_status(0).with_stdout(""));
 
     let f = File::open(&p.root().join("foo-0.0.1.tar.gz")).assert();
-    let mut rdr = flate2::reader::GzDecoder::new(f);
+    let mut rdr = GzDecoder::new(f);
     let contents = rdr.read_to_end().assert();
-    let ar = tar::Archive::new(MemReader::new(contents));
+    let ar = Archive::new(MemReader::new(contents));
     for f in ar.files().assert() {
         let f = f.assert();
         match f.filename().unwrap() {

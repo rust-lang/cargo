@@ -13,7 +13,7 @@ use url::Url;
 
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::Dependency;
-use sources::PathSource;
+use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
 use util::{hex, Require, Sha256};
 use ops;
@@ -32,8 +32,9 @@ pub struct RegistrySource<'a, 'b:'a> {
 }
 
 #[deriving(Decodable)]
-struct RegistryConfig {
-    dl_url: String,
+pub struct RegistryConfig {
+    pub dl: String,
+    pub upload: String,
 }
 
 #[deriving(Decodable)]
@@ -75,7 +76,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    fn config(&self) -> CargoResult<RegistryConfig> {
+    pub fn config(&self) -> CargoResult<RegistryConfig> {
         let mut f = try!(File::open(&self.checkout_path.join("config.json")));
         let contents = try!(f.read_to_string());
         let config = try!(json::decode(contents.as_slice()));
@@ -122,7 +123,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                 self.handle.as_mut().unwrap()
             }
         };
-        // TODO: don't download into memory
+        // TODO: don't download into memory (curl-rust doesn't expose it)
         let resp = try!(handle.get(url.to_string()).exec());
         if resp.get_code() != 200 && resp.get_code() != 0 {
             return Err(internal(format!("Failed to get 200 reponse from {}\n{}",
@@ -162,7 +163,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         try!(fs::mkdir_recursive(&dst.dir_path(), io::UserDir));
         let f = try!(File::open(&tarball));
         let mut gz = try!(GzDecoder::new(f));
-        // TODO: don't read into memory
+        // TODO: don't read into memory (Archive requires Seek)
         let mem = try!(gz.read_to_end());
         let tar = Archive::new(MemReader::new(mem));
         for file in try!(tar.files()) {
@@ -229,10 +230,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
         // git fetch origin
         let url = self.source_id.get_url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
-        let mut remote = try!(repo.remote_create_anonymous(url.as_slice(),
-                                                           refspec));
-        log!(5, "[{}] fetching {}", self.source_id, url);
-        try!(remote.fetch(None, None).chain_error(|| {
+        try!(git::fetch(&repo, url.as_slice(), refspec).chain_error(|| {
             internal(format!("failed to fetch `{}`", url))
         }));
 
@@ -247,7 +245,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
 
     fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
         let config = try!(self.config());
-        let url = try!(config.dl_url.as_slice().to_url().map_err(internal));
+        let url = try!(config.dl.as_slice().to_url().map_err(internal));
         for package in packages.iter() {
             if self.source_id != *package.get_source_id() { continue }
 

@@ -2,9 +2,11 @@
 #![feature(phase)]
 
 extern crate cargo;
+extern crate flate2;
 extern crate git2;
 extern crate hamcrest;
 extern crate serialize;
+extern crate tar;
 extern crate term;
 extern crate url;
 
@@ -43,3 +45,4 @@ mod test_cargo_profiles;
 mod test_cargo_package;
 mod test_cargo_build_auth;
 mod test_cargo_registry;
+mod test_cargo_upload;
