@@ -156,8 +156,8 @@ impl ConfigValue {
 
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
-            (me @ &String(..), from @ String(..)) => *me = from,
-            (me @ &Boolean(..), from @ Boolean(..)) => *me = from,
+            (&String(..), String(..)) |
+            (&Boolean(..), Boolean(..)) => {}
             (&List(ref mut old), List(ref mut new)) => {
                 let new = mem::replace(new, Vec::new());
                 old.extend(new.move_iter());

@@ -72,14 +72,6 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         url.as_slice().to_url().map_err(human)
     }
 
-    /// Translates the HTTP url of the registry to the git URL
-    fn git_url(&self) -> Url {
-        let mut url = self.source_id.get_url().clone();
-        url.path_mut().unwrap().push("git".to_string());
-        url.path_mut().unwrap().push("index".to_string());
-        url
-    }
-
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
@@ -103,7 +95,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
         try!(fs::mkdir_recursive(&self.checkout_path, io::UserDir));
         let _ = fs::rmdir_recursive(&self.checkout_path);
-        let url = self.git_url().to_string();
+        let url = self.source_id.get_url().to_string();
         let repo = try!(git2::Repository::init(&self.checkout_path));
         Ok(repo)
     }
@@ -115,7 +107,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// then ready for inspection.
     ///
     /// No action is taken if the package is already downloaded.
-    fn download_package(&mut self, pkg: &PackageId, url: Url)
+    fn download_package(&mut self, pkg: &PackageId, url: &Url)
                         -> CargoResult<Path> {
         let dst = self.cache_path.join(url.path().unwrap().last().unwrap()
                                           .as_slice());
@@ -132,7 +124,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         };
         // TODO: don't download into memory
         let resp = try!(handle.get(url.to_string()).exec());
-        if resp.get_code() != 200 {
+        if resp.get_code() != 200 && resp.get_code() != 0 {
             return Err(internal(format!("Failed to get 200 reponse from {}\n{}",
                                         url, resp)))
         }
@@ -235,7 +227,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
         let repo = try!(self.open());
 
         // git fetch origin
-        let url = self.git_url().to_string();
+        let url = self.source_id.get_url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
         let mut remote = try!(repo.remote_create_anonymous(url.as_slice(),
                                                            refspec));
@@ -265,8 +257,9 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
             url.path_mut().unwrap().push(format!("{}-{}.tar.gz",
                                                  package.get_name(),
                                                  package.get_version()));
-            let path = try!(self.download_package(package, url).chain_error(|| {
-                internal(format!("Failed to download package `{}`", package))
+            let path = try!(self.download_package(package, &url).chain_error(|| {
+                internal(format!("Failed to download package `{}` from {}",
+                                 package, url))
             }));
             let path = try!(self.unpack_package(package, path).chain_error(|| {
                 internal(format!("Failed to unpack package `{}`", package))
