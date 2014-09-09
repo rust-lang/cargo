@@ -133,9 +133,9 @@ recompiled for all users of the library.
 If a library ends up being used transitively by several dependencies, it's
 likely that just a single copy of the library is desired (based on semver
 compatibility). If all libraries were to check in their `Cargo.lock`, then
-multiple copies of the library would be used, and perhaps evan a version
+multiple copies of the library would be used, and perhaps even a version
 conflict.
 
 In other words, libraries specify semver requirements for their dependencies but
-cannot see the full picture. Only ends products like binaries have a full
+cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
