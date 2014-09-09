@@ -1,5 +1,6 @@
 use std::io::File;
 use std::io::fs::PathExtensions;
+use std::path;
 
 use tar::Archive;
 use flate2::{GzBuilder, BestCompression};
@@ -52,8 +53,8 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
         try!(shell.verbose(|shell| {
             shell.status("Archiving", relative.as_slice())
         }));
-        let path = format!("{}-{}/{}", pkg.get_name(),
-                           pkg.get_version(), relative);
+        let path = format!("{}-{}{}{}", pkg.get_name(),
+                           pkg.get_version(), path::SEP, relative);
         try!(ar.append(path.as_slice(), &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));

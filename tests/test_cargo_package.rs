@@ -40,10 +40,9 @@ test!(simple {
     let ar = Archive::new(MemReader::new(contents));
     for f in ar.files().assert() {
         let f = f.assert();
-        match f.filename().unwrap() {
-            "foo-0.0.1/Cargo.toml" |
-            "foo-0.0.1/src/main.rs" => {}
-            s => fail!("unexpected file: {}", s),
-        }
+        let fname = f.filename_bytes();
+        assert!(fname == Path::new("foo-0.0.1/Cargo.toml").as_vec() ||
+                fname == Path::new("foo-0.0.1/src/main.rs").as_vec(),
+                "unexpected filename: {}", f.filename())
     }
 })

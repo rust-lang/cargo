@@ -61,9 +61,10 @@ test!(simple {
     let ar = Archive::new(inner);
     for file in ar.files().unwrap() {
         let file = file.unwrap();
-        assert!(file.filename() == Some("foo-0.0.1/Cargo.toml") ||
-                file.filename() == Some("foo-0.0.1/src/main.rs"),
-                "bad filename: {}", file.filename());
+        let fname = file.filename_bytes();
+        assert!(fname == Path::new("foo-0.0.1/Cargo.toml").as_vec() ||
+                fname == Path::new("foo-0.0.1/src/main.rs").as_vec(),
+                "unexpected filename: {}", file.filename())
     }
 })
 
