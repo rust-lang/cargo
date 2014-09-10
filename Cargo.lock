@@ -63,7 +63,7 @@ source = "git+https://github.com/alexcrichton/git2-rs#962d1f6983489bd401327a9be2
 dependencies = [
  "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#9db278a48dd4f137f7ca75d20bddeb43a71a00ed)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#e378605ce4099008b1dab8f39619d91dc8887946)",
- "openssl-static-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-static-sys#b8f2500c39932e9d022dcc2590493ab0cc144e2a)",
+ "openssl-static-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-static-sys#1a3743ec387b7c460d36bacef99b50f5dd491af7)",
 ]
 
 [[package]]
@@ -79,7 +79,7 @@ source = "git+https://github.com/alexcrichton/link-config#e378605ce4099008b1dab8
 [[package]]
 name = "openssl-static-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/openssl-static-sys#b8f2500c39932e9d022dcc2590493ab0cc144e2a"
+source = "git+https://github.com/alexcrichton/openssl-static-sys#1a3743ec387b7c460d36bacef99b50f5dd491af7"
 
 [[package]]
 name = "semver"
