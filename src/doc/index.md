@@ -1,6 +1,4 @@
----
-title: Cargo, Rust's Package Manager
----
+% Cargo, Rust's Package Manager
 
 # Installing
 
@@ -58,7 +56,7 @@ needs to compile your project.
 
 Here's what's in `src/main.rs`:
 
-```rs
+```
 fn main() {
     println!("Hello, world!")
 }
@@ -66,7 +64,7 @@ fn main() {
 
 Cargo generated a 'hello world' for us. Let's compile it:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo build
+<pre><code class="language-shell">$ cargo build
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
 
@@ -79,7 +77,7 @@ Hello, world!
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
-<pre><code class="highlight"><span class="gp">$</span> cargo run
+<pre><code class="language-shell">$ cargo run
 <span style="font-weight: bold"
 class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"

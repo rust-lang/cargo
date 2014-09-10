@@ -1,6 +1,4 @@
----
-title: Configuration
----
+% Configuration
 
 This document will explain how cargo's configuration system works, as well as
 available keys or configuration.  For configuration of a project through its

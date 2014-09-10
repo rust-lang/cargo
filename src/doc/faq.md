@@ -1,8 +1,6 @@
----
-title: Frequently Asked Questions
----
+% Frequently Asked Questions
 
-# Is the plan to use Github as a package repository? <a href="#github" id="github" class="headerlink">¶</a>
+# Is the plan to use Github as a package repository?
 
 No. The plan for Cargo is to have a central registry of packages, like
 npm or Rubygems.
@@ -18,7 +16,7 @@ track the latest Rust. This makes downloading the latest `master` from
 Github the best approach to getting packages at the current point in the
 community's lifecycle.
 
-# Why build a package registry rather than use Github as a registry? <a href="#why-not-github" id="why-not-github" class="headerlink">¶</a>
+# Why build a package registry rather than use Github as a registry?
 
 We think that it's very important to support multiple ways to download
 packages, including downloading from Github and copying packages into
@@ -52,7 +50,7 @@ languages include:
   down fast. Also remember that not everybody has a high-speed,
   low-latency Internet connection.
 
-# Will Cargo work with C code (or other languages)? <a href="#c" id="c" class="headerlink">¶</a>
+# Will Cargo work with C code (or other languages)?
 
 Yes!
 
@@ -65,7 +63,7 @@ before invoking `rustc`. We plan to add support for platform-specific
 configuration, so you can use `make` on Linux and `cmake` on BSD, for
 example.
 
-# Can Cargo be used inside of `make` (or `ninja`, or ...) <a href="#make" id="make" class="headerlink">¶</a>
+# Can Cargo be used inside of `make` (or `ninja`, or ...)
 
 Indeed. While we intend Cargo to be useful as a standalone way to
 compile Rust projects at the top-level, we know that some people will
@@ -77,7 +75,7 @@ have some work to do on those fronts, but using Cargo in the context of
 conventional scripts is something we designed for from the beginning and
 will continue to prioritize.
 
-# Does Cargo handle multi-platform projects or cross-compilation? <a href="#multi-platform" id="multi-platform" class="headerlink">¶</a>
+# Does Cargo handle multi-platform projects or cross-compilation?
 
 Rust itself provides facilities for configuring sections of code based
 on the platform. We plan to support per-platform configuration in
@@ -87,7 +85,7 @@ future.
 In the longer-term, we're looking at ways to conveniently cross-compile
 projects using Cargo.
 
-# Does Cargo support environments, like `production` or `test`? <a href="#environments" id="environments" class="headerlink">¶</a>
+# Does Cargo support environments, like `production` or `test`?
 
 We are planning on support environments in the near future, that can
 support:
@@ -103,7 +101,7 @@ specify flags or dependencies for a combination of multiple environments
 and platforms ("use `fsevents`, but only in OSX in `development` or
 `test`").
 
-# Does Cargo work on Windows? <a href="#windows" id="windows" class="headerlink">¶</a>
+# Does Cargo work on Windows?
 
 Yes!
 
