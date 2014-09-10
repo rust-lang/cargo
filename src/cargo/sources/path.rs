@@ -2,10 +2,11 @@ use std::cmp;
 use std::fmt::{mod, Show, Formatter};
 use std::io::fs;
 use glob::Pattern;
+use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{CargoResult, internal, internal_error, process};
+use util::{CargoResult, internal, internal_error};
 
 pub struct PathSource {
     id: SourceId,
@@ -68,11 +69,10 @@ impl PathSource {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-        let candidates = try!(if self.path.join(".git").exists() {
-            self.list_files_git(pkg)
-        } else {
-            self.list_files_walk(pkg)
-        });
+        let candidates = match git2::Repository::open(&self.path) {
+            Ok(repo) => try!(self.list_files_git(pkg, repo)),
+            Err(..) => try!(self.list_files_walk(pkg)),
+        };
 
         let pats = pkg.get_manifest().get_exclude().iter().map(|p| {
             Pattern::new(p.as_slice())
@@ -86,26 +86,29 @@ impl PathSource {
         }).collect())
     }
 
-    fn list_files_git(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-        let cwd = pkg.get_manifest_path().dir_path();
-        let mut cmd = process("git").cwd(cwd.clone());
-        cmd = cmd.arg("ls-files").arg("-z")
-                 .arg("-x").arg("/target")
-                 .arg("-x").arg("/Cargo.lock");
+    fn list_files_git(&self, pkg: &Package, repo: git2::Repository)
+                      -> CargoResult<Vec<Path>> {
+        let index = try!(repo.index());
+        let mut ret = Vec::new();
+        'outer: for i in range(0, index.len()) {
+            let entry = match index.get(i) { Some(e) => e, None => continue };
+            let fname = entry.path.as_bytes_no_nul();
+            let path = pkg.get_manifest_path().dir_path().join(fname);
 
-        // Filter out all other packages with a filter directive
-        for pkg in self.packages.iter().filter(|p| *p != pkg) {
-            if cwd.is_ancestor_of(pkg.get_manifest_path()) {
-                let filter = pkg.get_manifest_path().dir_path()
-                                .path_relative_from(&self.path).unwrap();
-                cmd = cmd.arg("-x").arg(filter);
+            // Filter out Cargo.lock and target always
+            if fname == b"Cargo.lock" { continue }
+            if fname == b"target" { continue }
+
+            // Filter out all other packages
+            for pkg in self.packages.iter().filter(|p| *p != pkg) {
+                let pkg_path = pkg.get_manifest_path().dir_path();
+                if pkg_path.is_ancestor_of(&path) { continue 'outer; }
             }
-        }
 
-        log!(5, "listing git files with: {}", cmd);
-        let output = try!(cmd.arg(".").exec_with_output());
-        let output = output.output.as_slice();
-        Ok(output.split(|x| *x == 0).map(|p| cwd.join(p)).collect())
+            // We found a file!
+            ret.push(path);
+        }
+        Ok(ret)
     }
 
     fn list_files_walk(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
