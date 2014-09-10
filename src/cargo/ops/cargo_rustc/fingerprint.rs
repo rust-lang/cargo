@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
 use std::io::{fs, File, UserRWX, BufferedReader};
 
-use core::{Package, Target};
+use core::{Package, Target, PathKind};
 use util;
 use util::hex::short_hash;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
@@ -47,18 +47,31 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     let filename = filename(target);
     let old_loc = old.join(filename.as_slice());
     let new_loc = new.join(filename.as_slice());
-    let doc = target.get_profile().is_doc();
+
+    // We want to use the package fingerprint if we're either a doc target or a
+    // path source. If we're a git/registry source, then the mtime of files may
+    // fluctuate, but they won't change so long as the source itself remains
+    // constant (which is the responsibility of the source)
+    let use_pkg = {
+        let doc = target.get_profile().is_doc();
+        let path = match pkg.get_summary().get_source_id().kind {
+            PathKind => true,
+            _ => false,
+        };
+        doc || !path
+    };
 
     debug!("fingerprint at: {}", new_loc.display());
 
     // First bit of the freshness calculation, whether the dep-info file
     // indicates that the target is fresh.
     let (old_dep_info, new_dep_info) = dep_info_loc(cx, pkg, target, kind);
-    let are_files_fresh = doc || try!(calculate_target_fresh(pkg, &old_dep_info));
+    let are_files_fresh = use_pkg ||
+                          try!(calculate_target_fresh(pkg, &old_dep_info));
 
     // Second bit of the freshness calculation, whether rustc itself and the
     // target are fresh.
-    let rustc_fingerprint = if doc {
+    let rustc_fingerprint = if use_pkg {
         mk_fingerprint(cx, &(target, try!(calculate_pkg_fingerprint(cx, pkg))))
     } else {
         mk_fingerprint(cx, target)

@@ -1080,3 +1080,67 @@ test!(git_name_not_always_needed {
 {compiling} foo v0.5.0 ({url})
 ", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
 })
+
+test!(git_repo_changing_no_rebuild {
+    let bar = git_repo("bar", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+    }).assert();
+
+    // Lock p1 to the first rev in the git repo
+    let p1 = project("p1")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "p1"
+            version = "0.5.0"
+            authors = []
+            build = 'true'
+            [dependencies.bar]
+            git = '{}'
+        "#, bar.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+    p1.build();
+    p1.root().move_into_the_past().assert();
+    assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_stdout(format!("\
+{updating} git repository `{bar}`
+{compiling} bar v0.5.0 ({bar}#[..])
+{compiling} p1 v0.5.0 ({url})
+", updating = UPDATING, compiling = COMPILING, url = p1.url(), bar = bar.url())));
+
+    // Make a commit to lock p2 to a different rev
+    File::create(&bar.root().join("src/lib.rs")).write_str(r#"
+        pub fn bar() -> int { 2 }
+    "#).assert();
+    bar.process("git").args(["add", "."]).exec_with_output().assert();
+    bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
+       .assert();
+
+    // Lock p2 to the second rev
+    let p2 = project("p2")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "p2"
+            version = "0.5.0"
+            authors = []
+            [dependencies.bar]
+            git = '{}'
+        "#, bar.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+    assert_that(p2.cargo_process("build"),
+                execs().with_stdout(format!("\
+{updating} git repository `{bar}`
+{compiling} bar v0.5.0 ({bar}#[..])
+{compiling} p2 v0.5.0 ({url})
+", updating = UPDATING, compiling = COMPILING, url = p2.url(), bar = bar.url())));
+
+    // And now for the real test! Make sure that p1 doesn't get rebuilt
+    // even though the git repo has changed.
+    assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_stdout(""));
+})
