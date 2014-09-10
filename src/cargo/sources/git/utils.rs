@@ -202,20 +202,22 @@ impl GitDatabase {
 
     pub fn copy_to(&self, rev: GitRevision, dest: &Path)
                    -> CargoResult<GitCheckout> {
-        match git2::Repository::open(dest) {
+        let checkout = match git2::Repository::open(dest) {
             Ok(repo) => {
-                let is_fresh = match repo.revparse_single("HEAD") {
-                    Ok(head) => head.id().to_string() == rev.to_string(),
-                    _ => false,
-                };
-                if is_fresh {
-                    return Ok(GitCheckout::new(dest, self, rev, repo))
+                let checkout = GitCheckout::new(dest, self, rev, repo);
+                if !checkout.is_fresh() {
+                    try!(checkout.fetch());
+                    try!(checkout.reset());
+                    assert!(checkout.is_fresh());
                 }
+                checkout
             }
-            _ => {}
-        }
-
-        GitCheckout::clone_into(dest, self, rev)
+            Err(..) => try!(GitCheckout::clone_into(dest, self, rev)),
+        };
+        try!(checkout.update_submodules().chain_error(|| {
+            internal("failed to update submodules")
+        }));
+        Ok(checkout)
     }
 
     pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<GitRevision> {
@@ -248,14 +250,7 @@ impl<'a> GitCheckout<'a> {
     {
         let repo = try!(GitCheckout::clone_repo(database.get_path(), into));
         let checkout = GitCheckout::new(into, database, revision, repo);
-
-        try!(checkout.reset().chain_error(|| {
-            internal("failed to reset to the right revision")
-        }));
-        try!(checkout.update_submodules().chain_error(|| {
-            internal("failed to update submodules")
-        }));
-
+        try!(checkout.reset());
         Ok(checkout)
     }
 
@@ -284,6 +279,21 @@ impl<'a> GitCheckout<'a> {
                              into.display()))
         }));
         Ok(repo)
+    }
+
+    fn is_fresh(&self) -> bool {
+        match self.repo.revparse_single("HEAD") {
+            Ok(head) => head.id().to_string() == self.revision.to_string(),
+            _ => false,
+        }
+    }
+
+    fn fetch(&self) -> CargoResult<()> {
+        info!("fetch {}", self.repo.path().display());
+        let url = try!(self.database.path.to_url().map_err(human));
+        let url = url.to_string();
+        try!(fetch(&self.repo, url.as_slice()));
+        Ok(())
     }
 
     fn reset(&self) -> CargoResult<()> {
