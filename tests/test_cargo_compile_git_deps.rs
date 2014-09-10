@@ -475,8 +475,7 @@ test!(two_revs_same_deps {
 
     baz.build();
 
-    // TODO: -j1 is a hack
-    assert_that(foo.cargo_process("build").arg("-j").arg("1"),
+    assert_that(foo.cargo_process("build"),
                 execs().with_status(0));
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
