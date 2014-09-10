@@ -151,6 +151,8 @@ impl<'a, 'b> Context<'a, 'b> {
             self.build_requirements(pkg, target, Target, &mut HashSet::new());
         }
 
+        self.compilation.extra_env.insert("NUM_JOBS".to_string(),
+                                          Some(self.config.jobs().to_string()));
         self.compilation.root_output = self.layout(KindTarget).proxy().dest().clone();
         self.compilation.deps_output = self.layout(KindTarget).proxy().deps().clone();
 
