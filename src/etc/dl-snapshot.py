@@ -27,6 +27,9 @@ elif triple == 'x86_64-apple-darwin':
     me = mac64
 elif triple == 'i686-pc-mingw32':
     me = win32
+elif triple == 'x86_64-w64-mingw32':
+    triple = 'i686-pc-mingw32'
+    me = win32
 else:
     raise Exception("no snapshot for the triple: " + triple)
 
