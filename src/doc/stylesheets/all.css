@@ -12,9 +12,12 @@ body {
 }
 
 body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: -webkit-flex;
+  display:         flex;
+  -webkit-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+          align-items: center;
 }
 
 a { color: #f3bb00; }
@@ -52,8 +55,10 @@ code:not(.highlight) {
 }
 
 main {
-  display: flex;
-  flex-direction: column;
+  display: -webkit-flex;
+  display:         flex;
+  -webkit-flex-direction: column;
+          flex-direction: column;
 
   max-width: 900px;
   margin-bottom: 10px;
