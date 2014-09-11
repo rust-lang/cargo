@@ -168,6 +168,9 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             let fresh = job_freshness.combine(fresh);
             let my_tx = self.tx.clone();
             let id = id.clone();
+            if fresh == Dirty {
+                try!(config.shell().verbose(|shell| job.describe(shell)));
+            }
             self.pool.execute(proc() {
                 my_tx.send((id, stage, fresh, job.run(fresh)));
             });

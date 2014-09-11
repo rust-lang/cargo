@@ -25,6 +25,7 @@ test!(profile_overrides {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
+{compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 1 \
         --cfg ndebug \
@@ -34,7 +35,7 @@ test!(profile_overrides {
         --dep-info [..] \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
-{compiling} test v0.0.0 ({url})\n",
+",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
 url = p.url(),
@@ -77,6 +78,7 @@ test!(top_level_overrides_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
+{compiling} foo v0.0.0 ({url})
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib \
         --opt-level 1 \
@@ -87,6 +89,7 @@ test!(top_level_overrides_deps {
         --dep-info [..] \
         -L {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps`
+{compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 1 \
         -g \
@@ -99,8 +102,7 @@ test!(top_level_overrides_deps {
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`
-{compiling} foo v0.0.0 ({url})
-{compiling} test v0.0.0 ({url})\n",
+",
                     running = RUNNING,
                     compiling = COMPILING,
                     dir = p.root().display(),

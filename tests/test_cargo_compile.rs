@@ -1158,6 +1158,7 @@ test!(verbose_build {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
+{compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
@@ -1165,7 +1166,7 @@ test!(verbose_build {
         --dep-info [..] \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
-{compiling} test v0.0.0 ({url})\n",
+",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
 url = p.url(),
@@ -1185,6 +1186,7 @@ test!(verbose_release_build {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
+{compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
         --cfg ndebug \
@@ -1194,7 +1196,7 @@ test!(verbose_release_build {
         --dep-info [..] \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps`
-{compiling} test v0.0.0 ({url})\n",
+",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
 url = p.url(),
@@ -1229,6 +1231,7 @@ test!(verbose_release_build_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
+{compiling} foo v0.0.0 ({url})
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib \
         --opt-level 3 \
@@ -1239,6 +1242,7 @@ test!(verbose_release_build_deps {
         --dep-info [..] \
         -L {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps`
+{compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         --opt-level 3 \
         --cfg ndebug \
@@ -1251,8 +1255,7 @@ test!(verbose_release_build_deps {
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`
-{compiling} foo v0.0.0 ({url})
-{compiling} test v0.0.0 ({url})\n",
+",
                     running = RUNNING,
                     compiling = COMPILING,
                     dir = p.root().display(),
