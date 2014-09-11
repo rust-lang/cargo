@@ -622,7 +622,7 @@ test!(bench_dylib {
             path = "bar"
         "#)
         .file("src/lib.rs", r#"
-            extern crate the_bar = "bar";
+            extern crate "bar" as the_bar;
             extern crate test;
 
             pub fn bar() { the_bar::baz(); }
@@ -631,7 +631,7 @@ test!(bench_dylib {
             fn foo(_b: &mut test::Bencher) {}
         "#)
         .file("benches/bench.rs", r#"
-            extern crate the_foo = "foo";
+            extern crate "foo" as the_foo;
             extern crate test;
 
             #[bench]

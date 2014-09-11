@@ -185,10 +185,12 @@ impl GitRemote {
         try!(mkdir_recursive(dst, UserDir));
         let cfg = try!(git2::Config::open_default());
         with_authentication(url.as_slice(), &cfg, |f| {
+            let cb = git2::RemoteCallbacks::new()
+                                           .credentials(f);
             let repo = try!(git2::build::RepoBuilder::new()
                                                      .bare(true)
                                                      .hardlinks(false)
-                                                     .credentials(f)
+                                                     .remote_callbacks(cb)
                                                      .clone(url.as_slice(), dst));
             Ok(repo)
         })
@@ -410,10 +412,12 @@ fn fetch(repo: &git2::Repository, url: &str) -> CargoResult<()> {
     let refspec = "refs/heads/*:refs/heads/*";
 
     with_authentication(url, &try!(repo.config()), |f| {
+        let mut cb = git2::RemoteCallbacks::new()
+                                       .credentials(f);
         let mut remote = try!(repo.remote_create_anonymous(url.as_slice(),
                                                            refspec));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        remote.set_credentials(f);
+        remote.set_callbacks(&mut cb);
         try!(remote.fetch(None, None));
         Ok(())
     })
