@@ -183,17 +183,9 @@ impl GitRemote {
             try!(rmdir_recursive(dst));
         }
         try!(mkdir_recursive(dst, UserDir));
-        let cfg = try!(git2::Config::open_default());
-        with_authentication(url.as_slice(), &cfg, |f| {
-            let cb = git2::RemoteCallbacks::new()
-                                           .credentials(f);
-            let repo = try!(git2::build::RepoBuilder::new()
-                                                     .bare(true)
-                                                     .hardlinks(false)
-                                                     .remote_callbacks(cb)
-                                                     .clone(url.as_slice(), dst));
-            Ok(repo)
-        })
+        let repo = try!(git2::Repository::init_bare(dst));
+        try!(fetch(&repo, url.as_slice()));
+        Ok(repo)
     }
 }
 

@@ -125,7 +125,7 @@ test!(cargo_compile_git_dep_branch {
     }).assert();
 
     git_project.process("git").args(["checkout", "-b", "branchy"]).exec_with_output().assert();
-    git_project.process("git").args(["branch", "-d", "master"]).exec_with_output().assert();
+    git_project.process("git").args(["checkout", "master"]).exec_with_output().assert();
 
     let project = project
         .file("Cargo.toml", format!(r#"
