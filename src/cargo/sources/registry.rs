@@ -1,5 +1,6 @@
 #![allow(unused)]
 use std::io::{mod, fs, File, MemReader};
+use std::io::fs::PathExtensions;
 use std::collections::HashMap;
 
 use curl::http;
@@ -182,10 +183,10 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut chars = dep.get_name().chars();
         let path = self.checkout_path.clone();
-        let path = path.join(format!("{}{}", chars.next().unwrap_or('X'),
-                                     chars.next().unwrap_or('X')));
-        let path = path.join(format!("{}{}", chars.next().unwrap_or('X'),
-                                     chars.next().unwrap_or('X')));
+        let path = path.join(format!("{}{}", chars.next().unwrap_or(':'),
+                                     chars.next().unwrap_or(':')));
+        let path = path.join(format!("{}{}", chars.next().unwrap_or(':'),
+                                     chars.next().unwrap_or(':')));
         let path = path.join(dep.get_name());
         let contents = match File::open(&path) {
             Ok(mut f) => try!(f.read_to_string()),
@@ -236,9 +237,9 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
 
         // git reset --hard origin/master
         let reference = "refs/remotes/origin/master";
-        let oid = try!(git2::Reference::name_to_id(&repo, reference));
+        let oid = try!(repo.refname_to_id(reference));
         log!(5, "[{}] updating to rev {}", self.source_id, oid);
-        let object = try!(git2::Object::lookup(&repo, oid, None));
+        let object = try!(repo.find_object(oid, None));
         try!(repo.reset(&object, git2::Hard, None, None));
         Ok(())
     }

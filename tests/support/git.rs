@@ -42,9 +42,9 @@ impl RepoBuilder {
         }
         index.write().unwrap();
         let id = index.write_tree().unwrap();
-        let tree = git2::Tree::lookup(&self.repo, id).unwrap();
-        let sig = git2::Signature::default(&self.repo).unwrap();
-        git2::Commit::new(&self.repo, Some("HEAD"), &sig, &sig,
-                          "Initial commit", &tree, []).unwrap();
+        let tree = self.repo.find_tree(id).unwrap();
+        let sig = self.repo.signature().unwrap();
+        self.repo.commit(Some("HEAD"), &sig, &sig,
+                         "Initial commit", &tree, []).unwrap();
     }
 }

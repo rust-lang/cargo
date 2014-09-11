@@ -185,7 +185,7 @@ impl GitRemote {
         }
         try!(mkdir_recursive(dst, UserDir));
         let repo = try!(git2::Repository::init_bare(dst));
-        try!(fetch(&repo, url.as_slice()));
+        try!(fetch(&repo, url.as_slice(), "refs/heads/*:refs/heads/*"));
         Ok(repo)
     }
 }
@@ -287,7 +287,8 @@ impl<'a> GitCheckout<'a> {
         info!("fetch {}", self.repo.path().display());
         let url = try!(self.database.path.to_url().map_err(human));
         let url = url.to_string();
-        try!(fetch(&self.repo, url.as_slice()));
+        let refspec = "refs/heads/*:refs/heads/*";
+        try!(fetch(&self.repo, url.as_slice(), refspec));
         Ok(())
     }
 

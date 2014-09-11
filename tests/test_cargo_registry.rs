@@ -45,8 +45,8 @@ fn setup() {
         .file("config.json", format!(r#"
             {{"dl":"{}","upload":""}}
         "#, dl_url()).as_slice())
-        .file("fo/oX/foo", pkg("foo", "0.0.1", [], &foo_cksum))
-        .file("ba/rX/bar", pkg("bar", "0.0.1", ["foo|>=0.0.0"], &bar_cksum))
+        .file("fo/o:/foo", pkg("foo", "0.0.1", [], &foo_cksum))
+        .file("ba/r:/bar", pkg("bar", "0.0.1", ["foo|>=0.0.0"], &bar_cksum))
         .file("ba/d-/bad-cksum", pkg("bad-cksum", "0.0.1", [], &bar_cksum))
         .nocommit_file("no/ty/notyet", pkg("notyet", "0.0.1", [], &notyet))
         .build();
@@ -206,13 +206,13 @@ Version required: >= 0.0.0
     let mut index = repo.index().unwrap();
     index.add_path(&Path::new("no/ty/notyet")).unwrap();
     let id = index.write_tree().unwrap();
-    let tree = git2::Tree::lookup(&repo, id).unwrap();
-    let sig = git2::Signature::default(&repo).unwrap();
-    let parent = git2::Reference::name_to_id(&repo, "refs/heads/master").unwrap();
-    let parent = git2::Commit::lookup(&repo, parent).unwrap();
-    git2::Commit::new(&repo, Some("HEAD"), &sig, &sig,
-                      "Another commit", &tree,
-                      [&parent]).unwrap();
+    let tree = repo.find_tree(id).unwrap();
+    let sig = repo.signature().unwrap();
+    let parent = repo.refname_to_id("refs/heads/master").unwrap();
+    let parent = repo.find_commit(parent).unwrap();
+    repo.commit(Some("HEAD"), &sig, &sig,
+                "Another commit", &tree,
+                [&parent]).unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\

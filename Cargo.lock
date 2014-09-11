@@ -2,6 +2,7 @@
 name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
+ "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#720d87fa32c738c397252cf3c26d428bdca697d4)",
  "docopt 0.6.3 (git+https://github.com/docopt/docopt.rs#ee3844098f213121ce7dfb32cdbf2512ecba7085)",
  "docopt_macros 0.6.3 (git+https://github.com/docopt/docopt.rs#ee3844098f213121ce7dfb32cdbf2512ecba7085)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#a59b2a103642550bc1500c302c5031479ec7d9e1)",
@@ -13,6 +14,21 @@ dependencies = [
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#d40724ad2d6516d7b6750515153b4c360d63afe9)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#bfdf809365600a7941a77524f9bb065886de3379)",
 ]
+
+[[package]]
+name = "curl"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#720d87fa32c738c397252cf3c26d428bdca697d4"
+dependencies = [
+ "curl-sys 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#720d87fa32c738c397252cf3c26d428bdca697d4)",
+ "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#1d3cd271612036b47c015a55f33a97e1524569ae)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#bfdf809365600a7941a77524f9bb065886de3379)",
+]
+
+[[package]]
+name = "curl-sys"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#720d87fa32c738c397252cf3c26d428bdca697d4"
 
 [[package]]
 name = "docopt"
