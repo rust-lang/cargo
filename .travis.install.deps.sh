@@ -46,8 +46,13 @@ if [ -z "${windows}" ]; then
     rm -rf rust-nightly-$dst-$target
 else
     rm -rf *.exe rustc
-    curl -O http://static-rust-lang-org.s3.amazonaws.com/dist/rust-nightly-install.exe
-    innounp -y -x rust-nightly-install.exe
+    if [ "${BITS}" = "64" ]; then
+        triple=x86_64-w64-mingw32
+    else
+        triple=i686-pc-mingw32
+    fi
+    curl -O http://static-rust-lang-org.s3.amazonaws.com/dist/rust-nightly-$triple.exe
+    innounp -y -x rust-nightly-$triple.exe
     mv '{app}' rustc
 fi
 
