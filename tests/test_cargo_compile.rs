@@ -793,6 +793,15 @@ test!(custom_build_env_vars {
             use std::io::fs::PathExtensions;
             fn main() {{
                 let _ncpus = os::getenv("NUM_JOBS").unwrap();
+                let debug = os::getenv("DEBUG").unwrap();
+                assert_eq!(debug.as_slice(), "true");
+
+                let opt = os::getenv("OPT_LEVEL").unwrap();
+                assert_eq!(opt.as_slice(), "0");
+
+                let opt = os::getenv("PROFILE").unwrap();
+                assert_eq!(opt.as_slice(), "compile");
+
                 let out = os::getenv("OUT_DIR").unwrap();
                 assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());
@@ -800,6 +809,11 @@ test!(custom_build_env_vars {
                 let out = os::getenv("DEP_BAR_BAR_OUT_DIR").unwrap();
                 assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());
+
+                let out = os::getenv("CARGO_MANIFEST_DIR").unwrap();
+                let p1 = Path::new(out);
+                let p2 = os::make_absolute(&Path::new(file!()).dir_path().dir_path());
+                assert!(p1 == p2, "{{}} != {{}}", p1.display(), p2.display());
             }}
         "#,
         p.root().join("target").join("native").display()));
