@@ -55,6 +55,7 @@ macro_rules! each_subcommand( ($macro:ident) => ({
     $macro!(config_for_key)
     $macro!(config_list)
     $macro!(doc)
+    $macro!(fetch)
     $macro!(generate_lockfile)
     $macro!(git_checkout)
     $macro!(locate_project)
