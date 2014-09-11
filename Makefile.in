@@ -115,7 +115,11 @@ distcheck-$(1): dist-$(1)
 $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: $$(PKGDIR_$(1))/lib/cargo/manifest.in
 	tar -czvf $$@ -C $$(@D) $$(PKG_NAME)-$(1)
 
-$$(PKGDIR_$(1))/lib/cargo/manifest.in:
+ifeq (root user, $$(USER) $$(patsubst %,user,$$(SUDO_USER)))
+prepare-manifest-$(1):
+	@sudo -u "$$$$SUDO_USER" $$(MAKE) prepare-manifest-$(1)
+else
+prepare-manifest-$(1):
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ] || echo 'Please run `make` first'
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
 	rm -rf $$(PKGDIR_$(1))
@@ -129,12 +133,6 @@ $$(PKGDIR_$(1))/lib/cargo/manifest.in:
 	cp LICENSE-MIT $$(PKGDIR_$(1))
 	mv $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in \
 		$$(PKGDIR_$(1))/lib/cargo/manifest.in
-
-ifeq (root user, $$(USER) $$(patsubst %,user,$$(SUDO_USER)))
-prepare-manifest-$(1):
-	@sudo -u "$$$$SUDO_USER" $$(MAKE) prepare-manifest-$(1)
-else
-prepare-manifest-$(1): $$(PKGDIR_$(1))/lib/cargo/manifest.in
 endif
 
 install-$(1): prepare-manifest-$(1)
@@ -149,7 +147,7 @@ distcheck: $(foreach target,$(CFG_TARGET),distcheck-$(target))
 install: $(foreach target,$(CFG_TARGET),install-$(target))
 
 # Setup phony tasks
-.PHONY: all clean test test-unit style
+.PHONY: all clean clean-all dist distcheck install test test-unit style
 
 # Disable unnecessary built-in rules
 .SUFFIXES:
