@@ -58,8 +58,8 @@ test!(cargo_test_verbose {
 
     assert_that(p.cargo_process("test").arg("-v").arg("hello"),
         execs().with_stdout(format!("\
-{running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
+{running} `rustc src[..]foo.rs [..]`
 {running} `[..]target[..]foo-[..] hello`
 
 running 1 test

@@ -109,10 +109,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 
     // Prepare the fingerprint directory as the first step of building a package
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, KindTarget);
-    let mut init = vec![(Job::new(target1, target2), Fresh)];
+    let mut init = vec![(Job::new(target1, target2, String::new()), Fresh)];
     if cx.config.target().is_some() {
         let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindPlugin);
-        init.push((Job::new(plugin1, plugin2), Fresh));
+        init.push((Job::new(plugin1, plugin2, String::new()), Fresh));
     }
     jobs.enqueue(pkg, StageStart, init);
 
@@ -125,11 +125,17 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     }
     let (freshness, dirty, fresh) =
         try!(fingerprint::prepare_build_cmd(cx, pkg));
+    let desc = match build_cmds.len() {
+        0 => String::new(),
+        1 => pkg.get_manifest().get_build()[0].to_string(),
+        _ => format!("custom build commands"),
+    };
     let dirty = proc() {
         for cmd in build_cmds.move_iter() { try!(cmd()) }
         dirty()
     };
-    jobs.enqueue(pkg, StageCustomBuild, vec![(Job::new(dirty, fresh), freshness)]);
+    jobs.enqueue(pkg, StageCustomBuild, vec![(Job::new(dirty, fresh, desc),
+                                              freshness)]);
 
     // After the custom command has run, execute rustc for all targets of our
     // package.
@@ -139,19 +145,20 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     let (mut libs, mut bins) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
         let work = if target.get_profile().is_doc() {
-            vec![(try!(rustdoc(pkg, target, cx)), KindTarget)]
+            let (rustdoc, desc) = try!(rustdoc(pkg, target, cx));
+            vec![(rustdoc, KindTarget, desc)]
         } else {
             let req = cx.get_requirement(pkg, target);
             try!(rustc(pkg, target, cx, req))
         };
 
         let dst = if target.is_lib() {&mut libs} else {&mut bins};
-        for (work, kind) in work.move_iter() {
+        for (work, kind, desc) in work.move_iter() {
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
             let dirty = proc() { try!(work()); dirty() };
-            dst.push((Job::new(dirty, fresh), freshness));
+            dst.push((Job::new(dirty, fresh, desc), freshness));
         }
     }
     jobs.enqueue(pkg, StageLibraries, libs);
@@ -209,7 +216,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
 
 fn rustc(package: &Package, target: &Target,
          cx: &mut Context, req: PlatformRequirement)
-         -> CargoResult<Vec<(Work, Kind)> >{
+         -> CargoResult<Vec<(Work, Kind, String)> >{
     let crate_types = target.rustc_crate_types();
     let root = package.get_root();
 
@@ -219,15 +226,9 @@ fn rustc(package: &Package, target: &Target,
     let primary = cx.primary;
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
-    let _ = cx.config.shell().verbose(|shell| {
-        for &(ref rustc, _) in rustcs.iter() {
-            try!(shell.status("Running", rustc.to_string()));
-        }
-        Ok(())
-    });
-
     Ok(rustcs.move_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
+        let desc = rustc.to_string();
 
         (proc() {
             if primary {
@@ -243,7 +244,7 @@ fn rustc(package: &Package, target: &Target,
                 }))
             }
             Ok(())
-        }, kind)
+        }, kind, desc)
     }).collect())
 }
 
@@ -272,7 +273,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
 
 
 fn rustdoc(package: &Package, target: &Target,
-           cx: &mut Context) -> CargoResult<Work> {
+           cx: &mut Context) -> CargoResult<(Work, String)> {
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(kind).proxy().dest().join("doc");
@@ -284,13 +285,10 @@ fn rustdoc(package: &Package, target: &Target,
 
     log!(5, "commands={}", rustdoc);
 
-    let _ = cx.config.shell().verbose(|shell| {
-        shell.status("Running", rustdoc.to_string())
-    });
-
     let primary = cx.primary;
     let name = package.get_name().to_string();
-    Ok(proc() {
+    let desc = rustdoc.to_string();
+    Ok((proc() {
         if primary {
             try!(rustdoc.exec().chain_error(|| {
                 human(format!("Could not document `{}`.", name))
@@ -309,7 +307,7 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         }
         Ok(())
-    })
+    }, desc))
 }
 
 fn build_base_args(cx: &Context, mut cmd: ProcessBuilder,

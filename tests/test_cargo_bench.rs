@@ -61,8 +61,8 @@ test!(cargo_bench_verbose {
 
     assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
         execs().with_stdout(format!("\
-{running} `rustc src[..]foo.rs [..]`
 {compiling} foo v0.5.0 ({url})
+{running} `rustc src[..]foo.rs [..]`
 {running} `[..]target[..]release[..]foo-[..] hello --bench`
 
 running 1 test
@@ -654,12 +654,12 @@ test!(bench_dylib {
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{running} [..]
-{running} [..]
-{running} [..]
-{running} [..]
 {compiling} bar v0.0.1 ({dir})
+{running} [..]
 {compiling} foo v0.0.1 ({dir})
+{running} [..]
+{running} [..]
+{running} [..]
 {running} [..]target[..]release[..]bench-[..]
 
 running 1 test
@@ -681,10 +681,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{running} [..]
-{running} [..]
-{running} [..]
-{running} [..]
 {fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
 {running} [..]target[..]release[..]bench-[..]

@@ -295,6 +295,7 @@ test!(linker_and_ar {
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stdout(format!("\
+{compiling} foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}{sep}target{sep}{target} \
     --dep-info [..] \
@@ -302,7 +303,6 @@ test!(linker_and_ar {
     -C ar=my-ar-tool -C linker=my-linker-tool \
     -L {dir}{sep}target{sep}{target} \
     -L {dir}{sep}target{sep}{target}{sep}deps`
-{compiling} foo v0.5.0 ({url})
 ",
                             running = RUNNING,
                             compiling = COMPILING,
