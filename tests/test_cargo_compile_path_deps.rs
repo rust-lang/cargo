@@ -1,6 +1,6 @@
-use std::io::{fs, File, UserRWX};
+use std::io::{fs, File, TempDir, UserRWX};
 
-use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
+use support::{ProjectBuilder, ResultTest, project, execs, main_file, cargo_dir, path2url};
 use support::{COMPILING, RUNNING};
 use support::paths::{mod, PathExt};
 use hamcrest::{assert_that, existing_file};
@@ -630,3 +630,70 @@ test!(override_path_dep {
                 execs().with_status(0));
 
 })
+
+test!(path_dep_build_cmd {
+    let tmpdir = TempDir::new("cargo").unwrap();
+    let p = ProjectBuilder::new("foo", tmpdir.path().clone())
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+
+            version = "0.5.0"
+            path = "bar"
+
+            [[bin]]
+
+            name = "foo"
+        "#)
+        .file("src/foo.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "cp src/bar.rs.in src/bar.rs"
+
+            [lib]
+
+            name = "bar"
+        "#)
+        .file("bar/src/bar.rs.in", r#"
+            pub fn gimme() -> int { 0 }
+        "#);
+
+    assert_that(p.cargo_process("build"),
+        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout("0\n"));
+
+    // Touching bar.rs.in should cause the `build` command to run again.
+    {
+        let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).assert();
+        file.write_str(r#"pub fn gimme() -> int { 1 }"#).assert();
+    }
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout("1\n"));
+})
+
