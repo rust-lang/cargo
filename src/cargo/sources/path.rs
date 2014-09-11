@@ -69,16 +69,27 @@ impl PathSource {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-        let candidates = match git2::Repository::open(&self.path) {
+        let root = pkg.get_manifest_path().dir_path();
+
+        // Check whether the package itself is a git repository.
+        let candidates = match git2::Repository::open(&root) {
             Ok(repo) => try!(self.list_files_git(pkg, repo)),
-            Err(..) => try!(self.list_files_walk(pkg)),
+
+            // If not, check whether the package is in a sub-directory of the main repository.
+            Err(..) if self.path.is_ancestor_of(&root) => {
+                match git2::Repository::open(&self.path) {
+                    Ok(repo) => try!(self.list_files_git(pkg, repo)),
+                    _ => try!(self.list_files_walk(pkg))
+                }
+            }
+            // If neither is true, fall back to walking the filesystem.
+            _ => try!(self.list_files_walk(pkg))
         };
 
         let pats = pkg.get_manifest().get_exclude().iter().map(|p| {
             Pattern::new(p.as_slice())
         }).collect::<Vec<Pattern>>();
 
-        let root = pkg.get_manifest_path().dir_path();
         Ok(candidates.move_iter().filter(|candidate| {
             let relative_path = candidate.path_relative_from(&root).unwrap();
             !pats.iter().any(|p| p.matches_path(&relative_path)) &&
@@ -88,25 +99,38 @@ impl PathSource {
 
     fn list_files_git(&self, pkg: &Package, repo: git2::Repository)
                       -> CargoResult<Vec<Path>> {
+        warn!("list_files_git {}", pkg.get_package_id());
         let index = try!(repo.index());
+        let root = match repo.workdir() {
+            Some(dir) => dir,
+            None => return Err(internal_error("Can't list files on a bare repository.", "")),
+        };
+        let pkg_path = pkg.get_manifest_path().dir_path();
+
         let mut ret = Vec::new();
         'outer: for i in range(0, index.len()) {
             let entry = match index.get(i) { Some(e) => e, None => continue };
             let fname = entry.path.as_bytes_no_nul();
-            let path = pkg.get_manifest_path().dir_path().join(fname);
+            let file_path = root.join(fname);
+
+            // Filter out files outside this package.
+            if !pkg_path.is_ancestor_of(&file_path) { continue }
 
             // Filter out Cargo.lock and target always
             if fname == b"Cargo.lock" { continue }
             if fname == b"target" { continue }
 
-            // Filter out all other packages
-            for pkg in self.packages.iter().filter(|p| *p != pkg) {
-                let pkg_path = pkg.get_manifest_path().dir_path();
-                if pkg_path.is_ancestor_of(&path) { continue 'outer; }
+            // Filter out sub-packages of this package
+            for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
+                let other_path = other_pkg.get_manifest_path().dir_path();
+                if pkg_path.is_ancestor_of(&other_path) && other_path.is_ancestor_of(&file_path) {
+                    continue 'outer;
+                }
             }
 
             // We found a file!
-            ret.push(path);
+            warn!("  found {}", file_path.display());
+            ret.push(file_path);
         }
         Ok(ret)
     }
@@ -193,6 +217,7 @@ impl Source for PathSource {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
+            warn!("{} {}", file.stat().map(|s| s.modified).unwrap_or(0), file.display());
             max = cmp::max(max, file.stat().map(|s| s.modified).unwrap_or(0));
         }
         log!(5, "fingerprint {}: {}", self.path.display(), max);
