@@ -302,7 +302,7 @@ impl<'a> GitCheckout<'a> {
         info!("reset {} to {}", self.repo.path().display(),
               self.revision.as_slice());
         let oid = try!(git2::Oid::from_str(self.revision.as_slice()));
-        let object = try!(git2::Object::lookup(&self.repo, oid, None));
+        let object = try!(self.repo.find_object(oid, None));
         try!(self.repo.reset(&object, git2::Hard, None, None));
         Ok(())
     }
@@ -349,7 +349,7 @@ impl<'a> GitCheckout<'a> {
                                      child.name().unwrap_or(""), url))
                 }));
 
-                let obj = try!(git2::Object::lookup(&repo, head, None));
+                let obj = try!(repo.find_object(head, None));
                 try!(repo.reset(&obj, git2::Hard, None, None));
                 try!(update_submodules(&repo));
             }
@@ -414,8 +414,7 @@ fn fetch(repo: &git2::Repository, url: &str) -> CargoResult<()> {
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new()
                                        .credentials(f);
-        let mut remote = try!(repo.remote_create_anonymous(url.as_slice(),
-                                                           refspec));
+        let mut remote = try!(repo.remote_anonymous(url.as_slice(), refspec));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
         remote.set_callbacks(&mut cb);
         try!(remote.fetch(None, None));
