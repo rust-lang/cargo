@@ -61,7 +61,7 @@ name = "libgit2"
 version = "0.0.1"
 source = "git+https://github.com/alexcrichton/git2-rs#3bd3a8ff5d7306adffb79fcffef5ea467547cbb1"
 dependencies = [
- "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#d6fb271a309c9bcbe8f0992967272e7a765ff735)",
+ "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#6a5d3ad7b62db6ca0721c528402f4976a1876036)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#e378605ce4099008b1dab8f39619d91dc8887946)",
  "openssl-static-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-static-sys#b8f2500c39932e9d022dcc2590493ab0cc144e2a)",
 ]
@@ -69,7 +69,7 @@ dependencies = [
 [[package]]
 name = "libssh2-static-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/libssh2-static-sys#d6fb271a309c9bcbe8f0992967272e7a765ff735"
+source = "git+https://github.com/alexcrichton/libssh2-static-sys#6a5d3ad7b62db6ca0721c528402f4976a1876036"
 
 [[package]]
 name = "link-config"
