@@ -57,10 +57,8 @@ $ ./configure --target=i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
 
 ## Contributing to the Docs
 
-To contribute to the docs, please submit pull requests to [wycats/cargo-website][1].
-All you need to do is change the markdown files in the source directory.
-
-[1]: https://github.com/wycats/cargo-website
+To contribute to the docs, all you need to do is change the markdown files in
+the `src/doc` directory.
 
 ## Reporting Issues
 
