@@ -669,10 +669,7 @@ test!(path_dep_build_cmd {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
-                                     {} foo v0.5.0 ({})\n",
-                                    COMPILING, p.url(),
-                                    COMPILING, p.url())));
+        execs().with_status(0));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -687,10 +684,7 @@ test!(path_dep_build_cmd {
     }
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
-                                     {} foo v0.5.0 ({})\n",
-                                    COMPILING, p.url(),
-                                    COMPILING, p.url())));
+        execs().with_status(0));
 
     assert_that(
       cargo::util::process(p.bin("foo")),
