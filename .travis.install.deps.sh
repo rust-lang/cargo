@@ -52,8 +52,15 @@ else
         triple=i686-pc-mingw32
     fi
     curl -O http://static-rust-lang-org.s3.amazonaws.com/dist/rust-nightly-$triple.exe
-    innounp -y -x rust-nightly-$triple.exe
-    mv '{app}' rustc
+    if [ "${BITS}" = "64" ]; then
+        # this comes from the mingw-w64-x86_64-innoextract package
+        innoextract rust-nightly-$triple.exe
+        mv app rustc
+    else
+        # this came from a random download on the internet! (search google)
+        innounp -y -x rust-nightly-$triple.exe
+        mv '{app}' rustc
+    fi
 fi
 
 set +x
