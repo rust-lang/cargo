@@ -667,7 +667,10 @@ test!(path_dep_build_cmd {
             pub fn gimme() -> int { 0 }
         "#);
 
-    assert_that(p.cargo_process("build"),
+    p.build();
+    p.root().join("bar").move_into_the_past().assert();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
         execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
