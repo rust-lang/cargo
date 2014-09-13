@@ -1181,6 +1181,8 @@ test!(git_dep_build_cmd {
         "#)
     }).assert();
 
+    p.root().join("bar").move_into_the_past().assert();
+
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
         execs().with_status(0));
 
