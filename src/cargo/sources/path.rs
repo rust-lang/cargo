@@ -80,8 +80,8 @@ impl PathSource {
 
         let root = pkg.get_manifest_path().dir_path();
         Ok(candidates.move_iter().filter(|candidate| {
-            let candidate = candidate.path_relative_from(&root).unwrap();
-            !pats.iter().any(|p| p.matches_path(&candidate)) &&
+            let relative_path = candidate.path_relative_from(&root).unwrap();
+            !pats.iter().any(|p| p.matches_path(&relative_path)) &&
                 candidate.is_file()
         }).collect())
     }
