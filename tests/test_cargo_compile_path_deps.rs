@@ -1,6 +1,6 @@
-use std::io::{fs, File, TempDir, UserRWX};
+use std::io::{fs, File, UserRWX};
 
-use support::{ProjectBuilder, ResultTest, project, execs, main_file, cargo_dir, path2url};
+use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
 use support::{COMPILING, RUNNING};
 use support::paths::{mod, PathExt};
 use hamcrest::{assert_that, existing_file};
@@ -632,8 +632,7 @@ test!(override_path_dep {
 })
 
 test!(path_dep_build_cmd {
-    let tmpdir = TempDir::new("cargo").unwrap();
-    let p = ProjectBuilder::new("foo", tmpdir.path().clone())
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -669,7 +668,10 @@ test!(path_dep_build_cmd {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_status(0));
+        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -684,7 +686,10 @@ test!(path_dep_build_cmd {
     }
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-        execs().with_status(0));
+        execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                                     {} foo v0.5.0 ({})\n",
+                                    COMPILING, p.url(),
+                                    COMPILING, p.url())));
 
     assert_that(
       cargo::util::process(p.bin("foo")),
