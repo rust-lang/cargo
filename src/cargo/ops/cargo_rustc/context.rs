@@ -22,8 +22,8 @@ pub struct Context<'a, 'b> {
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
+    pub env: &'a str,
 
-    env: &'a str,
     host: Layout,
     target: Option<Layout>,
     target_triple: String,

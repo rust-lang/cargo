@@ -170,6 +170,15 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 
 fn compile_custom(pkg: &Package, cmd: &str,
                   cx: &Context, first: bool) -> CargoResult<Work> {
+    let root = cx.get_package(cx.resolve.root());
+    let profile = root.get_manifest().get_targets().iter()
+                      .find(|target| target.get_profile().get_env() == cx.env)
+                      .map(|target| target.get_profile());
+    let profile = match profile {
+        Some(profile) => profile,
+        None => return Err(internal(format!("no profile for {}", cx.env)))
+    };
+
     // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
     // TODO: this shouldn't explicitly pass `KindTarget` for dest/deps_dir, we
@@ -180,7 +189,10 @@ fn compile_custom(pkg: &Package, cmd: &str,
     let mut p = process(cmd.next().unwrap(), pkg, cx)
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
-                     .env("TARGET", Some(cx.target_triple()));
+                     .env("TARGET", Some(cx.target_triple()))
+                     .env("DEBUG", Some(profile.get_debug().to_string()))
+                     .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
+                     .env("PROFILE", Some(profile.get_env()));
     for arg in cmd {
         p = p.arg(arg);
     }

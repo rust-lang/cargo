@@ -66,6 +66,9 @@ define CARGO_TARGET
 cargo-$(1): $$(CARGO)
 	"$$(CFG_RUSTC)" -v
 	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(ARGS)
+
+test-unit-$(1): $$(CARGO)
+	$$(CARGO) test --target $(1) $$(only)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
@@ -76,10 +79,7 @@ $(CARGO): src/snapshots.txt
 
 # === Tests
 
-test: test-unit style no-exes
-
-test-unit: $(CARGO)
-	$(CARGO) test $(only)
+test: test-unit style no-exes $(foreach target,$(CFG_TARGET),test-unit-$(target))
 
 style:
 	sh tests/check-style.sh

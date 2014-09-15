@@ -78,6 +78,14 @@ commands.
                          directory in which all the output of the dependency's
                          build command was placed. This is useful for picking up
                          things like header files and such from other packages.
+* `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
+                         being built.
+* `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
+                         profile currently being built.
+* `PROFILE` - name of the profile currently being built (see
+              [profiles][profile]).
+
+[profile]: manifest.html#the-[profile.*]-sections
 
 # A complete example
 
