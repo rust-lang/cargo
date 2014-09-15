@@ -11,6 +11,7 @@ pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
 pub use self::dependency_queue::Dependency;
 pub use self::graph::Graph;
 pub use self::to_url::ToUrl;
+pub use self::vcs::{GitRepo, HgRepo};
 
 pub mod graph;
 pub mod process_builder;
@@ -25,3 +26,4 @@ pub mod profile;
 mod pool;
 mod dependency_queue;
 mod to_url;
+pub mod vcs;

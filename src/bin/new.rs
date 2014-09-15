@@ -17,6 +17,7 @@ Options:
     --no-git            Don't initialize a new git repository
     --git               Initialize a new git repository, overriding a
                         global `git = false` configuration
+    --hg                Initialize a new hg repository
     --travis            Create a .travis.yml file
     --bin               Use a binary instead of a library template
     -v, --verbose       Use verbose output
@@ -26,11 +27,13 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     debug!("executing; cmd=cargo-new; args={}", os::args());
     shell.set_verbose(options.flag_verbose);
 
-    let Options { flag_no_git, flag_travis, flag_bin, arg_path, flag_git, .. } = options;
+    let Options { flag_no_git, flag_travis,
+                  flag_bin,arg_path, flag_git, flag_hg, .. } = options;
 
     let opts = ops::NewOptions {
         no_git: flag_no_git,
         git: flag_git,
+        hg: flag_hg,
         travis: flag_travis,
         path: arg_path.as_slice(),
         bin: flag_bin,

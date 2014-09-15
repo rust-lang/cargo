@@ -2,14 +2,15 @@ use std::os;
 use std::io::{mod, fs, File};
 use std::io::fs::PathExtensions;
 
-use git2::{Repository, Config};
+use git2::Config;
 
-use util::{CargoResult, human, ChainError, config, internal};
+use util::{GitRepo, HgRepo, CargoResult, human, ChainError, config, internal};
 use core::shell::MultiShell;
 
 pub struct NewOptions<'a> {
     pub no_git: bool,
     pub git: bool,
+    pub hg: bool,
     pub travis: bool,
     pub bin: bool,
     pub path: &'a str,
@@ -36,15 +37,19 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
 
 fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config());
-    if !opts.git && (opts.no_git || cfg.git == Some(false)) {
+    let mut ignore = "/target\n".to_string();
+    if !opts.bin {
+        ignore.push_str("/Cargo.lock\n");
+    }
+
+    if opts.hg {
+        try!(HgRepo::init(path));
+        try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
+    } else if !opts.git && (opts.no_git || cfg.git == Some(false)) {
         try!(fs::mkdir(path, io::UserRWX));
     } else {
-        try!(Repository::init(path));
-        let mut gitignore = "/target\n".to_string();
-        if !opts.bin {
-            gitignore.push_str("/Cargo.lock\n");
-        }
-        try!(File::create(&path.join(".gitignore")).write(gitignore.as_bytes()));
+        try!(GitRepo::init(path));
+        try!(File::create(&path.join(".gitignore")).write(ignore.as_bytes()));
     }
 
     let (author_name, email) = try!(discover_author());
