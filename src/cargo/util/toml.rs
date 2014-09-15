@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::io::fs;
+use std::io::fs::{mod, PathExtensions};
 use std::os;
 use std::slice;
 use std::str;

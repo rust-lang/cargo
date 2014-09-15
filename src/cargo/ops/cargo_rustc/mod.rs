@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, UserRWX};
+use std::io::fs::PathExtensions;
 use std::os;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};

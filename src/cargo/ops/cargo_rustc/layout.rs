@@ -47,6 +47,7 @@
 //! ```
 
 use std::io::{mod, fs, IoResult};
+use std::io::fs::PathExtensions;
 
 use core::Package;
 use util::hex::short_hash;

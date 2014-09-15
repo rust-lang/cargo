@@ -1,5 +1,5 @@
 use std::io;
-use std::io::fs;
+use std::io::fs::{mod, PathExtensions};
 use std::io::process::{ProcessOutput};
 use std::os;
 use std::path::{Path,BytesContainer};

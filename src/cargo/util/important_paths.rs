@@ -1,4 +1,5 @@
 use std::os;
+use std::io::fs::PathExtensions;
 use util::{CargoResult, CliError, CliResult, human};
 
 /// Iteratively search for `file` in `pwd` and its parents, returning

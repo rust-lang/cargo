@@ -790,6 +790,7 @@ test!(custom_build_env_vars {
         "#)
         .file("src/foo.rs", format!(r#"
             use std::os;
+            use std::io::fs::PathExtensions;
             fn main() {{
                 let _ncpus = os::getenv("NUM_JOBS").unwrap();
                 let out = os::getenv("OUT_DIR").unwrap();

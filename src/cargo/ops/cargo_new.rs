@@ -1,5 +1,6 @@
 use std::os;
 use std::io::{mod, fs, File};
+use std::io::fs::PathExtensions;
 
 use git2::{Repository, Config};
 

@@ -10,7 +10,7 @@ extern crate docopt;
 use std::collections::TreeSet;
 use std::os;
 use std::io;
-use std::io::fs;
+use std::io::fs::{mod, PathExtensions};
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 use docopt::FlagParser;
 
