@@ -1,4 +1,4 @@
-use std::io::fs::{rmdir_recursive};
+use std::io::fs::{rmdir_recursive, PathExtensions};
 
 use core::source::Source;
 use sources::PathSource;

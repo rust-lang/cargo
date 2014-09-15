@@ -1,4 +1,5 @@
 use std::io::File;
+use std::io::fs::PathExtensions;
 
 use tar::Archive;
 use flate2::{GzBuilder, BestCompression};

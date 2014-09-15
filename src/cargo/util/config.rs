@@ -1,4 +1,5 @@
 use std::{io, fmt, os, result, mem};
+use std::io::fs::PathExtensions;
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;

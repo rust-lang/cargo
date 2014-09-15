@@ -1,4 +1,4 @@
-use std::io::fs;
+use std::io::fs::{mod, PathExtensions};
 use std::io;
 use std::os;
 use std::str;

@@ -1,4 +1,5 @@
 use std::io::{fs, UserRWX, File};
+use std::io::fs::PathExtensions;
 use std::os;
 
 use support::{execs, paths, cargo_dir, ResultTest};

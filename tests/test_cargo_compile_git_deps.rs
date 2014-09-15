@@ -1,4 +1,5 @@
 use std::io::{timer, fs, File};
+use std::io::fs::PathExtensions;
 use std::time::Duration;
 
 use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};

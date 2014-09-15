@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 use std::io::{File, fs};
+use std::io::fs::PathExtensions;
+
 use core::{Package,Manifest,SourceId};
 use util::{mod, CargoResult, human};
 use util::important_paths::find_project_manifest_exact;
