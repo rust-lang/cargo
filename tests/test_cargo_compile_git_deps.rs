@@ -1,8 +1,9 @@
-use std::io::{timer, fs, File};
-use std::io::fs::PathExtensions;
+use std::io::fs;
+use std::io::{timer, File};
 use std::time::Duration;
+use git2;
 
-use support::{ProjectBuilder, ResultTest, project, execs, main_file, paths};
+use support::{ProjectBuilder, ResultTest, project, execs, main_file};
 use support::{cargo_dir, path2url};
 use support::{COMPILING, UPDATING, RUNNING};
 use support::paths::PathExt;
@@ -17,30 +18,60 @@ fn setup() {
 fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder)
     -> Result<ProjectBuilder, ProcessError>
 {
-    let gitconfig = paths::home().join(".gitconfig");
-
-    if !gitconfig.exists() {
-        File::create(&gitconfig).write(r"
-            [user]
-
-            email = foo@bar.com
-            name = Foo Bar
-        ".as_bytes()).assert()
-    }
-
     let mut git_project = project(name);
     git_project = callback(git_project);
     git_project.build();
 
-    log!(5, "git init");
-    try!(git_project.process("git").args(["init", "--template="]).exec_with_output());
-    log!(5, "building git project");
-    log!(5, "git add .");
-    try!(git_project.process("git").args(["add", "."]).exec_with_output());
-    log!(5, "git commit");
-    try!(git_project.process("git").args(["commit", "-m", "Initial commit"])
-                    .exec_with_output());
+    let repo = git2::Repository::init(&git_project.root()).unwrap();
+    let mut cfg = repo.config().unwrap();
+    cfg.set_str("user.email", "foo@bar.com").unwrap();
+    cfg.set_str("user.name", "Foo Bar").unwrap();
+    drop(cfg);
+    add(&repo);
+    commit(&repo);
     Ok(git_project)
+}
+
+fn add(repo: &git2::Repository) {
+    // FIXME(libgit2/libgit2#2514): apparently add_all will add all submodules
+    // as well, and then fail b/c they're a directory. As a stopgap, we just
+    // ignore all submodules.
+    let mut s = repo.submodules().unwrap();
+    for submodule in s.mut_iter() {
+        submodule.add_to_index(false).unwrap();
+    }
+    let mut index = repo.index().unwrap();
+    index.add_all(&["*"], git2::AddDefault, Some(|a: &[u8], _b: &[u8]| {
+        if s.iter().any(|s| s.path().as_vec() == a) {1} else {0}
+    })).unwrap();
+    index.write().unwrap();
+}
+
+fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
+                     path: &Path) -> git2::Submodule<'a> {
+    let mut s = repo.submodule(url, path, false).unwrap();
+    let subrepo = s.open().unwrap();
+    let mut origin = subrepo.find_remote("origin").unwrap();
+    origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
+    origin.fetch(None, None).unwrap();
+    origin.save().unwrap();
+    subrepo.checkout_head(None).unwrap();
+    s.add_finalize().unwrap();
+    return s;
+}
+
+fn commit(repo: &git2::Repository) -> git2::Oid {
+    let tree_id = repo.index().unwrap().write_tree().unwrap();
+    let sig = repo.signature().unwrap();
+    let mut parents = Vec::new();
+    match repo.head().ok().map(|h| h.target().unwrap()) {
+        Some(parent) => parents.push(repo.find_commit(parent).unwrap()),
+        None => {}
+    }
+    let parents = parents.iter().collect::<Vec<_>>();
+    repo.commit(Some("HEAD"), &sig, &sig, "test",
+                &repo.find_tree(tree_id).unwrap(),
+                parents.as_slice()).unwrap()
 }
 
 test!(cargo_compile_simple_git_dep {
@@ -125,8 +156,11 @@ test!(cargo_compile_git_dep_branch {
             "#)
     }).assert();
 
-    git_project.process("git").args(["checkout", "-b", "branchy"]).exec_with_output().assert();
-    git_project.process("git").args(["checkout", "master"]).exec_with_output().assert();
+    // Make a new branch based on the current HEAD commit
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let head = repo.head().unwrap().target().unwrap();
+    let head = repo.find_commit(head).unwrap();
+    repo.branch("branchy", &head, true, None, None).unwrap();
 
     let project = project
         .file("Cargo.toml", format!(r#"
@@ -189,9 +223,14 @@ test!(cargo_compile_git_dep_tag {
             "#)
     }).assert();
 
-    git_project.process("git").args(["tag", "v0.1.0"]).exec_with_output().assert();
-    git_project.process("git").args(["checkout", "-b", "tmp"]).exec_with_output().assert();
-    git_project.process("git").args(["branch", "-d", "master"]).exec_with_output().assert();
+    // Make a tag correponding to the current HEAD
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let head = repo.head().unwrap().target().unwrap();
+    repo.tag("v0.1.0",
+             &repo.find_object(head, None).unwrap(),
+             &repo.signature().unwrap(),
+             "make a new tag",
+             false).unwrap();
 
     let project = project
         .file("Cargo.toml", format!(r#"
@@ -419,20 +458,15 @@ test!(two_revs_same_deps {
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
     }).assert();
 
+    let repo = git2::Repository::open(&bar.root()).unwrap();
+    let rev1 = repo.revparse_single("HEAD").unwrap().id().to_string();
+
     // Commit the changes and make sure we trigger a recompile
-    let rev1 = bar.process("git").args(["rev-parse", "HEAD"])
-                  .exec_with_output().assert();
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 2 }
     "#).assert();
-    bar.process("git").args(["add", "."]).exec_with_output().assert();
-    bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
-       .assert();
-    let rev2 = bar.process("git").args(["rev-parse", "HEAD"])
-                  .exec_with_output().assert();
-
-    let rev1 = String::from_utf8(rev1.output).unwrap();
-    let rev2 = String::from_utf8(rev2.output).unwrap();
+    add(&repo);
+    let rev2 = commit(&repo).to_string();
 
     let foo = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -551,9 +585,9 @@ test!(recompilation {
 
     // Commit the changes and make sure we don't trigger a recompile because the
     // lockfile says not to change
-    git_project.process("git").args(["add", "."]).exec_with_output().assert();
-    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
-               .assert();
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    add(&repo);
+    commit(&repo);
 
     println!("compile after commit");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
@@ -646,9 +680,9 @@ test!(update_with_shared_deps {
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
     "#).assert();
-    git_project.process("git").args(["add", "."]).exec_with_output().assert();
-    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
-               .assert();
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    add(&repo);
+    commit(&repo);
 
     timer::sleep(Duration::milliseconds(1000));
 
@@ -690,11 +724,10 @@ test!(dep_with_submodule {
             .file("lib.rs", "pub fn dep() {}")
     }).assert();
 
-    git_project.process("git").args(["submodule", "add"])
-               .arg(git_project2.root()).arg("src").exec_with_output().assert();
-    git_project.process("git").args(["add", "."]).exec_with_output().assert();
-    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
-               .assert();
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let url = path2url(git_project2.root()).to_string();
+    add_submodule(&repo, url.as_slice(), &Path::new("src"));
+    commit(&repo);
 
     let project = project
         .file("Cargo.toml", format!(r#"
@@ -772,9 +805,9 @@ test!(two_deps_only_update_one {
     File::create(&git1.root().join("src/lib.rs")).write_str(r#"
         pub fn foo() {}
     "#).assert();
-    git1.process("git").args(["add", "."]).exec_with_output().assert();
-    git1.process("git").args(["commit", "-m", "test"]).exec_with_output()
-        .assert();
+    let repo = git2::Repository::open(&git1.root()).unwrap();
+    add(&repo);
+    commit(&repo);
 
     assert_that(project.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
         execs()
@@ -820,15 +853,13 @@ test!(stale_cached_version {
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 1 + 0 }
     "#).assert();
-    bar.process("git").args(["add", "."]).exec_with_output().assert();
-    bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
-       .assert();
+    let repo = git2::Repository::open(&bar.root()).unwrap();
+    add(&repo);
+    commit(&repo);
 
     timer::sleep(Duration::milliseconds(1000));
 
-    let rev = bar.process("git").args(["rev-parse", "HEAD"])
-                 .exec_with_output().assert();
-    let rev = String::from_utf8(rev.output).unwrap();
+    let rev = repo.revparse_single("HEAD").unwrap().id();
 
     File::create(&foo.root().join("Cargo.lock")).write_str(format!(r#"
         [root]
@@ -877,12 +908,10 @@ test!(dep_with_changed_submodule {
             .file("lib.rs", "pub fn dep() -> &'static str { \"project3\" }")
     }).assert();
 
-    git_project.process("git").args(["submodule", "add"])
-               .arg(git_project2.url().to_string()).arg("src").exec_with_output()
-               .assert();
-    git_project.process("git").args(["add", "."]).exec_with_output().assert();
-    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
-               .assert();
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let mut sub = add_submodule(&repo, git_project2.url().to_string().as_slice(),
+                                &Path::new("src"));
+    commit(&repo);
 
     let project = project
         .file("Cargo.toml", format!(r#"
@@ -917,14 +946,22 @@ test!(dep_with_changed_submodule {
     file.write_str(format!("[submodule \"src\"]\n\tpath = src\n\turl={}",
                            git_project3.url()).as_slice()).assert();
 
-    git_project.process("git").args(["submodule", "sync"]).exec_with_output().assert();
-    git_project.process("git").args(["fetch"]).cwd(git_project.root().join("src"))
-               .exec_with_output().assert();
-    git_project.process("git").args(["reset", "--hard", "origin/master"])
-               .cwd(git_project.root().join("src")).exec_with_output().assert();
-    git_project.process("git").args(["add", "."]).exec_with_output().assert();
-    git_project.process("git").args(["commit", "-m", "test"]).exec_with_output()
-               .assert();
+    // Sync the submodule and reset it to the new remote.
+    sub.sync().unwrap();
+    {
+        let subrepo = sub.open().unwrap();
+        let mut origin = subrepo.find_remote("origin").unwrap();
+        origin.set_url(git_project3.url().to_string().as_slice()).unwrap();
+        origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();;
+        origin.fetch(None, None).unwrap();
+        origin.save().unwrap();
+        let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
+        let obj = subrepo.find_object(id, None).unwrap();
+        subrepo.reset(&obj, git2::Hard, None, None).unwrap();
+    }
+    sub.add_to_index(true).unwrap();
+    add(&repo);
+    commit(&repo);
 
     timer::sleep(Duration::milliseconds(1000));
     // Update the dependency and carry on!
@@ -1058,7 +1095,10 @@ test!(git_name_not_always_needed {
         "#)
     }).assert();
 
-    fs::unlink(&paths::home().join(".gitconfig")).assert();
+    let repo = git2::Repository::open(&p2.root()).unwrap();
+    let mut cfg = repo.config().unwrap();
+    let _ = cfg.remove("user.name");
+    let _ = cfg.remove("user.email");
 
     let p = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -1117,9 +1157,9 @@ test!(git_repo_changing_no_rebuild {
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 2 }
     "#).assert();
-    bar.process("git").args(["add", "."]).exec_with_output().assert();
-    bar.process("git").args(["commit", "-m", "test"]).exec_with_output()
-       .assert();
+    let repo = git2::Repository::open(&bar.root()).unwrap();
+    add(&repo);
+    commit(&repo);
 
     // Lock p2 to the second rev
     let p2 = project("p2")
