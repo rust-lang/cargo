@@ -1,5 +1,5 @@
-use std::{io, fmt, os, result, mem};
-use std::io::fs::PathExtensions;
+use std::{fmt, os, result, mem};
+use std::io::fs::{PathExtensions, File};
 use std::collections::HashMap;
 use serialize::{Encodable,Encoder};
 use toml;
@@ -45,6 +45,18 @@ impl<'a> Config<'a> {
 
     pub fn git_checkout_path(&self) -> Path {
         self.home_path.join(".cargo").join("git").join("checkouts")
+    }
+
+    pub fn registry_index_path(&self) -> Path {
+        self.home_path.join(".cargo").join("registry").join("index")
+    }
+
+    pub fn registry_cache_path(&self) -> Path {
+        self.home_path.join(".cargo").join("registry").join("cache")
+    }
+
+    pub fn registry_source_path(&self) -> Path {
+        self.home_path.join(".cargo").join("registry").join("src")
     }
 
     pub fn shell(&mut self) -> &mut MultiShell {
@@ -144,8 +156,8 @@ impl ConfigValue {
 
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
-            (me @ &String(..), from @ String(..)) => *me = from,
-            (me @ &Boolean(..), from @ Boolean(..)) => *me = from,
+            (&String(..), String(..)) |
+            (&Boolean(..), Boolean(..)) => {}
             (&List(ref mut old), List(ref mut new)) => {
                 let new = mem::replace(new, Vec::new());
                 old.extend(new.move_iter());
@@ -209,6 +221,18 @@ impl ConfigValue {
             Boolean(..) => "boolean",
         }
     }
+
+    fn into_toml(self) -> toml::Value {
+        match self {
+            Boolean(s, _) => toml::Boolean(s),
+            String(s, _) => toml::String(s),
+            List(l) => toml::Array(l.move_iter().map(|(s, _)| toml::String(s))
+                                    .collect()),
+            Table(l) => toml::Table(l.move_iter()
+                                     .map(|(k, v)| (k, v.into_toml()))
+                                     .collect()),
+        }
+    }
 }
 
 pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
@@ -239,13 +263,13 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
 }
 
 fn find_in_tree<T>(pwd: &Path,
-                   walk: |io::fs::File| -> CargoResult<T>) -> CargoResult<T> {
+                   walk: |File| -> CargoResult<T>) -> CargoResult<T> {
     let mut current = pwd.clone();
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible));
+            let file = try!(File::open(&possible));
 
             match walk(file) {
                 Ok(res) => return Ok(res),
@@ -260,14 +284,14 @@ fn find_in_tree<T>(pwd: &Path,
 }
 
 fn walk_tree(pwd: &Path,
-             walk: |io::fs::File| -> CargoResult<()>) -> CargoResult<()> {
+             walk: |File| -> CargoResult<()>) -> CargoResult<()> {
     let mut current = pwd.clone();
     let mut err = false;
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
-            let file = try!(io::fs::File::open(&possible));
+            let file = try!(File::open(&possible));
 
             match walk(file) {
                 Err(_) => err = false,
@@ -282,10 +306,28 @@ fn walk_tree(pwd: &Path,
     Ok(())
 }
 
-fn extract_config(mut file: io::fs::File, key: &str) -> CargoResult<ConfigValue> {
+fn extract_config(mut file: File, key: &str) -> CargoResult<ConfigValue> {
     let contents = try!(file.read_to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), file.path()));
     let val = try!(toml.pop(&key.to_string()).require(|| internal("")));
 
     ConfigValue::from_toml(file.path(), val)
+}
+
+pub fn set_config(cfg: &Config, loc: Location, key: &str,
+                  value: ConfigValue) -> CargoResult<()> {
+    // TODO: There are a number of drawbacks here
+    //
+    // 1. Project is unimplemented
+    // 2. This blows away all comments in a file
+    // 3. This blows away the previous ordering of a file.
+    let file = match loc {
+        Global => cfg.home_path.join(".cargo").join("config"),
+        Project => unimplemented!(),
+    };
+    let contents = File::open(&file).read_to_string().unwrap_or(String::new());
+    let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
+    toml.insert(key.to_string(), value.into_toml());
+    try!(File::create(&file).write(toml::Table(toml).to_string().as_bytes()));
+    Ok(())
 }

@@ -1,6 +1,6 @@
 use std::io::{fs, File, UserRWX};
 
-use support::{ResultTest, project, execs, main_file, cargo_dir, path2url};
+use support::{ResultTest, project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
 use support::paths::{mod, PathExt};
 use hamcrest::{assert_that, existing_file};
@@ -226,11 +226,7 @@ test!(cargo_compile_with_transitive_dev_deps {
 
 test!(no_rebuild_dependency {
     let mut p = project("foo");
-    let bar = p.root().join("bar");
     p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}']
-        "#, bar.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -239,7 +235,7 @@ test!(no_rebuild_dependency {
             authors = ["wycats@example.com"]
 
             [[bin]] name = "foo"
-            [dependencies] bar = "0.5.0"
+            [dependencies.bar] path = "bar"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -257,12 +253,11 @@ test!(no_rebuild_dependency {
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
         "#);
-    let bar = path2url(bar);
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            COMPILING, bar,
+                                            COMPILING, p.url(),
                                             COMPILING, p.url())));
     // This time we shouldn't compile bar
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
@@ -273,18 +268,13 @@ test!(no_rebuild_dependency {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            COMPILING, bar,
+                                            COMPILING, p.url(),
                                             COMPILING, p.url())));
 })
 
 test!(deep_dependencies_trigger_rebuild {
     let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
     p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}', '{}']
-        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -294,8 +284,8 @@ test!(deep_dependencies_trigger_rebuild {
 
             [[bin]]
             name = "foo"
-            [dependencies]
-            bar = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -310,8 +300,8 @@ test!(deep_dependencies_trigger_rebuild {
 
             [lib]
             name = "bar"
-            [dependencies]
-            baz = "0.5.0"
+            [dependencies.baz]
+            path = "../baz"
         "#)
         .file("bar/src/bar.rs", r#"
             extern crate baz;
@@ -330,14 +320,12 @@ test!(deep_dependencies_trigger_rebuild {
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
         "#);
-    let baz = path2url(baz);
-    let bar = path2url(bar);
     assert_that(p.cargo_process("build"),
                 execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
                                              {} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            COMPILING, baz,
-                                            COMPILING, bar,
+                                            COMPILING, p.url(),
+                                            COMPILING, p.url(),
                                             COMPILING, p.url())));
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
@@ -354,8 +342,8 @@ test!(deep_dependencies_trigger_rebuild {
                 execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
                                              {} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            COMPILING, baz,
-                                            COMPILING, bar,
+                                            COMPILING, p.url(),
+                                            COMPILING, p.url(),
                                             COMPILING, p.url())));
 
     // Make sure an update to bar doesn't trigger baz
@@ -367,19 +355,14 @@ test!(deep_dependencies_trigger_rebuild {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            COMPILING, bar,
+                                            COMPILING, p.url(),
                                             COMPILING, p.url())));
 
 })
 
 test!(no_rebuild_two_deps {
     let mut p = project("foo");
-    let bar = p.root().join("bar");
-    let baz = p.root().join("baz");
     p = p
-        .file(".cargo/config", format!(r#"
-            paths = ['{}', '{}']
-        "#, bar.display(), baz.display()).as_slice())
         .file("Cargo.toml", r#"
             [project]
 
@@ -389,9 +372,10 @@ test!(no_rebuild_two_deps {
 
             [[bin]]
             name = "foo"
-            [dependencies]
-            bar = "0.5.0"
-            baz = "0.5.0"
+            [dependencies.bar]
+            path = "bar"
+            [dependencies.baz]
+            path = "baz"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -406,8 +390,8 @@ test!(no_rebuild_two_deps {
 
             [lib]
             name = "bar"
-            [dependencies]
-            baz = "0.5.0"
+            [dependencies.baz]
+            path = "../baz"
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
@@ -425,14 +409,12 @@ test!(no_rebuild_two_deps {
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
         "#);
-    let baz = path2url(baz);
-    let bar = path2url(bar);
     assert_that(p.cargo_process("build"),
                 execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
                                              {} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
-                                            COMPILING, baz,
-                                            COMPILING, bar,
+                                            COMPILING, p.url(),
+                                            COMPILING, p.url(),
                                             COMPILING, p.url())));
     assert_that(&p.bin("foo"), existing_file());
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),

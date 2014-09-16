@@ -38,7 +38,14 @@ test!(adding_and_removing_packages {
             authors = []
             version = "0.0.1"
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("generate-lockfile"),
                 execs().with_status(0));
@@ -54,8 +61,8 @@ test!(adding_and_removing_packages {
         authors = []
         version = "0.0.1"
 
-        [dependencies]
-        bar = "0.5.0"
+        [dependencies.bar]
+        path = "bar"
     "#).assert();
     assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
@@ -63,14 +70,11 @@ test!(adding_and_removing_packages {
     assert!(lock1 != lock2);
 
     // change the dep
-    File::create(&toml).write_str(r#"
+    File::create(&p.root().join("bar/Cargo.toml")).write_str(r#"
         [package]
-        name = "foo"
+        name = "bar"
         authors = []
-        version = "0.0.1"
-
-        [dependencies]
-        bar = "0.2.0"
+        version = "0.0.2"
     "#).assert();
     assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));

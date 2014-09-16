@@ -2,7 +2,9 @@ use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::io::IoError;
 use std::fmt::{mod, Show, Formatter, FormatError};
 use std::str;
+use serialize::json;
 
+use curl;
 use docopt;
 use toml::Error as TomlError;
 use url;
@@ -140,6 +142,18 @@ impl CargoError for FormatError {
 }
 
 from_error!(FormatError)
+
+impl CargoError for curl::ErrCode {
+    fn description(&self) -> String { self.to_string() }
+}
+
+from_error!(curl::ErrCode)
+
+impl CargoError for json::DecoderError {
+    fn description(&self) -> String { self.to_string() }
+}
+
+from_error!(json::DecoderError)
 
 pub struct ProcessError {
     pub msg: String,

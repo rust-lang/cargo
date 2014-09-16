@@ -9,6 +9,8 @@ pub use self::cargo_generate_lockfile::{generate_lockfile, write_resolve};
 pub use self::cargo_generate_lockfile::{update_lockfile, load_lockfile};
 pub use self::cargo_test::{run_tests, run_benches, TestOptions};
 pub use self::cargo_package::package;
+pub use self::cargo_upload::{upload, upload_configuration, UploadConfig};
+pub use self::cargo_upload::{upload_login, http_proxy, http_handle};
 
 mod cargo_clean;
 mod cargo_compile;
@@ -20,3 +22,4 @@ mod cargo_doc;
 mod cargo_generate_lockfile;
 mod cargo_test;
 mod cargo_package;
+mod cargo_upload;

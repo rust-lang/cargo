@@ -174,7 +174,8 @@ impl GitRemote {
     fn fetch_into(&self, dst: &git2::Repository) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
         let url = self.url.to_string();
-        fetch(dst, url.as_slice())
+        let refspec = "refs/heads/*:refs/heads/*";
+        fetch(dst, url.as_slice(), refspec)
     }
 
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
@@ -184,7 +185,7 @@ impl GitRemote {
         }
         try!(mkdir_recursive(dst, UserDir));
         let repo = try!(git2::Repository::init_bare(dst));
-        try!(fetch(&repo, url.as_slice()));
+        try!(fetch(&repo, url.as_slice(), "refs/heads/*:refs/heads/*"));
         Ok(repo)
     }
 }
@@ -286,7 +287,8 @@ impl<'a> GitCheckout<'a> {
         info!("fetch {}", self.repo.path().display());
         let url = try!(self.database.path.to_url().map_err(human));
         let url = url.to_string();
-        try!(fetch(&self.repo, url.as_slice()));
+        let refspec = "refs/heads/*:refs/heads/*";
+        try!(fetch(&self.repo, url.as_slice(), refspec));
         Ok(())
     }
 
@@ -336,7 +338,8 @@ impl<'a> GitCheckout<'a> {
                 };
 
                 // Fetch data from origin and reset to the head commit
-                try!(fetch(&repo, url).chain_error(|| {
+                let refspec = "refs/heads/*:refs/heads/*";
+                try!(fetch(&repo, url, refspec).chain_error(|| {
                     internal(format!("failed to fetch submodule `{}` from {}",
                                      child.name().unwrap_or(""), url))
                 }));
@@ -399,9 +402,9 @@ fn with_authentication<T>(url: &str,
     }
 }
 
-fn fetch(repo: &git2::Repository, url: &str) -> CargoResult<()> {
+pub fn fetch(repo: &git2::Repository, url: &str,
+             refspec: &str) -> CargoResult<()> {
     // Create a local anonymous remote in the repository to fetch the url
-    let refspec = "refs/heads/*:refs/heads/*";
 
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new()

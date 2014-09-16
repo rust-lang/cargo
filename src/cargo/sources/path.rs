@@ -191,7 +191,7 @@ impl Source for PathSource {
         Ok(())
     }
 
-    fn download(&self, _: &[PackageId])  -> CargoResult<()>{
+    fn download(&mut self, _: &[PackageId])  -> CargoResult<()>{
         // TODO: assert! that the PackageId is contained by the source
         Ok(())
     }

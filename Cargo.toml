@@ -26,6 +26,10 @@ git = "https://github.com/servo/rust-url"
 [dependencies.semver]
 git = "https://github.com/rust-lang/semver"
 
+[dependencies.curl]
+git = "https://github.com/alexcrichton/curl-rust"
+branch = "bundle"
+
 [dependencies.tar]
 git = "https://github.com/alexcrichton/tar-rs"
 

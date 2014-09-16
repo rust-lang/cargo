@@ -490,7 +490,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
     for (n, v) in dependencies.iter() {
         let (version, source_id) = match *v {
             SimpleDep(ref string) => {
-                (Some(string.clone()), SourceId::for_central())
+                (Some(string.clone()), try!(SourceId::for_central()))
             },
             DetailedDep(ref details) => {
                 let reference = details.branch.clone()
@@ -515,7 +515,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
                             cx.source_id.clone()
                         })
                     }
-                }.unwrap_or(SourceId::for_central());
+                }.unwrap_or(try!(SourceId::for_central()));
 
                 (details.version.clone(), new_source_id)
             }

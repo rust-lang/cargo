@@ -14,6 +14,7 @@ use cargo::util::ProcessError;
 use support::paths::PathExt;
 
 pub mod paths;
+pub mod git;
 
 /*
  *
@@ -284,12 +285,12 @@ impl Execs {
 
     fn match_stdout(&self, actual: &ProcessOutput) -> ham::MatchResult {
         self.match_std(self.expect_stdout.as_ref(), actual.output.as_slice(),
-        "stdout", actual.error.as_slice())
+                       "stdout", actual.error.as_slice())
     }
 
     fn match_stderr(&self, actual: &ProcessOutput) -> ham::MatchResult {
         self.match_std(self.expect_stderr.as_ref(), actual.error.as_slice(),
-        "stderr", actual.output.as_slice())
+                       "stderr", actual.output.as_slice())
     }
 
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
@@ -505,9 +506,11 @@ pub fn path2url(p: Path) -> Url {
     Url::from_file_path(&p).unwrap()
 }
 
-pub static RUNNING:   &'static str = "     Running";
-pub static COMPILING: &'static str = "   Compiling";
-pub static FRESH:     &'static str = "       Fresh";
-pub static UPDATING:  &'static str = "    Updating";
-pub static DOCTEST:   &'static str = "   Doc-tests";
-pub static PACKAGING: &'static str = "   Packaging";
+pub static RUNNING:     &'static str = "     Running";
+pub static COMPILING:   &'static str = "   Compiling";
+pub static FRESH:       &'static str = "       Fresh";
+pub static UPDATING:    &'static str = "    Updating";
+pub static DOCTEST:     &'static str = "   Doc-tests";
+pub static PACKAGING:   &'static str = "   Packaging";
+pub static DOWNLOADING: &'static str = " Downloading";
+pub static UPLOADING:   &'static str = "   Uploading";

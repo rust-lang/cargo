@@ -64,4 +64,13 @@ linker = ".."
 # the `$triple` is being compiled for.
 ar = ".."
 linker = ".."
+
+
+# Configuration keys related to the registry
+[registry]
+host = "..."    # URL of the registry (defaults to the central repository)
+token = "..."   # Access token (found on the central repo's website)
+
+[http]
+proxy = "..."   # HTTP proxy to use for HTTP requests (defaults to none)
 ```

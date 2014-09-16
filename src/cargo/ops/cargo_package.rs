@@ -1,5 +1,6 @@
 use std::io::File;
 use std::io::fs::PathExtensions;
+use std::path;
 
 use tar::Archive;
 use flate2::{GzBuilder, BestCompression};
@@ -17,11 +18,12 @@ pub fn package(manifest_path: &Path,
 
     let filename = format!("{}-{}.tar.gz", pkg.get_name(), pkg.get_version());
     let dst = pkg.get_manifest_path().dir_path().join(filename);
+    if dst.exists() { return Ok(dst) }
+
     try!(shell.status("Packaging", pkg.get_package_id().to_string()));
     try!(tar(&pkg, &src, shell, &dst).chain_error(|| {
         human("failed to prepare local package for uploading")
     }));
-
     Ok(dst)
 }
 
@@ -41,6 +43,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
     // Put all package files into a compressed archive
     let ar = Archive::new(encoder);
     for file in try!(src.list_files(pkg)).iter() {
+        if file == dst { continue }
         let relative = file.path_relative_from(&dst.dir_path()).unwrap();
         let relative = try!(relative.as_str().require(|| {
             human(format!("non-utf8 path in source directory: {}",
@@ -50,12 +53,12 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
         try!(shell.verbose(|shell| {
             shell.status("Archiving", relative.as_slice())
         }));
-        let path = format!("{}-{}/{}", pkg.get_name(),
-                           pkg.get_version(), relative);
+        let path = format!("{}-{}{}{}", pkg.get_name(),
+                           pkg.get_version(), path::SEP, relative);
         try!(ar.append(path.as_slice(), &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
-
+    try!(ar.finish());
     Ok(())
 }
