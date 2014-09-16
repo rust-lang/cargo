@@ -1244,3 +1244,32 @@ test!(git_dep_build_cmd {
       execs().with_stdout("1\n"));
 })
 
+test!(fetch_downloads {
+    let bar = git_repo("bar", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+    }).assert();
+
+    let p = project("p1")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "p1"
+            version = "0.5.0"
+            authors = []
+            [dependencies.bar]
+            git = '{}'
+        "#, bar.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+    assert_that(p.cargo_process("fetch"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} git repository `{url}`
+", updating = UPDATING, url = bar.url())));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("fetch"),
+                execs().with_status(0).with_stdout(""));
+})

@@ -46,3 +46,4 @@ mod test_cargo_package;
 mod test_cargo_build_auth;
 mod test_cargo_registry;
 mod test_cargo_upload;
+mod test_cargo_fetch;

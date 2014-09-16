@@ -11,6 +11,7 @@ pub use self::cargo_test::{run_tests, run_benches, TestOptions};
 pub use self::cargo_package::package;
 pub use self::cargo_upload::{upload, upload_configuration, UploadConfig};
 pub use self::cargo_upload::{upload_login, http_proxy, http_handle};
+pub use self::cargo_fetch::{fetch, resolve_and_fetch};
 
 mod cargo_clean;
 mod cargo_compile;
@@ -23,3 +24,4 @@ mod cargo_generate_lockfile;
 mod cargo_test;
 mod cargo_package;
 mod cargo_upload;
+mod cargo_fetch;

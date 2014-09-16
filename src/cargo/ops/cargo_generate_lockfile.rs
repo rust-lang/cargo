@@ -16,28 +16,19 @@ use util::toml as cargo_toml;
 pub fn generate_lockfile(manifest_path: &Path,
                          shell: &mut MultiShell)
                          -> CargoResult<()> {
-
-    log!(4, "compile; manifest-path={}", manifest_path.display());
-
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
-
-    // TODO: Move this into PathSource
     let package = try!(source.get_root_package());
-    debug!("loaded package; package={}", package);
-
     let source_ids = package.get_source_ids();
+    let mut config = try!(Config::new(shell, None, None));
 
     let resolve = {
-        let mut config = try!(Config::new(shell, None, None));
-
         let mut registry = PackageRegistry::new(&mut config);
         try!(registry.add_sources(source_ids));
         try!(resolver::resolve(package.get_package_id(),
                                package.get_dependencies(),
                                &mut registry))
     };
-
     try!(write_resolve(&package, &resolve));
     Ok(())
 }
