@@ -60,7 +60,7 @@ else
     #
     # When cargo has a 64-bit nightly of its own, we'll only need to download
     # the relevant windows nightly.
-    v32=i686-pc-mingw32
+    v32=i686-w64-mingw32
     v64=x86_64-w64-mingw32
     curl -O http://$host/dist/rust-nightly-$v32.exe
     curl -O http://$host/dist/rust-nightly-$v64.exe
