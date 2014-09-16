@@ -1,0 +1,87 @@
+.TH CARGO "1" "September 2014" "cargo 0.0.1-pre" "User Commands"
+.SH NAME
+cargo \- The Rust package manager
+.SH SYNOPSIS
+.B cargo
+<COMMAND> [<ARGS>...]
+
+.B cargo
+[\fIOPTIONS\fR]
+
+.SH DESCRIPTION
+This program is a package manager for the Rust language, available at
+<\fBhttp://rust-lang.org\fR>.
+
+.SH OPTIONS
+
+.TP
+\fB\-h, \-\-help\fR
+Display a help message
+.TP
+\fB\-V, \-\-version\fR
+Print version information and exit
+.TP
+\fB\-\-list\fR
+List all available cargo commands
+.TP
+\fB\-v, \-\-verbose\fR
+Use verbose output
+
+.SH COMMANDS
+
+To get extended information about commands, run 'cargo help <command>'
+
+.TP
+\fBcargo build\fR
+Compile the current project
+.TP
+\fBcargo clean\fR
+Remove the target directory with build output
+.TP
+\fBcargo doc\fR
+Build this project's and its dependencies' documentation
+.TP
+\fBcargo new\fR
+Create a new cargo project
+.TP
+\fBcargo run\fR
+Build and execute src/main.rs
+.TP
+\fBcargo test\fR
+Run the tests for the package
+.TP
+\fBcargo bench\fR
+Run the benchmarks for the package
+.TP
+\fBcargo update\fR
+Update dependencies in Cargo.lock
+.TP
+\fBcargo package\fR
+Generate a source tarball for the current package
+.TP
+\fBcargo version\fR
+Print cargo's version and exit
+
+.SH "EXAMPLES"
+Build a local package and all of its dependencies
+    $ cargo build
+
+Build a package with optimizations
+    $ cargo build --release
+
+Run tests for a cross-compiled target
+    $ cargo test --target i686-unknown-linux-gnu
+
+Learn about a command's options and usage
+    $ cargo help clean
+
+.SH "SEE ALSO"
+
+rustc, rustdoc
+
+.SH "BUGS"
+See <\fBhttps://github.com/rust-lang/cargo/issues\fR> for issues.
+
+.SH "COPYRIGHT"
+This work is dual-licensed under Apache 2.0 and MIT terms.  See \fBCOPYRIGHT\fR
+file in the cargo source distribution.
