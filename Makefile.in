@@ -148,8 +148,10 @@ prepare-manifest-$(1):
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ] || echo 'Please run `make` first'
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
 	rm -rf $$(PKGDIR_$(1))
-	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo
+	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo \
+		$$(PKGDIR_$(1))/share/man/man1
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
+	cp src/etc/cargo.1 $$(PKGDIR_$(1))/share/man/man1
 	#cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
 	(cd $$(PKGDIR_$(1)) && find . -type f | sed 's/^\.\///') \
 		> $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in
