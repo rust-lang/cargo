@@ -45,8 +45,8 @@ fn setup() {
         .file("config.json", format!(r#"
             {{"dl":"{}","upload":""}}
         "#, dl_url()).as_slice())
-        .file("fo/o:/foo", pkg("foo", "0.0.1", [], &foo_cksum))
-        .file("ba/r:/bar", pkg("bar", "0.0.1", ["foo|>=0.0.0"], &bar_cksum))
+        .file("3/f/foo", pkg("foo", "0.0.1", [], &foo_cksum))
+        .file("3/b/bar", pkg("bar", "0.0.1", ["foo|>=0.0.0"], &bar_cksum))
         .file("ba/d-/bad-cksum", pkg("bad-cksum", "0.0.1", [], &bar_cksum))
         .nocommit_file("no/ty/notyet", pkg("notyet", "0.0.1", [], &notyet))
         .build();

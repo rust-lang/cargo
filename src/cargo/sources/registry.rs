@@ -181,13 +181,16 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
 impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let mut chars = dep.get_name().chars();
+        let name = dep.get_name();
         let path = self.checkout_path.clone();
-        let path = path.join(format!("{}{}", chars.next().unwrap_or(':'),
-                                     chars.next().unwrap_or(':')));
-        let path = path.join(format!("{}{}", chars.next().unwrap_or(':'),
-                                     chars.next().unwrap_or(':')));
-        let path = path.join(dep.get_name());
+        let path = match name.len() {
+            1 => path.join("1").join(name),
+            2 => path.join("2").join(name),
+            3 => path.join("3").join(name.slice_to(1)).join(name),
+            _ => path.join(name.slice(0, 2))
+                     .join(name.slice(2, 4))
+                     .join(name),
+        };
         let contents = match File::open(&path) {
             Ok(mut f) => try!(f.read_to_string()),
             Err(..) => return Ok(Vec::new()),
