@@ -22,8 +22,8 @@ pub struct Context<'a, 'b> {
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
-    pub env: &'a str,
 
+    env: &'a str,
     host: Layout,
     target: Option<Layout>,
     target_triple: String,
@@ -266,6 +266,13 @@ impl<'a, 'b> Context<'a, 'b> {
         self.package_set.iter()
             .find(|pkg| id == pkg.get_package_id())
             .expect("Should have found package")
+    }
+
+    pub fn env(&self) -> &str {
+        // The "doc-all" environment just means to document everything (see
+        // below), but we want to canonicalize that the the "doc" profile
+        // environment, so do that here.
+        if self.env == "doc-all" {"doc"} else {self.env}
     }
 
     pub fn is_relevant_target(&self, target: &Target) -> bool {
