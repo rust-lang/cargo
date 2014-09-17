@@ -26,7 +26,7 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
 // installation as we don't want it to muck with the --list tests
 fn new_path() -> Vec<Path> {
     let path = os::getenv_as_bytes("PATH").unwrap_or(Vec::new());
-    os::split_paths(path).move_iter().filter(|p| {
+    os::split_paths(path).into_iter().filter(|p| {
         !p.join(format!("cargo{}", os::consts::EXE_SUFFIX)).exists()
     }).collect()
 }

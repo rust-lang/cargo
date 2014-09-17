@@ -37,7 +37,7 @@ fn add(repo: &git2::Repository) {
     // as well, and then fail b/c they're a directory. As a stopgap, we just
     // ignore all submodules.
     let mut s = repo.submodules().unwrap();
-    for submodule in s.mut_iter() {
+    for submodule in s.iter_mut() {
         submodule.add_to_index(false).unwrap();
     }
     let mut index = repo.index().unwrap();
@@ -459,14 +459,14 @@ test!(two_revs_same_deps {
     }).assert();
 
     let repo = git2::Repository::open(&bar.root()).unwrap();
-    let rev1 = repo.revparse_single("HEAD").unwrap().id().to_string();
+    let rev1 = repo.revparse_single("HEAD").unwrap().id();
 
     // Commit the changes and make sure we trigger a recompile
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 2 }
     "#).assert();
     add(&repo);
-    let rev2 = commit(&repo).to_string();
+    let rev2 = commit(&repo);
 
     let foo = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -481,7 +481,7 @@ test!(two_revs_same_deps {
 
             [dependencies.baz]
             path = "../baz"
-        "#, bar.url(), rev1.as_slice().trim()).as_slice())
+        "#, bar.url(), rev1).as_slice())
         .file("src/main.rs", r#"
             extern crate bar;
             extern crate baz;
@@ -502,7 +502,7 @@ test!(two_revs_same_deps {
             [dependencies.bar]
             git = '{}'
             rev = "{}"
-        "#, bar.url(), rev2.as_slice().trim()).as_slice())
+        "#, bar.url(), rev2).as_slice())
         .file("src/lib.rs", r#"
             extern crate bar;
             pub fn baz() -> int { bar::bar() }
