@@ -5,7 +5,7 @@ use std::{io, os};
 
 use cargo::util::realpath;
 
-static CARGO_INTEGRATION_TEST_DIR : &'static str = "cargo-integration-tests";
+static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
 
 local_data_key!(task_id: uint)
 
