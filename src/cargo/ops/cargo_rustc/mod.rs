@@ -172,11 +172,11 @@ fn compile_custom(pkg: &Package, cmd: &str,
                   cx: &Context, first: bool) -> CargoResult<Work> {
     let root = cx.get_package(cx.resolve.root());
     let profile = root.get_manifest().get_targets().iter()
-                      .find(|target| target.get_profile().get_env() == cx.env)
+                      .find(|target| target.get_profile().get_env() == cx.env())
                       .map(|target| target.get_profile());
     let profile = match profile {
         Some(profile) => profile,
-        None => return Err(internal(format!("no profile for {}", cx.env)))
+        None => return Err(internal(format!("no profile for {}", cx.env())))
     };
 
     // TODO: this needs to be smarter about splitting
