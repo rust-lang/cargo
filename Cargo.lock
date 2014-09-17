@@ -11,7 +11,7 @@ dependencies = [
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#df163f7b22686493b037eee1f1f9d1a2742f9bbe)",
  "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#b2391703d54afd20c999d5531c4ed46bcf366f23)",
- "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#d40724ad2d6516d7b6750515153b4c360d63afe9)",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#5f5bd93203aa4c8e0602eb4def2d73d385cba74c)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#bfdf809365600a7941a77524f9bb065886de3379)",
 ]
 
@@ -110,7 +110,7 @@ source = "git+https://github.com/alexcrichton/tar-rs#b2391703d54afd20c999d5531c4
 [[package]]
 name = "toml"
 version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#d40724ad2d6516d7b6750515153b4c360d63afe9"
+source = "git+https://github.com/alexcrichton/toml-rs#5f5bd93203aa4c8e0602eb4def2d73d385cba74c"
 
 [[package]]
 name = "url"
