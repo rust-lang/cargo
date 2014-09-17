@@ -65,14 +65,12 @@ else
     curl -O http://$host/dist/rust-nightly-$v32.exe
     curl -O http://$host/dist/rust-nightly-$v64.exe
     if [ "${BITS}" = "64" ]; then
-        # innoextract comes from the mingw-w64-x86_64-innoextract package
-        innoextract rust-nightly-$v64.exe
-        mv app rustc
-        innoextract rust-nightly-$v32.exe
-        mv app/bin/libgcc_s_dw2-1.dll rustc/bin
-        rm -rf app
+        innounp -y -x rust-nightly-$v64.exe
+        mv '{app}' rustc
+        innounp -y -x rust-nightly-$v32.exe
+        mv '{app}/bin/libgcc_s_dw2-1.dll' rustc/bin
+        rm -rf '{app}'
     else
-        # innounp came from a random download on the internet! (search google)
         innounp -y -x rust-nightly-$v32.exe
         mv '{app}' rustc
     fi
