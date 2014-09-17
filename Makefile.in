@@ -130,16 +130,21 @@ $(DOC_DIR)/%: src/doc/%
 define DO_DIST_TARGET
 dist-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 
+# One may wonder why some of the commands here are prefixed with `cd -P .`, and
+# that's a good question! On some of the windows bots, PWD has a windows-style
+# path, and that ends up choking the installation script in various ways.
+# Prefixing commands with this `cd -P .` helps the bots to set the right PWD env
+# var.
 distcheck-$(1): dist-$(1)
 	rm -rf $$(TARGET_$(1))/distcheck
 	mkdir -p $$(TARGET_$(1))/distcheck
 	(cd $$(TARGET_$(1))/distcheck && tar xf ../dist/$$(PKG_NAME)-$(1).tar.gz)
-	$$(TARGET_$(1))/distcheck/$$(PKG_NAME)-$(1)/install.sh \
+	cd -P . && $$(TARGET_$(1))/distcheck/$$(PKG_NAME)-$(1)/install.sh \
 		--prefix=$$(TARGET_$(1))/distcheck/install
 	$$(TARGET_$(1))/distcheck/install/bin/cargo -V > /dev/null
-	$$(TARGET_$(1))/distcheck/$$(PKG_NAME)-$(1)/install.sh \
+	cd -P . && $$(TARGET_$(1))/distcheck/$$(PKG_NAME)-$(1)/install.sh \
 		--prefix=$$(TARGET_$(1))/distcheck/install --uninstall
-	[ -f $$(TARGET_$(1))/distcheck/install/bin/cargo ] && exit 1 || exit 0
+	[ -f $$(TARGET_$(1))/distcheck/install/bin/cargo$(X) ] && exit 1 || exit 0
 
 $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-manifest-$(1)
 	tar -czvf $$@ -C $$(@D) $$(PKG_NAME)-$(1)
