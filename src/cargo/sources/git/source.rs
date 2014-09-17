@@ -109,7 +109,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
                 rel.port = Some(443);
                 rel.default_port = Some(443);
                 let path = mem::replace(&mut rel.path, Vec::new());
-                rel.path = path.move_iter().map(|s| {
+                rel.path = path.into_iter().map(|s| {
                     s.as_slice().chars().map(|c| c.to_lowercase()).collect()
                 }).collect();
             }

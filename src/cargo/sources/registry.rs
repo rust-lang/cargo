@@ -276,7 +276,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
         let mut ret = Vec::new();
         for src in self.sources.iter() {
-            ret.extend(try!(src.get(packages)).move_iter());
+            ret.extend(try!(src.get(packages)).into_iter());
         }
         return Ok(ret);
     }

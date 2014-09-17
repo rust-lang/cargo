@@ -49,7 +49,7 @@ fn try_add_file(files: &mut Vec<Path>, root: &Path, dir: &str) {
 fn try_add_files(files: &mut Vec<Path>, root: &Path, dir: &str) {
     match fs::readdir(&root.join(dir)) {
         Ok(new) => {
-            files.extend(new.move_iter().filter(|f| f.extension_str() == Some("rs")))
+            files.extend(new.into_iter().filter(|f| f.extension_str() == Some("rs")))
         }
         Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
     }
@@ -651,7 +651,7 @@ fn normalize(libs: &[TomlLibTarget],
         }
 
         if target.plugin == Some(true) {
-            ret = ret.move_iter().map(|p| p.plugin(true)).collect();
+            ret = ret.into_iter().map(|p| p.plugin(true)).collect();
         }
 
         ret

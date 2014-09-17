@@ -132,7 +132,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         _ => format!("custom build commands"),
     };
     let dirty = proc() {
-        for cmd in build_cmds.move_iter() { try!(cmd()) }
+        for cmd in build_cmds.into_iter() { try!(cmd()) }
         dirty()
     };
     jobs.enqueue(pkg, StageCustomBuild, vec![(Job::new(dirty, fresh, desc),
@@ -154,7 +154,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         };
 
         let dst = if target.is_lib() {&mut libs} else {&mut bins};
-        for (work, kind, desc) in work.move_iter() {
+        for (work, kind, desc) in work.into_iter() {
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
@@ -239,7 +239,7 @@ fn rustc(package: &Package, target: &Target,
     let primary = cx.primary;
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
-    Ok(rustcs.move_iter().map(|(rustc, kind)| {
+    Ok(rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
         let desc = rustc.to_string();
 

@@ -56,7 +56,7 @@ pub fn resolve_and_fetch(registry: &mut PackageRegistry, package: &Package)
 fn add_lockfile_sources(registry: &mut PackageRegistry,
                         root: &Package,
                         resolve: &Resolve) -> CargoResult<()> {
-    let deps = resolve.deps(root.get_package_id()).move_iter().flat_map(|deps| {
+    let deps = resolve.deps(root.get_package_id()).into_iter().flat_map(|deps| {
         deps.map(|d| (d.get_name(), d))
     }).collect::<HashMap<_, _>>();
 
@@ -91,7 +91,7 @@ fn add_lockfile_sources(registry: &mut PackageRegistry,
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
                           set: &mut HashSet<&'a PackageId>) {
         if !set.insert(dep) { return }
-        for mut deps in resolve.deps(dep).move_iter() {
+        for mut deps in resolve.deps(dep).into_iter() {
             for dep in deps {
                 fill_with_deps(resolve, dep, set);
             }

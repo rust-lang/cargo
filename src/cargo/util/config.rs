@@ -160,11 +160,11 @@ impl ConfigValue {
             (&Boolean(..), Boolean(..)) => {}
             (&List(ref mut old), List(ref mut new)) => {
                 let new = mem::replace(new, Vec::new());
-                old.extend(new.move_iter());
+                old.extend(new.into_iter());
             }
             (&Table(ref mut old), Table(ref mut new)) => {
                 let new = mem::replace(new, HashMap::new());
-                for (key, value) in new.move_iter() {
+                for (key, value) in new.into_iter() {
                     let mut err = Ok(());
                     old.find_with_or_insert_with(key, value,
                                                  |_, old, new| err = old.merge(new),
@@ -226,9 +226,9 @@ impl ConfigValue {
         match self {
             Boolean(s, _) => toml::Boolean(s),
             String(s, _) => toml::String(s),
-            List(l) => toml::Array(l.move_iter().map(|(s, _)| toml::String(s))
+            List(l) => toml::Array(l.into_iter().map(|(s, _)| toml::String(s))
                                     .collect()),
-            Table(l) => toml::Table(l.move_iter()
+            Table(l) => toml::Table(l.into_iter()
                                      .map(|(k, v)| (k, v.into_toml()))
                                      .collect()),
         }

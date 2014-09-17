@@ -77,7 +77,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
         }
 
         let mut my_dependencies = HashSet::new();
-        for dep in key.dependencies(cx).move_iter() {
+        for dep in key.dependencies(cx).into_iter() {
             assert!(my_dependencies.insert(dep.clone()));
             let rev = self.reverse_dep_map.find_or_insert(dep, HashSet::new());
             assert!(rev.insert(key.clone()));
