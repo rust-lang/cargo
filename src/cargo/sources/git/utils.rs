@@ -307,7 +307,7 @@ impl<'a> GitCheckout<'a> {
         fn update_submodules(repo: &git2::Repository) -> CargoResult<()> {
             info!("update submodules for: {}", repo.path().display());
 
-            for mut child in try!(repo.submodules()).move_iter() {
+            for mut child in try!(repo.submodules()).into_iter() {
                 try!(child.init(false));
                 let url = try!(child.url().require(|| {
                     internal("non-utf8 url for submodule")

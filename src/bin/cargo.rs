@@ -82,7 +82,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
 
     if flags.flag_list {
         println!("Installed Commands:");
-        for command in list_commands().move_iter() {
+        for command in list_commands().into_iter() {
             println!("    {}", command);
         };
         return Ok(None)

@@ -90,7 +90,7 @@ impl PathSource {
             Pattern::new(p.as_slice())
         }).collect::<Vec<Pattern>>();
 
-        Ok(candidates.move_iter().filter(|candidate| {
+        Ok(candidates.into_iter().filter(|candidate| {
             let relative_path = candidate.path_relative_from(&root).unwrap();
             !pats.iter().any(|p| p.matches_path(&relative_path)) &&
                 candidate.is_file()

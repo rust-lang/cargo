@@ -330,7 +330,7 @@ impl<'a> SourceMap<'a> {
     }
 
     pub fn sources_mut(&'a mut self) -> SourcesMut<'a> {
-        self.map.mut_iter().map(|(_, v)| { let s: &mut Source+'a = &mut **v; s })
+        self.map.iter_mut().map(|(_, v)| { let s: &mut Source+'a = &mut **v; s })
     }
 }
 
@@ -348,7 +348,7 @@ impl<'a> Registry for SourceSet<'a> {
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
 
-        for source in self.sources.mut_iter() {
+        for source in self.sources.iter_mut() {
             ret.push_all_move(try!(source.query(name)));
         }
 
@@ -358,7 +358,7 @@ impl<'a> Registry for SourceSet<'a> {
 
 impl<'a> Source for SourceSet<'a> {
     fn update(&mut self) -> CargoResult<()> {
-        for source in self.sources.mut_iter() {
+        for source in self.sources.iter_mut() {
             try!(source.update());
         }
 
@@ -366,7 +366,7 @@ impl<'a> Source for SourceSet<'a> {
     }
 
     fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
-        for source in self.sources.mut_iter() {
+        for source in self.sources.iter_mut() {
             try!(source.download(packages));
         }
 

@@ -107,7 +107,7 @@ impl<'a> PackageRegistry<'a> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.get_name(), s);
-            ret.extend(try!(src.query(&dep)).move_iter().filter(|s| {
+            ret.extend(try!(src.query(&dep)).into_iter().filter(|s| {
                 seen.insert(s.get_name().to_string())
             }));
         }
@@ -118,7 +118,7 @@ impl<'a> PackageRegistry<'a> {
 fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
     let mut seen = vec!();
 
-    for id in ids.move_iter() {
+    for id in ids.into_iter() {
         if seen.contains(&id) { continue; }
         seen.push(id);
     }

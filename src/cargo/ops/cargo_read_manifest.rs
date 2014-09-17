@@ -105,7 +105,7 @@ fn read_nested_packages(path: &Path, source_id: &SourceId,
 }
 
 fn push_all(set: &mut Vec<Package>, packages: Vec<Package>) {
-    for package in packages.move_iter() {
+    for package in packages.into_iter() {
         if set.contains(&package) { continue; }
 
         set.push(package)

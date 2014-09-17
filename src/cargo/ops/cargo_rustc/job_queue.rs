@@ -164,7 +164,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             fresh: fresh,
         });
 
-        for (job, job_freshness) in jobs.move_iter() {
+        for (job, job_freshness) in jobs.into_iter() {
             let fresh = job_freshness.combine(fresh);
             let my_tx = self.tx.clone();
             let id = id.clone();
@@ -198,7 +198,7 @@ impl<'a> Dependency<&'a Resolve> for (&'a PackageId, TargetStage) {
         let (id, stage) = *self;
         match stage {
             StageStart => {
-                resolve.deps(id).move_iter().flat_map(|a| a).filter(|dep| {
+                resolve.deps(id).into_iter().flat_map(|a| a).filter(|dep| {
                     *dep != id
                 }).map(|dep| {
                     (dep, StageEnd)
