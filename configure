@@ -355,12 +355,6 @@ CFG_MANDIR=${CFG_MANDIR%/}
 CFG_HOST="$(echo $CFG_HOST | tr ',' ' ')"
 CFG_TARGET="$(echo $CFG_TARGET | tr ',' ' ')"
 
-# Temporary support for the old windows triples. Remove when rust also removes
-# this
-CFG_BUILD=`echo "${CFG_BUILD}" | sed 's/-pc-mingw32/-w64-mingw32/g'`
-CFG_HOST=`echo "${CFG_HOST}" | sed 's/-pc-mingw32/-w64-mingw32/g'`
-CFG_TARGET=`echo "${CFG_TARGET}" | sed 's/-pc-mingw32/-w64-mingw32/g'`
-
 # copy host-triples to target-triples so that hosts are a subset of targets
 V_TEMP=""
 for i in $CFG_HOST $CFG_TARGET;
