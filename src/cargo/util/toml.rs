@@ -221,6 +221,7 @@ pub struct TomlProfiles {
 #[deriving(Decodable, Clone, Default)]
 pub struct TomlProfile {
     opt_level: Option<uint>,
+    codegen_units: Option<uint>,
     debug: Option<bool>,
 }
 
@@ -604,8 +605,9 @@ fn normalize(libs: &[TomlLibTarget],
             None => return profile,
         };
         let opt_level = toml.opt_level.unwrap_or(profile.get_opt_level());
+        let codegen_units = toml.codegen_units;
         let debug = toml.debug.unwrap_or(profile.get_debug());
-        profile.opt_level(opt_level).debug(debug)
+        profile.opt_level(opt_level).codegen_units(codegen_units).debug(debug)
     }
 
     fn target_profiles(target: &TomlTarget, profiles: &TomlProfiles,

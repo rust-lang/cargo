@@ -107,6 +107,7 @@ pub enum TargetKind {
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
+    codegen_units: Option<uint>,    // None = use rustc default
     debug: bool,
     test: bool,
     doctest: bool,
@@ -121,6 +122,7 @@ impl Profile {
         Profile {
             env: String::new(),
             opt_level: 0,
+            codegen_units: None,
             debug: false,
             test: false,
             doc: false,
@@ -206,6 +208,10 @@ impl Profile {
         self.opt_level
     }
 
+    pub fn get_codegen_units(&self) -> Option<uint> {
+        self.codegen_units
+    }
+
     pub fn get_debug(&self) -> bool {
         self.debug
     }
@@ -220,6 +226,11 @@ impl Profile {
 
     pub fn opt_level(mut self, level: uint) -> Profile {
         self.opt_level = level;
+        self
+    }
+
+    pub fn codegen_units(mut self, units: Option<uint>) -> Profile {
+        self.codegen_units = units;
         self
     }
 
@@ -260,6 +271,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
         // to the actual hash of a profile.
         let Profile {
             opt_level,
+            codegen_units,
             debug,
             plugin,
             dest: ref dest,
@@ -273,7 +285,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             test: _,
             doctest: _,
         } = *self;
-        (opt_level, debug, plugin, dest, harness).hash(into)
+        (opt_level, codegen_units, debug, plugin, dest, harness).hash(into)
     }
 }
 
