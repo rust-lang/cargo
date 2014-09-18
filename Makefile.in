@@ -174,7 +174,7 @@ endif
 install-$(1): prepare-manifest-$(1)
 	$$(PKGDIR_$(1))/install.sh \
 		--prefix="$$(CFG_PREFIX)" \
-		--destdir="$$(DESTDIR)/" $$(MAYBE_DISABLE_VERIFY)
+		--destdir="$$(DESTDIR)" $$(MAYBE_DISABLE_VERIFY)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
 
