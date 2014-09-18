@@ -6,7 +6,7 @@ dependencies = [
  "docopt 0.6.3 (git+https://github.com/docopt/docopt.rs#ee3844098f213121ce7dfb32cdbf2512ecba7085)",
  "docopt_macros 0.6.3 (git+https://github.com/docopt/docopt.rs#ee3844098f213121ce7dfb32cdbf2512ecba7085)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#a59b2a103642550bc1500c302c5031479ec7d9e1)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#d36102579e8e42b275f63bf606a7a2eac006a98c)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#05276ae6dce9d3945104ffefb9e1496323351398)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#ce24c37f268c4a31238dbe3b8e9ff8fe5342f0be)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98)",
  "semver 0.0.1 (git+https://github.com/rust-lang/semver#df163f7b22686493b037eee1f1f9d1a2742f9bbe)",
@@ -56,9 +56,9 @@ source = "git+https://github.com/alexcrichton/flate2-rs#a59b2a103642550bc1500c30
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#d36102579e8e42b275f63bf606a7a2eac006a98c"
+source = "git+https://github.com/alexcrichton/git2-rs#05276ae6dce9d3945104ffefb9e1496323351398"
 dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#d36102579e8e42b275f63bf606a7a2eac006a98c)",
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#05276ae6dce9d3945104ffefb9e1496323351398)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#bfdf809365600a7941a77524f9bb065886de3379)",
 ]
 
@@ -75,7 +75,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b86
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#d36102579e8e42b275f63bf606a7a2eac006a98c"
+source = "git+https://github.com/alexcrichton/git2-rs#05276ae6dce9d3945104ffefb9e1496323351398"
 dependencies = [
  "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#6a5d3ad7b62db6ca0721c528402f4976a1876036)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#1d3cd271612036b47c015a55f33a97e1524569ae)",
