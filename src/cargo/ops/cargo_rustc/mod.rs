@@ -352,6 +352,11 @@ fn build_base_args(cx: &Context, mut cmd: ProcessBuilder,
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
 
+    match profile.get_codegen_units() {
+        Some(n) => cmd = cmd.arg("-C").arg(format!("codegen-units={}", n)),
+        None => {},
+    }
+
     if profile.get_debug() {
         cmd = cmd.arg("-g");
     } else {
