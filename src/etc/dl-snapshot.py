@@ -15,6 +15,7 @@ linux64 = lines[2]
 mac32 = lines[3]
 mac64 = lines[4]
 win32 = lines[5]
+win64 = lines[6]
 triple = sys.argv[1]
 
 if triple == 'i686-unknown-linux-gnu':
@@ -26,11 +27,9 @@ elif triple == 'i686-apple-darwin':
 elif triple == 'x86_64-apple-darwin':
     me = mac64
 elif triple == 'i686-w64-mingw32':
-    triple = 'i686-pc-mingw32'
     me = win32
 elif triple == 'x86_64-w64-mingw32':
-    triple = 'i686-pc-mingw32'
-    me = win32
+    me = win64
 else:
     raise Exception("no snapshot for the triple: " + triple)
 
