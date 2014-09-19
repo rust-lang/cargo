@@ -49,33 +49,15 @@ if [ -z "${windows}" ]; then
     rm -f rust-nightly-i686-$target.tar.gz
     rm -f rust-nightly-x86_64-$target.tar.gz
 else
-    rm -rf *.exe rustc
-    # Right now we don't have *cargo* nightlies for 64-bit windows. This means
-    # that to bootstrap the 64-bit cargo nightlies, we need to build from the
-    # 32-bit cargo. This, however, has a runtime dependency on libgcc_s_dw2
-    # which is not present in the mingw-w64 64-bit shell. Hence we download both
-    # *rust* snapshots, and then when we're on a 64-bit windows host we copy the
-    # libgcc_s_dw2 dll from the 32-bit rust nightly into a location that will be
-    # in our PATH
-    #
-    # When cargo has a 64-bit nightly of its own, we'll only need to download
-    # the relevant windows nightly.
-    v32=i686-w64-mingw32
-    v64=x86_64-w64-mingw32
-    curl -O http://$host/dist/rust-nightly-$v32.exe
-    curl -O http://$host/dist/rust-nightly-$v64.exe
     if [ "${BITS}" = "64" ]; then
-        innounp -y -x rust-nightly-$v64.exe
-        mv '{app}' rustc
-        innounp -y -x rust-nightly-$v32.exe
-        mv '{app}/bin/libgcc_s_dw2-1.dll' rustc/bin
-        rm -rf '{app}'
+        triple=x86_64-w64-mingw32
     else
-        innounp -y -x rust-nightly-$v32.exe
-        mv '{app}' rustc
+        triple=i686-w64-mingw32
     fi
-    rm -f rust-nightly-$v32.exe
-    rm -f rust-nightly-$v64.exe
+    curl -O http://$host/dist/rust-nightly-$triple.exe
+    innounp -y -x rust-nightly-$triple.exe
+    mv '{app}' rustc
+    rm -f rust-nightly-$triple.exe
 fi
 
 set +x
