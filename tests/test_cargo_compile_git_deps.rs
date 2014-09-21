@@ -1273,3 +1273,36 @@ test!(fetch_downloads {
     assert_that(p.process(cargo_dir().join("cargo")).arg("fetch"),
                 execs().with_status(0).with_stdout(""));
 })
+
+test!(warnings_in_git_dep {
+    let bar = git_repo("bar", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "fn unused() {}")
+    }).assert();
+
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            [dependencies.bar]
+            git = '{}'
+        "#, bar.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build"),
+        execs()
+        .with_stdout(format!("{} git repository `{}`\n\
+                              {} bar v0.5.0 ({}#[..])\n\
+                              {} foo v0.5.0 ({})\n",
+                             UPDATING, bar.url(),
+                             COMPILING, bar.url(),
+                             COMPILING, p.url()))
+        .with_stderr(""));
+})

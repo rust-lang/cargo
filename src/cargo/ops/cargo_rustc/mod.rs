@@ -237,26 +237,19 @@ fn rustc(package: &Package, target: &Target,
     log!(5, "root={}; target={}; crate_types={}; verbose={}; req={}",
          root.display(), target, crate_types, cx.primary, req);
 
-    let primary = cx.primary;
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
     Ok(rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
         let desc = rustc.to_string();
+        let is_path_source = package.get_package_id().get_source_id().is_path();
+        let show_warnings = cx.primary || is_path_source;
+        let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
 
         (proc() {
-            if primary {
-                log!(5, "executing primary");
-                try!(rustc.exec().chain_error(|| {
-                    human(format!("Could not compile `{}`.", name))
-                }))
-            } else {
-                log!(5, "executing deps");
-                try!(rustc.exec_with_output().and(Ok(())).map_err(|err| {
-                    caused_human(format!("Could not compile `{}`.\n{}",
-                                         name, err.output().unwrap()), err)
-                }))
-            }
+            try!(rustc.exec().chain_error(|| {
+                human(format!("Could not compile `{}`.", name))
+            }));
             Ok(())
         }, kind, desc)
     }).collect())

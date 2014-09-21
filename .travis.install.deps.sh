@@ -25,6 +25,7 @@ host=static-rust-lang-org.s3.amazonaws.com
 # just install the right ones? This should enable cross compilation in the
 # future anyway.
 if [ -z "${windows}" ]; then
+    rm -rf rustc *.tar.gz
     curl -O https://$host/dist/rust-nightly-i686-$target.tar.gz
     curl -O https://$host/dist/rust-nightly-x86_64-$target.tar.gz
     tar xfz rust-nightly-i686-$target.tar.gz
@@ -49,6 +50,7 @@ if [ -z "${windows}" ]; then
     rm -f rust-nightly-i686-$target.tar.gz
     rm -f rust-nightly-x86_64-$target.tar.gz
 else
+    rm -rf rustc *.exe
     if [ "${BITS}" = "64" ]; then
         triple=x86_64-w64-mingw32
     else
