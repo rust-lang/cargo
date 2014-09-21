@@ -12,7 +12,7 @@ pub struct ShellConfig {
 
 enum AdequateTerminal<'a> {
     NoColor(Box<Writer+'a>),
-    Color(Box<Terminal<Box<Writer+'a>>+'a>)
+    Colored(Box<Terminal<Box<Writer+'a>>+'a>)
 }
 
 pub struct Shell<'a> {
@@ -79,7 +79,7 @@ impl<'a> Shell<'a> {
         if config.tty && config.color {
             let term: Option<term::TerminfoTerminal<Box<Writer+'a>>> = Terminal::new(out);
             term.map(|t| Shell {
-                terminal: Color(box t as Box<Terminal<Box<Writer+'a>>>),
+                terminal: Colored(box t as Box<Terminal<Box<Writer+'a>>>),
                 config: config
             }).unwrap_or_else(|| {
                 Shell { terminal: NoColor(box stderr() as Box<Writer+'a>), config: config }
@@ -135,35 +135,35 @@ impl<'a> Terminal<Box<Writer+'a>> for Shell<'a> {
 
     fn fg(&mut self, color: color::Color) -> IoResult<bool> {
         match self.terminal {
-            Color(ref mut c) => c.fg(color),
+            Colored(ref mut c) => c.fg(color),
             NoColor(_) => Ok(false)
         }
     }
 
     fn bg(&mut self, color: color::Color) -> IoResult<bool> {
         match self.terminal {
-            Color(ref mut c) => c.bg(color),
+            Colored(ref mut c) => c.bg(color),
             NoColor(_) => Ok(false)
         }
     }
 
     fn attr(&mut self, attr: Attr) -> IoResult<bool> {
         match self.terminal {
-            Color(ref mut c) => c.attr(attr),
+            Colored(ref mut c) => c.attr(attr),
             NoColor(_) => Ok(false)
         }
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
         match self.terminal {
-            Color(ref c) => c.supports_attr(attr),
+            Colored(ref c) => c.supports_attr(attr),
             NoColor(_) => false
         }
     }
 
     fn reset(&mut self) -> IoResult<()> {
         match self.terminal {
-            Color(ref mut c) => c.reset(),
+            Colored(ref mut c) => c.reset(),
             NoColor(_) => Ok(())
         }
     }
@@ -174,14 +174,14 @@ impl<'a> Terminal<Box<Writer+'a>> for Shell<'a> {
 
     fn get_ref<'b>(&'b self) -> &'b Box<Writer+'a> {
         match self.terminal {
-            Color(ref c) => c.get_ref(),
+            Colored(ref c) => c.get_ref(),
             NoColor(ref w) => w
         }
     }
 
     fn get_mut<'b>(&'b mut self) -> &'b mut Box<Writer+'a> {
         match self.terminal {
-            Color(ref mut c) => c.get_mut(),
+            Colored(ref mut c) => c.get_mut(),
             NoColor(ref mut w) => w
         }
     }
@@ -190,14 +190,14 @@ impl<'a> Terminal<Box<Writer+'a>> for Shell<'a> {
 impl<'a> Writer for Shell<'a> {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
         match self.terminal {
-            Color(ref mut c) => c.write(buf),
+            Colored(ref mut c) => c.write(buf),
             NoColor(ref mut n) => n.write(buf)
         }
     }
 
     fn flush(&mut self) -> IoResult<()> {
         match self.terminal {
-            Color(ref mut c) => c.flush(),
+            Colored(ref mut c) => c.flush(),
             NoColor(ref mut n) => n.flush()
         }
     }

@@ -10,9 +10,9 @@ use super::layout::{Layout, LayoutProxy};
 
 #[deriving(Show)]
 pub enum PlatformRequirement {
-    Target,
-    Plugin,
-    PluginAndTarget,
+    PlatformTarget,
+    PlatformPlugin,
+    PlatformPluginAndTarget,
 }
 
 pub struct Context<'a, 'b> {
@@ -148,7 +148,8 @@ impl<'a, 'b> Context<'a, 'b> {
 
         let targets = pkg.get_targets().iter();
         for target in targets.filter(|t| t.get_profile().is_compile()) {
-            self.build_requirements(pkg, target, Target, &mut HashSet::new());
+            self.build_requirements(pkg, target, PlatformTarget,
+                                    &mut HashSet::new());
         }
 
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
@@ -165,7 +166,7 @@ impl<'a, 'b> Context<'a, 'b> {
         if !visiting.insert(pkg.get_package_id()) { return }
 
         let key = (pkg.get_package_id(), target.get_name());
-        let req = if target.get_profile().is_plugin() {Plugin} else {req};
+        let req = if target.get_profile().is_plugin() {PlatformPlugin} else {req};
         self.requirements.insert_or_update_with(key, req, |_, v| {
             *v = v.combine(req);
         });
@@ -180,7 +181,7 @@ impl<'a, 'b> Context<'a, 'b> {
     pub fn get_requirement(&self, pkg: &'a Package,
                            target: &'a Target) -> PlatformRequirement {
         self.requirements.find(&(pkg.get_package_id(), target.get_name()))
-            .map(|a| *a).unwrap_or(Target)
+            .map(|a| *a).unwrap_or(PlatformTarget)
     }
 
     /// Switch this context over to being the primary compilation unit,
@@ -291,9 +292,9 @@ impl<'a, 'b> Context<'a, 'b> {
 impl PlatformRequirement {
     fn combine(self, other: PlatformRequirement) -> PlatformRequirement {
         match (self, other) {
-            (Target, Target) => Target,
-            (Plugin, Plugin) => Plugin,
-            _ => PluginAndTarget,
+            (PlatformTarget, PlatformTarget) => PlatformTarget,
+            (PlatformPlugin, PlatformPlugin) => PlatformPlugin,
+            _ => PlatformPluginAndTarget,
         }
     }
 }

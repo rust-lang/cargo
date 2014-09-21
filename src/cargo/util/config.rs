@@ -1,6 +1,8 @@
 use std::{fmt, os, result, mem};
 use std::io::fs::{PathExtensions, File};
 use std::collections::HashMap;
+use std::string;
+
 use serialize::{Encodable,Encoder};
 use toml;
 use core::MultiShell;
@@ -12,15 +14,15 @@ pub struct Config<'a> {
     home_path: Path,
     shell: &'a mut MultiShell<'a>,
     jobs: uint,
-    target: Option<String>,
-    linker: Option<String>,
-    ar: Option<String>,
+    target: Option<string::String>,
+    linker: Option<string::String>,
+    ar: Option<string::String>,
 }
 
 impl<'a> Config<'a> {
     pub fn new<'a>(shell: &'a mut MultiShell,
                    jobs: Option<uint>,
-                   target: Option<String>) -> CargoResult<Config<'a>> {
+                   target: Option<string::String>) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
@@ -71,9 +73,9 @@ impl<'a> Config<'a> {
         self.target.as_ref().map(|t| t.as_slice())
     }
 
-    pub fn set_ar(&mut self, ar: String) { self.ar = Some(ar); }
+    pub fn set_ar(&mut self, ar: string::String) { self.ar = Some(ar); }
 
-    pub fn set_linker(&mut self, linker: String) { self.linker = Some(linker); }
+    pub fn set_linker(&mut self, linker: string::String) { self.linker = Some(linker); }
 
     pub fn linker(&self) -> Option<&str> {
         self.linker.as_ref().map(|t| t.as_slice())
@@ -91,9 +93,9 @@ pub enum Location {
 
 #[deriving(Eq,PartialEq,Clone,Decodable)]
 pub enum ConfigValue {
-    String(String, Path),
-    List(Vec<(String, Path)>),
-    Table(HashMap<String, ConfigValue>),
+    String(string::String, Path),
+    List(Vec<(string::String, Path)>),
+    Table(HashMap<string::String, ConfigValue>),
     Boolean(bool, Path),
 }
 
@@ -122,7 +124,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
         match *self {
             String(ref string, _) => string.encode(s),
             List(ref list) => {
-                let list: Vec<&String> = list.iter().map(|s| s.ref0()).collect();
+                let list: Vec<&string::String> = list.iter().map(|s| s.ref0()).collect();
                 list.encode(s)
             }
             Table(ref table) => table.encode(s),
@@ -189,7 +191,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn table(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+    pub fn table(&self) -> CargoResult<&HashMap<string::String, ConfigValue>> {
         match *self {
             Table(ref table) => Ok(table),
             _ => Err(internal(format!("expected a table, but found a {}",
@@ -197,7 +199,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn list(&self) -> CargoResult<&[(String, Path)]> {
+    pub fn list(&self) -> CargoResult<&[(string::String, Path)]> {
         match *self {
             List(ref list) => Ok(list.as_slice()),
             _ => Err(internal(format!("expected a list, but found a {}",
@@ -240,7 +242,7 @@ pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
         human(format!("`{}` not found in your configuration", key)))
 }
 
-pub fn all_configs(pwd: Path) -> CargoResult<HashMap<String, ConfigValue>> {
+pub fn all_configs(pwd: Path) -> CargoResult<HashMap<string::String, ConfigValue>> {
     let mut cfg = Table(HashMap::new());
 
     try!(walk_tree(&pwd, |mut file| {
@@ -325,7 +327,7 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
         Global => cfg.home_path.join(".cargo").join("config"),
         Project => unimplemented!(),
     };
-    let contents = File::open(&file).read_to_string().unwrap_or(String::new());
+    let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
     toml.insert(key.to_string(), value.into_toml());
     try!(File::create(&file).write(toml::Table(toml).to_string().as_bytes()));
