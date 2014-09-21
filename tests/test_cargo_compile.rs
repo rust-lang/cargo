@@ -213,7 +213,11 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
                               {} foo v0.5.0 ({})\n",
                              COMPILING, p.url(),
                              COMPILING, p.url()))
-        .with_stderr(""));
+        .with_stderr("\
+[..]warning: code is never used: `dead`[..]
+[..]fn dead() {}
+
+"));
 
     assert_that(&p.bin("foo"), existing_file());
 
