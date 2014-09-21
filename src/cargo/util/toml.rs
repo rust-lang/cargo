@@ -144,7 +144,7 @@ pub fn to_manifest(contents: &[u8],
     }
 }
 
-pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
+pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::TomlTable> {
     let mut parser = toml::Parser::new(toml.as_slice());
     match parser.parse() {
         Some(toml) => return Ok(toml),
@@ -538,7 +538,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
-    path: Option<TomlPath>,
+    path: Option<TomlPathValue>,
     test: Option<bool>,
     doctest: Option<bool>,
     bench: Option<bool>,
@@ -548,7 +548,7 @@ struct TomlTarget {
 }
 
 #[deriving(Decodable, Clone)]
-enum TomlPath {
+enum TomlPathValue {
     TomlString(String),
     TomlPath(Path),
 }
@@ -569,7 +569,7 @@ impl TomlTarget {
     }
 }
 
-impl TomlPath {
+impl TomlPathValue {
     fn to_path(&self) -> Path {
         match *self {
             TomlString(ref s) => Path::new(s.as_slice()),
@@ -578,7 +578,7 @@ impl TomlPath {
     }
 }
 
-impl fmt::Show for TomlPath {
+impl fmt::Show for TomlPathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             TomlString(ref s) => s.fmt(f),

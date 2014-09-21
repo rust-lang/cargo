@@ -11,7 +11,8 @@ use util::{Config, internal, ChainError, Fresh, profile};
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, StageStart, StageCustomBuild, StageLibraries};
 use self::job_queue::{StageBinaries, StageEnd};
-use self::context::{Context, PlatformRequirement, Target, Plugin, PluginAndTarget};
+use self::context::{Context, PlatformRequirement, PlatformTarget};
+use self::context::{PlatformPlugin, PlatformPluginAndTarget};
 
 pub use self::compilation::Compilation;
 
@@ -275,12 +276,12 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                                           KindPlugin));
 
     Ok(match req {
-        Target => vec![(target_cmd, KindTarget)],
-        Plugin => vec![(plugin_cmd, KindPlugin)],
-        PluginAndTarget if cx.config.target().is_none() =>
+        PlatformTarget => vec![(target_cmd, KindTarget)],
+        PlatformPlugin => vec![(plugin_cmd, KindPlugin)],
+        PlatformPluginAndTarget if cx.config.target().is_none() =>
             vec![(target_cmd, KindTarget)],
-        PluginAndTarget => vec![(target_cmd, KindTarget),
-                                (plugin_cmd, KindPlugin)],
+        PlatformPluginAndTarget => vec![(target_cmd, KindTarget),
+                                        (plugin_cmd, KindPlugin)],
     })
 }
 
