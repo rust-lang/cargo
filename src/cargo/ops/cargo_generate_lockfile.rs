@@ -127,7 +127,7 @@ pub fn write_resolve(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
     Ok(())
 }
 
-fn emit_package(dep: &toml::Table, out: &mut String) {
+fn emit_package(dep: &toml::TomlTable, out: &mut String) {
     out.push_str(format!("name = {}\n", lookup(dep, "name")).as_slice());
     out.push_str(format!("version = {}\n", lookup(dep, "version")).as_slice());
 
@@ -151,6 +151,6 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
     });
 }
 
-fn lookup<'a>(table: &'a toml::Table, key: &str) -> &'a toml::Value {
+fn lookup<'a>(table: &'a toml::TomlTable, key: &str) -> &'a toml::Value {
     table.find(&key.to_string()).expect(format!("Didn't find {}", key).as_slice())
 }
