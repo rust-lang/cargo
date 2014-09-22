@@ -96,9 +96,9 @@ fn read_nested_packages(path: &Path, source_id: &SourceId,
     let mut ret = vec![pkg];
 
     for p in nested.iter() {
-        ret.push_all_move(try!(read_nested_packages(&path.join(p),
+        ret.extend(try!(read_nested_packages(&path.join(p),
                                         source_id,
-                                        visited)));
+                                        visited)).into_iter());
     }
 
     Ok(ret)

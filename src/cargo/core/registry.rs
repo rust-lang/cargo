@@ -44,7 +44,7 @@ impl<'a> PackageRegistry<'a> {
             try!(source.download(package_ids));
             let packages = try!(source.get(package_ids));
 
-            ret.push_all_move(packages);
+            ret.extend(packages.into_iter());
         }
 
         // TODO: Return earlier if fail
@@ -135,7 +135,7 @@ impl<'a> Registry for PackageRegistry<'a> {
             try!(self.ensure_loaded(dep.get_source_id()));
             let mut ret = Vec::new();
             for src in self.sources.sources_mut() {
-                ret.push_all_move(try!(src.query(dep)));
+                ret.extend(try!(src.query(dep)).into_iter());
             }
             Ok(ret)
         } else {
@@ -165,7 +165,7 @@ pub mod test {
         }
 
         pub fn summaries(mut self, summaries: Vec<Summary>) -> RegistryBuilder {
-            self.summaries.push_all_move(summaries);
+            self.summaries.extend(summaries.into_iter());
             self
         }
 
@@ -175,7 +175,7 @@ pub mod test {
         }
 
         pub fn overrides(mut self, summaries: Vec<Summary>) -> RegistryBuilder {
-            self.overrides.push_all_move(summaries);
+            self.overrides.extend(summaries.into_iter());
             self
         }
 

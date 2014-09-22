@@ -339,7 +339,7 @@ impl Manifest {
         Manifest {
             summary: summary.clone(),
             authors: Vec::new(),
-            targets: Vec::from_slice(targets),
+            targets: targets.to_vec(),
             target_dir: target_dir.clone(),
             doc_dir: doc_dir.clone(),
             sources: sources,

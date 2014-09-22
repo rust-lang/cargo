@@ -184,7 +184,7 @@ impl Source for PathSource {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
             let packages = try!(self.read_packages());
-            self.packages.push_all_move(packages);
+            self.packages.extend(packages.into_iter());
             self.updated = true;
         }
 

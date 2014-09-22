@@ -349,7 +349,7 @@ impl<'a> Registry for SourceSet<'a> {
         let mut ret = Vec::new();
 
         for source in self.sources.iter_mut() {
-            ret.push_all_move(try!(source.query(name)));
+            ret.extend(try!(source.query(name)).into_iter());
         }
 
         Ok(ret)
