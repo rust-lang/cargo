@@ -59,6 +59,8 @@ else
     curl -O http://$host/dist/rust-nightly-$triple.exe
     innounp -y -x rust-nightly-$triple.exe
     mv '{app}' rustc
+    # Don't use the bundled gcc, see rust-lang/rust#17442
+    rm -rf rustc/bin/rustlib/$triple/gcc
     rm -f rust-nightly-$triple.exe
 fi
 
