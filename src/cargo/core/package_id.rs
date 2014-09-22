@@ -24,9 +24,9 @@ impl ToVersion for semver::Version {
 
 impl<'a> ToVersion for &'a str {
     fn to_version(self) -> Result<semver::Version, String> {
-        match semver::parse(self) {
-            Some(v) => Ok(v),
-            None => Err(format!("cannot parse '{}' as a semver", self)),
+        match semver::Version::parse(self) {
+            Ok(v) => Ok(v),
+            Err(_) => Err(format!("cannot parse '{}' as a semver", self)),
         }
     }
 }
@@ -53,7 +53,7 @@ impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
         let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
 
         let name = captures.at(1);
-        let version = semver::parse(captures.at(2)).expect("invalid version");
+        let version = semver::Version::parse(captures.at(2)).ok().expect("invalid version");
         let source_id = SourceId::from_url(captures.at(3).to_string());
 
         Ok(PackageId {

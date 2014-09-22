@@ -1,4 +1,5 @@
-use core::{VersionReq,SourceId,Summary};
+use core::{SourceId,Summary};
+use semver::VersionReq;
 use util::CargoResult;
 
 #[deriving(PartialEq,Clone,Show)]

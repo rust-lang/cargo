@@ -42,7 +42,6 @@ pub use self::dependency::{
     Dependency
 };
 
-pub use self::version_req::VersionReq;
 pub use self::resolver::Resolve;
 
 pub mod source;
@@ -54,4 +53,3 @@ pub mod resolver;
 pub mod summary;
 pub mod shell;
 pub mod registry;
-mod version_req;
