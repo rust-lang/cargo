@@ -3,6 +3,7 @@ use std::io::IoError;
 use std::fmt::{mod, Show, Formatter, FormatError};
 use std::str;
 use serialize::json;
+use semver;
 
 use curl;
 use docopt;
@@ -92,6 +93,12 @@ impl CargoError for Box<CargoError + Send> {
 
     fn box_error(self) -> Box<CargoError + Send> {
         self
+    }
+}
+
+impl CargoError for semver::ReqParseError {
+    fn description(&self) -> String {
+        self.to_string()
     }
 }
 
