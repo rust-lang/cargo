@@ -48,8 +48,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
             dependencies: summary.get_dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
-            authors: Vec::from_slice(manifest.get_authors()),
-            targets: Vec::from_slice(manifest.get_targets()),
+            authors: manifest.get_authors().to_vec(),
+            targets: manifest.get_targets().to_vec(),
             manifest_path: self.manifest_path.display().to_string()
         }.encode(s)
     }
@@ -138,7 +138,7 @@ impl PackageSet {
     pub fn new(packages: &[Package]) -> PackageSet {
         //assert!(packages.len() > 0,
         //        "PackageSet must be created with at least one package")
-        PackageSet { packages: Vec::from_slice(packages) }
+        PackageSet { packages: packages.to_vec() }
     }
 
     pub fn len(&self) -> uint {
