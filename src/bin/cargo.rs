@@ -62,6 +62,7 @@ macro_rules! each_subcommand( ($macro:ident) => ({
     $macro!(login)
     $macro!(new)
     $macro!(package)
+    $macro!(pkgid)
     $macro!(read_manifest)
     $macro!(run)
     $macro!(test)

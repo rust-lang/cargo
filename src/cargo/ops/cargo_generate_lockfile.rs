@@ -1,4 +1,3 @@
-#![warn(warnings)]
 use std::collections::HashSet;
 use std::io::File;
 

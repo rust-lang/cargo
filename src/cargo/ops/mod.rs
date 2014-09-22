@@ -12,6 +12,7 @@ pub use self::cargo_package::package;
 pub use self::cargo_upload::{upload, upload_configuration, UploadConfig};
 pub use self::cargo_upload::{upload_login, http_proxy, http_handle};
 pub use self::cargo_fetch::{fetch, resolve_and_fetch};
+pub use self::cargo_pkgid::pkgid;
 
 mod cargo_clean;
 mod cargo_compile;
@@ -25,3 +26,4 @@ mod cargo_test;
 mod cargo_package;
 mod cargo_upload;
 mod cargo_fetch;
+mod cargo_pkgid;
