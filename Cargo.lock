@@ -9,7 +9,7 @@ dependencies = [
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#08dc5e62bf11ff8957fcb98c0c3c57c764fc4879)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#ce24c37f268c4a31238dbe3b8e9ff8fe5342f0be)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98)",
- "semver 0.0.1 (git+https://github.com/rust-lang/semver#df163f7b22686493b037eee1f1f9d1a2742f9bbe)",
+ "semver 0.1.0 (git+https://github.com/rust-lang/semver#c88a711f543c57368be347686a549aa4254ec48f)",
  "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#b2391703d54afd20c999d5531c4ed46bcf366f23)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#22ad6e7ea9f2a81aac3ba9e427dd8a1036453486)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#275c4a8e1926ab87247203817c9c812e9b83a49f)",
@@ -99,8 +99,8 @@ source = "git+https://github.com/alexcrichton/openssl-static-sys#40c6aa58a878645
 
 [[package]]
 name = "semver"
-version = "0.0.1"
-source = "git+https://github.com/rust-lang/semver#df163f7b22686493b037eee1f1f9d1a2742f9bbe"
+version = "0.1.0"
+source = "git+https://github.com/rust-lang/semver#c88a711f543c57368be347686a549aa4254ec48f"
 
 [[package]]
 name = "tar"
