@@ -262,9 +262,9 @@ pub struct TomlVersion {
 impl<E, D: Decoder<E>> Decodable<D, E> for TomlVersion {
     fn decode(d: &mut D) -> Result<TomlVersion, E> {
         let s = raw_try!(d.read_str());
-        match semver::parse(s.as_slice()) {
-            Some(s) => Ok(TomlVersion { version: s }),
-            None => Err(d.error(format!("cannot parse '{}' as a semver",
+        match semver::Version::parse(s.as_slice()) {
+            Ok(s) => Ok(TomlVersion { version: s }),
+            Err(_) => Err(d.error(format!("cannot parse '{}' as a semver",
                                         s).as_slice())),
         }
     }
