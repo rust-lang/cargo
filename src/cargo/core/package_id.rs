@@ -2,34 +2,10 @@ use semver;
 use std::hash::Hash;
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
-use serialize::{
-    Encodable,
-    Encoder,
-    Decodable,
-    Decoder
-};
+use serialize::{Encodable, Encoder, Decodable, Decoder};
 
-use util::{CargoResult, CargoError, short_hash};
+use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
-
-trait ToVersion {
-    fn to_version(self) -> Result<semver::Version, String>;
-}
-
-impl ToVersion for semver::Version {
-    fn to_version(self) -> Result<semver::Version, String> {
-        Ok(self)
-    }
-}
-
-impl<'a> ToVersion for &'a str {
-    fn to_version(self) -> Result<semver::Version, String> {
-        match semver::Version::parse(self) {
-            Ok(v) => Ok(v),
-            Err(_) => Err(format!("cannot parse '{}' as a semver", self)),
-        }
-    }
-}
 
 #[deriving(Clone, PartialEq, PartialOrd, Ord)]
 pub struct PackageId {
@@ -97,9 +73,9 @@ pub struct Metadata {
 }
 
 impl PackageId {
-    pub fn new<T: ToVersion>(name: &str, version: T,
+    pub fn new<T: ToSemver>(name: &str, version: T,
                              sid: &SourceId) -> CargoResult<PackageId> {
-        let v = try!(version.to_version().map_err(InvalidVersion));
+        let v = try!(version.to_semver().map_err(InvalidVersion));
         Ok(PackageId {
             name: name.to_string(),
             version: v,

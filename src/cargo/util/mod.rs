@@ -11,6 +11,7 @@ pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
 pub use self::dependency_queue::Dependency;
 pub use self::graph::Graph;
 pub use self::to_url::ToUrl;
+pub use self::to_semver::ToSemver;
 pub use self::vcs::{GitRepo, HgRepo};
 pub use self::sha256::Sha256;
 
@@ -24,6 +25,7 @@ pub mod paths;
 pub mod errors;
 pub mod hex;
 pub mod profile;
+pub mod to_semver;
 mod pool;
 mod dependency_queue;
 mod to_url;
