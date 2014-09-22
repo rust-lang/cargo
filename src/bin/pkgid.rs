@@ -16,9 +16,9 @@ Options:
     --manifest-path PATH    Path to the manifest to the package to clean
     -v, --verbose           Use verbose output
 
-Given a <pkgid> argument, print out the fully qualified package id specifier.
-This command will generate an error if <pkgid> is ambiguous as to which package
-it refers to in the dependency graph. If no <pkgid> is given, then the pkgid for
+Given a <spec> argument, print out the fully qualified package id specifier.
+This command will generate an error if <spec> is ambiguous as to which package
+it refers to in the dependency graph. If no <spec> is given, then the pkgid for
 the local package is printed.
 
 This command requires that a lockfile is available and dependencies have been

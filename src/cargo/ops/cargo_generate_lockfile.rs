@@ -54,7 +54,6 @@ pub fn update_lockfile(manifest_path: &Path,
         Some(name) => {
             let mut to_avoid = HashSet::new();
             let dep = try!(resolve.query(name.as_slice()));
-            fill_with_deps(&resolve, dep, &mut to_avoid);
             if aggressive {
                 fill_with_deps(&resolve, dep, &mut to_avoid);
             } else {
