@@ -35,7 +35,8 @@ pub fn generate_lockfile(manifest_path: &Path,
 
 pub fn update_lockfile(manifest_path: &Path,
                        shell: &mut MultiShell,
-                       to_update: Option<String>) -> CargoResult<()> {
+                       to_update: Option<String>,
+                       aggressive: bool) -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
@@ -54,7 +55,11 @@ pub fn update_lockfile(manifest_path: &Path,
         Some(name) => {
             let mut to_avoid = HashSet::new();
             for dep in resolve.iter().filter(|d| d.get_name() == name.as_slice()) {
-                fill_with_deps(&resolve, dep, &mut to_avoid);
+                if aggressive {
+                    fill_with_deps(&resolve, dep, &mut to_avoid);
+                } else {
+                    to_avoid.insert(dep);
+                }
             }
             resolve.iter().filter(|pkgid| !to_avoid.contains(pkgid))
                    .map(|pkgid| pkgid.get_source_id().clone()).collect()

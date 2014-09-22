@@ -687,6 +687,9 @@ test!(update_with_shared_deps {
     timer::sleep(Duration::milliseconds(1000));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
+                execs().with_stdout(""));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1")
+                 .arg("--aggressive"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
