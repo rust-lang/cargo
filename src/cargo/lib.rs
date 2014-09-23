@@ -77,7 +77,7 @@ pub mod ops;
 pub mod sources;
 pub mod util;
 
-trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
+pub trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
 impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
 pub fn execute_main<'a,
