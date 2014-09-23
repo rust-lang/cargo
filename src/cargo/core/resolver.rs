@@ -1,18 +1,27 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
-
-use serialize::{Encodable, Encoder, Decodable, Decoder};
 use semver;
 
-use core::{Dependency, PackageId, Registry, SourceId, PackageIdSpec};
-use util::graph::{Nodes, Edges};
-use util::profile;
+use serialize::{Encodable, Encoder, Decodable, Decoder};
+
+use core::{PackageId, Registry, SourceId, Summary, Dependency};
+use core::PackageIdSpec;
 use util::{CargoResult, Graph, human, internal, ChainError};
+use util::profile;
+use util::graph::{Nodes, Edges};
 
 #[deriving(PartialEq, Eq)]
 pub struct Resolve {
     graph: Graph<PackageId>,
+    features: HashMap<PackageId, HashSet<String>>,
     root: PackageId
+}
+
+pub enum ResolveMethod<'a> {
+    ResolveEverything,
+    ResolveRequired(/* dev_deps = */ bool,
+                    /* features = */ &'a [String],
+                    /* uses_default_features = */ bool),
 }
 
 #[deriving(Encodable, Decodable, Show)]
@@ -37,7 +46,7 @@ impl EncodableResolve {
         }
 
         let root = self.root.to_package_id(default);
-        Ok(Resolve { graph: g, root: try!(root) })
+        Ok(Resolve { graph: g, root: try!(root), features: HashMap::new() })
     }
 }
 
@@ -189,7 +198,7 @@ impl Resolve {
     fn new(root: PackageId) -> Resolve {
         let mut g = Graph::new();
         g.add(root.clone(), []);
-        Resolve { graph: g, root: root }
+        Resolve { graph: g, root: root, features: HashMap::new() }
     }
 
     pub fn iter(&self) -> Nodes<PackageId> {
@@ -225,6 +234,10 @@ impl Resolve {
             None => Ok(ret)
         }
     }
+
+    pub fn features(&self, pkg: &PackageId) -> Option<&HashSet<String>> {
+        self.features.find(pkg)
+    }
 }
 
 impl fmt::Show for Resolve {
@@ -236,11 +249,16 @@ impl fmt::Show for Resolve {
 struct Context<'a, R:'a> {
     registry: &'a mut R,
     resolve: Resolve,
+    // cycle detection
+    visited: HashSet<PackageId>,
+
+    // Try not to re-resolve too much
+    resolved: HashMap<PackageId, HashSet<String>>,
 
     // Eventually, we will have smarter logic for checking for conflicts in the
     // resolve, but without the registry, conflicts should not exist in
     // practice, so this is just a sanity check.
-    seen: HashMap<(String, SourceId), semver::Version>
+    seen: HashMap<(String, SourceId), semver::Version>,
 }
 
 impl<'a, R: Registry> Context<'a, R> {
@@ -248,44 +266,87 @@ impl<'a, R: Registry> Context<'a, R> {
         Context {
             registry: registry,
             resolve: Resolve::new(root),
-            seen: HashMap::new()
+            seen: HashMap::new(),
+            visited: HashSet::new(),
+            resolved: HashMap::new(),
         }
     }
 }
 
-pub fn resolve<R: Registry>(root: &PackageId, deps: &[Dependency],
+pub fn resolve<R: Registry>(summary: &Summary, method: ResolveMethod,
                             registry: &mut R) -> CargoResult<Resolve> {
-    log!(5, "resolve; deps={}", deps);
-    let _p = profile::start(format!("resolving: {}", root));
+    log!(5, "resolve; summary={}", summary);
+    let _p = profile::start(format!("resolving: {}", summary));
 
-    let mut context = Context::new(registry, root.clone());
-    try!(resolve_deps(root, deps, &mut context));
+    let mut context = Context::new(registry, summary.get_package_id().clone());
+    try!(resolve_deps(summary, method, &mut context));
     log!(5, "  result={}", context.resolve);
     Ok(context.resolve)
 }
 
-fn resolve_deps<'a, R: Registry>(parent: &PackageId,
-                                 deps: &[Dependency],
+fn resolve_deps<'a, R: Registry>(parent: &Summary,
+                                 method: ResolveMethod,
                                  ctx: &mut Context<'a, R>)
                                  -> CargoResult<()> {
-    if deps.is_empty() {
-        return Ok(());
+    // Dependency graphs are required to be a DAG
+    if !ctx.visited.insert(parent.get_package_id().clone()) {
+        return Err(human(format!("Cyclic package dependency: package `{}` \
+                                  depends on itself", parent.get_package_id())))
     }
 
-    for dep in deps.iter() {
-        let pkgs = try!(ctx.registry.query(dep));
+    let dev_deps = match method {
+        ResolveEverything => true,
+        ResolveRequired(dev_deps, _, _) => dev_deps,
+    };
 
-        if pkgs.is_empty() {
-            return Err(human(format!("No package named `{:s}` found (required by `{:s}`).\n\
-                Location searched: {}\n\
-                Version required: {}",
-                dep.get_name(),
-                parent.get_name(),
-                dep.get_source_id(),
-                dep.get_version_req())));
+    // First, filter by dev-dependencies
+    let deps = parent.get_dependencies();
+    let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
+
+    // Second, weed out optional dependencies, but not those required
+    let (mut feature_deps, used_features) = try!(build_features(parent, method));
+    let deps = deps.filter(|d| {
+        !d.is_optional() || feature_deps.remove(&d.get_name().to_string())
+    }).collect::<Vec<&Dependency>>();
+
+    // All features can only point to optional dependencies, in which case they
+    // should have all been weeded out by the above iteration. Any remaining
+    // features are bugs in that the package does not actually have those
+    // features.
+    if feature_deps.len() > 0 {
+        let features = feature_deps.iter().map(|s| s.as_slice())
+                                   .collect::<Vec<&str>>().connect(", ");
+        return Err(human(format!("Package `{}` does not have these features: \
+                                  `{}`", parent.get_package_id(), features)))
+    }
+
+    // Record what list of features is active for this package.
+    {
+        let pkgid = parent.get_package_id().clone();
+        let features = ctx.resolve.features.find_or_insert(pkgid,
+                                                           HashSet::new());
+        features.extend(used_features.into_iter());
+    }
+
+    // Recursively resolve all dependencies
+    for &dep in deps.iter() {
+        if !ctx.resolved.find_or_insert(parent.get_package_id().clone(),
+                                        HashSet::new())
+                        .insert(dep.get_name().to_string()) {
+            continue
         }
 
-        if pkgs.len() > 1 {
+        let pkgs = try!(ctx.registry.query(dep));
+        if pkgs.is_empty() {
+            return Err(human(format!("No package named `{}` found \
+                                      (required by `{}`).\n\
+                                      Location searched: {}\n\
+                                      Version required: {}",
+                                     dep.get_name(),
+                                     parent.get_package_id().get_name(),
+                                     dep.get_source_id(),
+                                     dep.get_version_req())));
+        } else if pkgs.len() > 1 {
             return Err(internal(format!("At the moment, Cargo only supports a \
                 single source for a particular package name ({}).", dep)));
         }
@@ -293,52 +354,106 @@ fn resolve_deps<'a, R: Registry>(parent: &PackageId,
         let summary = &pkgs[0];
         let name = summary.get_name().to_string();
         let source_id = summary.get_source_id().clone();
-        let version = summary.get_version().clone();
+        let version = summary.get_version();
 
-        ctx.resolve.graph.link(parent.clone(), summary.get_package_id().clone());
+        ctx.resolve.graph.link(parent.get_package_id().clone(),
+                               summary.get_package_id().clone());
 
-        let found = {
-            let found = ctx.seen.find(&(name.clone(), source_id.clone()));
-
-            if found.is_some() {
-                if found == Some(&version) { continue; }
-                return Err(human(format!("Cargo found multiple copies of {} in {}. This \
-                                        is not currently supported",
-                                        summary.get_name(), summary.get_source_id())));
-            } else {
-                false
+        let found = match ctx.seen.find(&(name.clone(), source_id.clone())) {
+            Some(v) if v == version => true,
+            Some(..) => {
+                return Err(human(format!("Cargo found multiple copies of {} in \
+                                          {}. This is not currently supported",
+                                         summary.get_name(),
+                                         summary.get_source_id())));
             }
+            None => false,
         };
-
         if !found {
-            ctx.seen.insert((name, source_id), version);
+            ctx.seen.insert((name, source_id), version.clone());
+            ctx.resolve.graph.add(summary.get_package_id().clone(), []);
         }
-
-        ctx.resolve.graph.add(summary.get_package_id().clone(), []);
-
-        let deps: Vec<Dependency> = summary.get_dependencies().iter()
-            .filter(|d| d.is_transitive())
-            .map(|d| d.clone())
-            .collect();
-
-        try!(resolve_deps(summary.get_package_id(), deps.as_slice(), ctx));
+        try!(resolve_deps(summary,
+                          ResolveRequired(false, dep.get_features(),
+                                          dep.uses_default_features()),
+                          ctx));
     }
 
+    ctx.visited.remove(parent.get_package_id());
     Ok(())
+}
+
+// Returns a pair of (feature dependencies, all used features)
+fn build_features(s: &Summary, method: ResolveMethod)
+                  -> CargoResult<(HashSet<String>, HashSet<String>)> {
+    let mut deps = HashSet::new();
+    let mut used = HashSet::new();
+    let mut visited = HashSet::new();
+    match method {
+        ResolveEverything => {
+            for key in s.get_features().keys() {
+                try!(add_feature(s, key.as_slice(), &mut deps, &mut used,
+                                 &mut visited));
+            }
+        }
+        ResolveRequired(_, requested_features, _) =>  {
+            for feat in requested_features.iter() {
+                try!(add_feature(s, feat.as_slice(), &mut deps, &mut used,
+                                 &mut visited));
+            }
+        }
+    }
+    match method {
+        ResolveEverything | ResolveRequired(_, _, true) => {
+            if s.get_features().find_equiv(&"default").is_some() &&
+               !visited.contains_equiv(&"default") {
+                try!(add_feature(s, "default", &mut deps, &mut used,
+                                 &mut visited));
+            }
+        }
+        _ => {}
+    }
+    return Ok((deps, used));
+
+    fn add_feature(s: &Summary, feat: &str,
+                   deps: &mut HashSet<String>,
+                   used: &mut HashSet<String>,
+                   visited: &mut HashSet<String>) -> CargoResult<()> {
+        if !visited.insert(feat.to_string()) {
+            return Err(human(format!("Cyclic feature dependency: feature `{}` \
+                                      depends on itself", feat)))
+        }
+        used.insert(feat.to_string());
+        match s.get_features().find_equiv(&feat) {
+            Some(recursive) => {
+                for f in recursive.iter() {
+                    try!(add_feature(s, f.as_slice(), deps, used, visited));
+                }
+            }
+            None => { deps.insert(feat.to_string()); }
+        }
+        visited.remove(&feat.to_string());
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use hamcrest::{assert_that, equal_to, contains};
 
     use core::source::{SourceId, RegistryKind, GitKind};
     use core::{Dependency, PackageId, Summary, Registry};
     use util::{CargoResult, ToUrl};
 
-    fn resolve<R: Registry>(pkg: &PackageId, deps: &[Dependency],
+    fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
                             registry: &mut R)
                             -> CargoResult<Vec<PackageId>> {
-        Ok(try!(super::resolve(pkg, deps, registry)).iter().map(|p| p.clone()).collect())
+        let summary = Summary::new(pkg, deps, HashMap::new()).unwrap();
+        let method = super::ResolveEverything;
+        Ok(try!(super::resolve(&summary, method,
+                               registry)).iter().map(|p| p.clone()).collect())
     }
 
     trait ToDep {
@@ -363,13 +478,13 @@ mod test {
         ($name:expr => $($deps:expr),+) => ({
             let d: Vec<Dependency> = vec!($($deps.to_dep()),+);
 
-            Summary::new(&PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
-                         d.as_slice())
+            Summary::new(PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
+                         d, HashMap::new()).unwrap()
         });
 
         ($name:expr) => (
-            Summary::new(&PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
-                         [])
+            Summary::new(PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
+                         Vec::new(), HashMap::new()).unwrap()
         )
     )
 
@@ -379,7 +494,7 @@ mod test {
     }
 
     fn pkg(name: &str) -> Summary {
-        Summary::new(&pkg_id(name), &[])
+        Summary::new(pkg_id(name), Vec::new(), HashMap::new()).unwrap()
     }
 
     fn pkg_id(name: &str) -> PackageId {
@@ -395,7 +510,7 @@ mod test {
     }
 
     fn pkg_loc(name: &str, loc: &str) -> Summary {
-        Summary::new(&pkg_id_loc(name, loc), &[])
+        Summary::new(pkg_id_loc(name, loc), Vec::new(), HashMap::new()).unwrap()
     }
 
     fn dep(name: &str) -> Dependency {
@@ -427,7 +542,8 @@ mod test {
 
     #[test]
     pub fn test_resolving_empty_dependency_list() {
-        let res = resolve(&pkg_id("root"), [], &mut registry(vec!())).unwrap();
+        let res = resolve(pkg_id("root"), Vec::new(),
+                          &mut registry(vec!())).unwrap();
 
         assert_that(&res, equal_to(&names(["root"])));
     }
@@ -435,7 +551,7 @@ mod test {
     #[test]
     pub fn test_resolving_only_package() {
         let mut reg = registry(vec!(pkg("foo")));
-        let res = resolve(&pkg_id("root"), [dep("foo")], &mut reg);
+        let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
 
         assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
     }
@@ -443,7 +559,7 @@ mod test {
     #[test]
     pub fn test_resolving_one_dep() {
         let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
-        let res = resolve(&pkg_id("root"), [dep("foo")], &mut reg);
+        let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
 
         assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
     }
@@ -451,7 +567,8 @@ mod test {
     #[test]
     pub fn test_resolving_multiple_deps() {
         let mut reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
-        let res = resolve(&pkg_id("root"), [dep("foo"), dep("baz")], &mut reg).unwrap();
+        let res = resolve(pkg_id("root"), vec![dep("foo"), dep("baz")],
+                          &mut reg).unwrap();
 
         assert_that(&res, contains(names(["root", "foo", "baz"])).exactly());
     }
@@ -459,7 +576,7 @@ mod test {
     #[test]
     pub fn test_resolving_transitive_deps() {
         let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
-        let res = resolve(&pkg_id("root"), [dep("bar")], &mut reg).unwrap();
+        let res = resolve(pkg_id("root"), vec![dep("bar")], &mut reg).unwrap();
 
         assert_that(&res, contains(names(["root", "foo", "bar"])));
     }
@@ -467,7 +584,8 @@ mod test {
     #[test]
     pub fn test_resolving_common_transitive_deps() {
         let mut reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
-        let res = resolve(&pkg_id("root"), [dep("foo"), dep("bar")], &mut reg).unwrap();
+        let res = resolve(pkg_id("root"), vec![dep("foo"), dep("bar")],
+                          &mut reg).unwrap();
 
         assert_that(&res, contains(names(["root", "foo", "bar"])));
     }
@@ -475,16 +593,16 @@ mod test {
     #[test]
     pub fn test_resolving_with_same_name() {
         let list = vec![pkg_loc("foo", "http://first.example.com"),
-                        pkg_loc("foo", "http://second.example.com")];
+                        pkg_loc("bar", "http://second.example.com")];
 
         let mut reg = registry(list);
-        let res = resolve(&pkg_id("root"),
-                          [dep_loc("foo", "http://first.example.com"),
-                           dep_loc("foo", "http://second.example.com")],
-                           &mut reg);
+        let res = resolve(pkg_id("root"),
+                          vec![dep_loc("foo", "http://first.example.com"),
+                               dep_loc("bar", "http://second.example.com")],
+                          &mut reg);
 
         let mut names = loc_names([("foo", "http://first.example.com"),
-                                   ("foo", "http://second.example.com")]);
+                                   ("bar", "http://second.example.com")]);
 
         names.push(pkg_id("root"));
 
@@ -494,13 +612,15 @@ mod test {
     #[test]
     pub fn test_resolving_with_dev_deps() {
         let mut reg = registry(vec!(
-            pkg!("foo" => "bar", dep("baz").as_dev()),
-            pkg!("baz" => "bat", dep("bam").as_dev()),
+            pkg!("foo" => "bar", dep("baz").transitive(false)),
+            pkg!("baz" => "bat", dep("bam").transitive(false)),
             pkg!("bar"),
             pkg!("bat")
         ));
 
-        let res = resolve(&pkg_id("root"), [dep("foo"), dep("baz").as_dev()], &mut reg).unwrap();
+        let res = resolve(pkg_id("root"),
+                          vec![dep("foo"), dep("baz").transitive(false)],
+                          &mut reg).unwrap();
 
         assert_that(&res, contains(names(["root", "foo", "bar", "baz"])));
     }

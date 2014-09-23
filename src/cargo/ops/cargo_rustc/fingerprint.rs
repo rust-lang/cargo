@@ -69,12 +69,15 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     let are_files_fresh = use_pkg ||
                           try!(calculate_target_fresh(pkg, &old_dep_info));
 
-    // Second bit of the freshness calculation, whether rustc itself and the
-    // target are fresh.
+    // Second bit of the freshness calculation, whether rustc itself, the
+    // target are fresh, and the enabled set of features are all fresh.
+    let features = cx.resolve.features(pkg.get_package_id());
+    let features = features.map(|s| s.iter().collect::<Vec<&String>>());
     let rustc_fingerprint = if use_pkg {
-        mk_fingerprint(cx, &(target, try!(calculate_pkg_fingerprint(cx, pkg))))
+        mk_fingerprint(cx, &(target, try!(calculate_pkg_fingerprint(cx, pkg)),
+                             features))
     } else {
-        mk_fingerprint(cx, target)
+        mk_fingerprint(cx, &(target, features))
     };
     let is_rustc_fresh = try!(is_fresh(&old_loc, rustc_fingerprint.as_slice()));
 

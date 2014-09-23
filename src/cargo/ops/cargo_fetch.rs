@@ -32,8 +32,8 @@ pub fn resolve_and_fetch(registry: &mut PackageRegistry, package: &Package)
         None => try!(registry.add_sources(package.get_source_ids())),
     }
 
-    let resolved = try!(resolver::resolve(package.get_package_id(),
-                                          package.get_dependencies(),
+    let resolved = try!(resolver::resolve(package.get_summary(),
+                                          resolver::ResolveEverything,
                                           registry));
     try!(ops::write_resolve(package, &resolved));
     Ok(resolved)
@@ -58,7 +58,7 @@ fn add_lockfile_sources(registry: &mut PackageRegistry,
                         resolve: &Resolve) -> CargoResult<()> {
     let deps = resolve.deps(root.get_package_id()).into_iter().flat_map(|deps| {
         deps.map(|d| (d.get_name(), d))
-    }).collect::<HashMap<_, _>>();
+    }).collect::<HashMap<_, &PackageId>>();
 
     let mut sources = vec![root.get_package_id().get_source_id().clone()];
     let mut to_avoid = HashSet::new();
@@ -66,7 +66,8 @@ fn add_lockfile_sources(registry: &mut PackageRegistry,
     for dep in root.get_dependencies().iter() {
         match deps.find(&dep.get_name()) {
             Some(&lockfile_dep) => {
-                let summary = Summary::new(lockfile_dep, []);
+                let summary = Summary::new(lockfile_dep.clone(), Vec::new(),
+                                           HashMap::new()).unwrap();
                 if dep.matches(&summary) {
                     fill_with_deps(resolve, lockfile_dep, &mut to_add);
                 } else {

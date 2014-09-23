@@ -259,7 +259,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement)
                  -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
     let base = process("rustc", package, cx);
-    let base = build_base_args(cx, base, target, crate_types.as_slice());
+    let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
     let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
@@ -317,7 +317,9 @@ fn rustdoc(package: &Package, target: &Target,
     }, desc))
 }
 
-fn build_base_args(cx: &Context, mut cmd: ProcessBuilder,
+fn build_base_args(cx: &Context,
+                   mut cmd: ProcessBuilder,
+                   pkg: &Package,
                    target: &Target,
                    crate_types: &[&str]) -> ProcessBuilder {
     let metadata = target.get_metadata();
@@ -359,6 +361,15 @@ fn build_base_args(cx: &Context, mut cmd: ProcessBuilder,
 
     if profile.is_test() && profile.uses_test_harness() {
         cmd = cmd.arg("--test");
+    }
+
+    match cx.resolve.features(pkg.get_package_id()) {
+        Some(features) => {
+            for feat in features.iter() {
+                cmd = cmd.arg("--cfg").arg(format!("feature=\"{}\"", feat));
+            }
+        }
+        None => {}
     }
 
     match metadata {

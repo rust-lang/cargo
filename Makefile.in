@@ -83,7 +83,7 @@ $(TARGET_ROOT)/snapshot/bin/cargo$(X): src/snapshots.txt
 
 # === Tests
 
-test: test-unit style no-exes $(foreach target,$(CFG_TARGET),test-unit-$(target))
+test: style no-exes $(foreach target,$(CFG_TARGET),test-unit-$(target))
 
 style:
 	sh tests/check-style.sh

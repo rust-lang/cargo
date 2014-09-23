@@ -9,10 +9,15 @@ pub struct Dependency {
     req: VersionReq,
     transitive: bool,
     only_match_name: bool,
+
+    optional: bool,
+    default_features: bool,
+    features: Vec<String>,
 }
 
 impl Dependency {
-    pub fn parse(name: &str, version: Option<&str>,
+    pub fn parse(name: &str,
+                 version: Option<&str>,
                  source_id: &SourceId) -> CargoResult<Dependency> {
         let version = match version {
             Some(v) => try!(VersionReq::parse(v)),
@@ -20,11 +25,9 @@ impl Dependency {
         };
 
         Ok(Dependency {
-            name: name.to_string(),
-            source_id: source_id.clone(),
-            req: version,
-            transitive: true,
             only_match_name: false,
+            req: version,
+            .. Dependency::new_override(name, source_id)
         })
     }
 
@@ -35,6 +38,9 @@ impl Dependency {
             req: VersionReq::any(),
             transitive: true,
             only_match_name: true,
+            optional: false,
+            features: Vec::new(),
+            default_features: true,
         }
     }
 
@@ -50,15 +56,30 @@ impl Dependency {
         &self.source_id
     }
 
-    pub fn as_dev(&self) -> Dependency {
-        let mut dep = self.clone();
-        dep.transitive = false;
-        dep
+    pub fn transitive(mut self, transitive: bool) -> Dependency {
+        self.transitive = transitive;
+        self
     }
 
-    pub fn is_transitive(&self) -> bool {
-        self.transitive
+    pub fn features(mut self, features: Vec<String>) -> Dependency {
+        self.features = features;
+        self
     }
+
+    pub fn default_features(mut self, default_features: bool) -> Dependency {
+        self.default_features = default_features;
+        self
+    }
+
+    pub fn optional(mut self, optional: bool) -> Dependency {
+        self.optional = optional;
+        self
+    }
+
+    pub fn is_transitive(&self) -> bool { self.transitive }
+    pub fn is_optional(&self) -> bool { self.optional }
+    pub fn uses_default_features(&self) -> bool { self.default_features }
+    pub fn get_features(&self) -> &[String] { self.features.as_slice() }
 
     pub fn matches(&self, sum: &Summary) -> bool {
         debug!("matches; self={}; summary={}", self, sum);

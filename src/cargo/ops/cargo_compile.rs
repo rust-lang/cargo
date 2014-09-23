@@ -40,14 +40,19 @@ pub struct CompileOptions<'a> {
     pub jobs: Option<uint>,
     pub target: Option<&'a str>,
     pub dev_deps: bool,
+    pub features: &'a [String],
+    pub no_default_features: bool,
 }
 
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
                -> CargoResult<ops::Compilation> {
     let CompileOptions { update, env, ref mut shell, jobs, target,
-                         dev_deps } = *options;
+                         dev_deps, features, no_default_features } = *options;
     let target = target.map(|s| s.to_string());
+    let features = features.iter().flat_map(|s| {
+        s.as_slice().split(' ')
+    }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
@@ -84,13 +89,11 @@ pub fn compile(manifest_path: &Path,
         // overrides, etc.
         let _p = profile::start("resolving w/ overrides...");
 
-        let dependencies = package.get_dependencies().iter().filter(|dep| {
-            dep.is_transitive() || dev_deps
-        }).map(|d| d.clone()).collect::<Vec<_>>();
         try!(registry.add_overrides(override_ids));
+        let method = resolver::ResolveRequired(dev_deps, features.as_slice(),
+                                               !no_default_features);
         let resolved_with_overrides =
-                try!(resolver::resolve(package.get_package_id(),
-                                       dependencies.as_slice(),
+                try!(resolver::resolve(package.get_summary(), method,
                                        &mut registry));
 
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {

@@ -16,6 +16,8 @@ Options:
     -h, --help              Print this message
     --no-run                Compile, but don't run tests
     -j N, --jobs N          The number of jobs to run in parallel
+    --features FEATURES     Space-separated list of features to also build
+    --no-default-features   Do not build the `default` feature
     --target TRIPLE         Build for the target triple
     -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to build tests for
@@ -24,7 +26,7 @@ Options:
 All of the trailing arguments are passed to the test binaries generated for
 filtering tests and generally providing options configuring how they run.
 ",  flag_jobs: Option<uint>, flag_target: Option<String>,
-    flag_manifest_path: Option<String>)
+    flag_manifest_path: Option<String>, flag_features: Vec<String>)
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
@@ -39,6 +41,8 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| s.as_slice()),
             dev_deps: true,
+            features: options.flag_features.as_slice(),
+            no_default_features: options.flag_no_default_features,
         },
     };
 

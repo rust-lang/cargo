@@ -1,7 +1,9 @@
 use std::hash;
 use std::fmt::{mod, Show, Formatter};
+
 use semver::Version;
 use serialize::{Encoder,Encodable};
+
 use core::source::SourceId;
 use core::{
     Dependency,
@@ -333,15 +335,15 @@ impl Show for Target {
 
 
 impl Manifest {
-    pub fn new(summary: &Summary, targets: &[Target],
-               target_dir: &Path, doc_dir: &Path, sources: Vec<SourceId>,
+    pub fn new(summary: Summary, targets: Vec<Target>,
+               target_dir: Path, doc_dir: Path, sources: Vec<SourceId>,
                build: Vec<String>, exclude: Vec<String>) -> Manifest {
         Manifest {
-            summary: summary.clone(),
+            summary: summary,
             authors: Vec::new(),
-            targets: targets.to_vec(),
-            target_dir: target_dir.clone(),
-            doc_dir: doc_dir.clone(),
+            targets: targets,
+            target_dir: target_dir,
+            doc_dir: doc_dir,
             sources: sources,
             build: build,
             warnings: Vec::new(),
