@@ -41,12 +41,13 @@ pub struct CompileOptions<'a> {
     pub dev_deps: bool,
     pub features: &'a [String],
     pub no_default_features: bool,
+    pub spec: Option<&'a str>,
 }
 
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
                -> CargoResult<ops::Compilation> {
-    let CompileOptions { env, ref mut shell, jobs, target,
+    let CompileOptions { env, ref mut shell, jobs, target, spec,
                          dev_deps, features, no_default_features } = *options;
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
@@ -102,7 +103,15 @@ pub fn compile(manifest_path: &Path,
 
     debug!("packages={}", packages);
 
-    let targets = package.get_targets().iter().filter(|target| {
+    let to_build = match spec {
+        Some(spec) => {
+            let pkgid = try!(resolve_with_overrides.query(spec));
+            packages.iter().find(|p| p.get_package_id() == pkgid).unwrap()
+        }
+        None => &package,
+    };
+
+    let targets = to_build.get_targets().iter().filter(|target| {
         match env {
             // doc-all == document everything, so look for doc targets
             "doc" | "doc-all" => target.get_profile().get_env() == "doc",
@@ -115,7 +124,7 @@ pub fn compile(manifest_path: &Path,
         let mut config = try!(Config::new(*shell, jobs, target));
         try!(scrape_target_config(&mut config, &user_configs));
 
-        try!(ops::compile_targets(env.as_slice(), targets.as_slice(), &package,
+        try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
                                   &PackageSet::new(packages.as_slice()),
                                   &resolve_with_overrides, &sources,
                                   &mut config))

@@ -60,9 +60,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
     let dest = uniq_target_dest(targets);
-    let host_layout = Layout::new(pkg, None, dest);
+    let root = deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap();
+    let host_layout = Layout::new(root, None, dest);
     let target_layout = config.target().map(|target| {
-        layout::Layout::new(pkg, Some(target), dest)
+        layout::Layout::new(root, Some(target), dest)
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
@@ -76,8 +77,13 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     // particular package. No actual work is executed as part of this, that's
     // all done later as part of the `execute` function which will run
     // everything in order with proper parallelism.
+    let mut dep_pkgids = HashSet::new();
+    each_dep(pkg, &cx, |dep| {
+        dep_pkgids.insert(dep.get_package_id().clone());
+    });
     for dep in deps.iter() {
         if dep == pkg { continue }
+        if !dep_pkgids.contains(dep.get_package_id()) { continue }
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
@@ -91,7 +97,9 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         try!(compile(targets.as_slice(), dep, &mut cx, &mut queue));
     }
 
-    cx.primary();
+    if pkg.get_package_id() == resolve.root() {
+        cx.primary();
+    }
     try!(compile(targets, pkg, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!

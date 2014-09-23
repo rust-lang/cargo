@@ -38,6 +38,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         dev_deps: true,
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,
+        spec: None,
     };
 
     let err = try!(ops::run(&root, &mut compile_opts,
