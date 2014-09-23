@@ -34,7 +34,6 @@ use util::config::{Config, ConfigValue};
 use util::{CargoResult, Wrap, config, internal, human, ChainError, profile};
 
 pub struct CompileOptions<'a> {
-    pub update: bool,
     pub env: &'a str,
     pub shell: &'a mut MultiShell<'a>,
     pub jobs: Option<uint>,
@@ -47,7 +46,7 @@ pub struct CompileOptions<'a> {
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
                -> CargoResult<ops::Compilation> {
-    let CompileOptions { update, env, ref mut shell, jobs, target,
+    let CompileOptions { env, ref mut shell, jobs, target,
                          dev_deps, features, no_default_features } = *options;
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
@@ -55,11 +54,6 @@ pub fn compile(manifest_path: &Path,
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
-
-    if update {
-        return Err(human("The -u flag has been deprecated, please use the \
-                          `cargo update` command instead"));
-    }
 
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());

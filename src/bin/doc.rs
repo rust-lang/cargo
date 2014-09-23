@@ -17,7 +17,6 @@ Options:
     -j N, --jobs N          The number of jobs to run in parallel
     --features FEATURES     Space-separated list of features to also build
     --no-default-features   Do not build the `default` feature
-    -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to document
     -v, --verbose           Use verbose output
 
@@ -35,7 +34,6 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let mut doc_opts = ops::DocOptions {
         all: !options.flag_no_deps,
         compile_opts: ops::CompileOptions {
-            update: options.flag_update_remotes,
             env: if options.flag_no_deps {"doc"} else {"doc-all"},
             shell: shell,
             jobs: options.flag_jobs,

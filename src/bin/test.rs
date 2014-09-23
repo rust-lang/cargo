@@ -19,7 +19,6 @@ Options:
     --features FEATURES     Space-separated list of features to also build
     --no-default-features   Do not build the `default` feature
     --target TRIPLE         Build for the target triple
-    -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to build tests for
     -v, --verbose           Use verbose output
 
@@ -35,7 +34,6 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let mut ops = ops::TestOptions {
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
-            update: options.flag_update_remotes,
             env: "test",
             shell: shell,
             jobs: options.flag_jobs,
