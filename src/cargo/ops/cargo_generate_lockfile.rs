@@ -12,6 +12,13 @@ use util::config::{Config};
 use util::{CargoResult, human};
 use util::toml as cargo_toml;
 
+pub struct UpdateOptions<'a> {
+    pub shell: &'a mut MultiShell<'a>,
+    pub to_update: Option<&'a str>,
+    pub precise: Option<&'a str>,
+    pub aggressive: bool,
+}
+
 pub fn generate_lockfile(manifest_path: &Path,
                          shell: &mut MultiShell)
                          -> CargoResult<()> {
@@ -33,9 +40,7 @@ pub fn generate_lockfile(manifest_path: &Path,
 }
 
 pub fn update_lockfile(manifest_path: &Path,
-                       shell: &mut MultiShell,
-                       to_update: Option<String>,
-                       aggressive: bool) -> CargoResult<()> {
+                       opts: &mut UpdateOptions) -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
@@ -47,23 +52,37 @@ pub fn update_lockfile(manifest_path: &Path,
         None => return Err(human("A Cargo.lock must exist before it is updated"))
     };
 
-    let mut config = try!(Config::new(shell, None, None));
+    if opts.aggressive && opts.precise.is_some() {
+        return Err(human("cannot specify both aggressive and precise \
+                          simultaneously"))
+    }
+
+    let mut config = try!(Config::new(opts.shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
 
-    let sources = match to_update {
+    let mut sources = Vec::new();
+    match opts.to_update {
         Some(name) => {
             let mut to_avoid = HashSet::new();
-            let dep = try!(resolve.query(name.as_slice()));
-            if aggressive {
+            let dep = try!(resolve.query(name));
+            if opts.aggressive {
                 fill_with_deps(&resolve, dep, &mut to_avoid);
             } else {
                 to_avoid.insert(dep);
+                match opts.precise {
+                    Some(precise) => {
+                        sources.push(dep.get_source_id().clone()
+                                        .with_precise(precise.to_string()));
+                    }
+                    None => {}
+                }
             }
-            resolve.iter().filter(|pkgid| !to_avoid.contains(pkgid))
-                   .map(|pkgid| pkgid.get_source_id().clone()).collect()
+            sources.extend(resolve.iter()
+                                  .filter(|p| !to_avoid.contains(p))
+                                  .map(|p| p.get_source_id().clone()));
         }
-        None => package.get_source_ids(),
-    };
+        None => sources.extend(package.get_source_ids().into_iter()),
+    }
     try!(registry.add_sources(sources));
 
     let resolve = try!(resolver::resolve(package.get_summary(),

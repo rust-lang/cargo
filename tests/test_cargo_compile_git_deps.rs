@@ -681,13 +681,23 @@ test!(update_with_shared_deps {
         pub fn bar() { println!("hello!"); }
     "#).assert();
     let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let old_head = repo.head().unwrap().target().unwrap();
     add(&repo);
     commit(&repo);
 
     timer::sleep(Duration::milliseconds(1000));
 
+    // By default, not transitive updates
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
                 execs().with_stdout(""));
+
+    // Specifying a precise rev to the old rev shouldn't actually update
+    // anything because we already have the rev in the db.
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar")
+                 .arg("--precise").arg(old_head.to_string()),
+                execs().with_stdout(""));
+
+    // Updating aggressively should, however, update the repo.
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1")
                  .arg("--aggressive"),
                 execs().with_stdout(format!("{} git repository `{}`",
