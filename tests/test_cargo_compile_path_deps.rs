@@ -175,8 +175,8 @@ test!(cargo_compile_with_root_dev_deps_with_testing {
     p2.build();
     assert_that(p.cargo_process("test"),
         execs().with_stdout(format!("\
-{compiling} bar v0.5.0 ({url})
-{compiling} foo v0.5.0 ({url})
+{compiling} [..] v0.5.0 ({url})
+{compiling} [..] v0.5.0 ({url})
 {running} target[..]foo-[..]
 
 running 0 tests
@@ -697,3 +697,56 @@ test!(path_dep_build_cmd {
       execs().with_stdout("1\n"));
 })
 
+test!(dev_deps_no_rebuild_lib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+
+            [dev-dependencies.bar]
+                path = "bar"
+
+            [lib]
+                name = "foo"
+                doctest = false
+        "#)
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("bar/src/lib.rs", "pub fn bar() {}");
+    p.build();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout(format!("{} foo v0.5.0 ({})\n",
+                                            COMPILING, p.url())));
+    p.root().move_into_the_past().assert();
+
+    // Now that we've built the library, it *should not* be built again as part
+    // of `cargo test`, even if we have some dev dependencies that weren't
+    // previously built.
+    File::create(&p.root().join("src/lib.rs")).write_str(r#"
+        #[cfg(test)] extern crate bar;
+        #[cfg(not(test))] fn foo() { bar(); }
+    "#).unwrap();
+    p.root().join("src/lib.rs").move_into_the_past().assert();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{} [..] v0.5.0 ({})
+{} [..] v0.5.0 ({})
+Running target[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", COMPILING, p.url(), COMPILING, p.url())));
+})

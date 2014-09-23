@@ -1054,8 +1054,8 @@ test!(dev_deps_with_testing {
     // a second time.
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
         execs().with_stdout(format!("\
-{compiling} bar v0.5.0 ({bar}#[..])
-{compiling} foo v0.5.0 ({url})
+{compiling} [..] v0.5.0 ([..])
+{compiling} [..] v0.5.0 ([..]
 {running} target[..]foo-[..]
 
 running 1 test
@@ -1063,7 +1063,7 @@ test tests::foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, url = p.url(), running = RUNNING, bar = p2.url())));
+", compiling = COMPILING, running = RUNNING)));
 })
 
 test!(git_build_cmd_freshness {
