@@ -1,4 +1,3 @@
-#![warn(warnings)]
 use std::collections::HashSet;
 use std::io::File;
 
@@ -54,12 +53,11 @@ pub fn update_lockfile(manifest_path: &Path,
     let sources = match to_update {
         Some(name) => {
             let mut to_avoid = HashSet::new();
-            for dep in resolve.iter().filter(|d| d.get_name() == name.as_slice()) {
-                if aggressive {
-                    fill_with_deps(&resolve, dep, &mut to_avoid);
-                } else {
-                    to_avoid.insert(dep);
-                }
+            let dep = try!(resolve.query(name.as_slice()));
+            if aggressive {
+                fill_with_deps(&resolve, dep, &mut to_avoid);
+            } else {
+                to_avoid.insert(dep);
             }
             resolve.iter().filter(|pkgid| !to_avoid.contains(pkgid))
                    .map(|pkgid| pkgid.get_source_id().clone()).collect()

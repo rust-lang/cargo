@@ -13,7 +13,7 @@ use core::{SourceId, GitKind};
 use core::manifest::{LibKind, Lib, Dylib, Profile};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::package_id::Metadata;
-use util::{CargoResult, Require, human, ToUrl};
+use util::{CargoResult, Require, human, ToUrl, ToSemver};
 
 /// Representation of the projects file layout.
 ///
@@ -262,10 +262,9 @@ pub struct TomlVersion {
 impl<E, D: Decoder<E>> Decodable<D, E> for TomlVersion {
     fn decode(d: &mut D) -> Result<TomlVersion, E> {
         let s = raw_try!(d.read_str());
-        match semver::Version::parse(s.as_slice()) {
+        match s.as_slice().to_semver() {
             Ok(s) => Ok(TomlVersion { version: s }),
-            Err(_) => Err(d.error(format!("cannot parse '{}' as a semver",
-                                        s).as_slice())),
+            Err(e) => Err(d.error(e.as_slice())),
         }
     }
 }

@@ -1,48 +1,14 @@
-pub use self::registry::{
-    Registry,
-};
-
-pub use self::manifest::{
-    Manifest,
-    Target,
-    TargetKind,
-    Profile
-};
-
-pub use self::package::{
-    Package,
-    PackageSet
-};
-
-pub use self::package_id::{
-    PackageId
-};
-
-pub use self::source::{
-    Source,
-    SourceId,
-    SourceMap,
-    SourceSet,
-    GitKind,
-    PathKind,
-    RegistryKind
-};
-
-pub use self::summary::{
-    Summary
-};
-
-pub use self::shell::{
-    Shell,
-    MultiShell,
-    ShellConfig
-};
-
-pub use self::dependency::{
-    Dependency
-};
-
+pub use self::dependency::Dependency;
+pub use self::manifest::{Manifest, Target, TargetKind, Profile};
+pub use self::package::{Package, PackageSet};
+pub use self::package_id::PackageId;
+pub use self::package_id_spec::PackageIdSpec;
+pub use self::registry::Registry;
 pub use self::resolver::Resolve;
+pub use self::shell::{Shell, MultiShell, ShellConfig};
+pub use self::source::{PathKind, RegistryKind};
+pub use self::source::{Source, SourceId, SourceMap, SourceSet, GitKind};
+pub use self::summary::Summary;
 
 pub mod source;
 pub mod package;
@@ -53,3 +19,4 @@ pub mod resolver;
 pub mod summary;
 pub mod shell;
 pub mod registry;
+mod package_id_spec;

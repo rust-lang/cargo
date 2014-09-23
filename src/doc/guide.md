@@ -294,7 +294,10 @@ $ cargo update       # updates all dependencies
 $ cargo update color # updates just 'color'
 ```
 
-This will write out a new `Cargo.lock` with the new version information.
+This will write out a new `Cargo.lock` with the new version information. Note
+that the argument to `cargo update` is actually a
+[Package ID Specification](pkgid-spec.html) and `color` is just a short
+specification.
 
 # Overriding Dependencies
 
@@ -393,7 +396,4 @@ To test your project on Travis-CI, here is a sample `.travis.yml` file:
 
 ```
 language: rust
-script:
-  - cargo build --verbose
-  - cargo test --verbose
 ```

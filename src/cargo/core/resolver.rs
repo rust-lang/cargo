@@ -2,19 +2,12 @@ use std::collections::HashMap;
 use std::fmt;
 
 use serialize::{Encodable, Encoder, Decodable, Decoder};
-use util::profile;
-use util::graph::{Nodes, Edges};
-
-use core::{
-    Dependency,
-    PackageId,
-    Registry,
-    SourceId,
-};
-
 use semver;
 
-use util::{CargoResult, Graph, human, internal};
+use core::{Dependency, PackageId, Registry, SourceId, PackageIdSpec};
+use util::graph::{Nodes, Edges};
+use util::profile;
+use util::{CargoResult, Graph, human, internal, ChainError};
 
 #[deriving(PartialEq, Eq)]
 pub struct Resolve {
@@ -207,6 +200,30 @@ impl Resolve {
 
     pub fn deps(&self, pkg: &PackageId) -> Option<Edges<PackageId>> {
         self.graph.edges(pkg)
+    }
+
+    pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {
+        let spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
+            human(format!("invalid package id specification: `{}`", spec))
+        }));
+        let mut ids = self.iter().filter(|p| spec.matches(*p));
+        let ret = match ids.next() {
+            Some(id) => id,
+            None => return Err(human(format!("package id specification `{}` \
+                                              matched no packages", spec))),
+        };
+        match ids.next() {
+            Some(other) => {
+                let mut msg = format!("Ambiguous package id specification: \
+                                       `{}`\nMatching packages:\n  {}\n  {}",
+                                      spec, ret, other);
+                for id in ids {
+                    msg = format!("{}\n  {}", msg, id);
+                }
+                Err(human(msg))
+            }
+            None => Ok(ret)
+        }
     }
 }
 

@@ -150,3 +150,6 @@ pre.rust .doccomment { color: #4D4D4C; }
 pre.rust .macro, pre.rust .macro-nonterminal { color: #3E999F; }
 pre.rust .lifetime { color: #B76514; }
 code span.s1 { color: #2AA198; }
+
+table th { border-bottom: 1px solid black; }
+table td, table th { padding: 5px 10px; }
