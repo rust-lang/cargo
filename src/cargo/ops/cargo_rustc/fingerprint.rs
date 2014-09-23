@@ -5,7 +5,6 @@ use std::io::{fs, File, UserRWX, BufferedReader};
 
 use core::{Package, Target, PathKind};
 use util;
-use util::hex::short_hash;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
 
 use super::{Kind, KindTarget};
@@ -194,12 +193,9 @@ fn prepare(is_fresh: bool, loc: Path, fingerprint: String,
 
 /// Return the (old, new) location for fingerprints for a package
 pub fn dirs(cx: &Context, pkg: &Package, kind: Kind) -> (Path, Path) {
-    let dirname = format!("{}-{}", pkg.get_name(),
-                          short_hash(pkg.get_package_id()));
-    let dirname = dirname.as_slice();
     let layout = cx.layout(kind);
     let layout = layout.proxy();
-    (layout.old_fingerprint().join(dirname), layout.fingerprint().join(dirname))
+    (layout.old_fingerprint(pkg), layout.fingerprint(pkg))
 }
 
 /// Returns the (old, new) location for the dep info file of a target.

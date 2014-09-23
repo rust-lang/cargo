@@ -605,6 +605,13 @@ test!(recompilation {
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, git_project.url(),
                                             COMPILING, p.url())));
+
+    // Make sure clean only cleans one dep
+    assert_that(p.process(cargo_dir().join("cargo")).arg("clean").arg("foo"),
+                execs().with_stdout(""));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_stdout(format!("{} foo v0.5.0 ({})\n",
+                                            COMPILING, p.url())));
 })
 
 test!(update_with_shared_deps {

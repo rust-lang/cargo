@@ -11,10 +11,12 @@ use util::{Config, internal, ChainError, Fresh, profile};
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, StageStart, StageCustomBuild, StageLibraries};
 use self::job_queue::{StageBinaries, StageEnd};
-use self::context::{Context, PlatformRequirement, PlatformTarget};
-use self::context::{PlatformPlugin, PlatformPluginAndTarget};
 
 pub use self::compilation::Compilation;
+pub use self::context::Context;
+pub use self::context::{PlatformPlugin, PlatformPluginAndTarget};
+pub use self::context::{PlatformRequirement, PlatformTarget};
+pub use self::layout::{Layout, LayoutProxy};
 
 mod context;
 mod compilation;
@@ -24,7 +26,7 @@ mod job_queue;
 mod layout;
 
 #[deriving(PartialEq, Eq)]
-enum Kind { KindPlugin, KindTarget }
+pub enum Kind { KindPlugin, KindTarget }
 
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
@@ -57,11 +59,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
-    let root = pkg.get_absolute_target_dir();
-    let dest = uniq_target_dest(targets).unwrap_or("");
-    let host_layout = layout::Layout::new(root.join(dest));
+    let dest = uniq_target_dest(targets);
+    let host_layout = Layout::new(pkg, None, dest);
     let target_layout = config.target().map(|target| {
-        layout::Layout::new(root.join(target).join(dest))
+        layout::Layout::new(pkg, Some(target), dest)
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,

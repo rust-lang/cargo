@@ -1,7 +1,10 @@
-pub use self::cargo_clean::clean;
+pub use self::cargo_clean::{clean, CleanOptions};
 pub use self::cargo_compile::{compile, CompileOptions};
 pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
-pub use self::cargo_rustc::{compile_targets, Compilation};
+pub use self::cargo_rustc::{compile_targets, Compilation, Layout, Kind};
+pub use self::cargo_rustc::{KindTarget, KindPlugin, Context, LayoutProxy};
+pub use self::cargo_rustc::{PlatformRequirement, PlatformTarget};
+pub use self::cargo_rustc::{PlatformPlugin, PlatformPluginAndTarget};
 pub use self::cargo_run::run;
 pub use self::cargo_new::{new, NewOptions};
 pub use self::cargo_doc::{doc, DocOptions};
