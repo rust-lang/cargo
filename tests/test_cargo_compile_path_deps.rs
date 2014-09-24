@@ -712,7 +712,10 @@ test!(dev_deps_no_rebuild_lib {
                 name = "foo"
                 doctest = false
         "#)
-        .file("src/lib.rs", "")
+        .file("src/lib.rs", r#"
+            #[cfg(test)] extern crate bar;
+            #[cfg(not(test))] fn foo() { env!("FOO"); }
+        "#)
         .file("bar/Cargo.toml", r#"
             [package]
 
@@ -722,20 +725,11 @@ test!(dev_deps_no_rebuild_lib {
         "#)
         .file("bar/src/lib.rs", "pub fn bar() {}");
     p.build();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
+                 .env("FOO", Some("bar")),
                 execs().with_status(0)
                        .with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
-    p.root().move_into_the_past().assert();
-
-    // Now that we've built the library, it *should not* be built again as part
-    // of `cargo test`, even if we have some dev dependencies that weren't
-    // previously built.
-    File::create(&p.root().join("src/lib.rs")).write_str(r#"
-        #[cfg(test)] extern crate bar;
-        #[cfg(not(test))] fn foo() { bar(); }
-    "#).unwrap();
-    p.root().join("src/lib.rs").move_into_the_past().assert();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)

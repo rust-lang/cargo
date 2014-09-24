@@ -11,8 +11,6 @@ use util::{Config, internal, ChainError, Fresh, profile};
 use self::job::{Job, Work};
 use self::job_queue as jq;
 use self::job_queue::JobQueue;
-use self::context::{Context, PlatformRequirement, PlatformTarget};
-use self::context::{PlatformPlugin, PlatformPluginAndTarget};
 
 pub use self::compilation::Compilation;
 pub use self::context::Context;

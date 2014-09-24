@@ -1,7 +1,6 @@
 // Currently the only cross compilers available via nightlies are on linux/osx,
 // so we can only run these tests on those platforms
-#![cfg(target_os = "linux")]
-#![cfg(target_os = "macos")]
+#![cfg(any(target_os = "linux", target_os = "macos"))]
 
 use std::os;
 use std::path;
