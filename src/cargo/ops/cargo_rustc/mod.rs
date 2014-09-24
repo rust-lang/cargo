@@ -423,7 +423,15 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
-    cmd = push_native_dirs(cmd, &layout, package, cx, &mut HashSet::new());
+    let mut dirs = Vec::new();
+    each_dep(package, cx, |pkg| {
+        if pkg.get_manifest().get_build().len() > 0 {
+            dirs.push(layout.native(pkg));
+        }
+    });
+    for dir in dirs.into_iter() {
+        cmd = cmd.arg("-L").arg(dir);
+    }
 
     for &(_, target) in cx.dep_targets(package).iter() {
         cmd = try!(link_to(cmd, target, cx, kind, Dependency));
@@ -471,37 +479,51 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         }
         return Ok(cmd);
     }
-
-    fn push_native_dirs(mut cmd: ProcessBuilder, layout: &layout::LayoutProxy,
-                        pkg: &Package, cx: &Context,
-                        visited: &mut HashSet<PackageId>) -> ProcessBuilder {
-        if !visited.insert(pkg.get_package_id().clone()) { return cmd }
-
-        if pkg.get_manifest().get_build().len() > 0 {
-            cmd = cmd.arg("-L").arg(layout.native(pkg));
-        }
-
-        match cx.resolve.deps(pkg.get_package_id()) {
-            Some(mut pkgids) => {
-                pkgids.fold(cmd, |cmd, dep_id| {
-                    let dep = cx.get_package(dep_id);
-                    push_native_dirs(cmd, layout, dep, cx, visited)
-                })
-            }
-            None => cmd
-        }
-    }
 }
 
 pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
+    let layout = cx.layout(KindPlugin);
     let mut search_path = DynamicLibrary::search_path();
-    search_path.push(cx.layout(KindPlugin).deps().clone());
-    let search_path = os::join_paths(search_path.as_slice()).unwrap();
+    search_path.push(layout.deps().clone());
+
+    // Also be sure to pick up any native build directories required by plugins
+    // or their dependencies
+    let mut native_search_paths = HashSet::new();
+    for &(dep, target) in cx.dep_targets(pkg).iter() {
+        if !target.get_profile().is_plugin() { continue }
+        each_dep(dep, cx, |dep| {
+            if dep.get_manifest().get_build().len() > 0 {
+                native_search_paths.insert(layout.native(dep));
+            }
+        });
+    }
+    search_path.extend(native_search_paths.into_iter());
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.
+    let search_path = os::join_paths(search_path.as_slice()).unwrap();
     cx.compilation.process(cmd, pkg)
                   .env(DynamicLibrary::envvar(), Some(search_path.as_slice()))
+}
+
+fn each_dep<'a>(pkg: &Package, cx: &'a Context, f: |&'a Package|) {
+    let mut visited = HashSet::new();
+    let pkg = cx.get_package(pkg.get_package_id());
+    visit_deps(pkg, cx, &mut visited, f);
+
+    fn visit_deps<'a>(pkg: &'a Package, cx: &'a Context,
+                      visited: &mut HashSet<&'a PackageId>,
+                      f: |&'a Package|) {
+        if !visited.insert(pkg.get_package_id()) { return }
+        f(pkg);
+        let mut deps = match cx.resolve.deps(pkg.get_package_id()) {
+            Some(deps) => deps,
+            None => return,
+        };
+        for dep_id in deps {
+            visit_deps(cx.get_package(dep_id), cx, visited, |p| f(p))
+        }
+    }
 }
