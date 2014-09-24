@@ -1,4 +1,4 @@
-use std::{fmt, os, result, mem};
+use std::{fmt, os, mem};
 use std::io::fs::{PathExtensions, File};
 use std::collections::HashMap;
 use std::string;
@@ -139,18 +139,18 @@ impl ConfigValue {
             toml::String(val) => Ok(String(val, path.clone())),
             toml::Boolean(b) => Ok(Boolean(b, path.clone())),
             toml::Array(val) => {
-                Ok(List(try!(result::collect(val.move_iter().map(|toml| {
+                Ok(List(try!(val.into_iter().map(|toml| {
                     match toml {
                         toml::String(val) => Ok((val, path.clone())),
                         _ => Err(internal("")),
                     }
-                })))))
+                }).collect::<Result<_, _>>())))
             }
             toml::Table(val) => {
-                Ok(Table(try!(result::collect(val.move_iter().map(|(key, value)| {
+                Ok(Table(try!(val.into_iter().map(|(key, value)| {
                     let value = raw_try!(ConfigValue::from_toml(path, value));
                     Ok((key, value))
-                })))))
+                }).collect::<Result<_, _>>())))
             }
             _ => return Err(internal(""))
         }
