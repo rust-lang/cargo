@@ -456,8 +456,10 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         cmd = cmd.arg("-L").arg(dir);
     }
 
-    for &(_, target) in cx.dep_targets(package).iter() {
-        cmd = try!(link_to(cmd, target, cx, kind, Dependency));
+    for &(pkg, target) in cx.dep_targets(package).iter() {
+        let pkgid = pkg.get_package_id();
+        let reason = if pkgid == cx.resolve.root() {LocalLib} else {Dependency};
+        cmd = try!(link_to(cmd, target, cx, kind, reason));
     }
 
     let mut targets = package.get_targets().iter().filter(|target| {
@@ -486,7 +488,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             KindPlugin => KindPlugin,
             KindTarget if target.get_profile().is_plugin() => KindPlugin,
             KindTarget => KindTarget,
-        });
+        }).proxy();
 
         for filename in try!(cx.target_filenames(target)).iter() {
             let mut v = Vec::new();
@@ -494,7 +496,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             v.push(b'=');
             match reason {
                 Dependency => v.push_all(layout.deps().as_vec()),
-                LocalLib => v.push_all(layout.root().as_vec()),
+                LocalLib => v.push_all(layout.dest().as_vec()),
             }
             v.push(b'/');
             v.push_all(filename.as_bytes());
