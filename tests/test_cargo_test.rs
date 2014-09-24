@@ -896,3 +896,90 @@ test!(test_no_harness {
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
 })
+
+test!(selective_testing {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+            [dependencies.d2]
+                path = "d2"
+
+            [lib]
+                name = "foo"
+                doctest = false
+        "#)
+        .file("src/lib.rs", "")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+                name = "d1"
+                doctest = false
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+                name = "d2"
+                doctest = false
+        "#)
+        .file("d2/src/lib.rs", "");
+    p.build();
+
+    println!("d1");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
+                 .arg("-p").arg("d1"),
+                execs().with_status(0)
+                       .with_stderr("")
+                       .with_stdout(format!("\
+{compiling} d1 v0.0.1 ({dir})
+{running} target[..]d1-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+", compiling = COMPILING, running = RUNNING,
+   dir = p.url()).as_slice()));
+
+    println!("d2");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
+                 .arg("-p").arg("d2"),
+                execs().with_status(0)
+                       .with_stderr("")
+                       .with_stdout(format!("\
+{compiling} d2 v0.0.1 ({dir})
+{running} target[..]d2-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+", compiling = COMPILING, running = RUNNING,
+   dir = p.url()).as_slice()));
+
+    println!("whole");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+                execs().with_status(0)
+                       .with_stderr("")
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+", compiling = COMPILING, running = RUNNING,
+   dir = p.url()).as_slice()));
+})

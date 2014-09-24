@@ -88,11 +88,13 @@ test!(cargo_compile_with_nested_deps_shorthand {
     assert_that(p.process(cargo_dir().join("cargo")).arg("clean"),
                 execs().with_stdout(""));
     println!("building baz");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("baz"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
+                 .arg("-p").arg("baz"),
                 execs().with_stdout(format!("{} baz v0.5.0 ({})\n",
                                             COMPILING, p.url())));
     println!("building foo");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("foo"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
+                 .arg("-p").arg("foo"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),

@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::hashmap::{HashMap, HashSet, Occupied, Vacant};
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve};
@@ -23,6 +22,7 @@ pub struct JobQueue<'a, 'b> {
     active: uint,
     pending: HashMap<(&'a PackageId, TargetStage), PendingBuild>,
     state: HashMap<&'a PackageId, Freshness>,
+    ignored: HashSet<&'a PackageId>,
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -66,6 +66,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             active: 0,
             pending: HashMap::new(),
             state: HashMap::new(),
+            ignored: HashSet::new(),
         }
     }
 
@@ -83,6 +84,10 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         self.queue.enqueue(&self.resolve, Fresh,
                            (pkg.get_package_id(), stage),
                            (pkg, jobs));
+    }
+
+    pub fn ignore(&mut self, pkg: &'a Package) {
+        self.ignored.insert(pkg.get_package_id());
     }
 
     /// Execute all jobs necessary to build the dependency graph.
@@ -149,7 +154,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         let amt = if njobs == 0 {1} else {njobs};
         let id = pkg.get_package_id().clone();
 
-        if stage == StageStart {
+        if stage == StageStart && !self.ignored.contains(&pkg.get_package_id()) {
             match fresh.combine(self.state[pkg.get_package_id()]) {
                 Fresh => try!(config.shell().verbose(|c| {
                     c.status("Fresh", pkg)

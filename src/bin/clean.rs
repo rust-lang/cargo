@@ -10,21 +10,20 @@ docopt!(Options, "
 Remove artifacts that cargo has generated in the past
 
 Usage:
-    cargo clean [options] [<spec>]
+    cargo clean [options]
 
 Options:
-    -h, --help              Print this message
-    --manifest-path PATH    Path to the manifest to the package to clean
-    --target TRIPLE         Target triple to clean output for (default all)
-    -v, --verbose           Use verbose output
+    -h, --help               Print this message
+    -p SPEC, --package SPEC  Package to run benchmarks for
+    --manifest-path PATH     Path to the manifest to the package to clean
+    --target TRIPLE          Target triple to clean output for (default all)
+    -v, --verbose            Use verbose output
 
-If <spec> is provided, then it is interpreted as a package id specification and
-only the output for the package specified will be removed. If <spec> is not
-provided, then all output from cargo will be cleaned out. Note that a lockfile
-must exist for <spec> to be given.
-
-For more information about <spec>, see `cargo help pkgid`.
-",  flag_manifest_path: Option<String>, arg_spec: Option<String>,
+If the --package argument is given, then SPEC is a package id specification
+which indicates which package's artifacts should be cleaned out. If it is not
+given, then all packages' artifacts are removed. For more information on SPEC
+and its format, see the `cargo help pkgid` command.
+",  flag_manifest_path: Option<String>, flag_package: Option<String>,
     flag_target: Option<String>)
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
@@ -34,7 +33,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let mut opts = ops::CleanOptions {
         shell: shell,
-        spec: options.arg_spec.as_ref().map(|s| s.as_slice()),
+        spec: options.flag_package.as_ref().map(|s| s.as_slice()),
         target: options.flag_target.as_ref().map(|s| s.as_slice()),
     };
     ops::clean(&root, &mut opts).map(|_| None).map_err(|err| {

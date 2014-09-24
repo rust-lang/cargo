@@ -77,30 +77,30 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     // particular package. No actual work is executed as part of this, that's
     // all done later as part of the `execute` function which will run
     // everything in order with proper parallelism.
-    let mut dep_pkgids = HashSet::new();
+    let mut compiled = HashSet::new();
     each_dep(pkg, &cx, |dep| {
-        dep_pkgids.insert(dep.get_package_id().clone());
+        compiled.insert(dep.get_package_id().clone());
     });
     for dep in deps.iter() {
         if dep == pkg { continue }
-        if !dep_pkgids.contains(dep.get_package_id()) { continue }
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
             cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
-        if targets.len() == 0 {
+        if targets.len() == 0 && dep.get_package_id() != resolve.root() {
             return Err(human(format!("Package `{}` has no library targets", dep)))
         }
 
-        try!(compile(targets.as_slice(), dep, &mut cx, &mut queue));
+        let compiled = compiled.contains(dep.get_package_id());
+        try!(compile(targets.as_slice(), dep, compiled, &mut cx, &mut queue));
     }
 
     if pkg.get_package_id() == resolve.root() {
         cx.primary();
     }
-    try!(compile(targets, pkg, &mut cx, &mut queue));
+    try!(compile(targets, pkg, true, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
@@ -109,10 +109,18 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
+                   compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
     let _p = profile::start(format!("preparing: {}", pkg));
+
+    // Packages/targets which are actually getting compiled are constructed into
+    // a real job. Packages which are *not* compiled still have their jobs
+    // executed, but only if the work is fresh. This is to preserve their
+    // artifacts if any exist.
+    let job = if compiled {Job::new} else {Job::noop};
+    if !compiled { jobs.ignore(pkg); }
 
     if targets.is_empty() {
         return Ok(())
@@ -145,7 +153,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         for cmd in build_cmds.into_iter() { try!(cmd()) }
         dirty()
     };
-    jobs.enqueue(pkg, StageCustomBuild, vec![(Job::new(dirty, fresh, desc),
+    jobs.enqueue(pkg, StageCustomBuild, vec![(job(dirty, fresh, desc),
                                               freshness)]);
 
     // After the custom command has run, execute rustc for all targets of our
@@ -169,7 +177,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
             let dirty = proc() { try!(work()); dirty() };
-            dst.push((Job::new(dirty, fresh, desc), freshness));
+            dst.push((job(dirty, fresh, desc), freshness));
         }
     }
     jobs.enqueue(pkg, StageLibraries, libs);

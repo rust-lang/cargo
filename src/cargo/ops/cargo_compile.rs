@@ -56,6 +56,11 @@ pub fn compile(manifest_path: &Path,
 
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
+    if spec.is_some() && (no_default_features || features.len() > 0) {
+        return Err(human("features cannot be modified when the main package \
+                          is not being built"))
+    }
+
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
 

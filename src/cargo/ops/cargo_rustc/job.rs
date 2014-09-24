@@ -15,6 +15,17 @@ impl Job {
         Job { dirty: dirty, fresh: fresh, desc: desc }
     }
 
+    /// Create a new job which will run `fresh` if the job is fresh and
+    /// otherwise not run `dirty`.
+    ///
+    /// Retains the same signature as `new` for compatibility. This job does not
+    /// describe itself to the console.
+    pub fn noop(_dirty: proc():Send -> CargoResult<()>,
+                fresh: proc():Send -> CargoResult<()>,
+                _desc: String) -> Job {
+        Job { dirty: proc() Ok(()), fresh: fresh, desc: String::new() }
+    }
+
     /// Consumes this job by running it, returning the result of the
     /// computation.
     pub fn run(self, fresh: Freshness) -> CargoResult<()> {
