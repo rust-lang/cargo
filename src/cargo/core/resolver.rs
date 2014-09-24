@@ -306,6 +306,9 @@ pub fn resolve<R: Registry>(summary: &Summary, method: ResolveMethod,
     let _p = profile::start(format!("resolving: {}", summary));
 
     let mut context = Context::new(registry, summary.get_package_id().clone());
+    context.seen.insert((summary.get_name().to_string(),
+                         summary.get_source_id().clone()),
+                        summary.get_version().clone());
     try!(resolve_deps(summary, method, &mut context));
     log!(5, "  result={}", context.resolve);
     Ok(context.resolve)
