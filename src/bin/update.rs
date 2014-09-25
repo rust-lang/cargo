@@ -15,6 +15,7 @@ Usage:
 Options:
     -h, --help              Print this message
     --aggressive            Force updating all dependencies of <name> as well
+    --precise PRECISE       Update a single dependency to exactly PRECISE
     --manifest-path PATH    Path to the manifest to compile
     -v, --verbose           Use verbose output
 
@@ -27,18 +28,32 @@ updated. Its transitive dependencies will be updated only if <spec> cannot be
 updated without updating dependencies.  All other dependencies will remain
 locked at their currently recorded versions.
 
+If PRECISE is specified, then --aggressive must not also be specified. The
+argument PRECISE is a string representing a precise revision that the package
+being updated should be updated to. For example, if the package comes from a git
+repository, then PRECISE would be the exact revision that the repository should
+be updated to.
+
 If <spec> is not given, then all dependencies will be re-resolved and
 updated.
 
 For more information about package ids, see `cargo help pkgid`.
-",  flag_manifest_path: Option<String>, arg_spec: Option<String>)
+",  flag_manifest_path: Option<String>, arg_spec: Option<String>,
+    flag_precise: Option<String>)
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-update; args={}", os::args());
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    ops::update_lockfile(&root, shell, options.arg_spec, options.flag_aggressive)
+    let mut update_opts = ops::UpdateOptions {
+        aggressive: options.flag_aggressive,
+        precise: options.flag_precise.as_ref().map(|s| s.as_slice()),
+        to_update: options.arg_spec.as_ref().map(|s| s.as_slice()),
+        shell: shell,
+    };
+
+    ops::update_lockfile(&root, &mut update_opts)
         .map(|_| None).map_err(|err| CliError::from_boxed(err, 101))
 }
 

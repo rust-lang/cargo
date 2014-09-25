@@ -144,13 +144,13 @@ impl ConfigValue {
                         toml::String(val) => Ok((val, path.clone())),
                         _ => Err(internal("")),
                     }
-                }).collect::<Result<_, _>>())))
+                }).collect::<CargoResult<_>>())))
             }
             toml::Table(val) => {
                 Ok(Table(try!(val.into_iter().map(|(key, value)| {
                     let value = raw_try!(ConfigValue::from_toml(path, value));
                     Ok((key, value))
-                }).collect::<Result<_, _>>())))
+                }).collect::<CargoResult<_>>())))
             }
             _ => return Err(internal(""))
         }
