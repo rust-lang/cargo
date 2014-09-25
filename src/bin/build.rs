@@ -20,7 +20,6 @@ Options:
     --features FEATURES     Space-separated list of features to also build
     --no-default-features   Do not build the `default` feature
     --target TRIPLE         Build for the target triple
-    -u, --update-remotes    Deprecated option, use `cargo update` instead
     --manifest-path PATH    Path to the manifest to compile
     -v, --verbose           Use verbose output
 ",  flag_jobs: Option<uint>, flag_target: Option<String>,
@@ -39,7 +38,6 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     };
 
     let mut opts = CompileOptions {
-        update: options.flag_update_remotes,
         env: env,
         shell: shell,
         jobs: options.flag_jobs,

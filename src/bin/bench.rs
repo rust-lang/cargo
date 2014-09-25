@@ -35,7 +35,6 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let mut ops = ops::TestOptions {
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
-            update: false,
             env: "bench",
             shell: shell,
             jobs: options.flag_jobs,
