@@ -91,7 +91,7 @@ fn pre_version_component(v: &Version) -> Option<String> {
     let mut ret = String::new();
 
     for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 { ret.push_char('.') };
+        if i != 0 { ret.push('.') };
         ret.push_str(x.to_string().as_slice());
     }
 

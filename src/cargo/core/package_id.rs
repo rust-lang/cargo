@@ -112,13 +112,13 @@ impl Metadata {
     }
 }
 
-static central_repo: &'static str = "http://rust-lang.org/central-repo";
+static CENTRAL_REPO: &'static str = "http://rust-lang.org/central-repo";
 
 impl Show for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{} v{}", self.name, self.version));
 
-        if self.source_id.to_string().as_slice() != central_repo {
+        if self.source_id.to_string().as_slice() != CENTRAL_REPO {
             try!(write!(f, " ({})", self.source_id));
         }
 
@@ -128,13 +128,13 @@ impl Show for PackageId {
 
 #[cfg(test)]
 mod tests {
-    use super::{PackageId, central_repo};
+    use super::{PackageId, CENTRAL_REPO};
     use core::source::{RegistryKind, SourceId};
     use util::ToUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        let loc = central_repo.to_url().unwrap();
+        let loc = CENTRAL_REPO.to_url().unwrap();
         let repo = SourceId::new(RegistryKind, loc);
 
         assert!(PackageId::new("foo", "1.0", &repo).is_err());

@@ -161,7 +161,7 @@ test!(cargo_compile_with_warnings_in_the_root_package {
     assert_that(p.cargo_process("build"),
         execs()
         .with_stderr(format!("\
-{filename}:1:14: 1:26 warning: code is never used: `dead`, #[warn(dead_code)] \
+{filename}:1:14: 1:26 warning: function is never used: `dead`, #[warn(dead_code)] \
 on by default
 {filename}:1 fn main() {{}} fn dead() {{}}
                           ^~~~~~~~~~~~
@@ -214,7 +214,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
                              COMPILING, p.url(),
                              COMPILING, p.url()))
         .with_stderr("\
-[..]warning: code is never used: `dead`[..]
+[..]warning: function is never used: `dead`[..]
 [..]fn dead() {}
 
 "));
