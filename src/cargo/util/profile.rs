@@ -3,8 +3,8 @@ use std::mem;
 use std::fmt::Show;
 use time;
 
-local_data_key!(profile_stack: Vec<u64>)
-local_data_key!(messages: Vec<Message>)
+local_data_key!(PROFILE_STACK: Vec<u64>)
+local_data_key!(MESSAGES: Vec<Message>)
 
 type Message = (uint, u64, String);
 
@@ -17,9 +17,9 @@ fn enabled() -> bool { os::getenv("CARGO_PROFILE").is_some() }
 pub fn start<T: Show>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }
 
-    let mut stack = profile_stack.replace(None).unwrap_or(Vec::new());
+    let mut stack = PROFILE_STACK.replace(None).unwrap_or(Vec::new());
     stack.push(time::precise_time_ns());
-    profile_stack.replace(Some(stack));
+    PROFILE_STACK.replace(Some(stack));
 
     Profiler {
         desc: desc.to_string(),
@@ -30,8 +30,8 @@ impl Drop for Profiler {
     fn drop(&mut self) {
         if !enabled() { return }
 
-        let mut stack = profile_stack.replace(None).unwrap_or(Vec::new());
-        let mut msgs = messages.replace(None).unwrap_or(Vec::new());
+        let mut stack = PROFILE_STACK.replace(None).unwrap_or(Vec::new());
+        let mut msgs = MESSAGES.replace(None).unwrap_or(Vec::new());
 
         let start = stack.pop().unwrap();
         let end = time::precise_time_ns();
@@ -54,9 +54,9 @@ impl Drop for Profiler {
             print(0, msgs.as_slice());
         } else {
             msgs.push((stack.len(), end - start, msg));
-            messages.replace(Some(msgs));
+            MESSAGES.replace(Some(msgs));
         }
-        profile_stack.replace(Some(stack));
+        PROFILE_STACK.replace(Some(stack));
 
     }
 }
