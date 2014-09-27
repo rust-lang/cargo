@@ -830,7 +830,8 @@ test!(two_deps_only_update_one {
     add(&repo);
     commit(&repo);
 
-    assert_that(project.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
+    assert_that(project.process(cargo_dir().join("cargo")).arg("update")
+                       .arg("-p").arg("dep1"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n",
                              UPDATING, git1.url()))
