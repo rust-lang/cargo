@@ -1328,3 +1328,62 @@ test!(warnings_in_git_dep {
                              COMPILING, p.url()))
         .with_stderr(""));
 })
+
+test!(update_ambiguous {
+    let foo1 = git_repo("foo1", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "")
+    }).assert();
+    let foo2 = git_repo("foo2", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.6.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "")
+    }).assert();
+    let bar = git_repo("bar", |project| {
+        project.file("Cargo.toml", format!(r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.foo]
+            git = '{}'
+        "#, foo2.url()).as_slice())
+        .file("src/lib.rs", "")
+    }).assert();
+
+    let p = project("project")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "project"
+            version = "0.5.0"
+            authors = []
+            [dependencies.foo]
+            git = '{}'
+            [dependencies.bar]
+            git = '{}'
+        "#, foo1.url(), bar.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("generate-lockfile"), execs().with_status(0));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("foo"),
+                execs().with_status(101)
+                       .with_stderr("\
+There are multiple `foo` packages in your project, and the specification `foo` \
+is ambiguous.
+Please re-run this command with `-p <spec>` where `<spec>` is one of the \
+following:
+  foo:0.[..].0
+  foo:0.[..].0
+"));
+})
