@@ -1,4 +1,4 @@
-use std::io::{mod, fs, File, MemReader};
+use std::io::{mod, fs, File};
 use std::io::fs::PathExtensions;
 use std::collections::HashMap;
 
@@ -33,16 +33,26 @@ pub struct RegistrySource<'a, 'b:'a> {
 #[deriving(Decodable)]
 pub struct RegistryConfig {
     pub dl: String,
-    pub upload: String,
+    pub api: String,
 }
 
 #[deriving(Decodable)]
 struct RegistryPackage {
     name: String,
     vers: String,
-    deps: Vec<String>,
+    deps: Vec<RegistryDependency>,
     features: HashMap<String, Vec<String>>,
     cksum: String,
+}
+
+#[deriving(Decodable)]
+struct RegistryDependency {
+    name: String,
+    req: String,
+    features: Vec<String>,
+    optional: bool,
+    default_features: bool,
+    target: Option<String>,
 }
 
 impl<'a, 'b> RegistrySource<'a, 'b> {
@@ -68,9 +78,14 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a .cargo/config
     pub fn url() -> CargoResult<Url> {
-        let config = try!(ops::upload_configuration());
-        let url = config.host.unwrap_or(CENTRAL.to_string());
+        let config = try!(ops::registry_configuration());
+        let url = config.index.unwrap_or(CENTRAL.to_string());
         url.as_slice().to_url().map_err(human)
+    }
+
+    /// Get the default url for the registry
+    pub fn default_url() -> String {
+        CENTRAL.to_string()
     }
 
     /// Decode the configuration stored within the registry.
@@ -109,8 +124,9 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// No action is taken if the package is already downloaded.
     fn download_package(&mut self, pkg: &PackageId, url: &Url)
                         -> CargoResult<Path> {
-        let dst = self.cache_path.join(url.path().unwrap().last().unwrap()
-                                          .as_slice());
+        // TODO: should discover from the S3 redirect
+        let filename = format!("{}-{}.tar.gz", pkg.get_name(), pkg.get_version());
+        let dst = self.cache_path.join(filename);
         if dst.exists() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
 
@@ -123,7 +139,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             }
         };
         // TODO: don't download into memory (curl-rust doesn't expose it)
-        let resp = try!(handle.get(url.to_string()).exec());
+        let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
         if resp.get_code() != 200 && resp.get_code() != 0 {
             return Err(internal(format!("Failed to get 200 reponse from {}\n{}",
                                         url, resp)))
@@ -161,17 +177,9 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
         try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
         let f = try!(File::open(&tarball));
-        let mut gz = try!(GzDecoder::new(f));
-        // TODO: don't read into memory (Archive requires Seek)
-        let mem = try!(gz.read_to_end());
-        let tar = Archive::new(MemReader::new(mem));
-        for file in try!(tar.files()) {
-            let mut file = try!(file);
-            let dst = dst.dir_path().join(file.filename_bytes());
-            try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
-            let mut dst = try!(File::create(&dst));
-            try!(io::util::copy(&mut file, &mut dst));
-        }
+        let gz = try!(GzDecoder::new(f));
+        let mut tar = Archive::new(gz);
+        try!(tar.unpack(&dst.dir_path()));
         try!(File::create(&dst.join(".cargo-ok")));
         Ok(dst)
     }
@@ -179,54 +187,30 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// Parse a line from the registry's index file into a Summary for a
     /// package.
     fn parse_registry_package(&mut self, line: &str) -> CargoResult<Summary> {
-        let pkg = try!(json::decode::<RegistryPackage>(line));
-        let pkgid = try!(PackageId::new(pkg.name.as_slice(),
-                                        pkg.vers.as_slice(),
+        let RegistryPackage {
+            name, vers, cksum, deps, features
+        } = try!(json::decode::<RegistryPackage>(line));
+        let pkgid = try!(PackageId::new(name.as_slice(),
+                                        vers.as_slice(),
                                         &self.source_id));
-        let deps: CargoResult<Vec<Dependency>> = pkg.deps.iter().map(|dep| {
-            self.parse_registry_dependency(dep.as_slice())
+        let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
+            self.parse_registry_dependency(dep)
         }).collect();
         let deps = try!(deps);
-        let RegistryPackage { name, vers, cksum, .. } = pkg;
         self.hashes.insert((name, vers), cksum);
-        Summary::new(pkgid, deps, pkg.features)
+        Summary::new(pkgid, deps, features)
     }
 
-    /// Parse a dependency listed in the registry into a `Dependency`.
-    ///
-    /// Currently the format for dependencies is:
-    ///
-    /// ```notrust
-    /// dep := ['-'] ['*'] name '|' [ name ',' ] * '|' version_req
-    /// ```
-    ///
-    /// The '-' indicates that this is an optional dependency, and the '*'
-    /// indicates that the dependency does *not* use the default features
-    /// provided. The comma-separate list of names in brackets are the enabled
-    /// features for the dependency, and the final element is the version
-    /// requirement of the dependency.
-    fn parse_registry_dependency(&self, dep: &str) -> CargoResult<Dependency> {
-        let mut parts = dep.as_slice().splitn(2, '|');
-        let name = parts.next().unwrap();
-        let features = try!(parts.next().require(|| {
-            human(format!("malformed dependency in registry: {}", dep))
-        }));
-        let vers = try!(parts.next().require(|| {
-            human(format!("malformed dependency in registry: {}", dep))
-        }));
-        let (name, optional) = if name.starts_with("-") {
-            (name.slice_from(1), true)
-        } else {
-            (name, false)
-        };
-        let (name, default_features) = if name.starts_with("*") {
-            (name.slice_from(1), false)
-        } else {
-            (name, true)
-        };
-        let features = features.split(',').filter(|s| !s.is_empty())
-                               .map(|s| s.to_string()).collect();
-        let dep = try!(Dependency::parse(name, Some(vers), &self.source_id));
+    /// Converts an encoded dependency in the registry to a cargo dependency
+    fn parse_registry_dependency(&self, dep: RegistryDependency)
+                                 -> CargoResult<Dependency> {
+        let RegistryDependency {
+            name, req, features, optional, default_features, target
+        } = dep;
+
+        let dep = try!(Dependency::parse(name.as_slice(), Some(req.as_slice()),
+                                         &self.source_id));
+        drop(target); // FIXME: pass this in
         Ok(dep.optional(optional)
               .default_features(default_features)
               .features(features))
@@ -291,11 +275,9 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
             if self.source_id != *package.get_source_id() { continue }
 
             let mut url = url.clone();
-            url.path_mut().unwrap().push("pkg".to_string());
             url.path_mut().unwrap().push(package.get_name().to_string());
-            url.path_mut().unwrap().push(format!("{}-{}.tar.gz",
-                                                 package.get_name(),
-                                                 package.get_version()));
+            url.path_mut().unwrap().push(package.get_version().to_string());
+            url.path_mut().unwrap().push("download".to_string());
             let path = try!(self.download_package(package, &url).chain_error(|| {
                 internal(format!("Failed to download package `{}` from {}",
                                  package, url))

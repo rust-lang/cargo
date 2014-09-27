@@ -18,7 +18,6 @@ use util::{CargoResult, human};
 #[deriving(PartialEq,Clone)]
 pub struct Manifest {
     summary: Summary,
-    authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: Path,
     doc_dir: Path,
@@ -26,15 +25,36 @@ pub struct Manifest {
     build: Vec<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
+    metadata: ManifestMetadata,
 }
 
 impl Show for Manifest {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "Manifest({}, authors={}, targets={}, target_dir={}, \
+        write!(f, "Manifest({}, targets={}, target_dir={}, \
                    build={})",
-               self.summary, self.authors, self.targets,
-               self.target_dir.display(), self.build)
+               self.summary, self.targets, self.target_dir.display(),
+               self.build)
     }
+}
+
+/// General metadata about a package which is just blindly uploaded to the
+/// registry.
+///
+/// Note that many of these fields can contain invalid values such as the
+/// homepage, repository, documentation, or license. These fields are not
+/// validated by cargo itself, but rather it is up to the registry when uploaded
+/// to validate these fields. Cargo will itself accept any valid TOML
+/// specification for these values.
+#[deriving(PartialEq, Clone)]
+pub struct ManifestMetadata {
+    pub authors: Vec<String>,
+    pub keywords: Vec<String>,
+    pub license: Option<String>,
+    pub description: Option<String>,    // not markdown
+    pub readme: Option<String>,         // file, not contents
+    pub homepage: Option<String>,       // url
+    pub repository: Option<String>,     // url
+    pub documentation: Option<String>,  // url
 }
 
 #[deriving(PartialEq,Clone,Encodable)]
@@ -42,7 +62,6 @@ pub struct SerializedManifest {
     name: String,
     version: String,
     dependencies: Vec<SerializedDependency>,
-    authors: Vec<String>,
     targets: Vec<Target>,
     target_dir: String,
     doc_dir: String,
@@ -57,7 +76,6 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
             dependencies: self.summary.get_dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
-            authors: self.authors.clone(),
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_string(),
             doc_dir: self.doc_dir.display().to_string(),
@@ -352,10 +370,10 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
                target_dir: Path, doc_dir: Path, sources: Vec<SourceId>,
-               build: Vec<String>, exclude: Vec<String>) -> Manifest {
+               build: Vec<String>, exclude: Vec<String>,
+               metadata: ManifestMetadata) -> Manifest {
         Manifest {
             summary: summary,
-            authors: Vec::new(),
             targets: targets,
             target_dir: target_dir,
             doc_dir: doc_dir,
@@ -363,6 +381,7 @@ impl Manifest {
             build: build,
             warnings: Vec::new(),
             exclude: exclude,
+            metadata: metadata,
         }
     }
 
@@ -380,10 +399,6 @@ impl Manifest {
 
     pub fn get_version(&self) -> &Version {
         self.get_summary().get_package_id().get_version()
-    }
-
-    pub fn get_authors(&self) -> &[String] {
-        self.authors.as_slice()
     }
 
     pub fn get_dependencies(&self) -> &[Dependency] {
@@ -421,6 +436,12 @@ impl Manifest {
 
     pub fn get_exclude(&self) -> &[String] {
         self.exclude.as_slice()
+    }
+
+    pub fn get_metadata(&self) -> &ManifestMetadata { &self.metadata }
+
+    pub fn set_summary(&mut self, summary: Summary) {
+        self.summary = summary;
     }
 }
 

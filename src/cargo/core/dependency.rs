@@ -1,4 +1,4 @@
-use core::{SourceId,Summary};
+use core::{SourceId, Summary};
 use semver::VersionReq;
 use util::CargoResult;
 
@@ -8,6 +8,7 @@ pub struct Dependency {
     name: String,
     source_id: SourceId,
     req: VersionReq,
+    specified_req: Option<String>,
     transitive: bool,
     only_match_name: bool,
 
@@ -31,14 +32,15 @@ impl Dependency {
     pub fn parse(name: &str,
                  version: Option<&str>,
                  source_id: &SourceId) -> CargoResult<Dependency> {
-        let version = match version {
+        let version_req = match version {
             Some(v) => try!(VersionReq::parse(v)),
             None => VersionReq::any()
         };
 
         Ok(Dependency {
             only_match_name: false,
-            req: version,
+            req: version_req,
+            specified_req: version.map(|s| s.to_string()),
             .. Dependency::new_override(name, source_id)
         })
     }
@@ -53,12 +55,17 @@ impl Dependency {
             optional: false,
             features: Vec::new(),
             default_features: true,
+            specified_req: None,
         }
     }
 
     /// Returns the version of the dependency that is being requested.
     pub fn get_version_req(&self) -> &VersionReq {
         &self.req
+    }
+
+    pub fn get_specified_req(&self) -> Option<&str> {
+        self.specified_req.as_ref().map(|s| s.as_slice())
     }
 
     pub fn get_name(&self) -> &str {

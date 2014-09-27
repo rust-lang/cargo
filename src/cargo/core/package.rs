@@ -34,7 +34,6 @@ struct SerializedPackage {
     name: String,
     version: String,
     dependencies: Vec<SerializedDependency>,
-    authors: Vec<String>,
     targets: Vec<Target>,
     manifest_path: String,
 }
@@ -51,7 +50,6 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Package {
             dependencies: summary.get_dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
-            authors: manifest.get_authors().to_vec(),
             targets: manifest.get_targets().to_vec(),
             manifest_path: self.manifest_path.display().to_string()
         }.encode(s)

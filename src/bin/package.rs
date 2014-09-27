@@ -7,6 +7,7 @@ use cargo::util::important_paths::find_root_manifest_for_cwd;
 struct Options {
     flag_verbose: bool,
     flag_manifest_path: Option<String>,
+    flag_no_verify: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -18,19 +19,15 @@ Usage:
 Options:
     -h, --help              Print this message
     --manifest-path PATH    Path to the manifest to compile
+    --no-verify             Don't verify the contents by building them
     -v, --verbose           Use verbose output
 
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
-    let Options {
-        flag_manifest_path,
-        ..
-    } = options;
-
-    let root = try!(find_root_manifest_for_cwd(flag_manifest_path.clone()));
-    ops::package(&root, shell).map(|_| None).map_err(|err| {
+    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
+    ops::package(&root, shell, !options.flag_no_verify).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

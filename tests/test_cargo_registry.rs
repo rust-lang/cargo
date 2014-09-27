@@ -4,7 +4,7 @@ use git2;
 use serialize::hex::ToHex;
 
 use support::{ResultTest, project, execs, cargo_dir};
-use support::{UPDATING, DOWNLOADING, COMPILING};
+use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
 use support::paths;
 use support::git::repo;
 use cargo::util::Sha256;
@@ -27,7 +27,7 @@ fn setup() {
     fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
     File::create(&config).write_str(format!(r#"
         [registry]
-            host = "{reg}"
+            index = "{reg}"
             token = "api-token"
     "#, reg = registry()).as_slice()).assert();
 
@@ -35,37 +35,53 @@ fn setup() {
     let foo = include_bin!("fixtures/foo-0.0.1.tar.gz");
     let bar = include_bin!("fixtures/bar-0.0.1.tar.gz");
     let notyet = include_bin!("fixtures/notyet-0.0.1.tar.gz");
-    let foo_cksum = dl("pkg/foo/foo-0.0.1.tar.gz", foo);
-    let bar_cksum = dl("pkg/bar/bar-0.0.1.tar.gz", bar);
-    dl("pkg/bad-cksum/bad-cksum-0.0.1.tar.gz", foo);
-    let notyet = dl("pkg/notyet/notyet-0.0.1.tar.gz", notyet);
+    let foo_cksum = dl("foo", "0.0.1", foo);
+    let bar_cksum = dl("bar", "0.0.1", bar);
+    dl("bad-cksum", "0.0.1", foo);
+    let notyet = dl("notyet", "0.0.1", notyet);
 
     // Init a new registry
     repo(&registry_path())
         .file("config.json", format!(r#"
-            {{"dl":"{}","upload":""}}
+            {{"dl":"{}","api":""}}
         "#, dl_url()).as_slice())
         .file("3/f/foo", pkg("foo", "0.0.1", [], &foo_cksum))
-        .file("3/b/bar", pkg("bar", "0.0.1", ["foo||>=0.0.0"], &bar_cksum))
+        .file("3/b/bar", pkg("bar", "0.0.1", [
+            "{\"name\":\"foo\",\
+              \"req\":\">=0.0.0\",\
+              \"features\":[],\
+              \"default_features\":false,\
+              \"target\":null,\
+              \"optional\":false}"
+        ], &bar_cksum))
         .file("ba/d-/bad-cksum", pkg("bad-cksum", "0.0.1", [], &bar_cksum))
         .nocommit_file("no/ty/notyet", pkg("notyet", "0.0.1", [], &notyet))
         .build();
 
     fn pkg(name: &str, vers: &str, deps: &[&str], cksum: &String) -> String {
-        let deps: Vec<String> = deps.iter().map(|s| {
-            format!("\"{}\"", s)
-        }).collect();
-        let deps = deps.connect(",");
-
-        format!(r#"{{"name":"{}","vers":"{}","deps":[{}],"cksum":"{}","features":{{}}}}"#,
+        format!(r#"{{"name":"{}","vers":"{}","deps":{},"cksum":"{}","features":{{}}}}"#,
                 name, vers, deps, cksum)
     }
-    fn dl(path: &str, contents: &[u8]) -> String {
-        let dst = dl_path().join(path);
+    fn dl(name: &str, vers: &str, contents: &[u8]) -> String {
+        let dst = dl_path().join(name).join(vers).join("download");
         fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).assert();
         File::create(&dst).write(contents).unwrap();
         cksum(contents)
     }
+}
+
+fn publish_notyet() {
+    let repo = git2::Repository::open(&registry_path()).unwrap();
+    let mut index = repo.index().unwrap();
+    index.add_path(&Path::new("no/ty/notyet")).unwrap();
+    let id = index.write_tree().unwrap();
+    let tree = repo.find_tree(id).unwrap();
+    let sig = repo.signature().unwrap();
+    let parent = repo.refname_to_id("refs/heads/master").unwrap();
+    let parent = repo.find_commit(parent).unwrap();
+    repo.commit(Some("HEAD"), &sig, &sig,
+                "Another commit", &tree,
+                [&parent]).unwrap();
 }
 
 test!(simple {
@@ -201,18 +217,7 @@ location searched: the package registry
 version required: >= 0.0.0
 "));
 
-    // Add the package and commit
-    let repo = git2::Repository::open(&registry_path()).unwrap();
-    let mut index = repo.index().unwrap();
-    index.add_path(&Path::new("no/ty/notyet")).unwrap();
-    let id = index.write_tree().unwrap();
-    let tree = repo.find_tree(id).unwrap();
-    let sig = repo.signature().unwrap();
-    let parent = repo.refname_to_id("refs/heads/master").unwrap();
-    let parent = repo.find_commit(parent).unwrap();
-    repo.commit(Some("HEAD"), &sig, &sig,
-                "Another commit", &tree,
-                [&parent]).unwrap();
+    publish_notyet();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -226,4 +231,56 @@ version required: >= 0.0.0
         compiling = COMPILING,
         dir = p.url(),
         reg = registry()).as_slice()));
+})
+
+test!(package_with_path_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.notyet]
+            version = "0.0.1"
+            path = "notyet"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("notyet/Cargo.toml", r#"
+            [package]
+            name = "notyet"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("notyet/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("package").arg("-v"),
+                execs().with_status(101).with_stderr("\
+failed to verify package tarball
+
+Caused by:
+  no package named `notyet` found (required by `foo`)
+location searched: the package registry
+version required: ^0.0.1
+"));
+
+    publish_notyet();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{updating} registry `[..]`
+{downloading} notyet v0.0.1 (the package registry)
+{compiling} notyet v0.0.1 (the package registry)
+{compiling} foo v0.0.1 ({dir})
+",
+    packaging = PACKAGING,
+    verifying = VERIFYING,
+    updating = UPDATING,
+    downloading = DOWNLOADING,
+    compiling = COMPILING,
+    dir = p.url(),
+)));
 })

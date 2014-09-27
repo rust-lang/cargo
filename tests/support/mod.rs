@@ -514,3 +514,4 @@ pub static DOCTEST:     &'static str = "   Doc-tests";
 pub static PACKAGING:   &'static str = "   Packaging";
 pub static DOWNLOADING: &'static str = " Downloading";
 pub static UPLOADING:   &'static str = "   Uploading";
+pub static VERIFYING:   &'static str = "   Verifying";

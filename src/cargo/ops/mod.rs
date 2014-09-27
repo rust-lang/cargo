@@ -1,5 +1,5 @@
 pub use self::cargo_clean::{clean, CleanOptions};
-pub use self::cargo_compile::{compile, CompileOptions};
+pub use self::cargo_compile::{compile, compile_pkg, CompileOptions};
 pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
 pub use self::cargo_rustc::{compile_targets, Compilation, Layout, Kind};
 pub use self::cargo_rustc::{KindTarget, KindPlugin, Context, LayoutProxy};
@@ -13,8 +13,9 @@ pub use self::cargo_generate_lockfile::{update_lockfile, load_lockfile};
 pub use self::cargo_generate_lockfile::UpdateOptions;
 pub use self::cargo_test::{run_tests, run_benches, TestOptions};
 pub use self::cargo_package::package;
-pub use self::cargo_upload::{upload, upload_configuration, UploadConfig};
-pub use self::cargo_upload::{upload_login, http_proxy, http_handle};
+pub use self::registry::{publish, registry_configuration, RegistryConfig};
+pub use self::registry::{registry_login, http_proxy, http_handle};
+pub use self::registry::{modify_owners, yank};
 pub use self::cargo_fetch::{fetch, resolve_and_fetch};
 pub use self::cargo_pkgid::pkgid;
 
@@ -28,6 +29,6 @@ mod cargo_doc;
 mod cargo_generate_lockfile;
 mod cargo_test;
 mod cargo_package;
-mod cargo_upload;
 mod cargo_fetch;
 mod cargo_pkgid;
+mod registry;

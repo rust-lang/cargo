@@ -52,7 +52,7 @@ pub enum SourceKind {
     /// represents a local path
     PathKind,
     /// represents the central registry
-    RegistryKind
+    RegistryKind,
 }
 
 type Error = Box<CargoError + Send>;
@@ -177,17 +177,10 @@ impl SourceId {
         Ok(SourceId::for_registry(&try!(RegistrySource::url())))
     }
 
-    pub fn get_url(&self) -> &Url {
-        &self.inner.url
-    }
-
-    pub fn get_kind(&self) -> &SourceKind {
-        &self.inner.kind
-    }
-
-    pub fn is_path(&self) -> bool {
-        self.inner.kind == PathKind
-    }
+    pub fn get_url(&self) -> &Url { &self.inner.url }
+    pub fn get_kind(&self) -> &SourceKind { &self.inner.kind }
+    pub fn is_path(&self) -> bool { self.inner.kind == PathKind }
+    pub fn is_registry(&self) -> bool { self.inner.kind == RegistryKind }
 
     pub fn is_git(&self) -> bool {
         match self.inner.kind {

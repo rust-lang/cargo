@@ -102,10 +102,14 @@ fn read_nested_packages(path: &Path, source_id: &SourceId,
     let (pkg, nested) = try!(read_package(&manifest, source_id));
     let mut ret = vec![pkg];
 
-    for p in nested.iter() {
-        ret.extend(try!(read_nested_packages(&path.join(p),
-                                        source_id,
-                                        visited)).into_iter());
+    // Registry sources are not allowed to have `path=` dependencies because
+    // they're all translated to actual registry dependencies.
+    if !source_id.is_registry() {
+        for p in nested.iter() {
+            ret.extend(try!(read_nested_packages(&path.join(p),
+                                            source_id,
+                                            visited)).into_iter());
+        }
     }
 
     Ok(ret)

@@ -21,14 +21,15 @@ fn setup() {
     fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
     File::create(&config).write_str(format!(r#"
         [registry]
-            host = "{reg}"
+            index = "{reg}"
             token = "api-token"
     "#, reg = registry()).as_slice()).assert();
+    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), io::USER_DIR).assert();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{
-            "dl": "",
-            "upload": "{}"
+            "dl": "{0}",
+            "api": "{0}"
         }}"#, upload()))
         .build();
 }
@@ -43,7 +44,7 @@ test!(simple {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("upload"),
+    assert_that(p.cargo_process("publish").arg("--no-verify"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
 {packaging} foo v0.0.1 ({dir})
@@ -55,7 +56,13 @@ test!(simple {
         dir = p.url(),
         reg = registry()).as_slice()));
 
-    let mut rdr = GzDecoder::new(File::open(&upload_path()).unwrap()).unwrap();
+    let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
+    // Skip the metadata payload and the size of the tarball
+    let sz = f.read_le_u32().unwrap();
+    f.seek(sz as i64 + 4, io::SeekCur).unwrap();
+
+    // Verify the tarball
+    let mut rdr = GzDecoder::new(f).unwrap();
     assert_eq!(rdr.header().filename(), Some(b"foo-0.0.1.tar.gz"));
     let inner = MemReader::new(rdr.read_to_end().unwrap());
     let ar = Archive::new(inner);
@@ -81,12 +88,37 @@ test!(git_deps {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("upload").arg("-v"),
+    assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
                 execs().with_status(101).with_stderr("\
-failed to upload package to registry: [..]
+all dependencies must come from the same registry
+dependency `foo` comes from git://path/to/nowhere instead
+"));
+})
 
-Caused by:
-  All dependencies must come from the same registry.
-Dependency `foo` comes from git://path/to/nowhere instead
+test!(path_dependency_no_version {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("publish"),
+                execs().with_status(101).with_stderr("\
+all path dependencies must have a version specified when being uploaded \
+to the registry
+dependency `bar` does not specify a version
 "));
 })

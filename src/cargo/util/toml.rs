@@ -10,7 +10,7 @@ use semver;
 use serialize::{Decodable, Decoder};
 
 use core::{SourceId, GitKind};
-use core::manifest::{LibKind, Lib, Dylib, Profile};
+use core::manifest::{LibKind, Lib, Dylib, Profile, ManifestMetadata};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::package_id::Metadata;
 use util::{CargoResult, Require, human, ToUrl, ToSemver};
@@ -249,9 +249,18 @@ impl<T> ManyOrOne<T> {
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
-    pub authors: Vec<String>,
+    authors: Vec<String>,
     build: Option<TomlBuildCommandsList>,
     exclude: Option<Vec<String>>,
+
+    // package metadata
+    description: Option<String>,
+    homepage: Option<String>,
+    documentation: Option<String>,
+    readme: Option<String>,
+    keywords: Option<Vec<String>>,
+    license: Option<String>,
+    repository: Option<String>,
 }
 
 #[deriving(Decodable)]
@@ -472,13 +481,24 @@ impl TomlManifest {
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
                                             .unwrap_or(HashMap::new())));
+        let metadata = ManifestMetadata {
+            description: project.description.clone(),
+            homepage: project.homepage.clone(),
+            documentation: project.documentation.clone(),
+            readme: project.readme.clone(),
+            authors: project.authors.clone(),
+            license: project.license.clone(),
+            repository: project.repository.clone(),
+            keywords: project.keywords.clone().unwrap_or(Vec::new()),
+        };
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          layout.root.join("target"),
                                          layout.root.join("doc"),
                                          sources,
                                          build,
-                                         exclude);
+                                         exclude,
+                                         metadata);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));
