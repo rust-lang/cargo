@@ -76,19 +76,19 @@ impl Show for Box<CargoError + Send> {
 
 impl CargoError for Box<CargoError + Send> {
     fn description(&self) -> String {
-        (*self).description()
+        (**self).description()
     }
 
     fn detail(&self) -> Option<String> {
-        (*self).detail()
+        (**self).detail()
     }
 
     fn cause(&self) -> Option<&CargoError> {
-        (*self).cause()
+        (**self).cause()
     }
 
     fn is_human(&self) -> bool {
-        (*self).is_human()
+        (**self).is_human()
     }
 
     fn box_error(self) -> Box<CargoError + Send> {
