@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::collections::hashmap::{Occupied, Vacant};
 use std::str;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
@@ -167,9 +168,10 @@ impl<'a, 'b> Context<'a, 'b> {
 
         let key = (pkg.get_package_id(), target.get_name());
         let req = if target.get_profile().is_plugin() {PlatformPlugin} else {req};
-        self.requirements.insert_or_update_with(key, req, |_, v| {
-            *v = v.combine(req);
-        });
+        match self.requirements.entry(key) {
+            Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(req); }
+            Vacant(entry) => { entry.set(req); }
+        };
 
         for &(pkg, dep) in self.dep_targets(pkg).iter() {
             self.build_requirements(pkg, dep, req, visiting);

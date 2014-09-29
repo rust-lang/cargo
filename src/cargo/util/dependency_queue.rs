@@ -5,6 +5,7 @@
 //! it to figure out when a dependency should be built.
 
 use std::collections::{HashMap, HashSet};
+use std::collections::hashmap::{Occupied, Vacant};
 use std::hash::Hash;
 
 pub struct DependencyQueue<K, V> {
@@ -79,7 +80,10 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in key.dependencies(cx).into_iter() {
             assert!(my_dependencies.insert(dep.clone()));
-            let rev = self.reverse_dep_map.find_or_insert(dep, HashSet::new());
+            let rev = match self.reverse_dep_map.entry(dep) {
+                Occupied(entry) => entry.into_mut(),
+                Vacant(entry) => entry.set(HashSet::new()),
+            };
             assert!(rev.insert(key.clone()));
         }
         assert!(self.dep_map.insert(key, (my_dependencies, value)));
