@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::collections::hashmap::{Occupied, Vacant};
 use std::fmt;
 use semver;
 
@@ -323,16 +324,18 @@ fn resolve_deps<'a, R: Registry>(parent: &Summary,
     // Record what list of features is active for this package.
     {
         let pkgid = parent.get_package_id().clone();
-        let features = ctx.resolve.features.find_or_insert(pkgid,
-                                                           HashSet::new());
-        features.extend(used_features.into_iter());
+        match ctx.resolve.features.entry(pkgid) {
+            Occupied(entry) => entry.into_mut(),
+            Vacant(entry) => entry.set(HashSet::new()),
+        }.extend(used_features.into_iter());
     }
 
     // Recursively resolve all dependencies
     for &dep in deps.iter() {
-        if !ctx.resolved.find_or_insert(parent.get_package_id().clone(),
-                                        HashSet::new())
-                        .insert(dep.get_name().to_string()) {
+        if !match ctx.resolved.entry(parent.get_package_id().clone()) {
+            Occupied(entry) => entry.into_mut(),
+            Vacant(entry) => entry.set(HashSet::new()),
+        }.insert(dep.get_name().to_string()) {
             continue
         }
 
