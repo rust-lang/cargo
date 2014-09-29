@@ -1,6 +1,7 @@
 use std::{fmt, os, mem};
 use std::io::fs::{PathExtensions, File};
 use std::collections::HashMap;
+use std::collections::hashmap::{Occupied, Vacant};
 use std::string;
 
 use serialize::{Encodable,Encoder};
@@ -167,11 +168,10 @@ impl ConfigValue {
             (&Table(ref mut old), Table(ref mut new)) => {
                 let new = mem::replace(new, HashMap::new());
                 for (key, value) in new.into_iter() {
-                    let mut err = Ok(());
-                    old.find_with_or_insert_with(key, value,
-                                                 |_, old, new| err = old.merge(new),
-                                                 |_, new| new);
-                    try!(err);
+                    match old.entry(key) {
+                        Occupied(mut entry) => { try!(entry.get_mut().merge(value)); }
+                        Vacant(entry) => { entry.set(value); }
+                    };
                 }
             }
             (expected, found) => {

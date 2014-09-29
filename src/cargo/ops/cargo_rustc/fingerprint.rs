@@ -1,3 +1,4 @@
+use std::collections::hashmap::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
 use std::io::{fs, File, UserRWX, BufferedReader};
@@ -100,8 +101,10 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
                 cx.compilation.binaries.push(dst.clone());
             } else if target.is_lib() {
                 let pkgid = pkg.get_package_id().clone();
-                cx.compilation.libraries.find_or_insert(pkgid, Vec::new())
-                                        .push(root.join(filename));
+                match cx.compilation.libraries.entry(pkgid) {
+                    Occupied(entry) => entry.into_mut(),
+                    Vacant(entry) => entry.set(Vec::new()),
+                }.push(root.join(filename));
             }
         }
     }

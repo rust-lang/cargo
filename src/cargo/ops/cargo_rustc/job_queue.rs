@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hashmap::{Occupied, Vacant};
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve};
@@ -73,8 +74,10 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // Record the freshness state of this package as dirty if any job is
         // dirty or fresh otherwise
         let fresh = jobs.iter().fold(Fresh, |f1, &(_, f2)| f1.combine(f2));
-        let prev = self.state.find_or_insert(pkg.get_package_id(), fresh);
-        *prev = prev.combine(fresh);
+        match self.state.entry(pkg.get_package_id()) {
+            Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(fresh); }
+            Vacant(entry) => { entry.set(fresh); }
+        };
 
         // Add the package to the dependency graph
         self.queue.enqueue(&self.resolve, Fresh,
