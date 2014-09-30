@@ -70,7 +70,20 @@ pub struct LayoutProxy<'a> {
 }
 
 impl Layout {
-    pub fn new(root: Path) -> Layout {
+    pub fn new(pkg: &Package, triple: Option<&str>, dest: Option<&str>) -> Layout {
+        let mut path = pkg.get_absolute_target_dir();
+        match triple {
+            Some(s) => path.push(s),
+            None => {}
+        }
+        match dest {
+            Some(s) => path.push(s),
+            None => {}
+        }
+        Layout::at(path)
+    }
+
+    pub fn at(root: Path) -> Layout {
         Layout {
             deps: root.join("deps"),
             native: root.join("native"),
@@ -127,18 +140,22 @@ impl Layout {
     pub fn dest<'a>(&'a self) -> &'a Path { &self.root }
     pub fn deps<'a>(&'a self) -> &'a Path { &self.deps }
     pub fn native(&self, package: &Package) -> Path {
-        self.native.join(self.native_name(package))
+        self.native.join(self.pkg_dir(package))
     }
-    pub fn fingerprint(&self) -> &Path { &self.fingerprint }
+    pub fn fingerprint(&self, package: &Package) -> Path {
+        self.fingerprint.join(self.pkg_dir(package))
+    }
 
     pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
     pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
     pub fn old_native(&self, package: &Package) -> Path {
-        self.old_native.join(self.native_name(package))
+        self.old_native.join(self.pkg_dir(package))
     }
-    pub fn old_fingerprint(&self) -> &Path { &self.old_fingerprint }
+    pub fn old_fingerprint(&self, package: &Package) -> Path {
+        self.old_fingerprint.join(self.pkg_dir(package))
+    }
 
-    fn native_name(&self, pkg: &Package) -> String {
+    fn pkg_dir(&self, pkg: &Package) -> String {
         format!("{}-{}", pkg.get_name(), short_hash(pkg.get_package_id()))
     }
 }

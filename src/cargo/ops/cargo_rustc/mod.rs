@@ -11,10 +11,12 @@ use util::{Config, internal, ChainError, Fresh, profile};
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, StageStart, StageCustomBuild, StageLibraries};
 use self::job_queue::{StageBinaries, StageEnd};
-use self::context::{Context, PlatformRequirement, PlatformTarget};
-use self::context::{PlatformPlugin, PlatformPluginAndTarget};
 
 pub use self::compilation::Compilation;
+pub use self::context::Context;
+pub use self::context::{PlatformPlugin, PlatformPluginAndTarget};
+pub use self::context::{PlatformRequirement, PlatformTarget};
+pub use self::layout::{Layout, LayoutProxy};
 
 mod context;
 mod compilation;
@@ -24,7 +26,7 @@ mod job_queue;
 mod layout;
 
 #[deriving(PartialEq, Eq)]
-enum Kind { KindPlugin, KindTarget }
+pub enum Kind { KindPlugin, KindTarget }
 
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
@@ -57,11 +59,11 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
 
-    let root = pkg.get_absolute_target_dir();
-    let dest = uniq_target_dest(targets).unwrap_or("");
-    let host_layout = layout::Layout::new(root.join(dest));
+    let dest = uniq_target_dest(targets);
+    let root = deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap();
+    let host_layout = Layout::new(root, None, dest);
     let target_layout = config.target().map(|target| {
-        layout::Layout::new(root.join(target).join(dest))
+        layout::Layout::new(root, Some(target), dest)
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
@@ -75,6 +77,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     // particular package. No actual work is executed as part of this, that's
     // all done later as part of the `execute` function which will run
     // everything in order with proper parallelism.
+    let mut compiled = HashSet::new();
+    each_dep(pkg, &cx, |dep| {
+        compiled.insert(dep.get_package_id().clone());
+    });
     for dep in deps.iter() {
         if dep == pkg { continue }
 
@@ -83,15 +89,18 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
             cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
-        if targets.len() == 0 {
+        if targets.len() == 0 && dep.get_package_id() != resolve.root() {
             return Err(human(format!("Package `{}` has no library targets", dep)))
         }
 
-        try!(compile(targets.as_slice(), dep, &mut cx, &mut queue));
+        let compiled = compiled.contains(dep.get_package_id());
+        try!(compile(targets.as_slice(), dep, compiled, &mut cx, &mut queue));
     }
 
-    cx.primary();
-    try!(compile(targets, pkg, &mut cx, &mut queue));
+    if pkg.get_package_id() == resolve.root() {
+        cx.primary();
+    }
+    try!(compile(targets, pkg, true, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
@@ -100,10 +109,18 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
+                   compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
     let _p = profile::start(format!("preparing: {}", pkg));
+
+    // Packages/targets which are actually getting compiled are constructed into
+    // a real job. Packages which are *not* compiled still have their jobs
+    // executed, but only if the work is fresh. This is to preserve their
+    // artifacts if any exist.
+    let job = if compiled {Job::new} else {Job::noop};
+    if !compiled { jobs.ignore(pkg); }
 
     if targets.is_empty() {
         return Ok(())
@@ -136,7 +153,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         for cmd in build_cmds.into_iter() { try!(cmd()) }
         dirty()
     };
-    jobs.enqueue(pkg, StageCustomBuild, vec![(Job::new(dirty, fresh, desc),
+    jobs.enqueue(pkg, StageCustomBuild, vec![(job(dirty, fresh, desc),
                                               freshness)]);
 
     // After the custom command has run, execute rustc for all targets of our
@@ -160,7 +177,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
             let dirty = proc() { try!(work()); dirty() };
-            dst.push((Job::new(dirty, fresh, desc), freshness));
+            dst.push((job(dirty, fresh, desc), freshness));
         }
     }
     jobs.enqueue(pkg, StageLibraries, libs);

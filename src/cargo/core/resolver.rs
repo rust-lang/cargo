@@ -1,5 +1,4 @@
-use std::collections::{HashMap, HashSet};
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::hashmap::{HashMap, HashSet, Occupied, Vacant};
 use std::fmt;
 use semver;
 
@@ -222,17 +221,44 @@ impl Resolve {
             None => return Err(human(format!("package id specification `{}` \
                                               matched no packages", spec))),
         };
-        match ids.next() {
+        return match ids.next() {
             Some(other) => {
-                let mut msg = format!("Ambiguous package id specification: \
-                                       `{}`\nMatching packages:\n  {}\n  {}",
-                                      spec, ret, other);
-                for id in ids {
-                    msg = format!("{}\n  {}", msg, id);
-                }
+                let mut msg = format!("There are multiple `{}` packages in \
+                                       your project, and the specification \
+                                       `{}` is ambiguous.\n\
+                                       Please re-run this command \
+                                       with `-p <spec>` where `<spec>` is one \
+                                       of the following:",
+                                      spec.get_name(), spec);
+                let mut vec = vec![ret, other];
+                vec.extend(ids);
+                minimize(&mut msg, vec, &spec);
                 Err(human(msg))
             }
             None => Ok(ret)
+        };
+
+        fn minimize(msg: &mut String,
+                    ids: Vec<&PackageId>,
+                    spec: &PackageIdSpec) {
+            let mut version_cnt = HashMap::new();
+            for id in ids.iter() {
+                let slot = match version_cnt.entry(id.get_version()) {
+                    Occupied(e) => e.into_mut(),
+                    Vacant(e) => e.set(0u),
+                };
+                *slot += 1;
+            }
+            for id in ids.iter() {
+                if version_cnt[id.get_version()] == 1 {
+                    msg.push_str(format!("\n  {}:{}", spec.get_name(),
+                                 id.get_version()).as_slice());
+                } else {
+                    msg.push_str(format!("\n  {}",
+                                         PackageIdSpec::from_package_id(*id))
+                                        .as_slice());
+                }
+            }
         }
     }
 
