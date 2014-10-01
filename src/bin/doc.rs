@@ -13,6 +13,7 @@ Usage:
 
 Options:
     -h, --help              Print this message
+    --open                  Opens the docs in a browser after the operation
     --no-deps               Don't build documentation for dependencies
     -j N, --jobs N          The number of jobs to run in parallel
     --features FEATURES     Space-separated list of features to also build
@@ -33,6 +34,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
 
     let mut doc_opts = ops::DocOptions {
         all: !options.flag_no_deps,
+        open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
             env: if options.flag_no_deps {"doc"} else {"doc-all"},
             shell: shell,
