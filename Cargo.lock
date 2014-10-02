@@ -6,13 +6,13 @@ dependencies = [
  "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#21ce1190ef7631f71e52de5e13eb4d131564b82e)",
  "docopt_macros 0.6.4 (git+https://github.com/docopt/docopt.rs#21ce1190ef7631f71e52de5e13eb4d131564b82e)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#2730aeaa87c04bef814d1c1fd5ba7bed7cbc5a4d)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#545b7d27180bef79dea1cbc5de46f74cb9f085f8)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#0e068d21edbb1fb250b4350f314f1e06d7467c77)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#27338cbd4736d3c8146294fc090c6f8f06c32d72)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98)",
- "semver 0.1.0 (git+https://github.com/rust-lang/semver#e7adaf4fa43f77408e640985cf3b3ec9ed81b5b8)",
+ "semver 0.1.0 (git+https://github.com/rust-lang/semver#5dee918159d4e3d84c1ee54cf6a5305e6f7bd557)",
  "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#e7c9952ea75a75688966b516d8bbefb740f54208)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#8cdb2747de86ea7de6491ce5ba5dc522421bed7f)",
- "url 0.1.0 (git+https://github.com/servo/rust-url#29f70a47230c2aa736e263977247c786e0b2c243)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#f320b1e64d5caaf3cf4a31c8960f646ff7e865f7)",
 ]
 
 [[package]]
@@ -21,8 +21,8 @@ version = "0.0.1"
 source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#720d87fa32c738c397252cf3c26d428bdca697d4"
 dependencies = [
  "curl-sys 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#720d87fa32c738c397252cf3c26d428bdca697d4)",
- "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#1d3cd271612036b47c015a55f33a97e1524569ae)",
- "url 0.1.0 (git+https://github.com/servo/rust-url#29f70a47230c2aa736e263977247c786e0b2c243)",
+ "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#0afbf50ba545ac379292b6040330f2903ca891d2)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#f320b1e64d5caaf3cf4a31c8960f646ff7e865f7)",
 ]
 
 [[package]]
@@ -46,7 +46,7 @@ dependencies = [
 [[package]]
 name = "encoding"
 version = "0.1.0"
-source = "git+https://github.com/lifthrasiir/rust-encoding#1d26487807127f221afd55492f8f40cc4e718648"
+source = "git+https://github.com/lifthrasiir/rust-encoding#ea41c0226067331a4d13142c81d82b614135c82a"
 
 [[package]]
 name = "flate2"
@@ -56,10 +56,10 @@ source = "git+https://github.com/alexcrichton/flate2-rs#2730aeaa87c04bef814d1c1f
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#545b7d27180bef79dea1cbc5de46f74cb9f085f8"
+source = "git+https://github.com/alexcrichton/git2-rs#0e068d21edbb1fb250b4350f314f1e06d7467c77"
 dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#545b7d27180bef79dea1cbc5de46f74cb9f085f8)",
- "url 0.1.0 (git+https://github.com/servo/rust-url#29f70a47230c2aa736e263977247c786e0b2c243)",
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#0e068d21edbb1fb250b4350f314f1e06d7467c77)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url#f320b1e64d5caaf3cf4a31c8960f646ff7e865f7)",
 ]
 
 [[package]]
@@ -75,32 +75,32 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b86
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#545b7d27180bef79dea1cbc5de46f74cb9f085f8"
+source = "git+https://github.com/alexcrichton/git2-rs#0e068d21edbb1fb250b4350f314f1e06d7467c77"
 dependencies = [
- "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#6a5d3ad7b62db6ca0721c528402f4976a1876036)",
- "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#1d3cd271612036b47c015a55f33a97e1524569ae)",
- "openssl-static-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-static-sys#40c6aa58a878645b2f2a6f0270da7f1c3088a22c)",
+ "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#e084c0e08e202e813a23e228acc322b77eb308b2)",
+ "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#0afbf50ba545ac379292b6040330f2903ca891d2)",
+ "openssl-static-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-static-sys#b46ca510c5b0bf8215eeabfa5696932f9acb63b1)",
 ]
 
 [[package]]
 name = "libssh2-static-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/libssh2-static-sys#6a5d3ad7b62db6ca0721c528402f4976a1876036"
+source = "git+https://github.com/alexcrichton/libssh2-static-sys#e084c0e08e202e813a23e228acc322b77eb308b2"
 
 [[package]]
 name = "link-config"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/link-config#1d3cd271612036b47c015a55f33a97e1524569ae"
+source = "git+https://github.com/alexcrichton/link-config#0afbf50ba545ac379292b6040330f2903ca891d2"
 
 [[package]]
 name = "openssl-static-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/openssl-static-sys#40c6aa58a878645b2f2a6f0270da7f1c3088a22c"
+source = "git+https://github.com/alexcrichton/openssl-static-sys#b46ca510c5b0bf8215eeabfa5696932f9acb63b1"
 
 [[package]]
 name = "semver"
 version = "0.1.0"
-source = "git+https://github.com/rust-lang/semver#e7adaf4fa43f77408e640985cf3b3ec9ed81b5b8"
+source = "git+https://github.com/rust-lang/semver#5dee918159d4e3d84c1ee54cf6a5305e6f7bd557"
 
 [[package]]
 name = "tar"
@@ -115,8 +115,8 @@ source = "git+https://github.com/alexcrichton/toml-rs#8cdb2747de86ea7de6491ce5ba
 [[package]]
 name = "url"
 version = "0.1.0"
-source = "git+https://github.com/servo/rust-url#29f70a47230c2aa736e263977247c786e0b2c243"
+source = "git+https://github.com/servo/rust-url#f320b1e64d5caaf3cf4a31c8960f646ff7e865f7"
 dependencies = [
- "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#1d26487807127f221afd55492f8f40cc4e718648)",
+ "encoding 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding#ea41c0226067331a4d13142c81d82b614135c82a)",
 ]
 
