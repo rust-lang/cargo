@@ -15,7 +15,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to run benchmarks for
+    -p SPEC, --package SPEC  Package to build
     -j N, --jobs N           The number of jobs to run in parallel
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
@@ -26,7 +26,7 @@ Options:
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
-current package built tested. For more information on SPEC and its format, see the
+current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 ",  flag_jobs: Option<uint>, flag_target: Option<String>,
     flag_manifest_path: Option<String>, flag_features: Vec<String>,
