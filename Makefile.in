@@ -158,15 +158,18 @@ prepare-manifest-$(1):
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
 	rm -rf $$(PKGDIR_$(1))
 	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo \
-		$$(PKGDIR_$(1))/share/man/man1
+		$$(PKGDIR_$(1))/share/man/man1 \
+		$$(PKGDIR_$(1))/share/doc/cargo
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
 	cp src/etc/cargo.1 $$(PKGDIR_$(1))/share/man/man1
 	#cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
+	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
+		$$(PKGDIR_$(1))/share/doc/cargo
 	(cd $$(PKGDIR_$(1)) && find . -type f | sed 's/^\.\///') \
 		> $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in
 	cp src/etc/install.sh $$(PKGDIR_$(1))
-	cp README.md LICENSE-MIT LICENSE-APACHE $$(PKGDIR_$(1))
-	cp LICENSE-MIT $$(PKGDIR_$(1))
+	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
+		$$(PKGDIR_$(1))
 	mv $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in \
 		$$(PKGDIR_$(1))/lib/cargo/manifest.in
 endif
