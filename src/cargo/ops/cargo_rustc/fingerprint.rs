@@ -240,8 +240,18 @@ fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
     }));
     let deps = line.slice_from(pos + 2);
 
-    for file in deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty()) {
-        match fs::stat(&pkg.get_root().join(file)) {
+    let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
+    loop {
+        let mut file = match deps.next() {
+            Some(s) => s.to_string(),
+            None => break,
+        };
+        while file.as_slice().ends_with("\\") {
+            file.pop();
+            file.push(' ');
+            file.push_str(deps.next().unwrap())
+        }
+        match fs::stat(&pkg.get_root().join(file.as_slice())) {
             Ok(stat) if stat.modified <= mtime => {}
             Ok(stat) => {
                 debug!("stale: {} -- {} vs {}", file, stat.modified, mtime);
