@@ -38,7 +38,8 @@ pub struct Context<'a, 'b> {
 impl<'a, 'b> Context<'a, 'b> {
     pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap,
                deps: &'a PackageSet, config: &'b mut Config<'b>,
-               host: Layout, target: Option<Layout>)
+               host: Layout, target: Option<Layout>,
+               root_pkg: &Package)
                -> CargoResult<Context<'a, 'b>> {
         let (target_dylib, target_exe) =
                 try!(Context::filename_parts(config.target()));
@@ -66,7 +67,7 @@ impl<'a, 'b> Context<'a, 'b> {
             target_exe: target_exe,
             host_dylib: host_dylib,
             requirements: HashMap::new(),
-            compilation: Compilation::new(),
+            compilation: Compilation::new(root_pkg),
         })
     }
 

@@ -54,7 +54,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            config: &'a mut Config<'a>)
                            -> CargoResult<Compilation> {
     if targets.is_empty() {
-        return Ok(Compilation::new())
+        return Ok(Compilation::new(pkg))
     }
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
@@ -67,7 +67,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
-                                   host_layout, target_layout));
+                                   host_layout, target_layout, pkg));
     let mut queue = JobQueue::new(cx.resolve, deps, cx.config);
 
     // First ensure that the destination directory exists

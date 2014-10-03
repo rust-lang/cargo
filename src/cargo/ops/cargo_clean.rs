@@ -49,7 +49,7 @@ pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
     let pkgs = PackageSet::new([]);
     let cx = try!(Context::new("compile", &resolve, &srcs, &pkgs, &mut cfg,
                                Layout::at(root.get_absolute_target_dir()),
-                               None));
+                               None, &pkg));
 
     // And finally, clean everything out!
     for target in pkg.get_targets().iter() {
