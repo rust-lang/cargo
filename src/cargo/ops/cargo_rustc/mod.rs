@@ -9,8 +9,8 @@ use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile};
 
 use self::job::{Job, Work};
-use self::job_queue::{JobQueue, StageStart, StageCustomBuild, StageLibraries};
-use self::job_queue::{StageBinaries, StageEnd};
+use self::job_queue as jq;
+use self::job_queue::JobQueue;
 
 pub use self::compilation::Compilation;
 pub use self::context::Context;
@@ -68,7 +68,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
                                    host_layout, target_layout));
-    let mut queue = JobQueue::new(cx.resolve, cx.config);
+    let mut queue = JobQueue::new(cx.resolve, deps, cx.config);
 
     // First ensure that the destination directory exists
     try!(cx.prepare(pkg));
@@ -133,7 +133,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindPlugin);
         init.push((Job::new(plugin1, plugin2, String::new()), Fresh));
     }
-    jobs.enqueue(pkg, StageStart, init);
+    jobs.enqueue(pkg, jq::StageStart, init);
 
     // First part of the build step of a target is to execute all of the custom
     // build commands.
@@ -153,15 +153,15 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         for cmd in build_cmds.into_iter() { try!(cmd()) }
         dirty()
     };
-    jobs.enqueue(pkg, StageCustomBuild, vec![(job(dirty, fresh, desc),
-                                              freshness)]);
+    jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh, desc),
+                                                  freshness)]);
 
     // After the custom command has run, execute rustc for all targets of our
     // package.
     //
     // Each target has its own concept of freshness to ensure incremental
     // rebuilds on the *target* granularity, not the *package* granularity.
-    let (mut libs, mut bins) = (Vec::new(), Vec::new());
+    let (mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(), Vec::new());
     for &target in targets.iter() {
         let work = if target.get_profile().is_doc() {
             let (rustdoc, desc) = try!(rustdoc(pkg, target, cx));
@@ -171,7 +171,11 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             try!(rustc(pkg, target, cx, req))
         };
 
-        let dst = if target.is_lib() {&mut libs} else {&mut bins};
+        let dst = match (target.is_lib(), target.get_profile().is_test()) {
+            (_, true) => &mut tests,
+            (true, _) => &mut libs,
+            (false, false) => &mut bins,
+        };
         for (work, kind, desc) in work.into_iter() {
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
@@ -180,9 +184,9 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             dst.push((job(dirty, fresh, desc), freshness));
         }
     }
-    jobs.enqueue(pkg, StageLibraries, libs);
-    jobs.enqueue(pkg, StageBinaries, bins);
-    jobs.enqueue(pkg, StageEnd, Vec::new());
+    jobs.enqueue(pkg, jq::StageLibraries, libs);
+    jobs.enqueue(pkg, jq::StageBinaries, bins);
+    jobs.enqueue(pkg, jq::StageTests, tests);
     Ok(())
 }
 
@@ -450,8 +454,10 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         cmd = cmd.arg("-L").arg(dir);
     }
 
-    for &(_, target) in cx.dep_targets(package).iter() {
-        cmd = try!(link_to(cmd, target, cx, kind, Dependency));
+    for &(pkg, target) in cx.dep_targets(package).iter() {
+        let pkgid = pkg.get_package_id();
+        let reason = if pkgid == cx.resolve.root() {LocalLib} else {Dependency};
+        cmd = try!(link_to(cmd, target, cx, kind, reason));
     }
 
     let mut targets = package.get_targets().iter().filter(|target| {
@@ -480,7 +486,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             KindPlugin => KindPlugin,
             KindTarget if target.get_profile().is_plugin() => KindPlugin,
             KindTarget => KindTarget,
-        });
+        }).proxy();
 
         for filename in try!(cx.target_filenames(target)).iter() {
             let mut v = Vec::new();
@@ -488,7 +494,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
             v.push(b'=');
             match reason {
                 Dependency => v.push_all(layout.deps().as_vec()),
-                LocalLib => v.push_all(layout.root().as_vec()),
+                LocalLib => v.push_all(layout.dest().as_vec()),
             }
             v.push(b'/');
             v.push_all(filename.as_bytes());

@@ -983,3 +983,45 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 })
+
+test!(almost_cyclic_but_not_quite {
+    let p = project("a")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dev-dependencies.b]
+            path = "b"
+            [dev-dependencies.c]
+            path = "c"
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(test)] extern crate b;
+            #[cfg(test)] extern crate c;
+        "#)
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.a]
+            path = ".."
+        "#)
+        .file("b/src/lib.rs", r#"
+            extern crate a;
+        "#)
+        .file("c/Cargo.toml", r#"
+            [package]
+            name = "c"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("c/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+                execs().with_status(0));
+})

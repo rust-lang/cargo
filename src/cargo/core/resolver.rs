@@ -306,6 +306,9 @@ pub fn resolve<R: Registry>(summary: &Summary, method: ResolveMethod,
     let _p = profile::start(format!("resolving: {}", summary));
 
     let mut context = Context::new(registry, summary.get_package_id().clone());
+    context.seen.insert((summary.get_name().to_string(),
+                         summary.get_source_id().clone()),
+                        summary.get_version().clone());
     try!(resolve_deps(summary, method, &mut context));
     log!(5, "  result={}", context.resolve);
     Ok(context.resolve)
@@ -315,12 +318,6 @@ fn resolve_deps<'a, R: Registry>(parent: &Summary,
                                  method: ResolveMethod,
                                  ctx: &mut Context<'a, R>)
                                  -> CargoResult<()> {
-    // Dependency graphs are required to be a DAG
-    if !ctx.visited.insert(parent.get_package_id().clone()) {
-        return Err(human(format!("Cyclic package dependency: package `{}` \
-                                  depends on itself", parent.get_package_id())))
-    }
-
     let dev_deps = match method {
         ResolveEverything => true,
         ResolveRequired(dev_deps, _, _) => dev_deps,
@@ -402,13 +399,25 @@ fn resolve_deps<'a, R: Registry>(parent: &Summary,
             ctx.seen.insert((name, source_id), version.clone());
             ctx.resolve.graph.add(summary.get_package_id().clone(), []);
         }
+
+        // Dependency graphs are required to be a DAG. Non-transitive
+        // dependencies (dev-deps), however, can never introduce a cycle, so we
+        // skip them.
+        if dep.is_transitive() &&
+           !ctx.visited.insert(summary.get_package_id().clone()) {
+            return Err(human(format!("Cyclic package dependency: package `{}` \
+                                      depends on itself",
+                                     summary.get_package_id())))
+        }
         try!(resolve_deps(summary,
                           ResolveRequired(false, dep.get_features(),
                                           dep.uses_default_features()),
                           ctx));
+        if dep.is_transitive() {
+            ctx.visited.remove(summary.get_package_id());
+        }
     }
 
-    ctx.visited.remove(parent.get_package_id());
     Ok(())
 }
 

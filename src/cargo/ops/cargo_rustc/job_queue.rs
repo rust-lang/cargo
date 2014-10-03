@@ -1,7 +1,7 @@
 use std::collections::hashmap::{HashMap, HashSet, Occupied, Vacant};
 use term::color::YELLOW;
 
-use core::{Package, PackageId, Resolve};
+use core::{Package, PackageId, Resolve, PackageSet};
 use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, Dependency, profile};
 
@@ -19,6 +19,7 @@ pub struct JobQueue<'a, 'b> {
     tx: Sender<Message>,
     rx: Receiver<Message>,
     resolve: &'a Resolve,
+    packages: &'a PackageSet,
     active: uint,
     pending: HashMap<(&'a PackageId, TargetStage), PendingBuild>,
     state: HashMap<&'a PackageId, Freshness>,
@@ -49,13 +50,14 @@ pub enum TargetStage {
     StageCustomBuild,
     StageLibraries,
     StageBinaries,
-    StageEnd,
+    StageTests,
 }
 
 type Message = (PackageId, TargetStage, Freshness, CargoResult<()>);
 
 impl<'a, 'b> JobQueue<'a, 'b> {
-    pub fn new(resolve: &'a Resolve, config: &mut Config) -> JobQueue<'a, 'b> {
+    pub fn new(resolve: &'a Resolve, packages: &'a PackageSet,
+               config: &mut Config) -> JobQueue<'a, 'b> {
         let (tx, rx) = channel();
         JobQueue {
             pool: TaskPool::new(config.jobs()),
@@ -63,6 +65,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             tx: tx,
             rx: rx,
             resolve: resolve,
+            packages: packages,
             active: 0,
             pending: HashMap::new(),
             state: HashMap::new(),
@@ -81,7 +84,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         };
 
         // Add the package to the dependency graph
-        self.queue.enqueue(&self.resolve, Fresh,
+        self.queue.enqueue(&(self.resolve, self.packages), Fresh,
                            (pkg.get_package_id(), stage),
                            (pkg, jobs));
     }
@@ -193,8 +196,10 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     }
 }
 
-impl<'a> Dependency<&'a Resolve> for (&'a PackageId, TargetStage) {
-    fn dependencies(&self, resolve: &&'a Resolve)
+impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
+    for (&'a PackageId, TargetStage)
+{
+    fn dependencies(&self, &(resolve, packages): &(&'a Resolve, &'a PackageSet))
                     -> Vec<(&'a PackageId, TargetStage)> {
         // This implementation of `Dependency` is the driver for the structure
         // of the dependency graph of packages to be built. The "key" here is
@@ -204,18 +209,38 @@ impl<'a> Dependency<&'a Resolve> for (&'a PackageId, TargetStage) {
         // the start state which depends on the ending state of all dependent
         // packages (as determined by the resolve context).
         let (id, stage) = *self;
+        let pkg = packages.iter().find(|p| p.get_package_id() == id).unwrap();
+        let deps = resolve.deps(id).into_iter().flat_map(|a| a)
+                          .filter(|dep| *dep != id);
         match stage {
             StageStart => {
-                resolve.deps(id).into_iter().flat_map(|a| a).filter(|dep| {
-                    *dep != id
+                // Only transitive dependencies are needed to start building a
+                // package. Non transitive dependencies (dev dependencies) are
+                // only used to build tests.
+                deps.filter(|dep| {
+                    let dep = pkg.get_dependencies().iter().find(|d| {
+                        d.get_name() == dep.get_name()
+                    }).unwrap();
+                    dep.is_transitive()
                 }).map(|dep| {
-                    (dep, StageEnd)
+                    (dep, StageLibraries)
                 }).collect()
             }
             StageCustomBuild => vec![(id, StageStart)],
             StageLibraries => vec![(id, StageCustomBuild)],
             StageBinaries => vec![(id, StageLibraries)],
-            StageEnd => vec![(id, StageBinaries), (id, StageLibraries)],
+            StageTests => {
+                let mut ret = vec![(id, StageLibraries)];
+                ret.extend(deps.filter(|dep| {
+                    let dep = pkg.get_dependencies().iter().find(|d| {
+                        d.get_name() == dep.get_name()
+                    }).unwrap();
+                    !dep.is_transitive()
+                }).map(|dep| {
+                    (dep, StageLibraries)
+                }));
+                ret
+            }
         }
     }
 }
