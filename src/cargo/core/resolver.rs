@@ -97,9 +97,9 @@ pub struct EncodablePackageId {
 impl<E, S: Encoder<E>> Encodable<S, E> for EncodablePackageId {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         let mut out = format!("{} {}", self.name, self.version);
-        self.source.as_ref().map(|s| {
-            out.push_str(format!(" ({})", s.to_url()).as_slice())
-        });
+        if let Some(ref s) = self.source {
+            out.push_str(format!(" ({})", s.to_url()).as_slice());
+        }
         out.encode(s)
     }
 }

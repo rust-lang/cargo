@@ -153,11 +153,11 @@ fn emit_package(dep: &toml::TomlTable, out: &mut String) {
     out.push_str(format!("name = {}\n", lookup(dep, "name")).as_slice());
     out.push_str(format!("version = {}\n", lookup(dep, "version")).as_slice());
 
-    dep.find(&"source".to_string()).map(|_| {
+    if dep.contains_key(&"source".to_string()) {
         out.push_str(format!("source = {}\n", lookup(dep, "source")).as_slice());
-    });
+    }
 
-    dep.find(&"dependencies".to_string()).map(|s| {
+    if let Some(ref s) = dep.find(&"dependencies".to_string()) {
         let slice = s.as_slice().unwrap();
 
         if !slice.is_empty() {
@@ -170,7 +170,7 @@ fn emit_package(dep: &toml::TomlTable, out: &mut String) {
             out.push_str("]\n");
         }
         out.push_str("\n");
-    });
+    }
 }
 
 fn lookup<'a>(table: &'a toml::TomlTable, key: &str) -> &'a toml::Value {
