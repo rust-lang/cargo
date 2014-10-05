@@ -3,7 +3,7 @@
 
 #![feature(macro_rules, phase)]
 #![feature(default_type_params)]
-#![deny(bad_style, unused)]
+#![deny(bad_style)]
 
 extern crate libc;
 extern crate regex;
