@@ -6,7 +6,8 @@ use cargo::sources::{PathSource};
 
 docopt!(Options, "
 Usage:
-    cargo clean [options] --manifest-path=PATH
+    cargo read-manifest [options] --manifest-path=PATH
+    cargo read-manifest -h | --help
 
 Options:
     -h, --help              Print this message
