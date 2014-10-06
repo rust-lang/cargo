@@ -10,6 +10,7 @@ Usage:
 
 Options:
     --manifest-path PATH    Path to the manifest to build benchmarks for
+    -h, --help              Print this message
 ", flag_manifest_path: Option<String>)
 
 #[deriving(Encodable)]

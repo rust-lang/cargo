@@ -13,6 +13,7 @@ pub type Error = HashMap<String, String>;
 docopt!(Flags, "
 Usage:
     cargo verify-project [options] --manifest-path PATH
+    cargo verify-project -h | --help
 
 Options:
     -h, --help              Print this message
