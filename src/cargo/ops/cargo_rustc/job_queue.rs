@@ -108,6 +108,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             loop {
                 match self.queue.dequeue() {
                     Some((fresh, (_, stage), (pkg, jobs))) => {
+                        info!("start: {} {}", pkg, stage);
                         try!(self.run(pkg, stage, fresh, jobs, config));
                     }
                     None => break,
@@ -118,6 +119,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             // of work to finish. If any package fails to build then we stop
             // scheduling work as quickly as possibly.
             let (id, stage, fresh, result) = self.rx.recv();
+            info!("  end: {} {}", id, stage);
             let id = *self.state.keys().find(|&k| *k == &id).unwrap();
             self.active -= 1;
             match result {
