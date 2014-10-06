@@ -11,7 +11,12 @@ struct ConfigOut {
 }
 
 docopt!(ConfigForKeyFlags, "
-Usage: cargo config-for-key --human --key=<key>
+Usage:
+    cargo config-for-key --human --key=<key>
+    cargo config-for-key -h | --help
+
+Options:
+    -h, --help          Print this message
 ")
 
 pub fn execute(args: ConfigForKeyFlags,

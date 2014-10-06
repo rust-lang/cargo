@@ -11,7 +11,12 @@ struct ConfigOut {
 }
 
 docopt!(ConfigListFlags, "
-Usage: cargo config-list --human
+Usage:
+    cargo config-list --human
+    cargo config-list -h | --help
+
+Options:
+    -h, --help          Print this message
 ")
 
 pub fn execute(args: ConfigListFlags,

@@ -8,6 +8,7 @@ use cargo::util::{Config, CliResult, CliError, human, ToUrl};
 docopt!(Options, "
 Usage:
     cargo git-checkout [options] --url=URL --reference=REF
+    cargo git-checkout -h | --help
 
 Options:
     -h, --help              Print this message
