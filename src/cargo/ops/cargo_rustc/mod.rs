@@ -97,9 +97,6 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         try!(compile(targets.as_slice(), dep, compiled, &mut cx, &mut queue));
     }
 
-    if pkg.get_package_id() == resolve.root() {
-        cx.primary();
-    }
     try!(compile(targets, pkg, true, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -205,7 +202,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     let mut cmd = cmd.split(' ');
     // TODO: this shouldn't explicitly pass `KindTarget` for dest/deps_dir, we
     //       may be building a C lib for a plugin
-    let layout = cx.layout(KindTarget);
+    let layout = cx.layout(pkg, KindTarget);
     let output = layout.native(pkg);
     let old_output = layout.proxy().old_native(pkg);
     let mut p = process(cmd.next().unwrap(), pkg, cx)
@@ -253,18 +250,14 @@ fn rustc(package: &Package, target: &Target,
          cx: &mut Context, req: PlatformRequirement)
          -> CargoResult<Vec<(Work, Kind, String)> >{
     let crate_types = target.rustc_crate_types();
-    let root = package.get_root();
-
-    log!(5, "root={}; target={}; crate_types={}; verbose={}; req={}",
-         root.display(), target, crate_types, cx.primary, req);
-
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
     Ok(rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
         let desc = rustc.to_string();
         let is_path_source = package.get_package_id().get_source_id().is_path();
-        let show_warnings = cx.primary || is_path_source;
+        let show_warnings = package.get_package_id() == cx.resolve.root() ||
+                            is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
 
         (proc() {
@@ -304,7 +297,7 @@ fn rustdoc(package: &Package, target: &Target,
            cx: &mut Context) -> CargoResult<(Work, String)> {
     let kind = KindTarget;
     let pkg_root = package.get_root();
-    let cx_root = cx.layout(kind).proxy().dest().join("doc");
+    let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
     let rustdoc = process("rustdoc", package, cx).cwd(pkg_root.clone());
     let rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
@@ -313,7 +306,7 @@ fn rustdoc(package: &Package, target: &Target,
 
     log!(5, "commands={}", rustdoc);
 
-    let primary = cx.primary;
+    let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();
     let desc = rustdoc.to_string();
     Ok((proc() {
@@ -408,7 +401,7 @@ fn build_base_args(cx: &Context,
 fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) -> ProcessBuilder {
     cmd = cmd.arg("--out-dir");
-    cmd = cmd.arg(cx.layout(kind).root());
+    cmd = cmd.arg(cx.layout(pkg, kind).root());
 
     let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
     cmd = cmd.arg("--dep-info").arg(dep_info_loc);
@@ -436,9 +429,7 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
 fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
                    cx: &Context,
                    kind: Kind) -> CargoResult<ProcessBuilder> {
-    enum LinkReason { Dependency, LocalLib }
-
-    let layout = cx.layout(kind);
+    let layout = cx.layout(package, kind);
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
 
@@ -455,9 +446,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     }
 
     for &(pkg, target) in cx.dep_targets(package).iter() {
-        let pkgid = pkg.get_package_id();
-        let reason = if pkgid == cx.resolve.root() {LocalLib} else {Dependency};
-        cmd = try!(link_to(cmd, target, cx, kind, reason));
+        cmd = try!(link_to(cmd, pkg, target, cx, kind));
     }
 
     let mut targets = package.get_targets().iter().filter(|target| {
@@ -470,32 +459,28 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
                 continue;
             }
 
-            cmd = try!(link_to(cmd, target, cx, kind, LocalLib));
+            cmd = try!(link_to(cmd, package, target, cx, kind));
         }
     }
 
     return Ok(cmd);
 
-    fn link_to(mut cmd: ProcessBuilder, target: &Target,
-               cx: &Context, kind: Kind,
-               reason: LinkReason) -> CargoResult<ProcessBuilder> {
+    fn link_to(mut cmd: ProcessBuilder, pkg: &Package, target: &Target,
+               cx: &Context, kind: Kind) -> CargoResult<ProcessBuilder> {
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
-        let layout = cx.layout(match kind {
+        let layout = cx.layout(pkg, match kind {
             KindPlugin => KindPlugin,
             KindTarget if target.get_profile().is_plugin() => KindPlugin,
             KindTarget => KindTarget,
-        }).proxy();
+        });
 
         for filename in try!(cx.target_filenames(target)).iter() {
             let mut v = Vec::new();
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');
-            match reason {
-                Dependency => v.push_all(layout.deps().as_vec()),
-                LocalLib => v.push_all(layout.dest().as_vec()),
-            }
+            v.push_all(layout.root().as_vec());
             v.push(b'/');
             v.push_all(filename.as_bytes());
             cmd = cmd.arg("--extern").arg(v.as_slice());
@@ -507,7 +492,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
-    let layout = cx.layout(KindPlugin);
+    let layout = cx.layout(pkg, KindPlugin);
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
 

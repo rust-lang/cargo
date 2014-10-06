@@ -17,7 +17,6 @@ pub enum PlatformRequirement {
 }
 
 pub struct Context<'a, 'b> {
-    pub primary: bool,
     pub rustc_version: String,
     pub config: &'b mut Config<'b>,
     pub resolve: &'a Resolve,
@@ -59,7 +58,6 @@ impl<'a, 'b> Context<'a, 'b> {
             env: env,
             host: host,
             target: target,
-            primary: false,
             resolve: resolve,
             sources: sources,
             package_set: deps,
@@ -155,8 +153,10 @@ impl<'a, 'b> Context<'a, 'b> {
 
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
                                           Some(self.config.jobs().to_string()));
-        self.compilation.root_output = self.layout(KindTarget).proxy().dest().clone();
-        self.compilation.deps_output = self.layout(KindTarget).proxy().deps().clone();
+        self.compilation.root_output =
+                self.layout(pkg, KindTarget).proxy().dest().clone();
+        self.compilation.deps_output =
+                self.layout(pkg, KindTarget).proxy().deps().clone();
 
         return Ok(());
     }
@@ -186,19 +186,14 @@ impl<'a, 'b> Context<'a, 'b> {
             .map(|a| *a).unwrap_or(PlatformTarget)
     }
 
-    /// Switch this context over to being the primary compilation unit,
-    /// affecting the output of `dest()` and such.
-    pub fn primary(&mut self) {
-        self.primary = true;
-    }
-
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn layout(&self, kind: Kind) -> LayoutProxy {
+    pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
+        let primary = pkg.get_package_id() == self.resolve.root();
         match kind {
-            KindPlugin => LayoutProxy::new(&self.host, self.primary),
+            KindPlugin => LayoutProxy::new(&self.host, primary),
             KindTarget =>  LayoutProxy::new(self.target.as_ref()
                                                 .unwrap_or(&self.host),
-                                            self.primary)
+                                            primary)
         }
     }
 
