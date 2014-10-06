@@ -61,7 +61,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
         doc || !path
     };
 
-    debug!("fingerprint at: {}", new_loc.display());
+    info!("fingerprint at: {}", new_loc.display());
 
     // First bit of the freshness calculation, whether the dep-info file
     // indicates that the target is fresh.
@@ -72,7 +72,11 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     // Second bit of the freshness calculation, whether rustc itself, the
     // target are fresh, and the enabled set of features are all fresh.
     let features = cx.resolve.features(pkg.get_package_id());
-    let features = features.map(|s| s.iter().collect::<Vec<&String>>());
+    let features = features.map(|s| {
+        let mut v = s.iter().collect::<Vec<&String>>();
+        v.sort();
+        v
+    });
     let rustc_fingerprint = if use_pkg {
         mk_fingerprint(cx, &(target, try!(calculate_pkg_fingerprint(cx, pkg)),
                              features))
@@ -144,7 +148,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
     let old_loc = old.join("build");
     let new_loc = new.join("build");
 
-    debug!("fingerprint at: {}", new_loc.display());
+    info!("fingerprint at: {}", new_loc.display());
 
     let new_fingerprint = try!(calculate_build_cmd_fingerprint(cx, pkg));
     let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
@@ -244,10 +248,10 @@ fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
         match fs::stat(&pkg.get_root().join(file)) {
             Ok(stat) if stat.modified <= mtime => {}
             Ok(stat) => {
-                debug!("stale: {} -- {} vs {}", file, stat.modified, mtime);
+                info!("stale: {} -- {} vs {}", file, stat.modified, mtime);
                 return Ok(false)
             }
-            _ => { debug!("stale: {} -- missing", file); return Ok(false) }
+            _ => { info!("stale: {} -- missing", file); return Ok(false) }
         }
     }
 
