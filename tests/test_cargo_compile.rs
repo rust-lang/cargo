@@ -1643,3 +1643,22 @@ test!(dep_no_libs {
                        .with_stderr("\
 Package `bar v0.0.0 ([..])` has no library targets"));
 })
+
+test!(recompile_space_in_name {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [lib]
+            name = "foo"
+            path = "src/my lib.rs"
+        "#)
+        .file("src/my lib.rs", "");
+    assert_that(foo.cargo_process("build"), execs().with_status(0));
+    foo.root().move_into_the_past().assert();
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(""));
+})
