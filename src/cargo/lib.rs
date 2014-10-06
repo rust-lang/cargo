@@ -3,6 +3,7 @@
 
 #![feature(macro_rules, phase)]
 #![feature(default_type_params)]
+#![feature(if_let)]
 #![deny(bad_style)]
 
 extern crate libc;
@@ -143,12 +144,11 @@ pub fn process_executed<'a,
                             shell: &mut MultiShell) {
     match result {
         Err(e) => handle_error(e, shell),
-        Ok(encodable) => {
-            encodable.map(|encodable| {
-                let encoded = json::encode(&encodable);
-                println!("{}", encoded);
-            });
+        Ok(Some(encodable)) => {
+            let encoded = json::encode(&encodable);
+            println!("{}", encoded);
         }
+        _ => {}
     }
 }
 
@@ -189,12 +189,12 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
         if unknown {
             let _ = shell.error(error.to_string());
         }
-        error.detail().map(|detail| {
+        if let Some(detail) = error.detail() {
             let _ = shell.err().say(format!("{}", detail), BLACK);
-        });
-        error.cause().map(|err| {
+        }
+        if let Some(err) = error.cause() {
             let _ = handle_cause(err, shell);
-        });
+        }
         Ok(())
       });
 
@@ -205,7 +205,9 @@ fn handle_cause(err: &CargoError, shell: &mut MultiShell) {
     let _ = shell.err().say("\nCaused by:", BLACK);
     let _ = shell.err().say(format!("  {}", err.description()), BLACK);
 
-    err.cause().map(|e| handle_cause(e, shell));
+    if let Some(e) = err.cause() {
+        handle_cause(e, shell)
+    }
 }
 
 pub fn version() -> String {

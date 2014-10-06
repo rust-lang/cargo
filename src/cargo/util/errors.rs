@@ -179,7 +179,9 @@ impl Show for ProcessError {
             None => "never executed".to_string()
         };
         try!(write!(f, "{} (status={})", self.msg, exit));
-        self.output().map(|out| { let _ = write!(f, "{}", out); });
+        if let Some(out) = self.output() {
+            try!(write!(f, "{}", out));
+        }
         Ok(())
     }
 }
