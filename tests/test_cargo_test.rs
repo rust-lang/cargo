@@ -1025,3 +1025,31 @@ test!(almost_cyclic_but_not_quite {
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0));
 })
+
+test!(build_then_selective_test {
+    let p = project("a")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.b]
+            path = "b"
+        "#)
+        .file("src/lib.rs", "extern crate b;")
+        .file("src/main.rs", "extern crate b; extern crate a; fn main() {}")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    p.root().move_into_the_past().unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
+                 .arg("-p").arg("b"),
+                execs().with_status(0));
+})

@@ -82,7 +82,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     let is_rustc_fresh = try!(is_fresh(&old_loc, rustc_fingerprint.as_slice()));
 
     let (old_root, root) = {
-        let layout = cx.layout(kind);
+        let layout = cx.layout(pkg, kind);
         (layout.old_root().clone(), layout.root().clone())
     };
     let mut pairs = vec![(old_loc, new_loc.clone())];
@@ -151,10 +151,10 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
 
     let is_fresh = try!(is_fresh(&old_loc, new_fingerprint.as_slice()));
     let pairs = vec![(old_loc, new_loc.clone()),
-                     (cx.layout(kind).old_native(pkg),
-                      cx.layout(kind).native(pkg))];
+                     (cx.layout(pkg, kind).old_native(pkg),
+                      cx.layout(pkg, kind).native(pkg))];
 
-    let native_dir = cx.layout(kind).native(pkg);
+    let native_dir = cx.layout(pkg, kind).native(pkg);
     cx.compilation.native_dirs.insert(pkg.get_package_id().clone(), native_dir);
 
     Ok(prepare(is_fresh, new_loc, new_fingerprint, pairs))
@@ -193,7 +193,7 @@ fn prepare(is_fresh: bool, loc: Path, fingerprint: String,
 
 /// Return the (old, new) location for fingerprints for a package
 pub fn dirs(cx: &Context, pkg: &Package, kind: Kind) -> (Path, Path) {
-    let layout = cx.layout(kind);
+    let layout = cx.layout(pkg, kind);
     let layout = layout.proxy();
     (layout.old_fingerprint(pkg), layout.fingerprint(pkg))
 }
