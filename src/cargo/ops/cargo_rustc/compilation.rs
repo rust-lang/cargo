@@ -35,10 +35,13 @@ pub struct Compilation {
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
     pub extra_env: HashMap<String, Option<String>>,
+
+    /// Top-level package that was compiled
+    pub package: Package,
 }
 
 impl Compilation {
-    pub fn new() -> Compilation {
+    pub fn new(pkg: &Package) -> Compilation {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: HashMap::new(),
@@ -47,6 +50,7 @@ impl Compilation {
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
+            package: pkg.clone(),
         }
     }
 

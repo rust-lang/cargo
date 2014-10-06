@@ -1053,3 +1053,50 @@ test!(build_then_selective_test {
                  .arg("-p").arg("b"),
                 execs().with_status(0));
 })
+
+test!(selective_testing_with_docs {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// not valid rust
+            /// ```
+            pub fn foo() {}
+        "#)
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("d1/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
+                 .arg("-p").arg("d1"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} d1 v0.0.1 ({dir})
+{running} target[..]deps[..]d1[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} d1
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, dir = p.url(),
+   doctest = DOCTEST).as_slice()));
+})
