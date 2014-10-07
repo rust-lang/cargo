@@ -300,9 +300,19 @@ fn rustdoc(package: &Package, target: &Target,
     let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
     let rustdoc = process("rustdoc", package, cx).cwd(pkg_root.clone());
-    let rustdoc = rustdoc.arg(target.get_src_path())
+    let mut rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
+
+    match cx.resolve.features(package.get_package_id()) {
+        Some(features) => {
+            for feat in features.iter() {
+                rustdoc = rustdoc.arg("--cfg").arg(format!("feature=\"{}\"", feat));
+            }
+        }
+        None => {}
+    }
+
     let rustdoc = try!(build_deps_args(rustdoc, target, package, cx, kind));
 
     log!(5, "commands={}", rustdoc);
