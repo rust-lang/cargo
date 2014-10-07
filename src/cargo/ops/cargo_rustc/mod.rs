@@ -171,6 +171,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         let dst = match (target.is_lib(), target.get_profile().is_test()) {
             (_, true) => &mut tests,
             (true, _) => &mut libs,
+            (false, false) if target.get_profile().get_env() == "test" => &mut tests,
             (false, false) => &mut bins,
         };
         for (work, kind, desc) in work.into_iter() {

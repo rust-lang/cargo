@@ -1054,6 +1054,52 @@ test!(build_then_selective_test {
                 execs().with_status(0));
 })
 
+test!(example_dev_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dev-dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/lib.rs", r#"
+        "#)
+        .file("examples/e1.rs", r#"
+            extern crate bar;
+            fn main() { }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #![feature(macro_rules)]
+            // make sure this file takes awhile to compile
+            macro_rules! f0( () => (1u) )
+            macro_rules! f1( () => ({(f0!()) + (f0!())}) )
+            macro_rules! f2( () => ({(f1!()) + (f1!())}) )
+            macro_rules! f3( () => ({(f2!()) + (f2!())}) )
+            macro_rules! f4( () => ({(f3!()) + (f3!())}) )
+            macro_rules! f5( () => ({(f4!()) + (f4!())}) )
+            macro_rules! f6( () => ({(f5!()) + (f5!())}) )
+            macro_rules! f7( () => ({(f6!()) + (f6!())}) )
+            macro_rules! f8( () => ({(f7!()) + (f7!())}) )
+            macro_rules! f9( () => ({(f8!()) + (f8!())}) )
+            macro_rules! f10( () => ({(f9!()) + (f9!())}) )
+            macro_rules! f11( () => ({(f10!()) + (f10!())}) )
+            pub fn bar() {
+                f11!();
+            }
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+})
+
 test!(selective_testing_with_docs {
     let p = project("foo")
         .file("Cargo.toml", r#"
