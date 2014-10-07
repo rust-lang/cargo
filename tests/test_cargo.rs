@@ -17,7 +17,7 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
     mkdir_recursive(&Path::new(path.dirname())).assert();
     fs::File::create(&path).assert();
     let io::FileStat{perm, ..} = fs::stat(&path).assert();
-    fs::chmod(&path, io::OtherExecute | perm).assert();
+    fs::chmod(&path, io::OTHER_EXECUTE | perm).assert();
     proj
 }
 

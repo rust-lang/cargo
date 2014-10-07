@@ -1,5 +1,5 @@
 use std::fmt::{mod, Show, Formatter};
-use std::io::{UserDir};
+use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use serialize::{Encodable, Encoder};
 use url::Url;
@@ -183,7 +183,7 @@ impl GitRemote {
         if dst.exists() {
             try!(rmdir_recursive(dst));
         }
-        try!(mkdir_recursive(dst, UserDir));
+        try!(mkdir_recursive(dst, USER_DIR));
         let repo = try!(git2::Repository::init_bare(dst));
         try!(fetch(&repo, url.as_slice(), "refs/heads/*:refs/heads/*"));
         Ok(repo)
@@ -256,7 +256,7 @@ impl<'a> GitCheckout<'a> {
     fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
         let dirname = into.dir_path();
 
-        try!(mkdir_recursive(&dirname, UserDir).chain_error(|| {
+        try!(mkdir_recursive(&dirname, USER_DIR).chain_error(|| {
             human(format!("Couldn't mkdir {}", dirname.display()))
         }));
 

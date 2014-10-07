@@ -18,7 +18,7 @@ fn upload() -> Url { Url::from_file_path(&upload_path()).unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::UserDir).assert();
+    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
     File::create(&config).write_str(format!(r#"
         [registry]
             host = "{reg}"

@@ -98,7 +98,7 @@ impl Layout {
 
     pub fn prepare(&mut self) -> IoResult<()> {
         if !self.root.exists() {
-            try!(fs::mkdir_recursive(&self.root, io::UserRWX));
+            try!(fs::mkdir_recursive(&self.root, io::USER_RWX));
         }
 
         if self.old_deps.exists() {
@@ -123,10 +123,10 @@ impl Layout {
             try!(fs::rename(&self.fingerprint, &self.old_fingerprint));
         }
 
-        try!(fs::mkdir(&self.deps, io::UserRWX));
-        try!(fs::mkdir(&self.native, io::UserRWX));
-        try!(fs::mkdir(&self.fingerprint, io::UserRWX));
-        try!(fs::mkdir(&self.old_root, io::UserRWX));
+        try!(fs::mkdir(&self.deps, io::USER_RWX));
+        try!(fs::mkdir(&self.native, io::USER_RWX));
+        try!(fs::mkdir(&self.fingerprint, io::USER_RWX));
+        try!(fs::mkdir(&self.old_root, io::USER_RWX));
 
         for file in try!(fs::readdir(&self.root)).iter() {
             if !file.is_file() { continue }
