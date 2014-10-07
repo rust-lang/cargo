@@ -1,5 +1,6 @@
 use support::{project, execs, cargo_dir};
 use support::COMPILING;
+use support::paths::PathExt;
 use hamcrest::assert_that;
 
 fn setup() {
@@ -423,4 +424,41 @@ test!(union_features {
 {compiling} d1 v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
+})
+
+test!(many_features_no_rebuilds {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name    = "b"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+            features = ["fall"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name    = "a"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            ftest  = []
+            ftest2 = []
+            fall   = ["ftest", "ftest2"]
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} a v0.1.0 ({dir})
+{compiling} b v0.1.0 ({dir})
+", compiling = COMPILING, dir = p.url()).as_slice()));
+    p.root().move_into_the_past().unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(""));
 })
