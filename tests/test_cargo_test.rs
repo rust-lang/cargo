@@ -867,6 +867,43 @@ test!(test_no_run {
                        dir = p.url()).as_slice()));
 })
 
+test!(test_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "#[test] fn test1() { }")
+        .file("src/bin2.rs", "#[test] fn test2() { }");
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]bin2-[..]
+
+running 1 test
+test test2 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+       compiling = COMPILING,
+       running = RUNNING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("test").arg("--target-name").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+})
+
 test!(test_no_harness {
     let p = project("foo")
         .file("Cargo.toml", r#"

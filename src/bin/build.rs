@@ -21,6 +21,7 @@ Options:
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
     --target TRIPLE          Build for the target triple
+    --target-name NAME       Build target with NAME 
     --manifest-path PATH     Path to the manifest to compile
     -v, --verbose            Use verbose output
 
@@ -28,8 +29,12 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
-",  flag_jobs: Option<uint>, flag_target: Option<String>,
-    flag_manifest_path: Option<String>, flag_features: Vec<String>,
+",  
+    flag_jobs: Option<uint>, 
+    flag_target: Option<String>,
+    flag_target_name: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_features: Vec<String>,
     flag_package: Option<String>)
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
@@ -49,6 +54,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         shell: shell,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
+        target_name: options.flag_target_name.as_ref().map(|t| t.as_slice()),
         dev_deps: false,
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,

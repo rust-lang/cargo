@@ -38,6 +38,7 @@ pub struct CompileOptions<'a> {
     pub shell: &'a mut MultiShell<'a>,
     pub jobs: Option<uint>,
     pub target: Option<&'a str>,
+    pub target_name: Option<&'a str>,
     pub dev_deps: bool,
     pub features: &'a [String],
     pub no_default_features: bool,
@@ -47,14 +48,15 @@ pub struct CompileOptions<'a> {
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
                -> CargoResult<ops::Compilation> {
-    let CompileOptions { env, ref mut shell, jobs, target, spec,
+    let CompileOptions { env, ref mut shell, jobs, target, spec, target_name,
                          dev_deps, features, no_default_features } = *options;
+
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
         s.as_slice().split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
-    log!(4, "compile; manifest-path={}", manifest_path.display());
+    debug!("compile; manifest-path={}", manifest_path.display());
 
     if spec.is_some() && (no_default_features || features.len() > 0) {
         return Err(human("features cannot be modified when the main package \
@@ -116,13 +118,16 @@ pub fn compile(manifest_path: &Path,
         None => &package,
     };
 
-    let targets = to_build.get_targets().iter().filter(|target| {
-        match env {
-            // doc-all == document everything, so look for doc targets
-            "doc" | "doc-all" => target.get_profile().get_env() == "doc",
-            env => target.get_profile().get_env() == env,
-        }
-    }).collect::<Vec<&Target>>();
+    let targets = to_build.get_targets().iter()
+        .filter(|target| {
+            let name_eq = target_name.is_none() || (target_name.unwrap() == target.get_name());
+            match env {
+                // doc-all == document everything, so look for doc targets
+                "doc" | "doc-all" => target.get_profile().get_env() == "doc" && name_eq,
+                env               => target.get_profile().get_env() == env  && name_eq
+            }
+        })
+        .collect::<Vec<&Target>>();
 
     let ret = {
         let _p = profile::start("compiling");

@@ -4,7 +4,7 @@ use std::path;
 
 use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, is_not};
 use support::paths::PathExt;
 use cargo;
 use cargo::util::process;
@@ -35,6 +35,38 @@ test!(cargo_compile_manifest_path {
                  .cwd(p.root().dir_path()),
                 execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
+})
+
+test!(build_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "fn main() { }")
+        .file("src/bin2.rs", "fn main() { }");
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+",
+       compiling = COMPILING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("build").arg("--target-name").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+
+    assert_that(&prj.bin("bin1"), is_not(existing_file()));
+    assert_that(&prj.bin("bin2"), existing_file());
 })
 
 test!(cargo_compile_with_invalid_manifest {

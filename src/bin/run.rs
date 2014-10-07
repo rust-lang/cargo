@@ -19,12 +19,17 @@ Options:
     --features FEATURES     Space-separated list of features to also build
     --no-default-features   Do not build the `default` feature
     --target TRIPLE         Build for the target triple
+    --target-name NAME      Run target with NAME 
     --manifest-path PATH    Path to the manifest to execute
     -v, --verbose           Use verbose output
 
 All of the trailing arguments are passed as to the binary to run.
-",  flag_jobs: Option<uint>, flag_target: Option<String>,
-    flag_manifest_path: Option<String>, flag_features: Vec<String>)
+",  
+    flag_jobs: Option<uint>, 
+    flag_target: Option<String>,
+    flag_target_name: Option<String>,
+    flag_manifest_path: Option<String>, 
+    flag_features: Vec<String>)
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
@@ -35,6 +40,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         shell: shell,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
+        target_name: options.flag_target_name.as_ref().map(|s| s.as_slice()),
         dev_deps: true,
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,
