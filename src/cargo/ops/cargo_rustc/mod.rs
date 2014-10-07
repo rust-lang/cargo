@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
-use std::io::{fs, UserRWX};
+use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
 use std::os;
 
@@ -232,7 +232,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
             try!(if old_output.exists() {
                 fs::rename(&old_output, &output)
             } else {
-                fs::mkdir(&output, UserRWX)
+                fs::mkdir(&output, USER_RWX)
             }.chain_error(|| {
                 internal("failed to create output directory for build command")
             }));

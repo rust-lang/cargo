@@ -46,7 +46,7 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
         try!(HgRepo::init(path));
         try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
     } else if !opts.git && (opts.no_git || cfg.git == Some(false)) {
-        try!(fs::mkdir(path, io::UserRWX));
+        try!(fs::mkdir(path, io::USER_RWX));
     } else {
         try!(GitRepo::init(path));
         try!(File::create(&path.join(".gitignore")).write(ignore.as_bytes()));
@@ -75,7 +75,7 @@ version = "0.0.1"
 authors = ["{}"]
 "#, name, author).as_slice()));
 
-    try!(fs::mkdir(&path.join("src"), io::UserRWX));
+    try!(fs::mkdir(&path.join("src"), io::USER_RWX));
 
     if opts.bin {
         try!(File::create(&path.join("src/main.rs")).write_str("\

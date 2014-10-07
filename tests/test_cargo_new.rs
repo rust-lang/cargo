@@ -1,4 +1,4 @@
-use std::io::{fs, UserRWX, File, TempDir};
+use std::io::{fs, USER_RWX, File, TempDir};
 use std::io::fs::PathExtensions;
 use std::os;
 
@@ -93,7 +93,7 @@ Usage:
 
 test!(existing {
     let dst = paths::root().join("foo");
-    fs::mkdir(&dst, UserRWX).assert();
+    fs::mkdir(&dst, USER_RWX).assert();
     assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
                        .with_stderr(format!("Destination `{}` already exists\n",
@@ -132,7 +132,7 @@ test!(author_prefers_cargo {
     my_process("git").args(["config", "--global", "user.email", "baz"])
                      .exec().assert();
     let root = paths::root();
-    fs::mkdir(&root.join(".cargo"), UserRWX).assert();
+    fs::mkdir(&root.join(".cargo"), USER_RWX).assert();
     File::create(&root.join(".cargo/config")).write_str(r#"
         [cargo-new]
         name = "new-foo"
@@ -151,7 +151,7 @@ test!(author_prefers_cargo {
 
 test!(git_prefers_command_line {
     let root = paths::root();
-    fs::mkdir(&root.join(".cargo"), UserRWX).assert();
+    fs::mkdir(&root.join(".cargo"), USER_RWX).assert();
     File::create(&root.join(".cargo/config")).write_str(r#"
         [cargo-new]
         git = false

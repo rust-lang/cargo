@@ -11,7 +11,7 @@ pub fn repo(p: &Path) -> RepoBuilder { RepoBuilder::init(p) }
 
 impl RepoBuilder {
     pub fn init(p: &Path) -> RepoBuilder {
-        fs::mkdir_recursive(&p.dir_path(), io::UserDir).unwrap();
+        fs::mkdir_recursive(&p.dir_path(), io::USER_DIR).unwrap();
         let repo = git2::Repository::init(p).unwrap();
         {
             let mut config = repo.config().unwrap();
@@ -30,7 +30,7 @@ impl RepoBuilder {
     pub fn nocommit_file<T: Str>(self, path: &str,
                                  contents: T) -> RepoBuilder {
         let dst = self.repo.path().dir_path().join(path);
-        fs::mkdir_recursive(&dst.dir_path(), io::UserDir).unwrap();
+        fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).unwrap();
         File::create(&dst).write_str(contents.as_slice()).unwrap();
         self
     }

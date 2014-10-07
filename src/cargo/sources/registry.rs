@@ -94,7 +94,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             Err(..) => {}
         }
 
-        try!(fs::mkdir_recursive(&self.checkout_path, io::UserDir));
+        try!(fs::mkdir_recursive(&self.checkout_path, io::USER_DIR));
         let _ = fs::rmdir_recursive(&self.checkout_path);
         let repo = try!(git2::Repository::init(&self.checkout_path));
         Ok(repo)
@@ -114,7 +114,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         if dst.exists() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
 
-        try!(fs::mkdir_recursive(&dst.dir_path(), io::UserDir));
+        try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
@@ -159,7 +159,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                                              pkg.get_version()));
         if dst.join(".cargo-ok").exists() { return Ok(dst) }
 
-        try!(fs::mkdir_recursive(&dst.dir_path(), io::UserDir));
+        try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
         let f = try!(File::open(&tarball));
         let mut gz = try!(GzDecoder::new(f));
         // TODO: don't read into memory (Archive requires Seek)
@@ -168,7 +168,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         for file in try!(tar.files()) {
             let mut file = try!(file);
             let dst = dst.dir_path().join(file.filename_bytes());
-            try!(fs::mkdir_recursive(&dst.dir_path(), io::UserDir));
+            try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
             let mut dst = try!(File::create(&dst));
             try!(io::util::copy(&mut file, &mut dst));
         }

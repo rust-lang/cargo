@@ -48,7 +48,7 @@ impl PathExt for Path {
                 e => return e,
             }
             for path in try!(fs::walk_dir(self)) {
-                try!(fs::chmod(&path, io::UserRWX));
+                try!(fs::chmod(&path, io::USER_RWX));
             }
             fs::rmdir_recursive(self)
         } else {
@@ -57,7 +57,7 @@ impl PathExt for Path {
     }
 
     fn mkdir_p(&self) -> IoResult<()> {
-        fs::mkdir_recursive(self, io::UserDir)
+        fs::mkdir_recursive(self, io::USER_DIR)
     }
 
     fn move_into_the_past(&self) -> IoResult<()> {
@@ -83,7 +83,7 @@ impl PathExt for Path {
                 Err(io::IoError { kind: io::PermissionDenied, .. }) => {}
                 e => return e,
             }
-            try!(fs::chmod(path, stat.perm | io::UserWrite));
+            try!(fs::chmod(path, stat.perm | io::USER_WRITE));
             fs::change_file_times(path, newtime, newtime)
         }
     }

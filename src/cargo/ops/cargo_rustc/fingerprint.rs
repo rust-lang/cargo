@@ -1,7 +1,7 @@
 use std::collections::hashmap::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
-use std::io::{fs, File, UserRWX, BufferedReader};
+use std::io::{fs, File, USER_RWX, BufferedReader};
 
 use core::{Package, Target, PathKind};
 use util;
@@ -166,8 +166,8 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
     let (_, new1) = dirs(cx, pkg, kind);
     let new2 = new1.clone();
 
-    let work1 = proc() { try!(fs::mkdir(&new1, UserRWX)); Ok(()) };
-    let work2 = proc() { try!(fs::mkdir(&new2, UserRWX)); Ok(()) };
+    let work1 = proc() { try!(fs::mkdir(&new1, USER_RWX)); Ok(()) };
+    let work2 = proc() { try!(fs::mkdir(&new2, USER_RWX)); Ok(()) };
 
     (work1, work2)
 }

@@ -24,7 +24,7 @@ fn cksum(s: &[u8]) -> String {
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::UserDir).assert();
+    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
     File::create(&config).write_str(format!(r#"
         [registry]
             host = "{reg}"
@@ -62,7 +62,7 @@ fn setup() {
     }
     fn dl(path: &str, contents: &[u8]) -> String {
         let dst = dl_path().join(path);
-        fs::mkdir_recursive(&dst.dir_path(), io::UserDir).assert();
+        fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).assert();
         File::create(&dst).write(contents).unwrap();
         cksum(contents)
     }

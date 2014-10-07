@@ -1,4 +1,4 @@
-use std::io::{fs, File, UserRWX};
+use std::io::{fs, File, USER_RWX};
 
 use support::{ResultTest, project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
@@ -527,7 +527,7 @@ test!(override_relative {
         "#)
        .file("src/lib.rs", "");
 
-    fs::mkdir(&paths::root().join(".cargo"), UserRWX).assert();
+    fs::mkdir(&paths::root().join(".cargo"), USER_RWX).assert();
     File::create(&paths::root().join(".cargo/config")).write_str(r#"
         paths = ["bar"]
     "#).assert();

@@ -183,7 +183,7 @@ pub fn project(name: &str) -> ProjectBuilder {
 // === Helpers ===
 
 pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
-    fs::mkdir_recursive(path, io::UserDir)
+    fs::mkdir_recursive(path, io::USER_DIR)
         .with_err_msg(format!("could not create directory; path={}",
                               path.display()))
 }
