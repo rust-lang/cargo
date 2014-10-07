@@ -15,7 +15,6 @@ pub fn run_tests(manifest_path: &Path,
                  test_args: &[String]) -> CargoResult<Option<ProcessError>> {
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
-    let package = try!(source.get_root_package());
 
     let mut compile = try!(ops::compile(manifest_path, &mut options.compile_opts));
     if options.no_run { return Ok(None) }
@@ -27,7 +26,7 @@ pub fn run_tests(manifest_path: &Path,
             Some(path) => path,
             None => exe.clone(),
         };
-        let cmd = compile.process(exe, &package).args(test_args);
+        let cmd = compile.process(exe, &compile.package).args(test_args);
         try!(options.compile_opts.shell.concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));
@@ -51,12 +50,12 @@ pub fn run_tests(manifest_path: &Path,
 
     for (lib, name) in libs {
         try!(options.compile_opts.shell.status("Doc-tests", name));
-        let mut p = compile.process("rustdoc", &package)
+        let mut p = compile.process("rustdoc", &compile.package)
                            .arg("--test").arg(lib)
                            .arg("--crate-name").arg(name)
                            .arg("-L").arg(&compile.root_output)
                            .arg("-L").arg(&compile.deps_output)
-                           .cwd(package.get_root());
+                           .cwd(compile.package.get_root());
 
         // FIXME(rust-lang/rust#16272): this should just always be passed.
         if test_args.len() > 0 {

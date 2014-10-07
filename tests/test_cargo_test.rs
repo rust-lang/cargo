@@ -1122,8 +1122,12 @@ test!(selective_testing_with_docs {
             name = "d1"
             version = "0.0.1"
             authors = []
+
+            [lib]
+            name = "d1"
+            path = "d1.rs"
         "#)
-        .file("d1/src/lib.rs", "");
+        .file("d1/d1.rs", "");
     p.build();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("test")
