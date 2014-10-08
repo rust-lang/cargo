@@ -462,3 +462,18 @@ test!(many_features_no_rebuilds {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
 })
+
+// Tests that all cmd lines work with `--features ""`
+test!(empty_features {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("--features").arg(""),
+                execs().with_status(0));
+})
