@@ -19,7 +19,7 @@ fn dl_url() -> Url { Url::from_file_path(&dl_path()).unwrap() }
 fn cksum(s: &[u8]) -> String {
     let mut sha = Sha256::new();
     sha.update(s);
-    sha.final().to_hex()
+    sha.finish().to_hex()
 }
 
 fn setup() {
