@@ -41,7 +41,7 @@ fn add(repo: &git2::Repository) {
         submodule.add_to_index(false).unwrap();
     }
     let mut index = repo.index().unwrap();
-    index.add_all(&["*"], git2::AddDefault, Some(|a: &[u8], _b: &[u8]| {
+    index.add_all(&["*"], git2::ADD_DEFAULT, Some(|a: &[u8], _b: &[u8]| {
         if s.iter().any(|s| s.path().as_vec() == a) {1} else {0}
     })).unwrap();
     index.write().unwrap();

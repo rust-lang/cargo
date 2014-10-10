@@ -2,11 +2,11 @@
 name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
- "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#d687ccb2fdc8d256555a8c9d4c92f08342135e07)",
+ "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc22ffbc99d7ea8e97dfc7ab0b91a)",
  "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#21ce1190ef7631f71e52de5e13eb4d131564b82e)",
  "docopt_macros 0.6.4 (git+https://github.com/docopt/docopt.rs#21ce1190ef7631f71e52de5e13eb4d131564b82e)",
- "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#9be9775d3f50e961a2f99728b3de8d819f3939be)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#602d1c5ceffc20fbbb16364b142c32f8b3bdb177)",
+ "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4bcd195f76291ea390)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#27338cbd4736d3c8146294fc090c6f8f06c32d72)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98)",
  "semver 0.1.0 (git+https://github.com/rust-lang/semver#5dee918159d4e3d84c1ee54cf6a5305e6f7bd557)",
@@ -18,9 +18,9 @@ dependencies = [
 [[package]]
 name = "curl"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#d687ccb2fdc8d256555a8c9d4c92f08342135e07"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc22ffbc99d7ea8e97dfc7ab0b91a"
 dependencies = [
- "curl-sys 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#d687ccb2fdc8d256555a8c9d4c92f08342135e07)",
+ "curl-sys 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc22ffbc99d7ea8e97dfc7ab0b91a)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#0afbf50ba545ac379292b6040330f2903ca891d2)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#55b18b796ef2cef5490069dd450c60c2cc2c0c1b)",
 ]
@@ -28,7 +28,7 @@ dependencies = [
 [[package]]
 name = "curl-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#d687ccb2fdc8d256555a8c9d4c92f08342135e07"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc22ffbc99d7ea8e97dfc7ab0b91a"
 
 [[package]]
 name = "docopt"
@@ -51,14 +51,14 @@ source = "git+https://github.com/lifthrasiir/rust-encoding#ff55916fec8b5bf8667a7
 [[package]]
 name = "flate2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/flate2-rs#9be9775d3f50e961a2f99728b3de8d819f3939be"
+source = "git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4bcd195f76291ea390"
 
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#602d1c5ceffc20fbbb16364b142c32f8b3bdb177"
+source = "git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d"
 dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#602d1c5ceffc20fbbb16364b142c32f8b3bdb177)",
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#55b18b796ef2cef5490069dd450c60c2cc2c0c1b)",
 ]
 
@@ -75,7 +75,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b86
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#602d1c5ceffc20fbbb16364b142c32f8b3bdb177"
+source = "git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d"
 dependencies = [
  "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#80e71a3021618eb05656c58fb7c5ef5f12bc747f)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#0afbf50ba545ac379292b6040330f2903ca891d2)",
