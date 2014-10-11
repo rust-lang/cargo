@@ -457,6 +457,9 @@ fn build_features(s: &Summary, method: ResolveMethod)
                    deps: &mut HashSet<String>,
                    used: &mut HashSet<String>,
                    visited: &mut HashSet<String>) -> CargoResult<()> {
+        if feat.is_empty() {
+            return Ok(())
+        }
         if !visited.insert(feat.to_string()) {
             return Err(human(format!("Cyclic feature dependency: feature `{}` \
                                       depends on itself", feat)))

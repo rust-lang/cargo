@@ -80,7 +80,7 @@ impl<'a> PackageRegistry<'a> {
         Ok(())
     }
 
-    fn load(&mut self, source_id: &SourceId, override: bool) -> CargoResult<()> {
+    fn load(&mut self, source_id: &SourceId, is_override: bool) -> CargoResult<()> {
         (|| {
             let mut source = source_id.load(self.config);
 
@@ -89,7 +89,7 @@ impl<'a> PackageRegistry<'a> {
             try!(source.update());
             drop(p);
 
-            if override {
+            if is_override {
                 self.overrides.push(source_id.clone());
             }
 
@@ -169,7 +169,7 @@ pub mod test {
             self
         }
 
-        pub fn override(mut self, summary: Summary) -> RegistryBuilder {
+        pub fn add_override(mut self, summary: Summary) -> RegistryBuilder {
             self.overrides.push(summary);
             self
         }

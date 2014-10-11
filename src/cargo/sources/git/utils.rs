@@ -378,14 +378,14 @@ fn with_authentication<T>(url: &str,
     cred_helper.config(cfg);
     let mut cred_error = false;
     let ret = f(|url, username, allowed| {
-        let creds = if allowed.contains(git2::SshKey) {
+        let creds = if allowed.contains(git2::SSH_KEY) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())
                                .unwrap_or("git".to_string());
             git2::Cred::ssh_key_from_agent(user.as_slice())
-        } else if allowed.contains(git2::UserPassPlaintext) {
+        } else if allowed.contains(git2::USER_PASS_PLAINTEXT) {
             git2::Cred::credential_helper(cfg, url, username)
-        } else if allowed.contains(git2::Default) {
+        } else if allowed.contains(git2::DEFAULT) {
             git2::Cred::default()
         } else {
             Err(git2::Error::from_str("no authentication available"))

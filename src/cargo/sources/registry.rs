@@ -138,7 +138,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let actual = {
             let mut state = Sha256::new();
             state.update(resp.get_body());
-            state.final()
+            state.finish()
         };
         if actual.as_slice().to_hex() != *expected {
             return Err(human(format!("Failed to verify the checksum of `{}`",
