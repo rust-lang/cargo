@@ -14,16 +14,16 @@ Usage:
     cargo build [options]
 
 Options:
-    -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to build
-    -j N, --jobs N           The number of jobs to run in parallel
-    --release                Build artifacts in release mode, with optimizations
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --target-name NAME       Build target with NAME 
-    --manifest-path PATH     Path to the manifest to compile
-    -v, --verbose            Use verbose output
+    -h, --help                   Print this message
+    -p SPEC, --package SPEC      Package to build
+    -j N, --jobs N               The number of jobs to run in parallel
+    --release                    Build artifacts in release mode, with optimizations
+    --features FEATURES          Space-separated list of features to also build
+    --no-default-features        Do not build the `default` feature
+    --target TRIPLE              Build for the target triple
+    -t NAME, --target-name NAME  Build target with NAME 
+    --manifest-path PATH         Path to the manifest to compile
+    -v, --verbose                Use verbose output
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the

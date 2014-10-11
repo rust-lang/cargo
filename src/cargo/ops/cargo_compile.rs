@@ -129,6 +129,13 @@ pub fn compile(manifest_path: &Path,
         })
         .collect::<Vec<&Target>>();
 
+    match target_name {
+        Some(name) if targets.len() == 0 => {
+            return Err(human(format!("Could not find target with name `{}`", name)));
+        }
+        _ => { } 
+    }
+
     let ret = {
         let _p = profile::start("compiling");
         let mut config = try!(Config::new(*shell, jobs, target));

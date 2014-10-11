@@ -67,7 +67,7 @@ test!(exit_code {
                 execs().with_status(2));
 })
 
-test!(build_target_name {
+test!(run_target_name {
     let prj = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -100,6 +100,33 @@ test!(build_target_name {
 
     assert_that(&prj.bin("bin1"), is_not(existing_file()));
     assert_that(&prj.bin("bin2"), existing_file());
+})
+
+test!(run_nonexistent_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "fn main() { }")
+        .file("src/bin2.rs", "fn main() { }");
+
+    let expected_stderr = format!("\
+a bin target must be available for `cargo run`
+");
+
+    assert_that(prj.cargo_process("run").arg("-t").arg("nonexistent"),
+        execs().with_status(101).with_stderr(expected_stderr.as_slice()));
 })
 
 test!(no_main_file {
