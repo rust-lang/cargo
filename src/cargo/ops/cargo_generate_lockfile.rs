@@ -66,9 +66,10 @@ pub fn update_lockfile(manifest_path: &Path,
             let mut to_avoid = HashSet::new();
             let dep = try!(resolve.query(name));
             if opts.aggressive {
-                fill_with_deps(&resolve, dep, &mut to_avoid);
+                let mut visited = HashSet::new();
+                fill_with_deps(&resolve, dep, &mut to_avoid, &mut visited);
             } else {
-                to_avoid.insert(dep);
+                to_avoid.insert(dep.get_source_id());
                 match opts.precise {
                     Some(precise) => {
                         sources.push(dep.get_source_id().clone()
@@ -78,8 +79,9 @@ pub fn update_lockfile(manifest_path: &Path,
                 }
             }
             sources.extend(resolve.iter()
-                                  .filter(|p| !to_avoid.contains(p))
-                                  .map(|p| p.get_source_id().clone()));
+                                  .map(|p| p.get_source_id())
+                                  .filter(|s| !to_avoid.contains(s))
+                                  .map(|s| s.clone()));
         }
         None => sources.extend(package.get_source_ids().into_iter()),
     }
@@ -93,12 +95,14 @@ pub fn update_lockfile(manifest_path: &Path,
     return Ok(());
 
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
-                          set: &mut HashSet<&'a PackageId>) {
-        if !set.insert(dep) { return }
+                          set: &mut HashSet<&'a SourceId>,
+                          visited: &mut HashSet<&'a PackageId>) {
+        if !visited.insert(dep) { return }
+        set.insert(dep.get_source_id());
         match resolve.deps(dep) {
             Some(mut deps) => {
                 for dep in deps {
-                    fill_with_deps(resolve, dep, set);
+                    fill_with_deps(resolve, dep, set, visited);
                 }
             }
             None => {}
