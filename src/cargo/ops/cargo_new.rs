@@ -29,6 +29,12 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
                                  path.display())))
     }
     let name = path.filename_str().unwrap();
+    for c in name.chars() {
+        if c.is_alphanumeric() { continue }
+        if c == '_' || c == '-' { continue }
+        return Err(human(format!("Invalid character `{}` in crate name: `{}`",
+                                 c, name).as_slice()));
+    }
     mk(&path, name, &opts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))

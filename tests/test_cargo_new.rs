@@ -100,6 +100,12 @@ test!(existing {
                                             dst.display())));
 })
 
+test!(invalid_characters {
+    assert_that(cargo_process("new").arg("foo.rs"),
+                execs().with_status(101)
+                       .with_stderr("Invalid character `.` in crate name: `foo.rs`"));
+})
+
 test!(finds_author_user {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
