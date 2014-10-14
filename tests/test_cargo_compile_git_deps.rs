@@ -1387,3 +1387,43 @@ following:
   foo:0.[..].0
 "));
 })
+
+test!(update_one_dep_in_repo_with_many_deps {
+    let foo = git_repo("foo", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("a/src/lib.rs", "")
+    }).assert();
+
+    let p = project("project")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "project"
+            version = "0.5.0"
+            authors = []
+            [dependencies.foo]
+            git = '{}'
+            [dependencies.a]
+            git = '{}'
+        "#, foo.url(), foo.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("generate-lockfile"), execs().with_status(0));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("foo"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+Updating git repository `{}`
+", foo.url())));
+})
