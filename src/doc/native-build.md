@@ -127,10 +127,11 @@ int foo() { return 1; }
 
 ```rust
 // src/main.rs
+extern crate libc;
 
 #[link(name = "hello", kind = "static")]
 extern {
-    fn foo() -> i32;
+    fn foo() -> libc::c_int;
 }
 
 fn main() {
