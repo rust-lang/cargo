@@ -115,8 +115,8 @@ CFLAGS += -m64 -fPIC
 endif
 
 all:
-    $(CC) $(CFLAGS) hello.c -c -o $(OUT_DIR)/hello.o
-    $(AR) crus $(OUT_DIR)/libhello.a $(OUT_DIR)/hello.o
+    $(CC) $(CFLAGS) hello.c -c -o "$$OUT_DIR"/hello.o
+    $(AR) crus "$$OUT_DIR"/libhello.a "$$OUT_DIR"/hello.o
 
 ```
 
