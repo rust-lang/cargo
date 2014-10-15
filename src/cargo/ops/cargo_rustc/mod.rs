@@ -366,7 +366,8 @@ fn build_base_args(cx: &Context,
         let root_profile = target.get_profile();
         if root_profile.get_env() != profile.get_env() { continue }
         profile = profile.opt_level(root_profile.get_opt_level())
-                         .debug(root_profile.get_debug());
+                         .debug(root_profile.get_debug())
+                         .rpath(root_profile.get_rpath())
     }
 
     if profile.get_opt_level() != 0 {
@@ -403,6 +404,10 @@ fn build_base_args(cx: &Context,
             cmd = cmd.arg("-C").arg(format!("extra-filename={}", m.extra_filename));
         }
         None => {}
+    }
+
+    if profile.get_rpath() {
+        cmd = cmd.arg("-C").arg("rpath");
     }
 
     return cmd;
