@@ -111,6 +111,7 @@ pub struct Profile {
     opt_level: uint,
     codegen_units: Option<uint>,    // None = use rustc default
     debug: bool,
+    rpath: bool,
     test: bool,
     doctest: bool,
     doc: bool,
@@ -126,6 +127,7 @@ impl Profile {
             opt_level: 0,
             codegen_units: None,
             debug: false,
+            rpath: false,
             test: false,
             doc: false,
             dest: None,
@@ -218,6 +220,10 @@ impl Profile {
         self.debug
     }
 
+    pub fn get_rpath(&self) -> bool {
+        self.rpath
+    }
+
     pub fn get_env(&self) -> &str {
         self.env.as_slice()
     }
@@ -238,6 +244,11 @@ impl Profile {
 
     pub fn debug(mut self, debug: bool) -> Profile {
         self.debug = debug;
+        self
+    }
+
+    pub fn rpath(mut self, rpath: bool) -> Profile {
+        self.rpath = rpath;
         self
     }
 
@@ -275,6 +286,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             opt_level,
             codegen_units,
             debug,
+            rpath,
             plugin,
             dest: ref dest,
             harness: harness,
@@ -287,7 +299,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             test: _,
             doctest: _,
         } = *self;
-        (opt_level, codegen_units, debug, plugin, dest, harness).hash(into)
+        (opt_level, codegen_units, debug, rpath, plugin, dest, harness).hash(into)
     }
 }
 

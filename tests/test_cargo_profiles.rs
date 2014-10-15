@@ -21,6 +21,7 @@ test!(profile_overrides {
             [profile.dev]
             opt-level = 1
             debug = false
+            rpath = true
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
@@ -31,6 +32,7 @@ test!(profile_overrides {
         --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
+        -C rpath \
         --out-dir {dir}{sep}target \
         --dep-info [..] \
         -L {dir}{sep}target \
