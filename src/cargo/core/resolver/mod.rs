@@ -11,6 +11,7 @@ use util::profile;
 use util::graph::{Nodes, Edges};
 
 pub use self::encode::{EncodableResolve, EncodableDependency, EncodablePackageId};
+pub use self::encode::Metadata;
 
 mod encode;
 
@@ -23,7 +24,8 @@ mod encode;
 pub struct Resolve {
     graph: Graph<PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
-    root: PackageId
+    root: PackageId,
+    metadata: Option<Metadata>,
 }
 
 pub enum ResolveMethod<'a> {
@@ -37,7 +39,11 @@ impl Resolve {
     fn new(root: PackageId) -> Resolve {
         let mut g = Graph::new();
         g.add(root.clone(), []);
-        Resolve { graph: g, root: root, features: HashMap::new() }
+        Resolve { graph: g, root: root, features: HashMap::new(), metadata: None }
+    }
+
+    pub fn copy_metadata(&mut self, other: &Resolve) {
+        self.metadata = other.metadata.clone();
     }
 
     pub fn iter(&self) -> Nodes<PackageId> {

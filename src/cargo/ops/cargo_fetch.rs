@@ -32,14 +32,19 @@ pub fn resolve_and_fetch(registry: &mut PackageRegistry, package: &Package)
 
     let lockfile = package.get_manifest_path().dir_path().join("Cargo.lock");
     let source_id = package.get_package_id().get_source_id();
-    match try!(ops::load_lockfile(&lockfile, source_id)) {
-        Some(r) => try!(add_lockfile_sources(registry, package, &r)),
+    let previous_resolve = try!(ops::load_lockfile(&lockfile, source_id));
+    match previous_resolve {
+        Some(ref r) => try!(add_lockfile_sources(registry, package, r)),
         None => try!(registry.add_sources(package.get_source_ids())),
     }
 
-    let resolved = try!(resolver::resolve(package.get_summary(),
-                                          resolver::ResolveEverything,
-                                          registry));
+    let mut resolved = try!(resolver::resolve(package.get_summary(),
+                                              resolver::ResolveEverything,
+                                              registry));
+    match previous_resolve {
+        Some(ref prev) => resolved.copy_metadata(prev),
+        None => {}
+    }
     try!(ops::write_resolve(package, &resolved));
     Ok(resolved)
 }
