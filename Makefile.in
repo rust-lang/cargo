@@ -149,10 +149,6 @@ distcheck-$(1): dist-$(1)
 $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-manifest-$(1)
 	tar -czvf $$@ -C $$(@D) $$(PKG_NAME)-$(1)
 
-ifeq (root user, $$(USER) $$(patsubst %,user,$$(SUDO_USER)))
-prepare-manifest-$(1):
-	@sudo -u "$$$$SUDO_USER" $$(MAKE) prepare-manifest-$(1)
-else
 prepare-manifest-$(1):
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ] || echo 'Please run `make` first'
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
@@ -172,7 +168,6 @@ prepare-manifest-$(1):
 		$$(PKGDIR_$(1))
 	mv $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in \
 		$$(PKGDIR_$(1))/lib/cargo/manifest.in
-endif
 
 install-$(1): prepare-manifest-$(1)
 	$$(PKGDIR_$(1))/install.sh \
