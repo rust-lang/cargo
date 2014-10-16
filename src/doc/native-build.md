@@ -84,6 +84,10 @@ commands.
                          profile currently being built.
 * `PROFILE` - name of the profile currently being built (see
               [profiles][profile]).
+* `CARGO_FEATURE_<name>` - For each activated feature of the package being
+                           built, this environment variable will be present
+                           where `<name>` is the name of the feature uppercased
+                           and having `-` translated to `_`.
 
 [profile]: manifest.html#the-[profile.*]-sections
 
