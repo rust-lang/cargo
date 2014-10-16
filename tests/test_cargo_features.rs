@@ -137,6 +137,76 @@ Dev-dependencies are not allowed to be optional: `bar`
 ").as_slice()));
 })
 
+test!(invalid6 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            foo = ["bar/baz"]
+        "#)
+        .file("src/main.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+                execs().with_status(101).with_stderr(format!("\
+Cargo.toml is not a valid manifest
+
+Feature `foo` requires `bar` which is not an optional dependency
+").as_slice()));
+})
+
+test!(invalid7 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            foo = ["bar/baz"]
+            bar = []
+        "#)
+        .file("src/main.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+                execs().with_status(101).with_stderr(format!("\
+Cargo.toml is not a valid manifest
+
+Feature `foo` requires `bar` which is not an optional dependency
+").as_slice()));
+})
+
+test!(invalid8 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            features = ["foo/bar"]
+        "#)
+        .file("src/main.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+                execs().with_status(101).with_stderr(format!("\
+features in dependencies cannot enable features in other dependencies: `foo/bar`
+").as_slice()));
+})
+
 test!(no_feature_doesnt_build {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -475,5 +545,42 @@ test!(empty_features {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build").arg("--features").arg(""),
+                execs().with_status(0));
+})
+
+// Tests that all cmd lines work with `--features ""`
+test!(transitive_features {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            foo = ["bar/baz"]
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "
+            extern crate bar;
+            fn main() { bar::baz(); }
+        ")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            baz = []
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #[cfg(feature = "baz")]
+            pub fn baz() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(0));
 })

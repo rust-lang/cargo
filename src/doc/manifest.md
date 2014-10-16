@@ -157,6 +157,11 @@ default = ["jquery", "uglifier"]
 # requirements to the feature in the future.
 secure-password = ["bcrypt"]
 
+# Features can be used to reexport features of other packages.
+# The `session` feature of package `awesome` will ensure that the
+# `session` feature of the package `cookie` is also enabled.
+session = ["cookie/session"]
+
 [dependencies]
 
 # These packages are mandatory and form the core of this
