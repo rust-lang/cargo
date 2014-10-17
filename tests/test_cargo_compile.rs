@@ -1091,9 +1091,7 @@ test!(self_dependency {
         "#)
         .file("src/test.rs", "fn main() {}");
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-cyclic package dependency: package `test v0.0.0 ([..])` depends on itself
-"));
+                execs().with_status(0));
 })
 
 #[cfg(not(windows))]

@@ -221,35 +221,47 @@ fn activate_deps<R: Registry>(cx: Context,
         log!(5, "{}[{}]>{} trying {}", parent.get_name(), cur, dep.get_name(),
              candidate.get_version());
         let mut my_cx = cx.clone();
-        {
+        let early_return = {
             my_cx.resolve.graph.link(parent.get_package_id().clone(),
                                      candidate.get_package_id().clone());
             let prev = match my_cx.activations.entry(key.clone()) {
                 Occupied(e) => e.into_mut(),
                 Vacant(e) => e.set(Vec::new()),
             };
-            if !prev.iter().any(|c| c == candidate) {
+            if prev.iter().any(|c| c == candidate) {
+                match cx.resolve.features(candidate.get_package_id()) {
+                    Some(prev_features) => {
+                        features.iter().all(|f| prev_features.contains(f))
+                    }
+                    None => features.len() == 0,
+                }
+            } else {
                 my_cx.resolve.graph.add(candidate.get_package_id().clone(), []);
                 prev.push(candidate.clone());
+                false
             }
-        }
+        };
 
-        // Dependency graphs are required to be a DAG. Non-transitive
-        // dependencies (dev-deps), however, can never introduce a cycle, so we
-        // skip them.
-        if dep.is_transitive() &&
-           !cx.visited.borrow_mut().insert(candidate.get_package_id().clone()) {
-            return Err(human(format!("cyclic package dependency: package `{}` \
-                                      depends on itself",
-                                     candidate.get_package_id())))
-        }
-        let my_cx = try!(activate(my_cx, registry, &**candidate, method));
-        if dep.is_transitive() {
-            cx.visited.borrow_mut().remove(candidate.get_package_id());
-        }
-        let my_cx = match my_cx {
-            Ok(cx) => cx,
-            Err(e) => { last_err = Some(e); continue }
+        let my_cx = if early_return {
+            my_cx
+        } else {
+            // Dependency graphs are required to be a DAG. Non-transitive
+            // dependencies (dev-deps), however, can never introduce a cycle, so we
+            // skip them.
+            if dep.is_transitive() &&
+               !cx.visited.borrow_mut().insert(candidate.get_package_id().clone()) {
+                return Err(human(format!("cyclic package dependency: package `{}` \
+                                          depends on itself",
+                                         candidate.get_package_id())))
+            }
+            let my_cx = try!(activate(my_cx, registry, &**candidate, method));
+            if dep.is_transitive() {
+                cx.visited.borrow_mut().remove(candidate.get_package_id());
+            }
+            match my_cx {
+                Ok(cx) => cx,
+                Err(e) => { last_err = Some(e); continue }
+            }
         };
         match try!(activate_deps(my_cx, registry, parent, deps, cur + 1)) {
             Ok(cx) => return Ok(Ok(cx)),
