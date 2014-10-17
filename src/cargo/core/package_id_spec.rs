@@ -49,7 +49,7 @@ impl PackageIdSpec {
         PackageIdSpec {
             name: package_id.get_name().to_string(),
             version: Some(package_id.get_version().clone()),
-            url: Some(package_id.get_source_id().url.clone()),
+            url: Some(package_id.get_source_id().get_url().clone()),
         }
     }
 
@@ -110,7 +110,7 @@ impl PackageIdSpec {
         }
 
         match self.url {
-            Some(ref u) => *u == package_id.get_source_id().url,
+            Some(ref u) => u == package_id.get_source_id().get_url(),
             None => true
         }
     }

@@ -5,6 +5,7 @@ use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use std::iter;
 use std::mem;
+use std::sync::Arc;
 use serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
@@ -59,104 +60,26 @@ type Error = Box<CargoError + Send>;
 /// Unique identifier for a source of packages.
 #[deriving(Clone, Eq)]
 pub struct SourceId {
-    pub url: Url,
-    pub kind: SourceKind,
+    inner: Arc<SourceIdInner>,
+}
+
+#[deriving(Eq, Clone)]
+struct SourceIdInner {
+    url: Url,
+    kind: SourceKind,
     // e.g. the exact git revision of the specified branch for a Git Source
-    pub precise: Option<String>
-}
-
-impl PartialOrd for SourceId {
-    fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
-        self.to_string().partial_cmp(&other.to_string())
-    }
-}
-
-impl Ord for SourceId {
-    fn cmp(&self, other: &SourceId) -> Ordering {
-        self.to_string().cmp(&other.to_string())
-    }
-}
-
-impl<E, S: Encoder<E>> Encodable<S, E> for SourceId {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
-        if self.is_path() {
-            s.emit_option_none()
-        } else {
-           self.to_url().encode(s)
-        }
-    }
-}
-
-impl<E, D: Decoder<E>> Decodable<D, E> for SourceId {
-    fn decode(d: &mut D) -> Result<SourceId, E> {
-        let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
-        Ok(SourceId::from_url(string))
-    }
-}
-
-impl Show for SourceId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match *self {
-            SourceId { kind: PathKind, ref url, .. } => url.fmt(f),
-            SourceId { kind: GitKind(ref reference), ref url, ref precise, .. } => {
-                try!(write!(f, "{}", url));
-                if reference.as_slice() != "master" {
-                    try!(write!(f, "?ref={}", reference));
-                }
-
-                match *precise {
-                    Some(ref s) => {
-                        try!(write!(f, "#{}", s.as_slice().slice_to(8)));
-                    }
-                    None => {}
-                }
-                Ok(())
-            },
-            SourceId { kind: RegistryKind, ref url, .. } => {
-                let default = RegistrySource::url().ok();
-                if default.as_ref() == Some(url) {
-                    write!(f, "the package registry")
-                } else {
-                    write!(f, "registry {}", url)
-                }
-            }
-        }
-    }
-}
-
-// This custom implementation handles situations such as when two git sources
-// point at *almost* the same URL, but not quite, even when they actually point
-// to the same repository.
-impl PartialEq for SourceId {
-    fn eq(&self, other: &SourceId) -> bool {
-        if self.kind != other.kind { return false }
-        if self.url == other.url { return true }
-
-        match (&self.kind, &other.kind, &self.url, &other.url) {
-            (&GitKind(ref ref1), &GitKind(ref ref2), u1, u2) => {
-                ref1 == ref2 &&
-                git::canonicalize_url(u1) == git::canonicalize_url(u2)
-            }
-            _ => false,
-        }
-    }
-}
-
-impl<S: hash::Writer> hash::Hash<S> for SourceId {
-    fn hash(&self, into: &mut S) {
-        self.kind.hash(into);
-        match *self {
-            SourceId { kind: GitKind(..), ref url, .. } => {
-                git::canonicalize_url(url).hash(into)
-            }
-            _ => self.url.hash(into),
-        }
-    }
+    precise: Option<String>
 }
 
 impl SourceId {
     pub fn new(kind: SourceKind, url: Url) -> SourceId {
-        SourceId { kind: kind, url: url, precise: None }
+        SourceId {
+            inner: Arc::new(SourceIdInner {
+                kind: kind,
+                url: url,
+                precise: None,
+            }),
+        }
     }
 
     /// Parses a source URL and returns the corresponding ID.
@@ -198,12 +121,12 @@ impl SourceId {
     }
 
     pub fn to_url(&self) -> String {
-        match *self {
-            SourceId { kind: PathKind, .. } => {
+        match *self.inner {
+            SourceIdInner { kind: PathKind, .. } => {
                 fail!("Path sources are not included in the lockfile, \
                        so this is unimplemented")
             },
-            SourceId {
+            SourceIdInner {
                 kind: GitKind(ref reference), ref url, ref precise, ..
             } => {
                 let ref_str = if reference.as_slice() != "master" {
@@ -220,7 +143,7 @@ impl SourceId {
 
                 format!("git+{}{}{}", url, ref_str, precise_str)
             },
-            SourceId { kind: RegistryKind, .. } => {
+            SourceIdInner { kind: RegistryKind, .. } => {
                 // TODO: Central registry vs. alternates
                 "registry+https://crates.io/".to_string()
             }
@@ -255,15 +178,19 @@ impl SourceId {
     }
 
     pub fn get_url(&self) -> &Url {
-        &self.url
+        &self.inner.url
+    }
+
+    pub fn get_kind(&self) -> &SourceKind {
+        &self.inner.kind
     }
 
     pub fn is_path(&self) -> bool {
-        self.kind == PathKind
+        self.inner.kind == PathKind
     }
 
     pub fn is_git(&self) -> bool {
-        match self.kind {
+        match self.inner.kind {
             GitKind(_) => true,
             _ => false
         }
@@ -272,10 +199,10 @@ impl SourceId {
     /// Creates an implementation of `Source` corresponding to this ID.
     pub fn load<'a>(&self, config: &'a mut Config) -> Box<Source+'a> {
         log!(5, "loading SourceId; {}", self);
-        match self.kind {
+        match self.inner.kind {
             GitKind(..) => box GitSource::new(self, config) as Box<Source+'a>,
             PathKind => {
-                let path = match self.url.to_file_path() {
+                let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
                     Err(()) => fail!("path sources cannot be remote"),
                 };
@@ -285,10 +212,112 @@ impl SourceId {
         }
     }
 
+    pub fn get_precise(&self) -> Option<&str> {
+        self.inner.precise.as_ref().map(|s| s.as_slice())
+    }
+
     pub fn with_precise(&self, v: String) -> SourceId {
         SourceId {
-            precise: Some(v),
-            .. self.clone()
+            inner: Arc::new(SourceIdInner {
+                precise: Some(v),
+                .. (*self.inner).clone()
+            }),
+        }
+    }
+}
+
+impl PartialEq for SourceId {
+    fn eq(&self, other: &SourceId) -> bool {
+        self.inner.eq(&*other.inner)
+    }
+}
+
+impl PartialOrd for SourceId {
+    fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
+        self.to_string().partial_cmp(&other.to_string())
+    }
+}
+
+impl Ord for SourceId {
+    fn cmp(&self, other: &SourceId) -> Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
+impl<E, S: Encoder<E>> Encodable<S, E> for SourceId {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        if self.is_path() {
+            s.emit_option_none()
+        } else {
+           self.to_url().encode(s)
+        }
+    }
+}
+
+impl<E, D: Decoder<E>> Decodable<D, E> for SourceId {
+    fn decode(d: &mut D) -> Result<SourceId, E> {
+        let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
+        Ok(SourceId::from_url(string))
+    }
+}
+
+impl Show for SourceId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match *self.inner {
+            SourceIdInner { kind: PathKind, ref url, .. } => url.fmt(f),
+            SourceIdInner { kind: GitKind(ref reference), ref url,
+                            ref precise, .. } => {
+                try!(write!(f, "{}", url));
+                if reference.as_slice() != "master" {
+                    try!(write!(f, "?ref={}", reference));
+                }
+
+                match *precise {
+                    Some(ref s) => {
+                        try!(write!(f, "#{}", s.as_slice().slice_to(8)));
+                    }
+                    None => {}
+                }
+                Ok(())
+            },
+            SourceIdInner { kind: RegistryKind, ref url, .. } => {
+                let default = RegistrySource::url().ok();
+                if default.as_ref() == Some(url) {
+                    write!(f, "the package registry")
+                } else {
+                    write!(f, "registry {}", url)
+                }
+            }
+        }
+    }
+}
+
+// This custom implementation handles situations such as when two git sources
+// point at *almost* the same URL, but not quite, even when they actually point
+// to the same repository.
+impl PartialEq for SourceIdInner {
+    fn eq(&self, other: &SourceIdInner) -> bool {
+        if self.kind != other.kind { return false }
+        if self.url == other.url { return true }
+
+        match (&self.kind, &other.kind, &self.url, &other.url) {
+            (&GitKind(ref ref1), &GitKind(ref ref2), u1, u2) => {
+                ref1 == ref2 &&
+                git::canonicalize_url(u1) == git::canonicalize_url(u2)
+            }
+            _ => false,
+        }
+    }
+}
+
+impl<S: hash::Writer> hash::Hash<S> for SourceId {
+    fn hash(&self, into: &mut S) {
+        self.inner.kind.hash(into);
+        match *self.inner {
+            SourceIdInner { kind: GitKind(..), ref url, .. } => {
+                git::canonicalize_url(url).hash(into)
+            }
+            _ => self.inner.url.hash(into),
         }
     }
 }
