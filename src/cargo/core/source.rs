@@ -449,11 +449,11 @@ mod tests {
         let s1 = SourceId::new(GitKind("master".to_string()), loc);
 
         let loc = "git://github.com/foo/bar".to_url().unwrap();
-        let mut s2 = SourceId::new(GitKind("master".to_string()), loc);
+        let s2 = SourceId::new(GitKind("master".to_string()), loc.clone());
 
         assert_eq!(s1, s2);
 
-        s2.kind = GitKind("foo".to_string());
-        assert!(s1 != s2);
+        let s3 = SourceId::new(GitKind("foo".to_string()), loc);
+        assert!(s1 != s3);
     }
 }
