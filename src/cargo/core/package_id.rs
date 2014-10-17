@@ -1,5 +1,6 @@
 use semver;
 use std::hash::Hash;
+use std::sync::Arc;
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use serialize::{Encodable, Encoder, Decodable, Decoder};
@@ -10,8 +11,13 @@ use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
-#[deriving(Clone, PartialEq, PartialOrd, Ord)]
+#[deriving(Clone)]
 pub struct PackageId {
+    inner: Arc<PackageIdInner>,
+}
+
+#[deriving(PartialEq, PartialOrd, Eq, Ord)]
+struct PackageIdInner {
     name: String,
     version: semver::Version,
     source_id: SourceId,
@@ -19,8 +25,9 @@ pub struct PackageId {
 
 impl<E, S: Encoder<E>> Encodable<S, E> for PackageId {
     fn encode(&self, s: &mut S) -> Result<(), E> {
-        let source = self.source_id.to_url();
-        let encoded = format!("{} {} ({})", self.name, self.version, source);
+        let source = self.inner.source_id.to_url();
+        let encoded = format!("{} {} ({})", self.inner.name, self.inner.version,
+                              source);
         encoded.encode(s)
     }
 }
@@ -36,22 +43,39 @@ impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
         let source_id = SourceId::from_url(captures.at(3).to_string());
 
         Ok(PackageId {
-            name: name.to_string(),
-            version: version,
-            source_id: source_id
+            inner: Arc::new(PackageIdInner {
+                name: name.to_string(),
+                version: version,
+                source_id: source_id,
+            }),
         })
     }
 }
 
 impl<S: hash::Writer> Hash<S> for PackageId {
     fn hash(&self, state: &mut S) {
-        self.name.hash(state);
-        self.version.to_string().hash(state);
-        self.source_id.hash(state);
+        self.inner.name.hash(state);
+        self.inner.version.to_string().hash(state);
+        self.inner.source_id.hash(state);
     }
 }
 
+impl PartialEq for PackageId {
+    fn eq(&self, other: &PackageId) -> bool {
+        self.inner.eq(&*other.inner)
+    }
+}
+impl PartialOrd for PackageId {
+    fn partial_cmp(&self, other: &PackageId) -> Option<Ordering> {
+        self.inner.partial_cmp(&*other.inner)
+    }
+}
 impl Eq for PackageId {}
+impl Ord for PackageId {
+    fn cmp(&self, other: &PackageId) -> Ordering {
+        self.inner.cmp(&*other.inner)
+    }
+}
 
 #[deriving(Clone, Show, PartialEq)]
 pub enum PackageIdError {
@@ -80,27 +104,30 @@ impl PackageId {
                              sid: &SourceId) -> CargoResult<PackageId> {
         let v = try!(version.to_semver().map_err(InvalidVersion));
         Ok(PackageId {
-            name: name.to_string(),
-            version: v,
-            source_id: sid.clone()
+            inner: Arc::new(PackageIdInner {
+                name: name.to_string(),
+                version: v,
+                source_id: sid.clone(),
+            }),
         })
     }
 
     pub fn get_name(&self) -> &str {
-        self.name.as_slice()
+        self.inner.name.as_slice()
     }
 
     pub fn get_version(&self) -> &semver::Version {
-        &self.version
+        &self.inner.version
     }
 
     pub fn get_source_id(&self) -> &SourceId {
-        &self.source_id
+        &self.inner.source_id
     }
 
     pub fn generate_metadata(&self) -> Metadata {
         let metadata = short_hash(
-            &(self.name.as_slice(), self.version.to_string(), &self.source_id));
+            &(self.inner.name.as_slice(), self.inner.version.to_string(),
+              &self.inner.source_id));
         let extra_filename = format!("-{}", metadata);
 
         Metadata { metadata: metadata, extra_filename: extra_filename }
@@ -119,10 +146,10 @@ static CENTRAL_REPO: &'static str = "http://rust-lang.org/central-repo";
 
 impl Show for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "{} v{}", self.name, self.version));
+        try!(write!(f, "{} v{}", self.inner.name, self.inner.version));
 
-        if self.source_id.to_string().as_slice() != CENTRAL_REPO {
-            try!(write!(f, " ({})", self.source_id));
+        if self.inner.source_id.to_string().as_slice() != CENTRAL_REPO {
+            try!(write!(f, " ({})", self.inner.source_id));
         }
 
         Ok(())
