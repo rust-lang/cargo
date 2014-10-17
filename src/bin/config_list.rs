@@ -1,23 +1,27 @@
 use std::os;
 use std::collections::HashMap;
-use docopt;
 
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, config};
+
+#[deriving(Decodable)]
+struct ConfigListFlags {
+    flag_human: bool,
+}
 
 #[deriving(Encodable)]
 struct ConfigOut {
     values: HashMap<String, config::ConfigValue>
 }
 
-docopt!(ConfigListFlags, "
+pub const USAGE: &'static str = "
 Usage:
     cargo config-list --human
     cargo config-list -h | --help
 
 Options:
     -h, --help          Print this message
-")
+";
 
 pub fn execute(args: ConfigListFlags,
                _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {

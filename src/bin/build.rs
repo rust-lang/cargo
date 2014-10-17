@@ -5,9 +5,20 @@ use cargo::ops::CompileOptions;
 use cargo::ops;
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 use cargo::util::{CliResult, CliError};
-use docopt;
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_package: Option<String>,
+    flag_jobs: Option<uint>,
+    flag_features: Vec<String>,
+    flag_no_default_features: bool,
+    flag_target: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_verbose: bool,
+    flag_release: bool,
+}
+
+pub const USAGE: &'static str = "
 Compile a local package and all of its dependencies
 
 Usage:
@@ -28,9 +39,7 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
-",  flag_jobs: Option<uint>, flag_target: Option<String>,
-    flag_manifest_path: Option<String>, flag_features: Vec<String>,
-    flag_package: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-build; args={}", os::args());

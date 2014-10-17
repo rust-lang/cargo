@@ -1,11 +1,17 @@
-use docopt;
-
 use cargo::ops;
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_host: Option<String>,
+    flag_token: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Upload a package to the registry
 
 Usage:
@@ -18,8 +24,7 @@ Options:
     --manifest-path PATH    Path to the manifest to compile
     -v, --verbose           Use verbose output
 
-", flag_host: Option<String>, flag_token: Option<String>,
-   flag_manifest_path: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);

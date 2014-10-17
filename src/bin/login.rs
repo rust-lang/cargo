@@ -1,12 +1,18 @@
 use std::io;
-use docopt;
 
 use cargo::ops;
 use cargo::core::{MultiShell};
 use cargo::sources::RegistrySource;
 use cargo::util::{CliResult, CliError};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_host: Option<String>,
+    arg_token: Option<String>,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Save an api token from the registry locally
 
 Usage:
@@ -17,7 +23,7 @@ Options:
     --host HOST             Host to set the token for
     -v, --verbose           Use verbose output
 
-",  arg_token: Option<String>, flag_host: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);

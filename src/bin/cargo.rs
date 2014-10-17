@@ -1,28 +1,30 @@
 #![feature(phase, macro_rules)]
+#![deny(unused)]
 
 extern crate serialize;
 #[phase(plugin, link)] extern crate log;
 
 extern crate cargo;
-extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
 
 use std::collections::TreeSet;
 use std::os;
 use std::io;
 use std::io::fs::{mod, PathExtensions};
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
-use docopt::FlagParser;
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
 use cargo::util::{CliError, CliResult};
 
-fn main() {
-    execute_main_without_stdin(execute, true)
+#[deriving(Decodable)]
+struct Flags {
+    flag_list: bool,
+    flag_verbose: bool,
+    arg_command: String,
+    arg_args: Vec<String>,
 }
 
-docopt!(Flags, "
+const USAGE: &'static str = "
 Rust's package manager
 
 Usage:
@@ -46,7 +48,11 @@ Some common cargo commands are:
     update      Update dependencies listed in Cargo.lock
 
 See 'cargo help <command>' for more information on a specific command.
-")
+";
+
+fn main() {
+    execute_main_without_stdin(execute, true, USAGE)
+}
 
 macro_rules! each_subcommand( ($macro:ident) => ({
     $macro!(bench)
@@ -93,7 +99,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let (mut args, command) = match flags.arg_command.as_slice() {
         "" | "help" if flags.arg_args.len() == 0 => {
             shell.set_verbose(true);
-            let r = cargo::call_main_without_stdin(execute, shell,
+            let r = cargo::call_main_without_stdin(execute, shell, USAGE,
                                                    ["-h".to_string()], false);
             cargo::process_executed(r, shell);
             return Ok(None)
@@ -108,6 +114,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
             mod $name;
             shell.set_verbose(true);
             let r = cargo::call_main_without_stdin($name::execute, shell,
+                                                   $name::USAGE,
                                                    args.as_slice(),
                                                    false);
             cargo::process_executed(r, shell);

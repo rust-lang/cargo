@@ -1,11 +1,20 @@
-use docopt;
-
 use cargo::ops;
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_features: Vec<String>,
+    flag_jobs: Option<uint>,
+    flag_manifest_path: Option<String>,
+    flag_no_default_features: bool,
+    flag_no_deps: bool,
+    flag_open: bool,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Build a package's documentation
 
 Usage:
@@ -23,9 +32,7 @@ Options:
 
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
-",  flag_jobs: Option<uint>,
-    flag_manifest_path: Option<String>,
-    flag_features: Vec<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);

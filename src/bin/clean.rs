@@ -1,12 +1,19 @@
 use std::os;
-use docopt;
 
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_package: Option<String>,
+    flag_target: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Remove artifacts that cargo has generated in the past
 
 Usage:
@@ -23,8 +30,7 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package's artifacts should be cleaned out. If it is not
 given, then all packages' artifacts are removed. For more information on SPEC
 and its format, see the `cargo help pkgid` command.
-",  flag_manifest_path: Option<String>, flag_package: Option<String>,
-    flag_target: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
