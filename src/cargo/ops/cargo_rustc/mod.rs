@@ -216,6 +216,20 @@ fn compile_custom(pkg: &Package, cmd: &str,
     for arg in cmd {
         p = p.arg(arg);
     }
+    match cx.resolve.features(pkg.get_package_id()) {
+        Some(features) => {
+            for feat in features.iter() {
+                let feat = feat.as_slice().chars()
+                               .map(|c| c.to_uppercase())
+                               .map(|c| if c == '-' {'_'} else {c})
+                               .collect::<String>();
+                p = p.env(format!("CARGO_FEATURE_{}", feat).as_slice(), Some("1"));
+            }
+        }
+        None => {}
+    }
+
+
     for &(pkg, _) in cx.dep_targets(pkg).iter() {
         let name: String = pkg.get_name().chars().map(|c| {
             match c {

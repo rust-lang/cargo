@@ -745,6 +745,9 @@ test!(custom_build_env_vars {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
+            [features]
+            foo = []
+
             [[bin]]
             name = "foo"
         "#)
@@ -753,6 +756,7 @@ test!(custom_build_env_vars {
             use std::io::fs::PathExtensions;
             fn main() {{
                 let _ncpus = os::getenv("NUM_JOBS").unwrap();
+                let _feat = os::getenv("CARGO_FEATURE_FOO").unwrap();
                 let debug = os::getenv("DEBUG").unwrap();
                 assert_eq!(debug.as_slice(), "true");
 
@@ -777,7 +781,8 @@ test!(custom_build_env_vars {
             }}
         "#,
         p.root().join("target").join("native").display()));
-    assert_that(build.cargo_process("build"), execs().with_status(0));
+    assert_that(build.cargo_process("build").arg("--features").arg("foo"),
+                execs().with_status(0));
 
 
     p = p
@@ -789,6 +794,9 @@ test!(custom_build_env_vars {
             authors = ["wycats@example.com"]
             build = '{}'
 
+            [features]
+            foo = []
+
             [[bin]]
             name = "foo"
 
@@ -798,7 +806,8 @@ test!(custom_build_env_vars {
         .file("src/foo.rs", r#"
             fn main() {}
         "#);
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+                execs().with_status(0));
 })
 
 test!(crate_version_env_vars {

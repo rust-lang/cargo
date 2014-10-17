@@ -30,17 +30,22 @@ impl Summary {
         }
         for (feature, list) in features.iter() {
             for dep in list.iter() {
-                if features.find_equiv(&dep.as_slice()).is_some() { continue }
-                let d = dependencies.iter().find(|d| {
-                    d.get_name() == dep.as_slice()
-                });
-                match d {
+                let mut parts = dep.as_slice().splitn(1, '/');
+                let dep = parts.next().unwrap();
+                let is_reexport = parts.next().is_some();
+                if !is_reexport && features.find_equiv(&dep).is_some() { continue }
+                match dependencies.iter().find(|d| d.get_name() == dep) {
                     Some(d) => {
-                        if d.is_optional() { continue }
+                        if d.is_optional() || is_reexport { continue }
                         return Err(human(format!("Feature `{}` depends on `{}` \
                                                   which is not an optional \
                                                   dependency.\nConsider adding \
                                                   `optional = true` to the \
+                                                  dependency", feature, dep)))
+                    }
+                    None if is_reexport => {
+                        return Err(human(format!("Feature `{}` requires `{}` \
+                                                  which is not an optional \
                                                   dependency", feature, dep)))
                     }
                     None => {

@@ -318,40 +318,7 @@ fn resolve_deps<'a, R: Registry>(parent: &Summary,
                                  method: ResolveMethod,
                                  ctx: &mut Context<'a, R>)
                                  -> CargoResult<()> {
-    let dev_deps = match method {
-        ResolveEverything => true,
-        ResolveRequired(dev_deps, _, _) => dev_deps,
-    };
-
-    // First, filter by dev-dependencies
-    let deps = parent.get_dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
-
-    // Second, weed out optional dependencies, but not those required
-    let (mut feature_deps, used_features) = try!(build_features(parent, method));
-    let deps = deps.filter(|d| {
-        !d.is_optional() || feature_deps.remove(&d.get_name().to_string())
-    }).collect::<Vec<&Dependency>>();
-
-    // All features can only point to optional dependencies, in which case they
-    // should have all been weeded out by the above iteration. Any remaining
-    // features are bugs in that the package does not actually have those
-    // features.
-    if feature_deps.len() > 0 {
-        let features = feature_deps.iter().map(|s| s.as_slice())
-                                   .collect::<Vec<&str>>().connect(", ");
-        return Err(human(format!("Package `{}` does not have these features: \
-                                  `{}`", parent.get_package_id(), features)))
-    }
-
-    // Record what list of features is active for this package.
-    {
-        let pkgid = parent.get_package_id().clone();
-        match ctx.resolve.features.entry(pkgid) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.set(HashSet::new()),
-        }.extend(used_features.into_iter());
-    }
+    let (deps, features) = try!(resolve_features(parent, method, ctx));
 
     // Recursively resolve all dependencies
     for &dep in deps.iter() {
@@ -409,8 +376,15 @@ fn resolve_deps<'a, R: Registry>(parent: &Summary,
                                       depends on itself",
                                      summary.get_package_id())))
         }
+
+        // The list of enabled features for this dependency are both those
+        // listed in the dependency itself as well as any of our own features
+        // which enabled a feature of this package.
+        let features = features.find_equiv(&dep.get_name())
+                               .map(|v| v.as_slice())
+                               .unwrap_or(&[]);
         try!(resolve_deps(summary,
-                          ResolveRequired(false, dep.get_features(),
+                          ResolveRequired(false, features,
                                           dep.uses_default_features()),
                           ctx));
         if dep.is_transitive() {
@@ -421,10 +395,81 @@ fn resolve_deps<'a, R: Registry>(parent: &Summary,
     Ok(())
 }
 
+fn resolve_features<'a, R>(parent: &'a Summary, method: ResolveMethod,
+                           ctx: &mut Context<R>)
+                           -> CargoResult<(Vec<&'a Dependency>,
+                                           HashMap<&'a str, Vec<String>>)> {
+    let dev_deps = match method {
+        ResolveEverything => true,
+        ResolveRequired(dev_deps, _, _) => dev_deps,
+    };
+
+    // First, filter by dev-dependencies
+    let deps = parent.get_dependencies();
+    let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
+
+    // Second, weed out optional dependencies, but not those required
+    let (mut feature_deps, used_features) = try!(build_features(parent, method));
+    let mut ret = HashMap::new();
+    let deps = deps.filter(|d| {
+        !d.is_optional() || feature_deps.contains_key_equiv(&d.get_name())
+    }).collect::<Vec<&Dependency>>();
+
+    // Next, sanitize all requested features by whitelisting all the requested
+    // features that correspond to optional dependencies
+    for dep in deps.iter() {
+        let mut base = feature_deps.pop_equiv(&dep.get_name())
+                                   .unwrap_or(Vec::new());
+        for feature in dep.get_features().iter() {
+            base.push(feature.clone());
+            if feature.as_slice().contains("/") {
+                return Err(human(format!("features in dependencies \
+                                          cannot enable features in \
+                                          other dependencies: `{}`",
+                                         feature)));
+            }
+        }
+        ret.insert(dep.get_name(), base);
+    }
+
+    // All features can only point to optional dependencies, in which case they
+    // should have all been weeded out by the above iteration. Any remaining
+    // features are bugs in that the package does not actually have those
+    // features.
+    if feature_deps.len() > 0 {
+        let unknown = feature_deps.keys().map(|s| s.as_slice())
+                                  .collect::<Vec<&str>>();
+        if unknown.len() > 0 {
+            let features = unknown.connect(", ");
+            return Err(human(format!("Package `{}` does not have these features: \
+                                      `{}`", parent.get_package_id(), features)))
+        }
+    }
+
+    // Record what list of features is active for this package.
+    {
+        let pkgid = parent.get_package_id().clone();
+        match ctx.resolve.features.entry(pkgid) {
+            Occupied(entry) => entry.into_mut(),
+            Vacant(entry) => entry.set(HashSet::new()),
+        }.extend(used_features.into_iter());
+    }
+
+    Ok((deps, ret))
+}
+
 // Returns a pair of (feature dependencies, all used features)
+//
+// The feature dependencies map is a mapping of package name to list of features
+// enabled. Each package should be enabled, and each package should have the
+// specified set of features enabled.
+//
+// The all used features set is the set of features which this local package had
+// enabled, which is later used when compiling to instruct the code what
+// features were enabled.
 fn build_features(s: &Summary, method: ResolveMethod)
-                  -> CargoResult<(HashSet<String>, HashSet<String>)> {
-    let mut deps = HashSet::new();
+                  -> CargoResult<(HashMap<String, Vec<String>>, HashSet<String>)> {
+    let mut deps = HashMap::new();
     let mut used = HashSet::new();
     let mut visited = HashSet::new();
     match method {
@@ -454,26 +499,51 @@ fn build_features(s: &Summary, method: ResolveMethod)
     return Ok((deps, used));
 
     fn add_feature(s: &Summary, feat: &str,
-                   deps: &mut HashSet<String>,
+                   deps: &mut HashMap<String, Vec<String>>,
                    used: &mut HashSet<String>,
                    visited: &mut HashSet<String>) -> CargoResult<()> {
-        if feat.is_empty() {
-            return Ok(())
-        }
-        if !visited.insert(feat.to_string()) {
-            return Err(human(format!("Cyclic feature dependency: feature `{}` \
-                                      depends on itself", feat)))
-        }
-        used.insert(feat.to_string());
-        match s.get_features().find_equiv(&feat) {
-            Some(recursive) => {
-                for f in recursive.iter() {
-                    try!(add_feature(s, f.as_slice(), deps, used, visited));
-                }
+        if feat.is_empty() { return Ok(()) }
+
+        // If this feature is of the form `foo/bar`, then we just lookup package
+        // `foo` and enable its feature `bar`. Otherwise this feature is of the
+        // form `foo` and we need to recurse to enable the feature `foo` for our
+        // own package, which may end up enabling more features or just enabling
+        // a dependency.
+        let mut parts = feat.splitn(1, '/');
+        let feat_or_package = parts.next().unwrap();
+        match parts.next() {
+            Some(feat) => {
+                let package = feat_or_package;
+                match deps.entry(package.to_string()) {
+                    Occupied(e) => e.into_mut(),
+                    Vacant(e) => e.set(Vec::new()),
+                }.push(feat.to_string());
             }
-            None => { deps.insert(feat.to_string()); }
+            None => {
+                let feat = feat_or_package;
+                if !visited.insert(feat.to_string()) {
+                    return Err(human(format!("Cyclic feature dependency: \
+                                              feature `{}` depends on itself",
+                                              feat)))
+                }
+                used.insert(feat.to_string());
+                match s.get_features().find_equiv(&feat) {
+                    Some(recursive) => {
+                        for f in recursive.iter() {
+                            try!(add_feature(s, f.as_slice(), deps, used,
+                                             visited));
+                        }
+                    }
+                    None => {
+                        match deps.entry(feat.to_string()) {
+                            Occupied(..) => {} // already activated
+                            Vacant(e) => { e.set(Vec::new()); }
+                        }
+                    }
+                }
+                visited.remove(&feat.to_string());
+            }
         }
-        visited.remove(&feat.to_string());
         Ok(())
     }
 }
