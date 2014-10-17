@@ -1,4 +1,4 @@
-use std::io::{fs, TempDir, File};
+use std::io::{mod, fs, TempDir, File};
 use std::os;
 use std::path;
 
@@ -1661,4 +1661,19 @@ test!(recompile_space_in_name {
     foo.root().move_into_the_past().assert();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
+})
+
+test!(ignore_bad_directories {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+    foo.build();
+    fs::mkdir(&foo.root().join("tmp"), io::USER_EXEC ^ io::USER_EXEC).unwrap();
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
 })
