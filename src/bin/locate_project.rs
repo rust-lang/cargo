@@ -1,17 +1,20 @@
-use docopt;
-
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, human, Require};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-docopt!(LocateProjectFlags, "
+#[deriving(Decodable)]
+struct LocateProjectFlags {
+    flag_manifest_path: Option<String>,
+}
+
+pub const USAGE: &'static str = "
 Usage:
     cargo locate-project [options]
 
 Options:
     --manifest-path PATH    Path to the manifest to build benchmarks for
     -h, --help              Print this message
-", flag_manifest_path: Option<String>)
+";
 
 #[deriving(Encodable)]
 struct ProjectLocation {

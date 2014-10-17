@@ -1,12 +1,23 @@
 use std::io::process::ExitStatus;
-use docopt;
 
 use cargo::ops;
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_jobs: Option<uint>,
+    flag_features: Vec<String>,
+    flag_no_default_features: bool,
+    flag_target: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_verbose: bool,
+    flag_release: bool,
+    arg_args: Vec<String>,
+}
+
+pub const USAGE: &'static str = "
 Run the main binary of the local package (src/main.rs)
 
 Usage:
@@ -23,8 +34,7 @@ Options:
     -v, --verbose           Use verbose output
 
 All of the trailing arguments are passed as to the binary to run.
-",  flag_jobs: Option<uint>, flag_target: Option<String>,
-    flag_manifest_path: Option<String>, flag_features: Vec<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);

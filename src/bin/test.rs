@@ -1,12 +1,24 @@
 use std::io::process::ExitStatus;
-use docopt;
 
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, CargoError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    arg_args: Vec<String>,
+    flag_features: Vec<String>,
+    flag_jobs: Option<uint>,
+    flag_manifest_path: Option<String>,
+    flag_no_default_features: bool,
+    flag_no_run: bool,
+    flag_package: Option<String>,
+    flag_target: Option<String>,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Execute all unit and integration tests of a local package
 
 Usage:
@@ -30,9 +42,7 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be tested. If it is not given, then the
 current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
-",  flag_jobs: Option<uint>, flag_target: Option<String>,
-    flag_manifest_path: Option<String>, flag_features: Vec<String>,
-    flag_package: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));

@@ -3,14 +3,19 @@ extern crate toml;
 use std::collections::HashMap;
 use std::io::File;
 use std::os;
-use docopt;
 
 use cargo::core::MultiShell;
 use cargo::util::CliResult;
 
 pub type Error = HashMap<String, String>;
 
-docopt!(Flags, "
+#[deriving(Decodable)]
+struct Flags {
+    flag_manifest_path: String,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Usage:
     cargo verify-project [options] --manifest-path PATH
     cargo verify-project -h | --help
@@ -19,7 +24,7 @@ Options:
     -h, --help              Print this message
     --manifest-path PATH    Path to the manifest to verify
     -v, --verbose           Use verbose output
-")
+";
 
 pub fn execute(args: Flags,
                shell: &mut MultiShell) -> CliResult<Option<Error>> {

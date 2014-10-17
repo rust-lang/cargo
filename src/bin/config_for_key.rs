@@ -1,23 +1,28 @@
 use std::os;
 use std::collections::HashMap;
-use docopt;
 
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, config};
+
+#[deriving(Decodable)]
+struct ConfigForKeyFlags {
+    flag_human: bool,
+    flag_key: String,
+}
 
 #[deriving(Encodable)]
 struct ConfigOut {
     values: HashMap<String, config::ConfigValue>
 }
 
-docopt!(ConfigForKeyFlags, "
+pub const USAGE: &'static str = "
 Usage:
     cargo config-for-key --human --key=<key>
     cargo config-for-key -h | --help
 
 Options:
     -h, --help          Print this message
-")
+";
 
 pub fn execute(args: ConfigForKeyFlags,
                _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {

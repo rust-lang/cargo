@@ -1,10 +1,13 @@
-use docopt;
-
 use cargo::core::{MultiShell, Package, Source};
 use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_manifest_path: String,
+}
+
+pub const USAGE: &'static str = "
 Usage:
     cargo read-manifest [options] --manifest-path=PATH
     cargo read-manifest -h | --help
@@ -12,7 +15,7 @@ Usage:
 Options:
     -h, --help              Print this message
     -v, --verbose           Use verbose output
-")
+";
 
 pub fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
     let path = Path::new(options.flag_manifest_path.as_slice());

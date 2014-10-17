@@ -1,11 +1,21 @@
 use std::os;
-use docopt;
 
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_verbose: bool,
+    flag_bin: bool,
+    flag_travis: bool,
+    flag_hg: bool,
+    flag_git: bool,
+    flag_no_git: bool,
+    arg_path: String,
+}
+
+pub const USAGE: &'static str = "
 Create a new cargo package at <path>
 
 Usage:
@@ -21,7 +31,7 @@ Options:
     --travis            Create a .travis.yml file
     --bin               Use a binary instead of a library template
     -v, --verbose       Use verbose output
-")
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={}", os::args());

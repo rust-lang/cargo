@@ -1,9 +1,10 @@
-use docopt;
-
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options;
+
+pub const USAGE: &'static str = "
 Get some help with a cargo command.
 
 Usage:
@@ -12,7 +13,7 @@ Usage:
 
 Options:
     -h, --help          Print this message
-")
+";
 
 pub fn execute(_: Options, _: &mut MultiShell) -> CliResult<Option<()>> {
     // This is a dummy command just so that `cargo help help` works.

@@ -4,6 +4,8 @@ use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use serialize::{Encodable, Encoder, Decodable, Decoder};
 
+use regex::Regex;
+
 use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
@@ -25,7 +27,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for PackageId {
 impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
     fn decode(d: &mut D) -> Result<PackageId, E> {
         let string: String = raw_try!(Decodable::decode(d));
-        let regex = regex!(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$");
+        let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
         let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
 
         let name = captures.at(1);

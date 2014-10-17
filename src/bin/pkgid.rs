@@ -1,11 +1,16 @@
-use docopt;
-
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_verbose: bool,
+    flag_manifest_path: Option<String>,
+    arg_spec: Option<String>,
+}
+
+pub const USAGE: &'static str = "
 Print a fully qualified package specification
 
 Usage:
@@ -35,7 +40,7 @@ Example Package IDs
      crates.io/bar#foo:1.2.3      | foo    | 1.2.3     | *://crates.io/bar
      http://crates.io/foo#1.2.3   | foo    | 1.2.3     | http://crates.io/foo
 
-",  flag_manifest_path: Option<String>, arg_spec: Option<String>)
+";
 
 pub fn execute(options: Options,
                shell: &mut MultiShell) -> CliResult<Option<()>> {
