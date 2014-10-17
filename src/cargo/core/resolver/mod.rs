@@ -1,5 +1,8 @@
+use std::cell::RefCell;
 use std::collections::hashmap::{HashMap, HashSet, Occupied, Vacant};
 use std::fmt;
+use std::rc::Rc;
+use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
@@ -111,9 +114,9 @@ impl fmt::Show for Resolve {
 
 #[deriving(Clone)]
 struct Context {
-    activations: HashMap<(String, SourceId), Vec<Summary>>,
+    activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
     resolve: Resolve,
-    visited: HashSet<PackageId>,
+    visited: Rc<RefCell<HashSet<PackageId>>>,
 }
 
 /// Builds the list of all packages required to build the first argument.
@@ -124,12 +127,12 @@ pub fn resolve<R: Registry>(summary: &Summary, method: ResolveMethod,
     let mut cx = Context {
         resolve: Resolve::new(summary.get_package_id().clone()),
         activations: HashMap::new(),
-        visited: HashSet::new(),
+        visited: Rc::new(RefCell::new(HashSet::new())),
     };
     let _p = profile::start(format!("resolving: {}", summary));
     cx.activations.insert((summary.get_name().to_string(),
                            summary.get_source_id().clone()),
-                          vec![summary.clone()]);
+                          vec![Rc::new(summary.clone())]);
     match try!(activate(cx, registry, summary, method)) {
         Ok(cx) => Ok(cx.resolve),
         Err(e) => Err(e),
@@ -155,6 +158,7 @@ fn activate<R: Registry>(mut cx: Context,
         candidates.as_mut_slice().sort_by(|a, b| {
             b.get_version().cmp(a.get_version())
         });
+        let candidates = candidates.into_iter().map(Rc::new).collect::<Vec<_>>();
         Ok((dep, candidates, features))
     }).collect::<CargoResult<Vec<_>>>());
 
@@ -172,7 +176,7 @@ fn activate<R: Registry>(mut cx: Context,
 fn activate_deps<R: Registry>(cx: Context,
                               registry: &mut R,
                               parent: &Summary,
-                              deps: &[(&Dependency, Vec<Summary>, Vec<String>)],
+                              deps: &[(&Dependency, Vec<Rc<Summary>>, Vec<String>)],
                               cur: uint) -> CargoResult<CargoResult<Context>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
@@ -227,26 +231,26 @@ fn activate_deps<R: Registry>(cx: Context,
             if !prev.iter().any(|c| c == candidate) {
                 my_cx.resolve.graph.add(candidate.get_package_id().clone(), []);
                 prev.push(candidate.clone());
-
-            }
-
-            // Dependency graphs are required to be a DAG. Non-transitive
-            // dependencies (dev-deps), however, can never introduce a cycle, so we
-            // skip them.
-            if dep.is_transitive() &&
-               !my_cx.visited.insert(candidate.get_package_id().clone()) {
-                return Err(human(format!("cyclic package dependency: package `{}` \
-                                          depends on itself",
-                                         candidate.get_package_id())))
             }
         }
-        let mut my_cx = match try!(activate(my_cx, registry, candidate, method)) {
+
+        // Dependency graphs are required to be a DAG. Non-transitive
+        // dependencies (dev-deps), however, can never introduce a cycle, so we
+        // skip them.
+        if dep.is_transitive() &&
+           !cx.visited.borrow_mut().insert(candidate.get_package_id().clone()) {
+            return Err(human(format!("cyclic package dependency: package `{}` \
+                                      depends on itself",
+                                     candidate.get_package_id())))
+        }
+        let my_cx = try!(activate(my_cx, registry, &**candidate, method));
+        if dep.is_transitive() {
+            cx.visited.borrow_mut().remove(candidate.get_package_id());
+        }
+        let my_cx = match my_cx {
             Ok(cx) => cx,
             Err(e) => { last_err = Some(e); continue }
         };
-        if dep.is_transitive() {
-            my_cx.visited.remove(candidate.get_package_id());
-        }
         match try!(activate_deps(my_cx, registry, parent, deps, cur + 1)) {
             Ok(cx) => return Ok(Ok(cx)),
             Err(e) => { last_err = Some(e); }
@@ -324,18 +328,18 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
 
     // First, filter by dev-dependencies
     let deps = parent.get_dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
+    let mut deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
-    // Second, weed out optional dependencies, but not those required
     let (mut feature_deps, used_features) = try!(build_features(parent, method));
     let mut ret = HashMap::new();
-    let deps = deps.filter(|d| {
-        !d.is_optional() || feature_deps.contains_key_equiv(&d.get_name())
-    }).collect::<Vec<&Dependency>>();
 
     // Next, sanitize all requested features by whitelisting all the requested
     // features that correspond to optional dependencies
-    for dep in deps.iter() {
+    for dep in deps {
+        // weed out optional dependencies, but not those required
+        if dep.is_optional() && !feature_deps.contains_key_equiv(&dep.get_name()) {
+            continue
+        }
         let mut base = feature_deps.pop_equiv(&dep.get_name())
                                    .unwrap_or(Vec::new());
         for feature in dep.get_features().iter() {
@@ -347,7 +351,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
                                          feature)));
             }
         }
-        ret.insert(dep.get_name(), (*dep, base));
+        ret.insert(dep.get_name(), (dep, base));
     }
 
     // All features can only point to optional dependencies, in which case they
@@ -365,7 +369,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     }
 
     // Record what list of features is active for this package.
-    {
+    if used_features.len() > 0 {
         let pkgid = parent.get_package_id().clone();
         match cx.resolve.features.entry(pkgid) {
             Occupied(entry) => entry.into_mut(),
