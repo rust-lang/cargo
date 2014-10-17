@@ -1,11 +1,11 @@
-use std::io;
+use std::fmt::{mod, Show};
 use std::io::fs::{mod, PathExtensions};
 use std::io::process::{ProcessOutput};
+use std::io;
 use std::os;
 use std::path::{Path,BytesContainer};
 use std::str;
 use std::vec::Vec;
-use std::fmt::Show;
 use url::Url;
 use hamcrest as ham;
 use cargo::util::{process,ProcessBuilder};
@@ -379,9 +379,9 @@ fn zip_all<T, I1: Iterator<T>, I2: Iterator<T>>(a: I1, b: I2) -> ZipAll<T, I1, I
     }
 }
 
-impl ham::SelfDescribing for Execs {
-    fn describe(&self) -> String {
-        "execs".to_string()
+impl fmt::Show for Execs {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "execs")
     }
 }
 
@@ -421,9 +421,9 @@ struct ShellWrites {
     expected: String
 }
 
-impl ham::SelfDescribing for ShellWrites {
-    fn describe(&self) -> String {
-        format!("`{}` written to the shell", self.expected)
+impl fmt::Show for ShellWrites {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "`{}` written to the shell", self.expected)
     }
 }
 
