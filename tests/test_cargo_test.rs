@@ -867,6 +867,135 @@ test!(test_no_run {
                        dir = p.url()).as_slice()));
 })
 
+test!(test_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "#[test] fn test1() { }")
+        .file("src/bin2.rs", "#[test] fn test2() { }");
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]bin2-[..]
+
+running 1 test
+test test2 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+       compiling = COMPILING,
+       running = RUNNING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("test").arg("--target-name").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+})
+
+test!(test_target_name_with_dependecies {
+    let prj = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+            path = "d1"
+
+            [dependencies.d2]
+            path = "d2"
+
+            [[bin]]
+            name = "bin1"
+            path = "src/bin1.rs"
+
+            [[bin]]
+            name = "bin2"
+            path = "src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "#[test] fn test1() { }")
+        .file("src/bin2.rs", "#[test] fn test2() { }")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "d1"
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "d2"
+        "#)
+        .file("d2/src/lib.rs", "");
+
+    let expected_stdout = format!("\
+{compiling} d1 v0.0.1 ({dir})
+{compiling} d2 v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]bin2-[..]
+
+running 1 test
+test test2 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+       compiling = COMPILING,
+       running = RUNNING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("test").arg("-t").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+})
+
+test!(test_nonexistent_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "#[test] fn test1() { }")
+        .file("src/bin2.rs", "#[test] fn test2() { }");
+
+    let expected_stderr = format!("\
+Could not find target with name `nonexistent`
+");
+
+    assert_that(prj.cargo_process("test").arg("-t").arg("nonexistent"),
+        execs().with_status(101).with_stderr(expected_stderr.as_slice()));
+})
+
 test!(test_no_harness {
     let p = project("foo")
         .file("Cargo.toml", r#"

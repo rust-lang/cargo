@@ -12,8 +12,10 @@ pub fn run(manifest_path: &Path,
     try!(src.update());
     let root = try!(src.get_root_package());
     let env = options.env;
+    let target_name = (*options).target_name;
     let mut bins = root.get_manifest().get_targets().iter().filter(|a| {
-        a.is_bin() && a.get_profile().get_env() == env
+        let name_eq = target_name.is_none() || target_name.unwrap() == a.get_name();
+        a.is_bin() && a.get_profile().get_env() == env && name_eq
     });
     let bin = try!(bins.next().require(|| {
         human("a bin target must be available for `cargo run`")

@@ -2,7 +2,7 @@ use std::path;
 
 use support::{project, execs, path2url};
 use support::{COMPILING, RUNNING};
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, is_not};
 
 fn setup() {
 }
@@ -65,6 +65,68 @@ test!(exit_code {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(2));
+})
+
+test!(run_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "fn main() { }")
+        .file("src/bin2.rs", "fn main() { }");
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} `target{sep}bin2`
+",
+       compiling = COMPILING,
+       running = RUNNING,
+       sep = path::SEP,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("run").arg("--target-name").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+
+    assert_that(&prj.bin("bin1"), is_not(existing_file()));
+    assert_that(&prj.bin("bin2"), existing_file());
+})
+
+test!(run_nonexistent_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "fn main() { }")
+        .file("src/bin2.rs", "fn main() { }");
+
+    let expected_stderr = format!("\
+a bin target must be available for `cargo run`
+");
+
+    assert_that(prj.cargo_process("run").arg("-t").arg("nonexistent"),
+        execs().with_status(101).with_stderr(expected_stderr.as_slice()));
 })
 
 test!(no_main_file {
