@@ -3,12 +3,12 @@ name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
  "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc22ffbc99d7ea8e97dfc7ab0b91a)",
- "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#7515c10dcc94a7263d5e062c434b1465167673dd)",
- "docopt_macros 0.6.4 (git+https://github.com/docopt/docopt.rs#7515c10dcc94a7263d5e062c434b1465167673dd)",
+ "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c)",
+ "docopt_macros 0.6.4 (git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4bcd195f76291ea390)",
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#27338cbd4736d3c8146294fc090c6f8f06c32d72)",
- "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98)",
+ "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#7d46e76514ac606530dfb0e93270fffcf64ca76d)",
  "semver 0.1.0 (git+https://github.com/rust-lang/semver#5dee918159d4e3d84c1ee54cf6a5305e6f7bd557)",
  "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#943d7c0173c7fa5e8c58978add0180569c68d7f7)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#05c1eb420f54569336b8481c28a46b5a7c51ec99)",
@@ -33,14 +33,14 @@ source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc
 [[package]]
 name = "docopt"
 version = "0.6.4"
-source = "git+https://github.com/docopt/docopt.rs#7515c10dcc94a7263d5e062c434b1465167673dd"
+source = "git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c"
 
 [[package]]
 name = "docopt_macros"
 version = "0.6.4"
-source = "git+https://github.com/docopt/docopt.rs#7515c10dcc94a7263d5e062c434b1465167673dd"
+source = "git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c"
 dependencies = [
- "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#7515c10dcc94a7263d5e062c434b1465167673dd)",
+ "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c)",
 ]
 
 [[package]]
@@ -70,7 +70,7 @@ source = "git+https://github.com/rust-lang/glob#27338cbd4736d3c8146294fc090c6f8f
 [[package]]
 name = "hamcrest"
 version = "0.1.0"
-source = "git+https://github.com/carllerche/hamcrest-rust.git#49061a2134d9112b8622d54587590f324b97cc98"
+source = "git+https://github.com/carllerche/hamcrest-rust.git#7d46e76514ac606530dfb0e93270fffcf64ca76d"
 
 [[package]]
 name = "libgit2"
