@@ -92,3 +92,9 @@ impl<N: Eq + Hash> PartialEq for Graph<N> {
     fn eq(&self, other: &Graph<N>) -> bool { self.nodes.eq(&other.nodes) }
 }
 impl<N: Eq + Hash> Eq for Graph<N> {}
+
+impl<N: Eq + Hash + Clone> Clone for Graph<N> {
+    fn clone(&self) -> Graph<N> {
+        Graph { nodes: self.nodes.clone() }
+    }
+}

@@ -3,7 +3,7 @@ use std::fmt;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use util::{CargoResult, Graph, human, internal, ChainError};
+use util::{CargoResult, Graph, human, ChainError};
 use util::profile;
 use util::graph::{Nodes, Edges};
 
@@ -16,7 +16,7 @@ mod encode;
 ///
 /// Each instance of `Resolve` also understands the full set of features used
 /// for each package as well as what the root package is.
-#[deriving(PartialEq, Eq)]
+#[deriving(PartialEq, Eq, Clone)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
@@ -109,133 +109,214 @@ impl fmt::Show for Resolve {
     }
 }
 
-struct Context<'a, R:'a> {
-    registry: &'a mut R,
+#[deriving(Clone)]
+struct Context {
+    activations: HashMap<(String, SourceId), Vec<Summary>>,
     resolve: Resolve,
-    // cycle detection
     visited: HashSet<PackageId>,
-
-    // Try not to re-resolve too much
-    resolved: HashMap<PackageId, HashSet<String>>,
-
-    // Eventually, we will have smarter logic for checking for conflicts in the
-    // resolve, but without the registry, conflicts should not exist in
-    // practice, so this is just a sanity check.
-    seen: HashMap<(String, SourceId), semver::Version>,
-}
-
-impl<'a, R: Registry> Context<'a, R> {
-    fn new(registry: &'a mut R, root: PackageId) -> Context<'a, R> {
-        Context {
-            registry: registry,
-            resolve: Resolve::new(root),
-            seen: HashMap::new(),
-            visited: HashSet::new(),
-            resolved: HashMap::new(),
-        }
-    }
 }
 
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve<R: Registry>(summary: &Summary, method: ResolveMethod,
                             registry: &mut R) -> CargoResult<Resolve> {
     log!(5, "resolve; summary={}", summary);
-    let _p = profile::start(format!("resolving: {}", summary));
 
-    let mut context = Context::new(registry, summary.get_package_id().clone());
-    context.seen.insert((summary.get_name().to_string(),
-                         summary.get_source_id().clone()),
-                        summary.get_version().clone());
-    try!(resolve_deps(summary, method, &mut context));
-    log!(5, "  result={}", context.resolve);
-    Ok(context.resolve)
+    let mut cx = Context {
+        resolve: Resolve::new(summary.get_package_id().clone()),
+        activations: HashMap::new(),
+        visited: HashSet::new(),
+    };
+    let _p = profile::start(format!("resolving: {}", summary));
+    cx.activations.insert((summary.get_name().to_string(),
+                           summary.get_source_id().clone()),
+                          vec![summary.clone()]);
+    match try!(activate(cx, registry, summary, method)) {
+        Ok(cx) => Ok(cx.resolve),
+        Err(e) => Err(e),
+    }
 }
 
-fn resolve_deps<'a, R: Registry>(parent: &Summary,
-                                 method: ResolveMethod,
-                                 ctx: &mut Context<'a, R>)
-                                 -> CargoResult<()> {
-    let (deps, features) = try!(resolve_features(parent, method, ctx));
+fn activate<R: Registry>(mut cx: Context,
+                         registry: &mut R,
+                         parent: &Summary,
+                         method: ResolveMethod)
+                         -> CargoResult<CargoResult<Context>> {
+    // First, figure out our set of dependencies based on the requsted set of
+    // features. This also calculates what features we're going to enable for
+    // our own dependencies.
+    let deps = try!(resolve_features(&mut cx, parent, method));
 
-    // Recursively resolve all dependencies
-    for &dep in deps.iter() {
-        if !match ctx.resolved.entry(parent.get_package_id().clone()) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.set(HashSet::new()),
-        }.insert(dep.get_name().to_string()) {
-            continue
-        }
+    // Next, transform all dependencies into a list of possible candidates which
+    // can satisfy that dependency.
+    let mut deps = try!(deps.into_iter().map(|(_dep_name, (dep, features))| {
+        let mut candidates = try!(registry.query(dep));
+        // When we attempt versions for a package, we'll want to start at the
+        // maximum version and work our way down.
+        candidates.as_mut_slice().sort_by(|a, b| {
+            b.get_version().cmp(a.get_version())
+        });
+        Ok((dep, candidates, features))
+    }).collect::<CargoResult<Vec<_>>>());
 
-        let pkgs = try!(ctx.registry.query(dep));
-        if pkgs.is_empty() {
-            return Err(human(format!("No package named `{}` found \
-                                      (required by `{}`).\n\
-                                      Location searched: {}\n\
-                                      Version required: {}",
-                                     dep.get_name(),
-                                     parent.get_package_id().get_name(),
-                                     dep.get_source_id(),
-                                     dep.get_version_req())));
-        } else if pkgs.len() > 1 {
-            return Err(internal(format!("At the moment, Cargo only supports a \
-                single source for a particular package name ({}).", dep)));
-        }
+    // When we recurse, attempt to resolve dependencies with fewer candidates
+    // before recursing on dependencies with more candidates. This way if the
+    // dependency with only one candidate can't be resolved we don't have to do
+    // a bunch of work before we figure that out.
+    deps.as_mut_slice().sort_by(|&(_, ref a, _), &(_, ref b, _)| {
+        a.len().cmp(&b.len())
+    });
 
-        let summary = &pkgs[0];
-        let name = summary.get_name().to_string();
-        let source_id = summary.get_source_id().clone();
-        let version = summary.get_version();
+    activate_deps(cx, registry, parent, deps.as_slice(), 0)
+}
 
-        ctx.resolve.graph.link(parent.get_package_id().clone(),
-                               summary.get_package_id().clone());
+fn activate_deps<R: Registry>(cx: Context,
+                              registry: &mut R,
+                              parent: &Summary,
+                              deps: &[(&Dependency, Vec<Summary>, Vec<String>)],
+                              cur: uint) -> CargoResult<CargoResult<Context>> {
+    if cur == deps.len() { return Ok(Ok(cx)) }
+    let (dep, ref candidates, ref features) = deps[cur];
+    let method = ResolveRequired(false, features.as_slice(),
+                                  dep.uses_default_features());
 
-        let found = match ctx.seen.find(&(name.clone(), source_id.clone())) {
-            Some(v) if v == version => true,
-            Some(..) => {
-                return Err(human(format!("Cargo found multiple copies of {} in \
-                                          {}. This is not currently supported",
-                                         summary.get_name(),
-                                         summary.get_source_id())));
+    let key = (dep.get_name().to_string(), dep.get_source_id().clone());
+    let prev_active = cx.activations.find(&key)
+                                    .map(|v| v.as_slice()).unwrap_or(&[]);
+    log!(5, "{}[{}]>{} {} candidates", parent.get_name(), cur, dep.get_name(),
+         candidates.len());
+    log!(5, "{}[{}]>{} {} prev activations", parent.get_name(), cur,
+         dep.get_name(), prev_active.len());
+
+    // Filter the set of candidates based on the previously activated
+    // versions for this dependency. We can actually use a version if it
+    // precisely matches an activated version or if it is otherwise
+    // incompatible with all other activated versions. Note that we define
+    // "compatible" here in terms of the semver sense where if the left-most
+    // nonzero digit is the same they're considered compatible.
+    let mut my_candidates = candidates.iter().filter(|&b| {
+        prev_active.iter().any(|a| a == b) ||
+            prev_active.iter().all(|a| {
+                !compatible(a.get_version(), b.get_version())
+            })
+    });
+
+    // Alright, for each candidate that's gotten this far, it meets the
+    // following requirements:
+    //
+    // 1. The version matches the dependency requirement listed for this
+    //    package
+    // 2. There are no activated versions for this package which are
+    //    semver-compatible, or there's an activated version which is
+    //    precisely equal to `candidate`.
+    //
+    // This means that we're going to attempt to activate each candidate in
+    // turn. We could possibly fail to activate each candidate, so we try
+    // each one in turn.
+    let mut last_err = None;
+    for candidate in my_candidates {
+        log!(5, "{}[{}]>{} trying {}", parent.get_name(), cur, dep.get_name(),
+             candidate.get_version());
+        let mut my_cx = cx.clone();
+        {
+            my_cx.resolve.graph.link(parent.get_package_id().clone(),
+                                     candidate.get_package_id().clone());
+            let prev = match my_cx.activations.entry(key.clone()) {
+                Occupied(e) => e.into_mut(),
+                Vacant(e) => e.set(Vec::new()),
+            };
+            if !prev.iter().any(|c| c == candidate) {
+                my_cx.resolve.graph.add(candidate.get_package_id().clone(), []);
+                prev.push(candidate.clone());
+
             }
-            None => false,
+
+            // Dependency graphs are required to be a DAG. Non-transitive
+            // dependencies (dev-deps), however, can never introduce a cycle, so we
+            // skip them.
+            if dep.is_transitive() &&
+               !my_cx.visited.insert(candidate.get_package_id().clone()) {
+                return Err(human(format!("cyclic package dependency: package `{}` \
+                                          depends on itself",
+                                         candidate.get_package_id())))
+            }
+        }
+        let mut my_cx = match try!(activate(my_cx, registry, candidate, method)) {
+            Ok(cx) => cx,
+            Err(e) => { last_err = Some(e); continue }
         };
-        if !found {
-            ctx.seen.insert((name, source_id), version.clone());
-            ctx.resolve.graph.add(summary.get_package_id().clone(), []);
-        }
-
-        // Dependency graphs are required to be a DAG. Non-transitive
-        // dependencies (dev-deps), however, can never introduce a cycle, so we
-        // skip them.
-        if dep.is_transitive() &&
-           !ctx.visited.insert(summary.get_package_id().clone()) {
-            return Err(human(format!("Cyclic package dependency: package `{}` \
-                                      depends on itself",
-                                     summary.get_package_id())))
-        }
-
-        // The list of enabled features for this dependency are both those
-        // listed in the dependency itself as well as any of our own features
-        // which enabled a feature of this package.
-        let features = features.find_equiv(&dep.get_name())
-                               .map(|v| v.as_slice())
-                               .unwrap_or(&[]);
-        try!(resolve_deps(summary,
-                          ResolveRequired(false, features,
-                                          dep.uses_default_features()),
-                          ctx));
         if dep.is_transitive() {
-            ctx.visited.remove(summary.get_package_id());
+            my_cx.visited.remove(candidate.get_package_id());
+        }
+        match try!(activate_deps(my_cx, registry, parent, deps, cur + 1)) {
+            Ok(cx) => return Ok(Ok(cx)),
+            Err(e) => { last_err = Some(e); }
         }
     }
+    log!(5, "{}[{}]>{} -- {}", parent.get_name(), cur, dep.get_name(), last_err);
 
-    Ok(())
+    // Oh well, we couldn't activate any of the candidates, so we just can't
+    // activate this dependency at all
+    Ok(match last_err {
+        Some(e) => Err(e),
+        None if candidates.len() > 0 => {
+            let mut msg = format!("failed to select a version for `{}` \
+                                   (required by `{}`):\n\
+                                   all possible versions conflict with \
+                                   previously selected versions of `{}`",
+                                  dep.get_name(), parent.get_name(),
+                                  dep.get_name());
+            'outer: for v in prev_active.iter() {
+                for node in cx.resolve.graph.iter() {
+                    let mut edges = match cx.resolve.graph.edges(node) {
+                        Some(edges) => edges,
+                        None => continue,
+                    };
+                    for edge in edges {
+                        if edge != v.get_package_id() { continue }
+
+                        msg.push_str(format!("\n  version {} in use by {}",
+                                             v.get_version(), edge).as_slice());
+                        continue 'outer;
+                    }
+                }
+                msg.push_str(format!("\n  version {} in use by ??",
+                                     v.get_version()).as_slice());
+            }
+
+            msg.push_str(format!("\n  possible versions to select: {}",
+                                 candidates.iter().map(|v| v.get_version())
+                                           .collect::<Vec<_>>()).as_slice());
+
+            Err(human(msg))
+        }
+        None => {
+            Err(human(format!("no package named `{}` found (required by `{}`)\n\
+                               location searched: {}\n\
+                               version required: {}",
+                              dep.get_name(), parent.get_name(),
+                              dep.get_source_id(),
+                              dep.get_version_req())))
+        }
+    })
 }
 
-fn resolve_features<'a, R>(parent: &'a Summary, method: ResolveMethod,
-                           ctx: &mut Context<R>)
-                           -> CargoResult<(Vec<&'a Dependency>,
-                                           HashMap<&'a str, Vec<String>>)> {
+// Returns if `a` and `b` are compatible in the semver sense. This is a
+// commutative operation.
+//
+// Versions `a` and `b` are compatible if their left-most nonzero digit is the
+// same.
+fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
+    if a.major != b.major { return false }
+    if a.major != 0 { return true }
+    if a.minor != b.minor { return false }
+    if a.minor != 0 { return true }
+    a.patch == b.patch
+}
+
+fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
+                        method: ResolveMethod)
+                        -> CargoResult<HashMap<&'a str,
+                                               (&'a Dependency, Vec<String>)>> {
     let dev_deps = match method {
         ResolveEverything => true,
         ResolveRequired(dev_deps, _, _) => dev_deps,
@@ -266,7 +347,7 @@ fn resolve_features<'a, R>(parent: &'a Summary, method: ResolveMethod,
                                          feature)));
             }
         }
-        ret.insert(dep.get_name(), base);
+        ret.insert(dep.get_name(), (*dep, base));
     }
 
     // All features can only point to optional dependencies, in which case they
@@ -286,13 +367,13 @@ fn resolve_features<'a, R>(parent: &'a Summary, method: ResolveMethod,
     // Record what list of features is active for this package.
     {
         let pkgid = parent.get_package_id().clone();
-        match ctx.resolve.features.entry(pkgid) {
+        match cx.resolve.features.entry(pkgid) {
             Occupied(entry) => entry.into_mut(),
             Vacant(entry) => entry.set(HashSet::new()),
         }.extend(used_features.into_iter());
     }
 
-    Ok((deps, ret))
+    Ok(ret)
 }
 
 // Returns a pair of (feature dependencies, all used features)
@@ -384,193 +465,3 @@ fn build_features(s: &Summary, method: ResolveMethod)
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
-    use hamcrest::{assert_that, equal_to, contains};
-
-    use core::source::{SourceId, RegistryKind, GitKind};
-    use core::{Dependency, PackageId, Summary, Registry};
-    use util::{CargoResult, ToUrl};
-
-    fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
-                            registry: &mut R)
-                            -> CargoResult<Vec<PackageId>> {
-        let summary = Summary::new(pkg, deps, HashMap::new()).unwrap();
-        let method = super::ResolveEverything;
-        Ok(try!(super::resolve(&summary, method,
-                               registry)).iter().map(|p| p.clone()).collect())
-    }
-
-    trait ToDep {
-        fn to_dep(self) -> Dependency;
-    }
-
-    impl ToDep for &'static str {
-        fn to_dep(self) -> Dependency {
-            let url = "http://example.com".to_url().unwrap();
-            let source_id = SourceId::new(RegistryKind, url);
-            Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
-        }
-    }
-
-    impl ToDep for Dependency {
-        fn to_dep(self) -> Dependency {
-            self
-        }
-    }
-
-    macro_rules! pkg(
-        ($name:expr => $($deps:expr),+) => ({
-            let d: Vec<Dependency> = vec!($($deps.to_dep()),+);
-
-            Summary::new(PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
-                         d, HashMap::new()).unwrap()
-        });
-
-        ($name:expr) => (
-            Summary::new(PackageId::new($name, "1.0.0", &registry_loc()).unwrap(),
-                         Vec::new(), HashMap::new()).unwrap()
-        )
-    )
-
-    fn registry_loc() -> SourceId {
-        let remote = "http://example.com".to_url().unwrap();
-        SourceId::new(RegistryKind, remote)
-    }
-
-    fn pkg(name: &str) -> Summary {
-        Summary::new(pkg_id(name), Vec::new(), HashMap::new()).unwrap()
-    }
-
-    fn pkg_id(name: &str) -> PackageId {
-        PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
-    }
-
-    fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
-        let remote = loc.to_url();
-        let source_id = SourceId::new(GitKind("master".to_string()),
-                                      remote.unwrap());
-
-        PackageId::new(name, "1.0.0", &source_id).unwrap()
-    }
-
-    fn pkg_loc(name: &str, loc: &str) -> Summary {
-        Summary::new(pkg_id_loc(name, loc), Vec::new(), HashMap::new()).unwrap()
-    }
-
-    fn dep(name: &str) -> Dependency {
-        let url = "http://example.com".to_url().unwrap();
-        let source_id = SourceId::new(RegistryKind, url);
-        Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
-    }
-
-    fn dep_loc(name: &str, location: &str) -> Dependency {
-        let url = location.to_url().unwrap();
-        let source_id = SourceId::new(GitKind("master".to_string()), url);
-        Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
-    }
-
-    fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
-        pkgs
-    }
-
-    fn names(names: &[&'static str]) -> Vec<PackageId> {
-        names.iter()
-            .map(|name| PackageId::new(*name, "1.0.0", &registry_loc()).unwrap())
-            .collect()
-    }
-
-    fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
-        names.iter()
-            .map(|&(name, loc)| pkg_id_loc(name, loc)).collect()
-    }
-
-    #[test]
-    pub fn test_resolving_empty_dependency_list() {
-        let res = resolve(pkg_id("root"), Vec::new(),
-                          &mut registry(vec!())).unwrap();
-
-        assert_that(&res, equal_to(&names(["root"])));
-    }
-
-    #[test]
-    pub fn test_resolving_only_package() {
-        let mut reg = registry(vec!(pkg("foo")));
-        let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
-
-        assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
-    }
-
-    #[test]
-    pub fn test_resolving_one_dep() {
-        let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
-        let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
-
-        assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
-    }
-
-    #[test]
-    pub fn test_resolving_multiple_deps() {
-        let mut reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
-        let res = resolve(pkg_id("root"), vec![dep("foo"), dep("baz")],
-                          &mut reg).unwrap();
-
-        assert_that(&res, contains(names(["root", "foo", "baz"])).exactly());
-    }
-
-    #[test]
-    pub fn test_resolving_transitive_deps() {
-        let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => "foo")));
-        let res = resolve(pkg_id("root"), vec![dep("bar")], &mut reg).unwrap();
-
-        assert_that(&res, contains(names(["root", "foo", "bar"])));
-    }
-
-    #[test]
-    pub fn test_resolving_common_transitive_deps() {
-        let mut reg = registry(vec!(pkg!("foo" => "bar"), pkg!("bar")));
-        let res = resolve(pkg_id("root"), vec![dep("foo"), dep("bar")],
-                          &mut reg).unwrap();
-
-        assert_that(&res, contains(names(["root", "foo", "bar"])));
-    }
-
-    #[test]
-    pub fn test_resolving_with_same_name() {
-        let list = vec![pkg_loc("foo", "http://first.example.com"),
-                        pkg_loc("bar", "http://second.example.com")];
-
-        let mut reg = registry(list);
-        let res = resolve(pkg_id("root"),
-                          vec![dep_loc("foo", "http://first.example.com"),
-                               dep_loc("bar", "http://second.example.com")],
-                          &mut reg);
-
-        let mut names = loc_names([("foo", "http://first.example.com"),
-                                   ("bar", "http://second.example.com")]);
-
-        names.push(pkg_id("root"));
-
-        assert_that(&res.unwrap(), contains(names).exactly());
-    }
-
-    #[test]
-    pub fn test_resolving_with_dev_deps() {
-        let mut reg = registry(vec!(
-            pkg!("foo" => "bar", dep("baz").transitive(false)),
-            pkg!("baz" => "bat", dep("bam").transitive(false)),
-            pkg!("bar"),
-            pkg!("bat")
-        ));
-
-        let res = resolve(pkg_id("root"),
-                          vec![dep("foo"), dep("baz").transitive(false)],
-                          &mut reg).unwrap();
-
-        assert_that(&res, contains(names(["root", "foo", "bar", "baz"])));
-    }
-}
-

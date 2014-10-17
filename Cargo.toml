@@ -46,3 +46,6 @@ doc = false
 
 [[test]]
 name = "tests"
+
+[[test]]
+name = "resolve"
