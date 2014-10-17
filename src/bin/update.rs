@@ -1,12 +1,21 @@
 use std::os;
-use docopt;
 
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    arg_spec: Option<String>,
+    flag_package: Option<String>,
+    flag_aggressive: bool,
+    flag_precise: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Update dependencies as recorded in the local lock file.
 
 Usage:
@@ -40,8 +49,7 @@ If SPEC is not given, then all dependencies will be re-resolved and
 updated.
 
 For more information about package id specifications, see `cargo help pkgid`.
-",  flag_manifest_path: Option<String>, arg_spec: Option<String>,
-    flag_precise: Option<String>, flag_package: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-update; args={}", os::args());

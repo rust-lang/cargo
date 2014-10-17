@@ -3,8 +3,7 @@ name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
  "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc22ffbc99d7ea8e97dfc7ab0b91a)",
- "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c)",
- "docopt_macros 0.6.4 (git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c)",
+ "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#4544a9f422b115c2ffef4ee9baf27ceb07c34602)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4bcd195f76291ea390)",
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#27338cbd4736d3c8146294fc090c6f8f06c32d72)",
@@ -33,15 +32,7 @@ source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#1d43e08f629dc
 [[package]]
 name = "docopt"
 version = "0.6.4"
-source = "git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c"
-
-[[package]]
-name = "docopt_macros"
-version = "0.6.4"
-source = "git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c"
-dependencies = [
- "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#db3abbb1d55aec986daefcf4b6131a61ff78513c)",
-]
+source = "git+https://github.com/docopt/docopt.rs#4544a9f422b115c2ffef4ee9baf27ceb07c34602"
 
 [[package]]
 name = "encoding"

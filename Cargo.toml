@@ -11,9 +11,6 @@ path = "src/cargo/lib.rs"
 [dependencies.docopt]
 git = "https://github.com/docopt/docopt.rs"
 
-[dependencies.docopt_macros]
-git = "https://github.com/docopt/docopt.rs"
-
 [dependencies.toml]
 git = "https://github.com/alexcrichton/toml-rs"
 

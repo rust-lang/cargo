@@ -1,11 +1,15 @@
-use docopt;
-
 use cargo::ops;
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_manifest_path: Option<String>,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Fetch dependencies of a package from the network.
 
 Usage:
@@ -24,7 +28,7 @@ the lockfile changes.
 If the lockfile is not available, then this is the equivalent of
 `cargo generate-lockfile`. A lockfile is generated and dependencies are also
 all updated.
-",  flag_manifest_path: Option<String>)
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);

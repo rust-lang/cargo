@@ -11,7 +11,6 @@ extern crate regex;
 extern crate serialize;
 extern crate term;
 extern crate time;
-#[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
 
 extern crate curl;
@@ -29,7 +28,6 @@ use std::os;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
-use docopt::FlagParser;
 
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK};
@@ -82,51 +80,49 @@ pub trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
 impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
 pub fn execute_main<'a,
-                    T: FlagParser,
+                    T: Decodable<docopt::Decoder, docopt::Error>,
                     U: RepresentsJSON,
                     V: Encodable<json::Encoder<'a>, io::IoError>>(
                         exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
-                        options_first: bool) {
-    // see comments below
-    off_the_main_thread(proc() {
-        process::<V>(|rest, shell| call_main(exec, shell, rest, options_first));
-    });
+                        options_first: bool,
+                        usage: &str) {
+    process::<V>(|rest, shell| call_main(exec, shell, usage, rest, options_first));
 }
 
 pub fn call_main<'a,
-        T: FlagParser,
+        T: Decodable<docopt::Decoder, docopt::Error>,
         U: RepresentsJSON,
         V: Encodable<json::Encoder<'a>, io::IoError>>(
             exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
             shell: &mut MultiShell,
+            usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>> {
-    let flags = try!(flags_from_args::<T>(args, options_first));
+    let flags = try!(flags_from_args::<T>(usage, args, options_first));
     let json = try!(json_from_stdin::<U>());
 
     exec(flags, json, shell)
 }
 
 pub fn execute_main_without_stdin<'a,
-                                  T: FlagParser,
+                                  T: Decodable<docopt::Decoder, docopt::Error>,
                                   V: Encodable<json::Encoder<'a>, io::IoError>>(
                                       exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
-                                      options_first: bool) {
-    // see comments below
-    off_the_main_thread(proc() {
-        process::<V>(|rest, shell| call_main_without_stdin(exec, shell, rest,
-                                                           options_first));
-    });
+                                      options_first: bool,
+                                      usage: &str) {
+    process::<V>(|rest, shell| call_main_without_stdin(exec, shell, usage, rest,
+                                                       options_first));
 }
 
 pub fn call_main_without_stdin<'a,
-                               T: FlagParser,
+                               T: Decodable<docopt::Decoder, docopt::Error>,
                                V: Encodable<json::Encoder<'a>, io::IoError>>(
             exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
             shell: &mut MultiShell,
+            usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>> {
-    let flags = try!(flags_from_args::<T>(args, options_first));
+    let flags = try!(flags_from_args::<T>(usage, args, options_first));
     exec(flags, shell)
 }
 
@@ -221,15 +217,21 @@ pub fn version() -> String {
     })
 }
 
-fn flags_from_args<T: FlagParser>(args: &[String],
-                                  options_first: bool) -> CliResult<T> {
+fn flags_from_args<'a, T>(usage: &str, args: &[String],
+                          options_first: bool) -> CliResult<T>
+                          where T: Decodable<docopt::Decoder, docopt::Error> {
     let args = args.iter().map(|a| a.as_slice()).collect::<Vec<&str>>();
     let config = docopt::Config {
         options_first: options_first,
         help: true,
         version: Some(version()),
     };
-    FlagParser::parse_args(config, args.as_slice()).map_err(|e| {
+    let value_map = try!(docopt::docopt_args(config, args.as_slice(),
+                                             usage).map_err(|e| {
+        let code = if e.fatal() {1} else {0};
+        CliError::from_error(e, code)
+    }));
+    value_map.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
         CliError::from_error(e, code)
     })
@@ -249,17 +251,4 @@ fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
     Decodable::decode(&mut decoder).map_err(|_| {
         CliError::new("Could not process standard in as input", 1)
     })
-}
-
-// Seems curious to run cargo off the main thread, right? Well do I have a story
-// for you. Turns out rustdoc does a similar thing, and already has a good
-// explanation [1] though, so I'll just point you over there.
-//
-// [1]: https://github.com/rust-lang/rust/blob/85fd37f/src/librustdoc/lib.rs#L92-L122
-fn off_the_main_thread(p: proc():Send) {
-    let (tx, rx) = channel();
-    spawn(proc() { p(); tx.send(()); });
-    if rx.recv_opt().is_err() {
-        std::os::set_exit_status(std::rt::DEFAULT_ERROR_CODE);
-    }
 }

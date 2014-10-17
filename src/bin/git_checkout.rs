@@ -1,11 +1,16 @@
-use docopt;
-
 use cargo::core::MultiShell;
 use cargo::core::source::{Source, SourceId};
 use cargo::sources::git::{GitSource};
 use cargo::util::{Config, CliResult, CliError, human, ToUrl};
 
-docopt!(Options, "
+#[deriving(Decodable)]
+struct Options {
+    flag_url: String,
+    flag_reference: String,
+    flag_verbose: bool,
+}
+
+pub const USAGE: &'static str = "
 Usage:
     cargo git-checkout [options] --url=URL --reference=REF
     cargo git-checkout -h | --help
@@ -13,9 +18,10 @@ Usage:
 Options:
     -h, --help              Print this message
     -v, --verbose           Use verbose output
-")
+";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+    shell.set_verbose(options.flag_verbose);
     let Options { flag_url: url, flag_reference: reference, .. } = options;
 
     let url = try!(url.as_slice().to_url().map_err(|e| {
