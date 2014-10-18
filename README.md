@@ -1,6 +1,6 @@
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
-Learn more at http://crates.io/.
+Learn more at http://doc.crates.io/.
 
 ## Installing cargo from nightlies
 
