@@ -108,26 +108,31 @@ along with the defaults for each profile.
 [profile.dev]
 opt-level = 0  # Controls the --opt-level the compiler builds with
 debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
+rpath = false   # Controls whether the compiler passes `-C rpath`
 
 # The release profile, used for `cargo build --release`
 [profile.release]
 opt-level = 3
 debug = false
+rpath = false
 
 # The testing profile, used for `cargo test`
 [profile.test]
 opt-level = 0
 debug = true
+rpath = false
 
 # The benchmarking profile, used for `cargo bench`
 [profile.bench]
 opt-level = 3
 debug = false
+rpath = false
 
 # The documentation profile, used for `cargo doc`
 [profile.doc]
 opt-level = 0
 debug = true
+rpath = false
 ```
 
 # The `[features]` Section
