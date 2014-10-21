@@ -158,6 +158,7 @@ prepare-manifest-$(1):
 		$$(PKGDIR_$(1))/share/doc/cargo
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
 	cp src/etc/cargo.1 $$(PKGDIR_$(1))/share/man/man1
+	cp src/etc/cargo.bashcomp.sh $$(PKGDIR_$(1))/etc/bash_completion.d/cargo
 	#cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
 	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
 		$$(PKGDIR_$(1))/share/doc/cargo
