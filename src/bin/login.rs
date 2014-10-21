@@ -11,6 +11,7 @@ struct Options {
     flag_host: Option<String>,
     arg_token: Option<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -23,11 +24,12 @@ Options:
     -h, --help              Print this message
     --host HOST             Host to set the token for
     -v, --verbose           Use verbose output
+    -q, --quiet             No output printed to stdout
 
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {

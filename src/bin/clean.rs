@@ -10,6 +10,7 @@ struct Options {
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -24,6 +25,7 @@ Options:
     --manifest-path PATH     Path to the manifest to the package to clean
     --target TRIPLE          Target triple to clean output for (default all)
     -v, --verbose            Use verbose output
+    -q, --quiet              No output printed to stdout
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package's artifacts should be cleaned out. If it is not
@@ -32,7 +34,7 @@ and its format, see the `cargo help pkgid` command.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     debug!("executing; cmd=cargo-clean; args={:?}", env::args().collect::<Vec<_>>());
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));

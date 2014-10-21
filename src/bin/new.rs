@@ -6,6 +6,7 @@ use cargo::util::{CliResult, CliError, Config};
 #[derive(RustcDecodable)]
 struct Options {
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_bin: bool,
     arg_path: String,
     flag_name: Option<String>,
@@ -27,11 +28,12 @@ Options:
     --bin               Use a binary instead of a library template
     --name <name>       Set the resulting package name
     -v, --verbose       Use verbose output
+    -q, --quiet         No output printed to stdout
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={:?}", env::args().collect::<Vec<_>>());
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
 
     let Options { flag_bin, arg_path, flag_name, flag_vcs, .. } = options;
 

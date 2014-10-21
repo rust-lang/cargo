@@ -7,11 +7,21 @@ use term::color::{Color, BLACK, RED, GREEN, YELLOW};
 use term::{Terminal, TerminfoTerminal, color};
 
 use self::AdequateTerminal::{NoColor, Colored};
+use self::Verbosity::{Verbose, Normal, Quiet};
+
+use util::errors::{human, CargoResult};
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Verbosity {
+    Verbose,
+    Normal,
+    Quiet
+}
 
 #[derive(Clone, Copy)]
 pub struct ShellConfig {
     pub color: bool,
-    pub verbose: bool,
+    pub verbosity: Verbosity,
     pub tty: bool
 }
 
@@ -28,12 +38,12 @@ pub struct Shell {
 pub struct MultiShell {
     out: Shell,
     err: Shell,
-    verbose: bool
+    verbosity: Verbosity
 }
 
 impl MultiShell {
-    pub fn new(out: Shell, err: Shell, verbose: bool) -> MultiShell {
-        MultiShell { out: out, err: err, verbose: verbose }
+    pub fn new(out: Shell, err: Shell, verbosity: Verbosity) -> MultiShell {
+        MultiShell { out: out, err: err, verbosity: verbosity }
     }
 
     pub fn out(&mut self) -> &mut Shell {
@@ -45,27 +55,37 @@ impl MultiShell {
     }
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
-        self.out().say(message, color)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.out().say(message, color)
+        }
     }
 
     pub fn status<T, U>(&mut self, status: T, message: U) -> io::Result<()>
         where T: fmt::Display, U: fmt::Display
     {
-        self.out().say_status(status, message, GREEN)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.out().say_status(status, message, GREEN)
+        }
     }
 
     pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>
         where F: FnMut(&mut MultiShell) -> io::Result<()>
     {
-        if self.verbose { return callback(self) }
-        Ok(())
+        match self.verbosity {
+            Verbose => return callback(self),
+            _ => Ok(())
+        }
     }
 
     pub fn concise<F>(&mut self, mut callback: F) -> io::Result<()>
         where F: FnMut(&mut MultiShell) -> io::Result<()>
     {
-        if !self.verbose { return callback(self) }
-        Ok(())
+        match self.verbosity {
+            Verbose => Ok(()),
+            _ => return callback(self)
+        }
     }
 
     pub fn error<T: ToString>(&mut self, message: T) -> io::Result<()> {
@@ -76,12 +96,27 @@ impl MultiShell {
         self.err().say(message, YELLOW)
     }
 
-    pub fn set_verbose(&mut self, verbose: bool) {
-        self.verbose = verbose;
+    pub fn set_verbosity(&mut self, verbose: bool, quiet: bool) -> CargoResult<()> {
+        self.verbosity = match (verbose, quiet) {
+            (true, true) => return Err(human("cannot set both --verbose and --quiet")),
+            (true, false) => Verbose,
+            (false, true) => Quiet,
+            (false, false) => Normal
+        };
+        Ok(())
     }
 
-    pub fn get_verbose(&self) -> bool {
-        self.verbose
+    /// shortcut for commands that don't have both --verbose and --quiet
+    pub fn set_verbose(&mut self, verbose: bool) {
+        if verbose {
+            self.verbosity = Verbose;
+        } else {
+            self.verbosity = Normal;
+        }
+    }
+
+    pub fn get_verbose(&self) -> Verbosity {
+        self.verbosity
     }
 }
 
@@ -103,24 +138,33 @@ impl Shell {
     pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>
         where F: FnMut(&mut Shell) -> io::Result<()>
     {
-        if self.config.verbose { return callback(self) }
-        Ok(())
+        match self.config.verbosity {
+            Verbose => return callback(self),
+            _ => Ok(())
+        }
     }
 
     pub fn concise<F>(&mut self, mut callback: F) -> io::Result<()>
         where F: FnMut(&mut Shell) -> io::Result<()>
     {
-        if !self.config.verbose { return callback(self) }
-        Ok(())
+        match self.config.verbosity {
+            Verbose => Ok(()),
+            _ => return callback(self)
+        }
     }
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
-        try!(self.reset());
-        if color != BLACK { try!(self.fg(color)); }
-        try!(write!(self, "{}\n", message.to_string()));
-        try!(self.reset());
-        try!(self.flush());
-        Ok(())
+        match self.config.verbosity {
+            Quiet => Ok(()),
+            _ => {
+                try!(self.reset());
+                if color != BLACK { try!(self.fg(color)); }
+                try!(write!(self, "{}\n", message.to_string()));
+                try!(self.reset());
+                try!(self.flush());
+                Ok(())
+            },
+        }
     }
 
     pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)

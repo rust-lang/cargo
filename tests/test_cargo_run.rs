@@ -32,6 +32,44 @@ hello
     assert_that(&p.bin("foo"), existing_file());
 });
 
+test!(simple_quiet {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("-q"),
+                execs().with_status(0).with_stdout("\
+hello
+")
+    );
+});
+
+test!(simple_quiet_and_verbose {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("-q").arg("-v"),
+                execs().with_status(101).with_stderr("\
+cannot set both --verbose and --quiet
+")
+    );
+});
+
 test!(simple_with_args {
     let p = project("foo")
         .file("Cargo.toml", r#"

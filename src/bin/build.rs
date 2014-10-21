@@ -14,6 +14,7 @@ struct Options {
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_release: bool,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -43,6 +44,7 @@ Options:
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to compile
     -v, --verbose            Use verbose output
+    -q, --quiet              No output printed to stdout
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
@@ -57,7 +59,7 @@ the --release flag will use the `release` profile instead.
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-build; args={:?}",
            env::args().collect::<Vec<_>>());
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 

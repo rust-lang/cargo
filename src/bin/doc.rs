@@ -12,6 +12,7 @@ struct Options {
     flag_no_deps: bool,
     flag_open: bool,
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_package: Option<String>,
 }
 
@@ -32,6 +33,7 @@ Options:
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to document
     -v, --verbose            Use verbose output
+    -q, --quiet              No output printed to stdout
 
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
@@ -43,7 +45,7 @@ the `cargo help pkgid` command.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
