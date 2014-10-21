@@ -1,6 +1,6 @@
 use std::io::IoResult;
 use std::io::fs::{mod, PathExtensions};
-use std::sync::atomics;
+use std::sync::atomic;
 use std::{io, os};
 
 use cargo::util::realpath;
@@ -9,7 +9,7 @@ static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
 
 local_data_key!(task_id: uint)
 
-static mut NEXT_ID: atomics::AtomicUint = atomics::INIT_ATOMIC_UINT;
+static NEXT_ID: atomic::AtomicUint = atomic::INIT_ATOMIC_UINT;
 
 pub fn root() -> Path {
     let my_id = *task_id.get().unwrap();
@@ -91,7 +91,7 @@ impl PathExt for Path {
 
 /// Ensure required test directories exist and are empty
 pub fn setup() {
-    let my_id = unsafe { NEXT_ID.fetch_add(1, atomics::SeqCst) };
+    let my_id = NEXT_ID.fetch_add(1, atomic::SeqCst);
     task_id.replace(Some(my_id));
     debug!("path setup; root={}; home={}", root().display(), home().display());
     root().rm_rf().unwrap();

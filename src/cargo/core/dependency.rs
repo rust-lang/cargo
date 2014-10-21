@@ -25,7 +25,8 @@ impl Dependency {
     /// use cargo::core::SourceId;
     /// use cargo::core::Dependency;
     ///
-    /// Dependency::parse("color", Some("1.*"), SourceId::for_central())
+    /// Dependency::parse("color", Some("1.*"),
+    ///                   &SourceId::for_central().unwrap()).unwrap();
     /// ```
     pub fn parse(name: &str,
                  version: Option<&str>,

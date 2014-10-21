@@ -167,7 +167,7 @@ impl SourceId {
     /// use cargo::core::SourceId;
     /// SourceId::from_url("git+https://github.com/alexcrichton/\
     ///                     libssh2-static-sys#80e71a3021618eb05\
-    ///                     656c58fb7c5ef5f12bc747f".to_string())
+    ///                     656c58fb7c5ef5f12bc747f".to_string());
     /// ```
     pub fn from_url(string: String) -> SourceId {
         let mut parts = string.as_slice().splitn(1, '+');
@@ -247,7 +247,7 @@ impl SourceId {
     }
 
     /// Returns the `SourceId` corresponding to the main repository.
-    /// 
+    ///
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
     pub fn for_central() -> CargoResult<SourceId> {

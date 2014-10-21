@@ -42,8 +42,8 @@ test!(simple_with_args {
         "#)
         .file("src/main.rs", r#"
             fn main() {
-                assert_eq!(std::os::args().get(1).as_slice(), "hello");
-                assert_eq!(std::os::args().get(2).as_slice(), "world");
+                assert_eq!(std::os::args()[1].as_slice(), "hello");
+                assert_eq!(std::os::args()[2].as_slice(), "world");
             }
         "#);
 
