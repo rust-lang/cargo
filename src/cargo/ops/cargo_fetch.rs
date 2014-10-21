@@ -9,6 +9,7 @@ use sources::PathSource;
 use util::{CargoResult, Config};
 use util::profile;
 
+/// Executes `cargo fetch`.
 pub fn fetch(manifest_path: &Path,
              shell: &mut MultiShell) -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
@@ -21,6 +22,10 @@ pub fn fetch(manifest_path: &Path,
     Ok(())
 }
 
+/// Finds all the packages required to compile the specified `Package`,
+/// and loads them in the `PackageRegistry`.
+///
+/// Also write the `Cargo.lock` file with the results.
 pub fn resolve_and_fetch(registry: &mut PackageRegistry, package: &Package)
                          -> CargoResult<Resolve> {
     let _p = profile::start("resolve and fetch...");
