@@ -33,11 +33,15 @@ use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, Wrap, config, internal, human, ChainError, profile};
 
+/// Contains informations about how a package should be compiled.
 pub struct CompileOptions<'a> {
     pub env: &'a str,
     pub shell: &'a mut MultiShell<'a>,
+    /// Number of concurrent jobs to use.
     pub jobs: Option<uint>,
+    /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
     pub target: Option<&'a str>,
+    /// True if dev-dependencies must be compiled.
     pub dev_deps: bool,
     pub features: &'a [String],
     pub no_default_features: bool,

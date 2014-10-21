@@ -565,8 +565,8 @@ test!(custom_multiple_build {
         .file("src/foo.rs", r#"
             fn main() {
                 let args = ::std::os::args();
-                assert_eq!(args.get(1), &"hello".to_string());
-                assert_eq!(args.get(2), &"world".to_string());
+                assert_eq!(args[1], "hello".to_string());
+                assert_eq!(args[2], "world".to_string());
             }
         "#);
     assert_that(build1.cargo_process("build"),
@@ -586,7 +586,7 @@ test!(custom_multiple_build {
         .file("src/bar.rs", r#"
             fn main() {
                 let args = ::std::os::args();
-                assert_eq!(args.get(1), &"cargo".to_string());
+                assert_eq!(args[1], "cargo".to_string());
             }
         "#);
     assert_that(build2.cargo_process("build"),

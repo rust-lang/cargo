@@ -3,7 +3,11 @@ use std::collections::HashSet;
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
 
+/// Source of informations about a group of packages.
+///
+/// See also `core::Source`.
 pub trait Registry {
+    /// Attempt to find the packages that match a dependency request.
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
 }
 

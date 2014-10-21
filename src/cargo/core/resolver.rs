@@ -11,6 +11,7 @@ use util::{CargoResult, Graph, human, internal, ChainError};
 use util::profile;
 use util::graph::{Nodes, Edges};
 
+/// Result of the `resolve` function.
 #[deriving(PartialEq, Eq)]
 pub struct Resolve {
     graph: Graph<PackageId>,
@@ -301,6 +302,7 @@ impl<'a, R: Registry> Context<'a, R> {
     }
 }
 
+/// Builds the list of all packages required to build the first argument.
 pub fn resolve<R: Registry>(summary: &Summary, method: ResolveMethod,
                             registry: &mut R) -> CargoResult<Resolve> {
     log!(5, "resolve; summary={}", summary);

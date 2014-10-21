@@ -9,6 +9,7 @@ use regex::Regex;
 use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
+/// Identifier for a specific version of a package in a specific source.
 #[deriving(Clone, PartialEq, PartialOrd, Ord)]
 pub struct PackageId {
     name: String,
