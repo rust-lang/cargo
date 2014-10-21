@@ -202,7 +202,7 @@ impl SourceId {
                 };
 
                 let precise_str = if precise.is_some() {
-                    format!("#{}", precise.get_ref())
+                    format!("#{}", precise.as_ref().unwrap())
                 } else {
                     "".to_string()
                 };
