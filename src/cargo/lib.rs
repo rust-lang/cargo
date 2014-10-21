@@ -32,7 +32,8 @@ use std::io::{mod, stdout, stderr};
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
 use docopt::Docopt;
 
-use core::{Shell, MultiShell, ShellConfig};
+use core::{Shell, MultiShell, ShellConfig, Verbosity};
+use core::shell::{Verbose};
 use term::color::{BLACK};
 
 pub use util::{CargoError, CliError, CliResult, human};
@@ -131,7 +132,7 @@ pub fn call_main_without_stdin<'a,
 
 fn process<'a, V: Encodable<json::Encoder<'a>, io::IoError>>(
                callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
-    let mut shell = shell(true);
+    let mut shell = shell(Verbose);
     process_executed(callback(os::args().as_slice(), &mut shell), &mut shell)
 }
 
@@ -149,20 +150,20 @@ pub fn process_executed<'a,
     }
 }
 
-pub fn shell(verbose: bool) -> MultiShell {
+pub fn shell(verbosity: Verbosity) -> MultiShell {
     let tty = stderr_raw().isatty();
     let stderr = box stderr() as Box<Writer + Send>;
 
-    let config = ShellConfig { color: true, verbose: verbose, tty: tty };
+    let config = ShellConfig { color: true, verbosity: verbosity, tty: tty };
     let err = Shell::create(stderr, config);
 
     let tty = stdout_raw().isatty();
     let stdout = box stdout() as Box<Writer + Send>;
 
-    let config = ShellConfig { color: true, verbose: verbose, tty: tty };
+    let config = ShellConfig { color: true, verbosity: verbosity, tty: tty };
     let out = Shell::create(stdout, config);
 
-    MultiShell::new(out, err, verbose)
+    MultiShell::new(out, err, verbosity)
 }
 
 pub fn handle_error(err: CliError, shell: &mut MultiShell) {

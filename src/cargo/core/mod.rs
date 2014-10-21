@@ -5,7 +5,7 @@ pub use self::package_id::PackageId;
 pub use self::package_id_spec::PackageIdSpec;
 pub use self::registry::Registry;
 pub use self::resolver::Resolve;
-pub use self::shell::{Shell, MultiShell, ShellConfig};
+pub use self::shell::{Shell, MultiShell, ShellConfig, Verbosity};
 pub use self::source::{Source, SourceId, SourceMap, SourceSet};
 pub use self::summary::Summary;
 
