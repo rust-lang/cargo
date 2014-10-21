@@ -276,13 +276,14 @@ impl<'a, 'b> Context<'a, 'b> {
 
     pub fn is_relevant_target(&self, target: &Target) -> bool {
         target.is_lib() && match self.env {
-            "doc" | "test" | "bench" => target.get_profile().is_compile(),
+            "doc" | "test" => target.get_profile().is_compile(),
             // doc-all == document everything, so look for doc targets and
             //            compile targets in dependencies
             "doc-all" => target.get_profile().is_compile() ||
                          (target.get_profile().get_env() == "doc" &&
                           target.get_profile().is_doc()),
-            _ => target.get_profile().get_env() == self.env,
+            _ => target.get_profile().get_env() == self.env &&
+                 !target.get_profile().is_test(),
         }
     }
 }

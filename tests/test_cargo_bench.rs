@@ -655,11 +655,11 @@ test!(bench_dylib {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
-{running} [..]
+{running} [..] --opt-level 3 [..]
 {compiling} foo v0.0.1 ({dir})
-{running} [..]
-{running} [..]
-{running} [..]
+{running} [..] --opt-level 3 [..]
+{running} [..] --opt-level 3 [..]
+{running} [..] --opt-level 3 [..]
 {running} [..]target[..]release[..]bench-[..]
 
 running 1 test
