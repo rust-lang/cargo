@@ -52,11 +52,17 @@ impl MultiShell {
     }
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
-        self.out().say(message, color)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.out().say(message, color)
+        }
     }
 
     pub fn status<T: Show, U: Show>(&mut self, status: T, message: U) -> IoResult<()> {
-        self.out().say_status(status, message, GREEN)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.out().say_status(status, message, GREEN)
+        }
     }
 
     pub fn verbose(&mut self, callback: Callback) -> IoResult<()> {
