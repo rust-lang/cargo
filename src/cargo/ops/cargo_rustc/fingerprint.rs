@@ -229,7 +229,7 @@ fn is_fresh(loc: &Path, new_fingerprint: &str) -> CargoResult<bool> {
 /// fingerprint.
 fn mk_fingerprint<T: Hash>(cx: &Context, data: &T) -> String {
     let hasher = SipHasher::new_with_keys(0,0);
-    util::to_hex(hasher.hash(&(&cx.rustc_version, data)))
+    util::to_hex(hasher.hash(&(cx.config.rustc_version(), data)))
 }
 
 fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {

@@ -3,7 +3,7 @@ use std::collections::hashmap::{Occupied, Vacant};
 use std::str;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
-use util::{mod, CargoResult, ChainError, internal, Config, profile, Require};
+use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
 use super::{Kind, KindPlugin, KindTarget, Compilation};
@@ -17,7 +17,6 @@ pub enum PlatformRequirement {
 }
 
 pub struct Context<'a, 'b> {
-    pub rustc_version: String,
     pub config: &'b mut Config<'b>,
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'b>,
@@ -27,7 +26,6 @@ pub struct Context<'a, 'b> {
     host: Layout,
     target: Option<Layout>,
     target_triple: String,
-    host_triple: String,
     host_dylib: Option<(String, String)>,
     package_set: &'a PackageSet,
     target_dylib: Option<(String, String)>,
@@ -49,13 +47,10 @@ impl<'a, 'b> Context<'a, 'b> {
             let (dylib, _) = try!(Context::filename_parts(None));
             dylib
         };
-        let (rustc_version, rustc_host) = try!(Context::rustc_version());
         let target_triple = config.target().map(|s| s.to_string());
-        let target_triple = target_triple.unwrap_or(rustc_host.clone());
+        let target_triple = target_triple.unwrap_or(config.rustc_host().to_string());
         Ok(Context {
-            rustc_version: rustc_version,
             target_triple: target_triple,
-            host_triple: rustc_host,
             env: env,
             host: host,
             target: target,
@@ -69,28 +64,6 @@ impl<'a, 'b> Context<'a, 'b> {
             requirements: HashMap::new(),
             compilation: Compilation::new(root_pkg),
         })
-    }
-
-    /// Run `rustc` to figure out what its current version string is.
-    ///
-    /// The second element of the tuple returned is the target triple that rustc
-    /// is a host for.
-    fn rustc_version() -> CargoResult<(String, String)> {
-        let output = try!(util::process("rustc").arg("-v").arg("verbose")
-                               .exec_with_output());
-        let output = try!(String::from_utf8(output.output).map_err(|_| {
-            internal("rustc -v didn't return utf8 output")
-        }));
-        let triple = {
-            let triple = output.as_slice().lines().filter(|l| {
-                l.starts_with("host: ")
-            }).map(|l| l.slice_from(6)).next();
-            let triple = try!(triple.require(|| {
-                internal("rustc -v didn't have a line for `host:`")
-            }));
-            triple.to_string()
-        };
-        Ok((output, triple))
     }
 
     /// Run `rustc` to discover the dylib prefix/suffix for the target
@@ -204,9 +177,9 @@ impl<'a, 'b> Context<'a, 'b> {
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
         let (triple, pair) = if kind == KindPlugin {
-            (&self.host_triple, &self.host_dylib)
+            (self.config.rustc_host(), &self.host_dylib)
         } else {
-            (&self.target_triple, &self.target_dylib)
+            (self.target_triple.as_slice(), &self.target_dylib)
         };
         match *pair {
             None => return Err(human(format!("dylib outputs are not supported \
