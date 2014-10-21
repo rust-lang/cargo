@@ -5,6 +5,8 @@ use core::{Dependency, PackageId, SourceId};
 
 use util::{CargoResult, human};
 
+/// Subset of a `Manifest`. Contains only the most important informations about a package.
+///
 /// Summaries are cloned, and should not be mutated after creation
 #[deriving(Show,Clone,PartialEq)]
 pub struct Summary {

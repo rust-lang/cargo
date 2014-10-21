@@ -14,6 +14,7 @@ use core::package_id::Metadata;
 use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
+/// Contains all the informations about a package, as loaded from a Cargo.toml.
 #[deriving(PartialEq,Clone)]
 pub struct Manifest {
     summary: Summary,
@@ -89,6 +90,7 @@ impl LibKind {
         strings.iter().map(|s| LibKind::from_str(s.as_slice())).collect()
     }
 
+    /// Returns the argument suitable for `--crate-type` to pass to rustc.
     pub fn crate_type(&self) -> &'static str {
         match *self {
             Lib => "lib",
@@ -303,6 +305,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
     }
 }
 
+/// Informations about a binary, a library, an example, etc. that is part of the package.
 #[deriving(Clone, Hash, PartialEq)]
 pub struct Target {
     kind: TargetKind,
@@ -399,6 +402,7 @@ impl Manifest {
         &self.doc_dir
     }
 
+    /// Returns a list of all the potential `SourceId`s of the dependencies.
     pub fn get_source_ids(&self) -> &[SourceId] {
         self.sources.as_slice()
     }
@@ -520,6 +524,7 @@ impl Target {
         }
     }
 
+    /// Returns true for binary, bench, tests and examples.
     pub fn is_bin(&self) -> bool {
         match self.kind {
             BinTarget => true,
@@ -535,6 +540,7 @@ impl Target {
         self.metadata.as_ref()
     }
 
+    /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<&'static str> {
         match self.kind {
             LibTarget(ref kinds) => {

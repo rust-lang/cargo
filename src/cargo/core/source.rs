@@ -56,6 +56,7 @@ pub enum SourceKind {
 
 type Error = Box<CargoError + Send>;
 
+/// Unique identifier for a source of packages.
 #[deriving(Clone, Eq)]
 pub struct SourceId {
     pub url: Url,
@@ -158,6 +159,16 @@ impl SourceId {
         SourceId { kind: kind, url: url, precise: None }
     }
 
+    /// Parses a source URL and returns the corresponding ID.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use cargo::core::SourceId;
+    /// SourceId::from_url("git+https://github.com/alexcrichton/\
+    ///                     libssh2-static-sys#80e71a3021618eb05\
+    ///                     656c58fb7c5ef5f12bc747f".to_string())
+    /// ```
     pub fn from_url(string: String) -> SourceId {
         let mut parts = string.as_slice().splitn(1, '+');
         let kind = parts.next().unwrap();
@@ -235,6 +246,10 @@ impl SourceId {
         SourceId::new(RegistryKind, url.clone())
     }
 
+    /// Returns the `SourceId` corresponding to the main repository.
+    /// 
+    /// This is the main cargo registry by default, but it can be overridden in
+    /// a `.cargo/config`.
     pub fn for_central() -> CargoResult<SourceId> {
         Ok(SourceId::for_registry(&try!(RegistrySource::url())))
     }
@@ -254,6 +269,7 @@ impl SourceId {
         }
     }
 
+    /// Creates an implementation of `Source` corresponding to this ID.
     pub fn load<'a>(&self, config: &'a mut Config) -> Box<Source+'a> {
         log!(5, "loading SourceId; {}", self);
         match self.kind {
@@ -334,6 +350,7 @@ impl<'a> SourceMap<'a> {
     }
 }
 
+/// List of `Source` implementors. `SourceSet` itself implements `Source`.
 pub struct SourceSet<'a> {
     sources: Vec<Box<Source+'a>>
 }
