@@ -44,7 +44,7 @@ test!(old_custom_build {
                 execs().with_status(0)
                        .with_stdout(format!("   Compiling foo v0.5.0 ({})\n",
                                             p.url()))
-                       .with_stderr(""));
+                       .with_stderr("warning: the old build command has been deprecated"));
 })
 
 test!(old_custom_multiple_build {
@@ -108,7 +108,7 @@ test!(old_custom_multiple_build {
                 execs().with_status(0)
                        .with_stdout(format!("   Compiling foo v0.5.0 ({})\n",
                                             p.url()))
-                       .with_stderr(""));
+                       .with_stderr("warning: the old build command has been deprecated"));
 })
 
 test!(old_custom_build_failure {
@@ -148,6 +148,7 @@ test!(old_custom_build_failure {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+warning: the old build command has been deprecated\n\
 Failed to run custom build command for `foo v0.5.0 ({dir})
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
@@ -211,6 +212,7 @@ test!(old_custom_second_build_failure {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+warning: the old build command has been deprecated\n\
 Failed to run custom build command for `foo v0.5.0 ({dir})
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
