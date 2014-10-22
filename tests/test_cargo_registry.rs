@@ -150,9 +150,9 @@ test!(nonexistent {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-No package named `nonexistent` found (required by `foo`).
-Location searched: the package registry
-Version required: >= 0.0.0
+no package named `nonexistent` found (required by `foo`)
+location searched: the package registry
+version required: >= 0.0.0
 "));
 })
 
@@ -196,9 +196,9 @@ test!(update_registry {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-No package named `notyet` found (required by `foo`).
-Location searched: the package registry
-Version required: >= 0.0.0
+no package named `notyet` found (required by `foo`)
+location searched: the package registry
+version required: >= 0.0.0
 "));
 
     // Add the package and commit

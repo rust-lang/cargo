@@ -501,9 +501,9 @@ test!(cargo_compile_with_dep_name_mismatch {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!(
-r#"No package named `notquitebar` found (required by `foo`).
-Location searched: {proj_dir}
-Version required: *
+r#"no package named `notquitebar` found (required by `foo`)
+location searched: {proj_dir}
+version required: *
 "#, proj_dir = p.url())));
 })
 
@@ -1091,9 +1091,7 @@ test!(self_dependency {
         "#)
         .file("src/test.rs", "fn main() {}");
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
-[..] test v0.0.0 ([..])
-"));
+                execs().with_status(0));
 })
 
 #[cfg(not(windows))]

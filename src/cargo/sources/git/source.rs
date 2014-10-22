@@ -28,7 +28,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
                        config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
-        let reference = match source_id.kind {
+        let reference = match *source_id.get_kind() {
             GitKind(ref reference) => reference,
             _ => fail!("Not a git source; id={}", source_id)
         };
@@ -42,9 +42,9 @@ impl<'a, 'b> GitSource<'a, 'b> {
         let checkout_path = config.git_checkout_path()
             .join(ident.as_slice()).join(reference.as_slice());
 
-        let reference = match source_id.precise {
-            Some(ref s) => s,
-            None => reference,
+        let reference = match source_id.get_precise() {
+            Some(s) => s,
+            None => reference.as_slice(),
         };
 
         GitSource {
@@ -160,7 +160,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         let actual_rev = self.remote.rev_for(&self.db_path,
                                              self.reference.as_slice());
         let should_update = actual_rev.is_err() ||
-                            self.source_id.precise.is_none();
+                            self.source_id.get_precise().is_none();
 
         let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",

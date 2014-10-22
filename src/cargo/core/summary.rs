@@ -8,7 +8,7 @@ use util::{CargoResult, human};
 /// Subset of a `Manifest`. Contains only the most important informations about a package.
 ///
 /// Summaries are cloned, and should not be mutated after creation
-#[deriving(Show,Clone,PartialEq)]
+#[deriving(Show,Clone)]
 pub struct Summary {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
@@ -88,6 +88,12 @@ impl Summary {
 
     pub fn get_features(&self) -> &HashMap<String, Vec<String>> {
         &self.features
+    }
+}
+
+impl PartialEq for Summary {
+    fn eq(&self, other: &Summary) -> bool {
+        self.package_id == other.package_id
     }
 }
 
