@@ -155,7 +155,8 @@ prepare-manifest-$(1):
 	rm -rf $$(PKGDIR_$(1))
 	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo \
 		$$(PKGDIR_$(1))/share/man/man1 \
-		$$(PKGDIR_$(1))/share/doc/cargo
+		$$(PKGDIR_$(1))/share/doc/cargo \
+		$$(PKGDIR_$(1))/etc/bash_completion.d
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
 	cp src/etc/cargo.1 $$(PKGDIR_$(1))/share/man/man1
 	cp src/etc/cargo.bashcomp.sh $$(PKGDIR_$(1))/etc/bash_completion.d/cargo
