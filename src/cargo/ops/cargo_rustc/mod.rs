@@ -115,10 +115,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         }
 
         let compiled = compiled.contains(dep.get_package_id());
-        try!(compile(targets.as_slice(), dep, compiled, &mut cx, &mut queue));
+        try!(compile(targets.as_slice(), dep, pkg, compiled, &mut cx, &mut queue));
     }
 
-    try!(compile(targets, pkg, true, &mut cx, &mut queue));
+    try!(compile(targets, pkg, pkg, true, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
@@ -127,7 +127,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
-                   compiled: bool,
+                   root_pkg: &'a Package, compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
@@ -153,27 +153,6 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     }
     jobs.enqueue(pkg, jq::StageStart, init);
 
-    // Old custom build system
-    // TODO: deprecated, remove
-    let mut build_cmds = Vec::new();
-    for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
-        let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
-        build_cmds.push(work);
-    }
-    let (freshness, dirty, fresh) =
-        try!(fingerprint::prepare_build_cmd(cx, pkg));
-    let desc = match build_cmds.len() {
-        0 => String::new(),
-        1 => pkg.get_manifest().get_build()[0].to_string(),
-        _ => format!("custom build commands"),
-    };
-    let dirty = proc() {
-        for cmd in build_cmds.into_iter() { try!(cmd()) }
-        dirty()
-    };
-    jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh, desc),
-                                                  freshness)]);
-
     // After the custom command has run, execute rustc for all targets of our
     // package.
     //
@@ -187,7 +166,20 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             vec![(rustdoc, KindTarget, desc)]
         } else {
             let req = cx.get_requirement(pkg, target);
-            try!(rustc(pkg, target, cx, req))
+            let mut rustc = try!(rustc(pkg, target, cx, req));
+
+            if target.get_profile().is_custom_build() {
+                for &(ref mut work, _, _) in rustc.iter_mut() {
+                    use std::mem;
+                    let execute_cmd = try!(prepare_execute_custom_build(pkg, root_pkg,
+                                                                        target, cx));
+                    let rustc_cmd = mem::replace(work, proc() Ok(()));
+                    let replacement = proc() { try!(rustc_cmd()); execute_cmd() };
+                    mem::replace(work, replacement);
+                }
+            }
+
+            rustc
         };
 
         let dst = match (target.is_lib(),
@@ -207,7 +199,34 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             dst.push((job(dirty, fresh, desc), freshness));
         }
     }
-    jobs.enqueue(pkg, jq::StageCustomBuild, builds);
+
+    if builds.len() >= 1 {
+        // New custom build system
+        jobs.enqueue(pkg, jq::StageCustomBuild, builds);
+
+    } else {
+        // Old custom build system
+        // TODO: deprecated, remove
+        let mut build_cmds = Vec::new();
+        for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
+            let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
+            build_cmds.push(work);
+        }
+        let (freshness, dirty, fresh) =
+            try!(fingerprint::prepare_build_cmd(cx, pkg));
+        let desc = match build_cmds.len() {
+            0 => String::new(),
+            1 => pkg.get_manifest().get_build()[0].to_string(),
+            _ => format!("custom build commands"),
+        };
+        let dirty = proc() {
+            for cmd in build_cmds.into_iter() { try!(cmd()) }
+            dirty()
+        };
+        jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh, desc),
+                                                      freshness)]);
+    }
+
     jobs.enqueue(pkg, jq::StageLibraries, libs);
     jobs.enqueue(pkg, jq::StageBinaries, bins);
     jobs.enqueue(pkg, jq::StageTests, tests);
@@ -283,6 +302,74 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
                             pkg, e.msg);
             e.concrete().mark_human()
+        }));
+        Ok(())
+    })
+}
+
+// Prepares a `Work` that executes the target as a custom build script.
+// `pkg` is the package the build script belongs to, and `root_pkg` is the package
+// Cargo is being run on.
+fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Target,
+                                cx: &mut Context) -> CargoResult<Work> {
+    // TODO: this shouldn't explicitly pass `KindTarget` for dest/deps_dir, we
+    //       may be building a C lib for a plugin
+    let layout = cx.layout(pkg, KindTarget);
+    let output = layout.native(pkg);
+    let old_output = layout.proxy().old_native(pkg);
+
+    // Building the command to execute
+    let to_exec = try!(cx.target_filenames(target));
+    if to_exec.len() >= 2 {
+        return Err(human(format!("custom build script shouldn't have multiple outputs")));
+    }
+    let to_exec = to_exec.into_iter().next();
+    let to_exec = match to_exec {
+        Some(cmd) => cmd,
+        None => return Err(human(format!("failed to determine output of custom build script"))),
+    };
+    let to_exec = layout.root().join(to_exec);
+
+    let profile = target.get_profile();
+    let mut p = process(to_exec, pkg, cx)
+                     .env("OUT_DIR", Some(&output))
+                     .env("CARGO_MANIFEST_DIR", Some(root_pkg.get_manifest_path()
+                                                     .display().to_string()))
+                     .env("NUM_JOBS", profile.get_codegen_units().map(|n| n.to_string()))
+                     .env("TARGET", Some(cx.target_triple()))
+                     .env("DEBUG", Some(profile.get_debug().to_string()))
+                     .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
+                     .env("PROFILE", Some(profile.get_env()));
+
+    match cx.resolve.features(pkg.get_package_id()) {
+        Some(features) => {
+            for feat in features.iter() {
+                let feat = feat.as_slice().chars()
+                               .map(|c| c.to_uppercase())
+                               .map(|c| if c == '-' {'_'} else {c})
+                               .collect::<String>();
+                p = p.env(format!("CARGO_FEATURE_{}", feat).as_slice(), Some("1"));
+            }
+        }
+        None => {}
+    }
+
+    let pkg = pkg.to_string();
+
+    Ok(proc() {
+        // TODO: is this necessary? it's already part of layout::prepare
+        try!(if old_output.exists() {
+            fs::rename(&old_output, &output)
+        } else {
+            fs::mkdir(&output, USER_RWX)
+        }.chain_error(|| {
+            internal("failed to create output directory for build command")
+        }));
+
+        try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
+            e.msg = format!("Failed to run custom build command for `{}`\n{}",
+                            pkg, e.msg);
+            e.mark_human()
         }));
         Ok(())
     })
