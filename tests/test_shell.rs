@@ -15,7 +15,7 @@ fn pair() -> (ChanWriter, ChanReader) {
 }
 
 test!(non_tty {
-    let config = ShellConfig { color: true, verbose: true, tty: false };
+    let config = ShellConfig { color: true, verbosity: Verbose, tty: false };
     let (tx, mut rx) = pair();
 
     Shell::create(box tx, config).tap(|shell| {
@@ -27,7 +27,7 @@ test!(non_tty {
 })
 
 test!(color_explicitly_disabled {
-    let config = ShellConfig { color: false, verbose: true, tty: true };
+    let config = ShellConfig { color: false, verbosity: Verbose, tty: true };
     let (tx, mut rx) = pair();
 
     Shell::create(box tx, config).tap(|shell| {
@@ -41,7 +41,7 @@ test!(colored_shell {
     let term = TerminfoTerminal::new(MemWriter::new());
     if term.is_none() { return }
 
-    let config = ShellConfig { color: true, verbose: true, tty: true };
+    let config = ShellConfig { color: true, verbosity: Verbose, tty: true };
     let (tx, mut rx) = pair();
 
     Shell::create(box tx, config).tap(|shell| {
