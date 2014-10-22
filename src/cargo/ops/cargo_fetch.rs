@@ -31,9 +31,9 @@ pub fn resolve_and_fetch(registry: &mut PackageRegistry, package: &Package)
     let lockfile = package.get_manifest_path().dir_path().join("Cargo.lock");
     let source_id = package.get_package_id().get_source_id();
     let previous_resolve = try!(ops::load_lockfile(&lockfile, source_id));
-    match previous_resolve {
+    let sources = match previous_resolve {
         Some(ref r) => r.iter().map(|p| p.get_source_id().clone()).collect(),
-        None => package.get_source_ids(),
+        None => vec![package.get_package_id().get_source_id().clone()],
     };
     try!(registry.add_sources(sources));
 

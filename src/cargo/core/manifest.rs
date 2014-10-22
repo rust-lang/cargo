@@ -4,12 +4,7 @@ use std::fmt::{mod, Show, Formatter};
 use semver::Version;
 use serialize::{Encoder,Encodable};
 
-use core::source::SourceId;
-use core::{
-    Dependency,
-    PackageId,
-    Summary
-};
+use core::{Dependency, PackageId, Summary};
 use core::package_id::Metadata;
 use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
@@ -21,7 +16,6 @@ pub struct Manifest {
     targets: Vec<Target>,
     target_dir: Path,
     doc_dir: Path,
-    sources: Vec<SourceId>,
     build: Vec<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
@@ -369,7 +363,7 @@ impl Show for Target {
 
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
-               target_dir: Path, doc_dir: Path, sources: Vec<SourceId>,
+               target_dir: Path, doc_dir: Path,
                build: Vec<String>, exclude: Vec<String>,
                metadata: ManifestMetadata) -> Manifest {
         Manifest {
@@ -377,7 +371,6 @@ impl Manifest {
             targets: targets,
             target_dir: target_dir,
             doc_dir: doc_dir,
-            sources: sources,
             build: build,
             warnings: Vec::new(),
             exclude: exclude,
@@ -415,11 +408,6 @@ impl Manifest {
 
     pub fn get_doc_dir(&self) -> &Path {
         &self.doc_dir
-    }
-
-    /// Returns a list of all the potential `SourceId`s of the dependencies.
-    pub fn get_source_ids(&self) -> &[SourceId] {
-        self.sources.as_slice()
     }
 
     pub fn get_build(&self) -> &[String] {

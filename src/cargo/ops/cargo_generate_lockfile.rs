@@ -25,12 +25,10 @@ pub fn generate_lockfile(manifest_path: &Path,
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
-    let source_ids = package.get_source_ids();
     let mut config = try!(Config::new(shell, None, None));
 
     let resolve = {
         let mut registry = PackageRegistry::new(&mut config);
-        try!(registry.add_sources(source_ids));
         try!(resolver::resolve(package.get_summary(),
                                resolver::ResolveEverything,
                                &mut registry))
@@ -83,7 +81,7 @@ pub fn update_lockfile(manifest_path: &Path,
                                   .filter(|s| !to_avoid.contains(s))
                                   .map(|s| s.clone()));
         }
-        None => sources.extend(package.get_source_ids().into_iter()),
+        None => {}
     }
     try!(registry.add_sources(sources));
 

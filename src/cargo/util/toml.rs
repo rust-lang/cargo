@@ -293,7 +293,6 @@ impl TomlProject {
 struct Context<'a> {
     deps: &'a mut Vec<Dependency>,
     source_id: &'a SourceId,
-    source_ids: &'a mut Vec<SourceId>,
     nested_paths: &'a mut Vec<Path>
 }
 
@@ -371,7 +370,6 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
 impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
         -> CargoResult<(Manifest, Vec<Path>)> {
-        let mut sources = vec!();
         let mut nested_paths = vec!();
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
@@ -462,7 +460,6 @@ impl TomlManifest {
             let mut cx = Context {
                 deps: &mut deps,
                 source_id: source_id,
-                source_ids: &mut sources,
                 nested_paths: &mut nested_paths
             };
 
@@ -495,7 +492,6 @@ impl TomlManifest {
                                          targets,
                                          layout.root.join("target"),
                                          layout.root.join("doc"),
-                                         sources,
                                          build,
                                          exclude,
                                          metadata);
@@ -534,10 +530,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
                 let loc = try!(git.as_slice().to_url().map_err(|e| {
                     human(e)
                 }));
-                let source_id = SourceId::new(kind, loc);
-                // TODO: Don't do this for path
-                cx.source_ids.push(source_id.clone());
-                Some(source_id)
+                Some(SourceId::new(kind, loc))
             }
             None => {
                 details.path.as_ref().map(|path| {

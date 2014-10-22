@@ -110,12 +110,6 @@ impl Package {
     pub fn get_absolute_target_dir(&self) -> Path {
         self.get_root().join(self.get_target_dir())
     }
-
-    pub fn get_source_ids(&self) -> Vec<SourceId> {
-        let mut ret = vec!(self.source_id.clone());
-        ret.push_all(self.manifest.get_source_ids());
-        ret
-    }
 }
 
 impl Show for Package {
