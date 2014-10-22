@@ -766,8 +766,10 @@ fn normalize(libs: &[TomlLibTarget],
     fn custom_build_target(dst: &mut Vec<Target>, cmd: &Path,
                            profiles: &TomlProfiles) {
         let profiles = [
-            merge(Profile::default_dev().for_host(true), &profiles.dev),
-            merge(Profile::default_release().for_host(true), &profiles.release),
+            merge(Profile::default_dev().for_host(true).custom_build(true),
+                  &profiles.dev),
+            merge(Profile::default_release().for_host(true).custom_build(true),
+                  &profiles.release),
         ];
 
         let name = format!("build-script-{}", cmd.filestem_str().unwrap_or(""));
