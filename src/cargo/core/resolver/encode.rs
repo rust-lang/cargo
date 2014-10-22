@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, TreeMap};
 
 use regex::Regex;
 use serialize::{Encodable, Encoder, Decodable, Decoder};
@@ -11,8 +11,11 @@ use super::Resolve;
 #[deriving(Encodable, Decodable, Show)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
-    root: EncodableDependency
+    root: EncodableDependency,
+    metadata: Option<Metadata>,
 }
+
+pub type Metadata = TreeMap<String, String>;
 
 impl EncodableResolve {
     pub fn to_resolve(&self, default: &SourceId) -> CargoResult<Resolve> {
@@ -30,7 +33,12 @@ impl EncodableResolve {
         }
 
         let root = self.root.to_package_id(default);
-        Ok(Resolve { graph: g, root: try!(root), features: HashMap::new() })
+        Ok(Resolve {
+            graph: g,
+            root: try!(root),
+            features: HashMap::new(),
+            metadata: self.metadata.clone(),
+        })
     }
 }
 
@@ -136,7 +144,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Resolve {
 
         EncodableResolve {
             package: Some(encodable),
-            root: encodable_resolve_node(&self.root, &self.root, &self.graph)
+            root: encodable_resolve_node(&self.root, &self.root, &self.graph),
+            metadata: self.metadata.clone(),
         }.encode(s)
     }
 }

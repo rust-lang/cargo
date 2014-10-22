@@ -94,3 +94,47 @@ test!(adding_and_removing_packages {
     let lock4 = File::open(&lockfile).read_to_string().assert();
     assert_eq!(lock1, lock4);
 })
+
+test!(preserve_metadata {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("generate-lockfile"),
+                execs().with_status(0));
+
+    let metadata = r#"
+[metadata]
+bar = "baz"
+foo = "bar"
+"#;
+    let lockfile = p.root().join("Cargo.lock");
+    {
+        let lock = File::open(&lockfile).read_to_string().assert();
+        File::create(&lockfile).write_str((lock + metadata).as_slice()).assert();
+    }
+
+    // Build and make sure the metadata is still there
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+    let lock = File::open(&lockfile).read_to_string().assert();
+    assert!(lock.as_slice().contains(metadata.trim()), "{}", lock);
+
+    // Update and make sure the metadata is still there
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
+                execs().with_status(0));
+    let lock = File::open(&lockfile).read_to_string().assert();
+    assert!(lock.as_slice().contains(metadata.trim()), "{}", lock);
+})

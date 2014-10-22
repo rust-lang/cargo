@@ -47,7 +47,7 @@ pub fn update_lockfile(manifest_path: &Path,
 
     let lockfile = package.get_root().join("Cargo.lock");
     let source_id = package.get_package_id().get_source_id();
-    let resolve = match try!(load_lockfile(&lockfile, source_id)) {
+    let previous_resolve = match try!(load_lockfile(&lockfile, source_id)) {
         Some(resolve) => resolve,
         None => return Err(human("A Cargo.lock must exist before it is updated"))
     };
@@ -64,10 +64,10 @@ pub fn update_lockfile(manifest_path: &Path,
     match opts.to_update {
         Some(name) => {
             let mut to_avoid = HashSet::new();
-            let dep = try!(resolve.query(name));
+            let dep = try!(previous_resolve.query(name));
             if opts.aggressive {
-                let mut visited = HashSet::new();
-                fill_with_deps(&resolve, dep, &mut to_avoid, &mut visited);
+                fill_with_deps(&previous_resolve, dep, &mut to_avoid,
+                               &mut HashSet::new());
             } else {
                 to_avoid.insert(dep.get_source_id());
                 match opts.precise {
@@ -78,7 +78,7 @@ pub fn update_lockfile(manifest_path: &Path,
                     None => {}
                 }
             }
-            sources.extend(resolve.iter()
+            sources.extend(previous_resolve.iter()
                                   .map(|p| p.get_source_id())
                                   .filter(|s| !to_avoid.contains(s))
                                   .map(|s| s.clone()));
@@ -87,10 +87,10 @@ pub fn update_lockfile(manifest_path: &Path,
     }
     try!(registry.add_sources(sources));
 
-    let resolve = try!(resolver::resolve(package.get_summary(),
-                                         resolver::ResolveEverything,
-                                         &mut registry));
-
+    let mut resolve = try!(resolver::resolve(package.get_summary(),
+                                             resolver::ResolveEverything,
+                                             &mut registry));
+    resolve.copy_metadata(&previous_resolve);
     try!(write_resolve(&package, &resolve));
     return Ok(());
 
@@ -147,6 +147,14 @@ pub fn write_resolve(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
 
         out.push_str("[[package]]\n");
         emit_package(dep, &mut out);
+    }
+
+    match e.toml.find(&"metadata".to_string()) {
+        Some(metadata) => {
+            out.push_str("[metadata]\n");
+            out.push_str(metadata.to_string().as_slice());
+        }
+        None => {}
     }
 
     try!(File::create(&loc).write_str(out.as_slice()));
