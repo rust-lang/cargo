@@ -35,7 +35,7 @@ pub fn resolve_and_fetch(registry: &mut PackageRegistry, package: &Package)
         Some(ref r) => r.iter().map(|p| p.get_source_id().clone()).collect(),
         None => vec![package.get_package_id().get_source_id().clone()],
     };
-    try!(registry.add_sources(sources));
+    try!(registry.add_sources(sources.as_slice()));
 
     let mut resolved = try!(resolver::resolve(package.get_summary(),
                                               resolver::ResolveEverything,

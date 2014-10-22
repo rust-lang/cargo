@@ -83,7 +83,7 @@ pub fn update_lockfile(manifest_path: &Path,
         }
         None => {}
     }
-    try!(registry.add_sources(sources));
+    try!(registry.add_sources(sources.as_slice()));
 
     let mut resolve = try!(resolver::resolve(package.get_summary(),
                                              resolver::ResolveEverything,

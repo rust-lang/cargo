@@ -70,8 +70,8 @@ impl<'a> PackageRegistry<'a> {
         Ok(())
     }
 
-    pub fn add_sources(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
-        for id in dedup(ids).iter() {
+    pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
+        for id in ids.iter() {
             try!(self.load(id, false));
         }
         Ok(())
@@ -117,17 +117,6 @@ impl<'a> PackageRegistry<'a> {
         }
         Ok(ret)
     }
-}
-
-fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
-    let mut seen = vec!();
-
-    for id in ids.into_iter() {
-        if seen.contains(&id) { continue; }
-        seen.push(id);
-    }
-
-    seen
 }
 
 impl<'a> Registry for PackageRegistry<'a> {
