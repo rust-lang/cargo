@@ -251,7 +251,7 @@ pub struct TomlProject {
     name: String,
     version: TomlVersion,
     authors: Vec<String>,
-    build: Option<TomlBuildCommandsList>,
+    build: Option<TomlBuildCommandsList>,       // TODO: `String` instead
     exclude: Option<Vec<String>>,
 
     // package metadata
@@ -264,6 +264,7 @@ pub struct TomlProject {
     repository: Option<String>,
 }
 
+// TODO: deprecated, remove
 #[deriving(Decodable)]
 pub enum TomlBuildCommandsList {
     SingleBuildCommand(String),
@@ -440,10 +441,24 @@ impl TomlManifest {
             self.bench.as_ref().unwrap().iter().map(|t| t.clone()).collect()
         };
 
+        // processing the custom build script
+        let (new_build, old_build) = match project.build {
+            Some(SingleBuildCommand(ref cmd)) => {
+                if cmd.as_slice().ends_with(".rs") && layout.root.join(cmd.as_slice()).exists() {
+                    (Some(Path::new(cmd.as_slice())), Vec::new())
+                } else {
+                    (None, vec!(cmd.clone()))
+                }
+            },
+            Some(MultipleBuildCommands(ref cmd)) => (None, cmd.clone()),
+            None => (None, Vec::new())
+        };
+
         // Get targets
         let profiles = self.profile.clone().unwrap_or(Default::default());
         let targets = normalize(lib.as_slice(),
                                 bins.as_slice(),
+                                new_build,
                                 examples.as_slice(),
                                 tests.as_slice(),
                                 benches.as_slice(),
@@ -476,12 +491,9 @@ impl TomlManifest {
             }
         }
 
-        let build = match project.build {
-            Some(SingleBuildCommand(ref cmd)) => vec!(cmd.clone()),
-            Some(MultipleBuildCommands(ref cmd)) => cmd.clone(),
-            None => Vec::new()
-        };
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
+
+        let has_old_build = old_build.len() >= 1;
 
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
@@ -500,12 +512,15 @@ impl TomlManifest {
                                          targets,
                                          layout.root.join("target"),
                                          layout.root.join("doc"),
-                                         build,
+                                         old_build,
                                          exclude,
                                          metadata);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));
+        }
+        if has_old_build {
+            manifest.add_warning(format!("warning: the old build command has been deprecated"));
         }
         Ok((manifest, nested_paths))
     }
@@ -623,6 +638,7 @@ impl fmt::Show for TomlPathValue {
 
 fn normalize(libs: &[TomlLibTarget],
              bins: &[TomlBinTarget],
+             custom_build: Option<Path>,
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget],
@@ -689,7 +705,7 @@ fn normalize(libs: &[TomlLibTarget],
         }
 
         if target.plugin == Some(true) {
-            ret = ret.into_iter().map(|p| p.plugin(true)).collect();
+            ret = ret.into_iter().map(|p| p.for_host(true)).collect();
         }
 
         ret
@@ -744,6 +760,21 @@ fn normalize(libs: &[TomlLibTarget],
                                             profile,
                                             metadata));
             }
+        }
+    }
+
+    fn custom_build_target(dst: &mut Vec<Target>, cmd: &Path,
+                           profiles: &TomlProfiles) {
+        let profiles = [
+            merge(Profile::default_dev().for_host(true), &profiles.dev),
+            merge(Profile::default_release().for_host(true), &profiles.release),
+        ];
+
+        let name = format!("build-script-{}", cmd.filestem_str().unwrap_or(""));
+
+        for profile in profiles.iter() {
+            dst.push(Target::custom_build_target(name.as_slice(),
+                                                 cmd, profile, None));
         }
     }
 
@@ -829,6 +860,9 @@ fn normalize(libs: &[TomlLibTarget],
         ([], []) => ()
     }
 
+    if let Some(custom_build) = custom_build {
+        custom_build_target(&mut ret, &custom_build, profiles);
+    }
 
     example_targets(&mut ret, examples, profiles,
                     |ex| format!("examples/{}.rs", ex.name));

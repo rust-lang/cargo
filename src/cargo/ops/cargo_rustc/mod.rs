@@ -153,11 +153,11 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     }
     jobs.enqueue(pkg, jq::StageStart, init);
 
-    // First part of the build step of a target is to execute all of the custom
-    // build commands.
+    // Old custom build system
+    // TODO: deprecated, remove
     let mut build_cmds = Vec::new();
     for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
-        let work = try!(compile_custom(pkg, build_cmd.as_slice(), cx, i == 0));
+        let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
         build_cmds.push(work);
     }
     let (freshness, dirty, fresh) =
@@ -179,7 +179,8 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     //
     // Each target has its own concept of freshness to ensure incremental
     // rebuilds on the *target* granularity, not the *package* granularity.
-    let (mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut builds, mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(),
+                                                       Vec::new(), Vec::new());
     for &target in targets.iter() {
         let work = if target.get_profile().is_doc() {
             let (rustdoc, desc) = try!(rustdoc(pkg, target, cx));
@@ -189,11 +190,14 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             try!(rustc(pkg, target, cx, req))
         };
 
-        let dst = match (target.is_lib(), target.get_profile().is_test()) {
-            (_, true) => &mut tests,
-            (true, _) => &mut libs,
-            (false, false) if target.get_profile().get_env() == "test" => &mut tests,
-            (false, false) => &mut bins,
+        let dst = match (target.is_lib(),
+                         target.get_profile().is_test(),
+                         target.get_profile().is_custom_build()) {
+            (_, _, true) => &mut builds,
+            (_, true, _) => &mut tests,
+            (true, _, _) => &mut libs,
+            (false, false, _) if target.get_profile().get_env() == "test" => &mut tests,
+            (false, false, _) => &mut bins,
         };
         for (work, kind, desc) in work.into_iter() {
             let (freshness, dirty, fresh) =
@@ -203,14 +207,16 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             dst.push((job(dirty, fresh, desc), freshness));
         }
     }
+    jobs.enqueue(pkg, jq::StageCustomBuild, builds);
     jobs.enqueue(pkg, jq::StageLibraries, libs);
     jobs.enqueue(pkg, jq::StageBinaries, bins);
     jobs.enqueue(pkg, jq::StageTests, tests);
     Ok(())
 }
 
-fn compile_custom(pkg: &Package, cmd: &str,
-                  cx: &Context, first: bool) -> CargoResult<Work> {
+// TODO: deprecated, remove
+fn compile_custom_old(pkg: &Package, cmd: &str,
+                      cx: &Context, first: bool) -> CargoResult<Work> {
     let root = cx.get_package(cx.resolve.root());
     let profile = root.get_manifest().get_targets().iter()
                       .find(|target| target.get_profile().get_env() == cx.env())
@@ -533,7 +539,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         // target directory (hence the || here).
         let layout = cx.layout(pkg, match kind {
             KindPlugin => KindPlugin,
-            KindTarget if target.get_profile().is_plugin() => KindPlugin,
+            KindTarget if target.get_profile().is_for_host() => KindPlugin,
             KindTarget => KindTarget,
         });
 
@@ -562,7 +568,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
     // or their dependencies
     let mut native_search_paths = HashSet::new();
     for &(dep, target) in cx.dep_targets(pkg).iter() {
-        if !target.get_profile().is_plugin() { continue }
+        if !target.get_profile().is_for_host() { continue }
         each_dep(dep, cx, |dep| {
             if dep.get_manifest().get_build().len() > 0 {
                 native_search_paths.insert(layout.native(dep));

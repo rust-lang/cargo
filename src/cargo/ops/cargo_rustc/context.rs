@@ -145,7 +145,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         if !visiting.insert(pkg.get_package_id()) { return }
 
         let key = (pkg.get_package_id(), target.get_name());
-        let req = if target.get_profile().is_plugin() {PlatformPlugin} else {req};
+        let req = if target.get_profile().is_for_host() {PlatformPlugin} else {req};
         match self.requirements.entry(key) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(req); }
             Vacant(entry) => { entry.set(req); }
@@ -207,7 +207,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             ret.push(format!("{}{}", stem, self.target_exe));
         } else {
             if target.is_dylib() {
-                let plugin = target.get_profile().is_plugin();
+                let plugin = target.get_profile().is_for_host();
                 let kind = if plugin {KindPlugin} else {KindTarget};
                 let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
