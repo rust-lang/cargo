@@ -15,6 +15,7 @@ use support::paths::PathExt;
 
 pub mod paths;
 pub mod git;
+pub mod registry;
 
 /*
  *
