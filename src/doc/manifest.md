@@ -329,8 +329,8 @@ When you run `cargo test`, Cargo will:
 
 Both `[[bin]]` and `[lib]` sections support similar configuration for specifying
 how a target should be built. The example below uses `[lib]`, but it also
-applies to all `[[bin]]` sections as well. All values listed ar the defaults for
-that option unless otherwise specified.
+applies to all `[[bin]]` sections as well. All values listed are the defaults
+for that option unless otherwise specified.
 
 ```toml
 [package]
