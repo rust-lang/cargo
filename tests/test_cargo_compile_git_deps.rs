@@ -696,16 +696,19 @@ test!(update_with_shared_deps {
     timer::sleep(Duration::milliseconds(1000));
 
     // By default, not transitive updates
+    println!("dep1 update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
                 execs().with_stdout(""));
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
+    println!("bar precise update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar")
                  .arg("--precise").arg(old_head.to_string()),
                 execs().with_stdout(""));
 
     // Updating aggressively should, however, update the repo.
+    println!("dep1 aggressive update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1")
                  .arg("--aggressive"),
                 execs().with_stdout(format!("{} git repository `{}`",
@@ -713,6 +716,7 @@ test!(update_with_shared_deps {
                                             git_project.url())));
 
     // Make sure we still only compile one version of the git repo
+    println!("build");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({git}#[..])

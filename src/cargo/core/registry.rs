@@ -41,13 +41,39 @@ pub struct PackageRegistry<'a> {
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
     overrides: Vec<SourceId>,
+
+    // Note that each SourceId does not take into account its `precise` field
+    // when hashing or testing for equality. When adding a new `SourceId`, we
+    // want to avoid duplicates in the `SourceMap` (to prevent re-updating the
+    // same git repo twice for example), but we also want to ensure that the
+    // loaded source is always updated.
+    //
+    // Sources with a `precise` field normally don't need to be updated because
+    // their contents are already on disk, but sources without a `precise` field
+    // almost always need to be updated. If we have a cached `Source` for a
+    // precise `SourceId`, then when we add a new `SourceId` that is not precise
+    // we want to ensure that the underlying source is updated.
+    //
+    // This is basically a long-winded way of saying that we want to know
+    // precisely what the keys of `sources` are, so this is a mapping of key to
+    // what exactly the key is.
+    source_ids: HashMap<SourceId, (SourceId, Kind)>,
+
     locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
+}
+
+#[deriving(PartialEq, Eq)]
+enum Kind {
+    Override,
+    Locked,
+    Normal,
 }
 
 impl<'a> PackageRegistry<'a> {
     pub fn new<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
+            source_ids: HashMap::new(),
             overrides: vec!(),
             config: config,
             locked: HashMap::new(),
@@ -82,22 +108,43 @@ impl<'a> PackageRegistry<'a> {
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
-        if self.sources.contains(namespace) { return Ok(()); }
+        match self.source_ids.find(namespace) {
+            // We've previously loaded this source, and we've already locked it,
+            // so we're not allowed to change it even if `namespace` has a
+            // slightly different precise version listed.
+            Some(&(_, Locked)) => return Ok(()),
 
-        try!(self.load(namespace, false));
+            // If the previous source was not a precise source, then we can be
+            // sure that it's already been updated if we've already loaded it.
+            Some(&(ref previous, _)) if previous.get_precise().is_none() => {
+                return Ok(())
+            }
+
+            // If the previous source has the same precise version as we do,
+            // then we're done, otherwise we need to need to move forward
+            // updating this source.
+            Some(&(ref previous, _)) => {
+                if previous.get_precise() == namespace.get_precise() {
+                    return Ok(())
+                }
+            }
+            None => {}
+        }
+
+        try!(self.load(namespace, Normal));
         Ok(())
     }
 
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, false));
+            try!(self.load(id, Locked));
         }
         Ok(())
     }
 
     pub fn add_overrides(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, true));
+            try!(self.load(id, Override));
         }
         Ok(())
     }
@@ -114,7 +161,7 @@ impl<'a> PackageRegistry<'a> {
         sub_vec.push((id, deps));
     }
 
-    fn load(&mut self, source_id: &SourceId, is_override: bool) -> CargoResult<()> {
+    fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
             let mut source = source_id.load(self.config);
 
@@ -123,12 +170,13 @@ impl<'a> PackageRegistry<'a> {
             try!(source.update());
             drop(p);
 
-            if is_override {
+            if kind == Override {
                 self.overrides.push(source_id.clone());
             }
 
             // Save off the source
             self.sources.insert(source_id, source);
+            self.source_ids.insert(source_id.clone(), (source_id.clone(), kind));
 
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", source_id)))
