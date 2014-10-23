@@ -189,6 +189,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     sources: Vec<PathSource>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     cache: HashMap<String, Vec<(Summary, bool)>>,
+    updated: bool,
 }
 
 #[deriving(Decodable)]
@@ -239,6 +240,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             sources: Vec::new(),
             hashes: HashMap::new(),
             cache: HashMap::new(),
+            updated: false,
         }
     }
 
@@ -420,20 +422,11 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
               .default_features(default_features)
               .features(features))
     }
-}
 
-impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let summaries = try!(self.summaries(dep.get_name()));
-        let mut summaries = summaries.iter().filter(|&&(_, yanked)| {
-            dep.get_source_id().get_precise().is_some() || !yanked
-        }).map(|&(ref s, _)| s.clone()).collect::<Vec<_>>();
-        summaries.query(dep)
-    }
-}
+    /// Actually perform network operations to update the registry
+    fn do_update(&mut self) -> CargoResult<()> {
+        if self.updated { return Ok(()) }
 
-impl<'a, 'b> Source for RegistrySource<'a, 'b> {
-    fn update(&mut self) -> CargoResult<()> {
         try!(self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.get_url())));
         let repo = try!(self.open());
@@ -451,6 +444,41 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
         log!(5, "[{}] updating to rev {}", self.source_id, oid);
         let object = try!(repo.find_object(oid, None));
         try!(repo.reset(&object, git2::Hard, None, None));
+        self.updated = true;
+        self.cache.clear();
+        Ok(())
+    }
+}
+
+impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        // If this is a precise dependency, then it came from a lockfile and in
+        // theory the registry is known to contain this version. If, however, we
+        // come back with no summaries, then our registry may need to be
+        // updated, so we fall back to performing a lazy update.
+        if dep.get_source_id().get_precise().is_some() &&
+           try!(self.summaries(dep.get_name())).len() == 0 {
+            try!(self.do_update());
+        }
+
+        let summaries = try!(self.summaries(dep.get_name()));
+        let mut summaries = summaries.iter().filter(|&&(_, yanked)| {
+            dep.get_source_id().get_precise().is_some() || !yanked
+        }).map(|&(ref s, _)| s.clone()).collect::<Vec<_>>();
+        summaries.query(dep)
+    }
+}
+
+impl<'a, 'b> Source for RegistrySource<'a, 'b> {
+    fn update(&mut self) -> CargoResult<()> {
+        // If we have an imprecise version then we don't know what we're going
+        // to look for, so we always atempt to perform an update here.
+        //
+        // If we have a precise version, then we'll update lazily during the
+        // querying phase.
+        if self.source_id.get_precise().is_none() {
+            try!(self.do_update());
+        }
         Ok(())
     }
 

@@ -49,7 +49,6 @@ pub fn update_lockfile(manifest_path: &Path,
     let mut config = try!(Config::new(opts.shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
     let mut to_avoid = HashSet::new();
-    let mut previous = Some(&previous_resolve);
 
     match opts.to_update {
         Some(name) => {
@@ -69,13 +68,13 @@ pub fn update_lockfile(manifest_path: &Path,
                 }
             }
         }
-        None => { previous = None; }
+        None => to_avoid.extend(previous_resolve.iter()),
     }
 
     let resolve = try!(ops::resolve_with_previous(&mut registry,
                                                   &package,
                                                   resolver::ResolveEverything,
-                                                  previous,
+                                                  Some(&previous_resolve),
                                                   Some(&to_avoid)));
     try!(ops::write_pkg_lockfile(&package, &resolve));
     return Ok(());

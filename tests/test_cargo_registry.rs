@@ -2,7 +2,7 @@ use std::io::{fs, File};
 
 use support::{project, execs, cargo_dir};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
-use support::paths::PathExt;
+use support::paths::{mod, PathExt};
 use support::registry as r;
 
 use hamcrest::assert_that;
@@ -249,9 +249,7 @@ test!(lockfile_locks {
     r::mock_pkg("bar", "0.0.2", []);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_status(0).with_stdout(format!("\
-{updating} registry `[..]`
-", updating = UPDATING).as_slice()));
+                execs().with_status(0).with_stdout(""));
 })
 
 test!(lockfile_locks_transitively {
@@ -287,9 +285,7 @@ test!(lockfile_locks_transitively {
     r::mock_pkg("bar", "0.0.2", [("baz", "*")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_status(0).with_stdout(format!("\
-{updating} registry `[..]`
-", updating = UPDATING).as_slice()));
+                execs().with_status(0).with_stdout(""));
 })
 
 test!(yanks_are_not_used {
@@ -373,9 +369,7 @@ test!(yanks_in_lockfiles_are_ok {
     r::mock_pkg_yank("bar", "0.0.1", [], true);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_status(0).with_stdout(format!("\
-{updating} registry `[..]`
-", updating = UPDATING).as_slice()));
+                execs().with_status(0).with_stdout(""));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_status(101).with_stderr("\
@@ -383,4 +377,66 @@ no package named `bar` found (required by `foo`)
 location searched: the package registry
 version required: *
 "));
+})
+
+test!(update_with_lockfile_if_packages_missing {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("bar", "0.0.1", []);
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+    p.root().move_into_the_past().unwrap();
+
+    fs::rmdir_recursive(&paths::home().join(".cargo/registry")).unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} bar v0.0.1 (the package registry)
+", updating = UPDATING, downloading = DOWNLOADING).as_slice()));
+})
+
+test!(update_lockfile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("bar", "0.0.1", []);
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+
+    r::mock_pkg("bar", "0.0.2", []);
+    fs::rmdir_recursive(&paths::home().join(".cargo/registry")).unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("bar"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+", updating = UPDATING).as_slice()));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{downloading} [..] v0.0.2 (the package registry)
+{compiling} bar v0.0.2 (the package registry)
+{compiling} foo v0.0.1 ({dir})
+", downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
 })
