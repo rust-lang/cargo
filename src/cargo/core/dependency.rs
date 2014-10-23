@@ -114,7 +114,7 @@ impl Dependency {
     }
 
     /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(mut self, id: &PackageId) -> Dependency {
+    pub fn lock_to(self, id: &PackageId) -> Dependency {
         assert_eq!(self.source_id, *id.get_source_id());
         assert!(self.req.matches(id.get_version()));
         self.version_req(VersionReq::exact(id.get_version()))

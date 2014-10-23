@@ -1,11 +1,9 @@
-use core::{MultiShell, Package};
+use core::MultiShell;
 use core::registry::PackageRegistry;
-use core::resolver::{mod, Resolve};
 use core::source::Source;
 use ops;
 use sources::PathSource;
 use util::{CargoResult, Config};
-use util::profile;
 
 /// Executes `cargo fetch`.
 pub fn fetch(manifest_path: &Path,

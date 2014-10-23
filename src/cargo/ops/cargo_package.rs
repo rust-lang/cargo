@@ -7,7 +7,7 @@ use flate2::{GzBuilder, BestCompression};
 use flate2::reader::GzDecoder;
 
 use core::source::{Source, SourceId};
-use core::{Package, MultiShell, Dependency};
+use core::{Package, MultiShell};
 use sources::PathSource;
 use util::{CargoResult, human, internal, ChainError, Require};
 use ops;

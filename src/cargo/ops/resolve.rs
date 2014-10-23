@@ -1,15 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use semver::VersionReq;
-
-use core::{MultiShell, Package, PackageId};
+use core::{Package, PackageId};
 use core::registry::PackageRegistry;
 use core::resolver::{mod, Resolve};
-use core::source::Source;
 use ops;
-use sources::PathSource;
-use util::{CargoResult, Config};
-use util::profile;
+use util::CargoResult;
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.

@@ -1,16 +1,11 @@
 use std::collections::HashSet;
-use std::io::File;
-
-use serialize::{Encodable, Decodable};
-use toml::{mod, Encoder};
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, Resolve, resolver, Package, SourceId};
+use core::{MultiShell, Source, Resolve, resolver};
 use ops;
 use sources::{PathSource};
 use util::config::{Config};
-use util::toml as cargo_toml;
 use util::{CargoResult, human};
 
 pub struct UpdateOptions<'a> {

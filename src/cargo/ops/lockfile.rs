@@ -1,15 +1,10 @@
-use std::collections::HashSet;
 use std::io::File;
 
 use serialize::{Encodable, Decodable};
 use toml::{mod, Encoder};
 
-use core::registry::PackageRegistry;
-use core::{MultiShell, Source, Resolve, resolver, Package, SourceId};
-use core::PackageId;
-use sources::{PathSource};
-use util::config::{Config};
-use util::{CargoResult, human};
+use core::{Resolve, resolver, Package, SourceId};
+use util::CargoResult;
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
