@@ -43,6 +43,7 @@ struct RegistryPackage {
     deps: Vec<RegistryDependency>,
     features: HashMap<String, Vec<String>>,
     cksum: String,
+    yanked: Option<bool>,
 }
 
 #[deriving(Decodable)]
@@ -186,9 +187,12 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
     /// Parse a line from the registry's index file into a Summary for a
     /// package.
-    fn parse_registry_package(&mut self, line: &str) -> CargoResult<Summary> {
+    ///
+    /// The returned boolean is whether or not the summary has been yanked.
+    fn parse_registry_package(&mut self, line: &str)
+                              -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
-            name, vers, cksum, deps, features
+            name, vers, cksum, deps, features, yanked
         } = try!(json::decode::<RegistryPackage>(line));
         let pkgid = try!(PackageId::new(name.as_slice(),
                                         vers.as_slice(),
@@ -198,7 +202,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         }).collect();
         let deps = try!(deps);
         self.hashes.insert((name, vers), cksum);
-        Summary::new(pkgid, deps, features)
+        Ok((try!(Summary::new(pkgid, deps, features)), yanked.unwrap_or(false)))
     }
 
     /// Converts an encoded dependency in the registry to a cargo dependency
@@ -234,14 +238,17 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
             Err(..) => return Ok(Vec::new()),
         };
 
-        let ret: CargoResult<Vec<Summary>>;
+        let ret: CargoResult<Vec<(Summary, bool)>>;
         ret = contents.as_slice().lines().filter(|l| l.trim().len() > 0)
                       .map(|l| self.parse_registry_package(l))
                       .collect();
-        let mut summaries = try!(ret.chain_error(|| {
+        let summaries = try!(ret.chain_error(|| {
             internal(format!("Failed to parse registry's information for: {}",
                              dep.get_name()))
         }));
+        let mut summaries = summaries.into_iter().filter(|&(_, yanked)| {
+            dep.get_source_id().get_precise().is_some() || !yanked
+        }).map(|(summary, _)| summary).collect::<Vec<_>>();
         summaries.query(dep)
     }
 }

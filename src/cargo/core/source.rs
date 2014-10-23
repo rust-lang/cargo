@@ -114,7 +114,8 @@ impl SourceId {
             },
             "registry" => {
                 let url = url.to_url().unwrap();
-                SourceId::for_registry(&url)
+                SourceId::new(RegistryKind, url)
+                         .with_precise(Some("locked".to_string()))
             }
             "path" => SourceId::for_path(&Path::new(url.slice_from(5))).unwrap(),
             _ => fail!("Unsupported serialized SourceId")

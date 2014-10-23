@@ -1,4 +1,4 @@
-use std::io::File;
+use std::io::{fs, File};
 
 use support::{project, execs, cargo_dir};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
@@ -290,4 +290,97 @@ test!(lockfile_locks_transitively {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 ", updating = UPDATING).as_slice()));
+})
+
+test!(yanks_are_not_used {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("baz", "0.0.1", []);
+    r::mock_pkg_yank("baz", "0.0.2", [], true);
+    r::mock_pkg("bar", "0.0.1", [("baz", "*")]);
+    r::mock_pkg_yank("bar", "0.0.2", [("baz", "*")], true);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} [..] v0.0.1 (the package registry)
+{downloading} [..] v0.0.1 (the package registry)
+{compiling} baz v0.0.1 (the package registry)
+{compiling} bar v0.0.1 (the package registry)
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+})
+
+test!(relying_on_a_yank_is_bad {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("baz", "0.0.1", []);
+    r::mock_pkg_yank("baz", "0.0.2", [], true);
+    r::mock_pkg("bar", "0.0.1", [("baz", "=0.0.2")]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(101).with_stderr("\
+no package named `baz` found (required by `bar`)
+location searched: the package registry
+version required: = 0.0.2
+"));
+})
+
+test!(yanks_in_lockfiles_are_ok {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("bar", "0.0.1", []);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+
+    fs::rmdir_recursive(&r::registry_path().join("3")).unwrap();
+
+    r::mock_pkg_yank("bar", "0.0.1", [], true);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+", updating = UPDATING).as_slice()));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
+                execs().with_status(101).with_stderr("\
+no package named `bar` found (required by `foo`)
+location searched: the package registry
+version required: *
+"));
 })

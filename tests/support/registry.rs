@@ -68,9 +68,14 @@ pub fn mock_archive_dst(name: &str, version: &str) -> Path {
 }
 
 pub fn mock_pkg(name: &str, version: &str, deps: &[(&str, &str)]) {
+    mock_pkg_yank(name, version, deps, false)
+}
+
+pub fn mock_pkg_yank(name: &str, version: &str, deps: &[(&str, &str)],
+                     yanked: bool) {
     mock_archive(name, version, deps);
     let c = File::open(&mock_archive_dst(name, version)).read_to_end().unwrap();
-    let line = pkg(name, version, deps, cksum(c.as_slice()).as_slice());
+    let line = pkg(name, version, deps, cksum(c.as_slice()).as_slice(), yanked);
 
     let file = match name.len() {
         1 => format!("1/{}", name),
@@ -102,10 +107,13 @@ pub fn publish(file: &str, line: &str) {
                 [&parent]).unwrap();
 }
 
-pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str)], cksum: &str) -> String {
+pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str)], cksum: &str,
+           yanked: bool) -> String {
     let deps = deps.iter().map(|&(a, b)| dep(a, b)).collect::<Vec<String>>();
-    format!(r#"{{"name":"{}","vers":"{}","deps":{},"cksum":"{}","features":{{}}}}"#,
-            name, vers, deps, cksum)
+    format!("{{\"name\":\"{}\",\"vers\":\"{}\",\
+               \"deps\":{},\"cksum\":\"{}\",\"features\":{{}},\
+               \"yanked\":{}}}",
+            name, vers, deps, cksum, yanked)
 }
 
 pub fn dep(name: &str, req: &str) -> String {
