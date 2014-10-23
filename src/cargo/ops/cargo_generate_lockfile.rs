@@ -71,7 +71,7 @@ pub fn update_lockfile(manifest_path: &Path,
                 match opts.precise {
                     Some(precise) => {
                         sources.push(dep.get_source_id().clone()
-                                        .with_precise(precise.to_string()));
+                                        .with_precise(Some(precise.to_string())));
                     }
                     None => {}
                 }

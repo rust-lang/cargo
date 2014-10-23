@@ -157,12 +157,8 @@ impl SourceId {
     }
 
     pub fn for_git(url: &Url, reference: &str, precise: Option<String>) -> SourceId {
-        let mut id = SourceId::new(GitKind(reference.to_string()), url.clone());
-        if precise.is_some() {
-            id = id.with_precise(precise.unwrap());
-        }
-
-        id
+        SourceId::new(GitKind(reference.to_string()), url.clone())
+                 .with_precise(precise)
     }
 
     pub fn for_registry(url: &Url) -> SourceId {
@@ -209,10 +205,10 @@ impl SourceId {
         self.inner.precise.as_ref().map(|s| s.as_slice())
     }
 
-    pub fn with_precise(&self, v: String) -> SourceId {
+    pub fn with_precise(&self, v: Option<String>) -> SourceId {
         SourceId {
             inner: Arc::new(SourceIdInner {
-                precise: Some(v),
+                precise: v,
                 .. (*self.inner).clone()
             }),
         }

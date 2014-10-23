@@ -7,7 +7,7 @@ use flate2::{GzBuilder, BestCompression};
 use flate2::reader::GzDecoder;
 
 use core::source::{Source, SourceId};
-use core::{Package, MultiShell, Summary, Dependency};
+use core::{Package, MultiShell, Dependency};
 use sources::PathSource;
 use util::{CargoResult, human, internal, ChainError, Require};
 use ops;
@@ -102,20 +102,12 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
     // implicitly converted to registry-based dependencies, so we rewrite those
     // dependencies here.
     let registry = try!(SourceId::for_central());
-    let new_deps = pkg.get_dependencies().iter().map(|d| {
-        if !d.get_source_id().is_path() { return d.clone() }
-        Dependency::parse(d.get_name(), d.get_specified_req(), &registry)
-                   .unwrap()
-                   .transitive(d.is_transitive())
-                   .features(d.get_features().to_vec())
-                   .default_features(d.uses_default_features())
-                   .optional(d.is_optional())
-    }).collect::<Vec<_>>();
-    let new_summary = Summary::new(pkg.get_package_id().clone(),
-                                   new_deps,
-                                   pkg.get_summary().get_features().clone());
+    let new_summary = pkg.get_summary().clone().map_dependencies(|d| {
+        if !d.get_source_id().is_path() { return d }
+        d.source_id(registry.clone())
+    });
     let mut new_manifest = pkg.get_manifest().clone();
-    new_manifest.set_summary(new_summary.unwrap());
+    new_manifest.set_summary(new_summary);
     let new_pkg = Package::new(new_manifest,
                                &manifest_path,
                                pkg.get_package_id().get_source_id());

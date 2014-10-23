@@ -176,7 +176,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
         try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));
 
-        let source_id = self.source_id.with_precise(actual_rev.to_string());
+        let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new(&self.checkout_path, &source_id);
 
         self.path_source = Some(path_source);

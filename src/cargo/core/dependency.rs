@@ -100,6 +100,18 @@ impl Dependency {
         self
     }
 
+    /// Set the source id for this dependency
+    pub fn source_id(mut self, id: SourceId) -> Dependency {
+        self.source_id = id;
+        self
+    }
+
+    /// Set the version requirement for this dependency
+    pub fn version_req(mut self, req: VersionReq) -> Dependency {
+        self.req = req;
+        self
+    }
+
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool { self.transitive }
     pub fn is_optional(&self) -> bool { self.optional }
