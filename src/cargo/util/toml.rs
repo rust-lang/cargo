@@ -9,7 +9,7 @@ use toml;
 use semver;
 use serialize::{Decodable, Decoder};
 
-use core::{SourceId, GitKind};
+use core::SourceId;
 use core::manifest::{LibKind, Lib, Dylib, Profile, ManifestMetadata};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::package_id::Metadata;
@@ -526,11 +526,10 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
 
         let new_source_id = match details.git {
             Some(ref git) => {
-                let kind = GitKind(reference.clone());
                 let loc = try!(git.as_slice().to_url().map_err(|e| {
                     human(e)
                 }));
-                Some(SourceId::new(kind, loc))
+                Some(SourceId::for_git(&loc, reference.as_slice()))
             }
             None => {
                 details.path.as_ref().map(|path| {

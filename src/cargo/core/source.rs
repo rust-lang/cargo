@@ -46,7 +46,7 @@ pub trait Source: Registry {
 }
 
 #[deriving(Encodable, Decodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum SourceKind {
+enum SourceKind {
     /// GitKind(<git reference>) represents a git repository
     GitKind(String),
     /// represents a local path
@@ -72,7 +72,7 @@ struct SourceIdInner {
 }
 
 impl SourceId {
-    pub fn new(kind: SourceKind, url: Url) -> SourceId {
+    fn new(kind: SourceKind, url: Url) -> SourceId {
         SourceId {
             inner: Arc::new(SourceIdInner {
                 kind: kind,
@@ -109,7 +109,8 @@ impl SourceId {
                 }
                 url.query = None;
                 let precise = mem::replace(&mut url.fragment, None);
-                SourceId::for_git(&url, reference.as_slice(), precise)
+                SourceId::for_git(&url, reference.as_slice())
+                         .with_precise(precise)
             },
             "registry" => {
                 let url = url.to_url().unwrap();
@@ -155,9 +156,8 @@ impl SourceId {
         Ok(SourceId::new(PathKind, url))
     }
 
-    pub fn for_git(url: &Url, reference: &str, precise: Option<String>) -> SourceId {
+    pub fn for_git(url: &Url, reference: &str) -> SourceId {
         SourceId::new(GitKind(reference.to_string()), url.clone())
-                 .with_precise(precise)
     }
 
     pub fn for_registry(url: &Url) -> SourceId {
@@ -173,7 +173,6 @@ impl SourceId {
     }
 
     pub fn get_url(&self) -> &Url { &self.inner.url }
-    pub fn get_kind(&self) -> &SourceKind { &self.inner.kind }
     pub fn is_path(&self) -> bool { self.inner.kind == PathKind }
     pub fn is_registry(&self) -> bool { self.inner.kind == RegistryKind }
 
@@ -196,12 +195,21 @@ impl SourceId {
                 };
                 box PathSource::new(&path, self) as Box<Source>
             },
-            RegistryKind => box RegistrySource::new(self, config) as Box<Source+'a>,
+            RegistryKind => {
+                box RegistrySource::new(self, config) as Box<Source+'a>
+            }
         }
     }
 
     pub fn get_precise(&self) -> Option<&str> {
         self.inner.precise.as_ref().map(|s| s.as_slice())
+    }
+
+    pub fn git_reference(&self) -> Option<&str> {
+        match self.inner.kind {
+            GitKind(ref s) => Some(s.as_slice()),
+            _ => None,
+        }
     }
 
     pub fn with_precise(&self, v: Option<String>) -> SourceId {

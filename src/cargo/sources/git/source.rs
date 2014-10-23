@@ -4,7 +4,7 @@ use std::hash::sip::SipHasher;
 use std::mem;
 use url::{mod, Url};
 
-use core::source::{Source, SourceId, GitKind};
+use core::source::{Source, SourceId};
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
@@ -28,9 +28,9 @@ impl<'a, 'b> GitSource<'a, 'b> {
                        config: &'a mut Config<'b>) -> GitSource<'a, 'b> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
-        let reference = match *source_id.get_kind() {
-            GitKind(ref reference) => reference,
-            _ => fail!("Not a git source; id={}", source_id)
+        let reference = match source_id.git_reference() {
+            Some(reference) => reference,
+            None => fail!("Not a git source; id={}", source_id),
         };
 
         let remote = GitRemote::new(source_id.get_url());

@@ -7,7 +7,7 @@ use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
 
 use core::source::Source;
-use core::{Package, MultiShell, SourceId, RegistryKind};
+use core::{Package, MultiShell, SourceId};
 use core::manifest::ManifestMetadata;
 use ops;
 use sources::{PathSource, RegistrySource};

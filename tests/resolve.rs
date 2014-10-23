@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use hamcrest::{assert_that, equal_to, contains};
 
-use cargo::core::source::{SourceId, RegistryKind, GitKind};
+use cargo::core::source::SourceId;
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
 use cargo::core::resolver::{mod, ResolveEverything};
@@ -29,7 +29,7 @@ trait ToDep {
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
         let url = "http://example.com".to_url().unwrap();
-        let source_id = SourceId::new(RegistryKind, url);
+        let source_id = SourceId::for_registry(&url);
         Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
     }
 }
@@ -71,7 +71,7 @@ macro_rules! pkg(
 
 fn registry_loc() -> SourceId {
     let remote = "http://example.com".to_url().unwrap();
-    SourceId::new(RegistryKind, remote)
+    SourceId::for_registry(&remote)
 }
 
 fn pkg(name: &str) -> Summary {
@@ -84,8 +84,7 @@ fn pkg_id(name: &str) -> PackageId {
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
     let remote = loc.to_url();
-    let source_id = SourceId::new(GitKind("master".to_string()),
-                                  remote.unwrap());
+    let source_id = SourceId::for_git(&remote.unwrap(), "master");
 
     PackageId::new(name, "1.0.0", &source_id).unwrap()
 }
@@ -97,13 +96,13 @@ fn pkg_loc(name: &str, loc: &str) -> Summary {
 fn dep(name: &str) -> Dependency { dep_req(name, "1.0.0") }
 fn dep_req(name: &str, req: &str) -> Dependency {
     let url = "http://example.com".to_url().unwrap();
-    let source_id = SourceId::new(RegistryKind, url);
+    let source_id = SourceId::for_registry(&url);
     Dependency::parse(name, Some(req), &source_id).unwrap()
 }
 
 fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
-    let source_id = SourceId::new(GitKind("master".to_string()), url);
+    let source_id = SourceId::for_git(&url, "master");
     Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
 }
 

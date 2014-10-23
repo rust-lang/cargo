@@ -159,13 +159,13 @@ impl Show for PackageId {
 #[cfg(test)]
 mod tests {
     use super::{PackageId, CENTRAL_REPO};
-    use core::source::{RegistryKind, SourceId};
+    use core::source::SourceId;
     use util::ToUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {
         let loc = CENTRAL_REPO.to_url().unwrap();
-        let repo = SourceId::new(RegistryKind, loc);
+        let repo = SourceId::for_registry(&loc);
 
         assert!(PackageId::new("foo", "1.0", &repo).is_err());
         assert!(PackageId::new("foo", "1", &repo).is_err());
