@@ -90,7 +90,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        try!(ops::resolve_and_fetch(&mut registry, package));
+        try!(ops::resolve_pkg(&mut registry, package));
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
