@@ -92,6 +92,11 @@ impl Summary {
         &self.features
     }
 
+    pub fn override_id(mut self, id: PackageId) -> Summary {
+        self.package_id = id;
+        self
+    }
+
     pub fn map_dependencies(mut self, f: |Dependency| -> Dependency) -> Summary {
         let deps = mem::replace(&mut self.dependencies, Vec::new());
         self.dependencies = deps.into_iter().map(f).collect();

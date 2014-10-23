@@ -2,6 +2,7 @@ use std::io::File;
 
 use support::{project, execs, cargo_dir};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
+use support::paths::PathExt;
 use support::registry as r;
 
 use hamcrest::assert_that;
@@ -217,4 +218,76 @@ version required: ^0.0.1
     compiling = COMPILING,
     dir = p.url(),
 )));
+})
+
+test!(lockfile_locks {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("bar", "0.0.1", []);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} bar v0.0.1 (the package registry)
+{compiling} bar v0.0.1 (the package registry)
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+
+    p.root().move_into_the_past().unwrap();
+    r::mock_pkg("bar", "0.0.2", []);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+", updating = UPDATING).as_slice()));
+})
+
+test!(lockfile_locks_transitively {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("baz", "0.0.1", []);
+    r::mock_pkg("bar", "0.0.1", [("baz", "*")]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} [..] v0.0.1 (the package registry)
+{downloading} [..] v0.0.1 (the package registry)
+{compiling} baz v0.0.1 (the package registry)
+{compiling} bar v0.0.1 (the package registry)
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+
+    p.root().move_into_the_past().unwrap();
+    r::mock_pkg("baz", "0.0.2", []);
+    r::mock_pkg("bar", "0.0.2", [("baz", "*")]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+", updating = UPDATING).as_slice()));
 })

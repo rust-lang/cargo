@@ -1,5 +1,6 @@
-use core::{SourceId, Summary};
 use semver::VersionReq;
+
+use core::{SourceId, Summary, PackageId};
 use util::CargoResult;
 
 /// Informations about a dependency requested by a Cargo manifest.
@@ -112,6 +113,14 @@ impl Dependency {
         self
     }
 
+    /// Lock this dependency to depending on the specified package id
+    pub fn lock_to(mut self, id: &PackageId) -> Dependency {
+        assert_eq!(self.source_id, *id.get_source_id());
+        assert!(self.req.matches(id.get_version()));
+        self.version_req(VersionReq::exact(id.get_version()))
+            .source_id(id.get_source_id().clone())
+    }
+
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool { self.transitive }
     pub fn is_optional(&self) -> bool { self.optional }
@@ -122,12 +131,14 @@ impl Dependency {
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
-        debug!("matches; self={}; summary={}", self, sum);
-        debug!("         a={}; b={}", self.source_id, sum.get_source_id());
+        self.matches_id(sum.get_package_id())
+    }
 
-        self.name.as_slice() == sum.get_name() &&
-            (self.only_match_name || (self.req.matches(sum.get_version()) &&
-                                      &self.source_id == sum.get_source_id()))
+    /// Returns true if the package (`id`) can fulfill this dependency request.
+    pub fn matches_id(&self, id: &PackageId) -> bool {
+        self.name.as_slice() == id.get_name() &&
+            (self.only_match_name || (self.req.matches(id.get_version()) &&
+                                      &self.source_id == id.get_source_id()))
     }
 }
 

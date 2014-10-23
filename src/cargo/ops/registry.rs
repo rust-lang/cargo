@@ -147,7 +147,7 @@ pub fn registry(shell: &mut MultiShell,
     }));
     let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
     let index = try!(index.as_slice().to_url().map_err(human));
-    let sid = SourceId::new(RegistryKind, index.clone());
+    let sid = SourceId::for_registry(&index);
     let api_host = {
         let mut config = try!(Config::new(shell, None, None));
         let mut src = RegistrySource::new(&sid, &mut config);

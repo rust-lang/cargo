@@ -90,7 +90,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        try!(ops::resolve_pkg(&mut registry, package));
+        let resolve = try!(ops::resolve_pkg(&mut registry, package));
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -101,8 +101,8 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         let method = resolver::ResolveRequired(dev_deps, features.as_slice(),
                                                !no_default_features);
         let resolved_with_overrides =
-                try!(resolver::resolve(package.get_summary(), method,
-                                       &mut registry));
+                try!(ops::resolve_with_previous(&mut registry, package, method,
+                                                Some(&resolve), None));
 
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
             r.clone()

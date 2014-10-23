@@ -28,7 +28,9 @@ pub fn generate_lockfile(manifest_path: &Path,
     let package = try!(source.get_root_package());
     let mut config = try!(Config::new(shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
-    let resolve = try!(ops::resolve_with_previous(&mut registry, &package, None));
+    let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
+                                                  resolver::ResolveEverything,
+                                                  None, None));
     try!(ops::write_pkg_lockfile(&package, &resolve));
     Ok(())
 }
@@ -51,46 +53,43 @@ pub fn update_lockfile(manifest_path: &Path,
 
     let mut config = try!(Config::new(opts.shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
+    let mut to_avoid = HashSet::new();
+    let mut previous = Some(&previous_resolve);
 
-    let mut sources = Vec::new();
     match opts.to_update {
         Some(name) => {
-            let mut to_avoid = HashSet::new();
             let dep = try!(previous_resolve.query(name));
             if opts.aggressive {
                 fill_with_deps(&previous_resolve, dep, &mut to_avoid,
                                &mut HashSet::new());
             } else {
-                to_avoid.insert(dep.get_source_id());
+                to_avoid.insert(dep);
                 match opts.precise {
                     Some(precise) => {
-                        sources.push(dep.get_source_id().clone()
-                                        .with_precise(Some(precise.to_string())));
+                        let precise = dep.get_source_id().clone()
+                                         .with_precise(Some(precise.to_string()));
+                        try!(registry.add_sources(&[precise]));
                     }
                     None => {}
                 }
             }
-            sources.extend(previous_resolve.iter()
-                                  .map(|p| p.get_source_id())
-                                  .filter(|s| !to_avoid.contains(s))
-                                  .map(|s| s.clone()));
         }
-        None => {}
+        None => { previous = None; }
     }
-    try!(registry.add_sources(sources.as_slice()));
 
-    let mut resolve = try!(resolver::resolve(package.get_summary(),
-                                             resolver::ResolveEverything,
-                                             &mut registry));
-    resolve.copy_metadata(&previous_resolve);
+    let resolve = try!(ops::resolve_with_previous(&mut registry,
+                                                  &package,
+                                                  resolver::ResolveEverything,
+                                                  previous,
+                                                  Some(&to_avoid)));
     try!(ops::write_pkg_lockfile(&package, &resolve));
     return Ok(());
 
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
-                          set: &mut HashSet<&'a SourceId>,
+                          set: &mut HashSet<&'a PackageId>,
                           visited: &mut HashSet<&'a PackageId>) {
         if !visited.insert(dep) { return }
-        set.insert(dep.get_source_id());
+        set.insert(dep);
         match resolve.deps(dep) {
             Some(mut deps) => {
                 for dep in deps {

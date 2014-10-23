@@ -143,9 +143,8 @@ impl SourceId {
 
                 format!("git+{}{}{}", url, ref_str, precise_str)
             },
-            SourceIdInner { kind: RegistryKind, .. } => {
-                // TODO: Central registry vs. alternates
-                "registry+https://crates.io/".to_string()
+            SourceIdInner { kind: RegistryKind, ref url, .. } => {
+                format!("registry+{}", url)
             }
         }
     }
