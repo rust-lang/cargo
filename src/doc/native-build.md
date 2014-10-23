@@ -1,8 +1,7 @@
 % Building external code
 
-Some packages need to compile third-party non-Rust code that you will
-link into your Rust code using `#[link]` (more information on `#[link]`
-can be found in [the Rust manual][1]).
+Some packages need to compile third-party non-Rust code, for example C
+libraries.
 
 Cargo does not aim to replace other tools that are well-optimized for
 building C or C++ code, but it does integrate with them with the `build`
@@ -14,18 +13,34 @@ configuration option.
 name = "hello-world-from-c"
 version = "0.0.1"
 authors = [ "you@example.com" ]
-build = "make"
+links = ["myclib"]
+build = "build.rs"
 ```
 
-The `build` command will be invoked before `rustc`, allowing your Rust
-code to depend on the built artifacts.
+The Rust file designated by the `build` command will be compiled and invoked
+before anything else is compiled in the package, allowing your Rust code to
+depend on the built artifacts.
+
+If the `links` entry is present, it is the responsibility of this build script
+to indicate Cargo how to link to each specified library.
 
 Here's what you need to know:
 
+* Cargo passes the list of C libraries specified by `links` that must be
+  built as arguments to the script. Using a `.cargo/config` file, the user can
+  choose to use prebuilt libraries instead, in which case these prebuilt
+  libraries will *not* be passed to the build script.
+* Your build script should pass informations back to Cargo by writing to
+  stdout. Writing `cargo:rustc-flags=-L /path -l foo` will
+  add the `-L /path` and `-l foo` flags to rustc whenever it is invoked.
+* You can use Rust libraries within your build script by adding a
+  `[build-dependencies]` section in the manifest similar to `[dependencies]`.
+* Build scripts don't need to actually *build* anything, you can simply
+  return the location of an existing library in the filesystem if you wish so.
+  This is the recommended way to do for libraries that are available in the
+  platform's dependencies manager.
 * Cargo passes your build script an environment variable named
-  `OUT_DIR`, which is where you should put any compiled artifacts. It
-  will be different for different Cargo commands, but Cargo will always
-  pass that output directory as a lib directory to `rustc`.
+  `OUT_DIR`, which is where you should put any compiled artifacts.
 * Cargo will retain all output in `OUT_DIR` for clean packages across
   builds (intelligently discarding the compiled artifacts for dirty
   dependencies). Do not put the output of a build command in any other
@@ -34,32 +49,6 @@ Here's what you need to know:
   `/path/to/project/target/native/$your-out-dir`.
 * The target triple that the build command should compile for is specified by
   the `TARGET` environment variable.
-
-What this means is that the normal workflow for build dependencies is:
-
-* The first time a user types `cargo build` for a project that contains
-  your package, your `build` script will be invoked. Place any artifacts
-  into the provided `$OUT_DIR`.
-* The next time a user runs `cargo build`, if the dependency has not
-  changed (via `cargo update <your-package>`), Cargo will reuse the
-  output you provided before. Your build command will not be invoked.
-* If the user updates your package to a new version (or git revision),
-  Cargo will **not** remove the old `$OUT_DIR` will re-invoke your build script.
-  Your build script is responsible for bringing the state of the old directory
-  up to date with the current state of the input files.
-
-In general, build scripts may not be as portable as we'd like today. We
-encourage package authors to write build scripts that can work in both
-Windows and Unix environments.
-
-Several people who work on Cargo are also working on a project called
-[link-config][2], which is a Rust syntax extension whose goal is to
-enable portable external compilation and linkage against system
-packages. We intend for it to eventually serve this purpose for Cargo
-projects.
-
-[1]: http://doc.rust-lang.org/rust.html#linkage
-[2]: https://github.com/alexcrichton/link-config
 
 # Environment Variables
 
@@ -71,15 +60,14 @@ commands.
              compiled for this triple.
 * `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
                be useful to pass a `-j` parameter to a system like `make`.
-* `DEP_<name>_OUT_DIR` - This variable is present for all immediate dependencies
-                         of the package being built. The `<name>` will be the
-                         package's name, in uppercase, with `-` characters
-                         translated to a `_`. The value of this variable is the
-                         directory in which all the output of the dependency's
-                         build command was placed. This is useful for picking up
-                         things like header files and such from other packages.
+* `DEP_<name>_<key>` - This variable is present for all immediate dependencies
+                       of the package being built. The `<name>` will be the
+                       package's name, in uppercase, with `-` characters
+                       translated to a `_`. The `<key>` is a user-defined key
+                       written by the dependency's build script.
 * `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
-                         being built.
+                         being built. Note that this is the package Cargo is
+                         being run on, not the package of the build script.
 * `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
                          profile currently being built.
 * `PROFILE` - name of the profile currently being built (see
@@ -89,9 +77,35 @@ commands.
                            where `<name>` is the name of the feature uppercased
                            and having `-` translated to `_`.
 
+In addition to this, the `OUT_DIR` variable will also be available when
+a regular library or binary of this package is compiled, thus giving you
+access to the generated files thanks to the `include!`, `include_str!`
+or `include_bin!` macros.
+
 [profile]: manifest.html#the-[profile.*]-sections
 
-# A complete example
+# Metadata
+
+All the lines printed to stdout by a build script that start with `cargo:`
+are interpreted by Cargo and must be of the form `key=value`.
+
+Example output:
+
+```
+cargo:rustc-flags=-l static:foo -L /path/to/foo
+cargo:root=/path/to/foo
+cargo:libdir=/path/to/foo/lib
+cargo:include=/path/to/foo/include
+```
+
+The `rustc-flags` key is special and indicates the flags that Cargo will
+pass to Rustc.
+
+Any other element is a user-defined metadata that will be passed via
+the `DEP_<name>_<key>` environment variables to packages that immediatly
+depend on the package containing the build script.
+
+# A complete example: C dependency
 
 The code blocks below lay out a cargo project which has a small and simple C
 dependency along with the necessary infrastructure for linking that to the rust
@@ -104,24 +118,29 @@ program.
 name = "hello-world-from-c"
 version = "0.0.1"
 authors = [ "you@example.com" ]
-build = "make -C build"
+build = "build.rs"
 ```
 
-```make
-# build/Makefile
+```rust
+// build.rs
+use std::io::Command;
 
-# Support cross compilation to/from 32/64 bit.
-ARCH := $(word 1, $(subst -, ,$(TARGET)))
-ifeq ($(ARCH),i686)
-CFLAGS += -m32 -fPIC
-else
-CFLAGS += -m64 -fPIC
-endif
+fn main() {
+    let out_dir = std::os::getenv("OUT_DIR");
 
-all:
-    $(CC) $(CFLAGS) hello.c -c -o "$$OUT_DIR"/hello.o
-    $(AR) crus "$$OUT_DIR"/libhello.a "$$OUT_DIR"/hello.o
+    // note: this code is deliberately naive
+    // it is highly recommended that you use a library dedicated to building C code
+    // instead of manually calling gcc
 
+    Command::new("gcc").arg("build/hello.c")
+                       .arg("-shared")
+                       .arg("-o")
+                       .arg(format!("{}/libhello.so", out_dir))
+                       .output()
+                       .unwrap();
+
+    println!("cargo:rustc-flags=-L {} -l hello", out_dir);
+}
 ```
 
 ```c
@@ -133,7 +152,6 @@ int foo() { return 1; }
 // src/main.rs
 extern crate libc;
 
-#[link(name = "hello", kind = "static")]
 extern {
     fn foo() -> libc::c_int;
 }
@@ -141,5 +159,45 @@ extern {
 fn main() {
     let number = unsafe { foo() };
     println!("found {} from C!", number);
+}
+```
+
+# A complete example: generating Rust code
+
+The follow code generates a Rust file in `${OUT_DIR}/generated.rs`
+then processes its content in the *real* binary.
+
+```toml
+# Cargo.toml
+[package]
+
+name = "hello-world"
+version = "0.0.1"
+authors = [ "you@example.com" ]
+build = "build.rs"
+```
+
+```rust
+// build.rs
+use std::io::fs::File;
+
+fn main() {
+    let out_dir = std::os::getenv("OUT_DIR");
+    let path = Path::new(out_dir).join("generated.rs");
+
+    let mut file = File::create(&path).unwrap();
+    (write!(file, r#"fn say_hello() { \
+                        println!("hello world"); \
+                     }"#)).unwrap();
+}
+```
+
+```rust
+// src/main.rs
+
+include!(concat!(env!("OUT_DIR"), "/generated.rs"))
+
+fn main() {
+    say_hello();
 }
 ```
