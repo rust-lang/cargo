@@ -5,7 +5,7 @@ dependencies = [
  "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#36b015de91daf6310227cec04ef30acf5929dfb6)",
  "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#4544a9f422b115c2ffef4ee9baf27ceb07c34602)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4bcd195f76291ea390)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#7d7fba10893590793ae88c8fc6ab2aeffcb8f10b)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#469a6bc1a0fc289ab220170e691cffbc01dcf1e6)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#7d46e76514ac606530dfb0e93270fffcf64ca76d)",
  "semver 0.1.0 (git+https://github.com/rust-lang/semver#9bb8265ea6cf01eddfa7dc5ec9334883443e9fc7)",
@@ -47,9 +47,9 @@ source = "git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4b
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d"
+source = "git+https://github.com/alexcrichton/git2-rs#7d7fba10893590793ae88c8fc6ab2aeffcb8f10b"
 dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d)",
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#7d7fba10893590793ae88c8fc6ab2aeffcb8f10b)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#7f1991d847fb8cf8648def2ff121bae90b89131f)",
 ]
 
@@ -66,7 +66,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#7d46e76514ac606530
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#c01b0b279470552c48cf7f902ae5baf132df0a6d"
+source = "git+https://github.com/alexcrichton/git2-rs#7d7fba10893590793ae88c8fc6ab2aeffcb8f10b"
 dependencies = [
  "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys#80e71a3021618eb05656c58fb7c5ef5f12bc747f)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config#0202cc8aa74a7b0bdbaef4eef368d0bc80f63691)",
