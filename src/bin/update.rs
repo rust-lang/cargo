@@ -24,7 +24,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to run benchmarks for
+    -p SPEC, --package SPEC  Package to update
     --aggressive             Force updating all dependencies of <name> as well
     --precise PRECISE        Update a single dependency to exactly PRECISE
     --manifest-path PATH     Path to the manifest to compile

@@ -21,7 +21,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to run benchmarks for
+    -p SPEC, --package SPEC  Package to clean artifacts for
     --manifest-path PATH     Path to the manifest to the package to clean
     --target TRIPLE          Target triple to clean output for (default all)
     -v, --verbose            Use verbose output
