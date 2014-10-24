@@ -2,7 +2,7 @@ use std::os;
 use std::io::{mod, fs, File};
 use std::io::fs::PathExtensions;
 
-use git2::Config;
+use git2::{Config, Repository};
 
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, config, internal};
 use core::shell::MultiShell;
@@ -35,6 +35,7 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
         return Err(human(format!("Invalid character `{}` in crate name: `{}`",
                                  c, name).as_slice()));
     }
+
     mk(&path, name, &opts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
@@ -48,10 +49,12 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
         ignore.push_str("/Cargo.lock\n");
     }
 
+    let in_repo = Repository::discover(&path.dir_path()).is_ok();
+
     if opts.hg {
         try!(HgRepo::init(path));
         try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
-    } else if !opts.git && (opts.no_git || cfg.git == Some(false)) {
+    } else if !opts.git && (opts.no_git || cfg.git == Some(false) || in_repo) {
         try!(fs::mkdir(path, io::USER_RWX));
     } else {
         try!(GitRepo::init(path));

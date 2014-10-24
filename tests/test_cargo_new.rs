@@ -54,7 +54,7 @@ test!(simple_bin {
 
 test!(simple_git {
     os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo"),
+    assert_that(cargo_process("new").arg("foo").arg("--git"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -62,6 +62,21 @@ test!(simple_git {
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
     assert_that(&paths::root().join("foo/.git"), existing_dir());
     assert_that(&paths::root().join("foo/.gitignore"), existing_file());
+
+    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
+                execs().with_status(0));
+})
+
+test!(implicit_repo_no_git {
+    os::setenv("USER", "foo");
+    assert_that(cargo_process("new").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(&paths::root().join("foo"), existing_dir());
+    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+    assert_that(&paths::root().join("foo/.git"), is_not(existing_dir()));
+    assert_that(&paths::root().join("foo/.gitignore"), is_not(existing_file()));
 
     assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
