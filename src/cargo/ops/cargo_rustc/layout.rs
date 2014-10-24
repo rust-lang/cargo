@@ -11,6 +11,9 @@
 //!     # This is the root directory for all output of *dependencies*
 //!     deps/
 //!
+//!     # Root directory for all compiled examples
+//!     examples/
+//!
 //!     # This is the location at which the output of all custom build
 //!     # commands are rooted
 //!     native/
@@ -44,6 +47,7 @@
 //!     # Same as the two above old directories
 //!     old-native/
 //!     old-fingerprint/
+//!     old-examples/
 //! ```
 
 use std::io::{mod, fs, IoResult};
@@ -57,11 +61,13 @@ pub struct Layout {
     deps: Path,
     native: Path,
     fingerprint: Path,
+    examples: Path,
 
     old_deps: Path,
     old_root: Path,
     old_native: Path,
     old_fingerprint: Path,
+    old_examples: Path,
 }
 
 pub struct LayoutProxy<'a> {
@@ -88,10 +94,12 @@ impl Layout {
             deps: root.join("deps"),
             native: root.join("native"),
             fingerprint: root.join(".fingerprint"),
+            examples: root.join("examples"),
             old_deps: root.join("old-deps"),
             old_root: root.join("old-root"),
             old_native: root.join("old-native"),
             old_fingerprint: root.join("old-fingerprint"),
+            old_examples: root.join("old-examples"),
             root: root,
         }
     }
@@ -101,31 +109,16 @@ impl Layout {
             try!(fs::mkdir_recursive(&self.root, io::USER_RWX));
         }
 
-        if self.old_deps.exists() {
-            try!(fs::rmdir_recursive(&self.old_deps));
-        }
+        try!(old(&[
+            (&self.old_deps, &self.deps),
+            (&self.old_native, &self.native),
+            (&self.old_fingerprint, &self.fingerprint),
+            (&self.old_examples, &self.examples),
+        ]));
+
         if self.old_root.exists() {
             try!(fs::rmdir_recursive(&self.old_root));
         }
-        if self.old_native.exists() {
-            try!(fs::rmdir_recursive(&self.old_native));
-        }
-        if self.old_fingerprint.exists() {
-            try!(fs::rmdir_recursive(&self.old_fingerprint));
-        }
-        if self.deps.exists() {
-            try!(fs::rename(&self.deps, &self.old_deps));
-        }
-        if self.native.exists() {
-            try!(fs::rename(&self.native, &self.old_native));
-        }
-        if self.fingerprint.exists() {
-            try!(fs::rename(&self.fingerprint, &self.old_fingerprint));
-        }
-
-        try!(fs::mkdir(&self.deps, io::USER_RWX));
-        try!(fs::mkdir(&self.native, io::USER_RWX));
-        try!(fs::mkdir(&self.fingerprint, io::USER_RWX));
         try!(fs::mkdir(&self.old_root, io::USER_RWX));
 
         for file in try!(fs::readdir(&self.root)).iter() {
@@ -134,11 +127,25 @@ impl Layout {
             try!(fs::rename(file, &self.old_root.join(file.filename().unwrap())));
         }
 
-        Ok(())
+        return Ok(());
+
+        fn old(dirs: &[(&Path, &Path)]) -> IoResult<()> {
+            for &(old, new) in dirs.iter() {
+                if old.exists() {
+                    try!(fs::rmdir_recursive(old));
+                }
+                if new.exists() {
+                    try!(fs::rename(new, old));
+                }
+                try!(fs::mkdir(new, io::USER_DIR));
+            }
+            Ok(())
+        }
     }
 
     pub fn dest<'a>(&'a self) -> &'a Path { &self.root }
     pub fn deps<'a>(&'a self) -> &'a Path { &self.deps }
+    pub fn examples<'a>(&'a self) -> &'a Path { &self.examples }
     pub fn native(&self, package: &Package) -> Path {
         self.native.join(self.pkg_dir(package))
     }
@@ -148,6 +155,7 @@ impl Layout {
 
     pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
     pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
+    pub fn old_examples<'a>(&'a self) -> &'a Path { &self.old_examples }
     pub fn old_native(&self, package: &Package) -> Path {
         self.old_native.join(self.pkg_dir(package))
     }
@@ -166,6 +174,7 @@ impl Drop for Layout {
         let _ = fs::rmdir_recursive(&self.old_root);
         let _ = fs::rmdir_recursive(&self.old_native);
         let _ = fs::rmdir_recursive(&self.old_fingerprint);
+        let _ = fs::rmdir_recursive(&self.old_examples);
     }
 }
 
@@ -182,11 +191,15 @@ impl<'a> LayoutProxy<'a> {
     }
     pub fn deps(&self) -> &'a Path { self.root.deps() }
 
+    pub fn examples(&self) -> &'a Path { self.root.examples() }
+
     pub fn native(&self, pkg: &Package) -> Path { self.root.native(pkg) }
 
     pub fn old_root(&self) -> &'a Path {
         if self.primary {self.root.old_dest()} else {self.root.old_deps()}
     }
+
+    pub fn old_examples(&self) -> &'a Path { self.root.old_examples() }
 
     pub fn old_native(&self, pkg: &Package) -> Path {
         self.root.old_native(pkg)

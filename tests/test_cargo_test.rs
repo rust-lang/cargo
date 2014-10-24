@@ -1150,3 +1150,32 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ", compiling = COMPILING, running = RUNNING, dir = p.url(),
    doctest = DOCTEST).as_slice()));
 })
+
+test!(example_bin_same_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
+        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#);
+
+    assert_that(p.cargo_process("test").arg("--no-run").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} `rustc [..]bin[..]foo.rs [..] --test [..]`
+{running} `rustc [..]bin[..]foo.rs [..]`
+{running} `rustc [..]examples[..]foo.rs [..]`
+", compiling = COMPILING, running = RUNNING, dir = p.url()).as_slice()));
+
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("examples/foo"), existing_file());
+
+    assert_that(p.process(p.bin("foo")),
+                execs().with_status(0).with_stdout("bin\n"));
+    assert_that(p.process(p.bin("examples/foo")),
+                execs().with_status(0).with_stdout("example\n"));
+})

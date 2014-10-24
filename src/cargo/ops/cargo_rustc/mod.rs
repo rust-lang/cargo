@@ -431,7 +431,11 @@ fn build_base_args(cx: &Context,
 fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) -> ProcessBuilder {
     cmd = cmd.arg("--out-dir");
-    cmd = cmd.arg(cx.layout(pkg, kind).root());
+    if target.is_example() {
+        cmd = cmd.arg(cx.layout(pkg, kind).examples());
+    } else {
+        cmd = cmd.arg(cx.layout(pkg, kind).root());
+    }
 
     let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
     cmd = cmd.arg("--dep-info").arg(dep_info_loc);

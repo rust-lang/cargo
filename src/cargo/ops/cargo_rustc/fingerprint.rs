@@ -87,7 +87,11 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
 
     let (old_root, root) = {
         let layout = cx.layout(pkg, kind);
-        (layout.old_root().clone(), layout.root().clone())
+        if target.is_example() {
+            (layout.old_examples().clone(), layout.examples().clone())
+        } else {
+            (layout.old_root().clone(), layout.root().clone())
+        }
     };
     let mut pairs = vec![(old_loc, new_loc.clone())];
     if !target.get_profile().is_doc() {
