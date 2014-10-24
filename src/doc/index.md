@@ -86,4 +86,4 @@ Hello, world!</code></pre>
 
 # Going Further
 
-For more details on using Cargo, check out the [Cargo Guide](/guide.html)
+For more details on using Cargo, check out the [Cargo Guide](guide.html)

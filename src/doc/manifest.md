@@ -31,7 +31,7 @@ You can specify a script that Cargo should execute before invoking
 your Rust code, for example. More information can be found in the building
 non-rust code [guide][2]
 
-[1]: http://doc.rust-lang.org/rust.html#external-blocks
+[1]: http://doc.rust-lang.org/reference.html#external-blocks
 [2]: build-script.html
 
 ```toml

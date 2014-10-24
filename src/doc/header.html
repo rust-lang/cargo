@@ -1,11 +1,41 @@
+<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 
 <a href='https://github.com/rust-lang/cargo' class='fork-me'>
   <img src='images/forkme.png'/>
 </a>
-<a href='index.html' class='logo'><img src='images/Cargo-Logo-Small.png'/></a>
+
+<div id="header">
+    <a href='index.html' class='logo'>
+        <img id="logo" height=100 width=100 src='images/Cargo-Logo-Small.png'/>
+    </a>
+    <a href="index.html">
+        <h1>CARGO</h1>
+    </a>
+
+    <div class="search">
+        <form action="https://staging-crates-io.herokuapp.com/search"
+              method="GET">
+            <input name="q" class="search" placeholder="Search crates" type="text"/>
+        </form>
+    </div>
+
+    <div class="nav">
+        <div class="dropdown-container">
+            <button class="dropdown">
+                Documentation
+                <span class="arrow"></span>
+            </button>
+            <ul id="current-user-links" class="dropdown" data-bindattr-503="503">
+                <li><a href='index.html'>Getting Started</a></li>
+                <li><a href='guide.html'>Guide</a></li>
+                <li><a href='faq.html'>FAQ</a></li>
+                <li><a href='manifest.html'>Manifest Format</a></li>
+                <li><a href='build-script.html'>Build Scripts</a></li>
+                <li><a href='config.html'>Configuration</a></li>
+                <li><a href='pkgid-spec.html'>Package ID specs</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
 
 <main>
-  <p>
-    Cargo downloads your <a href="http://rust-lang.org">Rust</a>
-    project's dependencies and builds your project
-  </p>
