@@ -64,6 +64,39 @@ the VCS's ignore settings (`.gitignore` for git for example).
 exclude = ["build/**/*.o", "doc/**/*.html"]
 ```
 
+## Package metadata
+
+There are a number of optional metadata fields also accepted under the
+`[package]` section:
+
+```toml
+[package]
+# ...
+
+# A short blurb about the package. This is not rendered in any format when
+# uploaded to registries.
+description = "..."
+
+# These URLs point to more information about the repository
+documentation = "..."
+homepage = "..."
+repository = "..."
+
+# This points to a file in the repository (relative to this Cargo.toml). The
+# contents of this file are stored and indexed in the registry.
+readme = "..."
+
+# This is a small list of keywords used to categorize and search for this
+# package.
+keywords = ["...", "..."]
+
+# This is a string description of the license for this package. Currently
+# the registry will validate the license provided against a whitelist of known
+# licenses.
+license = "..."
+```
+
+
 # The `[dependencies.*]` Sections
 
 You list dependencies using `[dependencies.<name>]`. For example, if you
