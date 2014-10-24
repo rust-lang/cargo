@@ -108,7 +108,7 @@ along with the defaults for each profile.
 [profile.dev]
 opt-level = 0  # Controls the --opt-level the compiler builds with
 debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
-rpath = false   # Controls whether the compiler passes `-C rpath`
+rpath = false  # Controls whether the compiler passes `-C rpath`
 
 # The release profile, used for `cargo build --release`
 [profile.release]
