@@ -41,9 +41,15 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
     })
 }
 
+fn existing_git_repo(path: &Path) -> bool {
+    GitRepo::discover(path).is_ok()
+}
+
 fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config());
     let mut ignore = "/target\n".to_string();
+    let no_git = !opts.git && (opts.no_git || cfg.git == Some(false));
+    let in_existing_git_repo = existing_git_repo(&path.dir_path());
     if !opts.bin {
         ignore.push_str("/Cargo.lock\n");
     }
@@ -51,7 +57,7 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
     if opts.hg {
         try!(HgRepo::init(path));
         try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
-    } else if !opts.git && (opts.no_git || cfg.git == Some(false)) {
+    } else if no_git || in_existing_git_repo {
         try!(fs::mkdir(path, io::USER_RWX));
     } else {
         try!(GitRepo::init(path));

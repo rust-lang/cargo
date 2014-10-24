@@ -53,17 +53,18 @@ test!(simple_bin {
 })
 
 test!(simple_git {
+    let td = TempDir::new("cargo").unwrap();
     os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo"),
+    assert_that(cargo_process("new").arg("foo").cwd(td.path().clone()),
                 execs().with_status(0));
 
-    assert_that(&paths::root().join("foo"), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
-    assert_that(&paths::root().join("foo/.gitignore"), existing_file());
+    assert_that(td.path(), existing_dir());
+    assert_that(&td.path().join("foo/Cargo.toml"), existing_file());
+    assert_that(&td.path().join("foo/src/lib.rs"), existing_file());
+    assert_that(&td.path().join("foo/.git"), existing_dir());
+    assert_that(&td.path().join("foo/.gitignore"), existing_file());
 
-    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
+    assert_that(cargo_process("build").cwd(td.path().clone().join("foo")),
                 execs().with_status(0));
 })
 
@@ -157,6 +158,7 @@ test!(author_prefers_cargo {
 
 test!(git_prefers_command_line {
     let root = paths::root();
+    let td = TempDir::new("cargo").unwrap();
     fs::mkdir(&root.join(".cargo"), USER_RWX).assert();
     File::create(&root.join(".cargo/config")).write_str(r#"
         [cargo-new]
@@ -165,8 +167,23 @@ test!(git_prefers_command_line {
         email = "bar"
     "#).assert();
 
-    assert_that(cargo_process("new").arg("foo").arg("--git")
+    assert_that(cargo_process("new").arg("foo").arg("--git").cwd(td.path().clone())
                                     .env("USER", Some("foo")),
                 execs().with_status(0));
-    assert!(root.join("foo/.gitignore").exists());
+    assert!(td.path().join("foo/.gitignore").exists());
+})
+
+test!(subpackage_no_git {
+    os::setenv("USER", "foo");
+    assert_that(cargo_process("new").arg("foo"), execs().with_status(0));
+
+    let subpackage = paths::root().join("foo").join("components");
+    fs::mkdir(&subpackage, USER_RWX).assert();
+    assert_that(cargo_process("new").arg("foo/components/subcomponent"),
+                execs().with_status(0));
+
+    assert_that(&paths::root().join("foo/components/subcomponent/.git"),
+                 is_not(existing_file()));
+    assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
+                 is_not(existing_file()));
 })

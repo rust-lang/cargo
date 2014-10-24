@@ -10,6 +10,9 @@ impl GitRepo {
         try!(git2::Repository::init(path));
         return Ok(GitRepo)
     }
+    pub fn discover(path: &Path) -> Result<git2::Repository,git2::Error> {
+        git2::Repository::discover(path)
+    }
 }
 
 impl HgRepo {
