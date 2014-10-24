@@ -255,7 +255,7 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<string::String, ConfigValue
         let value = try!(ConfigValue::from_toml(&path, toml::Table(table)));
         try!(cfg.merge(value));
         Ok(())
-    }).map_err(|_| human("Couldn't load Cargo configuration")));
+    }).chain_error(|| human("Couldn't load Cargo configuration")));
 
 
     match cfg {
@@ -288,20 +288,14 @@ fn find_in_tree<T>(pwd: &Path,
 fn walk_tree(pwd: &Path,
              walk: |File| -> CargoResult<()>) -> CargoResult<()> {
     let mut current = pwd.clone();
-    let mut err = false;
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
             let file = try!(File::open(&possible));
 
-            match walk(file) {
-                Err(_) => err = false,
-                _ => ()
-            }
+            try!(walk(file));
         }
-
-        if err { return Err(internal("")); }
         if !current.pop() { break; }
     }
 

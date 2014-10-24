@@ -1684,3 +1684,29 @@ test!(ignore_bad_directories {
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 })
+
+test!(bad_cargo_config {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+              this is not valid toml
+        "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+Couldn't load Cargo configuration
+
+Caused by:
+  could not parse Toml manifest; path=[..]
+
+Caused by:
+  could not parse input TOML
+[..].cargo[..]config:2:20-2:21 expected `=`, but found `i`
+
+"));
+})
