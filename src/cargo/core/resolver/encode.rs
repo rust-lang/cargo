@@ -20,46 +20,60 @@ pub type Metadata = TreeMap<String, String>;
 impl EncodableResolve {
     pub fn to_resolve(&self, default: &SourceId) -> CargoResult<Resolve> {
         let mut g = Graph::new();
+        let mut tmp = HashMap::new();
 
-        try!(add_pkg_to_graph(&mut g, &self.root, default));
+        let packages = Vec::new();
+        let packages = self.package.as_ref().unwrap_or(&packages);
 
-        match self.package {
-            Some(ref packages) => {
-                for dep in packages.iter() {
-                    try!(add_pkg_to_graph(&mut g, dep, default));
-                }
+        {
+            let register_pkg = |pkg: &EncodableDependency| {
+                let pkgid = try!(pkg.to_package_id(default));
+                let precise = pkgid.get_source_id().get_precise()
+                                   .map(|s| s.to_string());
+                assert!(tmp.insert(pkgid.clone(), precise),
+                        "a package was referenced twice in the lockfile");
+                g.add(try!(pkg.to_package_id(default)), []);
+                Ok(())
+            };
+
+            try!(register_pkg(&self.root));
+            for pkg in packages.iter() {
+                try!(register_pkg(pkg));
             }
-            None => {}
         }
 
-        let root = self.root.to_package_id(default);
+        {
+            let add_dependencies = |pkg: &EncodableDependency| {
+                let package_id = try!(pkg.to_package_id(default));
+
+                let deps = match pkg.dependencies {
+                    Some(ref deps) => deps,
+                    None => return Ok(()),
+                };
+                for edge in deps.iter() {
+                    let to_depend_on = try!(edge.to_package_id(default));
+                    let precise_pkgid =
+                        tmp.find(&to_depend_on)
+                           .map(|p| to_depend_on.with_precise(p.clone()))
+                           .unwrap_or(to_depend_on.clone());
+                    g.link(package_id.clone(), precise_pkgid);
+                }
+                Ok(())
+            };
+
+            try!(add_dependencies(&self.root));
+            for pkg in packages.iter() {
+                try!(add_dependencies(pkg));
+            }
+        }
+
         Ok(Resolve {
             graph: g,
-            root: try!(root),
+            root: try!(self.root.to_package_id(default)),
             features: HashMap::new(),
             metadata: self.metadata.clone(),
         })
     }
-}
-
-fn add_pkg_to_graph(g: &mut Graph<PackageId>,
-                    dep: &EncodableDependency,
-                    default: &SourceId)
-                    -> CargoResult<()>
-{
-    let package_id = try!(dep.to_package_id(default));
-    g.add(package_id.clone(), []);
-
-    match dep.dependencies {
-        Some(ref deps) => {
-            for edge in deps.iter() {
-                g.link(package_id.clone(), try!(edge.to_package_id(default)));
-            }
-        },
-        _ => ()
-    };
-
-    Ok(())
 }
 
 #[deriving(Encodable, Decodable, Show, PartialOrd, Ord, PartialEq, Eq)]
@@ -178,7 +192,7 @@ fn encodable_package_id(id: &PackageId, root: &PackageId) -> EncodablePackageId 
     let source = if id.get_source_id() == root.get_source_id() {
         None
     } else {
-        Some(id.get_source_id().clone())
+        Some(id.get_source_id().with_precise(None))
     };
     EncodablePackageId {
         name: id.get_name().to_string(),
