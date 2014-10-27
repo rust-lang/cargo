@@ -132,6 +132,16 @@ impl PackageId {
 
         Metadata { metadata: metadata, extra_filename: extra_filename }
     }
+
+    pub fn with_precise(&self, precise: Option<String>) -> PackageId {
+        PackageId {
+            inner: Arc::new(PackageIdInner {
+                name: self.inner.name.to_string(),
+                version: self.inner.version.clone(),
+                source_id: self.inner.source_id.with_precise(precise),
+            }),
+        }
+    }
 }
 
 impl Metadata {
