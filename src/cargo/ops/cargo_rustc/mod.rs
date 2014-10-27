@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
-use std::io::{fs, USER_RWX};
+use std::io::{fs, BufReader, USER_RWX};
 use std::io::fs::PathExtensions;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
@@ -25,7 +25,7 @@ mod job_queue;
 mod layout;
 
 #[deriving(PartialEq, Eq)]
-pub enum Kind { KindPlugin, KindTarget }
+pub enum Kind { KindForHost, KindTarget }
 
 /// Run `rustc` to figure out what its current version string is.
 ///
@@ -148,7 +148,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, KindTarget);
     let mut init = vec![(Job::new(target1, target2, String::new()), Fresh)];
     if cx.config.target().is_some() {
-        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindPlugin);
+        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindForHost);
         init.push((Job::new(plugin1, plugin2, String::new()), Fresh));
     }
     jobs.enqueue(pkg, jq::StageStart, init);
@@ -171,10 +171,40 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             if target.get_profile().is_custom_build() {
                 for &(ref mut work, _, _) in rustc.iter_mut() {
                     use std::mem;
-                    let execute_cmd = try!(prepare_execute_custom_build(pkg, root_pkg,
+
+                    let (old_build, script_output) = {
+                        let layout = cx.layout(pkg, KindForHost);
+                        let old_build = layout.proxy().old_build(pkg);
+                        let script_output = layout.build(pkg);
+                        (old_build, script_output)
+                    };
+
+                    let execute_cmd = try!(prepare_execute_custom_build(pkg,
+                                                                        root_pkg,
                                                                         target, cx));
+
+                    // building a `Work` that creates the directory where the compiled script
+                    // must be placed
+                    let create_directory = proc() {
+                        if old_build.exists() {
+                            fs::rename(&old_build, &script_output)
+                        } else {
+                            fs::mkdir_recursive(&script_output, USER_RWX)
+                        }.chain_error(|| {
+                            internal("failed to create script output directory for build command")
+                        })
+                    };
+
+                    // replacing the simple rustc compilation by three steps:
+                    // 1 - create the output directory
+                    // 2 - call rustc
+                    // 3 - execute the command
                     let rustc_cmd = mem::replace(work, proc() Ok(()));
-                    let replacement = proc() { try!(rustc_cmd()); execute_cmd() };
+                    let replacement = proc() {
+                        try!(create_directory());
+                        try!(rustc_cmd());
+                        execute_cmd()
+                    };
                     mem::replace(work, replacement);
                 }
             }
@@ -307,16 +337,98 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     })
 }
 
+// Contains the parsed output of a custom build script.
+struct CustomBuildCommandOutput {
+    // paths to pass to rustc with the `-L` flag
+    library_paths: Vec<Path>,
+    // names and link kinds of libraries, suitable for the `-l` flag
+    library_links: Vec<String>,
+    // metadata to pass to the immediate dependencies
+    metadata: Vec<(String, String)>,
+}
+
+impl CustomBuildCommandOutput {
+    // Parses the output of a script.
+    // The `pkg_name` is used for error messages.
+    fn parse<B: Buffer>(mut input: B, pkg_name: &str) -> CargoResult<CustomBuildCommandOutput> {
+        let mut library_paths = Vec::new();
+        let mut library_links = Vec::new();
+        let mut metadata = Vec::new();
+
+        for line in input.lines() {
+            // unwrapping the IoResult
+            let line = try!(line.map_err(|e| human(format!("Error while reading\
+                                                            custom build output: {}", e))));
+
+            let mut iter = line.as_slice().splitn(1, |c: char| c == ':');
+            if iter.next() != Some("cargo") {
+                // skip this line since it doesn't start with "cargo:"
+                continue;
+            }
+            let data = match iter.next() {
+                Some(val) => val,
+                None => continue
+            };
+
+            // getting the `key=value` part of the line
+            let mut iter = data.splitn(1, |c: char| c == '=');
+            let key = iter.next();
+            let value = iter.next();
+            let (key, value) = match (key, value) {
+                (Some(a), Some(b)) => (a, b),
+                // line started with `cargo:` but didn't match `key=value`
+                _ => return Err(human(format!("Wrong output for the custom\
+                                               build script of `{}`:\n`{}`", pkg_name, line)))
+            };
+
+            if key == "rustc-flags" {
+                let mut flags_iter = value.split(|c: char| c == ' ' || c == '\t');
+                loop {
+                    let flag = match flags_iter.next() {
+                        Some(f) => f,
+                        None => break
+                    };
+                    if flag != "-l" && flag != "-L" {
+                        return Err(human(format!("Only `-l` and `-L` flags are allowed \
+                                                 in build script of `{}`:\n`{}`",
+                                                 pkg_name, value)))
+                    }
+                    let value = match flags_iter.next() {
+                        Some(v) => v,
+                        None => return Err(human(format!("Flag in rustc-flags has no value\
+                                                          in build script of `{}`:\n`{}`",
+                                                          pkg_name, value)))
+                    };
+                    match flag {
+                        "-l" => library_links.push(value.to_string()),
+                        "-L" => library_paths.push(Path::new(value)),
+
+                        // was already checked above
+                        _ => return Err(human("only -l and -L flags are allowed"))
+                    };
+                }
+            } else {
+                metadata.push((key.to_string(), value.to_string()))
+            }
+        }
+
+        Ok(CustomBuildCommandOutput {
+            library_paths: library_paths,
+            library_links: library_links,
+            metadata: metadata,
+        })
+    }
+}
+
 // Prepares a `Work` that executes the target as a custom build script.
 // `pkg` is the package the build script belongs to, and `root_pkg` is the package
 // Cargo is being run on.
 fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Target,
-                                cx: &mut Context) -> CargoResult<Work> {
-    // TODO: this shouldn't explicitly pass `KindTarget` for dest/deps_dir, we
-    //       may be building a C lib for a plugin
-    let layout = cx.layout(pkg, KindTarget);
-    let output = layout.native(pkg);
-    let old_output = layout.proxy().old_native(pkg);
+                                cx: &mut Context)
+                                -> CargoResult<Work> {
+    let layout = cx.layout(pkg, KindForHost);
+    let script_output = layout.build(pkg);
+    let build_output = layout.build_out(pkg);
 
     // Building the command to execute
     let to_exec = try!(cx.target_filenames(target));
@@ -328,11 +440,12 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
         Some(cmd) => cmd,
         None => return Err(human(format!("failed to determine output of custom build script"))),
     };
-    let to_exec = layout.root().join(to_exec);
+    let to_exec = script_output.join(to_exec);
 
+    // Filling environment variables
     let profile = target.get_profile();
     let mut p = process(to_exec, pkg, cx)
-                     .env("OUT_DIR", Some(&output))
+                     .env("OUT_DIR", Some(&build_output))
                      .env("CARGO_MANIFEST_DIR", Some(root_pkg.get_manifest_path()
                                                      .display().to_string()))
                      .env("NUM_JOBS", profile.get_codegen_units().map(|n| n.to_string()))
@@ -354,25 +467,36 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
         None => {}
     }
 
+    // Building command
     let pkg = pkg.to_string();
+    let work = proc() {
+        if !build_output.exists() {
+            try!(fs::mkdir(&build_output, USER_RWX)
+                .chain_error(|| {
+                    internal("failed to create build output directory for build command")
+                }))
+        }
 
-    Ok(proc() {
-        // TODO: is this necessary? it's already part of layout::prepare
-        try!(if old_output.exists() {
-            fs::rename(&old_output, &output)
-        } else {
-            fs::mkdir(&output, USER_RWX)
-        }.chain_error(|| {
-            internal("failed to create output directory for build command")
-        }));
-
-        try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
+        let output = try!(p.exec_with_output().map_err(|mut e| {
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
                             pkg, e.msg);
             e.mark_human()
         }));
+
+        // parsing the output of the custom build script to check that it's correct
+        try!(CustomBuildCommandOutput::parse(BufReader::new(output.output.as_slice()),
+                                             pkg.as_slice()));
+
+        // writing the output to the right directory
+        try!(fs::File::create(&script_output.join("output")).write(output.output.as_slice())
+            .map_err(|e| {
+                human(format!("failed to write output of custom build command: {}", e))
+            }));
+
         Ok(())
-    })
+    };
+
+    Ok(work)
 }
 
 fn rustc(package: &Package, target: &Target,
@@ -405,19 +529,19 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
     let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
-    let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
+    let plugin_cmd = build_plugin_args(base, cx, package, target, KindForHost);
     let target_cmd = try!(build_deps_args(target_cmd, target, package, cx,
                                           KindTarget));
     let plugin_cmd = try!(build_deps_args(plugin_cmd, target, package, cx,
-                                          KindPlugin));
+                                          KindForHost));
 
     Ok(match req {
         PlatformTarget => vec![(target_cmd, KindTarget)],
-        PlatformPlugin => vec![(plugin_cmd, KindPlugin)],
+        PlatformPlugin => vec![(plugin_cmd, KindForHost)],
         PlatformPluginAndTarget if cx.config.target().is_none() =>
             vec![(target_cmd, KindTarget)],
         PlatformPluginAndTarget => vec![(target_cmd, KindTarget),
-                                        (plugin_cmd, KindPlugin)],
+                                        (plugin_cmd, KindForHost)],
     })
 }
 
@@ -548,12 +672,17 @@ fn build_base_args(cx: &Context,
 
 fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) -> ProcessBuilder {
-    cmd = cmd.arg("--out-dir");
-    if target.is_example() {
-        cmd = cmd.arg(cx.layout(pkg, kind).examples());
+    let out_dir = cx.layout(pkg, kind);
+    let out_dir = if target.get_profile().is_custom_build() {
+        out_dir.build(pkg)
+    } else if target.is_example() {
+        out_dir.examples().clone()
     } else {
-        cmd = cmd.arg(cx.layout(pkg, kind).root());
-    }
+        out_dir.root().clone()
+    };
+
+    cmd = cmd.arg("--out-dir");
+    cmd = cmd.arg(out_dir);
 
     let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
     cmd = cmd.arg("--dep-info").arg(dep_info_loc);
@@ -625,8 +754,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
         let layout = cx.layout(pkg, match kind {
-            KindPlugin => KindPlugin,
-            KindTarget if target.get_profile().is_for_host() => KindPlugin,
+            KindForHost => KindForHost,
+            KindTarget if target.get_profile().is_for_host() => KindForHost,
             KindTarget => KindTarget,
         });
 
@@ -647,7 +776,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
                           cx: &Context) -> CargoResult<ProcessBuilder> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
-    let layout = cx.layout(pkg, KindPlugin);
+    let layout = cx.layout(pkg, KindForHost);
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
 

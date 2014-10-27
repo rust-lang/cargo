@@ -16,6 +16,20 @@
 //!
 //!     # This is the location at which the output of all custom build
 //!     # commands are rooted
+//!     build/
+//!
+//!         # Each package gets its own directory where its build script and
+//!         # script output are placed
+//!         $pkg1/
+//!         $pkg2/
+//!         $pkg3/
+//!
+//!             # Each directory package has a `out` directory where output
+//!             # is placed.
+//!             out/
+//!
+//!     # This is the location at which the output of all old custom build
+//!     # commands are rooted
 //!     native/
 //!
 //!         # Each package gets its own directory for where its output is
@@ -46,6 +60,7 @@
 //!
 //!     # Same as the two above old directories
 //!     old-native/
+//!     old-build/
 //!     old-fingerprint/
 //!     old-examples/
 //! ```
@@ -60,12 +75,14 @@ pub struct Layout {
     root: Path,
     deps: Path,
     native: Path,
+    build: Path,
     fingerprint: Path,
     examples: Path,
 
     old_deps: Path,
     old_root: Path,
     old_native: Path,
+    old_build: Path,
     old_fingerprint: Path,
     old_examples: Path,
 }
@@ -93,11 +110,13 @@ impl Layout {
         Layout {
             deps: root.join("deps"),
             native: root.join("native"),
+            build: root.join("build"),
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
             old_deps: root.join("old-deps"),
             old_root: root.join("old-root"),
             old_native: root.join("old-native"),
+            old_build: root.join("old-build"),
             old_fingerprint: root.join("old-fingerprint"),
             old_examples: root.join("old-examples"),
             root: root,
@@ -153,6 +172,14 @@ impl Layout {
         self.fingerprint.join(self.pkg_dir(package))
     }
 
+    pub fn build(&self, package: &Package) -> Path {
+        self.build.join(self.pkg_dir(package))
+    }
+
+    pub fn build_out(&self, package: &Package) -> Path {
+        self.build(package).join("out")
+    }
+
     pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
     pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
     pub fn old_examples<'a>(&'a self) -> &'a Path { &self.old_examples }
@@ -161,6 +188,10 @@ impl Layout {
     }
     pub fn old_fingerprint(&self, package: &Package) -> Path {
         self.old_fingerprint.join(self.pkg_dir(package))
+    }
+
+    pub fn old_build(&self, package: &Package) -> Path {
+        self.old_build.join(self.pkg_dir(package))
     }
 
     fn pkg_dir(&self, pkg: &Package) -> String {
@@ -195,6 +226,10 @@ impl<'a> LayoutProxy<'a> {
 
     pub fn native(&self, pkg: &Package) -> Path { self.root.native(pkg) }
 
+    pub fn build(&self, pkg: &Package) -> Path { self.root.build(pkg) }
+
+    pub fn build_out(&self, pkg: &Package) -> Path { self.root.build_out(pkg) }
+
     pub fn old_root(&self) -> &'a Path {
         if self.primary {self.root.old_dest()} else {self.root.old_deps()}
     }
@@ -203,6 +238,10 @@ impl<'a> LayoutProxy<'a> {
 
     pub fn old_native(&self, pkg: &Package) -> Path {
         self.root.old_native(pkg)
+    }
+
+    pub fn old_build(&self, pkg: &Package) -> Path {
+        self.root.old_build(pkg)
     }
 
     pub fn proxy(&self) -> &'a Layout { self.root }

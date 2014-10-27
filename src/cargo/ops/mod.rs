@@ -2,7 +2,7 @@ pub use self::cargo_clean::{clean, CleanOptions};
 pub use self::cargo_compile::{compile, compile_pkg, CompileOptions};
 pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
 pub use self::cargo_rustc::{compile_targets, Compilation, Layout, Kind, rustc_version};
-pub use self::cargo_rustc::{KindTarget, KindPlugin, Context, LayoutProxy};
+pub use self::cargo_rustc::{KindTarget, KindForHost, Context, LayoutProxy};
 pub use self::cargo_rustc::{PlatformRequirement, PlatformTarget};
 pub use self::cargo_rustc::{PlatformPlugin, PlatformPluginAndTarget};
 pub use self::cargo_run::run;
