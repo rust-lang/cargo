@@ -1683,4 +1683,5 @@ test!(ignore_bad_directories {
     fs::mkdir(&foo.root().join("tmp"), io::USER_EXEC ^ io::USER_EXEC).unwrap();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
+    fs::chmod(&foo.root().join("tmp"), io::USER_DIR).unwrap();
 })
