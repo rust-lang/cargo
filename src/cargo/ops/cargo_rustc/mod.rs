@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
-use std::io::{fs, BufReader, USER_RWX};
-use std::io::fs::PathExtensions;
+use std::io::{fs, BufferedReader, BufReader, USER_RWX};
+use std::io::fs::{File, PathExtensions};
+use std::os;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
@@ -512,12 +513,60 @@ fn rustc(package: &Package, target: &Target,
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
+        let build_cmd_layout = cx.layout(package, KindForHost);
+
+        // building the possible `build/$pkg/output` file for this local package
+        let command_output_file = build_cmd_layout.build(package).join("output");
+
+        // building the list of all possible `build/$pkg/output` files
+        // whether they exist or not will be checked during the work
+        let command_output_files = cx.dep_targets(package).iter().map(|&(pkg, _)| {
+            build_cmd_layout.build(pkg).join("output")
+        }).collect::<Vec<_>>();
 
         (proc() {
+            let mut rustc = rustc;
+
+            let mut additional_library_paths = Vec::new();
+
+            // list of `-l` flags to pass to rustc coming from custom build scripts
+            let additional_library_links = match File::open(&command_output_file) {
+                Ok(f) => {
+                    let flags = try!(CustomBuildCommandOutput::parse(
+                        BufferedReader::new(f), name.as_slice()));
+
+                    additional_library_paths.extend(flags.library_paths.iter().map(|p| p.clone()));
+                    flags.library_links.clone()
+                },
+                Err(_) => Vec::new()
+            };
+
+            // loading each possible custom build output file to fill `additional_library_paths`
+            for flags_file in command_output_files.into_iter() {
+                let flags = match File::open(&flags_file) {
+                    Ok(f) => f,
+                    Err(_) => continue  // the file doesn't exist, probably means that this pkg
+                                        // doesn't have a build command
+                };
+
+                let flags = try!(CustomBuildCommandOutput::parse(
+                    BufferedReader::new(flags), name.as_slice()));
+                additional_library_paths.extend(flags.library_paths.iter().map(|p| p.clone()));
+            }
+
+            for p in additional_library_paths.into_iter() {
+                rustc = rustc.arg("-L").arg(p);
+            }
+            for lib in additional_library_links.into_iter() {
+                rustc = rustc.arg("-l").arg(lib);
+            }
+
             try!(rustc.exec().chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
+
             Ok(())
+
         }, kind, desc)
     }).collect())
 }
