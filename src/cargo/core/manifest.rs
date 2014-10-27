@@ -116,7 +116,8 @@ impl LibKind {
 #[deriving(Show, Clone, Hash, PartialEq, Encodable)]
 pub enum TargetKind {
     LibTarget(Vec<LibKind>),
-    BinTarget
+    BinTarget,
+    ExampleTarget,
 }
 
 #[deriving(Encodable, Decodable, Clone, PartialEq, Show)]
@@ -340,7 +341,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         let kind = match self.kind {
             LibTarget(ref kinds) => kinds.iter().map(|k| k.crate_type()).collect(),
-            BinTarget => vec!("bin")
+            BinTarget => vec!("bin"),
+            ExampleTarget => vec!["example"],
         };
 
         SerializedTarget {
@@ -466,7 +468,7 @@ impl Target {
 
     pub fn example_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
         Target {
-            kind: BinTarget,
+            kind: ExampleTarget,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -533,10 +535,18 @@ impl Target {
         }
     }
 
-    /// Returns true for binary, bench, tests and examples.
+    /// Returns true for binary, bench, and tests.
     pub fn is_bin(&self) -> bool {
         match self.kind {
             BinTarget => true,
+            _ => false
+        }
+    }
+
+    /// Returns true for exampels
+    pub fn is_example(&self) -> bool {
+        match self.kind {
+            ExampleTarget => true,
             _ => false
         }
     }
@@ -555,7 +565,8 @@ impl Target {
             LibTarget(ref kinds) => {
                 kinds.iter().map(|kind| kind.crate_type()).collect()
             },
-            BinTarget => vec!("bin")
+            ExampleTarget |
+            BinTarget => vec!("bin"),
         }
     }
 }

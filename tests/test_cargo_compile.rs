@@ -975,7 +975,7 @@ test!(many_crate_types_old_style_lib_location {
     let files = fs::readdir(&p.root().join("target")).assert();
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
-            "deps" => None,
+            "examples" | "deps" => None,
             s if s.contains("fingerprint") || s.contains("dSYM") => None,
             s => Some(s.to_string())
         }
@@ -1013,7 +1013,7 @@ test!(many_crate_types_correct {
     let files = fs::readdir(&p.root().join("target")).assert();
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
-            "deps" => None,
+            "examples" | "deps" => None,
             s if s.contains("fingerprint") || s.contains("dSYM") => None,
             s => Some(s.to_string())
         }
@@ -1280,8 +1280,10 @@ test!(explicit_examples {
         "#);
 
     assert_that(p.cargo_process("test"), execs());
-    assert_that(process(p.bin("hello")), execs().with_stdout("Hello, World!\n"));
-    assert_that(process(p.bin("goodbye")), execs().with_stdout("Goodbye, World!\n"));
+    assert_that(process(p.bin("examples/hello")),
+                        execs().with_stdout("Hello, World!\n"));
+    assert_that(process(p.bin("examples/goodbye")),
+                        execs().with_stdout("Goodbye, World!\n"));
 })
 
 test!(implicit_examples {
@@ -1307,8 +1309,10 @@ test!(implicit_examples {
         "#);
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
-    assert_that(process(p.bin("hello")), execs().with_stdout("Hello, World!\n"));
-    assert_that(process(p.bin("goodbye")), execs().with_stdout("Goodbye, World!\n"));
+    assert_that(process(p.bin("examples/hello")),
+                execs().with_stdout("Hello, World!\n"));
+    assert_that(process(p.bin("examples/goodbye")),
+                execs().with_stdout("Goodbye, World!\n"));
 })
 
 test!(standard_build_no_ndebug {
