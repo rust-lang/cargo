@@ -1,4 +1,7 @@
+use std::path;
+
 use support::{project, execs};
+use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -151,3 +154,55 @@ Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 (file://{})`
 `",
 p.root().display())));
 })
+
+/*
+test!(custom_build_script_rustc_flags {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.foo]
+            path = "foo"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "build.rs"
+        "#)
+        .file("foo/src/lib.rs", r#"
+        "#)
+        .file("foo/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-flags=-l nonexistinglib -L /dummy/path1 -L /dummy/path2");
+            }
+        "#);
+
+    // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(101)
+                       .with_stdout(format!("\
+{compiling} bar v0.5.0 ({url})
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
+        -C metadata=[..] \
+        -C extra-filename=-[..] \
+        --out-dir {dir}{sep}target \
+        --dep-info [..] \
+        -L {dir}{sep}target \
+        -L {dir}{sep}target{sep}deps`
+",
+running = RUNNING, compiling = COMPILING, sep = path::SEP,
+dir = p.root().display(),
+url = p.url(),
+)));
+})
+*/
