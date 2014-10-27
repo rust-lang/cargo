@@ -182,12 +182,21 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             let fresh = job_freshness.combine(fresh);
             let my_tx = self.tx.clone();
             let id = id.clone();
-            if fresh == Dirty {
-                try!(config.shell().verbose(|shell| job.describe(shell)));
-            }
+            let (desc_tx, desc_rx) = channel();
             self.pool.execute(proc() {
-                my_tx.send((id, stage, fresh, job.run(fresh)));
+                my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
             });
+            if fresh == Dirty {
+                // TODO: only the first message of each job is processed
+                match desc_rx.recv_opt() {
+                    Ok(ref msg) if msg.len() >= 1 => {
+                        try!(config.shell().verbose(|shell| {
+                            shell.status("Running", msg.as_slice())
+                        }));
+                    },
+                    _ => ()
+                }
+            }
         }
 
         // If no work was scheduled, make sure that a message is actually send

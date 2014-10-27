@@ -147,10 +147,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 
     // Prepare the fingerprint directory as the first step of building a package
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, KindTarget);
-    let mut init = vec![(Job::new(target1, target2, String::new()), Fresh)];
+    let mut init = vec![(Job::new(target1, target2), Fresh)];
     if cx.config.target().is_some() {
         let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindForHost);
-        init.push((Job::new(plugin1, plugin2, String::new()), Fresh));
+        init.push((Job::new(plugin1, plugin2), Fresh));
     }
     jobs.enqueue(pkg, jq::StageStart, init);
 
@@ -163,14 +163,14 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                                                        Vec::new(), Vec::new());
     for &target in targets.iter() {
         let work = if target.get_profile().is_doc() {
-            let (rustdoc, desc) = try!(rustdoc(pkg, target, cx));
-            vec![(rustdoc, KindTarget, desc)]
+            let rustdoc = try!(rustdoc(pkg, target, cx));
+            vec![(rustdoc, KindTarget)]
         } else {
             let req = cx.get_requirement(pkg, target);
             let mut rustc = try!(rustc(pkg, target, cx, req));
 
             if target.get_profile().is_custom_build() {
-                for &(ref mut work, _, _) in rustc.iter_mut() {
+                for &(ref mut work, _) in rustc.iter_mut() {
                     use std::mem;
 
                     let (old_build, script_output) = {
@@ -200,11 +200,11 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                     // 1 - create the output directory
                     // 2 - call rustc
                     // 3 - execute the command
-                    let rustc_cmd = mem::replace(work, proc() Ok(()));
-                    let replacement = proc() {
+                    let rustc_cmd = mem::replace(work, proc(_) Ok(()));
+                    let replacement = proc(desc_tx: Sender<String>) {
                         try!(create_directory());
-                        try!(rustc_cmd());
-                        execute_cmd()
+                        try!(rustc_cmd(desc_tx.clone()));
+                        execute_cmd(desc_tx)
                     };
                     mem::replace(work, replacement);
                 }
@@ -222,12 +222,15 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             (false, false, _) if target.get_profile().get_env() == "test" => &mut tests,
             (false, false, _) => &mut bins,
         };
-        for (work, kind, desc) in work.into_iter() {
+        for (work, kind) in work.into_iter() {
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
-            let dirty = proc() { try!(work()); dirty() };
-            dst.push((job(dirty, fresh, desc), freshness));
+            let dirty = proc(desc_tx: Sender<String>) {
+                try!(work(desc_tx.clone()));
+                dirty(desc_tx)
+            };
+            dst.push((job(dirty, fresh), freshness));
         }
     }
 
@@ -250,11 +253,12 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             1 => pkg.get_manifest().get_build()[0].to_string(),
             _ => format!("custom build commands"),
         };
-        let dirty = proc() {
-            for cmd in build_cmds.into_iter() { try!(cmd()) }
-            dirty()
+        let dirty = proc(desc_tx: Sender<String>) {
+            desc_tx.send_opt(desc).ok();
+            for cmd in build_cmds.into_iter() { try!(cmd(desc_tx.clone())) }
+            dirty(desc_tx)
         };
-        jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh, desc),
+        jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh),
                                                       freshness)]);
     }
 
@@ -319,7 +323,8 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     }
     let pkg = pkg.to_string();
 
-    Ok(proc() {
+    Ok(proc(desc_tx: Sender<String>) {
+        desc_tx.send_opt(p.to_string()).ok();
         if first {
             try!(if old_output.exists() {
                 fs::rename(&old_output, &output)
@@ -470,7 +475,9 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
 
     // Building command
     let pkg = pkg.to_string();
-    let work = proc() {
+    let work = proc(desc_tx: Sender<String>) {
+        desc_tx.send_opt(build_output.display().to_string()).ok();
+
         if !build_output.exists() {
             try!(fs::mkdir(&build_output, USER_RWX)
                 .chain_error(|| {
@@ -502,13 +509,12 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
 
 fn rustc(package: &Package, target: &Target,
          cx: &mut Context, req: PlatformRequirement)
-         -> CargoResult<Vec<(Work, Kind, String)> >{
+         -> CargoResult<Vec<(Work, Kind)> >{
     let crate_types = target.rustc_crate_types();
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
     Ok(rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
-        let desc = rustc.to_string();
         let is_path_source = package.get_package_id().get_source_id().is_path();
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
@@ -524,7 +530,7 @@ fn rustc(package: &Package, target: &Target,
             build_cmd_layout.build(pkg).join("output")
         }).collect::<Vec<_>>();
 
-        (proc() {
+        (proc(desc_tx: Sender<String>) {
             let mut rustc = rustc;
 
             let mut additional_library_paths = Vec::new();
@@ -561,13 +567,14 @@ fn rustc(package: &Package, target: &Target,
                 rustc = rustc.arg("-l").arg(lib);
             }
 
+            desc_tx.send_opt(rustc.to_string()).ok();
             try!(rustc.exec().chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
 
             Ok(())
 
-        }, kind, desc)
+        }, kind)
     }).collect())
 }
 
@@ -596,7 +603,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
 
 
 fn rustdoc(package: &Package, target: &Target,
-           cx: &mut Context) -> CargoResult<(Work, String)> {
+           cx: &mut Context) -> CargoResult<Work> {
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
@@ -621,7 +628,8 @@ fn rustdoc(package: &Package, target: &Target,
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();
     let desc = rustdoc.to_string();
-    Ok((proc() {
+    Ok(proc(desc_tx: Sender<String>) {
+        desc_tx.send(desc);
         if primary {
             try!(rustdoc.exec().chain_error(|| {
                 human(format!("Could not document `{}`.", name))
@@ -640,7 +648,7 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         }
         Ok(())
-    }, desc))
+    })
 }
 
 fn build_base_args(cx: &Context,
