@@ -2,12 +2,12 @@
 
 This document will explain how cargo's configuration system works, as well as
 available keys or configuration.  For configuration of a project through its
-manfest, see the [manifest format](manifest.html).
+manifest, see the [manifest format](manifest.html).
 
 # Hierarchical structure
 
 Cargo allows to have local configuration for a particular project or global
-configuration (like git). Cargo also extends this ability to a hirearchical
+configuration (like git). Cargo also extends this ability to a hierarchical
 strategy. If, for example, cargo were invoked in `/home/foo/bar/baz`, then the
 following configuration files would be probed for:
 
