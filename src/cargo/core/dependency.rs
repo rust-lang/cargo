@@ -1,5 +1,6 @@
-use core::{SourceId,Summary};
 use semver::VersionReq;
+
+use core::{SourceId, Summary, PackageId};
 use util::CargoResult;
 
 /// Informations about a dependency requested by a Cargo manifest.
@@ -8,6 +9,7 @@ pub struct Dependency {
     name: String,
     source_id: SourceId,
     req: VersionReq,
+    specified_req: Option<String>,
     transitive: bool,
     only_match_name: bool,
 
@@ -31,14 +33,15 @@ impl Dependency {
     pub fn parse(name: &str,
                  version: Option<&str>,
                  source_id: &SourceId) -> CargoResult<Dependency> {
-        let version = match version {
+        let version_req = match version {
             Some(v) => try!(VersionReq::parse(v)),
             None => VersionReq::any()
         };
 
         Ok(Dependency {
             only_match_name: false,
-            req: version,
+            req: version_req,
+            specified_req: version.map(|s| s.to_string()),
             .. Dependency::new_override(name, source_id)
         })
     }
@@ -53,12 +56,17 @@ impl Dependency {
             optional: false,
             features: Vec::new(),
             default_features: true,
+            specified_req: None,
         }
     }
 
     /// Returns the version of the dependency that is being requested.
     pub fn get_version_req(&self) -> &VersionReq {
         &self.req
+    }
+
+    pub fn get_specified_req(&self) -> Option<&str> {
+        self.specified_req.as_ref().map(|s| s.as_slice())
     }
 
     pub fn get_name(&self) -> &str {
@@ -93,6 +101,26 @@ impl Dependency {
         self
     }
 
+    /// Set the source id for this dependency
+    pub fn source_id(mut self, id: SourceId) -> Dependency {
+        self.source_id = id;
+        self
+    }
+
+    /// Set the version requirement for this dependency
+    pub fn version_req(mut self, req: VersionReq) -> Dependency {
+        self.req = req;
+        self
+    }
+
+    /// Lock this dependency to depending on the specified package id
+    pub fn lock_to(self, id: &PackageId) -> Dependency {
+        assert_eq!(self.source_id, *id.get_source_id());
+        assert!(self.req.matches(id.get_version()));
+        self.version_req(VersionReq::exact(id.get_version()))
+            .source_id(id.get_source_id().clone())
+    }
+
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool { self.transitive }
     pub fn is_optional(&self) -> bool { self.optional }
@@ -103,12 +131,14 @@ impl Dependency {
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
-        debug!("matches; self={}; summary={}", self, sum);
-        debug!("         a={}; b={}", self.source_id, sum.get_source_id());
+        self.matches_id(sum.get_package_id())
+    }
 
-        self.name.as_slice() == sum.get_name() &&
-            (self.only_match_name || (self.req.matches(sum.get_version()) &&
-                                      &self.source_id == sum.get_source_id()))
+    /// Returns true if the package (`id`) can fulfill this dependency request.
+    pub fn matches_id(&self, id: &PackageId) -> bool {
+        self.name.as_slice() == id.get_name() &&
+            (self.only_match_name || (self.req.matches(id.get_version()) &&
+                                      &self.source_id == id.get_source_id()))
     }
 }
 

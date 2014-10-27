@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
 use std::io::{fs, File, USER_RWX, BufferedReader};
 
-use core::{Package, Target, PathKind};
+use core::{Package, Target};
 use util;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
 
@@ -54,10 +54,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     // constant (which is the responsibility of the source)
     let use_pkg = {
         let doc = target.get_profile().is_doc();
-        let path = match *pkg.get_summary().get_source_id().get_kind() {
-            PathKind => true,
-            _ => false,
-        };
+        let path = pkg.get_summary().get_source_id().is_path();
         doc || !path
     };
 

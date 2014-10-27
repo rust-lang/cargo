@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::mem;
 
 use semver::Version;
 use core::{Dependency, PackageId, SourceId};
 
 use util::{CargoResult, human};
 
-/// Subset of a `Manifest`. Contains only the most important informations about a package.
+/// Subset of a `Manifest`. Contains only the most important informations about
+/// a package.
 ///
 /// Summaries are cloned, and should not be mutated after creation
 #[deriving(Show,Clone)]
@@ -88,6 +90,17 @@ impl Summary {
 
     pub fn get_features(&self) -> &HashMap<String, Vec<String>> {
         &self.features
+    }
+
+    pub fn override_id(mut self, id: PackageId) -> Summary {
+        self.package_id = id;
+        self
+    }
+
+    pub fn map_dependencies(mut self, f: |Dependency| -> Dependency) -> Summary {
+        let deps = mem::replace(&mut self.dependencies, Vec::new());
+        self.dependencies = deps.into_iter().map(f).collect();
+        self
     }
 }
 

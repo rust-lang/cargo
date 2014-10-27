@@ -26,7 +26,7 @@ use std::os;
 use std::collections::HashMap;
 
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, SourceId, PackageSet, Target, PackageId};
+use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver;
 use ops;
 use sources::{PathSource};
@@ -51,19 +51,7 @@ pub struct CompileOptions<'a> {
 pub fn compile(manifest_path: &Path,
                options: &mut CompileOptions)
                -> CargoResult<ops::Compilation> {
-    let CompileOptions { env, ref mut shell, jobs, target, spec,
-                         dev_deps, features, no_default_features } = *options;
-    let target = target.map(|s| s.to_string());
-    let features = features.iter().flat_map(|s| {
-        s.as_slice().split(' ')
-    }).map(|s| s.to_string()).collect::<Vec<String>>();
-
     log!(4, "compile; manifest-path={}", manifest_path.display());
-
-    if spec.is_some() && (no_default_features || features.len() > 0) {
-        return Err(human("features cannot be modified when the main package \
-                          is not being built"))
-    }
 
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
@@ -73,12 +61,28 @@ pub fn compile(manifest_path: &Path,
     debug!("loaded package; package={}", package);
 
     for key in package.get_manifest().get_warnings().iter() {
-        try!(shell.warn(key))
+        try!(options.shell.warn(key))
+    }
+    compile_pkg(&package, options)
+}
+
+pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
+                   -> CargoResult<ops::Compilation> {
+    let CompileOptions { env, ref mut shell, jobs, target, spec,
+                         dev_deps, features, no_default_features } = *options;
+    let target = target.map(|s| s.to_string());
+    let features = features.iter().flat_map(|s| {
+        s.as_slice().split(' ')
+    }).map(|s| s.to_string()).collect::<Vec<String>>();
+
+    if spec.is_some() && (no_default_features || features.len() > 0) {
+        return Err(human("features cannot be modified when the main package \
+                          is not being built"))
     }
 
     let user_configs = try!(config::all_configs(os::getcwd()));
     let override_ids = try!(source_ids_from_config(&user_configs,
-                                                   manifest_path.dir_path()));
+                                                   package.get_root()));
 
     let (packages, resolve_with_overrides, sources) = {
         let mut config = try!(Config::new(*shell, jobs, target.clone()));
@@ -86,7 +90,7 @@ pub fn compile(manifest_path: &Path,
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        try!(ops::resolve_and_fetch(&mut registry, &package));
+        let resolve = try!(ops::resolve_pkg(&mut registry, package));
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -97,8 +101,8 @@ pub fn compile(manifest_path: &Path,
         let method = resolver::ResolveRequired(dev_deps, features.as_slice(),
                                                !no_default_features);
         let resolved_with_overrides =
-                try!(resolver::resolve(package.get_summary(), method,
-                                       &mut registry));
+                try!(ops::resolve_with_previous(&mut registry, package, method,
+                                                Some(&resolve), None));
 
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
             r.clone()
@@ -117,7 +121,7 @@ pub fn compile(manifest_path: &Path,
             let pkgid = try!(resolve_with_overrides.query(spec));
             packages.iter().find(|p| p.get_package_id() == pkgid).unwrap()
         }
-        None => &package,
+        None => package,
     };
 
     let targets = to_build.get_targets().iter().filter(|target| {

@@ -4,7 +4,7 @@ use tar::Archive;
 use flate2::reader::GzDecoder;
 
 use support::{project, execs, cargo_dir, ResultTest};
-use support::{PACKAGING};
+use support::{PACKAGING, VERIFYING, COMPILING};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -27,8 +27,12 @@ test!(simple {
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
+        verifying = VERIFYING,
+        compiling = COMPILING,
         dir = p.url()).as_slice()));
     assert_that(&p.root().join("foo-0.0.1.tar.gz"), existing_file());
     assert_that(p.process(cargo_dir().join("cargo")).arg("package"),

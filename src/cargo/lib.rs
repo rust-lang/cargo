@@ -24,6 +24,8 @@ extern crate toml;
 extern crate url;
 #[cfg(test)] extern crate hamcrest;
 
+extern crate registry;
+
 use std::os;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};

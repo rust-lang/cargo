@@ -40,7 +40,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     };
 
     let token = token.as_slice().trim().to_string();
-    try!(ops::upload_login(shell, token).map_err(|e| {
+    try!(ops::registry_login(shell, token).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));
     Ok(None)

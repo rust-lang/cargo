@@ -30,7 +30,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
                    })
                    .map_err(|e| CliError::from_boxed(e, 1)));
 
-    let source_id = SourceId::for_git(&url, reference.as_slice(), None);
+    let source_id = SourceId::for_git(&url, reference.as_slice());
 
     let mut config = try!(Config::new(shell, None, None).map_err(|e| {
         CliError::from_boxed(e, 1)

@@ -3,13 +3,14 @@ name = "cargo"
 version = "0.0.1-pre"
 dependencies = [
  "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#36b015de91daf6310227cec04ef30acf5929dfb6)",
- "docopt 0.6.4 (git+https://github.com/docopt/docopt.rs#4544a9f422b115c2ffef4ee9baf27ceb07c34602)",
+ "docopt 0.6.5 (git+https://github.com/docopt/docopt.rs#1c9a63e0362848570f7c503f8891770ebf2d1eab)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs#68971ae77a523c7ec3f19b4bcd195f76291ea390)",
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs#7d7fba10893590793ae88c8fc6ab2aeffcb8f10b)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob#469a6bc1a0fc289ab220170e691cffbc01dcf1e6)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git#7d46e76514ac606530dfb0e93270fffcf64ca76d)",
- "semver 0.1.0 (git+https://github.com/rust-lang/semver#9bb8265ea6cf01eddfa7dc5ec9334883443e9fc7)",
- "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#943d7c0173c7fa5e8c58978add0180569c68d7f7)",
+ "registry 0.0.1-pre",
+ "semver 0.1.0 (git+https://github.com/rust-lang/semver#0eee1b33e90a62ed03a123b94c8e06cdbaf5b662)",
+ "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs#c477f1ca1b6dde36ebf1f4a739033fe485895722)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#8a3ba4c65cfa22a3d924293a1fb3a70bfac5e66c)",
  "url 0.1.0 (git+https://github.com/servo/rust-url#7f1991d847fb8cf8648def2ff121bae90b89131f)",
 ]
@@ -31,8 +32,8 @@ source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#36b015de91daf
 
 [[package]]
 name = "docopt"
-version = "0.6.4"
-source = "git+https://github.com/docopt/docopt.rs#4544a9f422b115c2ffef4ee9baf27ceb07c34602"
+version = "0.6.5"
+source = "git+https://github.com/docopt/docopt.rs#1c9a63e0362848570f7c503f8891770ebf2d1eab"
 
 [[package]]
 name = "encoding"
@@ -89,14 +90,21 @@ version = "0.0.1"
 source = "git+https://github.com/alexcrichton/openssl-static-sys#d218fa63aabefb3ac56a44985e2df8a2dc932450"
 
 [[package]]
+name = "registry"
+version = "0.0.1-pre"
+dependencies = [
+ "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle#36b015de91daf6310227cec04ef30acf5929dfb6)",
+]
+
+[[package]]
 name = "semver"
 version = "0.1.0"
-source = "git+https://github.com/rust-lang/semver#9bb8265ea6cf01eddfa7dc5ec9334883443e9fc7"
+source = "git+https://github.com/rust-lang/semver#0eee1b33e90a62ed03a123b94c8e06cdbaf5b662"
 
 [[package]]
 name = "tar"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/tar-rs#943d7c0173c7fa5e8c58978add0180569c68d7f7"
+source = "git+https://github.com/alexcrichton/tar-rs#c477f1ca1b6dde36ebf1f4a739033fe485895722"
 
 [[package]]
 name = "toml"

@@ -68,15 +68,17 @@ macro_rules! each_subcommand( ($macro:ident) => ({
     $macro!(locate_project)
     $macro!(login)
     $macro!(new)
+    $macro!(owner)
     $macro!(package)
     $macro!(pkgid)
+    $macro!(publish)
     $macro!(read_manifest)
     $macro!(run)
     $macro!(test)
     $macro!(update)
-    $macro!(upload)
     $macro!(verify_project)
     $macro!(version)
+    $macro!(yank)
 }) )
 
 /**

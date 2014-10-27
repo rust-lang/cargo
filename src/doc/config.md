@@ -68,7 +68,7 @@ linker = ".."
 
 # Configuration keys related to the registry
 [registry]
-host = "..."    # URL of the registry (defaults to the central repository)
+index = "..."   # URL of the registry index (defaults to the central repository)
 token = "..."   # Access token (found on the central repo's website)
 
 [http]

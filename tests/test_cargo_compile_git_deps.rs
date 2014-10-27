@@ -696,16 +696,19 @@ test!(update_with_shared_deps {
     timer::sleep(Duration::milliseconds(1000));
 
     // By default, not transitive updates
+    println!("dep1 update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
                 execs().with_stdout(""));
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
+    println!("bar precise update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar")
                  .arg("--precise").arg(old_head.to_string()),
                 execs().with_stdout(""));
 
     // Updating aggressively should, however, update the repo.
+    println!("dep1 aggressive update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1")
                  .arg("--aggressive"),
                 execs().with_stdout(format!("{} git repository `{}`",
@@ -713,6 +716,7 @@ test!(update_with_shared_deps {
                                             git_project.url())));
 
     // Make sure we still only compile one version of the git repo
+    println!("build");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("\
 {compiling} bar v0.5.0 ({git}#[..])
@@ -1426,4 +1430,81 @@ test!(update_one_dep_in_repo_with_many_deps {
                        .with_stdout(format!("\
 Updating git repository `{}`
 ", foo.url())));
+})
+
+test!(switch_deps_does_not_update_transitive {
+    let transitive = git_repo("transitive", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "transitive"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/lib.rs", "")
+    }).assert();
+    let dep1 = git_repo("dep1", |project| {
+        project.file("Cargo.toml", format!(r#"
+            [package]
+            name = "dep"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.transitive]
+            git = '{}'
+        "#, transitive.url()).as_slice())
+        .file("src/lib.rs", "")
+    }).assert();
+    let dep2 = git_repo("dep2", |project| {
+        project.file("Cargo.toml", format!(r#"
+            [package]
+            name = "dep"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.transitive]
+            git = '{}'
+        "#, transitive.url()).as_slice())
+        .file("src/lib.rs", "")
+    }).assert();
+
+    let p = project("project")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "project"
+            version = "0.5.0"
+            authors = []
+            [dependencies.dep]
+            git = '{}'
+        "#, dep1.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    p.build();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+Updating git repository `{}`
+Updating git repository `{}`
+{compiling} transitive [..]
+{compiling} dep [..]
+{compiling} project [..]
+", dep1.url(), transitive.url(), compiling = COMPILING)));
+
+    // Update the dependency to point to the second repository, but this
+    // shouldn't update the transitive dependency which is the same.
+    File::create(&p.root().join("Cargo.toml")).write_str(format!(r#"
+            [project]
+            name = "project"
+            version = "0.5.0"
+            authors = []
+            [dependencies.dep]
+            git = '{}'
+    "#, dep2.url()).as_slice()).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+Updating git repository `{}`
+{compiling} dep [..]
+{compiling} project [..]
+", dep2.url(), compiling = COMPILING)));
 })

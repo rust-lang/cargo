@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::hashmap::{HashSet, HashMap, Occupied, Vacant};
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
@@ -21,18 +21,62 @@ impl Registry for Vec<Summary> {
     }
 }
 
+/// This structure represents a registry of known packages. It internally
+/// contains a number of `Box<Source>` instances which are used to load a
+/// `Package` from.
+///
+/// The resolution phase of Cargo uses this to drive knowledge about new
+/// packages as well as querying for lists of new packages. It is here that
+/// sources are updated and (e.g. network operations) as well as overrides are
+/// handled.
+///
+/// The general idea behind this registry is that it is centered around the
+/// `SourceMap` structure contained within which is a mapping of a `SourceId` to
+/// a `Source`. Each `Source` in the map has been updated (using network
+/// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'a> {
     sources: SourceMap<'a>,
+    config: &'a mut Config<'a>,
+
+    // A list of sources which are considered "overrides" which take precedent
+    // when querying for packages.
     overrides: Vec<SourceId>,
-    config: &'a mut Config<'a>
+
+    // Note that each SourceId does not take into account its `precise` field
+    // when hashing or testing for equality. When adding a new `SourceId`, we
+    // want to avoid duplicates in the `SourceMap` (to prevent re-updating the
+    // same git repo twice for example), but we also want to ensure that the
+    // loaded source is always updated.
+    //
+    // Sources with a `precise` field normally don't need to be updated because
+    // their contents are already on disk, but sources without a `precise` field
+    // almost always need to be updated. If we have a cached `Source` for a
+    // precise `SourceId`, then when we add a new `SourceId` that is not precise
+    // we want to ensure that the underlying source is updated.
+    //
+    // This is basically a long-winded way of saying that we want to know
+    // precisely what the keys of `sources` are, so this is a mapping of key to
+    // what exactly the key is.
+    source_ids: HashMap<SourceId, (SourceId, Kind)>,
+
+    locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
+}
+
+#[deriving(PartialEq, Eq)]
+enum Kind {
+    Override,
+    Locked,
+    Normal,
 }
 
 impl<'a> PackageRegistry<'a> {
     pub fn new<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
+            source_ids: HashMap::new(),
             overrides: vec!(),
-            config: config
+            config: config,
+            locked: HashMap::new(),
         }
     }
 
@@ -64,27 +108,60 @@ impl<'a> PackageRegistry<'a> {
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
-        if self.sources.contains(namespace) { return Ok(()); }
+        match self.source_ids.find(namespace) {
+            // We've previously loaded this source, and we've already locked it,
+            // so we're not allowed to change it even if `namespace` has a
+            // slightly different precise version listed.
+            Some(&(_, Locked)) => return Ok(()),
 
-        try!(self.load(namespace, false));
+            // If the previous source was not a precise source, then we can be
+            // sure that it's already been updated if we've already loaded it.
+            Some(&(ref previous, _)) if previous.get_precise().is_none() => {
+                return Ok(())
+            }
+
+            // If the previous source has the same precise version as we do,
+            // then we're done, otherwise we need to need to move forward
+            // updating this source.
+            Some(&(ref previous, _)) => {
+                if previous.get_precise() == namespace.get_precise() {
+                    return Ok(())
+                }
+            }
+            None => {}
+        }
+
+        try!(self.load(namespace, Normal));
         Ok(())
     }
 
-    pub fn add_sources(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
-        for id in dedup(ids).iter() {
-            try!(self.load(id, false));
+    pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
+        for id in ids.iter() {
+            try!(self.load(id, Locked));
         }
         Ok(())
     }
 
     pub fn add_overrides(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, true));
+            try!(self.load(id, Override));
         }
         Ok(())
     }
 
-    fn load(&mut self, source_id: &SourceId, is_override: bool) -> CargoResult<()> {
+    pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
+        let sub_map = match self.locked.entry(id.get_source_id().clone()) {
+            Occupied(e) => e.into_mut(),
+            Vacant(e) => e.set(HashMap::new()),
+        };
+        let sub_vec = match sub_map.entry(id.get_name().to_string()) {
+            Occupied(e) => e.into_mut(),
+            Vacant(e) => e.set(Vec::new()),
+        };
+        sub_vec.push((id, deps));
+    }
+
+    fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
             let mut source = source_id.load(self.config);
 
@@ -93,12 +170,13 @@ impl<'a> PackageRegistry<'a> {
             try!(source.update());
             drop(p);
 
-            if is_override {
+            if kind == Override {
                 self.overrides.push(source_id.clone());
             }
 
             // Save off the source
             self.sources.insert(source_id, source);
+            self.source_ids.insert(source_id.clone(), (source_id.clone(), kind));
 
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", source_id)))
@@ -117,34 +195,86 @@ impl<'a> PackageRegistry<'a> {
         }
         Ok(ret)
     }
-}
 
-fn dedup(ids: Vec<SourceId>) -> Vec<SourceId> {
-    let mut seen = vec!();
+    // This function is used to transform a summary to another locked summary if
+    // possible. This is where the the concept of a lockfile comes into play.
+    //
+    // If a summary points at a package id which was previously locked, then we
+    // override the summary's id itself as well as all dependencies to be
+    // rewritten to the locked versions. This will transform the summary's
+    // source to a precise source (listed in the locked version) as well as
+    // transforming all of the dependencies from range requirements on imprecise
+    // sources to exact requirements on precise sources.
+    //
+    // If a summary does not point at a package id which was previously locked,
+    // we still want to avoid updating as many dependencies as possible to keep
+    // the graph stable. In this case we map all of the summary's dependencies
+    // to be rewritten to a locked version wherever possible. If we're unable to
+    // map a dependency though, we just pass it on through.
+    fn lock(&self, summary: Summary) -> Summary {
+        let pair = self.locked.find(summary.get_source_id()).and_then(|map| {
+            map.find_equiv(&summary.get_name())
+        }).and_then(|vec| {
+            vec.iter().find(|&&(ref id, _)| id == summary.get_package_id())
+        });
 
-    for id in ids.into_iter() {
-        if seen.contains(&id) { continue; }
-        seen.push(id);
+        // Lock the summary's id if possible
+        let summary = match pair {
+            Some(&(ref precise, _)) => summary.override_id(precise.clone()),
+            None => summary,
+        };
+        summary.map_dependencies(|dep| {
+            match pair {
+                // If this summary has a locked version, then we need to lock
+                // this dependency. If this dependency doesn't have a locked
+                // version, then it was likely an optional dependency which
+                // wasn't included and we just pass it through anyway.
+                Some(&(_, ref deps)) => {
+                    match deps.iter().find(|d| d.get_name() == dep.get_name()) {
+                        Some(lock) => dep.lock_to(lock),
+                        None => dep,
+                    }
+                }
+
+                // If this summary did not have a locked version, then we query
+                // all known locked packages to see if they match this
+                // dependency. If anything does then we lock it to that and move
+                // on.
+                None => {
+                    let v = self.locked.find(dep.get_source_id()).and_then(|map| {
+                        map.find_equiv(&dep.get_name())
+                    }).and_then(|vec| {
+                        vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
+                    });
+                    match v {
+                        Some(&(ref id, _)) => dep.lock_to(id),
+                        None => dep
+                    }
+                }
+            }
+        })
     }
-
-    seen
 }
 
 impl<'a> Registry for PackageRegistry<'a> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let overrides = try!(self.query_overrides(dep));
 
-        if overrides.len() == 0 {
+        let ret = if overrides.len() == 0 {
             // Ensure the requested source_id is loaded
             try!(self.ensure_loaded(dep.get_source_id()));
             let mut ret = Vec::new();
             for src in self.sources.sources_mut() {
                 ret.extend(try!(src.query(dep)).into_iter());
             }
-            Ok(ret)
+            ret
         } else {
-            Ok(overrides)
-        }
+            overrides
+        };
+
+        // post-process all returned summaries to ensure that we lock all
+        // relevant summaries to the right versions and sources
+        Ok(ret.into_iter().map(|summary| self.lock(summary)).collect())
     }
 }
 

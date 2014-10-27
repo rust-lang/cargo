@@ -9,8 +9,8 @@ use toml;
 use semver;
 use serialize::{Decodable, Decoder};
 
-use core::{SourceId, GitKind};
-use core::manifest::{LibKind, Lib, Dylib, Profile};
+use core::SourceId;
+use core::manifest::{LibKind, Lib, Dylib, Profile, ManifestMetadata};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::package_id::Metadata;
 use util::{CargoResult, Require, human, ToUrl, ToSemver};
@@ -249,9 +249,18 @@ impl<T> ManyOrOne<T> {
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
-    pub authors: Vec<String>,
+    authors: Vec<String>,
     build: Option<TomlBuildCommandsList>,
     exclude: Option<Vec<String>>,
+
+    // package metadata
+    description: Option<String>,
+    homepage: Option<String>,
+    documentation: Option<String>,
+    readme: Option<String>,
+    keywords: Option<Vec<String>>,
+    license: Option<String>,
+    repository: Option<String>,
 }
 
 #[deriving(Decodable)]
@@ -284,7 +293,6 @@ impl TomlProject {
 struct Context<'a> {
     deps: &'a mut Vec<Dependency>,
     source_id: &'a SourceId,
-    source_ids: &'a mut Vec<SourceId>,
     nested_paths: &'a mut Vec<Path>
 }
 
@@ -362,7 +370,6 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
 impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
         -> CargoResult<(Manifest, Vec<Path>)> {
-        let mut sources = vec!();
         let mut nested_paths = vec!();
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
@@ -453,7 +460,6 @@ impl TomlManifest {
             let mut cx = Context {
                 deps: &mut deps,
                 source_id: source_id,
-                source_ids: &mut sources,
                 nested_paths: &mut nested_paths
             };
 
@@ -472,13 +478,23 @@ impl TomlManifest {
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
                                             .unwrap_or(HashMap::new())));
+        let metadata = ManifestMetadata {
+            description: project.description.clone(),
+            homepage: project.homepage.clone(),
+            documentation: project.documentation.clone(),
+            readme: project.readme.clone(),
+            authors: project.authors.clone(),
+            license: project.license.clone(),
+            repository: project.repository.clone(),
+            keywords: project.keywords.clone().unwrap_or(Vec::new()),
+        };
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          layout.root.join("target"),
                                          layout.root.join("doc"),
-                                         sources,
                                          build,
-                                         exclude);
+                                         exclude,
+                                         metadata);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));
@@ -510,14 +526,10 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
 
         let new_source_id = match details.git {
             Some(ref git) => {
-                let kind = GitKind(reference.clone());
                 let loc = try!(git.as_slice().to_url().map_err(|e| {
                     human(e)
                 }));
-                let source_id = SourceId::new(kind, loc);
-                // TODO: Don't do this for path
-                cx.source_ids.push(source_id.clone());
-                Some(source_id)
+                Some(SourceId::for_git(&loc, reference.as_slice()))
             }
             None => {
                 details.path.as_ref().map(|path| {
