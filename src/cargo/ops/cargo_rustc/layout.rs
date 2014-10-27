@@ -165,6 +165,8 @@ impl Layout {
     pub fn dest<'a>(&'a self) -> &'a Path { &self.root }
     pub fn deps<'a>(&'a self) -> &'a Path { &self.deps }
     pub fn examples<'a>(&'a self) -> &'a Path { &self.examples }
+
+    // TODO: deprecated, remove
     pub fn native(&self, package: &Package) -> Path {
         self.native.join(self.pkg_dir(package))
     }
@@ -183,6 +185,8 @@ impl Layout {
     pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
     pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
     pub fn old_examples<'a>(&'a self) -> &'a Path { &self.old_examples }
+
+    // TODO: deprecated, remove
     pub fn old_native(&self, package: &Package) -> Path {
         self.old_native.join(self.pkg_dir(package))
     }
@@ -224,6 +228,7 @@ impl<'a> LayoutProxy<'a> {
 
     pub fn examples(&self) -> &'a Path { self.root.examples() }
 
+    // TODO: deprecated, remove
     pub fn native(&self, pkg: &Package) -> Path { self.root.native(pkg) }
 
     pub fn build(&self, pkg: &Package) -> Path { self.root.build(pkg) }
@@ -236,6 +241,7 @@ impl<'a> LayoutProxy<'a> {
 
     pub fn old_examples(&self) -> &'a Path { self.root.old_examples() }
 
+    // TODO: deprecated, remove
     pub fn old_native(&self, pkg: &Package) -> Path {
         self.root.old_native(pkg)
     }

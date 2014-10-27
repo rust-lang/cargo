@@ -23,6 +23,7 @@ pub struct Compilation {
     ///
     /// This is currently used to drive some entries which are added to the
     /// LD_LIBRARY_PATH as appropriate.
+    // TODO: deprecated, remove
     pub native_dirs: HashMap<PackageId, Path>,
 
     /// Root output directory (for the local package's artifacts)
@@ -43,7 +44,7 @@ impl Compilation {
     pub fn new(pkg: &Package) -> Compilation {
         Compilation {
             libraries: HashMap::new(),
-            native_dirs: HashMap::new(),
+            native_dirs: HashMap::new(),  // TODO: deprecated, remove
             root_output: Path::new("/"),
             deps_output: Path::new("/"),
             tests: Vec::new(),
