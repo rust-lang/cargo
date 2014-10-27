@@ -143,7 +143,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
     let kind = KindTarget;
 
     if pkg.get_manifest().get_build().len() == 0 {
-        return Ok((Fresh, proc() Ok(()), proc() Ok(())))
+        return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))
     }
     let (old, new) = dirs(cx, pkg, kind);
     let old_loc = old.join("build");
@@ -171,8 +171,8 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
     let (_, new1) = dirs(cx, pkg, kind);
     let new2 = new1.clone();
 
-    let work1 = proc() { try!(fs::mkdir(&new1, USER_RWX)); Ok(()) };
-    let work2 = proc() { try!(fs::mkdir(&new2, USER_RWX)); Ok(()) };
+    let work1 = proc(_) { try!(fs::mkdir(&new1, USER_RWX)); Ok(()) };
+    let work2 = proc(_) { try!(fs::mkdir(&new2, USER_RWX)); Ok(()) };
 
     (work1, work2)
 }
@@ -181,12 +181,14 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 /// instances to actually perform the necessary work.
 fn prepare(is_fresh: bool, loc: Path, fingerprint: String,
            to_copy: Vec<(Path, Path)>) -> Preparation {
-    let write_fingerprint = proc() {
+    let write_fingerprint = proc(desc_tx) {
+        drop(desc_tx);
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
         Ok(())
     };
 
-    let move_old = proc() {
+    let move_old = proc(desc_tx) {
+        drop(desc_tx);
         for &(ref src, ref dst) in to_copy.iter() {
             try!(fs::rename(src, dst));
         }
