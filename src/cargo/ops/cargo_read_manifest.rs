@@ -1,9 +1,9 @@
 use std::collections::HashSet;
-use std::io::{File, fs};
+use std::io::{mod, File, fs};
 use std::io::fs::PathExtensions;
 
 use core::{Package,Manifest,SourceId};
-use util::{mod, CargoResult, human};
+use util::{mod, CargoResult, human, CargoError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 
@@ -61,7 +61,14 @@ fn walk(path: &Path, is_root: bool,
             return Ok(());
         }
 
-        for dir in try!(fs::readdir(path)).iter() {
+        // Ignore any permission denied errors because temporary directories
+        // can often have some weird permissions on them.
+        let dirs = match fs::readdir(path) {
+            Ok(dirs) => dirs,
+            Err(ref e) if e.kind == io::PermissionDenied => return Ok(()),
+            Err(e) => return Err(e.box_error()),
+        };
+        for dir in dirs.iter() {
             try!(walk(dir, false, |a, x| callback(a, x)))
         }
     }
