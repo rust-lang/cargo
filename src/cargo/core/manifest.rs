@@ -290,8 +290,8 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             debug,
             rpath,
             plugin,
-            dest: ref dest,
-            harness: harness,
+            ref dest,
+            harness,
 
             // test flags are separated by file, not by profile hash, and
             // env/doc also don't matter for the actual contents of the output
