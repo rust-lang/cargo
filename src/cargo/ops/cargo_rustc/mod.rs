@@ -473,6 +473,15 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
         None => {}
     }
 
+    // building the list of all possible `build/$pkg/output` files
+    // whether they exist or not will be checked during the work
+    let command_output_files = {
+        let layout = cx.layout(pkg, KindForHost);
+        cx.dep_targets(pkg).iter().map(|&(pkg, _)| {
+            layout.build(pkg).join("output")
+        }).collect::<Vec<_>>()
+    };
+
     // Building command
     let pkg = pkg.to_string();
     let work = proc(desc_tx: Sender<String>) {
@@ -484,6 +493,31 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
                     internal("failed to create build output directory for build command")
                 }))
         }
+
+        // loading each possible custom build output file in order to get their metadata
+        let _metadata = {
+            let mut metadata = Vec::new();
+
+            for flags_file in command_output_files.into_iter() {
+                match File::open(&flags_file) {
+                    Ok(flags) => {
+                        let flags = try!(CustomBuildCommandOutput::parse(
+                            BufferedReader::new(flags), pkg.as_slice()));
+                        metadata.extend(flags.metadata.into_iter());
+                    },
+                    Err(_) => ()  // the file doesn't exist, probably means that this pkg
+                                  // doesn't have a build command
+                }
+            }
+
+            metadata
+        };
+
+        // TODO: ENABLE THIS CODE WHEN `links` IS ADDED
+        /*let mut p = p;
+        for (key, value) in metadata.into_iter() {
+            p = p.env(format!("DEP_{}_{}", PUT LINKS VALUES HERE, value), value);
+        }*/
 
         let output = try!(p.exec_with_output().map_err(|mut e| {
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
