@@ -803,6 +803,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
+    // TODO: deprecated, remove
     let mut dirs = Vec::new();
     each_dep(package, cx, |pkg| {
         if pkg.get_manifest().get_build().len() > 0 {
@@ -864,6 +865,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
 
+    // TODO: deprecated, remove
     // Also be sure to pick up any native build directories required by plugins
     // or their dependencies
     let mut native_search_paths = HashSet::new();
