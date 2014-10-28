@@ -25,10 +25,10 @@ impl Job {
 
     /// Consumes this job by running it, returning the result of the
     /// computation.
-    pub fn run(self, fresh: Freshness, sender: Sender<String>) -> CargoResult<()> {
+    pub fn run(self, fresh: Freshness, tx: Sender<String>) -> CargoResult<()> {
         match fresh {
-            Fresh => (self.fresh)(sender),
-            Dirty => (self.dirty)(sender),
+            Fresh => (self.fresh)(tx),
+            Dirty => (self.dirty)(tx),
         }
     }
 }
