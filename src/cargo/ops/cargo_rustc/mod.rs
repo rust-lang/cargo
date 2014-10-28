@@ -26,7 +26,7 @@ mod job_queue;
 mod layout;
 
 #[deriving(PartialEq, Eq)]
-pub enum Kind { KindForHost, KindTarget }
+pub enum Kind { KindHost, KindTarget }
 
 /// Run `rustc` to figure out what its current version string is.
 ///
@@ -116,10 +116,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         }
 
         let compiled = compiled.contains(dep.get_package_id());
-        try!(compile(targets.as_slice(), dep, pkg, compiled, &mut cx, &mut queue));
+        try!(compile(targets.as_slice(), dep, compiled, &mut cx, &mut queue));
     }
 
-    try!(compile(targets, pkg, pkg, true, &mut cx, &mut queue));
+    try!(compile(targets, pkg, true, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
@@ -128,7 +128,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
-                   root_pkg: &'a Package, compiled: bool,
+                   compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
@@ -149,7 +149,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, KindTarget);
     let mut init = vec![(Job::new(target1, target2), Fresh)];
     if cx.config.target().is_some() {
-        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindForHost);
+        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindHost);
         init.push((Job::new(plugin1, plugin2), Fresh));
     }
     jobs.enqueue(pkg, jq::StageStart, init);
@@ -174,14 +174,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                     use std::mem;
 
                     let (old_build, script_output) = {
-                        let layout = cx.layout(pkg, KindForHost);
+                        let layout = cx.layout(pkg, KindHost);
                         let old_build = layout.proxy().old_build(pkg);
                         let script_output = layout.build(pkg);
                         (old_build, script_output)
                     };
 
                     let execute_cmd = try!(prepare_execute_custom_build(pkg,
-                                                                        root_pkg,
                                                                         target, cx));
 
                     // building a `Work` that creates the directory where the compiled script
@@ -388,7 +387,8 @@ impl CustomBuildCommandOutput {
             };
 
             if key == "rustc-flags" {
-                let mut flags_iter = value.split(|c: char| c == ' ' || c == '\t');
+                // TODO: some arguments (like paths) may contain spaces
+                let mut flags_iter = value.words();
                 loop {
                     let flag = match flags_iter.next() {
                         Some(f) => f,
@@ -427,32 +427,22 @@ impl CustomBuildCommandOutput {
 }
 
 // Prepares a `Work` that executes the target as a custom build script.
-// `pkg` is the package the build script belongs to, and `root_pkg` is the package
-// Cargo is being run on.
-fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Target,
+fn prepare_execute_custom_build(pkg: &Package, target: &Target,
                                 cx: &mut Context)
                                 -> CargoResult<Work> {
-    let layout = cx.layout(pkg, KindForHost);
+    let layout = cx.layout(pkg, KindHost);
     let script_output = layout.build(pkg);
     let build_output = layout.build_out(pkg);
 
     // Building the command to execute
-    let to_exec = try!(cx.target_filenames(target));
-    if to_exec.len() >= 2 {
-        return Err(human(format!("custom build script shouldn't have multiple outputs")));
-    }
-    let to_exec = to_exec.into_iter().next();
-    let to_exec = match to_exec {
-        Some(cmd) => cmd,
-        None => return Err(human(format!("failed to determine output of custom build script"))),
-    };
+    let to_exec = try!(cx.target_filenames(target))[0].clone();
     let to_exec = script_output.join(to_exec);
 
     // Filling environment variables
     let profile = target.get_profile();
     let mut p = process(to_exec, pkg, cx)
                      .env("OUT_DIR", Some(&build_output))
-                     .env("CARGO_MANIFEST_DIR", Some(root_pkg.get_manifest_path()
+                     .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
                                                      .display().to_string()))
                      .env("NUM_JOBS", profile.get_codegen_units().map(|n| n.to_string()))
                      .env("TARGET", Some(cx.target_triple()))
@@ -476,7 +466,7 @@ fn prepare_execute_custom_build(pkg: &Package, root_pkg: &Package, target: &Targ
     // building the list of all possible `build/$pkg/output` files
     // whether they exist or not will be checked during the work
     let command_output_files = {
-        let layout = cx.layout(pkg, KindForHost);
+        let layout = cx.layout(pkg, KindHost);
         cx.dep_targets(pkg).iter().map(|&(pkg, _)| {
             layout.build(pkg).join("output")
         }).collect::<Vec<_>>()
@@ -553,7 +543,7 @@ fn rustc(package: &Package, target: &Target,
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
-        let build_cmd_layout = cx.layout(package, KindForHost);
+        let build_cmd_layout = cx.layout(package, KindHost);
 
         // building the possible `build/$pkg/output` file for this local package
         let command_output_file = build_cmd_layout.build(package).join("output");
@@ -619,19 +609,19 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
     let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
-    let plugin_cmd = build_plugin_args(base, cx, package, target, KindForHost);
+    let plugin_cmd = build_plugin_args(base, cx, package, target, KindHost);
     let target_cmd = try!(build_deps_args(target_cmd, target, package, cx,
                                           KindTarget));
     let plugin_cmd = try!(build_deps_args(plugin_cmd, target, package, cx,
-                                          KindForHost));
+                                          KindHost));
 
     Ok(match req {
         PlatformTarget => vec![(target_cmd, KindTarget)],
-        PlatformPlugin => vec![(plugin_cmd, KindForHost)],
+        PlatformPlugin => vec![(plugin_cmd, KindHost)],
         PlatformPluginAndTarget if cx.config.target().is_none() =>
             vec![(target_cmd, KindTarget)],
         PlatformPluginAndTarget => vec![(target_cmd, KindTarget),
-                                        (plugin_cmd, KindForHost)],
+                                        (plugin_cmd, KindHost)],
     })
 }
 
@@ -846,8 +836,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
         let layout = cx.layout(pkg, match kind {
-            KindForHost => KindForHost,
-            KindTarget if target.get_profile().is_for_host() => KindForHost,
+            KindHost => KindHost,
+            KindTarget if target.get_profile().is_for_host() => KindHost,
             KindTarget => KindTarget,
         });
 
@@ -868,7 +858,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
                           cx: &Context) -> CargoResult<ProcessBuilder> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
-    let layout = cx.layout(pkg, KindForHost);
+    let layout = cx.layout(pkg, KindHost);
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
 

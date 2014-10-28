@@ -6,7 +6,7 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, KindForHost, KindTarget, Compilation};
+use super::{Kind, KindHost, KindTarget, Compilation};
 use super::layout::{Layout, LayoutProxy};
 
 #[deriving(Show)]
@@ -168,7 +168,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
         let primary = pkg.get_package_id() == self.resolve.root();
         match kind {
-            KindForHost => LayoutProxy::new(&self.host, primary),
+            KindHost => LayoutProxy::new(&self.host, primary),
             KindTarget =>  LayoutProxy::new(self.target.as_ref()
                                                 .unwrap_or(&self.host),
                                             primary),
@@ -180,7 +180,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
-        let (triple, pair) = if kind == KindForHost {
+        let (triple, pair) = if kind == KindHost {
             (self.config.rustc_host(), &self.host_dylib)
         } else {
             (self.target_triple.as_slice(), &self.target_dylib)
@@ -208,7 +208,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         } else {
             if target.is_dylib() {
                 let plugin = target.get_profile().is_for_host();
-                let kind = if plugin {KindForHost} else {KindTarget};
+                let kind = if plugin {KindHost} else {KindTarget};
                 let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
             }

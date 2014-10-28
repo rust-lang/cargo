@@ -187,7 +187,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
                 my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
             });
             if fresh == Dirty {
-                // TODO: only the first message of each job is processed
+                // only the first message of each job is processed
                 match desc_rx.recv_opt() {
                     Ok(ref msg) if msg.len() >= 1 => {
                         try!(config.shell().verbose(|shell| {
