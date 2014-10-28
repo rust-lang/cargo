@@ -417,10 +417,11 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
         let dep = try!(Dependency::parse(name.as_slice(), Some(req.as_slice()),
                                          &self.source_id));
-        drop(target); // FIXME: pass this in
+        
         Ok(dep.optional(optional)
               .default_features(default_features)
-              .features(features))
+              .features(features)
+              .only_for_platform(target))
     }
 
     /// Actually perform network operations to update the registry
