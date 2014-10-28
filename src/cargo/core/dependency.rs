@@ -151,6 +151,12 @@ impl Dependency {
                                       &self.source_id == id.get_source_id()))
     }
 
+    /// If none, this dependencies must be built for all platforms.
+    /// If some, it must only be built for the specified platform.
+    pub fn get_only_for_platform(&self) -> Option<&str> {
+        self.only_for_platform.as_ref().map(|s| s.as_slice())
+    }
+
     /// Returns true if the dependency should be built for this platform.
     pub fn is_active_for_platform(&self, platform: &str) -> bool {
         match self.only_for_platform {

@@ -72,7 +72,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
             name: dep.get_name().to_string(),
             features: dep.get_features().to_vec(),
             version_req: dep.get_version_req().to_string(),
-            target: None, // FIXME: fill this out
+            target: dep.get_only_for_platform().map(|s| s.to_string()),
         }
     }).collect::<Vec<NewCrateDependency>>();
     let manifest = pkg.get_manifest();
