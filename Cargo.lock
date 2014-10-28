@@ -18,17 +18,18 @@ dependencies = [
 [[package]]
 name = "curl"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#36b015de91daf6310227cec04ef30acf5929dfb6"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#1098e4dd3b89b168b412dfeaba033e41796ea794"
 dependencies = [
  "curl-sys 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config)",
+ "openssl-static-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-static-sys)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
 
 [[package]]
 name = "curl-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#36b015de91daf6310227cec04ef30acf5929dfb6"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#1098e4dd3b89b168b412dfeaba033e41796ea794"
 
 [[package]]
 name = "docopt"
@@ -87,7 +88,7 @@ source = "git+https://github.com/alexcrichton/link-config#0202cc8aa74a7b0bdbaef4
 [[package]]
 name = "openssl-static-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/openssl-static-sys#d218fa63aabefb3ac56a44985e2df8a2dc932450"
+source = "git+https://github.com/alexcrichton/openssl-static-sys#2e1c50a7f35ef52ce38dbd405a175b6dccc0ebad"
 
 [[package]]
 name = "registry"
