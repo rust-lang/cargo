@@ -100,7 +100,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
             pairs.push((old_root.join(filename), root.join(filename)));
 
             if target.get_profile().is_test() {
-                cx.compilation.tests.push(dst.clone());
+                cx.compilation.tests.push((target.get_name().into_string(), dst.clone()));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst.clone());
             } else if target.is_lib() {

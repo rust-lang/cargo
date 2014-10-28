@@ -867,6 +867,81 @@ test!(test_no_run {
                        dir = p.url()).as_slice()));
 })
 
+test!(test_run_specific_bin_target {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", "#[test] fn test1() { }")
+        .file("src/bin2.rs", "#[test] fn test2() { }");
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]bin2-[..]
+
+running 1 test
+test test2 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+       compiling = COMPILING,
+       running = RUNNING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("test").arg("--name").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+})
+
+test!(test_run_specific_test_target {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/bin/a.rs", "fn main() { }")
+        .file("src/bin/b.rs", "#[test] fn test_b() { } fn main() { }")
+        .file("tests/a.rs", "#[test] fn test_a() { }")
+        .file("tests/b.rs", "#[test] fn test_b() { }");
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]b-[..]
+
+running 1 test
+test test_b ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]b-[..]
+
+running 1 test
+test test_b ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+       compiling = COMPILING,
+       running = RUNNING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("test").arg("--name").arg("b"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+})
+
 test!(test_no_harness {
     let p = project("foo")
         .file("Cargo.toml", r#"

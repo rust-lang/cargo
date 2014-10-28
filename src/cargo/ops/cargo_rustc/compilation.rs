@@ -15,7 +15,7 @@ pub struct Compilation {
     pub libraries: HashMap<PackageId, Vec<Path>>,
 
     /// An array of all tests created during this compilation.
-    pub tests: Vec<Path>,
+    pub tests: Vec<(String, Path)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<Path>,

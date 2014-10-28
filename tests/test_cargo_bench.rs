@@ -50,6 +50,47 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
         RUNNING)));
 })
 
+test!(bench_target_name {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="bin1"
+            path="src/bin1.rs"
+
+            [[bin]]
+            name="bin2"
+            path="src/bin2.rs"
+        "#)
+        .file("src/bin1.rs", r#"
+            extern crate test;
+            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
+        .file("src/bin2.rs", r#"
+            extern crate test;
+            #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
+
+    let expected_stdout = format!("\
+{compiling} foo v0.0.1 ({dir})
+{runnning} target[..]release[..]bin2[..]
+
+running 1 test
+test run2 ... bench:         0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+",
+       compiling = COMPILING,
+       runnning = RUNNING,
+       dir = prj.url());
+
+    assert_that(prj.cargo_process("bench").arg("--name").arg("bin2"),
+        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+})
+
 test!(cargo_bench_verbose {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
