@@ -225,9 +225,8 @@ impl<'a, 'b> Context<'a, 'b> {
         let stem = target.file_stem();
 
         let mut ret = Vec::new();
-        if target.is_example() {
-            ret.push(format!("examples/{}{}", stem, self.target_exe));
-        } else if target.is_bin() || target.get_profile().is_test() {
+        if target.is_example() || target.is_bin() ||
+           target.get_profile().is_test() {
             ret.push(format!("{}{}", stem, self.target_exe));
         } else {
             if target.is_dylib() {

@@ -1254,3 +1254,24 @@ test!(example_bin_same_name {
     assert_that(p.process(p.bin("examples/foo")),
                 execs().with_status(0).with_stdout("example\n"));
 })
+
+test!(test_with_example_twice {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
+        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#);
+
+    println!("first");
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.bin("examples/foo"), existing_file());
+    println!("second");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.bin("examples/foo"), existing_file());
+})
