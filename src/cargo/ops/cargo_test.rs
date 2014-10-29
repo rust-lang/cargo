@@ -8,6 +8,7 @@ use util::{CargoResult, ProcessError};
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
     pub no_run: bool,
+    pub name: Option<&'a str>,
 }
 
 pub fn run_tests(manifest_path: &Path,
@@ -20,8 +21,13 @@ pub fn run_tests(manifest_path: &Path,
     if options.no_run { return Ok(None) }
     compile.tests.sort();
 
+    let target_name = options.name;
+    let mut tests_to_run = compile.tests.iter().filter(|&&(ref test_name, _)| {
+        target_name.map_or(true, |target_name| target_name == test_name.as_slice())
+    });
+
     let cwd = os::getcwd();
-    for exe in compile.tests.iter() {
+    for &(_, ref exe) in tests_to_run {
         let to_display = match exe.path_relative_from(&cwd) {
             Some(path) => path,
             None => exe.clone(),
@@ -38,6 +44,8 @@ pub fn run_tests(manifest_path: &Path,
             Err(e) => return Ok(Some(e))
         }
     }
+
+    if options.name.is_some() { return Ok(None) }
 
     if options.compile_opts.env == "bench" { return Ok(None) }
 

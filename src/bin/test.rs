@@ -11,6 +11,7 @@ struct Options {
     flag_features: Vec<String>,
     flag_jobs: Option<uint>,
     flag_manifest_path: Option<String>,
+    flag_name: Option<String>,
     flag_no_default_features: bool,
     flag_no_run: bool,
     flag_package: Option<String>,
@@ -26,6 +27,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
+    --name NAME              Name of the test to run
     --no-run                 Compile, but don't run tests
     -p SPEC, --package SPEC  Package to run tests for
     -j N, --jobs N           The number of jobs to run in parallel
@@ -49,6 +51,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     shell.set_verbose(options.flag_verbose);
 
     let mut ops = ops::TestOptions {
+        name: options.flag_name.as_ref().map(|s| s.as_slice()),
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
             env: "test",
