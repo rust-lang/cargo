@@ -106,6 +106,9 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
             cargo::process_executed(r, shell);
             return Ok(None)
         }
+        "help" if flags.arg_args[0].as_slice() == "-h" ||
+                  flags.arg_args[0].as_slice() == "--help" =>
+            (flags.arg_args, "help"),
         "help" => (vec!["-h".to_string()], flags.arg_args[0].as_slice()),
         s => (flags.arg_args.clone(), s),
     };
