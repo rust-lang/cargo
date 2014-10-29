@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use core::{Package, PackageId};
+use core::{Package, PackageId, SourceId};
 use core::registry::PackageRegistry;
 use core::resolver::{mod, Resolve};
 use ops;
@@ -39,6 +39,26 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     let root = package.get_package_id().get_source_id().clone();
     try!(registry.add_sources(&[root]));
 
+    // Here we place an artificial limitation that all non-registry sources
+    // cannot be locked at more than one revision. This means that if a git
+    // repository provides more than one package, they must all be updated in
+    // step when any of them are updated.
+    //
+    // TODO: This seems like a hokey reason to single out the registry as being
+    //       different
+    let mut to_avoid_sources = HashSet::new();
+    match to_avoid {
+        Some(set) => {
+            for package_id in set.iter() {
+                let source = package_id.get_source_id();
+                if !source.is_registry() {
+                    to_avoid_sources.insert(source);
+                }
+            }
+        }
+        None => {}
+    }
+
     let summary = package.get_summary().clone();
     let summary = match previous {
         Some(r) => {
@@ -63,15 +83,15 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             //    ranges. To deal with this, we only actually lock a dependency
             //    to the previously resolved version if the dependency listed
             //    still matches the locked version.
-            for node in r.iter().filter(|p| keep(p, to_avoid)) {
+            for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
                 let deps = r.deps(node).into_iter().flat_map(|i| i)
-                            .filter(|p| keep(p, to_avoid))
+                            .filter(|p| keep(p, to_avoid, &to_avoid_sources))
                             .map(|p| p.clone()).collect();
                 registry.register_lock(node.clone(), deps);
             }
 
             let map = r.deps(r.root()).into_iter().flat_map(|i| i).filter(|p| {
-                keep(p, to_avoid)
+                keep(p, to_avoid, &to_avoid_sources)
             }).map(|d| {
                 (d.get_name(), d)
             }).collect::<HashMap<_, _>>();
@@ -92,9 +112,11 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     }
     return Ok(resolved);
 
-    fn keep<'a>(p: &&'a PackageId, to_avoid: Option<&HashSet<&'a PackageId>>)
+    fn keep<'a>(p: &&'a PackageId,
+                to_avoid_packages: Option<&HashSet<&'a PackageId>>,
+                to_avoid_sources: &HashSet<&'a SourceId>)
                 -> bool {
-        match to_avoid {
+        !to_avoid_sources.contains(&p.get_source_id()) && match to_avoid_packages {
             Some(set) => !set.contains(p),
             None => true,
         }
