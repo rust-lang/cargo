@@ -7,28 +7,6 @@ use hamcrest::{assert_that};
 fn setup() {
 }
 
-test!(custom_build_compiled {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            build = "build.rs"
-        "#)
-        .file("src/main.rs", r#"
-            fn main() {}
-        "#)
-        .file("build.rs", r#"
-        	invalid rust file, should trigger a build error
-        "#);
-
-    assert_that(p.cargo_process("build"),
-                execs().with_status(101));
-})
-
-/*
 test!(custom_build_script_failed {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -47,14 +25,18 @@ test!(custom_build_script_failed {
                 std::os::set_exit_status(101);
             }
         "#);
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 ({url})
+{running} `rustc build.rs --crate-name build-script-build --crate-type bin [..]`
+",
+url = p.url(), compiling = COMPILING, running = RUNNING))
                        .with_stderr(format!("\
-Failed to run custom build command for `foo v0.5.0 (file://{})`
-Process didn't exit successfully: `{}` (status=101)",  // TODO: TEST FAILS BECAUSE OF WRONG PATH
-p.root().display(), p.bin("build-script-build").display())));
+Failed to run custom build command for `foo v0.5.0 ({})`
+Process didn't exit successfully: `[..]build[..]build-script-build` (status=101)",
+p.url())));
 })
-*/
 
 test!(custom_build_env_vars {
     let p = project("foo")
@@ -149,10 +131,10 @@ test!(custom_build_script_wrong_rustc_flags {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr(format!("\
-Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 (file://{})`:
+Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`:
 `-aaa -bbb
 `",
-p.root().display())));
+p.url())));
 })
 
 /*
