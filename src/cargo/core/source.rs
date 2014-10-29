@@ -225,7 +225,7 @@ impl SourceId {
 
 impl PartialEq for SourceId {
     fn eq(&self, other: &SourceId) -> bool {
-        self.inner.eq(&*other.inner)
+        (*self.inner).eq(&*other.inner)
     }
 }
 

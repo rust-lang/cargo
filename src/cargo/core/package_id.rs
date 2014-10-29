@@ -62,18 +62,18 @@ impl<S: hash::Writer> Hash<S> for PackageId {
 
 impl PartialEq for PackageId {
     fn eq(&self, other: &PackageId) -> bool {
-        self.inner.eq(&*other.inner)
+        (*self.inner).eq(&*other.inner)
     }
 }
 impl PartialOrd for PackageId {
     fn partial_cmp(&self, other: &PackageId) -> Option<Ordering> {
-        self.inner.partial_cmp(&*other.inner)
+        (*self.inner).partial_cmp(&*other.inner)
     }
 }
 impl Eq for PackageId {}
 impl Ord for PackageId {
     fn cmp(&self, other: &PackageId) -> Ordering {
-        self.inner.cmp(&*other.inner)
+        (*self.inner).cmp(&*other.inner)
     }
 }
 
