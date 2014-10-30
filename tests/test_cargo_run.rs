@@ -260,7 +260,7 @@ test!(release_works {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            fn main() { if !cfg!(ndebug) { fail!() } }
+            fn main() { if !cfg!(ndebug) { panic!() } }
         "#);
 
     assert_that(p.cargo_process("run").arg("--release"),

@@ -390,7 +390,7 @@ test!(dont_run_examples {
         .file("src/lib.rs", r#"
         "#)
         .file("examples/dont-run-me-i-will-fail.rs", r#"
-            fn main() { fail!("Examples should not be run by 'cargo test'"); }
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
         "#);
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
@@ -855,7 +855,7 @@ test!(test_no_run {
         "#)
         .file("src/lib.rs", "
             #[test]
-            fn foo() { fail!() }
+            fn foo() { panic!() }
         ");
 
     assert_that(p.cargo_process("test").arg("--no-run"),

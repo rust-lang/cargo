@@ -401,7 +401,7 @@ test!(dont_run_examples {
         .file("src/lib.rs", r#"
         "#)
         .file("examples/dont-run-me-i-will-fail.rs", r#"
-            fn main() { fail!("Examples should not be run by 'cargo test'"); }
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
         "#);
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0));

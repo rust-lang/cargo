@@ -628,7 +628,7 @@ test!(custom_build_failure {
             name = "foo"
         "#)
         .file("src/foo.rs", r#"
-            fn main() { fail!("nope") }
+            fn main() { panic!("nope") }
         "#);
     assert_that(build.cargo_process("build"), execs().with_status(0));
 
@@ -691,7 +691,7 @@ test!(custom_second_build_failure {
             name = "bar"
         "#)
         .file("src/bar.rs", r#"
-            fn main() { fail!("nope") }
+            fn main() { panic!("nope") }
         "#);
     assert_that(build2.cargo_process("build"), execs().with_status(0));
 
