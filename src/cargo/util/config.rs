@@ -7,6 +7,7 @@ use std::string;
 use serialize::{Encodable,Encoder};
 use toml;
 use core::MultiShell;
+use ops;
 use util::{CargoResult, ChainError, Require, internal, human};
 
 use util::toml as cargo_toml;
@@ -18,6 +19,9 @@ pub struct Config<'a> {
     target: Option<string::String>,
     linker: Option<string::String>,
     ar: Option<string::String>,
+    rustc_version: string::String,
+    /// The current host and default target of rustc
+    rustc_host: string::String,
 }
 
 impl<'a> Config<'a> {
@@ -27,6 +31,9 @@ impl<'a> Config<'a> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
+
+        let (rustc_version, rustc_host) = try!(ops::rustc_version());
+
         Ok(Config {
             home_path: try!(os::homedir().require(|| {
                 human("Cargo couldn't find your home directory. \
@@ -37,6 +44,8 @@ impl<'a> Config<'a> {
             target: target,
             ar: None,
             linker: None,
+            rustc_version: rustc_version,
+            rustc_host: rustc_host,
         })
     }
 
@@ -83,6 +92,16 @@ impl<'a> Config<'a> {
     }
     pub fn ar(&self) -> Option<&str> {
         self.ar.as_ref().map(|t| t.as_slice())
+    }
+
+    /// Return the output of `rustc -v verbose`
+    pub fn rustc_version(&self) -> &str {
+        self.rustc_version.as_slice()
+    }
+
+    /// Return the host platform and default target of rustc
+    pub fn rustc_host(&self) -> &str {
+        self.rustc_host.as_slice()
     }
 }
 

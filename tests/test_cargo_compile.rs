@@ -1715,3 +1715,121 @@ Caused by:
 
 "));
 })
+
+#[cfg(target_os = "linux")]
+test!(cargo_platform_specific_dependency {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [target.i686-unknown-linux-gnu.dependencies.bar]
+            path = "bar"
+            [target.x86_64-unknown-linux-gnu.dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn gimme() -> String {
+                "test passed".to_string()
+            }
+        "#);
+
+    p.cargo_process("build")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs().with_stdout("test passed\n"));
+})
+
+#[cfg(not(target_os = "linux"))]
+test!(cargo_platform_specific_dependency {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [target.i686-unknown-linux-gnu.dependencies.bar]
+            path = "bar"
+            [target.x86_64-unknown-linux-gnu.dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs",
+              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("bar/src/lib.rs", r#"
+            extern crate baz;
+
+            pub fn gimme() -> String {
+                format!("")
+            }
+        "#);
+
+    assert_that(p.cargo_process("build"),
+        execs().with_status(101));
+})
+
+test!(cargo_platform_specific_dependency_wrong_platform {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [target.non-existing-triplet.dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("bar/src/lib.rs", r#"
+            invalid rust file, should not be compiled
+        "#);
+
+    p.cargo_process("build")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(
+      cargo::util::process(p.bin("foo")),
+      execs());
+
+    let lockfile = p.root().join("Cargo.lock");
+    let lockfile = File::open(&lockfile).read_to_string().assert();
+    assert!(lockfile.as_slice().contains("bar"))
+})

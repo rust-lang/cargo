@@ -211,6 +211,7 @@ pub struct TomlManifest {
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
     features: Option<HashMap<String, Vec<String>>>,
+    target: Option<HashMap<String, TomlPlatform>>,
 }
 
 #[deriving(Decodable, Clone, Default)]
@@ -464,8 +465,15 @@ impl TomlManifest {
             };
 
             // Collect the deps
-            try!(process_dependencies(&mut cx, false, self.dependencies.as_ref()));
-            try!(process_dependencies(&mut cx, true, self.dev_dependencies.as_ref()));
+            try!(process_dependencies(&mut cx, false, None, self.dependencies.as_ref()));
+            try!(process_dependencies(&mut cx, true, None, self.dev_dependencies.as_ref()));
+
+            if let Some(targets) = self.target.as_ref() {
+                for (name, platform) in targets.iter() {
+                    try!(process_dependencies(&mut cx, false, Some(name.clone()),
+                                              platform.dependencies.as_ref()));
+                }
+            }
         }
 
         let build = match project.build {
@@ -503,7 +511,7 @@ impl TomlManifest {
     }
 }
 
-fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
+fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool, platform: Option<String>,
                             new_deps: Option<&HashMap<String, TomlDependency>>)
                             -> CargoResult<()> {
     let dependencies = match new_deps {
@@ -544,6 +552,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool,
                                                 .map(|v| v.as_slice()),
                                          &new_source_id));
         let dep = dep.transitive(!dev)
+                     .only_for_platform(platform.clone())
                      .features(details.features.unwrap_or(Vec::new()))
                      .default_features(details.default_features.unwrap_or(true))
                      .optional(details.optional.unwrap_or(false));
@@ -570,6 +579,12 @@ struct TomlTarget {
 enum TomlPathValue {
     TomlString(String),
     TomlPath(Path),
+}
+
+/// Corresponds to a `target` entry, but `TomlTarget` is already used.
+#[deriving(Decodable)]
+struct TomlPlatform {
+    dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
 impl TomlTarget {

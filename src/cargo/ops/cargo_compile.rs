@@ -86,6 +86,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
     let (packages, resolve_with_overrides, sources) = {
         let mut config = try!(Config::new(*shell, jobs, target.clone()));
+        let rustc_host = config.rustc_host().to_string();
         let mut registry = PackageRegistry::new(&mut config);
 
         // First, resolve the package's *listed* dependencies, as well as
@@ -98,8 +99,11 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         let _p = profile::start("resolving w/ overrides...");
 
         try!(registry.add_overrides(override_ids));
+
+        let platform = target.as_ref().map(|e| e.as_slice()).or(Some(rustc_host.as_slice()));
         let method = resolver::ResolveRequired(dev_deps, features.as_slice(),
-                                               !no_default_features);
+                                               !no_default_features,
+                                               platform);
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, package, method,
                                                 Some(&resolve), None));

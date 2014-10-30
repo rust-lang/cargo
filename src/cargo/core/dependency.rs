@@ -16,6 +16,10 @@ pub struct Dependency {
     optional: bool,
     default_features: bool,
     features: Vec<String>,
+
+    // This dependency should be used only for this platform.
+    // `None` means *all platforms*.
+    only_for_platform: Option<String>,
 }
 
 impl Dependency {
@@ -57,6 +61,7 @@ impl Dependency {
             features: Vec::new(),
             default_features: true,
             specified_req: None,
+            only_for_platform: None,
         }
     }
 
@@ -121,6 +126,11 @@ impl Dependency {
             .source_id(id.get_source_id().clone())
     }
 
+    pub fn only_for_platform(mut self, platform: Option<String>) -> Dependency {
+        self.only_for_platform = platform;
+        self
+    }
+
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool { self.transitive }
     pub fn is_optional(&self) -> bool { self.optional }
@@ -139,6 +149,21 @@ impl Dependency {
         self.name.as_slice() == id.get_name() &&
             (self.only_match_name || (self.req.matches(id.get_version()) &&
                                       &self.source_id == id.get_source_id()))
+    }
+
+    /// If none, this dependencies must be built for all platforms.
+    /// If some, it must only be built for the specified platform.
+    pub fn get_only_for_platform(&self) -> Option<&str> {
+        self.only_for_platform.as_ref().map(|s| s.as_slice())
+    }
+
+    /// Returns true if the dependency should be built for this platform.
+    pub fn is_active_for_platform(&self, platform: &str) -> bool {
+        match self.only_for_platform {
+            None => true,
+            Some(ref p) if p.as_slice() == platform => true,
+            _ => false
+        }
     }
 }
 
