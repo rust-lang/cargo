@@ -135,7 +135,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>task 'test_hello' failed at 'assertion failed: \
+<tab>task 'test_hello' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:12
 <tab>
@@ -150,7 +150,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
         COMPILING, p.url(), RUNNING,
         sep = path::SEP))
               .with_stderr(format!("\
-task '<main>' failed at 'Some tests failed', [..]
+task '<main>' panicked at 'Some tests failed', [..]
 "))
               .with_status(101));
 })
@@ -390,7 +390,7 @@ test!(dont_run_examples {
         .file("src/lib.rs", r#"
         "#)
         .file("examples/dont-run-me-i-will-fail.rs", r#"
-            fn main() { fail!("Examples should not be run by 'cargo test'"); }
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
         "#);
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
@@ -855,7 +855,7 @@ test!(test_no_run {
         "#)
         .file("src/lib.rs", "
             #[test]
-            fn foo() { fail!() }
+            fn foo() { panic!() }
         ");
 
     assert_that(p.cargo_process("test").arg("--no-run"),

@@ -30,7 +30,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
 
         let reference = match source_id.git_reference() {
             Some(reference) => reference,
-            None => fail!("Not a git source; id={}", source_id),
+            None => panic!("Not a git source; id={}", source_id),
         };
 
         let remote = GitRemote::new(source_id.get_url());

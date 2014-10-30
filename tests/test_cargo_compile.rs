@@ -628,7 +628,7 @@ test!(custom_build_failure {
             name = "foo"
         "#)
         .file("src/foo.rs", r#"
-            fn main() { fail!("nope") }
+            fn main() { panic!("nope") }
         "#);
     assert_that(build.cargo_process("build"), execs().with_status(0));
 
@@ -654,7 +654,7 @@ test!(custom_build_failure {
 Failed to run custom build command for `foo v0.5.0 ({dir})
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
-task '<main>' failed at 'nope', {filename}:2\n\
+task '<main>' panicked at 'nope', {filename}:2\n\
 \n\
 ", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP),
    dir = p.url())));
@@ -691,7 +691,7 @@ test!(custom_second_build_failure {
             name = "bar"
         "#)
         .file("src/bar.rs", r#"
-            fn main() { fail!("nope") }
+            fn main() { panic!("nope") }
         "#);
     assert_that(build2.cargo_process("build"), execs().with_status(0));
 
@@ -717,7 +717,7 @@ test!(custom_second_build_failure {
 Failed to run custom build command for `foo v0.5.0 ({dir})
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
-task '<main>' failed at 'nope', {filename}:2\n\
+task '<main>' panicked at 'nope', {filename}:2\n\
 \n\
 ", build2.bin("bar").display(), filename = format!("src{}bar.rs", path::SEP),
    dir = p.url())));

@@ -144,7 +144,7 @@ impl ProjectBuilder {
     // TODO: return something different than a ProjectBuilder
     pub fn build(&self) -> &ProjectBuilder {
         match self.build_with_result() {
-            Err(e) => fail!(e),
+            Err(e) => panic!(e),
             _ => return self
         }
     }
@@ -227,7 +227,7 @@ pub fn cargo_dir() -> Path {
     os::getenv("CARGO_BIN_PATH").map(Path::new)
         .or_else(|| os::self_exe_path())
         .unwrap_or_else(|| {
-            fail!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
+            panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
         })
 }
 
@@ -327,7 +327,7 @@ impl Execs {
                         (None, Some(e)) => {
                             Some(format!("{:3} - |{}|\n    +\n", i, e))
                         },
-                        (None, None) => fail!("Cannot get here")
+                        (None, None) => panic!("Cannot get here")
                     }
                 });
 
@@ -450,7 +450,7 @@ impl<T,E: Show> ResultTest<T,E> for Result<T,E> {
     fn assert(self) -> T {
         match self {
             Ok(val) => val,
-            Err(err) => fail!("Result was error: {}", err)
+            Err(err) => panic!("Result was error: {}", err)
         }
     }
 }
@@ -459,7 +459,7 @@ impl<T> ResultTest<T,()> for Option<T> {
     fn assert(self) -> T {
         match self {
             Some(val) => val,
-            None => fail!("Option was None")
+            None => panic!("Option was None")
         }
     }
 }
