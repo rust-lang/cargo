@@ -1,5 +1,8 @@
 use std::{io,os};
 use std::io::fs;
+use std::path::BytesContainer;
+
+use util::{human, CargoResult};
 
 pub fn realpath(original: &Path) -> io::IoResult<Path> {
     static MAX_LINKS_FOLLOWED: uint = 256;
@@ -38,3 +41,10 @@ pub fn realpath(original: &Path) -> io::IoResult<Path> {
     return Ok(result);
 }
 
+pub fn join_paths<T: BytesContainer>(paths: &[T], env: &str)
+                                     -> CargoResult<Vec<u8>> {
+    os::join_paths(paths).map_err(|e| {
+        human(format!("failed to join search paths together: {}\n\
+                       Does ${} have an unterminated quote character?", e, env))
+    })
+}

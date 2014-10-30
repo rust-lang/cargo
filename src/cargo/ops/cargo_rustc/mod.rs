@@ -2,11 +2,10 @@ use std::collections::HashSet;
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
-use std::os;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
-use util::{Require, Config, internal, ChainError, Fresh, profile};
+use util::{Require, Config, internal, ChainError, Fresh, profile, join_paths};
 
 use self::job::{Job, Work};
 use self::job_queue as jq;
@@ -228,7 +227,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     let layout = cx.layout(pkg, KindTarget);
     let output = layout.native(pkg);
     let old_output = layout.proxy().old_native(pkg);
-    let mut p = process(cmd.next().unwrap(), pkg, cx)
+    let mut p = try!(process(cmd.next().unwrap(), pkg, cx))
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", Some(cx.target_triple()))
@@ -309,7 +308,7 @@ fn rustc(package: &Package, target: &Target,
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement)
                  -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
-    let base = process("rustc", package, cx);
+    let base = try!(process("rustc", package, cx));
     let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
@@ -335,7 +334,7 @@ fn rustdoc(package: &Package, target: &Target,
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
-    let rustdoc = process("rustdoc", package, cx).cwd(pkg_root.clone());
+    let rustdoc = try!(process("rustdoc", package, cx)).cwd(pkg_root.clone());
     let mut rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
@@ -545,7 +544,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder {
+pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
+                          cx: &Context) -> CargoResult<ProcessBuilder> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let layout = cx.layout(pkg, KindPlugin);
@@ -567,9 +567,10 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package, cx: &Context) -> ProcessBuilder
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.
-    let search_path = os::join_paths(search_path.as_slice()).unwrap();
-    cx.compilation.process(cmd, pkg)
-                  .env(DynamicLibrary::envvar(), Some(search_path.as_slice()))
+    let search_path = try!(join_paths(search_path.as_slice(),
+                                      DynamicLibrary::envvar()));
+    Ok(try!(cx.compilation.process(cmd, pkg))
+              .env(DynamicLibrary::envvar(), Some(search_path.as_slice())))
 }
 
 fn each_dep<'a>(pkg: &Package, cx: &'a Context, f: |&'a Package|) {
