@@ -169,7 +169,7 @@ impl<'a> Terminal<Box<Writer+'a>> for Shell<'a> {
     }
 
     fn unwrap(self) -> Box<Writer+'a> {
-        fail!("Can't unwrap a Shell");
+        panic!("Can't unwrap a Shell");
     }
 
     fn get_ref<'b>(&'b self) -> &'b Box<Writer+'a> {

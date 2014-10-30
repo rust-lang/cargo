@@ -118,14 +118,14 @@ impl SourceId {
                          .with_precise(Some("locked".to_string()))
             }
             "path" => SourceId::for_path(&Path::new(url.slice_from(5))).unwrap(),
-            _ => fail!("Unsupported serialized SourceId")
+            _ => panic!("Unsupported serialized SourceId")
         }
     }
 
     pub fn to_url(&self) -> String {
         match *self.inner {
             SourceIdInner { kind: PathKind, .. } => {
-                fail!("Path sources are not included in the lockfile, \
+                panic!("Path sources are not included in the lockfile, \
                        so this is unimplemented")
             },
             SourceIdInner {
@@ -192,7 +192,7 @@ impl SourceId {
             PathKind => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
-                    Err(()) => fail!("path sources cannot be remote"),
+                    Err(()) => panic!("path sources cannot be remote"),
                 };
                 box PathSource::new(&path, self) as Box<Source>
             },

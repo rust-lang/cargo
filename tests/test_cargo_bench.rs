@@ -181,7 +181,7 @@ running 1 test
 test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
               .with_stderr(format!("\
-task '<main>' failed at 'assertion failed: \
+task '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:13
 ", sep = path::SEP))
@@ -401,7 +401,7 @@ test!(dont_run_examples {
         .file("src/lib.rs", r#"
         "#)
         .file("examples/dont-run-me-i-will-fail.rs", r#"
-            fn main() { fail!("Examples should not be run by 'cargo test'"); }
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
         "#);
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0));

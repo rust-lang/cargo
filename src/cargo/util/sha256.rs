@@ -109,7 +109,7 @@ mod imp {
 
     macro_rules! call( ($e:expr) => ({
         if $e == 0 {
-            fail!("failed {}: {}", stringify!($e), os::last_os_error())
+            panic!("failed {}: {}", stringify!($e), os::last_os_error())
         }
     }) )
 
