@@ -135,7 +135,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>task 'test_hello' failed at 'assertion failed: \
+<tab>task 'test_hello' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:12
 <tab>
@@ -150,7 +150,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
         COMPILING, p.url(), RUNNING,
         sep = path::SEP))
               .with_stderr(format!("\
-task '<main>' failed at 'Some tests failed', [..]
+task '<main>' panicked at 'Some tests failed', [..]
 "))
               .with_status(101));
 })

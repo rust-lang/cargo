@@ -181,7 +181,7 @@ running 1 test
 test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
               .with_stderr(format!("\
-task '<main>' failed at 'assertion failed: \
+task '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:13
 ", sep = path::SEP))
