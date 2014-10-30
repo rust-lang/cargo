@@ -23,9 +23,12 @@ struct CargoNewConfig {
 }
 
 pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
+    fn dir_is_empty(p: &Path) -> bool { fs::walk_dir(p).unwrap().count() == 0 }
+
     let path = os::getcwd().join(opts.path);
-    if path.exists() {
-        return Err(human(format!("Destination `{}` already exists",
+
+    if path.exists() && !(path.is_dir() && dir_is_empty(&path)) {
+        return Err(human(format!("Destination `{}` already exists and is not an empty directory",
                                  path.display())))
     }
     let name = path.filename_str().unwrap();
