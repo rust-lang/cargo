@@ -32,7 +32,8 @@ pub enum ResolveMethod<'a> {
     ResolveEverything,
     ResolveRequired(/* dev_deps = */ bool,
                     /* features = */ &'a [String],
-                    /* uses_default_features = */ bool),
+                    /* uses_default_features = */ bool,
+                    /* target_platform = */ Option<&'a str>),
 }
 
 impl Resolve {
@@ -150,6 +151,12 @@ fn activate<R: Registry>(mut cx: Context,
                          parent: &Summary,
                          method: ResolveMethod)
                          -> CargoResult<CargoResult<Context>> {
+    // Extracting the platform request.
+    let platform = match method {
+        ResolveRequired(_, _, _, platform) => platform,
+        ResolveEverything => None,
+    };
+
     // First, figure out our set of dependencies based on the requsted set of
     // features. This also calculates what features we're going to enable for
     // our own dependencies.
@@ -176,18 +183,19 @@ fn activate<R: Registry>(mut cx: Context,
         a.len().cmp(&b.len())
     });
 
-    activate_deps(cx, registry, parent, deps.as_slice(), 0)
+    activate_deps(cx, registry, parent, platform, deps.as_slice(), 0)
 }
 
-fn activate_deps<R: Registry>(cx: Context,
-                              registry: &mut R,
-                              parent: &Summary,
-                              deps: &[(&Dependency, Vec<Rc<Summary>>, Vec<String>)],
-                              cur: uint) -> CargoResult<CargoResult<Context>> {
+fn activate_deps<'a, R: Registry>(cx: Context,
+                                  registry: &mut R,
+                                  parent: &Summary,
+                                  platform: Option<&'a str>,
+                                  deps: &'a [(&Dependency, Vec<Rc<Summary>>, Vec<String>)],
+                                  cur: uint) -> CargoResult<CargoResult<Context>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
     let method = ResolveRequired(false, features.as_slice(),
-                                  dep.uses_default_features());
+                                  dep.uses_default_features(), platform);
 
     let key = (dep.get_name().to_string(), dep.get_source_id().clone());
     let prev_active = cx.activations.find(&key)
@@ -269,7 +277,7 @@ fn activate_deps<R: Registry>(cx: Context,
                 Err(e) => { last_err = Some(e); continue }
             }
         };
-        match try!(activate_deps(my_cx, registry, parent, deps, cur + 1)) {
+        match try!(activate_deps(my_cx, registry, parent, platform, deps, cur + 1)) {
             Ok(cx) => return Ok(Ok(cx)),
             Err(e) => { last_err = Some(e); }
         }
@@ -341,12 +349,22 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
                                                (&'a Dependency, Vec<String>)>> {
     let dev_deps = match method {
         ResolveEverything => true,
-        ResolveRequired(dev_deps, _, _) => dev_deps,
+        ResolveRequired(dev_deps, _, _, _) => dev_deps,
     };
 
     // First, filter by dev-dependencies
     let deps = parent.get_dependencies();
-    let mut deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
+    let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
+
+    // Second, ignoring dependencies that should not be compiled for this platform
+    let mut deps = deps.filter(|d| {
+        match method {
+            ResolveRequired(_, _, _, Some(ref platform)) => {
+                d.is_active_for_platform(platform.as_slice())
+            },
+            _ => true
+        }
+    });
 
     let (mut feature_deps, used_features) = try!(build_features(parent, method));
     let mut ret = HashMap::new();
@@ -419,7 +437,7 @@ fn build_features(s: &Summary, method: ResolveMethod)
                                  &mut visited));
             }
         }
-        ResolveRequired(_, requested_features, _) =>  {
+        ResolveRequired(_, requested_features, _, _) =>  {
             for feat in requested_features.iter() {
                 try!(add_feature(s, feat.as_slice(), &mut deps, &mut used,
                                  &mut visited));
@@ -427,7 +445,7 @@ fn build_features(s: &Summary, method: ResolveMethod)
         }
     }
     match method {
-        ResolveEverything | ResolveRequired(_, _, true) => {
+        ResolveEverything | ResolveRequired(_, _, true, _) => {
             if s.get_features().find_equiv(&"default").is_some() &&
                !visited.contains_equiv(&"default") {
                 try!(add_feature(s, "default", &mut deps, &mut used,

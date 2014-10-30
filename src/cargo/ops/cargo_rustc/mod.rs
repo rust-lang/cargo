@@ -5,8 +5,8 @@ use std::io::fs::PathExtensions;
 use std::os;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{CargoResult, ProcessBuilder, CargoError, human, caused_human};
-use util::{Config, internal, ChainError, Fresh, profile};
+use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
+use util::{Require, Config, internal, ChainError, Fresh, profile};
 
 use self::job::{Job, Work};
 use self::job_queue as jq;
@@ -27,6 +27,28 @@ mod layout;
 
 #[deriving(PartialEq, Eq)]
 pub enum Kind { KindPlugin, KindTarget }
+
+/// Run `rustc` to figure out what its current version string is.
+///
+/// The second element of the tuple returned is the target triple that rustc
+/// is a host for.
+pub fn rustc_version() -> CargoResult<(String, String)> {
+    let output = try!(util::process("rustc").arg("-v").arg("verbose")
+                           .exec_with_output());
+    let output = try!(String::from_utf8(output.output).map_err(|_| {
+        internal("rustc -v didn't return utf8 output")
+    }));
+    let triple = {
+        let triple = output.as_slice().lines().filter(|l| {
+            l.starts_with("host: ")
+        }).map(|l| l.slice_from(6)).next();
+        let triple = try!(triple.require(|| {
+            internal("rustc -v didn't have a line for `host:`")
+        }));
+        triple.to_string()
+    };
+    Ok((output, triple))
+}
 
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
