@@ -94,7 +94,7 @@ pub fn prepare_execute_custom_build(pkg: &Package, target: &Target,
         let output = try!(p.exec_with_output().map_err(|mut e| {
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
                             pkg, e.msg);
-            e.mark_human()
+            e.concrete().mark_human()
         }));
 
         // parsing the output of the custom build script to check that it's correct

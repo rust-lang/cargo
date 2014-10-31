@@ -252,6 +252,7 @@ pub struct TomlProject {
     version: TomlVersion,
     authors: Vec<String>,
     build: Option<TomlBuildCommandsList>,       // TODO: `String` instead
+    links: Option<String>,
     exclude: Option<Vec<String>>,
 
     // package metadata
@@ -514,6 +515,7 @@ impl TomlManifest {
                                          layout.root.join("doc"),
                                          old_build,
                                          exclude,
+                                         project.links.clone(),
                                          metadata);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \

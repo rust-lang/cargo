@@ -1,5 +1,3 @@
-use std::path;
-
 use support::{project, execs};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that};
@@ -188,3 +186,61 @@ url = p.url(),
 )));
 })
 */
+
+test!(links_no_build_cmd {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
+not have a custom build script
+"));
+})
+
+
+test!(links_duplicates {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+native library `a` is being linked to by more than one package, and can only be \
+linked to by one package
+
+  foo v0.5.0 (file://[..])
+  a v0.5.0 (file://[..])
+"));
+})
+

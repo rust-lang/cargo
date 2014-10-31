@@ -17,6 +17,7 @@ pub struct Manifest {
     target_dir: Path,
     doc_dir: Path,
     build: Vec<String>,         // TODO: deprecated, remove
+    links: Option<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
     metadata: ManifestMetadata,
@@ -328,7 +329,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             env: _,
             test: _,
             doctest: _,
-            
+
             custom_build: _,
         } = *self;
         (opt_level, codegen_units, debug, rpath, for_host, dest, harness).hash(into)
@@ -383,7 +384,7 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
                target_dir: Path, doc_dir: Path,
-               build: Vec<String>, exclude: Vec<String>,
+               build: Vec<String>, exclude: Vec<String>, links: Option<String>,
                metadata: ManifestMetadata) -> Manifest {
         Manifest {
             summary: summary,
@@ -393,6 +394,7 @@ impl Manifest {
             build: build,     // TODO: deprecated, remove
             warnings: Vec::new(),
             exclude: exclude,
+            links: links,
             metadata: metadata,
         }
     }
@@ -431,6 +433,10 @@ impl Manifest {
 
     pub fn get_build(&self) -> &[String] {
         self.build.as_slice()
+    }
+
+    pub fn get_links(&self) -> Option<&str> {
+        self.links.as_ref().map(|s| s.as_slice())
     }
 
     pub fn add_warning(&mut self, s: String) {

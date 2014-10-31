@@ -26,6 +26,7 @@ mod fingerprint;
 mod job;
 mod job_queue;
 mod layout;
+mod links;
 
 #[deriving(PartialEq, Eq)]
 pub enum Kind { KindHost, KindTarget }
@@ -82,6 +83,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     }
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
+
+    try!(links::validate(deps));
 
     let dest = uniq_target_dest(targets);
     let root = deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap();
