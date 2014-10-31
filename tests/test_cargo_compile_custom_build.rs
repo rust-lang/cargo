@@ -1,5 +1,8 @@
-use support::{project, execs};
-use support::{COMPILING, RUNNING};
+use std::io::File;
+
+use support::{project, execs, cargo_dir};
+use support::{COMPILING, RUNNING, FRESH};
+use support::paths::PathExt;
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -342,5 +345,90 @@ test!(links_passes_env_vars {
 {running} `[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
+})
+
+test!(only_rerun_build_script {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    p.root().move_into_the_past().unwrap();
+
+    File::create(&p.root().join("some-new-file")).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `[..]build-script-build`
+{running} `rustc [..] --crate-name foo [..]`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
+
+test!(rebuild_continues_to_pass_env_vars {
+    let a = project("a")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:foo=bar");
+                println!("cargo:bar=baz");
+            }
+        "#);
+    a.build();
+    a.root().move_into_the_past().unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [dependencies.a]
+            path = '{}'
+        "#, a.root().display()))
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            use std::os;
+            fn main() {
+                assert_eq!(os::getenv("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(os::getenv("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    p.root().move_into_the_past().unwrap();
+
+    File::create(&p.root().join("some-new-file")).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{fresh} a v0.5.0 (file://[..])
+{compiling} foo v0.5.0 (file://[..])
+{running} `[..]build-script-build`
+{running} `rustc [..] --crate-name foo [..]`
+", compiling = COMPILING, running = RUNNING, fresh = FRESH).as_slice()));
 })
 

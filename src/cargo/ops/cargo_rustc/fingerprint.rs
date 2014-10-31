@@ -144,7 +144,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
     // TODO: this should not explicitly pass KindTarget
     let kind = KindTarget;
 
-    if pkg.get_manifest().get_build().len() == 0 {
+    if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
         return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))
     }
     let (old, new) = dirs(cx, pkg, kind);

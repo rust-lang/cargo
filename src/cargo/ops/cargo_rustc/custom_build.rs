@@ -1,10 +1,11 @@
 use std::fmt;
-use std::io::{fs, BufReader, USER_RWX, File};
 use std::io::fs::PathExtensions;
+use std::io::{fs, USER_RWX, File};
+use std::str;
 
 use core::{Package, Target};
 use util::{CargoResult, CargoError, human};
-use util::{internal, ChainError};
+use util::{internal, ChainError, Require};
 
 use super::job::Work;
 use super::{fingerprint, process, KindHost, Context};
@@ -24,9 +25,10 @@ pub struct BuildOutput {
 /// Prepares a `Work` that executes the target as a custom build script.
 pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
                -> CargoResult<(Work, Work, Freshness)> {
-    let (script_output, build_output, old_build_output) = {
+    let (script_output, old_script_output, build_output, old_build_output) = {
         let layout = cx.layout(pkg, KindHost);
         (layout.build(pkg),
+         layout.proxy().old_build(pkg),
          layout.build_out(pkg),
          layout.proxy().old_build(pkg).join("out"))
     };
@@ -75,6 +77,8 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
     let lib_name = pkg.get_manifest().get_links().map(|s| s.to_string());
     let pkg_name = pkg.to_string();
     let native_libs = cx.native_libs.clone();
+    let all = (lib_name.clone(), pkg_name.clone(), native_libs.clone(),
+               script_output.clone());
 
     try!(fs::mkdir(&script_output, USER_RWX));
 
@@ -127,15 +131,17 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let rdr = BufReader::new(output.output.as_slice());
-        let build_output = try!(BuildOutput::parse(rdr, pkg_name.as_slice()));
+        let output = try!(str::from_utf8(output.output.as_slice()).require(|| {
+            human("build script output was not valid utf-8")
+        }));
+        let build_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
         match lib_name {
             Some(name) => assert!(native_libs.lock().insert(name, build_output)),
             None => {}
         }
 
         try!(File::create(&script_output.join("output"))
-                  .write(output.output.as_slice()).map_err(|e| {
+                  .write_str(output).map_err(|e| {
             human(format!("failed to write output of custom build command: {}",
                           e))
         }));
@@ -150,10 +156,26 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
     // Note that the freshness calculation here is the build_cmd freshness, not
     // target specific freshness. This is because we don't actually know what
     // the inputs are to this command!
+    //
+    // Also note that a fresh build command needs to
     let (freshness, dirty, fresh) =
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
     let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
     let fresh = proc(tx) {
+        let (lib_name, pkg_name, native_libs, script_output) = all;
+        let new_loc = script_output.join("output");
+        try!(fs::rename(&old_script_output.join("output"), &new_loc));
+        let mut f = try!(File::open(&new_loc).map_err(|e| {
+            human(format!("failed to read cached build command output: {}", e))
+        }));
+        let contents = try!(f.read_to_string());
+        let output = try!(BuildOutput::parse(contents.as_slice(),
+                                             pkg_name.as_slice()));
+        match lib_name {
+            Some(name) => assert!(native_libs.lock().insert(name, output)),
+            None => {}
+        }
+
         fresh(tx)
     };
 
@@ -163,18 +185,14 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
 impl BuildOutput {
     // Parses the output of a script.
     // The `pkg_name` is used for error messages.
-    pub fn parse<B: Buffer>(mut input: B, pkg_name: &str) -> CargoResult<BuildOutput> {
+    pub fn parse(input: &str, pkg_name: &str) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
         let mut metadata = Vec::new();
         let whence = format!("build script of `{}`", pkg_name);
 
         for line in input.lines() {
-            // unwrapping the IoResult
-            let line = try!(line.map_err(|e| human(format!("Error while reading\
-                                                            custom build output: {}", e))));
-
-            let mut iter = line.as_slice().splitn(1, |c: char| c == ':');
+            let mut iter = line.splitn(1, |c: char| c == ':');
             if iter.next() != Some("cargo") {
                 // skip this line since it doesn't start with "cargo:"
                 continue;
