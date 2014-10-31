@@ -1508,3 +1508,58 @@ Updating git repository `{}`
 {compiling} project [..]
 ", dep2.url(), compiling = COMPILING)));
 })
+
+test!(update_one_source_updates_all_packages_in_that_git_source {
+    let dep = git_repo("dep", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "dep"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "")
+    }).assert();
+
+    let p = project("project")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "project"
+            version = "0.5.0"
+            authors = []
+            [dependencies.dep]
+            git = '{}'
+        "#, dep.url()).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    p.build();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+
+    let repo = git2::Repository::open(&dep.root()).unwrap();
+    let rev1 = repo.revparse_single("HEAD").unwrap().id();
+
+    // Just be sure to change a file
+    File::create(&dep.root().join("src/lib.rs")).write_str(r#"
+        pub fn bar() -> int { 2 }
+    "#).assert();
+    add(&repo);
+    commit(&repo);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("dep"),
+                execs().with_status(0));
+    let lockfile = File::open(&p.root().join("Cargo.lock")).read_to_string()
+                                                           .unwrap();
+    assert!(!lockfile.as_slice().contains(rev1.to_string().as_slice()),
+            "{} in {}", rev1, lockfile);
+})
