@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, BufferedReader, USER_RWX};
 use std::io::fs::{File, PathExtensions};
@@ -8,7 +8,6 @@ use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
 use util::{Require, Config, internal, ChainError, Fresh, profile, join_paths};
 
-use self::custom_build::CustomBuildCommandOutput;
 use self::job::{Job, Work};
 use self::job_queue as jq;
 use self::job_queue::JobQueue;
@@ -18,6 +17,7 @@ pub use self::context::Context;
 pub use self::context::{PlatformPlugin, PlatformPluginAndTarget};
 pub use self::context::{PlatformRequirement, PlatformTarget};
 pub use self::layout::{Layout, LayoutProxy};
+pub use self::custom_build::BuildOutput;
 
 mod context;
 mod compilation;
@@ -76,7 +76,8 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
                            sources: &'a SourceMap,
-                           config: &'a Config<'a>)
+                           config: &'a Config<'a>,
+                           lib_overrides: HashMap<String, BuildOutput>)
                            -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
@@ -94,7 +95,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
-                                   host_layout, target_layout, pkg));
+                                   host_layout, target_layout, pkg,
+                                   lib_overrides));
     let mut queue = JobQueue::new(cx.resolve, deps, cx.config);
 
     // First ensure that the destination directory exists
@@ -305,11 +307,9 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     match cx.resolve.features(pkg.get_package_id()) {
         Some(features) => {
             for feat in features.iter() {
-                let feat = feat.as_slice().chars()
-                               .map(|c| c.to_uppercase())
-                               .map(|c| if c == '-' {'_'} else {c})
-                               .collect::<String>();
-                p = p.env(format!("CARGO_FEATURE_{}", feat).as_slice(), Some("1"));
+                p = p.env(format!("CARGO_FEATURE_{}",
+                                  envify(feat.as_slice())).as_slice(),
+                          Some("1"));
             }
         }
         None => {}
@@ -379,7 +379,7 @@ fn rustc(package: &Package, target: &Target,
             // list of `-l` flags to pass to rustc coming from custom build scripts
             let additional_library_links = match File::open(&command_output_file) {
                 Ok(f) => {
-                    let flags = try!(CustomBuildCommandOutput::parse(
+                    let flags = try!(BuildOutput::parse(
                         BufferedReader::new(f), name.as_slice()));
 
                     additional_library_paths.extend(flags.library_paths.iter().map(|p| p.clone()));
@@ -396,7 +396,7 @@ fn rustc(package: &Package, target: &Target,
                                         // doesn't have a build command
                 };
 
-                let flags = try!(CustomBuildCommandOutput::parse(
+                let flags = try!(BuildOutput::parse(
                     BufferedReader::new(flags), name.as_slice()));
                 additional_library_paths.extend(flags.library_paths.iter().map(|p| p.clone()));
             }
@@ -719,4 +719,11 @@ fn each_dep<'a>(pkg: &Package, cx: &'a Context, f: |&'a Package|) {
             visit_deps(cx.get_package(dep_id), cx, visited, |p| f(p))
         }
     }
+}
+
+fn envify(s: &str) -> String {
+    s.chars()
+     .map(|c| c.to_uppercase())
+     .map(|c| if c == '-' {'_'} else {c})
+     .collect()
 }

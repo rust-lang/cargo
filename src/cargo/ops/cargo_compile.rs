@@ -28,7 +28,7 @@ use std::collections::HashMap;
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver;
-use ops;
+use ops::{mod, BuildOutput};
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, Wrap, config, internal, human, ChainError, profile};
@@ -138,12 +138,12 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
     let ret = {
         let _p = profile::start("compiling");
-        try!(scrape_target_config(&config, &user_configs));
+        let lib_overrides = try!(scrape_target_config(&config, &user_configs));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
                                   &PackageSet::new(packages.as_slice()),
                                   &resolve_with_overrides, &sources,
-                                  &config))
+                                  &config, lib_overrides))
     };
 
     return Ok(ret);
@@ -175,41 +175,68 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 
 fn scrape_target_config(config: &Config,
                         configs: &HashMap<String, config::ConfigValue>)
-                        -> CargoResult<()> {
+                        -> CargoResult<HashMap<String, BuildOutput>> {
     let target = match configs.find_equiv("target") {
-        None => return Ok(()),
+        None => return Ok(HashMap::new()),
         Some(target) => try!(target.table().chain_error(|| {
             internal("invalid configuration for the key `target`")
         })),
     };
-    let target = match config.target() {
-        None => target,
-        Some(triple) => match target.find_equiv(triple) {
-            None => return Ok(()),
-            Some(target) => try!(target.table().chain_error(|| {
-                internal(format!("invalid configuration for the key \
-                                  `target.{}`", triple))
-            })),
-        },
+    let triple = config.target().unwrap_or(config.rustc_host()).to_string();
+    let target = match target.find(&triple) {
+        None => return Ok(HashMap::new()),
+        Some(target) => try!(target.table().chain_error(|| {
+            internal(format!("invalid configuration for the key \
+                              `target.{}`", triple))
+        })),
     };
 
-    match target.find_equiv("ar") {
-        None => {}
-        Some(ar) => {
-            config.set_ar(try!(ar.string().chain_error(|| {
-                internal("invalid configuration for key `ar`")
-            })).ref0().to_string());
+    let mut ret = HashMap::new();
+    for (k, v) in target.iter() {
+        match k.as_slice() {
+            "ar" | "linker" => {
+                let v = try!(v.string().chain_error(|| {
+                    internal(format!("invalid configuration for key `{}`", k))
+                })).ref0().to_string();
+                if k.as_slice() == "linker" {
+                    config.set_linker(v);
+                } else {
+                    config.set_ar(v);
+                }
+            }
+            lib_name => {
+                let table = try!(v.table().chain_error(|| {
+                    internal(format!("invalid configuration for the key \
+                                      `target.{}.{}`", triple, lib_name))
+                }));
+                let mut output = BuildOutput {
+                    library_paths: Vec::new(),
+                    library_links: Vec::new(),
+                    metadata: Vec::new(),
+                };
+                for (k, v) in table.iter() {
+                    let v = try!(v.string().chain_error(|| {
+                        internal(format!("invalid configuration for the key \
+                                          `target.{}.{}.{}`", triple, lib_name,
+                                          k))
+                    })).val0();
+                    if k.as_slice() == "rustc-flags" {
+                        let whence = format!("in `target.{}.{}.rustc-flags`",
+                                             triple, lib_name);
+                        let whence = whence.as_slice();
+                        let (paths, links) = try!(
+                            BuildOutput::parse_rustc_flags(v.as_slice(), whence)
+                        );
+                        output.library_paths.extend(paths.into_iter());
+                        output.library_links.extend(links.into_iter());
+                    } else {
+                        output.metadata.push((k.to_string(), v.to_string()));
+                    }
+                }
+                ret.insert(lib_name.to_string(), output);
+            }
         }
     }
 
-    match target.find_equiv("linker") {
-        None => {}
-        Some(linker) => {
-            config.set_linker(try!(linker.string().chain_error(|| {
-                internal("invalid configuration for key `ar`")
-            })).ref0().to_string());
-        }
-    }
-
-    Ok(())
+    Ok(ret)
 }

@@ -5,6 +5,7 @@ pub use self::cargo_rustc::{compile_targets, Compilation, Layout, Kind, rustc_ve
 pub use self::cargo_rustc::{KindTarget, KindHost, Context, LayoutProxy};
 pub use self::cargo_rustc::{PlatformRequirement, PlatformTarget};
 pub use self::cargo_rustc::{PlatformPlugin, PlatformPluginAndTarget};
+pub use self::cargo_rustc::{BuildOutput};
 pub use self::cargo_run::run;
 pub use self::cargo_new::{new, NewOptions};
 pub use self::cargo_doc::{doc, DocOptions};

@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::str;
+use std::sync::{Arc, Mutex};
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, KindHost, KindTarget, Compilation};
+use super::{Kind, KindHost, KindTarget, Compilation, BuildOutput};
 use super::layout::{Layout, LayoutProxy};
 
 #[deriving(Show)]
@@ -21,6 +22,7 @@ pub struct Context<'a, 'b: 'a> {
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
+    pub native_libs: Arc<Mutex<HashMap<String, BuildOutput>>>,
 
     env: &'a str,
     host: Layout,
@@ -37,7 +39,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap<'b>,
                deps: &'a PackageSet, config: &'b Config<'b>,
                host: Layout, target: Option<Layout>,
-               root_pkg: &Package)
+               root_pkg: &Package,
+               native_libs: HashMap<String, BuildOutput>)
                -> CargoResult<Context<'a, 'b>> {
         let (target_dylib, target_exe) =
                 try!(Context::filename_parts(config.target()));
@@ -63,6 +66,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             host_dylib: host_dylib,
             requirements: HashMap::new(),
             compilation: Compilation::new(root_pkg),
+            native_libs: Arc::new(Mutex::new(native_libs)),
         })
     }
 
@@ -230,12 +234,10 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             None => return vec!(),
             Some(deps) => deps,
         };
-        deps.map(|pkg_id| self.get_package(pkg_id))
-        .filter_map(|pkg| {
+        deps.map(|pkg_id| self.get_package(pkg_id)).filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
-        })
-        .collect()
+        }).collect()
     }
 
     /// Gets a package for the given package id.

@@ -129,9 +129,8 @@ test!(custom_build_script_wrong_rustc_flags {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr(format!("\
-Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`:
-`-aaa -bbb
-`",
+Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
+`-aaa -bbb`",
 p.url())));
 })
 
@@ -206,7 +205,6 @@ not have a custom build script
 "));
 })
 
-
 test!(links_duplicates {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -241,6 +239,56 @@ linked to by one package
 
   foo v0.5.0 (file://[..])
   a v0.5.0 (file://[..])
+"));
+})
+
+test!(overrides_and_links {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            use std::os;
+            fn main() {
+                assert_eq!(os::getenv("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(os::getenv("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+            }
+        "#)
+        .file(".cargo/config", format!(r#"
+            [target.{}.foo]
+            rustc-flags = "-l foo -L bar"
+            foo = "bar"
+            bar = "baz"
+        "#, target).as_slice())
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", "not valid rust code");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout("\
+Compiling a v0.5.0 (file://[..])
+  Running `rustc [..] --crate-name a [..]`
+Compiling foo v0.5.0 (file://[..])
+  Running `rustc build.rs [..]`
+  Running `rustc [..] --crate-name foo [..]`
 "));
 })
 
