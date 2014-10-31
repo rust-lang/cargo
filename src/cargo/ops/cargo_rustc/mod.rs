@@ -277,7 +277,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
         try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
                             pkg, e.msg);
-            e.mark_human()
+            e.concrete().mark_human()
         }));
         Ok(())
     })

@@ -3,7 +3,7 @@ use std::io::{mod, File, fs};
 use std::io::fs::PathExtensions;
 
 use core::{Package,Manifest,SourceId};
-use util::{mod, CargoResult, human, CargoError};
+use util::{mod, CargoResult, human, FromError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 
@@ -66,7 +66,7 @@ fn walk(path: &Path, is_root: bool,
         let dirs = match fs::readdir(path) {
             Ok(dirs) => dirs,
             Err(ref e) if e.kind == io::PermissionDenied => return Ok(()),
-            Err(e) => return Err(e.box_error()),
+            Err(e) => return Err(FromError::from_error(e)),
         };
         for dir in dirs.iter() {
             try!(walk(dir, false, |a, x| callback(a, x)))

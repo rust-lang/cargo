@@ -8,7 +8,7 @@ impl<T> Wrap for Result<T, Box<CargoError + Send>> {
     fn wrap<E: CargoError + Send>(self, error: E) -> CargoResult<T> {
         match self {
             Ok(x) => Ok(x),
-            Err(e) => Err(error.with_cause(e))
+            Err(e) => Err(error.concrete().with_cause(e))
         }
     }
 }

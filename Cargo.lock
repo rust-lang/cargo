@@ -44,12 +44,12 @@ source = "git+https://github.com/lifthrasiir/rust-encoding#6daaad9f4c0fcde452582
 [[package]]
 name = "flate2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/flate2-rs#f74a1f632c09e4f241ecb638e331c2cec4e955e0"
+source = "git+https://github.com/alexcrichton/flate2-rs#67be37548937c059370ce272efe1142fbf198d67"
 
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#fc308a305068392b07999b7c47122244b151cdec"
+source = "git+https://github.com/alexcrichton/git2-rs#35a0632e92d63de8218675a17cd81e15d0de44b4"
 dependencies = [
  "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
@@ -68,7 +68,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#998036d000095f72c8
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#fc308a305068392b07999b7c47122244b151cdec"
+source = "git+https://github.com/alexcrichton/git2-rs#35a0632e92d63de8218675a17cd81e15d0de44b4"
 dependencies = [
  "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config)",
@@ -83,7 +83,7 @@ source = "git+https://github.com/alexcrichton/libssh2-static-sys#80e71a3021618eb
 [[package]]
 name = "link-config"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/link-config#ed9fffa15fc41e8f09e92c7756feead1b0cbb01d"
+source = "git+https://github.com/alexcrichton/link-config#7c56ef12c8a49bedb0357e2a50af9ba79bf0ae1b"
 
 [[package]]
 name = "openssl-static-sys"
@@ -100,17 +100,17 @@ dependencies = [
 [[package]]
 name = "semver"
 version = "0.1.0"
-source = "git+https://github.com/rust-lang/semver#fdaec35ff5db609f53119f1e455fdd8830edc790"
+source = "git+https://github.com/rust-lang/semver#7dca047a9cd40e929a4545b37a1917daff82f156"
 
 [[package]]
 name = "tar"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/tar-rs#fced2e3833ed2776d9975ffc6fb3204528944faa"
+source = "git+https://github.com/alexcrichton/tar-rs#47d2cc4b09e373a4cc7bee7c71ebf96b42ea620d"
 
 [[package]]
 name = "toml"
 version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#35804927ef76cc5f24b04f2af25919c488a0992c"
+source = "git+https://github.com/alexcrichton/toml-rs#71d1689d63ef1af41addef330e314a56e88f48a9"
 
 [[package]]
 name = "url"

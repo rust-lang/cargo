@@ -9,7 +9,7 @@ use util::config::{Config};
 use util::{CargoResult, human};
 
 pub struct UpdateOptions<'a> {
-    pub shell: &'a mut MultiShell<'a>,
+    pub shell: &'a mut MultiShell,
     pub to_update: Option<&'a str>,
     pub precise: Option<&'a str>,
     pub aggressive: bool,
