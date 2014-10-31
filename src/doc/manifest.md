@@ -341,7 +341,8 @@ the `target` directory.
 # Examples
 
 Files located under `examples` are example uses of the functionality
-provided by the library.
+provided by the library.  When compiled, they are placed in the 
+`target/examples` directory.
 
 They must compile as executables (with `main.rs`) and load in the
 library by using `extern crate <library-name>`. They are compiled when
