@@ -770,8 +770,6 @@ fn normalize(libs: &[TomlLibTarget],
         let profiles = [
             merge(Profile::default_dev().for_host(true).custom_build(true),
                   &profiles.dev),
-            merge(Profile::default_release().for_host(true).custom_build(true),
-                  &profiles.release),
         ];
 
         let name = format!("build-script-{}", cmd.filestem_str().unwrap_or(""));

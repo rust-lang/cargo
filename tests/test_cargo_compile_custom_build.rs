@@ -28,6 +28,7 @@ test!(custom_build_script_failed {
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc build.rs --crate-name build-script-build --crate-type bin [..]`
+{running} `[..]build-script-build`
 ",
 url = p.url(), compiling = COMPILING, running = RUNNING))
                        .with_stderr(format!("\
@@ -98,7 +99,7 @@ test!(custom_build_env_vars {
                 let _feat = os::getenv("CARGO_FEATURE_FOO").unwrap();
             }}
         "#,
-        p.root().join("target").join("native").display());
+        p.root().join("target").join("build").display());
 
     let p = p.file("bar/build.rs", file_content);
 
@@ -266,7 +267,7 @@ test!(overrides_and_links {
         "#)
         .file(".cargo/config", format!(r#"
             [target.{}.foo]
-            rustc-flags = "-l foo -L bar"
+            rustc-flags = "-L foo -L bar"
             foo = "bar"
             bar = "baz"
         "#, target).as_slice())
@@ -283,12 +284,63 @@ test!(overrides_and_links {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
-Compiling a v0.5.0 (file://[..])
-  Running `rustc [..] --crate-name a [..]`
-Compiling foo v0.5.0 (file://[..])
-  Running `rustc build.rs [..]`
-  Running `rustc [..] --crate-name foo [..]`
-"));
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc build.rs [..]`
+{compiling} a v0.5.0 (file://[..])
+{running} `rustc [..] --crate-name a [..]`
+{running} `[..]build-script-build`
+{running} `rustc [..] --crate-name foo [..] -L foo -L bar[..]`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
+
+test!(links_passes_env_vars {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            use std::os;
+            fn main() {
+                assert_eq!(os::getenv("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(os::getenv("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+            }
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:foo=bar");
+                println!("cargo:bar=baz");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} [..] v0.5.0 (file://[..])
+{running} `rustc build.rs [..]`
+{compiling} [..] v0.5.0 (file://[..])
+{running} `rustc build.rs [..]`
+{running} `[..]`
+{running} `[..]`
+{running} `[..]`
+{running} `rustc [..] --crate-name foo [..]`
+", compiling = COMPILING, running = RUNNING).as_slice()));
 })
 

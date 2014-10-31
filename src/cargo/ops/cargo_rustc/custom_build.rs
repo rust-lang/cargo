@@ -1,4 +1,5 @@
-use std::io::{fs, BufReader, USER_RWX};
+use std::fmt;
+use std::io::{fs, BufReader, USER_RWX, File};
 use std::io::fs::PathExtensions;
 
 use core::{Package, Target};
@@ -6,7 +7,8 @@ use util::{CargoResult, CargoError, human};
 use util::{internal, ChainError};
 
 use super::job::Work;
-use super::{process, KindHost, Context};
+use super::{fingerprint, process, KindHost, Context};
+use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
 #[deriving(Clone)]
@@ -20,29 +22,35 @@ pub struct BuildOutput {
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
-pub fn prepare_execute_custom_build(pkg: &Package, target: &Target,
-                                    cx: &mut Context)
-                                    -> CargoResult<Work> {
-    let layout = cx.layout(pkg, KindHost);
-    let script_output = layout.build(pkg);
-    let build_output = layout.build_out(pkg);
+pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
+               -> CargoResult<(Work, Work, Freshness)> {
+    let (script_output, build_output, old_build_output) = {
+        let layout = cx.layout(pkg, KindHost);
+        (layout.build(pkg),
+         layout.build_out(pkg),
+         layout.proxy().old_build(pkg).join("out"))
+    };
 
     // Building the command to execute
     let to_exec = try!(cx.target_filenames(target))[0].clone();
     let to_exec = script_output.join(to_exec);
 
-    // Filling environment variables
+    // Start preparing the process to execute, starting out with some
+    // environment variables.
     let profile = target.get_profile();
-    let mut p = process(to_exec, pkg, cx)
+    let mut p = super::process(to_exec, pkg, cx)
                      .env("OUT_DIR", Some(&build_output))
                      .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
-                                                     .display().to_string()))
-                     .env("NUM_JOBS", profile.get_codegen_units().map(|n| n.to_string()))
+                                                        .dir_path()
+                                                        .display().to_string()))
+                     .env("NUM_JOBS", Some(cx.config.jobs().to_string()))
                      .env("TARGET", Some(cx.target_triple()))
                      .env("DEBUG", Some(profile.get_debug().to_string()))
                      .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
                      .env("PROFILE", Some(profile.get_env()));
 
+    // Be sure to pass along all enabled features for this package, this is the
+    // last piece of statically known information that we have.
     match cx.resolve.features(pkg.get_package_id()) {
         Some(features) => {
             for feat in features.iter() {
@@ -54,28 +62,43 @@ pub fn prepare_execute_custom_build(pkg: &Package, target: &Target,
         None => {}
     }
 
-    // Gather the set of native dependencies that this package has
+    // Gather the set of native dependencies that this package has along with
+    // some other variables to close over.
+    //
+    // This information will be used at build-time later on to figure out which
+    // sorts of variables need to be discovered at that time.
     let lib_deps = {
         cx.dep_targets(pkg).iter().filter_map(|&(pkg, _)| {
             pkg.get_manifest().get_links()
         }).map(|s| s.to_string()).collect::<Vec<_>>()
     };
-
+    let lib_name = pkg.get_manifest().get_links().map(|s| s.to_string());
+    let pkg_name = pkg.to_string();
     let native_libs = cx.native_libs.clone();
 
-    // Building command
-    let pkg = pkg.to_string();
+    try!(fs::mkdir(&script_output, USER_RWX));
+
+    // Prepare the unit of "dirty work" which will actually run the custom build
+    // command.
+    //
+    // Note that this has to do some extra work just before running the command
+    // to determine extra environment variables and such.
     let work = proc(desc_tx: Sender<String>) {
+        // Make sure that OUT_DIR exists.
+        //
+        // If we have an old build directory, then just move it into place,
+        // otherwise create it!
+        try!(if old_build_output.exists() {
+            fs::rename(&old_build_output, &build_output)
+        } else {
+            fs::mkdir(&build_output, USER_RWX)
+        }.chain_error(|| {
+            internal("failed to create script output directory for \
+                      build command")
+        }));
 
-        if !build_output.exists() {
-            try!(fs::mkdir(&build_output, USER_RWX).chain_error(|| {
-                internal("failed to create build output directory for \
-                          build command")
-            }))
-        }
-
-        // loading each possible custom build output file in order to get their
-        // metadata
+        // For all our native lib dependencies, pick up their metadata to pass
+        // along to this custom build command.
         let mut p = p;
         {
             let native_libs = native_libs.lock();
@@ -89,27 +112,52 @@ pub fn prepare_execute_custom_build(pkg: &Package, target: &Target,
             }
         }
 
+        // And now finally, run the build command itself!
         desc_tx.send_opt(p.to_string()).ok();
         let output = try!(p.exec_with_output().map_err(|mut e| {
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
-                            pkg, e.msg);
+                            pkg_name, e.msg);
             e.concrete().mark_human()
         }));
 
-        // parsing the output of the custom build script to check that it's correct
-        try!(BuildOutput::parse(BufReader::new(output.output.as_slice()),
-                                             pkg.as_slice()));
+        // After the build command has finished running, we need to be sure to
+        // remember all of its output so we can later discover precisely what it
+        // was, even if we don't run the build command again (due to freshness).
+        //
+        // This is also the location where we provide feedback into the build
+        // state informing what variables were discovered via our script as
+        // well.
+        let rdr = BufReader::new(output.output.as_slice());
+        let build_output = try!(BuildOutput::parse(rdr, pkg_name.as_slice()));
+        match lib_name {
+            Some(name) => assert!(native_libs.lock().insert(name, build_output)),
+            None => {}
+        }
 
-        // writing the output to the right directory
-        try!(fs::File::create(&script_output.join("output")).write(output.output.as_slice())
-            .map_err(|e| {
-                human(format!("failed to write output of custom build command: {}", e))
-            }));
+        try!(File::create(&script_output.join("output"))
+                  .write(output.output.as_slice()).map_err(|e| {
+            human(format!("failed to write output of custom build command: {}",
+                          e))
+        }));
 
         Ok(())
     };
 
-    Ok(work)
+    // Now that we've prepared our work-to-do, we need to prepare the fresh work
+    // itself to run when we actually end up just discarding what we calculated
+    // above.
+    //
+    // Note that the freshness calculation here is the build_cmd freshness, not
+    // target specific freshness. This is because we don't actually know what
+    // the inputs are to this command!
+    let (freshness, dirty, fresh) =
+            try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
+    let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
+    let fresh = proc(tx) {
+        fresh(tx)
+    };
+
+    Ok((dirty, fresh, freshness))
 }
 
 impl BuildOutput {
@@ -141,7 +189,7 @@ impl BuildOutput {
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {
-                (Some(a), Some(b)) => (a, b),
+                (Some(a), Some(b)) => (a, b.trim_right()),
                 // line started with `cargo:` but didn't match `key=value`
                 _ => return Err(human(format!("Wrong output in {}: `{}`",
                                               whence, line)))
@@ -197,5 +245,12 @@ impl BuildOutput {
             };
         }
         Ok((library_paths, library_links))
+    }
+}
+
+impl fmt::Show for BuildOutput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BuildOutput {{ paths: [..], libs: {}, metadata: {} }}",
+               self.library_links, self.metadata)
     }
 }

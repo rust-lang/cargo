@@ -240,6 +240,14 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         }).collect()
     }
 
+    /// For a package, return all targets which are registered as build
+    /// dependencies for that package.
+    pub fn build_dep_targets(&self, _pkg: &Package)
+                             -> Vec<(&'a Package, &'a Target)> {
+        // FIXME: needs implementation
+        vec![]
+    }
+
     /// Gets a package for the given package id.
     pub fn get_package(&self, id: &PackageId) -> &'a Package {
         self.package_set.iter()

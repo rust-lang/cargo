@@ -1,7 +1,7 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
-use std::io::{fs, BufferedReader, USER_RWX};
-use std::io::fs::{File, PathExtensions};
+use std::io::{fs, USER_RWX};
+use std::io::fs::PathExtensions;
 use std::os;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
@@ -115,7 +115,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
-            cx.is_relevant_target(*target)
+            target.get_profile().is_custom_build() ||
+                cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
         if targets.len() == 0 && dep.get_package_id() != resolve.root() {
@@ -166,64 +167,37 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     //
     // Each target has its own concept of freshness to ensure incremental
     // rebuilds on the *target* granularity, not the *package* granularity.
-    let (mut builds, mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(),
-                                                       Vec::new(), Vec::new());
+    let (mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut build_custom, mut run_custom) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
+        if target.get_profile().is_custom_build() {
+            // Custom build commands that are for libs that are overridden are
+            // skipped entirely
+            match pkg.get_manifest().get_links() {
+                Some(lib) => {
+                    if cx.native_libs.lock().contains_key_equiv(&lib) {
+                        continue
+                    }
+                }
+                None => {}
+            }
+            let (dirty, fresh, freshness) =
+                    try!(custom_build::prepare(pkg, target, cx));
+            run_custom.push((job(dirty, fresh), freshness));
+        }
+
         let work = if target.get_profile().is_doc() {
             let rustdoc = try!(rustdoc(pkg, target, cx));
             vec![(rustdoc, KindTarget)]
         } else {
             let req = cx.get_requirement(pkg, target);
-            let mut rustc = try!(rustc(pkg, target, cx, req));
-
-            if target.get_profile().is_custom_build() {
-                for &(ref mut work, _) in rustc.iter_mut() {
-                    use std::mem;
-
-                    let (old_build, script_output) = {
-                        let layout = cx.layout(pkg, KindHost);
-                        let old_build = layout.proxy().old_build(pkg);
-                        let script_output = layout.build(pkg);
-                        (old_build, script_output)
-                    };
-
-                    let execute_cmd = try!(custom_build::prepare_execute_custom_build(pkg,
-                                                                                      target,
-                                                                                      cx));
-
-                    // building a `Work` that creates the directory where the compiled script
-                    // must be placed
-                    let create_directory = proc() {
-                        if old_build.exists() {
-                            fs::rename(&old_build, &script_output)
-                        } else {
-                            fs::mkdir_recursive(&script_output, USER_RWX)
-                        }.chain_error(|| {
-                            internal("failed to create script output directory for build command")
-                        })
-                    };
-
-                    // replacing the simple rustc compilation by three steps:
-                    // 1 - create the output directory
-                    // 2 - call rustc
-                    // 3 - execute the command
-                    let rustc_cmd = mem::replace(work, proc(_) Ok(()));
-                    let replacement = proc(desc_tx: Sender<String>) {
-                        try!(create_directory());
-                        try!(rustc_cmd(desc_tx.clone()));
-                        execute_cmd(desc_tx)
-                    };
-                    mem::replace(work, replacement);
-                }
-            }
-
-            rustc
+            try!(rustc(pkg, target, cx, req))
         };
 
         let dst = match (target.is_lib(),
                          target.get_profile().is_test(),
                          target.get_profile().is_custom_build()) {
-            (_, _, true) => &mut builds,
+            (_, _, true) => &mut build_custom,
             (_, true, _) => &mut tests,
             (true, _, _) => &mut libs,
             (false, false, _) if target.get_profile().get_env() == "test" => &mut tests,
@@ -241,20 +215,21 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         }
     }
 
-    if builds.len() >= 1 {
+    if targets.iter().any(|t| t.get_profile().is_custom_build()) {
         // New custom build system
-        jobs.enqueue(pkg, jq::StageCustomBuild, builds);
+        jobs.enqueue(pkg, jq::StageBuildCustomBuild, build_custom);
+        jobs.enqueue(pkg, jq::StageRunCustomBuild, run_custom);
 
     } else {
         // Old custom build system
-        // TODO: deprecated, remove
+        // OLD-BUILD: to-remove
         let mut build_cmds = Vec::new();
         for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
             let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
             build_cmds.push(work);
         }
         let (freshness, dirty, fresh) =
-            try!(fingerprint::prepare_build_cmd(cx, pkg));
+            try!(fingerprint::prepare_build_cmd(cx, pkg, None));
         let desc = match build_cmds.len() {
             0 => String::new(),
             1 => pkg.get_manifest().get_build()[0].to_string(),
@@ -265,8 +240,9 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             for cmd in build_cmds.into_iter() { try!(cmd(desc_tx.clone())) }
             dirty(desc_tx)
         };
-        jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh),
-                                                      freshness)]);
+        jobs.enqueue(pkg, jq::StageBuildCustomBuild, vec![]);
+        jobs.enqueue(pkg, jq::StageRunCustomBuild, vec![(job(dirty, fresh),
+                                                         freshness)]);
     }
 
     jobs.enqueue(pkg, jq::StageLibraries, libs);
@@ -275,7 +251,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     Ok(())
 }
 
-// TODO: deprecated, remove
+// OLD-BUILD: to-remove
 fn compile_custom_old(pkg: &Package, cmd: &str,
                       cx: &Context, first: bool) -> CargoResult<Work> {
     let root = cx.get_package(cx.resolve.root());
@@ -360,52 +336,41 @@ fn rustc(package: &Package, target: &Target,
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
-        let build_cmd_layout = cx.layout(package, KindHost);
 
-        // building the possible `build/$pkg/output` file for this local package
-        let command_output_file = build_cmd_layout.build(package).join("output");
+        // Prepare the native lib state (extra -L and -l flags)
+        let native_libs = cx.native_libs.clone();
+        let mut native_lib_deps = Vec::new();
 
-        // building the list of all possible `build/$pkg/output` files
-        // whether they exist or not will be checked during the work
-        let command_output_files = cx.dep_targets(package).iter().map(|&(pkg, _)| {
-            build_cmd_layout.build(pkg).join("output")
-        }).collect::<Vec<_>>();
+        // FIXME: traverse build dependencies and add -L and -l for an
+        // transitive build deps.
+        if !target.get_profile().is_custom_build() {
+            each_dep(package, cx, |dep| {
+                let primary = package.get_package_id() == dep.get_package_id();
+                match dep.get_manifest().get_links() {
+                    Some(name) => native_lib_deps.push((name.to_string(), primary)),
+                    None => {}
+                }
+            });
+        }
 
         (proc(desc_tx: Sender<String>) {
             let mut rustc = rustc;
 
-            let mut additional_library_paths = Vec::new();
-
-            // list of `-l` flags to pass to rustc coming from custom build scripts
-            let additional_library_links = match File::open(&command_output_file) {
-                Ok(f) => {
-                    let flags = try!(BuildOutput::parse(
-                        BufferedReader::new(f), name.as_slice()));
-
-                    additional_library_paths.extend(flags.library_paths.iter().map(|p| p.clone()));
-                    flags.library_links.clone()
-                },
-                Err(_) => Vec::new()
-            };
-
-            // loading each possible custom build output file to fill `additional_library_paths`
-            for flags_file in command_output_files.into_iter() {
-                let flags = match File::open(&flags_file) {
-                    Ok(f) => f,
-                    Err(_) => continue  // the file doesn't exist, probably means that this pkg
-                                        // doesn't have a build command
-                };
-
-                let flags = try!(BuildOutput::parse(
-                    BufferedReader::new(flags), name.as_slice()));
-                additional_library_paths.extend(flags.library_paths.iter().map(|p| p.clone()));
-            }
-
-            for p in additional_library_paths.into_iter() {
-                rustc = rustc.arg("-L").arg(p);
-            }
-            for lib in additional_library_links.into_iter() {
-                rustc = rustc.arg("-l").arg(lib);
+            // Only at runtime have we discovered what the extra -L and -l
+            // arguments are for native libraries, so we process those here.
+            {
+                let native_libs = native_libs.lock();
+                for &(ref lib, primary) in native_lib_deps.iter() {
+                    let output = &(*native_libs)[*lib];
+                    for path in output.library_paths.iter() {
+                        rustc = rustc.arg("-L").arg(path);
+                    }
+                    if primary {
+                        for name in output.library_links.iter() {
+                            rustc = rustc.arg("-l").arg(name.as_slice());
+                        }
+                    }
+                }
             }
 
             desc_tx.send_opt(rustc.to_string()).ok();
@@ -616,7 +581,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
-    // TODO: deprecated, remove
+    // OLD-BUILD: to-remove
+    // FIXME: traverse build deps for build cmds
     let mut dirs = Vec::new();
     each_dep(package, cx, |pkg| {
         if pkg.get_manifest().get_build().len() > 0 {
@@ -627,21 +593,25 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         cmd = cmd.arg("-L").arg(dir);
     }
 
-    for &(pkg, target) in cx.dep_targets(package).iter() {
-        cmd = try!(link_to(cmd, pkg, target, cx, kind));
-    }
+    if target.get_profile().is_custom_build() {
+        // Custom build commands don't link to any other targets in the package,
+        // and they also link to all build dependencies, not normal dependencies
+        for &(pkg, target) in cx.build_dep_targets(package).iter() {
+            cmd = try!(link_to(cmd, pkg, target, cx, kind));
+        }
+    } else {
+        for &(pkg, target) in cx.dep_targets(package).iter() {
+            cmd = try!(link_to(cmd, pkg, target, cx, kind));
+        }
 
-    let mut targets = package.get_targets().iter().filter(|target| {
-        target.is_lib() && target.get_profile().is_compile()
-    });
+        let targets = package.get_targets().iter().filter(|target| {
+            target.is_lib() && target.get_profile().is_compile()
+        });
 
-    if target.is_bin() {
-        for target in targets {
-            if target.is_staticlib() {
-                continue;
+        if target.is_bin() {
+            for target in targets.filter(|f| !f.is_staticlib()) {
+                cmd = try!(link_to(cmd, package, target, cx, kind));
             }
-
-            cmd = try!(link_to(cmd, package, target, cx, kind));
         }
     }
 
@@ -679,7 +649,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
 
-    // TODO: deprecated, remove
+    // OLD-BUILD: to-remove
     // Also be sure to pick up any native build directories required by plugins
     // or their dependencies
     let mut native_search_paths = HashSet::new();

@@ -133,6 +133,7 @@ impl Layout {
             (&self.old_native, &self.native),
             (&self.old_fingerprint, &self.fingerprint),
             (&self.old_examples, &self.examples),
+            (&self.old_build, &self.build),
         ]));
 
         if self.old_root.exists() {
@@ -210,6 +211,7 @@ impl Drop for Layout {
         let _ = fs::rmdir_recursive(&self.old_native);
         let _ = fs::rmdir_recursive(&self.old_fingerprint);
         let _ = fs::rmdir_recursive(&self.old_examples);
+        let _ = fs::rmdir_recursive(&self.old_build);
     }
 }
 

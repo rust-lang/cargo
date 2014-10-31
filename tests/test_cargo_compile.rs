@@ -581,7 +581,7 @@ test!(many_crate_types_old_style_lib_location {
     let files = fs::readdir(&p.root().join("target")).assert();
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
-            "examples" | "deps" => None,
+            "build" | "examples" | "deps" => None,
             s if s.contains("fingerprint") || s.contains("dSYM") => None,
             s => Some(s.to_string())
         }
@@ -619,7 +619,7 @@ test!(many_crate_types_correct {
     let files = fs::readdir(&p.root().join("target")).assert();
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
-            "examples" | "deps" => None,
+            "build" | "examples" | "deps" => None,
             s if s.contains("fingerprint") || s.contains("dSYM") => None,
             s => Some(s.to_string())
         }
@@ -1190,7 +1190,7 @@ test!(rebuild_preserves_out_dir {
     build = build
         .file("Cargo.toml", r#"
             [package]
-            name = "build"
+            name = "builder"
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
@@ -1216,7 +1216,7 @@ test!(rebuild_preserves_out_dir {
             version = "0.0.0"
             authors = []
             build = '{}'
-        "#, build.bin("build").display()).as_slice())
+        "#, build.bin("builder").display()).as_slice())
         .file("src/lib.rs", "pub fn bar() -> int { 1 }");
     foo.build();
     foo.root().move_into_the_past().assert();
