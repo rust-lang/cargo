@@ -33,7 +33,7 @@ Cargo requires the following tools and packages to build:
 
 * `rustc`
 * `python`
-* `curl` or `wget`
+* `curl`
 * `cmake`
 * `pkg-config`
 * OpenSSL headers (`libssl-dev` package on ubuntu)
