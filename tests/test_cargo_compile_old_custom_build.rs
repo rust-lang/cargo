@@ -149,7 +149,7 @@ test!(old_custom_build_failure {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
 warning: the old build command has been deprecated\n\
-Failed to run custom build command for `foo v0.5.0 ({dir})
+Failed to run custom build command for `foo v0.5.0 ({dir})`
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
 task '<main>' panicked at 'nope', {filename}:2\n\
@@ -213,7 +213,7 @@ test!(old_custom_second_build_failure {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
 warning: the old build command has been deprecated\n\
-Failed to run custom build command for `foo v0.5.0 ({dir})
+Failed to run custom build command for `foo v0.5.0 ({dir})`
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
 task '<main>' panicked at 'nope', {filename}:2\n\

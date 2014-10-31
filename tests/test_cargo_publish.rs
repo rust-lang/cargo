@@ -90,7 +90,7 @@ test!(git_deps {
 
     assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
                 execs().with_status(101).with_stderr("\
-all dependencies must come from the same registry
+all dependencies must come from the same registry.
 dependency `foo` comes from git://path/to/nowhere instead
 "));
 })
@@ -118,7 +118,7 @@ test!(path_dependency_no_version {
     assert_that(p.cargo_process("publish"),
                 execs().with_status(101).with_stderr("\
 all path dependencies must have a version specified when being uploaded \
-to the registry
+to the registry.
 dependency `bar` does not specify a version
 "));
 })

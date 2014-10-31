@@ -216,7 +216,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
         .with_stderr("\
 [..]warning: function is never used: `dead`[..]
 [..]fn dead() {}
-
+[..]^~~~~~~~~~~~
 "));
 
     assert_that(&p.bin("foo"), existing_file());
