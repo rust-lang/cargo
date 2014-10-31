@@ -74,7 +74,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         Some(err) => {
             Err(match err.exit {
                 Some(ExitStatus(i)) => CliError::new("", i as uint),
-                _ => CliError::from_boxed(err.mark_human(), 101)
+                _ => CliError::from_boxed(err.concrete().mark_human(), 101)
             })
         }
     }

@@ -14,7 +14,7 @@ use util::toml as cargo_toml;
 
 pub struct Config<'a> {
     home_path: Path,
-    shell: &'a mut MultiShell<'a>,
+    shell: &'a mut MultiShell,
     jobs: uint,
     target: Option<string::String>,
     linker: Option<string::String>,

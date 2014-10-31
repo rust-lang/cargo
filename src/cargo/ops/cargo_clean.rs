@@ -9,7 +9,7 @@ use ops::{mod, Layout, Context};
 pub struct CleanOptions<'a> {
     pub spec: Option<&'a str>,
     pub target: Option<&'a str>,
-    pub shell: &'a mut MultiShell<'a>
+    pub shell: &'a mut MultiShell,
 }
 
 /// Cleans the project from build artifacts.

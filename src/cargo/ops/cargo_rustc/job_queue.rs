@@ -124,7 +124,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             self.active -= 1;
             match result {
                 Ok(()) => {
-                    let state = self.pending.get_mut(&(id, stage));
+                    let state = &mut self.pending[(id, stage)];
                     state.amt -= 1;
                     state.fresh = state.fresh.combine(fresh);
                     if state.amt == 0 {
