@@ -111,11 +111,15 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     let git_config = git_config.as_ref();
     let name = git_config.and_then(|g| g.get_str("user.name").ok())
                          .map(|s| s.to_string())
-                         .or_else(|| os::getenv("USER"));
+                         .or_else(|| os::getenv("USER"))      // unix
+                         .or_else(|| os::getenv("USERNAME")); // windows
     let name = match name {
         Some(name) => name,
-        None => return Err(human("could not determine the current user, \
-                                  please set $USER"))
+        None => {
+            let username_var = if cfg!(windows) {"USERNAME"} else {"USER"};
+            return Err(human(format!("could not determine the current \
+                                      user, please set ${}", username_var)))
+        }
     };
     let email = git_config.and_then(|g| g.get_str("user.email").ok());
 
