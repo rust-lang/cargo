@@ -357,8 +357,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
     /// Parse the on-disk metadata for the package provided
     fn summaries(&mut self, name: &str) -> CargoResult<&Vec<(Summary, bool)>> {
-        if self.cache.contains_key_equiv(&name) {
-            return Ok(self.cache.find_equiv(&name).unwrap());
+        if self.cache.contains_key_equiv(name) {
+            return Ok(self.cache.find_equiv(name).unwrap());
         }
         // see module comment for why this is structured the way it is
         let path = self.checkout_path.clone();
@@ -385,7 +385,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             Err(..) => Vec::new(),
         };
         self.cache.insert(name.to_string(), summaries);
-        Ok(self.cache.find_equiv(&name).unwrap())
+        Ok(self.cache.find_equiv(name).unwrap())
     }
 
     /// Parse a line from the registry's index file into a Summary for a
