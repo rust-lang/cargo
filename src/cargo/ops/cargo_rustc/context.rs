@@ -155,7 +155,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Vacant(entry) => { entry.set(req); }
         };
 
-        for &(pkg, dep) in self.dep_targets(pkg).iter() {
+        for &(pkg, dep) in self.dep_targets(pkg, target).iter() {
             self.build_requirements(pkg, dep, req, visiting);
         }
 
@@ -229,23 +229,24 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, pkg: &Package) -> Vec<(&'a Package, &'a Target)> {
+    pub fn dep_targets(&self, pkg: &Package, target: &Target)
+                       -> Vec<(&'a Package, &'a Target)> {
         let deps = match self.resolve.deps(pkg.get_package_id()) {
             None => return vec!(),
             Some(deps) => deps,
         };
-        deps.map(|pkg_id| self.get_package(pkg_id)).filter_map(|pkg| {
+        deps.map(|id| self.get_package(id)).filter(|dep| {
+            // If this target is a build command, then we only want build
+            // dependencies, otherwise we want everything *other than* build
+            // dependencies.
+            let pkg_dep = pkg.get_dependencies().iter().find(|d| {
+                d.get_name() == dep.get_name()
+            }).unwrap();
+            target.get_profile().is_custom_build() == pkg_dep.is_build()
+        }).filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
         }).collect()
-    }
-
-    /// For a package, return all targets which are registered as build
-    /// dependencies for that package.
-    pub fn build_dep_targets(&self, _pkg: &Package)
-                             -> Vec<(&'a Package, &'a Target)> {
-        // FIXME: needs implementation
-        vec![]
     }
 
     /// Gets a package for the given package id.

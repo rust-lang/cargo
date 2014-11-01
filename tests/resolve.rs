@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use hamcrest::{assert_that, equal_to, contains};
 
 use cargo::core::source::SourceId;
+use cargo::core::dependency::Development;
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
 use cargo::core::resolver::{mod, ResolveEverything};
@@ -191,14 +192,14 @@ fn test_resolving_with_same_name() {
 #[test]
 fn test_resolving_with_dev_deps() {
     let mut reg = registry(vec!(
-        pkg!("foo" => ["bar", dep("baz").transitive(false)]),
-        pkg!("baz" => ["bat", dep("bam").transitive(false)]),
+        pkg!("foo" => ["bar", dep("baz").kind(Development)]),
+        pkg!("baz" => ["bat", dep("bam").kind(Development)]),
         pkg!("bar"),
         pkg!("bat")
     ));
 
     let res = resolve(pkg_id("root"),
-                      vec![dep("foo"), dep("baz").transitive(false)],
+                      vec![dep("foo"), dep("baz").kind(Development)],
                       &mut reg).unwrap();
 
     assert_that(&res, contains(names(["root", "foo", "bar", "baz"])));

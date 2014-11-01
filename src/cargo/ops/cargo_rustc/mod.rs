@@ -264,6 +264,9 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
         Some(profile) => profile,
         None => return Err(internal(format!("no profile for {}", cx.env())))
     };
+    // Just need a target which isn't a custom build command
+    let target = &pkg.get_targets()[0];
+    assert!(!target.get_profile().is_custom_build());
 
     // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
@@ -272,7 +275,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     let layout = cx.layout(pkg, KindTarget);
     let output = layout.native(pkg);
     let old_output = layout.proxy().old_native(pkg);
-    let mut p = try!(process(cmd.next().unwrap(), pkg, cx))
+    let mut p = try!(process(cmd.next().unwrap(), pkg, target, cx))
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", Some(cx.target_triple()))
@@ -294,7 +297,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     }
 
 
-    for &(pkg, _) in cx.dep_targets(pkg).iter() {
+    for &(pkg, _) in cx.dep_targets(pkg, target).iter() {
         let name: String = pkg.get_name().chars().map(|c| {
             match c {
                 '-' => '_',
@@ -389,7 +392,7 @@ fn rustc(package: &Package, target: &Target,
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement)
                  -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
-    let base = try!(process("rustc", package, cx));
+    let base = try!(process("rustc", package, target, cx));
     let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
@@ -415,7 +418,7 @@ fn rustdoc(package: &Package, target: &Target,
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
-    let rustdoc = try!(process("rustdoc", package, cx)).cwd(pkg_root.clone());
+    let rustdoc = try!(process("rustdoc", package, target, cx)).cwd(pkg_root.clone());
     let mut rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
@@ -584,7 +587,6 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
     // OLD-BUILD: to-remove
-    // FIXME: traverse build deps for build cmds
     let mut dirs = Vec::new();
     each_dep(package, cx, |pkg| {
         if pkg.get_manifest().get_build().len() > 0 {
@@ -595,25 +597,17 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         cmd = cmd.arg("-L").arg(dir);
     }
 
-    if target.get_profile().is_custom_build() {
-        // Custom build commands don't link to any other targets in the package,
-        // and they also link to all build dependencies, not normal dependencies
-        for &(pkg, target) in cx.build_dep_targets(package).iter() {
-            cmd = try!(link_to(cmd, pkg, target, cx, kind));
-        }
-    } else {
-        for &(pkg, target) in cx.dep_targets(package).iter() {
-            cmd = try!(link_to(cmd, pkg, target, cx, kind));
-        }
+    for &(pkg, target) in cx.dep_targets(package, target).iter() {
+        cmd = try!(link_to(cmd, pkg, target, cx, kind));
+    }
 
-        let targets = package.get_targets().iter().filter(|target| {
-            target.is_lib() && target.get_profile().is_compile()
-        });
+    let targets = package.get_targets().iter().filter(|target| {
+        target.is_lib() && target.get_profile().is_compile()
+    });
 
-        if target.is_bin() {
-            for target in targets.filter(|f| !f.is_staticlib()) {
-                cmd = try!(link_to(cmd, package, target, cx, kind));
-            }
+    if target.is_bin() && !target.get_profile().is_custom_build() {
+        for target in targets.filter(|f| !f.is_staticlib()) {
+            cmd = try!(link_to(cmd, package, target, cx, kind));
         }
     }
 
@@ -643,7 +637,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
+pub fn process<T: ToCStr>(cmd: T, pkg: &Package, target: &Target,
                           cx: &Context) -> CargoResult<ProcessBuilder> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
@@ -655,7 +649,7 @@ pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
     // Also be sure to pick up any native build directories required by plugins
     // or their dependencies
     let mut native_search_paths = HashSet::new();
-    for &(dep, target) in cx.dep_targets(pkg).iter() {
+    for &(dep, target) in cx.dep_targets(pkg, target).iter() {
         if !target.get_profile().is_for_host() { continue }
         each_dep(dep, cx, |dep| {
             if dep.get_manifest().get_build().len() > 0 {

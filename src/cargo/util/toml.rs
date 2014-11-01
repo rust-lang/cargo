@@ -10,8 +10,9 @@ use semver;
 use serialize::{Decodable, Decoder};
 
 use core::SourceId;
-use core::manifest::{LibKind, Lib, Dylib, Profile, ManifestMetadata};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
+use core::dependency::{Build, Development};
+use core::manifest::{LibKind, Lib, Dylib, Profile, ManifestMetadata};
 use core::package_id::Metadata;
 use util::{CargoResult, Require, human, ToUrl, ToSemver};
 
@@ -210,6 +211,7 @@ pub struct TomlManifest {
     bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
+    build_dependencies: Option<HashMap<String, TomlDependency>>,
     features: Option<HashMap<String, Vec<String>>>,
     target: Option<HashMap<String, TomlPlatform>>,
 }
@@ -481,13 +483,20 @@ impl TomlManifest {
             };
 
             // Collect the deps
-            try!(process_dependencies(&mut cx, false, None, self.dependencies.as_ref()));
-            try!(process_dependencies(&mut cx, true, None, self.dev_dependencies.as_ref()));
+            try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
+                                      |dep| dep));
+            try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
+                                      |dep| dep.kind(Development)));
+            try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
+                                      |dep| dep.kind(Build)));
 
             if let Some(targets) = self.target.as_ref() {
                 for (name, platform) in targets.iter() {
-                    try!(process_dependencies(&mut cx, false, Some(name.clone()),
-                                              platform.dependencies.as_ref()));
+                    try!(process_dependencies(&mut cx,
+                                              platform.dependencies.as_ref(),
+                                              |dep| {
+                        dep.only_for_platform(Some(name.clone()))
+                    }));
                 }
             }
         }
@@ -528,8 +537,9 @@ impl TomlManifest {
     }
 }
 
-fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool, platform: Option<String>,
-                            new_deps: Option<&HashMap<String, TomlDependency>>)
+fn process_dependencies<'a>(cx: &mut Context<'a>,
+                            new_deps: Option<&HashMap<String, TomlDependency>>,
+                            f: |Dependency| -> Dependency)
                             -> CargoResult<()> {
     let dependencies = match new_deps {
         Some(ref dependencies) => dependencies,
@@ -568,8 +578,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>, dev: bool, platform: Option<St
                                          details.version.as_ref()
                                                 .map(|v| v.as_slice()),
                                          &new_source_id));
-        let dep = dep.transitive(!dev)
-                     .only_for_platform(platform.clone())
+        let dep = f(dep)
                      .features(details.features.unwrap_or(Vec::new()))
                      .default_features(details.default_features.unwrap_or(true))
                      .optional(details.optional.unwrap_or(false));

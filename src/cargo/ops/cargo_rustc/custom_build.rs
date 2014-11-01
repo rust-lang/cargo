@@ -40,7 +40,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
     // Start preparing the process to execute, starting out with some
     // environment variables.
     let profile = target.get_profile();
-    let mut p = super::process(to_exec, pkg, cx)
+    let mut p = super::process(to_exec, pkg, target, cx)
                      .env("OUT_DIR", Some(&build_output))
                      .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
                                                         .dir_path()
@@ -70,7 +70,10 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        cx.dep_targets(pkg).iter().filter_map(|&(pkg, _)| {
+        let non_build_target = pkg.get_targets().iter().find(|t| {
+            !t.get_profile().is_custom_build()
+        }).unwrap();
+        cx.dep_targets(pkg, non_build_target).iter().filter_map(|&(pkg, _)| {
             pkg.get_manifest().get_links()
         }).map(|s| s.to_string()).collect::<Vec<_>>()
     };

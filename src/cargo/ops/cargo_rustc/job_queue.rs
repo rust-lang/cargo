@@ -250,9 +250,14 @@ impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
         match stage {
             StageStart => Vec::new(),
 
+            // Building the build command itself starts off pretty easily,we
+            // just need to depend on all of the library stages of our own build
+            // dependencies (making them available to us).
             StageBuildCustomBuild => {
-                // FIXME: build dependencies should come into play here
-                vec![(id, StageStart)]
+                let mut base = vec![(id, StageStart)];
+                base.extend(deps.filter(|&(_, dep)| dep.is_build())
+                                .map(|(id, _)| (id, StageLibraries)));
+                base
             }
 
             // When running a custom build command, we need to be sure that our

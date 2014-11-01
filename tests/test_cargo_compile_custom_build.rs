@@ -540,3 +540,78 @@ test!(propagation_of_l_flags {
 {running} `rustc [..] --crate-name foo [..] -L bar[..]-L foo[..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
+
+test!(build_deps_simple {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+            [build-dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "
+            extern crate a;
+            fn main() {}
+        ")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} a v0.5.0 (file://[..])
+{running} `rustc [..] --crate-name a [..]`
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc build.rs [..] --extern a=[..]`
+{running} `[..]foo-[..]build-script-build`
+{running} `rustc [..] --crate-name foo [..]`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
+
+test!(build_deps_not_for_normal {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+            [build-dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "extern crate a;")
+        .file("build.rs", "
+            extern crate a;
+            fn main() {}
+        ")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(target),
+                execs().with_status(101)
+                       .with_stderr("\
+[..]lib.rs[..] error: can't find crate for `a`
+[..]lib.rs[..] extern crate a;
+[..]           ^~~~~~~~~~~~~~~
+error: aborting due to previous error
+Could not compile `foo`.
+
+Caused by:
+  Process didn't exit successfully: [..]
+"));
+})
