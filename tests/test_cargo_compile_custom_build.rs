@@ -450,6 +450,8 @@ test!(testing_and_such {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
+{running} `[..]build-script-build`
+{running} `rustc [..] --crate-name foo [..]`
 {running} `rustc [..] --test [..]`
 {running} `[..]foo-[..]`
 
@@ -675,5 +677,78 @@ test!(build_cmd_with_a_build_cmd {
     -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target --dep-info [..]fingerprint[..]dep-lib-foo \
     -L [..]target -L [..]target[..]deps`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
+
+test!(out_dir_is_preserved {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            use std::os;
+            use std::io::File;
+            fn main() {
+                let out = os::getenv("OUT_DIR").unwrap();
+                File::create(&Path::new(out).join("foo")).unwrap();
+            }
+        "#);
+
+    // Make the file
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    p.root().move_into_the_past().unwrap();
+
+    // Change to asserting that it's there
+    File::create(&p.root().join("build.rs")).write_str(r#"
+        use std::os;
+        use std::io::File;
+        fn main() {
+            let out = os::getenv("OUT_DIR").unwrap();
+            File::open(&Path::new(out).join("foo")).unwrap();
+        }
+    "#).unwrap();
+    p.root().move_into_the_past().unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+                execs().with_status(0));
+
+    // Run a fresh build where file should be preserved
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+                execs().with_status(0));
+
+    // One last time to make sure it's still there.
+    File::create(&p.root().join("foo")).unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+                execs().with_status(0));
+})
+
+test!(output_separate_lines {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-flags=-L foo");
+                println!("cargo:rustc-flags=-l foo");
+            }
+        "#);
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc build.rs [..]`
+{running} `[..]foo-[..]build-script-build`
+{running} `rustc [..] --crate-name foo [..] -L foo -l foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })

@@ -81,7 +81,8 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
     let pkg_name = pkg.to_string();
     let native_libs = cx.native_libs.clone();
     let all = (lib_name.clone(), pkg_name.clone(), native_libs.clone(),
-               script_output.clone());
+               script_output.clone(), old_build_output.clone(),
+               build_output.clone());
 
     try!(fs::mkdir(&script_output, USER_RWX));
 
@@ -165,9 +166,11 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
     let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
     let fresh = proc(tx) {
-        let (lib_name, pkg_name, native_libs, script_output) = all;
+        let (lib_name, pkg_name, native_libs, script_output,
+             old_build_output, build_output) = all;
         let new_loc = script_output.join("output");
         try!(fs::rename(&old_script_output.join("output"), &new_loc));
+        try!(fs::rename(&old_build_output, &build_output));
         let mut f = try!(File::open(&new_loc).map_err(|e| {
             human(format!("failed to read cached build command output: {}", e))
         }));

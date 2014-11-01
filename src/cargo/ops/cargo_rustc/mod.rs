@@ -175,7 +175,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             // skipped entirely
             match pkg.get_manifest().get_links() {
                 Some(lib) => {
-                    if cx.native_libs.lock().contains_key_equiv(&lib) {
+                    if cx.native_libs.lock().contains_key_equiv(lib) {
                         continue
                     }
                 }

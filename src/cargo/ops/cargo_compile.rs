@@ -129,7 +129,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
     };
 
     let targets = to_build.get_targets().iter().filter(|target| {
-        match env {
+        target.get_profile().is_custom_build() || match env {
             // doc-all == document everything, so look for doc targets
             "doc" | "doc-all" => target.get_profile().get_env() == "doc",
             env => target.get_profile().get_env() == env,
