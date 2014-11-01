@@ -18,7 +18,7 @@ dependencies = [
 [[package]]
 name = "curl"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#64a0f26393e8b30eeda3cbcc71c4d3c864c950ee"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#28d4a3d0dde0cde6b6f46fc928656cb251832888"
 dependencies = [
  "curl-sys 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config)",
@@ -29,7 +29,7 @@ dependencies = [
 [[package]]
 name = "curl-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#64a0f26393e8b30eeda3cbcc71c4d3c864c950ee"
+source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#28d4a3d0dde0cde6b6f46fc928656cb251832888"
 
 [[package]]
 name = "docopt"
