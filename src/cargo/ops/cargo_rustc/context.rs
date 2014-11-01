@@ -6,7 +6,7 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, KindPlugin, KindTarget, Compilation};
+use super::{Kind, KindHost, KindTarget, Compilation};
 use super::layout::{Layout, LayoutProxy};
 
 #[deriving(Show)]
@@ -141,7 +141,7 @@ impl<'a, 'b> Context<'a, 'b> {
         if !visiting.insert(pkg.get_package_id()) { return }
 
         let key = (pkg.get_package_id(), target.get_name());
-        let req = if target.get_profile().is_plugin() {PlatformPlugin} else {req};
+        let req = if target.get_profile().is_for_host() {PlatformPlugin} else {req};
         match self.requirements.entry(key) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(req); }
             Vacant(entry) => { entry.set(req); }
@@ -164,10 +164,10 @@ impl<'a, 'b> Context<'a, 'b> {
     pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
         let primary = pkg.get_package_id() == self.resolve.root();
         match kind {
-            KindPlugin => LayoutProxy::new(&self.host, primary),
+            KindHost => LayoutProxy::new(&self.host, primary),
             KindTarget =>  LayoutProxy::new(self.target.as_ref()
                                                 .unwrap_or(&self.host),
-                                            primary)
+                                            primary),
         }
     }
 
@@ -176,7 +176,7 @@ impl<'a, 'b> Context<'a, 'b> {
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
-        let (triple, pair) = if kind == KindPlugin {
+        let (triple, pair) = if kind == KindHost {
             (self.config.rustc_host(), &self.host_dylib)
         } else {
             (self.target_triple.as_slice(), &self.target_dylib)
@@ -203,8 +203,8 @@ impl<'a, 'b> Context<'a, 'b> {
             ret.push(format!("{}{}", stem, self.target_exe));
         } else {
             if target.is_dylib() {
-                let plugin = target.get_profile().is_plugin();
-                let kind = if plugin {KindPlugin} else {KindTarget};
+                let plugin = target.get_profile().is_for_host();
+                let kind = if plugin {KindHost} else {KindTarget};
                 let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
             }
