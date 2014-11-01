@@ -373,10 +373,10 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // features that correspond to optional dependencies
     for dep in deps {
         // weed out optional dependencies, but not those required
-        if dep.is_optional() && !feature_deps.contains_key_equiv(&dep.get_name()) {
+        if dep.is_optional() && !feature_deps.contains_key_equiv(dep.get_name()) {
             continue
         }
-        let mut base = feature_deps.pop_equiv(&dep.get_name())
+        let mut base = feature_deps.pop_equiv(dep.get_name())
                                    .unwrap_or(Vec::new());
         for feature in dep.get_features().iter() {
             base.push(feature.clone());
@@ -446,8 +446,8 @@ fn build_features(s: &Summary, method: ResolveMethod)
     }
     match method {
         ResolveEverything | ResolveRequired(_, _, true, _) => {
-            if s.get_features().find_equiv(&"default").is_some() &&
-               !visited.contains_equiv(&"default") {
+            if s.get_features().find_equiv("default").is_some() &&
+               !visited.contains_equiv("default") {
                 try!(add_feature(s, "default", &mut deps, &mut used,
                                  &mut visited));
             }
@@ -485,7 +485,7 @@ fn build_features(s: &Summary, method: ResolveMethod)
                                               feat)))
                 }
                 used.insert(feat.to_string());
-                match s.get_features().find_equiv(&feat) {
+                match s.get_features().find_equiv(feat) {
                     Some(recursive) => {
                         for f in recursive.iter() {
                             try!(add_feature(s, f.as_slice(), deps, used,

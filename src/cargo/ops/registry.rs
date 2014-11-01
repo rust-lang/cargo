@@ -109,13 +109,13 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
 
 pub fn registry_configuration() -> CargoResult<RegistryConfig> {
     let configs = try!(config::all_configs(os::getcwd()));
-    let registry = match configs.find_equiv(&"registry") {
+    let registry = match configs.find_equiv("registry") {
         None => return Ok(RegistryConfig { index: None, token: None }),
         Some(registry) => try!(registry.table().chain_error(|| {
             internal("invalid configuration for the key `registry`")
         })),
     };
-    let index = match registry.find_equiv(&"index") {
+    let index = match registry.find_equiv("index") {
         None => None,
         Some(index) => {
             Some(try!(index.string().chain_error(|| {
@@ -123,7 +123,7 @@ pub fn registry_configuration() -> CargoResult<RegistryConfig> {
             })).ref0().to_string())
         }
     };
-    let token = match registry.find_equiv(&"token") {
+    let token = match registry.find_equiv("token") {
         None => None,
         Some(token) => {
             Some(try!(token.string().chain_error(|| {
@@ -174,12 +174,12 @@ pub fn http_handle() -> CargoResult<http::Handle> {
 /// HTTP_PROXY env var.
 pub fn http_proxy() -> CargoResult<Option<String>> {
     let configs = try!(config::all_configs(os::getcwd()));
-    match configs.find_equiv(&"http") {
+    match configs.find_equiv("http") {
         Some(http) => {
             let http = try!(http.table().chain_error(|| {
                 internal("invalid configuration for the key `http`")
             }));
-            match http.find_equiv(&"proxy") {
+            match http.find_equiv("proxy") {
                 Some(proxy) => {
                     return Ok(Some(try!(proxy.string().chain_error(|| {
                         internal("invalid configuration for key `http.proxy`")

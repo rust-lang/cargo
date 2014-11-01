@@ -22,7 +22,7 @@ impl Summary {
                dependencies: Vec<Dependency>,
                features: HashMap<String, Vec<String>>) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
-            if features.find_equiv(&dep.get_name()).is_some() {
+            if features.find_equiv(dep.get_name()).is_some() {
                 return Err(human(format!("Features and dependencies cannot have \
                                           the same name: `{}`", dep.get_name())))
             }
@@ -37,7 +37,7 @@ impl Summary {
                 let mut parts = dep.as_slice().splitn(1, '/');
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
-                if !is_reexport && features.find_equiv(&dep).is_some() { continue }
+                if !is_reexport && features.find_equiv(dep).is_some() { continue }
                 match dependencies.iter().find(|d| d.get_name() == dep) {
                     Some(d) => {
                         if d.is_optional() || is_reexport { continue }

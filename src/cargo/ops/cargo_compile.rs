@@ -154,7 +154,7 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
                           cur_path: Path) -> CargoResult<Vec<SourceId>> {
     debug!("loaded config; configs={}", configs);
 
-    let config_paths = match configs.find_equiv(&"paths") {
+    let config_paths = match configs.find_equiv("paths") {
         Some(cfg) => cfg,
         None => return Ok(Vec::new())
     };
@@ -177,7 +177,7 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 fn scrape_target_config(config: &mut Config,
                         configs: &HashMap<String, config::ConfigValue>)
                         -> CargoResult<()> {
-    let target = match configs.find_equiv(&"target") {
+    let target = match configs.find_equiv("target") {
         None => return Ok(()),
         Some(target) => try!(target.table().chain_error(|| {
             internal("invalid configuration for the key `target`")
@@ -185,7 +185,7 @@ fn scrape_target_config(config: &mut Config,
     };
     let target = match config.target() {
         None => target,
-        Some(triple) => match target.find_equiv(&triple) {
+        Some(triple) => match target.find_equiv(triple) {
             None => return Ok(()),
             Some(target) => try!(target.table().chain_error(|| {
                 internal(format!("invalid configuration for the key \
@@ -194,7 +194,7 @@ fn scrape_target_config(config: &mut Config,
         },
     };
 
-    match target.find_equiv(&"ar") {
+    match target.find_equiv("ar") {
         None => {}
         Some(ar) => {
             config.set_ar(try!(ar.string().chain_error(|| {
@@ -203,7 +203,7 @@ fn scrape_target_config(config: &mut Config,
         }
     }
 
-    match target.find_equiv(&"linker") {
+    match target.find_equiv("linker") {
         None => {}
         Some(linker) => {
             config.set_linker(try!(linker.string().chain_error(|| {
