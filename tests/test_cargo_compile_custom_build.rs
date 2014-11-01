@@ -615,3 +615,65 @@ Caused by:
   Process didn't exit successfully: [..]
 "));
 })
+
+test!(build_cmd_with_a_build_cmd {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "
+            extern crate a;
+            fn main() {}
+        ")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.b]
+            path = "../b"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", "extern crate b; fn main() {}")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} b v0.5.0 (file://[..])
+{running} `rustc [..] --crate-name b [..]`
+{compiling} a v0.5.0 (file://[..])
+{running} `rustc build.rs [..] --extern b=[..]`
+{running} `[..]a-[..]build-script-build`
+{running} `rustc [..]lib.rs --crate-name a --crate-type lib -g \
+    -C metadata=[..] -C extra-filename=-[..] \
+    --out-dir [..]target[..]deps --dep-info [..]fingerprint[..]dep-lib-a \
+    -L [..]target[..]deps -L [..]target[..]deps`
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc build.rs --crate-name build-script-build --crate-type bin -g \
+    --out-dir [..]build[..]foo-[..] --dep-info [..]fingerprint[..]dep-[..] \
+    -L [..]target -L [..]target[..]deps \
+    --extern a=[..]liba-[..].rlib`
+{running} `[..]foo-[..]build-script-build`
+{running} `rustc [..]lib.rs --crate-name foo --crate-type lib -g \
+    -C metadata=[..] -C extra-filename=-[..] \
+    --out-dir [..]target --dep-info [..]fingerprint[..]dep-lib-foo \
+    -L [..]target -L [..]target[..]deps`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
