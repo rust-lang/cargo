@@ -1,7 +1,7 @@
 use std::io::File;
 
 use support::{project, execs, cargo_dir};
-use support::{COMPILING, RUNNING, FRESH};
+use support::{COMPILING, RUNNING, DOCTEST};
 use support::paths::PathExt;
 use hamcrest::{assert_that};
 
@@ -423,12 +423,120 @@ test!(rebuild_continues_to_pass_env_vars {
     File::create(&p.root().join("some-new-file")).unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
-                execs().with_status(0)
-                       .with_stdout(format!("\
-{fresh} a v0.5.0 (file://[..])
-{compiling} foo v0.5.0 (file://[..])
-{running} `[..]build-script-build`
-{running} `rustc [..] --crate-name foo [..]`
-", compiling = COMPILING, running = RUNNING, fresh = FRESH).as_slice()));
+                execs().with_status(0));
 })
 
+test!(testing_and_such {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    p.root().move_into_the_past().unwrap();
+
+    File::create(&p.root().join("file1")).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc [..] --test [..]`
+{running} `[..]foo-[..]`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+{running} `rustdoc --test [..]`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, doctest = DOCTEST).as_slice()));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("doc").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustdoc [..]`
+{running} `rustc [..]`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+
+    File::create(&p.root().join("src/main.rs")).write_str("fn main() {}").unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("run"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `target[..]foo`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
+
+test!(propagation_of_l_flags {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "bar"
+            build = "build.rs"
+
+            [dependencies.b]
+            path = "../b"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-flags=-L bar");
+            }
+        "#)
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("b/build.rs", "bad file")
+        .file(".cargo/config", format!(r#"
+            [target.{}.foo]
+            rustc-flags = "-L foo"
+        "#, target).as_slice());
+
+    assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} a v0.5.0 (file://[..])
+{running} `rustc build.rs [..]`
+{compiling} b v0.5.0 (file://[..])
+{running} `rustc [..] --crate-name b [..]-L foo[..]`
+{running} `[..]a-[..]build-script-build`
+{running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc [..] --crate-name foo [..] -L bar[..]-L foo[..]`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})

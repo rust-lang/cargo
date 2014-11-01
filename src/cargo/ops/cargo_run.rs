@@ -22,7 +22,8 @@ pub fn run(manifest_path: &Path,
             LibTarget(_) => false,
         };
         let matches_name = name.as_ref().map_or(true, |n| n.as_slice() == a.get_name());
-        matches_kind && matches_name && a.get_profile().get_env() == env
+        matches_kind && matches_name && a.get_profile().get_env() == env &&
+            !a.get_profile().is_custom_build()
     });
     let bin = try!(bins.next().require(|| {
         human("a bin target must be available for `cargo run`")

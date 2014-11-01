@@ -236,7 +236,9 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             _ => format!("custom build commands"),
         };
         let dirty = proc(desc_tx: Sender<String>) {
-            desc_tx.send_opt(desc).ok();
+            if desc.len() > 0 {
+                desc_tx.send_opt(desc).ok();
+            }
             for cmd in build_cmds.into_iter() { try!(cmd(desc_tx.clone())) }
             dirty(desc_tx)
         };
