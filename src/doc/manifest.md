@@ -32,7 +32,7 @@ your Rust code, for example. More information can be found in the building
 non-rust code [guide][2]
 
 [1]: http://doc.rust-lang.org/rust.html#external-blocks
-[2]: native-build.html
+[2]: build-script.html
 
 ```toml
 [package]
@@ -341,7 +341,7 @@ the `target` directory.
 # Examples
 
 Files located under `examples` are example uses of the functionality
-provided by the library.  When compiled, they are placed in the 
+provided by the library.  When compiled, they are placed in the
 `target/examples` directory.
 
 They must compile as executables (with `main.rs`) and load in the
