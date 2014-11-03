@@ -72,7 +72,7 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
                            sources: &'a SourceMap,
-                           config: &'a mut Config<'a>)
+                           config: &'a Config<'a>)
                            -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
@@ -405,6 +405,10 @@ fn build_base_args(cx: &Context,
                          .rpath(root_profile.get_rpath())
     }
 
+    if profile.is_plugin() {
+        cmd = cmd.arg("-C").arg("prefer-dynamic");
+    }
+
     if profile.get_opt_level() != 0 {
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
@@ -474,8 +478,10 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
         }
 
         cmd = opt(cmd, "--target", "", cx.config.target());
-        cmd = opt(cmd, "-C", "ar=", cx.config.ar());
-        cmd = opt(cmd, "-C", "linker=", cx.config.linker());
+        cmd = opt(cmd, "-C", "ar=", cx.config.ar().as_ref()
+                                             .map(|s| s.as_slice()));
+        cmd = opt(cmd, "-C", "linker=", cx.config.linker().as_ref()
+                                                 .map(|s| s.as_slice()));
     }
 
     return cmd;

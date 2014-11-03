@@ -1,6 +1,4 @@
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::collections::hashmap::{Values, MutEntries};
+use std::collections::hash_map::{HashMap, Values, MutEntries};
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use std::iter;
@@ -185,7 +183,7 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(&self, config: &'a mut Config) -> Box<Source+'a> {
+    pub fn load<'a>(&self, config: &'a Config) -> Box<Source+'a> {
         log!(5, "loading SourceId; {}", self);
         match self.inner.kind {
             GitKind(..) => box GitSource::new(self, config) as Box<Source+'a>,
@@ -319,17 +317,18 @@ impl<S: hash::Writer> hash::Hash<S> for SourceId {
     }
 }
 
-pub struct SourceMap<'a> {
-    map: HashMap<SourceId, Box<Source+'a>>
+pub struct SourceMap<'src> {
+    map: HashMap<SourceId, Box<Source+'src>>
 }
 
-pub type Sources<'a> = Values<'a, SourceId, Box<Source+'a>>;
-pub type SourcesMut<'a> = iter::Map<'static, (&'a SourceId, &'a mut Box<Source+'a>),
-                                    &'a mut Source+'a,
-                                    MutEntries<'a, SourceId, Box<Source+'a>>>;
+pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
+pub type SourcesMut<'a, 'src> = iter::Map<'static, (&'a SourceId,
+                                                  &'a mut Box<Source+'src>),
+                                    &'a mut Source+'src,
+                                    MutEntries<'a, SourceId, Box<Source+'src>>>;
 
-impl<'a> SourceMap<'a> {
-    pub fn new() -> SourceMap<'a> {
+impl<'src> SourceMap<'src> {
+    pub fn new() -> SourceMap<'src> {
         SourceMap {
             map: HashMap::new()
         }
@@ -339,27 +338,27 @@ impl<'a> SourceMap<'a> {
         self.map.contains_key(id)
     }
 
-    pub fn get(&self, id: &SourceId) -> Option<&Source+'a> {
+    pub fn get(&self, id: &SourceId) -> Option<&Source+'src> {
         let source = self.map.find(id);
 
         source.map(|s| {
-            let s: &Source+'a = &**s;
+            let s: &Source+'src = &**s;
             s
         })
     }
 
-    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source+'a> {
+    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source+'src> {
         self.map.find_mut(id).map(|s| {
-            let s: &mut Source+'a = &mut **s;
+            let s: &mut Source+'src = &mut **s;
             s
         })
     }
 
-    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source+'a> {
+    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source+'src> {
         self.get(pkg_id.get_source_id())
     }
 
-    pub fn insert(&mut self, id: &SourceId, source: Box<Source+'a>) {
+    pub fn insert(&mut self, id: &SourceId, source: Box<Source+'src>) {
         self.map.insert(id.clone(), source);
     }
 
@@ -367,27 +366,27 @@ impl<'a> SourceMap<'a> {
         self.map.len()
     }
 
-    pub fn sources(&'a self) -> Sources<'a> {
+    pub fn sources<'a>(&'a self) -> Sources<'a, 'src> {
         self.map.values()
     }
 
-    pub fn sources_mut(&'a mut self) -> SourcesMut<'a> {
-        self.map.iter_mut().map(|(_, v)| { let s: &mut Source+'a = &mut **v; s })
+    pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
+        self.map.iter_mut().map(|(_, v)| &mut **v)
     }
 }
 
 /// List of `Source` implementors. `SourceSet` itself implements `Source`.
-pub struct SourceSet<'a> {
-    sources: Vec<Box<Source+'a>>
+pub struct SourceSet<'src> {
+    sources: Vec<Box<Source+'src>>
 }
 
-impl<'a> SourceSet<'a> {
-    pub fn new(sources: Vec<Box<Source+'a>>) -> SourceSet<'a> {
+impl<'src> SourceSet<'src> {
+    pub fn new(sources: Vec<Box<Source+'src>>) -> SourceSet<'src> {
         SourceSet { sources: sources }
     }
 }
 
-impl<'a> Registry for SourceSet<'a> {
+impl<'src> Registry for SourceSet<'src> {
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
 
@@ -399,7 +398,7 @@ impl<'a> Registry for SourceSet<'a> {
     }
 }
 
-impl<'a> Source for SourceSet<'a> {
+impl<'src> Source for SourceSet<'src> {
     fn update(&mut self) -> CargoResult<()> {
         for source in self.sources.iter_mut() {
             try!(source.update());

@@ -1,4 +1,5 @@
-use std::collections::hashmap::{HashMap, HashSet, Occupied, Vacant};
+use std::collections::HashSet;
+use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
@@ -57,7 +58,7 @@ type Message = (PackageId, TargetStage, Freshness, CargoResult<()>);
 
 impl<'a, 'b> JobQueue<'a, 'b> {
     pub fn new(resolve: &'a Resolve, packages: &'a PackageSet,
-               config: &mut Config) -> JobQueue<'a, 'b> {
+               config: &Config) -> JobQueue<'a, 'b> {
         let (tx, rx) = channel();
         JobQueue {
             pool: TaskPool::new(config.jobs()),
@@ -98,7 +99,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, config: &mut Config) -> CargoResult<()> {
+    pub fn execute(&mut self, config: &Config) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
 
         // Iteratively execute the dependency graph. Each turn of this loop will
@@ -154,7 +155,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     /// freshness of all upstream dependencies. This function will schedule all
     /// work in `jobs` to be executed.
     fn run(&mut self, pkg: &'a Package, stage: TargetStage, fresh: Freshness,
-           jobs: Vec<(Job, Freshness)>, config: &mut Config) -> CargoResult<()> {
+           jobs: Vec<(Job, Freshness)>, config: &Config) -> CargoResult<()> {
         let njobs = jobs.len();
         let amt = if njobs == 0 {1} else {njobs};
         let id = pkg.get_package_id().clone();
