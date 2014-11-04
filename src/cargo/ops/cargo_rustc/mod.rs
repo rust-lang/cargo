@@ -582,6 +582,15 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
 
+    let has_build_cmd = package.get_targets().iter().any(|t| {
+        t.get_profile().is_custom_build()
+    });
+    cmd = cmd.env("OUT_DIR", if has_build_cmd {
+        Some(layout.build_out(package))
+    } else {
+        None
+    });
+
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
     // OLD-BUILD: to-remove

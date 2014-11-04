@@ -753,3 +753,42 @@ test!(output_separate_lines {
 {running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
+
+test!(code_generation {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/main.rs", r#"
+            include!(concat!(env!("OUT_DIR"), "/hello.rs"))
+
+            fn main() {
+                println!("{}", message());
+            }
+        "#)
+        .file("build.rs", r#"
+            use std::os;
+            use std::io::File;
+
+            fn main() {
+                let dst = Path::new(os::getenv("OUT_DIR").unwrap());
+                let mut f = File::create(&dst.join("hello.rs")).unwrap();
+                f.write_str("
+                    pub fn message() -> &'static str {
+                        \"Hello, World!\"
+                    }
+                ").unwrap();
+            }
+        "#);
+    assert_that(p.cargo_process("run"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `target[..]foo`
+Hello, World!
+", compiling = COMPILING, running = RUNNING).as_slice()));
+})
