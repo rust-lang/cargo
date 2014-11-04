@@ -2,7 +2,6 @@ use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
-use std::os;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
@@ -173,13 +172,9 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         if target.get_profile().is_custom_build() {
             // Custom build commands that are for libs that are overridden are
             // skipped entirely
-            match pkg.get_manifest().get_links() {
-                Some(lib) => {
-                    if cx.native_libs.lock().contains_key_equiv(lib) {
-                        continue
-                    }
-                }
-                None => {}
+            if pkg.get_manifest().get_links().is_some() &&
+               cx.build_state.outputs.lock().contains_key(pkg.get_package_id()) {
+                continue
             }
             let (dirty, fresh, freshness) =
                     try!(custom_build::prepare(pkg, target, cx));
@@ -343,17 +338,20 @@ fn rustc(package: &Package, target: &Target,
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
 
         // Prepare the native lib state (extra -L and -l flags)
-        let native_libs = cx.native_libs.clone();
+        let build_state = cx.build_state.clone();
         let mut native_lib_deps = Vec::new();
+        let current_id = package.get_package_id().clone();
+        let has_custom_build = package.get_targets().iter().any(|t| {
+            t.get_profile().is_custom_build()
+        });
 
         // FIXME: traverse build dependencies and add -L and -l for an
         // transitive build deps.
         if !target.get_profile().is_custom_build() {
             each_dep(package, cx, |dep| {
-                let primary = package.get_package_id() == dep.get_package_id();
-                match dep.get_manifest().get_links() {
-                    Some(name) => native_lib_deps.push((name.to_string(), primary)),
-                    None => {}
+                if dep.get_manifest().get_links().is_some() ||
+                   (*dep.get_package_id() == current_id && has_custom_build) {
+                    native_lib_deps.push(dep.get_package_id().clone());
                 }
             });
         }
@@ -364,13 +362,13 @@ fn rustc(package: &Package, target: &Target,
             // Only at runtime have we discovered what the extra -L and -l
             // arguments are for native libraries, so we process those here.
             {
-                let native_libs = native_libs.lock();
-                for &(ref lib, primary) in native_lib_deps.iter() {
-                    let output = &(*native_libs)[*lib];
+                let build_state = build_state.outputs.lock();
+                for id in native_lib_deps.iter() {
+                    let output = &(*build_state)[*id];
                     for path in output.library_paths.iter() {
                         rustc = rustc.arg("-L").arg(path);
                     }
-                    if primary {
+                    if *id == current_id {
                         for name in output.library_links.iter() {
                             rustc = rustc.arg("-l").arg(name.as_slice());
                         }
@@ -490,7 +488,7 @@ fn build_base_args(cx: &Context,
                          .rpath(root_profile.get_rpath())
     }
 
-    if profile.is_plugin() {
+    if profile.is_for_host() {
         cmd = cmd.arg("-C").arg("prefer-dynamic");
     }
 

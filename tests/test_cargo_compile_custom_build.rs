@@ -668,7 +668,8 @@ test!(build_cmd_with_a_build_cmd {
     --out-dir [..]target[..]deps --dep-info [..]fingerprint[..]dep-lib-a \
     -L [..]target[..]deps -L [..]target[..]deps`
 {compiling} foo v0.5.0 (file://[..])
-{running} `rustc build.rs --crate-name build-script-build --crate-type bin -g \
+{running} `rustc build.rs --crate-name build-script-build --crate-type bin \
+    -C prefer-dynamic -g \
     --out-dir [..]build[..]foo-[..] --dep-info [..]fingerprint[..]dep-[..] \
     -L [..]target -L [..]target[..]deps \
     --extern a=[..]liba-[..].rlib`
@@ -744,7 +745,7 @@ test!(output_separate_lines {
             }
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0)
+                execs().with_status(101)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..]`

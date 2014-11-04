@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
+use std::sync::Mutex;
 
-use core::{Package, Target};
+use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, CargoError, human};
 use util::{internal, ChainError, Require};
 
@@ -20,6 +22,10 @@ pub struct BuildOutput {
     pub library_links: Vec<String>,
     /// Metadata to pass to the immediate dependencies
     pub metadata: Vec<(String, String)>,
+}
+
+pub struct BuildState {
+    pub outputs: Mutex<HashMap<PackageId, BuildOutput>>,
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
@@ -40,7 +46,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
     // Start preparing the process to execute, starting out with some
     // environment variables.
     let profile = target.get_profile();
-    let mut p = super::process(to_exec, pkg, target, cx)
+    let mut p = try!(super::process(to_exec, pkg, target, cx))
                      .env("OUT_DIR", Some(&build_output))
                      .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
                                                         .dir_path()
@@ -74,13 +80,15 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
             !t.get_profile().is_custom_build()
         }).unwrap();
         cx.dep_targets(pkg, non_build_target).iter().filter_map(|&(pkg, _)| {
-            pkg.get_manifest().get_links()
-        }).map(|s| s.to_string()).collect::<Vec<_>>()
+            pkg.get_manifest().get_links().map(|links| {
+                (links.to_string(), pkg.get_package_id().clone())
+            })
+        }).collect::<Vec<_>>()
     };
-    let lib_name = pkg.get_manifest().get_links().map(|s| s.to_string());
     let pkg_name = pkg.to_string();
-    let native_libs = cx.native_libs.clone();
-    let all = (lib_name.clone(), pkg_name.clone(), native_libs.clone(),
+    let build_state = cx.build_state.clone();
+    let id = pkg.get_package_id().clone();
+    let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                script_output.clone(), old_build_output.clone(),
                build_output.clone());
 
@@ -109,11 +117,11 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
         // along to this custom build command.
         let mut p = p;
         {
-            let native_libs = native_libs.lock();
-            for dep in lib_deps.iter() {
-                for &(ref key, ref value) in (*native_libs)[*dep].metadata.iter() {
+            let build_state = build_state.outputs.lock();
+            for &(ref name, ref id) in lib_deps.iter() {
+                for &(ref key, ref value) in (*build_state)[*id].metadata.iter() {
                     p = p.env(format!("DEP_{}_{}",
-                                      super::envify(dep.as_slice()),
+                                      super::envify(name.as_slice()),
                                       super::envify(key.as_slice())).as_slice(),
                               Some(value.as_slice()));
                 }
@@ -139,10 +147,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
             human("build script output was not valid utf-8")
         }));
         let build_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
-        match lib_name {
-            Some(name) => assert!(native_libs.lock().insert(name, build_output)),
-            None => {}
-        }
+        build_state.outputs.lock().insert(id, build_output);
 
         try!(File::create(&script_output.join("output"))
                   .write_str(output).map_err(|e| {
@@ -166,7 +171,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
     let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
     let fresh = proc(tx) {
-        let (lib_name, pkg_name, native_libs, script_output,
+        let (id, pkg_name, build_state, script_output,
              old_build_output, build_output) = all;
         let new_loc = script_output.join("output");
         try!(fs::rename(&old_script_output.join("output"), &new_loc));
@@ -177,15 +182,33 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
         let contents = try!(f.read_to_string());
         let output = try!(BuildOutput::parse(contents.as_slice(),
                                              pkg_name.as_slice()));
-        match lib_name {
-            Some(name) => assert!(native_libs.lock().insert(name, output)),
-            None => {}
-        }
+        build_state.outputs.lock().insert(id, output);
 
         fresh(tx)
     };
 
     Ok((dirty, fresh, freshness))
+}
+
+impl BuildState {
+    pub fn new(overrides: HashMap<String, BuildOutput>,
+               packages: &PackageSet) -> BuildState {
+        let mut sources = HashMap::new();
+        for package in packages.iter() {
+            match package.get_manifest().get_links() {
+                Some(links) => {
+                    sources.insert(links.to_string(),
+                                   package.get_package_id().clone());
+                }
+                None => {}
+            }
+        }
+        let mut outputs = HashMap::new();
+        for (name, output) in overrides.into_iter() {
+            outputs.insert(sources[name].clone(), output);
+        }
+        BuildState { outputs: Mutex::new(outputs) }
+    }
 }
 
 impl BuildOutput {
