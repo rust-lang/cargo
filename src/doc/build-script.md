@@ -18,13 +18,16 @@ build = "build.rs"
 
 The Rust file designated by the `build` command (relative to the package root)
 will be compiled and invoked before anything else is compiled in the package,
-allowing your Rust code to depend on the built or generated artifacts. For
-example, this script could perform any number of the following actions:
+allowing your Rust code to depend on the built or generated artifacts. Note
+that there is no default value for `build`, it must be explicitly specified if
+required.
 
-* Build a bundled C library.
-* Find a C library on the host system.
-* Generate a Rust module from a specification.
-* Perform any platform-specific configuration neeeded for the crate.
+Some example use cases of the build command are:
+
+* Building a bundled C library.
+* Finding a C library on the host system.
+* Generating a Rust module from a specification.
+* Performing any platform-specific configuration neeeded for the crate.
 
 Each of these use cases will be detailed in full below to give examples of how
 the build command works.
@@ -38,7 +41,8 @@ all passed in the form of environment variables:
               inside the build directory for the package being built, and it is
               unique for the package in question.
 * `TARGET` - the target triple that is being compiled for. Native code should be
-             compiled for this triple.
+             compiled for this triple. Some more information about target
+             triples can be found in [clang's own documentation][clang].
 * `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
                be useful to pass a `-j` parameter to a system like `make`.
 * `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
@@ -62,6 +66,7 @@ directory is the source directory of the build script's package.
 
 [profile]: manifest.html#the-[profile.*]-sections
 [links]: #the-links-manifest-key
+[clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 
 ## Outputs of the Build Script
 
@@ -97,7 +102,7 @@ git = "https://github.com/your-packages/foo"
 
 The build script **does not** have access to the dependencies listed in the
 `dependencies` or `dev-dependencies` section (they're not built yet!). All build
-dependencies also not be available to the package itself unless explicitly
+dependencies will also not be available to the package itself unless explicitly
 stated as so.
 
 ## The `links` Manifest Key
@@ -123,17 +128,20 @@ system of passing metadata between package build scripts.
 
 Primarily, Cargo requires that there is at most one package per `links` value.
 In other words, it's forbidden to have two packages link to the same native
-library.
+library. Note, however, that there are [conventions in place][star-sys] to
+alleviate this.
+
+[star-sys]: #*-sys-packages
 
 As mentioned above in the output format, each build script can generate an
 arbitrary set of metadata in the form of key-value pairs. This metadata is
-passed to the build scripts of **dependant** packages. For example, if `libbar`
+passed to the build scripts of **dependent** packages. For example, if `libbar`
 depends on `libfoo`, then if `libfoo` generates `key=value` as part of its
 metadata, then the build script of `libbar` will have the environment variables
 `DEP_FOO_KEY=value`.
 
-Note that metadata is only passed to immediate dependants, not transitive
-dependants. The motivation for this metadata passing is outlined in the linking
+Note that metadata is only passed to immediate dependents, not transitive
+dependents. The motivation for this metadata passing is outlined in the linking
 to system libraries case study below.
 
 ## Overriding Build Scripts
@@ -165,8 +173,8 @@ instead be used.
 # Case study: Code generation
 
 Some Cargo packages need to have code generated just before they are compiled
-for various reasons. Here we'll walk through a dependency which uses a parser
-generator to generate a parser from a grammar.
+for various reasons. Here we'll walk through a simple example which generates a
+library call as part of the build script.
 
 First, let's take a look at the directory structure of this package:
 
@@ -175,74 +183,71 @@ First, let's take a look at the directory structure of this package:
 ├── Cargo.toml
 ├── build.rs
 └── src
-    ├── lang.grm
-    └── lib.rs
+    └── main.rs
 
-1 directory, 4 files
+1 directory, 3 files
 ```
 
-Here we can see that we have a `build.rs` build script, our ficticious language
-definition in `lang.grm`, and our library in `lib.rs`. Next, let's take a look
-at the manifest:
+Here we can see that we have a `build.rs` build script and our binary in
+`main.rs`. Next, let's take a look at the manifest:
 
 ```toml
 # Cargo.toml
 
 [package]
 
-name = "my-awesome-parser"
+name = "hello-from-generated-code"
 version = "0.0.1"
 authors = ["you@example.com"]
 build = "build.rs"
-
-[build-dependencies.parser_generator]
-git = "https://github.com/parser_generator/parser_generator"
 ```
 
-Here we can see we've got a build dependency on the parser generator we're
-using as well as a declaration of the build script itself. Let's see what's
-inside the build script:
+Here we can se we've got a build script specified which we'll use to generate
+some code. Let's see what's inside the build script:
 
 ```
 // build.rs
 
-extern crate parser_generator;
-
 use std::os;
+use std::io::File;
 
 fn main() {
     let dst = Path::new(os::getenv("OUT_DIR").unwrap());
-    parser_generator::generate(&Path::new("src/lang.grm"),
-                               &dst.join("grammar.rs"));
+    let mut f = File::create(&dst.join("hello.rs")).unwrap();
+    f.write_str("
+        pub fn message() -> &'static str {
+            \"Hello, World!\"
+        }
+    ").unwrap();
 }
-
-// Assume that the `parser_generator` crate has a function that looks like:
-//
-// pub fn generate(input: &Path, output: &Path) { /* ... */ }
 ```
 
-There's a few things going on here:
+There's a couple of points of note here:
 
-* The script links to the `parser_generator` crate from the
-  `build-dependencies` section of the manifest.
-* The script uses the `CARGO_MANIFEST_DIR` and `OUT_DIR` environment variables
-  to discover where the input and ouput files should be located.
-* This script is relatively simple as it just invokes the parser generator's
-  helper `generate` function to generate a Rust module.
+* The script uses the `OUT_DIR` environment variable to discover where the ouput
+  files should be located. It can use the process's current working directory to
+  find where the input files should be located, but in this case we don't have
+  any input files.
+* This script is relatively simple as it just writes out a small generated file.
+  One could imagine that other more fanciful operations could take place such as
+  generating a Rust module from a C header file or another language definition,
+  for example.
 
 Next, let's peek at the library itself:
 
 ```
-// src/lib.rs
+// src/main.rs
 
-mod grammar {
-    include!(concat!(env!("OUT_DIR"), "/grammar.rs"))
+include!(concat!(env!("OUT_DIR"), "/hello.rs"))
+
+fn main() {
+    println!("{}", message());
 }
 ```
 
 This is where the real magic happens. The library is using the rustc-defined
 `include!` macro in combination with the `concat!` and `env!` macros to include
-the generated file (`grammar.rs`) into the crate's compilation.
+the generated file (`mod.rs`) into the crate's compilation.
 
 Using the structure shown here, crates can include any number of generated files
 from the build script itself. We've also seen a brief example of how a build
@@ -335,16 +340,16 @@ portable, and standardized. For example, the build script could be written as:
 ```rust
 // build.rs
 
-// Bring in a dependency on an externally maintained `gcc` package which manages
+// Bring in a dependency on an externally maintained `cc` package which manages
 // invoking the C compiler.
-extern crate gcc;
+extern crate cc;
 
 fn main() {
-    gcc::compile_library("libhello.a", &["src/hello.c"]).unwrap();
+    cc::compile_library("libhello.a", &["src/hello.c"]).unwrap();
 }
 ```
 
-This example is a little hand-wavy, but we can assume that the `gcc` crate
+This example is a little hand-wavy, but we can assume that the `cc` crate
 performs tasks such as:
 
 * It invokes the appropriate compiler (MSVC for windows, `gcc` for MinGW, `cc`
@@ -358,7 +363,7 @@ performs tasks such as:
 
 here we can start to see some of the major benefits of farming as much
 functionality as possible out to common build dependencies rather than
-duplicating logic across all build sripts!
+duplicating logic across all build scripts!
 
 Back to the case study though, let's take a quick look at the contents of the
 `src` directory:
@@ -387,7 +392,7 @@ fn main() {
 ```
 
 And there we go! This should complete our example of building some C code from a
-cargo package using the build script itself. This also shows why using a build
+Cargo package using the build script itself. This also shows why using a build
 dependency can be crucial in many situations and even much more concise!
 
 # Case study: Linking to system libraries
