@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use core::PackageSet;
 use util::{CargoResult, human};
 
-// Returns a mapping of the root package plus its immediate dependencies to
-// where the compiled libraries are all located.
+// Validate that there are no duplicated native libraries among packages and
+// that all packages with `links` also have a build script.
 pub fn validate(deps: &PackageSet) -> CargoResult<()> {
     let mut map = HashMap::new();
 

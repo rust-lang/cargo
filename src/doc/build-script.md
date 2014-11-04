@@ -407,6 +407,50 @@ performing this in a platform-agnostic fashion, and the purpose of a build
 script is again to farm out as much of this as possible to make this as easy as
 possible for consumers.
 
+As an example to follow, let's take a look at one of [Cargo's own
+dependencies][git2-rs], [libgit2][libgit2]. This library has a number of
+constraints:
+
+[git2-rs]: https://github.com/alexcrichton/git2-rs/tree/master/libgit2-sys
+[libgit2]: https://github.com/libgit2/libgit2
+
+* It has an optional dependency on OpenSSL on Unix to implement the https
+  transport.
+* It has an optional dependency on libssh2 on all platforms to implement the ssh
+  transport.
+* It is often not installed on all systems by default.
+* It can be built from source using `cmake`.
+
+To visualize what's going on here, let's take a look at the manifest for the
+relevant Cargo package.
+
+```toml
+[package]
+name = "libgit2-sys"
+version = "0.0.1"
+authors = ["..."]
+links = "git2"
+build = "build.rs"
+
+[dependencies.libssh2-sys]
+git = "https://github.com/alexcrichton/ssh2-rs"
+
+[target.x86_64-unknown-linux-gnu.dependencies.openssl-sys]
+git = "https://github.com/alexcrichton/openssl-sys"
+
+# ...
+```
+
+As the above manifests show, we've got a `build` script specified, but it's
+worth noting that this example has a `links` entry which indicates that the
+crate (`libgit2-sys`) links to the `git2` native library.
+
+Here we also see the unconditional dependency on `libssh2` via the
+`libssh2-sys` crate, as well as a platform-specific dependency on `openssl-sys`
+for unix (other variants elided for now). It may seem a little counterintuitive
+to express *C dependencies* in the *Cargo manifest*, but this is actually using
+one of Cargo's conventions in this space.
+
 ## `*-sys` Packages
 
 To alleviate linking to system libraries, Cargo has a *convention* of package
@@ -428,3 +472,43 @@ convention of native-library-related packages:
 * A common dependency allows centralizing logic on discovering `libfoo` itself
   (or building it from source).
 * These dependencies are easily overridable.
+
+## Building libgit2
+
+Now that we've got libgit2's dependencies sorted out, we need to actually write
+the build script. We're not going to look at specific snippets of code here and
+instead only take a look at the high-level details of the build script of
+`libgit2-sys`. This is not recommending all packages follow this strategy, but
+rather just outlining one specific strategy.
+
+The first step of the build script should do is to query whether libgit2 is
+already installed on the host system. To do this we'll leverage the preexisting
+tool `pkg-config` (when its available). We'll also use a `build-dependencies`
+section to refactor out all the `pkg-config` related code (or someone's already
+done that!).
+
+If `pkg-config` failed to find libgit2, or if `pkg-config` just wasn't
+installed, the next step is to build libgit2 from bundled source code
+(distributed as part of `libgit2-sys` itself). There are a few nuances when
+doing so that we need to take into account, however:
+
+* The build system of libgit2, `cmake`, needs to be able to find libgit2's
+  optional dependency of libssh2. We're sure we've already built it (it's a
+  Cargo dependency), we just need to communicate this information. To do this
+  we leverage the metadata format to communicate information between build
+  scripts. In this example the libssh2 package printed out `cargo:root=...` to
+  tell us where libssh2 is installed at, and we can then pass this along to
+  cmake with the `CMAKE_PREFIX_PATH` environment variable.
+
+* We'll need to handle some `CFLAGS` values when compiling C code (and tell
+  `cmake` about this). Some flags we may want to pass are `-m64` for 64-bit
+  code, `-m32` for 32-bit code, or `-fPIC` for 64-bit code as well.
+
+* Finally, we'll invoke `cmake` to place all output into the `OUT_DIR`
+  environment variable, and then we'll print the necessary metadata to instruct
+  rustc how to link to libgit2.
+
+Most of the functionality of this build script is easily refactorable into
+common dependencies, so our build script isn't quite as intimidating as this
+descriptions! In reality it's expected that build scripts are quite succinct by
+farming logic such as above to build dependencies.
