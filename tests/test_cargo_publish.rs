@@ -63,7 +63,7 @@ test!(simple {
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f).unwrap();
-    assert_eq!(rdr.header().filename(), Some(b"foo-0.0.1.tar.gz"));
+    assert_eq!(rdr.header().filename(), Some(b"foo-0.0.1.crate"));
     let inner = MemReader::new(rdr.read_to_end().unwrap());
     let ar = Archive::new(inner);
     for file in ar.files().unwrap() {

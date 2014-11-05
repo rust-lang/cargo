@@ -1,4 +1,4 @@
-use std::io::{fs, File};
+use std::io::{fs, File, USER_DIR};
 use std::io::fs::PathExtensions;
 use std::path;
 
@@ -30,8 +30,9 @@ pub fn package(manifest_path: &Path,
     try!(src.update());
     let pkg = try!(src.get_root_package());
 
-    let filename = format!("{}-{}.tar.gz", pkg.get_name(), pkg.get_version());
-    let dst = pkg.get_manifest_path().dir_path().join(filename);
+    let filename = format!("package/{}-{}.crate", pkg.get_name(),
+                           pkg.get_version());
+    let dst = pkg.get_absolute_target_dir().join(filename);
     if dst.exists() { return Ok(dst) }
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
@@ -55,6 +56,9 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
         return Err(human(format!("destination already exists: {}",
                                  dst.display())))
     }
+
+    try!(fs::mkdir_recursive(&dst.dir_path(), USER_DIR))
+
     let tmpfile = try!(File::create(dst));
 
     // Prepare the encoder and its header
@@ -63,9 +67,10 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
 
     // Put all package files into a compressed archive
     let ar = Archive::new(encoder);
+    let root = pkg.get_manifest_path().dir_path();
     for file in try!(src.list_files(pkg)).iter() {
         if file == dst { continue }
-        let relative = file.path_relative_from(&dst.dir_path()).unwrap();
+        let relative = file.path_relative_from(&root).unwrap();
         let relative = try!(relative.as_str().require(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
@@ -89,14 +94,14 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
     try!(shell.status("Verifying", pkg));
 
     let f = try!(GzDecoder::new(try!(File::open(tar))));
-    let dst = pkg.get_root().join("target/package");
+    let dst = pkg.get_root().join(format!("target/package/{}-{}",
+                                          pkg.get_name(), pkg.get_version()));
     if dst.exists() {
         try!(fs::rmdir_recursive(&dst));
     }
     let mut archive = Archive::new(f);
-    try!(archive.unpack(&dst));
-    let manifest_path = dst.join(format!("{}-{}/Cargo.toml", pkg.get_name(),
-                                         pkg.get_version()));
+    try!(archive.unpack(&dst.dir_path()));
+    let manifest_path = dst.join("Cargo.toml");
 
     // When packages are uploaded to the registry, all path dependencies are
     // implicitly converted to registry-based dependencies, so we rewrite those
@@ -108,8 +113,7 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
     });
     let mut new_manifest = pkg.get_manifest().clone();
     new_manifest.set_summary(new_summary);
-    let new_pkg = Package::new(new_manifest,
-                               &manifest_path,
+    let new_pkg = Package::new(new_manifest, &manifest_path,
                                pkg.get_package_id().get_source_id());
 
     // Now that we've rewritten all our path dependencies, compile it!

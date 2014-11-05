@@ -209,7 +209,7 @@ version required: ^0.0.1
 {updating} registry `[..]`
 {downloading} notyet v0.0.1 (the package registry)
 {compiling} notyet v0.0.1 (the package registry)
-{compiling} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir}[..])
 ",
     packaging = PACKAGING,
     verifying = VERIFYING,
