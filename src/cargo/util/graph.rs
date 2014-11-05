@@ -1,7 +1,8 @@
 use std::fmt;
 use std::hash::Hash;
 use std::collections::{HashMap, HashSet};
-use std::collections::hashmap::{Keys, Occupied, SetItems, Vacant};
+use std::collections::hash_map::{Keys, Occupied, Vacant};
+use std::collections::hash_set::SetItems;
 
 pub struct Graph<N> {
     nodes: HashMap<N, HashSet<N>>

@@ -5,7 +5,7 @@
 //! it to figure out when a dependency should be built.
 
 use std::collections::{HashMap, HashSet};
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::hash_map::{Occupied, Vacant};
 use std::hash::Hash;
 
 pub struct DependencyQueue<K, V> {

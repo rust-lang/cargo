@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet};
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::HashSet;
+use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::str;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
@@ -16,8 +16,8 @@ pub enum PlatformRequirement {
     PlatformPluginAndTarget,
 }
 
-pub struct Context<'a, 'b> {
-    pub config: &'b mut Config<'b>,
+pub struct Context<'a, 'b: 'a> {
+    pub config: &'b Config<'b>,
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
@@ -33,9 +33,9 @@ pub struct Context<'a, 'b> {
     requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
 }
 
-impl<'a, 'b> Context<'a, 'b> {
-    pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap,
-               deps: &'a PackageSet, config: &'b mut Config<'b>,
+impl<'a, 'b: 'a> Context<'a, 'b> {
+    pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap<'b>,
+               deps: &'a PackageSet, config: &'b Config<'b>,
                host: Layout, target: Option<Layout>,
                root_pkg: &Package)
                -> CargoResult<Context<'a, 'b>> {
@@ -95,8 +95,12 @@ impl<'a, 'b> Context<'a, 'b> {
             Some((dylib_parts[0].to_string(), dylib_parts[1].to_string()))
         };
 
-        let exe_suffix = lines.next().unwrap().trim()
-                              .split('-').skip(1).next().unwrap().to_string();
+        let exe_suffix = if error.contains("dropping unsupported crate type `bin`") {
+            String::new()
+        } else {
+            lines.next().unwrap().trim()
+                 .split('-').skip(1).next().unwrap().to_string()
+        };
         Ok((dylib, exe_suffix.to_string()))
     }
 

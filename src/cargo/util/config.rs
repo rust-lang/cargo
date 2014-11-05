@@ -1,7 +1,7 @@
 use std::{fmt, os, mem};
+use std::cell::{RefCell, RefMut, Ref};
+use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::io::fs::{PathExtensions, File};
-use std::collections::HashMap;
-use std::collections::hashmap::{Occupied, Vacant};
 use std::string;
 
 use serialize::{Encodable,Encoder};
@@ -14,11 +14,11 @@ use util::toml as cargo_toml;
 
 pub struct Config<'a> {
     home_path: Path,
-    shell: &'a mut MultiShell,
+    shell: RefCell<&'a mut MultiShell>,
     jobs: uint,
     target: Option<string::String>,
-    linker: Option<string::String>,
-    ar: Option<string::String>,
+    linker: RefCell<Option<string::String>>,
+    ar: RefCell<Option<string::String>>,
     rustc_version: string::String,
     /// The current host and default target of rustc
     rustc_host: string::String,
@@ -39,11 +39,11 @@ impl<'a> Config<'a> {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
-            shell: shell,
+            shell: RefCell::new(shell),
             jobs: jobs.unwrap_or(os::num_cpus()),
             target: target,
-            ar: None,
-            linker: None,
+            ar: RefCell::new(None),
+            linker: RefCell::new(None),
             rustc_version: rustc_version,
             rustc_host: rustc_host,
         })
@@ -71,8 +71,8 @@ impl<'a> Config<'a> {
         self.home_path.join(".cargo").join("registry").join("src")
     }
 
-    pub fn shell(&mut self) -> &mut MultiShell {
-        &mut *self.shell
+    pub fn shell(&self) -> RefMut<&'a mut MultiShell> {
+        self.shell.borrow_mut()
     }
 
     pub fn jobs(&self) -> uint {
@@ -83,16 +83,16 @@ impl<'a> Config<'a> {
         self.target.as_ref().map(|t| t.as_slice())
     }
 
-    pub fn set_ar(&mut self, ar: string::String) { self.ar = Some(ar); }
-
-    pub fn set_linker(&mut self, linker: string::String) { self.linker = Some(linker); }
-
-    pub fn linker(&self) -> Option<&str> {
-        self.linker.as_ref().map(|t| t.as_slice())
+    pub fn set_ar(&self, ar: string::String) {
+        *self.ar.borrow_mut() = Some(ar);
     }
-    pub fn ar(&self) -> Option<&str> {
-        self.ar.as_ref().map(|t| t.as_slice())
+
+    pub fn set_linker(&self, linker: string::String) {
+        *self.linker.borrow_mut() = Some(linker);
     }
+
+    pub fn linker(&self) -> Ref<Option<string::String>> { self.linker.borrow() }
+    pub fn ar(&self) -> Ref<Option<string::String>> { self.ar.borrow() }
 
     /// Return the output of `rustc -v verbose`
     pub fn rustc_version(&self) -> &str {

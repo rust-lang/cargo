@@ -1,4 +1,4 @@
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::hash_map::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
 use std::io::{fs, File, USER_RWX, BufferedReader};

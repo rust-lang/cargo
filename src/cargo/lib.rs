@@ -30,6 +30,7 @@ use std::os;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
 use serialize::{Decoder, Encoder, Decodable, Encodable, json};
+use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK};
@@ -131,9 +132,7 @@ pub fn call_main_without_stdin<'a,
 fn process<'a, V: Encodable<json::Encoder<'a>, io::IoError>>(
                callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
     let mut shell = shell(true);
-    let mut args = os::args();
-    args.remove(0);
-    process_executed(callback(args.as_slice(), &mut shell), &mut shell)
+    process_executed(callback(os::args().as_slice(), &mut shell), &mut shell)
 }
 
 pub fn process_executed<'a,
@@ -222,18 +221,12 @@ pub fn version() -> String {
 fn flags_from_args<'a, T>(usage: &str, args: &[String],
                           options_first: bool) -> CliResult<T>
                           where T: Decodable<docopt::Decoder, docopt::Error> {
-    let args = args.iter().map(|a| a.as_slice()).collect::<Vec<&str>>();
-    let config = docopt::Config {
-        options_first: options_first,
-        help: true,
-        version: Some(version()),
-    };
-    let value_map = try!(docopt::docopt_args(config, args.as_slice(),
-                                             usage).map_err(|e| {
-        let code = if e.fatal() {1} else {0};
-        CliError::from_error(e, code)
-    }));
-    value_map.decode().map_err(|e| {
+    let docopt = Docopt::new(usage).unwrap()
+                                   .options_first(options_first)
+                                   .argv(args.iter().map(|s| s.as_slice()))
+                                   .help(true)
+                                   .version(Some(version()));
+    docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
         CliError::from_error(e, code)
     })

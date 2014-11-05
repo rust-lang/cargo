@@ -83,11 +83,11 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
     let user_configs = try!(config::all_configs(os::getcwd()));
     let override_ids = try!(source_ids_from_config(&user_configs,
                                                    package.get_root()));
+    let config = try!(Config::new(*shell, jobs, target.clone()));
 
     let (packages, resolve_with_overrides, sources) = {
-        let mut config = try!(Config::new(*shell, jobs, target.clone()));
         let rustc_host = config.rustc_host().to_string();
-        let mut registry = PackageRegistry::new(&mut config);
+        let mut registry = PackageRegistry::new(&config);
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
@@ -138,13 +138,12 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
     let ret = {
         let _p = profile::start("compiling");
-        let mut config = try!(Config::new(*shell, jobs, target));
-        try!(scrape_target_config(&mut config, &user_configs));
+        try!(scrape_target_config(&config, &user_configs));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
                                   &PackageSet::new(packages.as_slice()),
                                   &resolve_with_overrides, &sources,
-                                  &mut config))
+                                  &config))
     };
 
     return Ok(ret);
@@ -174,7 +173,7 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
     }).map(|p| SourceId::for_path(&p)).collect()
 }
 
-fn scrape_target_config(config: &mut Config,
+fn scrape_target_config(config: &Config,
                         configs: &HashMap<String, config::ConfigValue>)
                         -> CargoResult<()> {
     let target = match configs.find_equiv("target") {
