@@ -1,3 +1,5 @@
+use std::io::File;
+
 use support::{project, execs, cargo_dir};
 use support::{COMPILING, FRESH};
 use support::paths::PathExt;
@@ -586,4 +588,62 @@ test!(transitive_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(0));
+})
+
+test!(everything_in_the_lockfile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            f1 = ["d1/f1"]
+            f2 = ["d2"]
+
+            [dependencies.d1]
+            path = "d1"
+            [dependencies.d2]
+            path = "d2"
+            optional = true
+            [dependencies.d3]
+            path = "d3"
+            optional = true
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            f1 = []
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.2"
+            authors = []
+        "#)
+        .file("d2/src/lib.rs", "")
+        .file("d3/Cargo.toml", r#"
+            [package]
+            name = "d3"
+            version = "0.0.3"
+            authors = []
+
+            [features]
+            f3 = []
+        "#)
+        .file("d3/src/lib.rs", "");
+
+    assert_that(p.cargo_process("fetch"), execs().with_status(0));
+    let lockfile = p.root().join("Cargo.lock");
+    let lockfile = File::open(&lockfile).read_to_string().unwrap();
+    assert!(lockfile.contains(r#"name = "d1""#), "d1 not found\n{}", lockfile);
+    assert!(lockfile.contains(r#"name = "d2""#), "d2 not found\n{}", lockfile);
+    assert!(lockfile.contains(r#"name = "d3""#), "d3 not found\n{}", lockfile);
 })

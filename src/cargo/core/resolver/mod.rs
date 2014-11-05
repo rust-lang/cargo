@@ -437,6 +437,10 @@ fn build_features(s: &Summary, method: ResolveMethod)
                 try!(add_feature(s, key.as_slice(), &mut deps, &mut used,
                                  &mut visited));
             }
+            for dep in s.get_dependencies().iter().filter(|d| d.is_optional()) {
+                try!(add_feature(s, dep.get_name(), &mut deps, &mut used,
+                                 &mut visited));
+            }
         }
         ResolveRequired(_, requested_features, _, _) =>  {
             for feat in requested_features.iter() {
