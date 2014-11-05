@@ -347,13 +347,13 @@ impl Execs {
 fn lines_match(expected: &str, mut actual: &str) -> bool {
     for part in expected.split_str("[..]") {
         match actual.find_str(part) {
-            Some(i) => actual = actual.slice_from(i),
+            Some(i) => actual = actual.slice_from(i + part.len()),
             None => {
                 return false
             }
         }
     }
-    return true;
+    actual.len() == 0 || expected.ends_with("[..]")
 }
 
 struct ZipAll<T, I1, I2> {

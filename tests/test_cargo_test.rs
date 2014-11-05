@@ -36,7 +36,7 @@ test!(cargo_test_simple {
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]foo
+{} target[..]foo-[..]
 
 running 1 test
 test test_hello ... ok
@@ -127,7 +127,7 @@ test!(cargo_test_failing_test {
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
         execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
-{} target[..]foo
+{} target[..]foo-[..]
 
 running 1 test
 test test_hello ... FAILED
@@ -198,7 +198,7 @@ test bin_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{running} target[..]foo
+{running} target[..]foo[..]
 
 running 1 test
 test lib_test ... ok
@@ -413,7 +413,7 @@ test!(pass_through_command_line {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]foo
+{running} target[..]foo-[..]
 
 running 1 test
 test bar ... ok
@@ -435,7 +435,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]foo
+{running} target[..]foo-[..]
 
 running 1 test
 test foo ... ok

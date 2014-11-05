@@ -83,15 +83,15 @@ test!(plugin_to_the_max {
 })
 
 test!(plugin_with_dynamic_native_dependency {
-    let build = project("build")
+    let build = project("builder")
         .file("Cargo.toml", r#"
             [package]
-            name = "build"
+            name = "builder"
             version = "0.0.1"
             authors = []
 
             [lib]
-            name = "build"
+            name = "builder"
             crate-type = ["dylib"]
         "#)
         .file("src/main.rs", r#"
@@ -147,7 +147,7 @@ test!(plugin_with_dynamic_native_dependency {
             [lib]
             name = "bar"
             plugin = true
-        "#, build.bin("build").display()))
+        "#, build.bin("builder").display()))
         .file("bar/src/lib.rs", format!(r#"
             #![feature(plugin_registrar)]
 

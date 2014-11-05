@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
@@ -16,16 +16,19 @@ pub use self::context::Context;
 pub use self::context::{PlatformPlugin, PlatformPluginAndTarget};
 pub use self::context::{PlatformRequirement, PlatformTarget};
 pub use self::layout::{Layout, LayoutProxy};
+pub use self::custom_build::BuildOutput;
 
 mod context;
 mod compilation;
+mod custom_build;
 mod fingerprint;
 mod job;
 mod job_queue;
 mod layout;
+mod links;
 
 #[deriving(PartialEq, Eq)]
-pub enum Kind { KindPlugin, KindTarget }
+pub enum Kind { KindHost, KindTarget }
 
 /// Run `rustc` to figure out what its current version string is.
 ///
@@ -72,13 +75,16 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
                            sources: &'a SourceMap,
-                           config: &'a Config<'a>)
+                           config: &'a Config<'a>,
+                           lib_overrides: HashMap<String, BuildOutput>)
                            -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
     }
 
     debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
+
+    try!(links::validate(deps));
 
     let dest = uniq_target_dest(targets);
     let root = deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap();
@@ -88,7 +94,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
-                                   host_layout, target_layout, pkg));
+                                   host_layout, target_layout, pkg,
+                                   lib_overrides));
     let mut queue = JobQueue::new(cx.resolve, deps, cx.config);
 
     // First ensure that the destination directory exists
@@ -107,7 +114,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
         // Only compile lib targets for dependencies
         let targets = dep.get_targets().iter().filter(|target| {
-            cx.is_relevant_target(*target)
+            target.get_profile().is_custom_build() ||
+                cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
         if targets.len() == 0 && dep.get_package_id() != resolve.root() {
@@ -146,33 +154,12 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 
     // Prepare the fingerprint directory as the first step of building a package
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, KindTarget);
-    let mut init = vec![(Job::new(target1, target2, String::new()), Fresh)];
+    let mut init = vec![(Job::new(target1, target2), Fresh)];
     if cx.config.target().is_some() {
-        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindPlugin);
-        init.push((Job::new(plugin1, plugin2, String::new()), Fresh));
+        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, KindHost);
+        init.push((Job::new(plugin1, plugin2), Fresh));
     }
     jobs.enqueue(pkg, jq::StageStart, init);
-
-    // First part of the build step of a target is to execute all of the custom
-    // build commands.
-    let mut build_cmds = Vec::new();
-    for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
-        let work = try!(compile_custom(pkg, build_cmd.as_slice(), cx, i == 0));
-        build_cmds.push(work);
-    }
-    let (freshness, dirty, fresh) =
-        try!(fingerprint::prepare_build_cmd(cx, pkg));
-    let desc = match build_cmds.len() {
-        0 => String::new(),
-        1 => pkg.get_manifest().get_build()[0].to_string(),
-        _ => format!("custom build commands"),
-    };
-    let dirty = proc() {
-        for cmd in build_cmds.into_iter() { try!(cmd()) }
-        dirty()
-    };
-    jobs.enqueue(pkg, jq::StageCustomBuild, vec![(job(dirty, fresh, desc),
-                                                  freshness)]);
 
     // After the custom command has run, execute rustc for all targets of our
     // package.
@@ -180,37 +167,90 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // Each target has its own concept of freshness to ensure incremental
     // rebuilds on the *target* granularity, not the *package* granularity.
     let (mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut build_custom, mut run_custom) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
+        if target.get_profile().is_custom_build() {
+            // Custom build commands that are for libs that are overridden are
+            // skipped entirely
+            if pkg.get_manifest().get_links().is_some() &&
+               cx.build_state.outputs.lock().contains_key(pkg.get_package_id()) {
+                continue
+            }
+            let (dirty, fresh, freshness) =
+                    try!(custom_build::prepare(pkg, target, cx));
+            run_custom.push((job(dirty, fresh), freshness));
+        }
+
         let work = if target.get_profile().is_doc() {
-            let (rustdoc, desc) = try!(rustdoc(pkg, target, cx));
-            vec![(rustdoc, KindTarget, desc)]
+            let rustdoc = try!(rustdoc(pkg, target, cx));
+            vec![(rustdoc, KindTarget)]
         } else {
             let req = cx.get_requirement(pkg, target);
             try!(rustc(pkg, target, cx, req))
         };
 
-        let dst = match (target.is_lib(), target.get_profile().is_test()) {
-            (_, true) => &mut tests,
-            (true, _) => &mut libs,
-            (false, false) if target.get_profile().get_env() == "test" => &mut tests,
-            (false, false) => &mut bins,
+        let dst = match (target.is_lib(),
+                         target.get_profile().is_test(),
+                         target.get_profile().is_custom_build()) {
+            (_, _, true) => &mut build_custom,
+            (_, true, _) => &mut tests,
+            (true, _, _) => &mut libs,
+            (false, false, _) if target.get_profile().get_env() == "test" => &mut tests,
+            (false, false, _) => &mut bins,
         };
-        for (work, kind, desc) in work.into_iter() {
+        for (work, kind) in work.into_iter() {
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
-            let dirty = proc() { try!(work()); dirty() };
-            dst.push((job(dirty, fresh, desc), freshness));
+            let dirty = proc(desc_tx: Sender<String>) {
+                try!(work(desc_tx.clone()));
+                dirty(desc_tx)
+            };
+            dst.push((job(dirty, fresh), freshness));
         }
     }
+
+    if targets.iter().any(|t| t.get_profile().is_custom_build()) {
+        // New custom build system
+        jobs.enqueue(pkg, jq::StageBuildCustomBuild, build_custom);
+        jobs.enqueue(pkg, jq::StageRunCustomBuild, run_custom);
+
+    } else {
+        // Old custom build system
+        // OLD-BUILD: to-remove
+        let mut build_cmds = Vec::new();
+        for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
+            let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
+            build_cmds.push(work);
+        }
+        let (freshness, dirty, fresh) =
+            try!(fingerprint::prepare_build_cmd(cx, pkg, None));
+        let desc = match build_cmds.len() {
+            0 => String::new(),
+            1 => pkg.get_manifest().get_build()[0].to_string(),
+            _ => format!("custom build commands"),
+        };
+        let dirty = proc(desc_tx: Sender<String>) {
+            if desc.len() > 0 {
+                desc_tx.send_opt(desc).ok();
+            }
+            for cmd in build_cmds.into_iter() { try!(cmd(desc_tx.clone())) }
+            dirty(desc_tx)
+        };
+        jobs.enqueue(pkg, jq::StageBuildCustomBuild, vec![]);
+        jobs.enqueue(pkg, jq::StageRunCustomBuild, vec![(job(dirty, fresh),
+                                                         freshness)]);
+    }
+
     jobs.enqueue(pkg, jq::StageLibraries, libs);
     jobs.enqueue(pkg, jq::StageBinaries, bins);
     jobs.enqueue(pkg, jq::StageTests, tests);
     Ok(())
 }
 
-fn compile_custom(pkg: &Package, cmd: &str,
-                  cx: &Context, first: bool) -> CargoResult<Work> {
+// OLD-BUILD: to-remove
+fn compile_custom_old(pkg: &Package, cmd: &str,
+                      cx: &Context, first: bool) -> CargoResult<Work> {
     let root = cx.get_package(cx.resolve.root());
     let profile = root.get_manifest().get_targets().iter()
                       .find(|target| target.get_profile().get_env() == cx.env())
@@ -219,6 +259,9 @@ fn compile_custom(pkg: &Package, cmd: &str,
         Some(profile) => profile,
         None => return Err(internal(format!("no profile for {}", cx.env())))
     };
+    // Just need a target which isn't a custom build command
+    let target = &pkg.get_targets()[0];
+    assert!(!target.get_profile().is_custom_build());
 
     // TODO: this needs to be smarter about splitting
     let mut cmd = cmd.split(' ');
@@ -227,7 +270,7 @@ fn compile_custom(pkg: &Package, cmd: &str,
     let layout = cx.layout(pkg, KindTarget);
     let output = layout.native(pkg);
     let old_output = layout.proxy().old_native(pkg);
-    let mut p = try!(process(cmd.next().unwrap(), pkg, cx))
+    let mut p = try!(process(cmd.next().unwrap(), pkg, target, cx))
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", Some(cx.target_triple()))
@@ -240,18 +283,16 @@ fn compile_custom(pkg: &Package, cmd: &str,
     match cx.resolve.features(pkg.get_package_id()) {
         Some(features) => {
             for feat in features.iter() {
-                let feat = feat.as_slice().chars()
-                               .map(|c| c.to_uppercase())
-                               .map(|c| if c == '-' {'_'} else {c})
-                               .collect::<String>();
-                p = p.env(format!("CARGO_FEATURE_{}", feat).as_slice(), Some("1"));
+                p = p.env(format!("CARGO_FEATURE_{}",
+                                  envify(feat.as_slice())).as_slice(),
+                          Some("1"));
             }
         }
         None => {}
     }
 
 
-    for &(pkg, _) in cx.dep_targets(pkg).iter() {
+    for &(pkg, _) in cx.dep_targets(pkg, target).iter() {
         let name: String = pkg.get_name().chars().map(|c| {
             match c {
                 '-' => '_',
@@ -263,7 +304,8 @@ fn compile_custom(pkg: &Package, cmd: &str,
     }
     let pkg = pkg.to_string();
 
-    Ok(proc() {
+    Ok(proc(desc_tx: Sender<String>) {
+        desc_tx.send_opt(p.to_string()).ok();
         if first {
             try!(if old_output.exists() {
                 fs::rename(&old_output, &output)
@@ -284,57 +326,97 @@ fn compile_custom(pkg: &Package, cmd: &str,
 
 fn rustc(package: &Package, target: &Target,
          cx: &mut Context, req: PlatformRequirement)
-         -> CargoResult<Vec<(Work, Kind, String)> >{
+         -> CargoResult<Vec<(Work, Kind)> >{
     let crate_types = target.rustc_crate_types();
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
     Ok(rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
-        let desc = rustc.to_string();
         let is_path_source = package.get_package_id().get_source_id().is_path();
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
 
-        (proc() {
+        // Prepare the native lib state (extra -L and -l flags)
+        let build_state = cx.build_state.clone();
+        let mut native_lib_deps = Vec::new();
+        let current_id = package.get_package_id().clone();
+        let has_custom_build = package.get_targets().iter().any(|t| {
+            t.get_profile().is_custom_build()
+        });
+
+        // FIXME: traverse build dependencies and add -L and -l for an
+        // transitive build deps.
+        if !target.get_profile().is_custom_build() {
+            each_dep(package, cx, |dep| {
+                if dep.get_manifest().get_links().is_some() ||
+                   (*dep.get_package_id() == current_id && has_custom_build) {
+                    native_lib_deps.push(dep.get_package_id().clone());
+                }
+            });
+        }
+
+        (proc(desc_tx: Sender<String>) {
+            let mut rustc = rustc;
+
+            // Only at runtime have we discovered what the extra -L and -l
+            // arguments are for native libraries, so we process those here.
+            {
+                let build_state = build_state.outputs.lock();
+                for id in native_lib_deps.iter() {
+                    let output = &(*build_state)[*id];
+                    for path in output.library_paths.iter() {
+                        rustc = rustc.arg("-L").arg(path);
+                    }
+                    if *id == current_id {
+                        for name in output.library_links.iter() {
+                            rustc = rustc.arg("-l").arg(name.as_slice());
+                        }
+                    }
+                }
+            }
+
+            desc_tx.send_opt(rustc.to_string()).ok();
             try!(rustc.exec().chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
+
             Ok(())
-        }, kind, desc)
+
+        }, kind)
     }).collect())
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: PlatformRequirement)
                  -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
-    let base = try!(process("rustc", package, cx));
+    let base = try!(process("rustc", package, target, cx));
     let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, KindTarget);
-    let plugin_cmd = build_plugin_args(base, cx, package, target, KindPlugin);
+    let plugin_cmd = build_plugin_args(base, cx, package, target, KindHost);
     let target_cmd = try!(build_deps_args(target_cmd, target, package, cx,
                                           KindTarget));
     let plugin_cmd = try!(build_deps_args(plugin_cmd, target, package, cx,
-                                          KindPlugin));
+                                          KindHost));
 
     Ok(match req {
         PlatformTarget => vec![(target_cmd, KindTarget)],
-        PlatformPlugin => vec![(plugin_cmd, KindPlugin)],
+        PlatformPlugin => vec![(plugin_cmd, KindHost)],
         PlatformPluginAndTarget if cx.config.target().is_none() =>
             vec![(target_cmd, KindTarget)],
         PlatformPluginAndTarget => vec![(target_cmd, KindTarget),
-                                        (plugin_cmd, KindPlugin)],
+                                        (plugin_cmd, KindHost)],
     })
 }
 
 
 fn rustdoc(package: &Package, target: &Target,
-           cx: &mut Context) -> CargoResult<(Work, String)> {
+           cx: &mut Context) -> CargoResult<Work> {
     let kind = KindTarget;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
-    let rustdoc = try!(process("rustdoc", package, cx)).cwd(pkg_root.clone());
+    let rustdoc = try!(process("rustdoc", package, target, cx)).cwd(pkg_root.clone());
     let mut rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
@@ -355,7 +437,8 @@ fn rustdoc(package: &Package, target: &Target,
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();
     let desc = rustdoc.to_string();
-    Ok((proc() {
+    Ok(proc(desc_tx: Sender<String>) {
+        desc_tx.send(desc);
         if primary {
             try!(rustdoc.exec().chain_error(|| {
                 human(format!("Could not document `{}`.", name))
@@ -374,7 +457,7 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         }
         Ok(())
-    }, desc))
+    })
 }
 
 fn build_base_args(cx: &Context,
@@ -405,7 +488,7 @@ fn build_base_args(cx: &Context,
                          .rpath(root_profile.get_rpath())
     }
 
-    if profile.is_plugin() {
+    if profile.is_for_host() {
         cmd = cmd.arg("-C").arg("prefer-dynamic");
     }
 
@@ -455,12 +538,17 @@ fn build_base_args(cx: &Context,
 
 fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) -> ProcessBuilder {
-    cmd = cmd.arg("--out-dir");
-    if target.is_example() {
-        cmd = cmd.arg(cx.layout(pkg, kind).examples());
+    let out_dir = cx.layout(pkg, kind);
+    let out_dir = if target.get_profile().is_custom_build() {
+        out_dir.build(pkg)
+    } else if target.is_example() {
+        out_dir.examples().clone()
     } else {
-        cmd = cmd.arg(cx.layout(pkg, kind).root());
-    }
+        out_dir.root().clone()
+    };
+
+    cmd = cmd.arg("--out-dir");
+    cmd = cmd.arg(out_dir);
 
     let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
     cmd = cmd.arg("--dep-info").arg(dep_info_loc);
@@ -494,8 +582,18 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
 
+    let has_build_cmd = package.get_targets().iter().any(|t| {
+        t.get_profile().is_custom_build()
+    });
+    cmd = cmd.env("OUT_DIR", if has_build_cmd {
+        Some(layout.build_out(package))
+    } else {
+        None
+    });
+
     // Traverse the entire dependency graph looking for -L paths to pass for
     // native dependencies.
+    // OLD-BUILD: to-remove
     let mut dirs = Vec::new();
     each_dep(package, cx, |pkg| {
         if pkg.get_manifest().get_build().len() > 0 {
@@ -506,20 +604,16 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         cmd = cmd.arg("-L").arg(dir);
     }
 
-    for &(pkg, target) in cx.dep_targets(package).iter() {
+    for &(pkg, target) in cx.dep_targets(package, target).iter() {
         cmd = try!(link_to(cmd, pkg, target, cx, kind));
     }
 
-    let mut targets = package.get_targets().iter().filter(|target| {
+    let targets = package.get_targets().iter().filter(|target| {
         target.is_lib() && target.get_profile().is_compile()
     });
 
-    if target.is_bin() {
-        for target in targets {
-            if target.is_staticlib() {
-                continue;
-            }
-
+    if target.is_bin() && !target.get_profile().is_custom_build() {
+        for target in targets.filter(|f| !f.is_staticlib()) {
             cmd = try!(link_to(cmd, package, target, cx, kind));
         }
     }
@@ -532,8 +626,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
         let layout = cx.layout(pkg, match kind {
-            KindPlugin => KindPlugin,
-            KindTarget if target.get_profile().is_plugin() => KindPlugin,
+            KindHost => KindHost,
+            KindTarget if target.get_profile().is_for_host() => KindHost,
             KindTarget => KindTarget,
         });
 
@@ -550,19 +644,20 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T, pkg: &Package,
+pub fn process<T: ToCStr>(cmd: T, pkg: &Package, target: &Target,
                           cx: &Context) -> CargoResult<ProcessBuilder> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
-    let layout = cx.layout(pkg, KindPlugin);
+    let layout = cx.layout(pkg, KindHost);
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
 
+    // OLD-BUILD: to-remove
     // Also be sure to pick up any native build directories required by plugins
     // or their dependencies
     let mut native_search_paths = HashSet::new();
-    for &(dep, target) in cx.dep_targets(pkg).iter() {
-        if !target.get_profile().is_plugin() { continue }
+    for &(dep, target) in cx.dep_targets(pkg, target).iter() {
+        if !target.get_profile().is_for_host() { continue }
         each_dep(dep, cx, |dep| {
             if dep.get_manifest().get_build().len() > 0 {
                 native_search_paths.insert(layout.native(dep));
@@ -597,4 +692,11 @@ fn each_dep<'a>(pkg: &Package, cx: &'a Context, f: |&'a Package|) {
             visit_deps(cx.get_package(dep_id), cx, visited, |p| f(p))
         }
     }
+}
+
+fn envify(s: &str) -> String {
+    s.chars()
+     .map(|c| c.to_uppercase())
+     .map(|c| if c == '-' {'_'} else {c})
+     .collect()
 }

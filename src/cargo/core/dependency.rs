@@ -10,7 +10,7 @@ pub struct Dependency {
     source_id: SourceId,
     req: VersionReq,
     specified_req: Option<String>,
-    transitive: bool,
+    kind: Kind,
     only_match_name: bool,
 
     optional: bool,
@@ -20,6 +20,13 @@ pub struct Dependency {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     only_for_platform: Option<String>,
+}
+
+#[deriving(PartialEq, Clone, Show)]
+pub enum Kind {
+    Normal,
+    Development,
+    Build,
 }
 
 impl Dependency {
@@ -55,7 +62,7 @@ impl Dependency {
             name: name.to_string(),
             source_id: source_id.clone(),
             req: VersionReq::any(),
-            transitive: true,
+            kind: Normal,
             only_match_name: true,
             optional: false,
             features: Vec::new(),
@@ -83,8 +90,8 @@ impl Dependency {
         &self.source_id
     }
 
-    pub fn transitive(mut self, transitive: bool) -> Dependency {
-        self.transitive = transitive;
+    pub fn kind(mut self, kind: Kind) -> Dependency {
+        self.kind = kind;
         self
     }
 
@@ -132,7 +139,15 @@ impl Dependency {
     }
 
     /// Returns false if the dependency is only used to build the local package.
-    pub fn is_transitive(&self) -> bool { self.transitive }
+    pub fn is_transitive(&self) -> bool {
+        match self.kind {
+            Normal | Build => true,
+            Development => false,
+        }
+    }
+    pub fn is_build(&self) -> bool {
+        match self.kind { Build => true, _ => false }
+    }
     pub fn is_optional(&self) -> bool { self.optional }
     /// Returns true if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool { self.default_features }

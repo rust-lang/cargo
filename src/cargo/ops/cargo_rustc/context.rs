@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::str;
+use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, KindPlugin, KindTarget, Compilation};
+use super::{Kind, KindHost, KindTarget, Compilation, BuildOutput};
 use super::layout::{Layout, LayoutProxy};
+use super::custom_build::BuildState;
 
 #[deriving(Show)]
 pub enum PlatformRequirement {
@@ -21,6 +23,7 @@ pub struct Context<'a, 'b: 'a> {
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
+    pub build_state: Arc<BuildState>,
 
     env: &'a str,
     host: Layout,
@@ -37,7 +40,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap<'b>,
                deps: &'a PackageSet, config: &'b Config<'b>,
                host: Layout, target: Option<Layout>,
-               root_pkg: &Package)
+               root_pkg: &Package,
+               build_state: HashMap<String, BuildOutput>)
                -> CargoResult<Context<'a, 'b>> {
         let (target_dylib, target_exe) =
                 try!(Context::filename_parts(config.target()));
@@ -63,6 +67,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             host_dylib: host_dylib,
             requirements: HashMap::new(),
             compilation: Compilation::new(root_pkg),
+            build_state: Arc::new(BuildState::new(build_state, deps)),
         })
     }
 
@@ -145,13 +150,13 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         if !visiting.insert(pkg.get_package_id()) { return }
 
         let key = (pkg.get_package_id(), target.get_name());
-        let req = if target.get_profile().is_plugin() {PlatformPlugin} else {req};
+        let req = if target.get_profile().is_for_host() {PlatformPlugin} else {req};
         match self.requirements.entry(key) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(req); }
             Vacant(entry) => { entry.set(req); }
         };
 
-        for &(pkg, dep) in self.dep_targets(pkg).iter() {
+        for &(pkg, dep) in self.dep_targets(pkg, target).iter() {
             self.build_requirements(pkg, dep, req, visiting);
         }
 
@@ -168,10 +173,10 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
         let primary = pkg.get_package_id() == self.resolve.root();
         match kind {
-            KindPlugin => LayoutProxy::new(&self.host, primary),
+            KindHost => LayoutProxy::new(&self.host, primary),
             KindTarget =>  LayoutProxy::new(self.target.as_ref()
                                                 .unwrap_or(&self.host),
-                                            primary)
+                                            primary),
         }
     }
 
@@ -180,7 +185,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
-        let (triple, pair) = if kind == KindPlugin {
+        let (triple, pair) = if kind == KindHost {
             (self.config.rustc_host(), &self.host_dylib)
         } else {
             (self.target_triple.as_slice(), &self.target_dylib)
@@ -207,8 +212,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             ret.push(format!("{}{}", stem, self.target_exe));
         } else {
             if target.is_dylib() {
-                let plugin = target.get_profile().is_plugin();
-                let kind = if plugin {KindPlugin} else {KindTarget};
+                let plugin = target.get_profile().is_for_host();
+                let kind = if plugin {KindHost} else {KindTarget};
                 let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
             }
@@ -225,17 +230,24 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, pkg: &Package) -> Vec<(&'a Package, &'a Target)> {
+    pub fn dep_targets(&self, pkg: &Package, target: &Target)
+                       -> Vec<(&'a Package, &'a Target)> {
         let deps = match self.resolve.deps(pkg.get_package_id()) {
             None => return vec!(),
             Some(deps) => deps,
         };
-        deps.map(|pkg_id| self.get_package(pkg_id))
-        .filter_map(|pkg| {
+        deps.map(|id| self.get_package(id)).filter(|dep| {
+            // If this target is a build command, then we only want build
+            // dependencies, otherwise we want everything *other than* build
+            // dependencies.
+            let pkg_dep = pkg.get_dependencies().iter().find(|d| {
+                d.get_name() == dep.get_name()
+            }).unwrap();
+            target.get_profile().is_custom_build() == pkg_dep.is_build()
+        }).filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
-        })
-        .collect()
+        }).collect()
     }
 
     /// Gets a package for the given package id.

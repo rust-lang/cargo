@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::fs::{mod, PathExtensions};
 
 use core::{MultiShell, PackageSet};
@@ -49,7 +50,7 @@ pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
     let pkgs = PackageSet::new([]);
     let cx = try!(Context::new("compile", &resolve, &srcs, &pkgs, &mut cfg,
                                Layout::at(root.get_absolute_target_dir()),
-                               None, &pkg));
+                               None, &pkg, HashMap::new()));
 
     // And finally, clean everything out!
     for target in pkg.get_targets().iter() {

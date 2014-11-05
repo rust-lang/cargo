@@ -16,7 +16,8 @@ pub struct Manifest {
     targets: Vec<Target>,
     target_dir: Path,
     doc_dir: Path,
-    build: Vec<String>,
+    build: Vec<String>,         // TODO: deprecated, remove
+    links: Option<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
     metadata: ManifestMetadata,
@@ -59,7 +60,7 @@ pub struct SerializedManifest {
     targets: Vec<Target>,
     target_dir: String,
     doc_dir: String,
-    build: Option<Vec<String>>,
+    build: Option<Vec<String>>,     // TODO: deprecated, remove
 }
 
 impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
@@ -73,6 +74,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_string(),
             doc_dir: self.doc_dir.display().to_string(),
+            // TODO: deprecated, remove
             build: if self.build.len() == 0 { None } else { Some(self.build.clone()) },
         }.encode(s)
     }
@@ -131,8 +133,9 @@ pub struct Profile {
     doctest: bool,
     doc: bool,
     dest: Option<String>,
-    plugin: bool,
+    for_host: bool,
     harness: bool, // whether to use the test harness (--test)
+    custom_build: bool,
 }
 
 impl Profile {
@@ -146,8 +149,9 @@ impl Profile {
             test: false,
             doc: false,
             dest: None,
-            plugin: false,
+            for_host: false,
             doctest: false,
+            custom_build: false,
             harness: true,
         }
     }
@@ -219,8 +223,13 @@ impl Profile {
         self.doctest
     }
 
-    pub fn is_plugin(&self) -> bool {
-        self.plugin
+    pub fn is_custom_build(&self) -> bool {
+        self.custom_build
+    }
+
+    /// Returns true if the target must be built for the host instead of the target.
+    pub fn is_for_host(&self) -> bool {
+        self.for_host
     }
 
     pub fn get_opt_level(&self) -> uint {
@@ -282,13 +291,20 @@ impl Profile {
         self
     }
 
-    pub fn plugin(mut self, plugin: bool) -> Profile {
-        self.plugin = plugin;
+    /// Sets whether the `Target` must be compiled for the host instead of the target platform.
+    pub fn for_host(mut self, for_host: bool) -> Profile {
+        self.for_host = for_host;
         self
     }
 
     pub fn harness(mut self, harness: bool) -> Profile {
         self.harness = harness;
+        self
+    }
+
+    /// Sets whether the `Target` is a custom build script.
+    pub fn custom_build(mut self, custom_build: bool) -> Profile {
+        self.custom_build = custom_build;
         self
     }
 }
@@ -302,7 +318,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             codegen_units,
             debug,
             rpath,
-            plugin,
+            for_host,
             ref dest,
             harness,
 
@@ -313,8 +329,10 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
             env: _,
             test: _,
             doctest: _,
+
+            custom_build: _,
         } = *self;
-        (opt_level, codegen_units, debug, rpath, plugin, dest, harness).hash(into)
+        (opt_level, codegen_units, debug, rpath, for_host, dest, harness).hash(into)
     }
 }
 
@@ -366,16 +384,17 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
                target_dir: Path, doc_dir: Path,
-               build: Vec<String>, exclude: Vec<String>,
+               build: Vec<String>, exclude: Vec<String>, links: Option<String>,
                metadata: ManifestMetadata) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
             target_dir: target_dir,
             doc_dir: doc_dir,
-            build: build,
+            build: build,     // TODO: deprecated, remove
             warnings: Vec::new(),
             exclude: exclude,
+            links: links,
             metadata: metadata,
         }
     }
@@ -414,6 +433,10 @@ impl Manifest {
 
     pub fn get_build(&self) -> &[String] {
         self.build.as_slice()
+    }
+
+    pub fn get_links(&self) -> Option<&str> {
+        self.links.as_ref().map(|s| s.as_slice())
     }
 
     pub fn add_warning(&mut self, s: String) {
@@ -457,6 +480,18 @@ impl Target {
 
     pub fn bin_target(name: &str, src_path: &Path, profile: &Profile,
                       metadata: Option<Metadata>) -> Target {
+        Target {
+            kind: BinTarget,
+            name: name.to_string(),
+            src_path: src_path.clone(),
+            profile: profile.clone(),
+            metadata: metadata,
+        }
+    }
+
+    /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
+    pub fn custom_build_target(name: &str, src_path: &Path, profile: &Profile,
+                               metadata: Option<Metadata>) -> Target {
         Target {
             kind: BinTarget,
             name: name.to_string(),

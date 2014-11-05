@@ -25,6 +25,7 @@ pub struct JobQueue<'a, 'b> {
     pending: HashMap<(&'a PackageId, TargetStage), PendingBuild>,
     state: HashMap<&'a PackageId, Freshness>,
     ignored: HashSet<&'a PackageId>,
+    printed: HashSet<&'a PackageId>,
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -48,7 +49,8 @@ struct PendingBuild {
 #[deriving(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show)]
 pub enum TargetStage {
     StageStart,
-    StageCustomBuild,
+    StageBuildCustomBuild,
+    StageRunCustomBuild,
     StageLibraries,
     StageBinaries,
     StageTests,
@@ -71,6 +73,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             pending: HashMap::new(),
             state: HashMap::new(),
             ignored: HashSet::new(),
+            printed: HashSet::new(),
         }
     }
 
@@ -160,15 +163,6 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         let amt = if njobs == 0 {1} else {njobs};
         let id = pkg.get_package_id().clone();
 
-        if stage == StageStart && !self.ignored.contains(&pkg.get_package_id()) {
-            match fresh.combine(self.state[pkg.get_package_id()]) {
-                Fresh => try!(config.shell().verbose(|c| {
-                    c.status("Fresh", pkg)
-                })),
-                Dirty => try!(config.shell().status("Compiling", pkg))
-            }
-        }
-
         // While the jobs are all running, we maintain some metadata about how
         // many are running, the current state of freshness (of all the combined
         // jobs), and the stage to pass to finish() later on.
@@ -178,22 +172,55 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             fresh: fresh,
         });
 
+        let mut total_fresh = fresh.combine(self.state[pkg.get_package_id()]);
+        let mut running = Vec::new();
         for (job, job_freshness) in jobs.into_iter() {
             let fresh = job_freshness.combine(fresh);
+            total_fresh = total_fresh.combine(fresh);
             let my_tx = self.tx.clone();
             let id = id.clone();
-            if fresh == Dirty {
-                try!(config.shell().verbose(|shell| job.describe(shell)));
-            }
+            let (desc_tx, desc_rx) = channel();
             self.pool.execute(proc() {
-                my_tx.send((id, stage, fresh, job.run(fresh)));
+                my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
             });
+            // only the first message of each job is processed
+            match desc_rx.recv_opt() {
+                Ok(msg) => running.push(msg),
+                Err(..) => {}
+            }
         }
 
         // If no work was scheduled, make sure that a message is actually send
         // on this channel.
         if njobs == 0 {
             self.tx.send((id, stage, fresh, Ok(())));
+        }
+
+        // Print out some nice progress information
+        //
+        // This isn't super trivial becuase we don't want to print loads and
+        // loads of information to the console, but we also want to produce a
+        // faithful representation of what's happening. This is somewhat nuanced
+        // as a package can start compiling *very* early on because of custom
+        // build commands and such.
+        //
+        // In general, we try to print "Compiling" for the first nontrivial task
+        // run for a package, regardless of when that is. We then don't print
+        // out any more information for a package after we've printed it once.
+        let print = !self.ignored.contains(&pkg.get_package_id());
+        let print = print && !self.printed.contains(&pkg.get_package_id());
+        if print && (stage == StageLibraries ||
+                     (total_fresh == Dirty && running.len() > 0)) {
+            self.printed.insert(pkg.get_package_id());
+            match total_fresh {
+                Fresh => try!(config.shell().verbose(|c| {
+                    c.status("Fresh", pkg)
+                })),
+                Dirty => try!(config.shell().status("Compiling", pkg))
+            }
+        }
+        for msg in running.iter() {
+            try!(config.shell().verbose(|c| c.status("Running", msg)));
         }
         Ok(())
     }
@@ -214,35 +241,57 @@ impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
         let (id, stage) = *self;
         let pkg = packages.iter().find(|p| p.get_package_id() == id).unwrap();
         let deps = resolve.deps(id).into_iter().flat_map(|a| a)
-                          .filter(|dep| *dep != id);
+                          .filter(|dep| *dep != id)
+                          .map(|dep| {
+                              (dep, pkg.get_dependencies().iter().find(|d| {
+                                  d.get_name() == dep.get_name()
+                              }).unwrap())
+                          });
         match stage {
-            StageStart => {
-                // Only transitive dependencies are needed to start building a
-                // package. Non transitive dependencies (dev dependencies) are
-                // only used to build tests.
-                deps.filter(|dep| {
-                    let dep = pkg.get_dependencies().iter().find(|d| {
-                        d.get_name() == dep.get_name()
-                    }).unwrap();
-                    dep.is_transitive()
-                }).map(|dep| {
-                    (dep, StageLibraries)
-                }).collect()
+            StageStart => Vec::new(),
+
+            // Building the build command itself starts off pretty easily,we
+            // just need to depend on all of the library stages of our own build
+            // dependencies (making them available to us).
+            StageBuildCustomBuild => {
+                let mut base = vec![(id, StageStart)];
+                base.extend(deps.filter(|&(_, dep)| dep.is_build())
+                                .map(|(id, _)| (id, StageLibraries)));
+                base
             }
-            StageCustomBuild => vec![(id, StageStart)],
-            StageLibraries => vec![(id, StageCustomBuild)],
+
+            // When running a custom build command, we need to be sure that our
+            // own custom build command is actually built, and then we need to
+            // wait for all our dependencies to finish their custom build
+            // commands themselves (as they may provide input to us).
+            StageRunCustomBuild => {
+                let mut base = vec![(id, StageBuildCustomBuild)];
+                base.extend(deps.filter(|&(_, dep)| dep.is_transitive())
+                                .map(|(id, _)| (id, StageRunCustomBuild)));
+                base
+            }
+
+            // Building a library depends on our own custom build command plus
+            // all our transitive dependencies.
+            StageLibraries => {
+                let mut base = vec![(id, StageRunCustomBuild)];
+                base.extend(deps.filter(|&(_, dep)| dep.is_transitive())
+                                .map(|(id, _)| (id, StageLibraries)));
+                base
+            }
+
+            // Binaries only depend on libraries being available. Note that they
+            // do not depend on dev-dependencies.
             StageBinaries => vec![(id, StageLibraries)],
+
+            // Tests depend on all non-transitive dependencies
+            // (dev-dependencies) in addition to the library stage for this
+            // package.
             StageTests => {
-                let mut ret = vec![(id, StageLibraries)];
-                ret.extend(deps.filter(|dep| {
-                    let dep = pkg.get_dependencies().iter().find(|d| {
-                        d.get_name() == dep.get_name()
-                    }).unwrap();
-                    !dep.is_transitive()
-                }).map(|dep| {
-                    (dep, StageLibraries)
-                }));
-                ret
+                let mut base = vec![(id, StageLibraries)];
+                base.extend(deps.filter(|&(_, dep)| !dep.is_transitive())
+                                .map(|(id, _)| (id, StageLibraries)));
+                base
             }
         }
     }

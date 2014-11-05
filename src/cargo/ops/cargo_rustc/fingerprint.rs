@@ -84,7 +84,9 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
 
     let (old_root, root) = {
         let layout = cx.layout(pkg, kind);
-        if target.is_example() {
+        if target.get_profile().is_custom_build() {
+            (layout.old_build(pkg), layout.build(pkg))
+        } else if target.is_example() {
             (layout.old_examples().clone(), layout.examples().clone())
         } else {
             (layout.old_root().clone(), layout.root().clone())
@@ -134,16 +136,16 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
 ///
 /// The currently implemented solution is option (1), although it is planned to
 /// migrate to option (2) in the near future.
-pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
-                         -> CargoResult<Preparation> {
+pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
+                         target: Option<&Target>) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint build cmd: {}",
                                     pkg.get_package_id()));
 
     // TODO: this should not explicitly pass KindTarget
     let kind = KindTarget;
 
-    if pkg.get_manifest().get_build().len() == 0 {
-        return Ok((Fresh, proc() Ok(()), proc() Ok(())))
+    if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
+        return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))
     }
     let (old, new) = dirs(cx, pkg, kind);
     let old_loc = old.join("build");
@@ -155,12 +157,16 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package)
     let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
 
     let is_fresh = try!(is_fresh(&old_loc, new_fingerprint.as_slice()));
-    let pairs = vec![(old_loc, new_loc.clone()),
-                     (cx.layout(pkg, kind).old_native(pkg),
-                      cx.layout(pkg, kind).native(pkg))];
+    let mut pairs = vec![(old_loc, new_loc.clone())];
 
-    let native_dir = cx.layout(pkg, kind).native(pkg);
-    cx.compilation.native_dirs.insert(pkg.get_package_id().clone(), native_dir);
+    // The new custom build command infrastructure handles its own output
+    // directory as part of freshness.
+    if target.is_none() {
+        let native_dir = cx.layout(pkg, kind).native(pkg);
+        pairs.push((cx.layout(pkg, kind).old_native(pkg), native_dir.clone()));
+        cx.compilation.native_dirs.insert(pkg.get_package_id().clone(),
+                                          native_dir);
+    }
 
     Ok(prepare(is_fresh, new_loc, new_fingerprint, pairs))
 }
@@ -171,8 +177,8 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
     let (_, new1) = dirs(cx, pkg, kind);
     let new2 = new1.clone();
 
-    let work1 = proc() { try!(fs::mkdir(&new1, USER_RWX)); Ok(()) };
-    let work2 = proc() { try!(fs::mkdir(&new2, USER_RWX)); Ok(()) };
+    let work1 = proc(_) { try!(fs::mkdir(&new1, USER_RWX)); Ok(()) };
+    let work2 = proc(_) { try!(fs::mkdir(&new2, USER_RWX)); Ok(()) };
 
     (work1, work2)
 }
@@ -181,12 +187,14 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 /// instances to actually perform the necessary work.
 fn prepare(is_fresh: bool, loc: Path, fingerprint: String,
            to_copy: Vec<(Path, Path)>) -> Preparation {
-    let write_fingerprint = proc() {
+    let write_fingerprint = proc(desc_tx) {
+        drop(desc_tx);
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
         Ok(())
     };
 
-    let move_old = proc() {
+    let move_old = proc(desc_tx) {
+        drop(desc_tx);
         for &(ref src, ref dst) in to_copy.iter() {
             try!(fs::rename(src, dst));
         }

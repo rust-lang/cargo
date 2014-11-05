@@ -29,6 +29,8 @@ mod test_cargo;
 mod test_cargo_bench;
 mod test_cargo_clean;
 mod test_cargo_compile;
+mod test_cargo_compile_custom_build;
+mod test_cargo_compile_old_custom_build;
 mod test_cargo_compile_git_deps;
 mod test_cargo_compile_path_deps;
 mod test_cargo_test;

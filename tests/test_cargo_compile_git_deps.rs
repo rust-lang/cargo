@@ -1175,9 +1175,9 @@ test!(git_repo_changing_no_rebuild {
     assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("\
 {updating} git repository `{bar}`
-{compiling} bar v0.5.0 ({bar}#[..])
-{compiling} p1 v0.5.0 ({url})
-", updating = UPDATING, compiling = COMPILING, url = p1.url(), bar = bar.url())));
+{compiling} [..]
+{compiling} [..]
+", updating = UPDATING, compiling = COMPILING, bar = bar.url())));
 
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
@@ -1201,9 +1201,9 @@ test!(git_repo_changing_no_rebuild {
     assert_that(p2.cargo_process("build"),
                 execs().with_stdout(format!("\
 {updating} git repository `{bar}`
-{compiling} bar v0.5.0 ({bar}#[..])
-{compiling} p2 v0.5.0 ({url})
-", updating = UPDATING, compiling = COMPILING, url = p2.url(), bar = bar.url())));
+{compiling} [..]
+{compiling} [..]
+", updating = UPDATING, compiling = COMPILING, bar = bar.url())));
 
     // And now for the real test! Make sure that p1 doesn't get rebuilt
     // even though the git repo has changed.
