@@ -166,7 +166,8 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     //
     // Each target has its own concept of freshness to ensure incremental
     // rebuilds on the *target* granularity, not the *package* granularity.
-    let (mut libs, mut bins, mut tests) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut libs, mut bins, mut lib_tests, mut bin_tests) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     let (mut build_custom, mut run_custom) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
         if target.get_profile().is_custom_build() {
@@ -193,9 +194,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                          target.get_profile().is_test(),
                          target.get_profile().is_custom_build()) {
             (_, _, true) => &mut build_custom,
-            (_, true, _) => &mut tests,
-            (true, _, _) => &mut libs,
-            (false, false, _) if target.get_profile().get_env() == "test" => &mut tests,
+            (true, true, _) => &mut lib_tests,
+            (false, true, _) => &mut bin_tests,
+            (true, false, _) => &mut libs,
+            (false, false, _) if target.get_profile().get_env() == "test" => &mut bin_tests,
             (false, false, _) => &mut bins,
         };
         for (work, kind) in work.into_iter() {
@@ -244,7 +246,8 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 
     jobs.enqueue(pkg, jq::StageLibraries, libs);
     jobs.enqueue(pkg, jq::StageBinaries, bins);
-    jobs.enqueue(pkg, jq::StageTests, tests);
+    jobs.enqueue(pkg, jq::StageBinaryTests, bin_tests);
+    jobs.enqueue(pkg, jq::StageLibraryTests, lib_tests);
     Ok(())
 }
 
