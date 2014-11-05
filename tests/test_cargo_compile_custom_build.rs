@@ -455,7 +455,7 @@ test!(testing_and_such {
 {compiling} foo v0.5.0 (file://[..])
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
-{running} `rustc [..] --test [..]`
+{running} `rustc [..] --crate-name foo [..]`
 {running} `[..]foo-[..]`
 
 running 0 tests
