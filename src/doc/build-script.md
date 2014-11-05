@@ -152,7 +152,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location][config.html].
+Cargo [configuration location](config.html).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]

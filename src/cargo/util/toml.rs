@@ -531,7 +531,12 @@ impl TomlManifest {
                                           deprecated in favor of [lib]"));
         }
         if has_old_build {
-            manifest.add_warning(format!("warning: the old build command has been deprecated"));
+            manifest.add_warning(format!("warning: an arbitrary build command \
+                                          has now been deprecated."));
+            manifest.add_warning(format!("         It has been replaced by custom \
+                                                   build scripts."));
+            manifest.add_warning(format!("         For more information, see \
+                                          http://doc.crates.io/build-script.html"));
         }
         Ok((manifest, nested_paths))
     }
