@@ -31,12 +31,12 @@ test!(custom_build_script_failed {
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc build.rs --crate-name build-script-build --crate-type bin [..]`
-{running} `[..]build-script-build`
+{running} `[..]build-script-build[..]`
 ",
 url = p.url(), compiling = COMPILING, running = RUNNING))
                        .with_stderr(format!("\
 Failed to run custom build command for `foo v0.5.0 ({})`
-Process didn't exit successfully: `[..]build[..]build-script-build` (status=101)",
+Process didn't exit successfully: `[..]build[..]build-script-build[..]` (status=101)",
 p.url())));
 })
 
@@ -292,7 +292,7 @@ test!(overrides_and_links {
 {running} `rustc build.rs [..]`
 {compiling} a v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name a [..]`
-{running} `[..]build-script-build`
+{running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -L bar[..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
@@ -371,7 +371,7 @@ test!(only_rerun_build_script {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
-{running} `[..]build-script-build`
+{running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
@@ -444,13 +444,13 @@ test!(testing_and_such {
                 execs().with_status(0));
     p.root().move_into_the_past().unwrap();
 
-    File::create(&p.root().join("file1")).unwrap();
+    File::create(&p.root().join("src/lib.rs")).unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-vj1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
-{running} `[..]build-script-build`
+{running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 {running} `rustc [..] --test [..]`
 {running} `[..]foo-[..]`
@@ -536,7 +536,7 @@ test!(propagation_of_l_flags {
 {running} `rustc build.rs [..]`
 {compiling} b v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name b [..]-L foo[..]`
-{running} `[..]a-[..]build-script-build`
+{running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar[..]-L foo[..]`
@@ -574,7 +574,7 @@ test!(build_deps_simple {
 {running} `rustc [..] --crate-name a [..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..] --extern a=[..]`
-{running} `[..]foo-[..]build-script-build`
+{running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
@@ -662,7 +662,7 @@ test!(build_cmd_with_a_build_cmd {
 {running} `rustc [..] --crate-name b [..]`
 {compiling} a v0.5.0 (file://[..])
 {running} `rustc build.rs [..] --extern b=[..]`
-{running} `[..]a-[..]build-script-build`
+{running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name a --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target[..]deps --dep-info [..]fingerprint[..]dep-lib-a \
@@ -673,7 +673,7 @@ test!(build_cmd_with_a_build_cmd {
     --out-dir [..]build[..]foo-[..] --dep-info [..]fingerprint[..]dep-[..] \
     -L [..]target -L [..]target[..]deps \
     --extern a=[..]liba-[..].rlib`
-{running} `[..]foo-[..]build-script-build`
+{running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name foo --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target --dep-info [..]fingerprint[..]dep-lib-foo \
@@ -749,7 +749,7 @@ test!(output_separate_lines {
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..]`
-{running} `[..]foo-[..]build-script-build`
+{running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
