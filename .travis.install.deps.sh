@@ -52,9 +52,9 @@ if [ -z "${windows}" ]; then
 else
     rm -rf rustc *.exe
     if [ "${BITS}" = "64" ]; then
-        triple=x86_64-w64-mingw32
+        triple=x86_64-pc-windows-gnu
     else
-        triple=i686-w64-mingw32
+        triple=i686-pc-windows-gnu
     fi
     curl -O http://$host/dist/rust-nightly-$triple.exe
     innounp -y -x rust-nightly-$triple.exe

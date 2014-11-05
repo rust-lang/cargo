@@ -184,7 +184,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     checkout_path: Path,
     cache_path: Path,
     src_path: Path,
-    config: &'a mut Config<'b>,
+    config: &'a Config<'b>,
     handle: Option<http::Handle>,
     sources: Vec<PathSource>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
@@ -226,7 +226,7 @@ struct RegistryDependency {
 
 impl<'a, 'b> RegistrySource<'a, 'b> {
     pub fn new(source_id: &SourceId,
-               config: &'a mut Config<'b>) -> RegistrySource<'a, 'b> {
+               config: &'a Config<'b>) -> RegistrySource<'a, 'b> {
         let hash = hex::short_hash(source_id);
         let ident = source_id.get_url().host().unwrap().to_string();
         let part = format!("{}-{}", ident, hash);
@@ -417,7 +417,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
         let dep = try!(Dependency::parse(name.as_slice(), Some(req.as_slice()),
                                          &self.source_id));
-        
+
         Ok(dep.optional(optional)
               .default_features(default_features)
               .features(features)

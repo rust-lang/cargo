@@ -113,6 +113,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
         s => (flags.arg_args.clone(), s),
     };
     args.insert(0, command.to_string());
+    args.insert(0, os::args()[0].clone());
 
     macro_rules! cmd( ($name:ident) => (
         if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {

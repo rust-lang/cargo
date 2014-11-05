@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::collections::hashmap::{HashMap, HashSet, Occupied, Vacant};
+use std::collections::HashSet;
+use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::fmt;
 use std::rc::Rc;
 use semver;

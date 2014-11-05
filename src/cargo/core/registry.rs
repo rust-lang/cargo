@@ -1,4 +1,5 @@
-use std::collections::hashmap::{HashSet, HashMap, Occupied, Vacant};
+use std::collections::HashSet;
+use std::collections::hash_map::{HashMap, Occupied, Vacant};
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
@@ -36,7 +37,7 @@ impl Registry for Vec<Summary> {
 /// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'a> {
     sources: SourceMap<'a>,
-    config: &'a mut Config<'a>,
+    config: &'a Config<'a>,
 
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
@@ -70,7 +71,7 @@ enum Kind {
 }
 
 impl<'a> PackageRegistry<'a> {
-    pub fn new<'a>(config: &'a mut Config<'a>) -> PackageRegistry<'a> {
+    pub fn new<'a>(config: &'a Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
