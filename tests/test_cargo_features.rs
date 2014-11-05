@@ -1,5 +1,5 @@
 use support::{project, execs, cargo_dir};
-use support::COMPILING;
+use support::{COMPILING, FRESH};
 use support::paths::PathExt;
 use hamcrest::assert_that;
 
@@ -529,8 +529,11 @@ test!(many_features_no_rebuilds {
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     p.root().move_into_the_past().unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
-                execs().with_status(0).with_stdout(""));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+                execs().with_status(0).with_stdout(format!("\
+{fresh} a v0.1.0 ([..])
+{fresh} b v0.1.0 ([..])
+", fresh = FRESH).as_slice()));
 })
 
 // Tests that all cmd lines work with `--features ""`

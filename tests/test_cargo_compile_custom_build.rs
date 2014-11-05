@@ -366,6 +366,7 @@ test!(only_rerun_build_script {
     p.root().move_into_the_past().unwrap();
 
     File::create(&p.root().join("some-new-file")).unwrap();
+    p.root().move_into_the_past().unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
                 execs().with_status(0)
@@ -421,6 +422,7 @@ test!(rebuild_continues_to_pass_env_vars {
     p.root().move_into_the_past().unwrap();
 
     File::create(&p.root().join("some-new-file")).unwrap();
+    p.root().move_into_the_past().unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
                 execs().with_status(0));
@@ -445,6 +447,7 @@ test!(testing_and_such {
     p.root().move_into_the_past().unwrap();
 
     File::create(&p.root().join("src/lib.rs")).unwrap();
+    p.root().move_into_the_past().unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-vj1"),
                 execs().with_status(0)
