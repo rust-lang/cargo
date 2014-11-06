@@ -102,7 +102,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
         "" | "help" if flags.arg_args.len() == 0 => {
             shell.set_verbose(true);
             let r = cargo::call_main_without_stdin(execute, shell, USAGE,
-                                                   ["-h".to_string()], false);
+                                                   [os::args()[0].clone(), "-h".to_string()], false);
             cargo::process_executed(r, shell);
             return Ok(None)
         }
