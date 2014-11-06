@@ -20,7 +20,7 @@ impl Drop for Closer {
 
 // Test that HTTP auth is offered from `credential.helper`
 test!(http_auth_offered {
-    let mut listener = TcpListener::bind("127.0.0.1", 0).assert();
+    let mut listener = TcpListener::bind("127.0.0.1:0").assert();
     let addr = listener.socket_name().assert();
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
@@ -127,7 +127,7 @@ Caused by:
 
 // Boy, sure would be nice to have a TLS implementation in rust!
 test!(https_something_happens {
-    let mut listener = TcpListener::bind("127.0.0.1", 0).assert();
+    let mut listener = TcpListener::bind("127.0.0.1:0").assert();
     let addr = listener.socket_name().assert();
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
@@ -180,7 +180,7 @@ Caused by:
 
 // Boy, sure would be nice to have an SSH implementation in rust!
 test!(ssh_something_happens {
-    let mut listener = TcpListener::bind("127.0.0.1", 0).assert();
+    let mut listener = TcpListener::bind("127.0.0.1:0").assert();
     let addr = listener.socket_name().assert();
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
