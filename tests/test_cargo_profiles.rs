@@ -82,7 +82,7 @@ test!(top_level_overrides_deps {
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.0 ({url})
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
-        --crate-type dylib --crate-type rlib \
+        --crate-type dylib --crate-type rlib -C prefer-dynamic \
         --opt-level 1 \
         -g \
         -C metadata=[..] \
