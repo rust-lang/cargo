@@ -5,7 +5,8 @@ use std::str;
 use cargo::util::process;
 
 use support::paths;
-use support::{project, cargo_dir, mkdir_recursive, ProjectBuilder, ResultTest};
+use support::{execs, project, cargo_dir, mkdir_recursive, ProjectBuilder, ResultTest};
+use hamcrest::{assert_that};
 
 fn setup() {
 }
@@ -44,3 +45,30 @@ test!(list_commands_looks_at_path {
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);
 })
+
+test!(find_closest_biuld_to_build {
+    let pr = process(cargo_dir().join("cargo"))
+                    .arg("biuld").cwd(paths::root())
+                    .env("HOME", Some(paths::home()));
+
+    assert_that(pr,
+                execs().with_status(127)
+                       .with_stderr("No such subcommand
+
+Did you mean ``build''?
+
+"));
+})
+
+// if a subcommand is more than 3 edit distance away, we don't make a suggestion
+test!(find_closest_dont_correct_nonsense {
+    let pr = process(cargo_dir().join("cargo"))
+                    .arg("asdf").cwd(paths::root())
+                    .env("HOME", Some(paths::home()));
+
+    assert_that(pr,
+                execs().with_status(127)
+                       .with_stderr("No such subcommand
+"));
+})
+
