@@ -288,13 +288,13 @@ test!(overrides_and_links {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
-{running} `rustc build.rs [..]`
-{compiling} a v0.5.0 (file://[..])
-{running} `rustc [..] --crate-name a [..]`
-{running} `[..]build-script-build[..]`
+[..]
+[..]
+[..]
+[..]
+[..]
 {running} `rustc [..] --crate-name foo [..] -L foo -L bar[..]`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", running = RUNNING).as_slice()));
 })
 
 test!(unused_overrides {
