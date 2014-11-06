@@ -133,11 +133,31 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     Ok(None)
 }
 
+fn find_closest(cmd: &str) -> Option<String> {
+    match list_commands().iter()
+                            // doing it this way (instead of just .min_by(|c| c.lev_distance(cmd)))
+                            // allows us to only make suggestions that have an edit distance of
+                            // 3 or less
+                            .map(|c| (c.lev_distance(cmd), c))
+                            .filter(|&(d, _): &(uint, &String)| d < 4u)
+                            .min_by(|&(d, _)| d) {
+        Some((_, c)) => {
+            Some(c.to_string())
+        },
+        None => None
+    }
+}
+
 fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
     let command = match find_command(cmd) {
         Some(command) => command,
-        None => return handle_error(CliError::new("No such subcommand", 127),
-                                    shell)
+        None => {
+            let msg = match find_closest(cmd) {
+                Some(closest) => format!("No such subcommand\n\n\tDid you mean ``{}''?\n", closest),
+                None => "No such subcommand".to_string()
+            };
+            return handle_error(CliError::new(msg, 127), shell)
+        }
     };
     let status = Command::new(command)
                          .args(args)
