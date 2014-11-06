@@ -53,7 +53,8 @@ pub enum TargetStage {
     StageRunCustomBuild,
     StageLibraries,
     StageBinaries,
-    StageTests,
+    StageLibraryTests,
+    StageBinaryTests,
 }
 
 type Message = (PackageId, TargetStage, Freshness, CargoResult<()>);
@@ -284,13 +285,17 @@ impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
             // do not depend on dev-dependencies.
             StageBinaries => vec![(id, StageLibraries)],
 
-            // Tests depend on all non-transitive dependencies
-            // (dev-dependencies) in addition to the library stage for this
-            // package.
-            StageTests => {
-                let mut base = vec![(id, StageLibraries)];
-                base.extend(deps.filter(|&(_, dep)| !dep.is_transitive())
-                                .map(|(id, _)| (id, StageLibraries)));
+            // Tests depend on all dependencies (including dev-dependencies) in
+            // addition to the library stage for this package. Note, however,
+            // that library tests only need to depend the custom build command
+            // being run, not the libraries themselves.
+            StageBinaryTests | StageLibraryTests => {
+                let mut base = if stage == StageBinaryTests {
+                    vec![(id, StageLibraries)]
+                } else {
+                    vec![(id, StageRunCustomBuild)]
+                };
+                base.extend(deps.map(|(id, _)| (id, StageLibraries)));
                 base
             }
         }
