@@ -27,7 +27,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --name NAME              Name of the test to run
+    --name NAME              Name of the test executable to run
     --no-run                 Compile, but don't run tests
     -p SPEC, --package SPEC  Package to run tests for
     -j N, --jobs N           The number of jobs to run in parallel
@@ -38,7 +38,10 @@ Options:
     -v, --verbose            Use verbose output
 
 All of the trailing arguments are passed to the test binaries generated for
-filtering tests and generally providing options configuring how they run.
+filtering tests and generally providing options configuring how they run. For
+example, this will run all tests with the name `foo` in their name:
+
+    cargo test foo
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be tested. If it is not given, then the
