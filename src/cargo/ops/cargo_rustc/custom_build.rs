@@ -10,7 +10,7 @@ use util::{CargoResult, CargoError, human};
 use util::{internal, ChainError, Require};
 
 use super::job::Work;
-use super::{fingerprint, process, KindTarget, KindHost, Context};
+use super::{fingerprint, process, KindTarget, KindHost, Kind, Context};
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
@@ -25,16 +25,16 @@ pub struct BuildOutput {
 }
 
 pub struct BuildState {
-    pub outputs: Mutex<HashMap<PackageId, BuildOutput>>,
+    pub outputs: Mutex<HashMap<(PackageId, Kind), BuildOutput>>,
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
-pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
+pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
                -> CargoResult<(Work, Work, Freshness)> {
     // TODO: this shouldn't explicitly pass `KindTarget` for the layout, we
     //       may be running a build script for a plugin dependency.
     let (script_output, old_script_output, build_output, old_build_output) = {
-        let target = cx.layout(pkg, KindTarget);
+        let target = cx.layout(pkg, kind);
         let host = cx.layout(pkg, KindHost);
         (host.build(pkg),
          host.proxy().old_build(pkg),
@@ -55,7 +55,10 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
                                                         .dir_path()
                                                         .display().to_string()))
                      .env("NUM_JOBS", Some(cx.config.jobs().to_string()))
-                     .env("TARGET", Some(cx.target_triple()))
+                     .env("TARGET", Some(match kind {
+                         KindHost => cx.config.rustc_host(),
+                         KindTarget => cx.target_triple(),
+                     }))
                      .env("DEBUG", Some(profile.get_debug().to_string()))
                      .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
                      .env("PROFILE", Some(profile.get_env()));
@@ -123,7 +126,8 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
         {
             let build_state = build_state.outputs.lock();
             for &(ref name, ref id) in lib_deps.iter() {
-                for &(ref key, ref value) in (*build_state)[*id].metadata.iter() {
+                let data = &build_state[(id.clone(), kind)].metadata;
+                for &(ref key, ref value) in data.iter() {
                     p = p.env(format!("DEP_{}_{}",
                                       super::envify(name.as_slice()),
                                       super::envify(key.as_slice())).as_slice(),
@@ -151,7 +155,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
             human("build script output was not valid utf-8")
         }));
         let build_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
-        build_state.outputs.lock().insert(id, build_output);
+        build_state.outputs.lock().insert((id, kind), build_output);
 
         try!(File::create(&script_output.join("output"))
                   .write_str(output).map_err(|e| {
@@ -186,7 +190,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
         let contents = try!(f.read_to_string());
         let output = try!(BuildOutput::parse(contents.as_slice(),
                                              pkg_name.as_slice()));
-        build_state.outputs.lock().insert(id, output);
+        build_state.outputs.lock().insert((id, kind), output);
 
         fresh(tx)
     };
@@ -195,7 +199,7 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
 }
 
 impl BuildState {
-    pub fn new(overrides: HashMap<String, BuildOutput>,
+    pub fn new(config: super::BuildConfig,
                packages: &PackageSet) -> BuildState {
         let mut sources = HashMap::new();
         for package in packages.iter() {
@@ -208,8 +212,11 @@ impl BuildState {
             }
         }
         let mut outputs = HashMap::new();
-        for (name, output) in overrides.into_iter() {
-            outputs.insert(sources[name].clone(), output);
+        for (name, output) in config.host.overrides.into_iter() {
+            outputs.insert((sources[name].clone(), KindHost), output);
+        }
+        for (name, output) in config.target.overrides.into_iter() {
+            outputs.insert((sources[name].clone(), KindTarget), output);
         }
         BuildState { outputs: Mutex::new(outputs) }
     }

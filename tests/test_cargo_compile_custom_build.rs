@@ -542,7 +542,7 @@ test!(propagation_of_l_flags {
 {running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
-{running} `rustc [..] --crate-name foo [..] -L bar[..]-L foo[..]`
+{running} `rustc [..] --crate-name foo [..] -L bar -L foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
 

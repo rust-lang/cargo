@@ -24,6 +24,7 @@
 
 use std::os;
 use std::collections::HashMap;
+use std::default::Default;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
@@ -138,7 +139,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
     let ret = {
         let _p = profile::start("compiling");
-        let lib_overrides = try!(scrape_target_config(&config, &user_configs));
+        let lib_overrides = try!(scrape_build_config(&config, &user_configs));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
                                   &PackageSet::new(packages.as_slice()),
@@ -173,25 +174,40 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
     }).map(|p| SourceId::for_path(&p)).collect()
 }
 
-fn scrape_target_config(config: &Config,
-                        configs: &HashMap<String, config::ConfigValue>)
-                        -> CargoResult<HashMap<String, BuildOutput>> {
+fn scrape_build_config(config: &Config,
+                       configs: &HashMap<String, config::ConfigValue>)
+                       -> CargoResult<ops::BuildConfig> {
     let target = match configs.find_equiv("target") {
-        None => return Ok(HashMap::new()),
+        None => return Ok(Default::default()),
         Some(target) => try!(target.table().chain_error(|| {
             internal("invalid configuration for the key `target`")
         })),
     };
-    let triple = config.target().unwrap_or(config.rustc_host()).to_string();
-    let target = match target.get(&triple) {
-        None => return Ok(HashMap::new()),
+
+    let host = try!(scrape_target_config(target, config.rustc_host()));
+    let target = match config.target() {
+        Some(triple) => try!(scrape_target_config(target, triple)),
+        None => host.clone(),
+    };
+    Ok(ops::BuildConfig { host: host, target: target })
+}
+
+fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,
+                        triple: &str)
+                        -> CargoResult<ops::TargetConfig> {
+    let target = match target.get(&triple.to_string()) {
+        None => return Ok(Default::default()),
         Some(target) => try!(target.table().chain_error(|| {
             internal(format!("invalid configuration for the key \
                               `target.{}`", triple))
         })),
     };
 
-    let mut ret = HashMap::new();
+    let mut ret = ops::TargetConfig {
+        ar: None,
+        linker: None,
+        overrides: HashMap::new(),
+    };
     for (k, v) in target.iter() {
         match k.as_slice() {
             "ar" | "linker" => {
@@ -199,9 +215,9 @@ fn scrape_target_config(config: &Config,
                     internal(format!("invalid configuration for key `{}`", k))
                 })).ref0().to_string();
                 if k.as_slice() == "linker" {
-                    config.set_linker(v);
+                    ret.linker = Some(v);
                 } else {
-                    config.set_ar(v);
+                    ret.ar = Some(v);
                 }
             }
             lib_name => {
@@ -233,7 +249,7 @@ fn scrape_target_config(config: &Config,
                         output.metadata.push((k.to_string(), v.to_string()));
                     }
                 }
-                ret.insert(lib_name.to_string(), output);
+                ret.overrides.insert(lib_name.to_string(), output);
             }
         }
     }

@@ -1,5 +1,5 @@
 use std::{fmt, os, mem};
-use std::cell::{RefCell, RefMut, Ref};
+use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::io::fs::{PathExtensions, File};
 use std::string;
@@ -17,8 +17,6 @@ pub struct Config<'a> {
     shell: RefCell<&'a mut MultiShell>,
     jobs: uint,
     target: Option<string::String>,
-    linker: RefCell<Option<string::String>>,
-    ar: RefCell<Option<string::String>>,
     rustc_version: string::String,
     /// The current host and default target of rustc
     rustc_host: string::String,
@@ -42,8 +40,6 @@ impl<'a> Config<'a> {
             shell: RefCell::new(shell),
             jobs: jobs.unwrap_or(os::num_cpus()),
             target: target,
-            ar: RefCell::new(None),
-            linker: RefCell::new(None),
             rustc_version: rustc_version,
             rustc_host: rustc_host,
         })
@@ -82,17 +78,6 @@ impl<'a> Config<'a> {
     pub fn target(&self) -> Option<&str> {
         self.target.as_ref().map(|t| t.as_slice())
     }
-
-    pub fn set_ar(&self, ar: string::String) {
-        *self.ar.borrow_mut() = Some(ar);
-    }
-
-    pub fn set_linker(&self, linker: string::String) {
-        *self.linker.borrow_mut() = Some(linker);
-    }
-
-    pub fn linker(&self) -> Ref<Option<string::String>> { self.linker.borrow() }
-    pub fn ar(&self) -> Ref<Option<string::String>> { self.ar.borrow() }
 
     /// Return the output of `rustc -v verbose`
     pub fn rustc_version(&self) -> &str {
