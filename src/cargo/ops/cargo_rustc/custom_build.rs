@@ -10,7 +10,7 @@ use util::{CargoResult, CargoError, human};
 use util::{internal, ChainError, Require};
 
 use super::job::Work;
-use super::{fingerprint, process, KindHost, Context};
+use super::{fingerprint, process, KindTarget, KindHost, Context};
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
@@ -31,12 +31,15 @@ pub struct BuildState {
 /// Prepares a `Work` that executes the target as a custom build script.
 pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
                -> CargoResult<(Work, Work, Freshness)> {
+    // TODO: this shouldn't explicitly pass `KindTarget` for the layout, we
+    //       may be running a build script for a plugin dependency.
     let (script_output, old_script_output, build_output, old_build_output) = {
-        let layout = cx.layout(pkg, KindHost);
-        (layout.build(pkg),
-         layout.proxy().old_build(pkg),
-         layout.build_out(pkg),
-         layout.proxy().old_build(pkg).join("out"))
+        let target = cx.layout(pkg, KindTarget);
+        let host = cx.layout(pkg, KindHost);
+        (host.build(pkg),
+         host.proxy().old_build(pkg),
+         target.build_out(pkg),
+         target.proxy().old_build(pkg).join("out"))
     };
 
     // Building the command to execute
@@ -92,7 +95,8 @@ pub fn prepare(pkg: &Package, target: &Target, cx: &mut Context)
                script_output.clone(), old_build_output.clone(),
                build_output.clone());
 
-    try!(fs::mkdir(&script_output, USER_RWX));
+    try!(fs::mkdir_recursive(&cx.layout(pkg, KindTarget).build(pkg), USER_RWX));
+    try!(fs::mkdir_recursive(&cx.layout(pkg, KindHost).build(pkg), USER_RWX));
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.

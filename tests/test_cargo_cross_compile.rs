@@ -474,3 +474,45 @@ test!(cross_but_no_dylibs {
                        .with_stderr("dylib outputs are not supported for \
                                      arm-apple-ios"));
 })
+
+test!(cross_with_a_build_script {
+    if disabled() { return }
+
+    let target = alternate();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = 'build.rs'
+        "#)
+        .file("build.rs", format!(r#"
+            use std::os;
+            fn main() {{
+                assert_eq!(os::getenv("TARGET").unwrap().as_slice(), "{0}");
+                let mut path = Path::new(os::getenv("OUT_DIR").unwrap());
+                assert_eq!(path.filename().unwrap(), b"out");
+                path.pop();
+                assert!(path.filename().unwrap().starts_with(b"foo-"));
+                path.pop();
+                assert_eq!(path.filename().unwrap(), b"build");
+                path.pop();
+                assert_eq!(path.filename().unwrap(), b"{0}");
+                path.pop();
+                assert_eq!(path.filename().unwrap(), b"target");
+            }}
+        "#, target).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 (file://[..])
+{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..]`
+{running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
+{running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..]`
+", compiling = COMPILING, running = RUNNING, target = target,
+   dir = p.root().display(), sep = path::SEP).as_slice()));
+})
+
