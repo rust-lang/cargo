@@ -149,10 +149,10 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
                           req: PlatformRequirement,
-                          visiting: &mut HashSet<&'a PackageId>) {
-        if !visiting.insert(pkg.get_package_id()) { return }
+                          visiting: &mut HashSet<(&'a PackageId, &'a str)>) {
 
         let key = (pkg.get_package_id(), target.get_name());
+        if !visiting.insert(key) { return }
         let req = if target.get_profile().is_for_host() {PlatformPlugin} else {req};
         match self.requirements.entry(key) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(req); }
@@ -163,7 +163,15 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             self.build_requirements(pkg, dep, req, visiting);
         }
 
-        visiting.remove(&pkg.get_package_id());
+        match pkg.get_targets().iter().find(|t| t.get_profile().is_custom_build()) {
+            Some(custom_build) => {
+                self.build_requirements(pkg, custom_build, PlatformPlugin,
+                                        visiting);
+            }
+            None => {}
+        }
+
+        visiting.remove(&key);
     }
 
     pub fn get_requirement(&self, pkg: &'a Package,
