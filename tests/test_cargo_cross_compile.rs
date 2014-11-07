@@ -9,6 +9,7 @@ use support::{project, execs, basic_bin_manifest};
 use support::{RUNNING, COMPILING, DOCTEST, cargo_dir};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
+use cargo::ops::rustc_version;
 
 fn setup() {
 }
@@ -473,4 +474,127 @@ test!(cross_but_no_dylibs {
                 execs().with_status(101)
                        .with_stderr("dylib outputs are not supported for \
                                      arm-apple-ios"));
+})
+
+test!(cross_with_a_build_script {
+    if disabled() { return }
+
+    let target = alternate();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = 'build.rs'
+        "#)
+        .file("build.rs", format!(r#"
+            use std::os;
+            fn main() {{
+                assert_eq!(os::getenv("TARGET").unwrap().as_slice(), "{0}");
+                let mut path = Path::new(os::getenv("OUT_DIR").unwrap());
+                assert_eq!(path.filename().unwrap(), b"out");
+                path.pop();
+                assert!(path.filename().unwrap().starts_with(b"foo-"));
+                path.pop();
+                assert_eq!(path.filename().unwrap(), b"build");
+                path.pop();
+                assert_eq!(path.filename().unwrap(), b"{0}");
+                path.pop();
+                assert_eq!(path.filename().unwrap(), b"target");
+            }}
+        "#, target).as_slice())
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.0 (file://[..])
+{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..]`
+{running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
+{running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..]`
+", compiling = COMPILING, running = RUNNING, target = target,
+   dir = p.root().display(), sep = path::SEP).as_slice()));
+})
+
+test!(build_script_needed_for_host_and_target {
+    if disabled() { return }
+
+    let target = alternate();
+    let (_, host) = rustc_version().unwrap();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = 'build.rs'
+
+            [dependencies.d1]
+            path = "d1"
+            [build-dependencies.d2]
+            path = "d2"
+        "#)
+
+        .file("build.rs", r#"
+            extern crate d2;
+            fn main() { d2::d2(); }
+        "#)
+        .file("src/main.rs", "
+            extern crate d1;
+            fn main() { d1::d1(); }
+        ")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.0"
+            authors = []
+            build = 'build.rs'
+        "#)
+        .file("d1/src/lib.rs", "
+            pub fn d1() {}
+        ")
+        .file("d1/build.rs", r#"
+            use std::os;
+            fn main() {
+                let target = os::getenv("TARGET").unwrap();
+                println!("cargo:rustc-flags=-L /path/to/{}", target);
+            }
+        "#)
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.d1]
+            path = "../d1"
+        "#)
+        .file("d2/src/lib.rs", "
+            extern crate d1;
+            pub fn d2() { d1::d1(); }
+        ");
+
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} d1 v0.0.0 (file://{dir})
+{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}d1-[..]`
+{running} `{dir}{sep}target{sep}build{sep}d1-[..]build-script-build`
+{running} `{dir}{sep}target{sep}build{sep}d1-[..]build-script-build`
+{running} `rustc {dir}{sep}d1{sep}src{sep}lib.rs [..] --target {target} [..] \
+           -L /path/to/{target}`
+{running} `rustc {dir}{sep}d1{sep}src{sep}lib.rs [..] \
+           -L /path/to/{host}`
+{compiling} d2 v0.0.0 (file://{dir})
+{running} `rustc {dir}{sep}d2{sep}src{sep}lib.rs [..] \
+           -L /path/to/{host}`
+{compiling} foo v0.0.0 (file://{dir})
+{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..] \
+           -L /path/to/{host}`
+{running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
+{running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..] \
+           -L /path/to/{target}`
+", compiling = COMPILING, running = RUNNING, target = target, host = host,
+   dir = p.root().display(), sep = path::SEP).as_slice()));
 })

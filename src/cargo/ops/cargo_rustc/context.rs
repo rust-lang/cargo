@@ -7,7 +7,8 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, KindHost, KindTarget, Compilation, BuildOutput};
+use super::{Kind, KindHost, KindTarget, Compilation, BuildConfig};
+use super::TargetConfig;
 use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
 
@@ -34,6 +35,7 @@ pub struct Context<'a, 'b: 'a> {
     target_dylib: Option<(String, String)>,
     target_exe: String,
     requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
+    build_config: BuildConfig,
 }
 
 impl<'a, 'b: 'a> Context<'a, 'b> {
@@ -41,7 +43,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                deps: &'a PackageSet, config: &'b Config<'b>,
                host: Layout, target: Option<Layout>,
                root_pkg: &Package,
-               build_state: HashMap<String, BuildOutput>)
+               build_config: BuildConfig)
                -> CargoResult<Context<'a, 'b>> {
         let (target_dylib, target_exe) =
                 try!(Context::filename_parts(config.target()));
@@ -67,7 +69,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             host_dylib: host_dylib,
             requirements: HashMap::new(),
             compilation: Compilation::new(root_pkg),
-            build_state: Arc::new(BuildState::new(build_state, deps)),
+            build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
+            build_config: build_config,
         })
     }
 
@@ -165,8 +168,13 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     pub fn get_requirement(&self, pkg: &'a Package,
                            target: &'a Target) -> PlatformRequirement {
+        let default = if target.get_profile().is_for_host() {
+            PlatformPlugin
+        } else {
+            PlatformTarget
+        };
         self.requirements.get(&(pkg.get_package_id(), target.get_name()))
-            .map(|a| *a).unwrap_or(PlatformTarget)
+            .map(|a| *a).unwrap_or(default)
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
@@ -274,6 +282,24 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                           target.get_profile().is_doc()),
             _ => target.get_profile().get_env() == self.env &&
                  !target.get_profile().is_test(),
+        }
+    }
+
+    /// Get the user-specified linker for a particular host or target
+    pub fn linker(&self, kind: Kind) -> Option<&str> {
+        self.target_config(kind).linker.as_ref().map(|s| s.as_slice())
+    }
+
+    /// Get the user-specified `ar` program for a particular host or target
+    pub fn ar(&self, kind: Kind) -> Option<&str> {
+        self.target_config(kind).ar.as_ref().map(|s| s.as_slice())
+    }
+
+    /// Get the target configuration for a particular host or target
+    fn target_config(&self, kind: Kind) -> &TargetConfig {
+        match kind {
+            KindHost => &self.build_config.host,
+            KindTarget => &self.build_config.target,
         }
     }
 }

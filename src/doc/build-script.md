@@ -76,7 +76,7 @@ are interpreted by Cargo and must be of the form `key=value`.
 Example output:
 
 ```
-cargo:rustc-flags=-l static:foo -L /path/to/foo
+cargo:rustc-flags=-l foo:static -L /path/to/foo
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
