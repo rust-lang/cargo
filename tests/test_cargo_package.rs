@@ -34,11 +34,11 @@ test!(simple {
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice()));
-    assert_that(&p.root().join("foo-0.0.1.tar.gz"), existing_file());
+    assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
     assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
                 execs().with_status(0).with_stdout(""));
 
-    let f = File::open(&p.root().join("foo-0.0.1.tar.gz")).assert();
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).assert();
     let mut rdr = GzDecoder::new(f);
     let contents = rdr.read_to_end().assert();
     let ar = Archive::new(MemReader::new(contents));
