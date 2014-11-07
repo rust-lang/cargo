@@ -324,7 +324,7 @@ fn walk_tree(pwd: &Path,
 fn extract_config(mut file: File, key: &str) -> CargoResult<ConfigValue> {
     let contents = try!(file.read_to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), file.path()));
-    let val = try!(toml.pop(&key.to_string()).require(|| internal("")));
+    let val = try!(toml.remove(&key.to_string()).require(|| internal("")));
 
     ConfigValue::from_toml(file.path(), val)
 }

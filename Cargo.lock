@@ -5,7 +5,7 @@ dependencies = [
  "curl 0.0.1 (git+https://github.com/alexcrichton/curl-rust?ref=bundle)",
  "docopt 0.6.8 (git+https://github.com/docopt/docopt.rs)",
  "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs)",
- "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
+ "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs?ref=no-build-cmd)",
  "glob 0.0.1 (git+https://github.com/rust-lang/glob)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git)",
  "registry 0.0.1-pre",
@@ -34,7 +34,7 @@ source = "git+https://github.com/alexcrichton/curl-rust?ref=bundle#b595431adb3ff
 [[package]]
 name = "docopt"
 version = "0.6.8"
-source = "git+https://github.com/docopt/docopt.rs#1b614c83b771b23e95e69d10b4bc04c87ff7eff3"
+source = "git+https://github.com/docopt/docopt.rs#0b184b15ed5ea7e3c180b088e8f99baa4427f989"
 
 [[package]]
 name = "encoding"
@@ -81,9 +81,9 @@ source = "git+https://github.com/alexcrichton/flate2-rs#31d9253355ba837cd62487b8
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#556e27113a4918cede9b80e447a5ebad524f3357"
+source = "git+https://github.com/alexcrichton/git2-rs?ref=no-build-cmd#b7a84b817bc62df62e4449b7d78aa3887bd3b4c7"
 dependencies = [
- "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
+ "libgit2 0.0.1 (git+https://github.com/alexcrichton/git2-rs?ref=no-build-cmd)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
 
@@ -100,7 +100,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#998036d000095f72c8
 [[package]]
 name = "libgit2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#556e27113a4918cede9b80e447a5ebad524f3357"
+source = "git+https://github.com/alexcrichton/git2-rs?ref=no-build-cmd#b7a84b817bc62df62e4449b7d78aa3887bd3b4c7"
 dependencies = [
  "libssh2-static-sys 0.0.1 (git+https://github.com/alexcrichton/libssh2-static-sys)",
  "link-config 0.0.1 (git+https://github.com/alexcrichton/link-config)",
@@ -142,12 +142,12 @@ source = "git+https://github.com/alexcrichton/tar-rs#47d2cc4b09e373a4cc7bee7c71e
 [[package]]
 name = "toml"
 version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#78acb5081d57bec85fd51ecb596506b14d17d430"
+source = "git+https://github.com/alexcrichton/toml-rs#ac6f3b27e03e7a5938fd4cae5fc3fecc5ab1a85f"
 
 [[package]]
 name = "url"
 version = "0.1.0"
-source = "git+https://github.com/servo/rust-url#9142b86a812ac5bc886f76235585557d8e002246"
+source = "git+https://github.com/servo/rust-url#cec3c32168ce4233e179f22ef50215b3a9c34342"
 dependencies = [
  "encoding 0.2.0 (git+https://github.com/lifthrasiir/rust-encoding)",
 ]

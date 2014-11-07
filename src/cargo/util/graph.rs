@@ -37,7 +37,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 
     pub fn edges(&self, node: &N) -> Option<Edges<N>> {
-        self.nodes.find(node).map(|set| set.iter())
+        self.nodes.get(node).map(|set| set.iter())
     }
 
     pub fn sort(&self) -> Option<Vec<N>> {

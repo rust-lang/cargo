@@ -109,7 +109,7 @@ impl<'a> PackageRegistry<'a> {
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
-        match self.source_ids.find(namespace) {
+        match self.source_ids.get(namespace) {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
             // slightly different precise version listed.
@@ -213,7 +213,7 @@ impl<'a> PackageRegistry<'a> {
     // to be rewritten to a locked version wherever possible. If we're unable to
     // map a dependency though, we just pass it on through.
     fn lock(&self, summary: Summary) -> Summary {
-        let pair = self.locked.find(summary.get_source_id()).and_then(|map| {
+        let pair = self.locked.get(summary.get_source_id()).and_then(|map| {
             map.find_equiv(summary.get_name())
         }).and_then(|vec| {
             vec.iter().find(|&&(ref id, _)| id == summary.get_package_id())
@@ -242,7 +242,7 @@ impl<'a> PackageRegistry<'a> {
                 // dependency. If anything does then we lock it to that and move
                 // on.
                 None => {
-                    let v = self.locked.find(dep.get_source_id()).and_then(|map| {
+                    let v = self.locked.get(dep.get_source_id()).and_then(|map| {
                         map.find_equiv(dep.get_name())
                     }).and_then(|vec| {
                         vec.iter().find(|&&(ref id, _)| dep.matches_id(id))

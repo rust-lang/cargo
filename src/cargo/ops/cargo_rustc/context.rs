@@ -165,7 +165,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     pub fn get_requirement(&self, pkg: &'a Package,
                            target: &'a Target) -> PlatformRequirement {
-        self.requirements.find(&(pkg.get_package_id(), target.get_name()))
+        self.requirements.get(&(pkg.get_package_id(), target.get_name()))
             .map(|a| *a).unwrap_or(PlatformTarget)
     }
 

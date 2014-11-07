@@ -13,7 +13,7 @@ pub fn validate(deps: &PackageSet) -> CargoResult<()> {
             Some(lib) => lib,
             None => continue,
         };
-        match map.find(&lib) {
+        match map.get(&lib) {
             Some(previous) => {
                 return Err(human(format!("native library `{}` is being linked \
                                           to by more than one package, and \
