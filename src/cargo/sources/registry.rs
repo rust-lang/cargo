@@ -147,7 +147,7 @@
 //!     # This folder is a cache for all downloaded tarballs from a registry.
 //!     # Once downloaded and verified, a tarball never changes.
 //!     cache/
-//!         registry1-<hash>/<pkg>-<version>.tar.gz
+//!         registry1-<hash>/<pkg>-<version>.crate
 //!         ...
 //!
 //!     # Location in which all tarballs are unpacked. Each tarball is known to
@@ -296,7 +296,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     fn download_package(&mut self, pkg: &PackageId, url: &Url)
                         -> CargoResult<Path> {
         // TODO: should discover from the S3 redirect
-        let filename = format!("{}-{}.tar.gz", pkg.get_name(), pkg.get_version());
+        let filename = format!("{}-{}.crate", pkg.get_name(), pkg.get_version());
         let dst = self.cache_path.join(filename);
         if dst.exists() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));

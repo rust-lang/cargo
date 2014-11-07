@@ -456,6 +456,10 @@ impl Manifest {
     pub fn set_summary(&mut self, summary: Summary) {
         self.summary = summary;
     }
+
+    pub fn set_target_dir(&mut self, target_dir: Path) {
+        self.target_dir = target_dir;
+    }
 }
 
 impl Target {
