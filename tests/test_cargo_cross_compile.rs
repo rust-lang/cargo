@@ -598,3 +598,44 @@ test!(build_script_needed_for_host_and_target {
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
    dir = p.root().display(), sep = path::SEP).as_slice()));
 })
+
+test!(build_deps_for_the_right_arch {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.d2]
+            path = "d2"
+        "#)
+        .file("src/main.rs", "extern crate d2; fn main() {}")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("d1/src/lib.rs", "
+            pub fn d1() {}
+        ")
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.d1]
+            path = "../d1"
+        "#)
+        .file("d2/build.rs", "extern crate d1; fn main() {}")
+        .file("d2/src/lib.rs", "");
+
+    let target = alternate();
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+                execs().with_status(0));
+})
