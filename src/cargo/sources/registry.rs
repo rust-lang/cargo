@@ -317,8 +317,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         }
 
         // Verify what we just downloaded
-        let expected = self.hashes.find(&(pkg.get_name().to_string(),
-                                          pkg.get_version().to_string()));
+        let expected = self.hashes.get(&(pkg.get_name().to_string(),
+                                         pkg.get_version().to_string()));
         let expected = try!(expected.require(|| {
             internal(format!("no hash listed for {}", pkg))
         }));

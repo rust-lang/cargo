@@ -35,6 +35,7 @@ git = "https://github.com/alexcrichton/flate2-rs"
 
 [dependencies.git2]
 git = "https://github.com/alexcrichton/git2-rs"
+branch = "no-build-cmd"
 
 [dependencies.glob]
 git = "https://github.com/rust-lang/glob"

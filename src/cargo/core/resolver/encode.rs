@@ -30,7 +30,7 @@ impl EncodableResolve {
                 let pkgid = try!(pkg.to_package_id(default));
                 let precise = pkgid.get_source_id().get_precise()
                                    .map(|s| s.to_string());
-                assert!(tmp.insert(pkgid.clone(), precise),
+                assert!(tmp.insert(pkgid.clone(), precise).is_none(),
                         "a package was referenced twice in the lockfile");
                 g.add(try!(pkg.to_package_id(default)), []);
                 Ok(())
@@ -53,7 +53,7 @@ impl EncodableResolve {
                 for edge in deps.iter() {
                     let to_depend_on = try!(edge.to_package_id(default));
                     let precise_pkgid =
-                        tmp.find(&to_depend_on)
+                        tmp.get(&to_depend_on)
                            .map(|p| to_depend_on.with_precise(p.clone()))
                            .unwrap_or(to_depend_on.clone());
                     g.link(package_id.clone(), precise_pkgid);

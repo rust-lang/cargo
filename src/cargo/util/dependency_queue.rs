@@ -86,7 +86,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
             };
             assert!(rev.insert(key.clone()));
         }
-        assert!(self.dep_map.insert(key, (my_dependencies, value)));
+        assert!(self.dep_map.insert(key, (my_dependencies, value)).is_none());
     }
 
     /// Dequeues a package that is ready to be built.
@@ -100,7 +100,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
             Some(key) => key,
             None => return None
         };
-        let (_, data) = self.dep_map.pop(&key).unwrap();
+        let (_, data) = self.dep_map.remove(&key).unwrap();
         let fresh = if self.dirty.contains(&key) {Dirty} else {Fresh};
         self.pending.insert(key.clone());
         Some((fresh, key, data))
@@ -117,7 +117,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
     /// possibly allowing the next invocation of `dequeue` to return a package.
     pub fn finish(&mut self, key: &K, fresh: Freshness) {
         assert!(self.pending.remove(key));
-        let reverse_deps = match self.reverse_dep_map.find(key) {
+        let reverse_deps = match self.reverse_dep_map.get(key) {
             Some(deps) => deps,
             None => return,
         };

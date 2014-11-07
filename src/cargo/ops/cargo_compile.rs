@@ -183,7 +183,7 @@ fn scrape_target_config(config: &Config,
         })),
     };
     let triple = config.target().unwrap_or(config.rustc_host()).to_string();
-    let target = match target.find(&triple) {
+    let target = match target.get(&triple) {
         None => return Ok(HashMap::new()),
         Some(target) => try!(target.table().chain_error(|| {
             internal(format!("invalid configuration for the key \

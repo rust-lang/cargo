@@ -110,7 +110,7 @@ impl Resolve {
     }
 
     pub fn features(&self, pkg: &PackageId) -> Option<&HashSet<String>> {
-        self.features.find(pkg)
+        self.features.get(pkg)
     }
 }
 
@@ -199,7 +199,7 @@ fn activate_deps<'a, R: Registry>(cx: Context,
                                   dep.uses_default_features(), platform);
 
     let key = (dep.get_name().to_string(), dep.get_source_id().clone());
-    let prev_active = cx.activations.find(&key)
+    let prev_active = cx.activations.get(&key)
                                     .map(|v| v.as_slice()).unwrap_or(&[]);
     log!(5, "{}[{}]>{} {} candidates", parent.get_name(), cur, dep.get_name(),
          candidates.len());

@@ -491,7 +491,10 @@ fn build_base_args(cx: &Context,
                          .rpath(root_profile.get_rpath())
     }
 
-    if profile.is_for_host() {
+    let prefer_dynamic = profile.is_for_host() ||
+                         (crate_types.contains(&"dylib") &&
+                          pkg.get_package_id() != cx.resolve.root());
+    if prefer_dynamic {
         cmd = cmd.arg("-C").arg("prefer-dynamic");
     }
 
