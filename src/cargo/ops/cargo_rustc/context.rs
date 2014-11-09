@@ -31,6 +31,7 @@ pub struct Context<'a, 'b: 'a> {
     target: Option<Layout>,
     target_triple: String,
     host_dylib: Option<(String, String)>,
+    host_exe: String,
     package_set: &'a PackageSet,
     target_dylib: Option<(String, String)>,
     target_exe: String,
@@ -47,11 +48,11 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                -> CargoResult<Context<'a, 'b>> {
         let (target_dylib, target_exe) =
                 try!(Context::filename_parts(config.target()));
-        let host_dylib = if config.target().is_none() {
-            target_dylib.clone()
+        let (host_dylib, host_exe) = if config.target().is_none() {
+            (target_dylib.clone(),
+             target_exe.clone())
         } else {
-            let (dylib, _) = try!(Context::filename_parts(None));
-            dylib
+            try!(Context::filename_parts(None))
         };
         let target_triple = config.target().map(|s| s.to_string());
         let target_triple = target_triple.unwrap_or(config.rustc_host().to_string());
@@ -67,6 +68,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             target_dylib: target_dylib,
             target_exe: target_exe,
             host_dylib: host_dylib,
+            host_exe: host_exe,
             requirements: HashMap::new(),
             compilation: Compilation::new(root_pkg),
             build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
@@ -225,7 +227,12 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         let mut ret = Vec::new();
         if target.is_example() || target.is_bin() ||
            target.get_profile().is_test() {
-            ret.push(format!("{}{}", stem, self.target_exe));
+            ret.push(format!("{}{}", stem,
+                             if target.get_profile().is_for_host() {
+                                 self.host_exe.as_slice()
+                             } else {
+                                 self.target_exe.as_slice()
+                             }));
         } else {
             if target.is_dylib() {
                 let plugin = target.get_profile().is_for_host();
