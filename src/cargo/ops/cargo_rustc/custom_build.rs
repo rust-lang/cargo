@@ -212,11 +212,13 @@ impl BuildState {
             }
         }
         let mut outputs = HashMap::new();
-        for (name, output) in config.host.overrides.into_iter() {
-            outputs.insert((sources[name].clone(), KindHost), output);
-        }
-        for (name, output) in config.target.overrides.into_iter() {
-            outputs.insert((sources[name].clone(), KindTarget), output);
+        let i1 = config.host.overrides.into_iter().map(|p| (p, KindHost));
+        let i2 = config.target.overrides.into_iter().map(|p| (p, KindTarget));
+        for ((name, output), kind) in i1.chain(i2) {
+            match sources.get(&name) {
+                Some(id) => { outputs.insert((id.clone(), kind), output); }
+                None => {}
+            }
         }
         BuildState { outputs: Mutex::new(outputs) }
     }

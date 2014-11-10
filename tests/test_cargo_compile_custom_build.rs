@@ -297,6 +297,30 @@ test!(overrides_and_links {
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
 
+test!(unused_overrides {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file(".cargo/config", format!(r#"
+            [target.{}.foo]
+            rustc-flags = "-L foo -L bar"
+            foo = "bar"
+            bar = "baz"
+        "#, target).as_slice());
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+})
+
 test!(links_passes_env_vars {
     let p = project("foo")
         .file("Cargo.toml", r#"
