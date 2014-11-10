@@ -31,13 +31,9 @@ pub struct BuildState {
 /// Prepares a `Work` that executes the target as a custom build script.
 pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
                -> CargoResult<(Work, Work, Freshness)> {
-    // TODO: this shouldn't explicitly pass `KindTarget` for the layout, we
-    //       may be running a build script for a plugin dependency.
-    let (script_output, old_script_output, build_output, old_build_output) = {
+    let (script_output, build_output, old_build_output) = {
         let target = cx.layout(pkg, kind);
-        let host = cx.layout(pkg, KindHost);
-        (host.build(pkg),
-         host.proxy().old_build(pkg),
+        (cx.layout(pkg, KindHost).build(pkg),
          target.build_out(pkg),
          target.proxy().old_build(pkg).join("out"))
     };
@@ -95,7 +91,7 @@ pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
     let build_state = cx.build_state.clone();
     let id = pkg.get_package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
-               script_output.clone(), old_build_output.clone(),
+               old_build_output.clone(),
                build_output.clone());
 
     try!(fs::mkdir_recursive(&cx.layout(pkg, KindTarget).build(pkg), USER_RWX));
@@ -154,10 +150,10 @@ pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
         let output = try!(str::from_utf8(output.output.as_slice()).require(|| {
             human("build script output was not valid utf-8")
         }));
-        let build_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
-        build_state.outputs.lock().insert((id, kind), build_output);
+        let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
+        build_state.outputs.lock().insert((id, kind), parsed_output);
 
-        try!(File::create(&script_output.join("output"))
+        try!(File::create(&build_output.dir_path().join("output"))
                   .write_str(output).map_err(|e| {
             human(format!("failed to write output of custom build command: {}",
                           e))
@@ -179,10 +175,9 @@ pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
     let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
     let fresh = proc(tx) {
-        let (id, pkg_name, build_state, script_output,
-             old_build_output, build_output) = all;
-        let new_loc = script_output.join("output");
-        try!(fs::rename(&old_script_output.join("output"), &new_loc));
+        let (id, pkg_name, build_state, old_build_output, build_output) = all;
+        let new_loc = build_output.dir_path().join("output");
+        try!(fs::rename(&old_build_output.dir_path().join("output"), &new_loc));
         try!(fs::rename(&old_build_output, &build_output));
         let mut f = try!(File::open(&new_loc).map_err(|e| {
             human(format!("failed to read cached build command output: {}", e))
@@ -217,6 +212,9 @@ impl BuildState {
         for ((name, output), kind) in i1.chain(i2) {
             match sources.get(&name) {
                 Some(id) => { outputs.insert((id.clone(), kind), output); }
+
+                // If no package is using the library named `name`, then this is
+                // just an override that we ignore.
                 None => {}
             }
         }
