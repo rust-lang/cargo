@@ -21,8 +21,8 @@ Nightlies are available for the following triples:
 * [`i686-unknown-linux-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-unknown-linux-gnu.tar.gz)
 * [`x86_64-apple-darwin`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-apple-darwin.tar.gz)
 * [`i686-apple-darwin`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-apple-darwin.tar.gz)
-* [`x86_64-w64-mingw32`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-w64-mingw32.tar.gz)
-* [`i686-w64-mingw32`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-w64-mingw32.tar.gz)
+* [`x86_64-pc-windows-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz)
+* [`i686-pc-windows-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz)
 
 Note that if you're using the windows snapshot you will need Mingw-w64 installed
 as well as MSYS. The installation script needs to be run inside the MSYS shell.
