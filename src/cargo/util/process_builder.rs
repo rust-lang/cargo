@@ -113,10 +113,23 @@ impl ProcessBuilder {
         for arg in self.args.iter() {
             program.push(' ');
             let s = String::from_utf8_lossy(arg.as_bytes_no_nul());
-            program.push_str(s.as_slice());
+            program.push_str(string_to_sh_single_quote(s.as_slice()).as_slice());
         }
         program
     }
+}
+
+fn string_to_sh_single_quote(s: &str) -> String {
+    let mut parts = s.split('\'');
+    let mut first = String::from_str("\'");
+
+    first.push_str(parts.next().unwrap_or(""));
+
+    parts.fold(first, |mut ns, part| {
+        ns.push_str("'\\''");
+        ns.push_str(part);
+        ns
+    }) + "\'"
 }
 
 pub fn process<T: ToCStr>(cmd: T) -> ProcessBuilder {
