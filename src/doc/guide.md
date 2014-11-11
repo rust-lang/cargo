@@ -20,7 +20,7 @@ To accomplish this goal, Cargo does four things:
 You can convert an existing Rust project to use Cargo. You'll have to create a
 `Cargo.toml` file with all of your dependencies, and move your source files and
 test files into the places where Cargo expects them to be. See the [manifest
-description](/manifest.html) and the "Cargo Conventions" section below for more
+description](manifest.html) and the "Cargo Conventions" section below for more
 details.
 
 # Creating A New Project
@@ -353,7 +353,7 @@ your code directory or in your home directory).
 
 Inside that file, put this:
 
-```
+```toml
 paths = ["/path/to/project/conduit"]
 ```
 
