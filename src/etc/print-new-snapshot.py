@@ -16,8 +16,8 @@ snaps = {
     'macos-x86_64': 'x86_64-apple-darwin',
     'linux-i386': 'i686-unknown-linux-gnu',
     'linux-x86_64': 'x86_64-unknown-linux-gnu',
-    'winnt-i386': 'i686-w64-mingw32',
-    'winnt-x86_64': 'x86_64-w64-mingw32',
+    'winnt-i386': 'i686-pc-windows-gnu',
+    'winnt-x86_64': 'x86_64-pc-windows-gnu',
 }
 
 for platform in sorted(snaps):

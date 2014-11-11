@@ -9,4 +9,4 @@ path = "lib.rs"
 
 [dependencies.curl]
 git = "https://github.com/alexcrichton/curl-rust"
-branch = "bundle"
+branch = "build-cmd"
