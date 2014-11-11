@@ -118,7 +118,9 @@ pub fn to_manifest(contents: &[u8],
         Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
         None => {}
     }
-    if manifest.get_targets().len() == 0 {
+    if manifest.get_targets().iter()
+                           .filter(|t| !t.get_profile().is_custom_build() )
+                           .next().is_none() {
         return Err(human(format!("either a [lib] or [[bin]] section must \
                                   be present")))
     }
