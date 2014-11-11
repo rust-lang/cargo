@@ -16,6 +16,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_release: bool,
+    flag_lib: bool
 }
 
 pub const USAGE: &'static str = "
@@ -28,6 +29,7 @@ Options:
     -h, --help               Print this message
     -p SPEC, --package SPEC  Package to build
     -j N, --jobs N           The number of jobs to run in parallel
+    --lib                    Build only lib (if present in package)
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
@@ -62,6 +64,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,
         spec: options.flag_package.as_ref().map(|s| s.as_slice()),
+        lib_only: options.flag_lib
     };
 
     ops::compile(&root, &mut opts).map(|_| None).map_err(|err| {
