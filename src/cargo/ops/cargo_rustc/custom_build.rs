@@ -11,6 +11,8 @@ use util::{internal, ChainError, Require};
 
 use super::job::Work;
 use super::{fingerprint, process, KindTarget, KindHost, Kind, Context};
+use super::{PlatformPlugin, PlatformPluginAndTarget, PlatformTarget};
+use super::PlatformRequirement;
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
@@ -29,8 +31,14 @@ pub struct BuildState {
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
-pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
-               -> CargoResult<(Work, Work, Freshness)> {
+///
+/// The `req` given is the requirement which this run of the build script will
+/// prepare work for. If the requirement is specified as both the target and the
+/// host platforms it is assumed that the two are equal and the build script is
+/// only run once (not twice).
+pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
+               cx: &mut Context) -> CargoResult<(Work, Work, Freshness)> {
+    let kind = match req { PlatformPlugin => KindHost, _ => KindTarget, };
     let (script_output, build_output, old_build_output) = {
         let target = cx.layout(pkg, kind);
         (cx.layout(pkg, KindHost).build(pkg),
@@ -151,7 +159,7 @@ pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
             human("build script output was not valid utf-8")
         }));
         let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
-        build_state.outputs.lock().insert((id, kind), parsed_output);
+        build_state.insert(id, req, parsed_output);
 
         try!(File::create(&build_output.dir_path().join("output"))
                   .write_str(output).map_err(|e| {
@@ -185,7 +193,7 @@ pub fn prepare(pkg: &Package, target: &Target, kind: Kind, cx: &mut Context)
         let contents = try!(f.read_to_string());
         let output = try!(BuildOutput::parse(contents.as_slice(),
                                              pkg_name.as_slice()));
-        build_state.outputs.lock().insert((id, kind), output);
+        build_state.insert(id, req, output);
 
         fresh(tx)
     };
@@ -219,6 +227,22 @@ impl BuildState {
             }
         }
         BuildState { outputs: Mutex::new(outputs) }
+    }
+
+    fn insert(&self, id: PackageId, req: PlatformRequirement,
+              output: BuildOutput) {
+        let mut outputs = self.outputs.lock();
+        match req {
+            PlatformTarget => { outputs.insert((id, KindTarget), output); }
+            PlatformPlugin => { outputs.insert((id, KindHost), output); }
+
+            // If this build output was for both the host and target platforms,
+            // we need to insert it at both places.
+            PlatformPluginAndTarget => {
+                outputs.insert((id.clone(), KindHost), output.clone());
+                outputs.insert((id, KindTarget), output);
+            }
+        }
     }
 }
 

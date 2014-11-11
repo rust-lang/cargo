@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::collections::hash_map::{HashMap, Occupied, Vacant};
 use std::str;
 use std::sync::Arc;
@@ -135,8 +134,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         let targets = pkg.get_targets().iter();
         for target in targets.filter(|t| t.get_profile().is_compile()) {
-            self.build_requirements(pkg, target, PlatformTarget,
-                                    &mut HashSet::new());
+            self.build_requirements(pkg, target, PlatformTarget);
         }
 
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
@@ -150,30 +148,31 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     }
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
-                          req: PlatformRequirement,
-                          visiting: &mut HashSet<(&'a PackageId, &'a str)>) {
+                          req: PlatformRequirement) {
 
-        let key = (pkg.get_package_id(), target.get_name());
-        if !visiting.insert(key) { return }
         let req = if target.get_profile().is_for_host() {PlatformPlugin} else {req};
-        match self.requirements.entry(key) {
-            Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(req); }
+        match self.requirements.entry((pkg.get_package_id(), target.get_name())) {
+            Occupied(mut entry) => match (*entry.get(), req) {
+                (PlatformPlugin, PlatformPlugin) |
+                (PlatformPluginAndTarget, PlatformPlugin) |
+                (PlatformTarget, PlatformTarget) |
+                (PlatformPluginAndTarget, PlatformTarget) |
+                (PlatformPluginAndTarget, PlatformPluginAndTarget) => return,
+                _ => *entry.get_mut() = entry.get().combine(req),
+            },
             Vacant(entry) => { entry.set(req); }
         };
 
         for &(pkg, dep) in self.dep_targets(pkg, target).iter() {
-            self.build_requirements(pkg, dep, req, visiting);
+            self.build_requirements(pkg, dep, req);
         }
 
         match pkg.get_targets().iter().find(|t| t.get_profile().is_custom_build()) {
             Some(custom_build) => {
-                self.build_requirements(pkg, custom_build, PlatformPlugin,
-                                        visiting);
+                self.build_requirements(pkg, custom_build, PlatformPlugin);
             }
             None => {}
         }
-
-        visiting.remove(&key);
     }
 
     pub fn get_requirement(&self, pkg: &'a Package,
