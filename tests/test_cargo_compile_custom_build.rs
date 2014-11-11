@@ -837,3 +837,19 @@ test!(release_with_build_script {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0));
 })
+
+test!(build_script_only {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+              [project]
+              name = "foo"
+              version = "0.0.0"
+              authors = []
+              build = "build.rs"
+        "#)
+        .file("build.rs", r#"fn main() {}"#);
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(101)
+                       .with_stderr("either a [lib] or [[bin]] section must \
+                                     be present"));
+})
