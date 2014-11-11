@@ -177,7 +177,7 @@ use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
 use util::{hex, Require, Sha256};
 use ops;
 
-static CENTRAL: &'static str = "https://example.com";
+static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
 
 pub struct RegistrySource<'a, 'b:'a> {
     source_id: SourceId,
@@ -250,13 +250,13 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// a .cargo/config
     pub fn url() -> CargoResult<Url> {
         let config = try!(ops::registry_configuration());
-        let url = config.index.unwrap_or(CENTRAL.to_string());
+        let url = config.index.unwrap_or(DEFAULT.to_string());
         url.as_slice().to_url().map_err(human)
     }
 
     /// Get the default url for the registry
     pub fn default_url() -> String {
-        CENTRAL.to_string()
+        DEFAULT.to_string()
     }
 
     /// Decode the configuration stored within the registry.

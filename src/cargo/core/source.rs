@@ -219,6 +219,14 @@ impl SourceId {
             }),
         }
     }
+
+    pub fn is_default_registry(&self) -> bool {
+        match self.inner.kind {
+            RegistryKind => {}
+            _ => return false,
+        }
+        self.inner.url.to_string() == RegistrySource::default_url()
+    }
 }
 
 impl PartialEq for SourceId {
@@ -276,12 +284,7 @@ impl Show for SourceId {
                 Ok(())
             },
             SourceIdInner { kind: RegistryKind, ref url, .. } => {
-                let default = RegistrySource::url().ok();
-                if default.as_ref() == Some(url) {
-                    write!(f, "the package registry")
-                } else {
-                    write!(f, "registry {}", url)
-                }
+                write!(f, "registry {}", url)
             }
         }
     }

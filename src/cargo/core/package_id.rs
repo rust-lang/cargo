@@ -152,13 +152,11 @@ impl Metadata {
     }
 }
 
-static CENTRAL_REPO: &'static str = "http://rust-lang.org/central-repo";
-
 impl Show for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{} v{}", self.inner.name, self.inner.version));
 
-        if self.inner.source_id.to_string().as_slice() != CENTRAL_REPO {
+        if !self.inner.source_id.is_default_registry() {
             try!(write!(f, " ({})", self.inner.source_id));
         }
 
@@ -168,13 +166,14 @@ impl Show for PackageId {
 
 #[cfg(test)]
 mod tests {
-    use super::{PackageId, CENTRAL_REPO};
+    use super::PackageId;
     use core::source::SourceId;
+    use sources::RegistrySource;
     use util::ToUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        let loc = CENTRAL_REPO.to_url().unwrap();
+        let loc = RegistrySource::default_url().to_url().unwrap();
         let repo = SourceId::for_registry(&loc);
 
         assert!(PackageId::new("foo", "1.0", &repo).is_err());
