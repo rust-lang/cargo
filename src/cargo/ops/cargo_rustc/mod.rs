@@ -71,7 +71,7 @@ pub fn rustc_version() -> CargoResult<(String, String)> {
 fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
     let mut curr: Option<Option<&str>> = None;
 
-    for t in targets.iter() {
+    for t in targets.iter().filter(|t| !t.get_profile().is_custom_build()) {
         let dest = t.get_profile().get_dest();
 
         match curr {

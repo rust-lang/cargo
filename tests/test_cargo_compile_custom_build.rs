@@ -795,3 +795,21 @@ test!(code_generation {
 Hello, World!
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
+
+test!(release_with_build_script {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v").arg("--release"),
+                execs().with_status(0));
+})
