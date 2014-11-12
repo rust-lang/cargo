@@ -92,7 +92,7 @@ authors = ["{}"]
     if opts.bin {
         try!(File::create(&path.join("src/main.rs")).write_str("\
 fn main() {
-    println!(\"Hello, world!\")
+    println!(\"Hello, world!\");
 }
 "));
     } else {
