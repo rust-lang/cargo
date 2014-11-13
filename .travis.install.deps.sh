@@ -17,15 +17,15 @@ if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     sudo apt-get install g++-multilib lib32stdc++6
 fi
 
-host=static-rust-lang-org.s3.amazonaws.com
+url=https://static-rust-lang-org.s3.amazonaws.com/dist/`cat src/rustversion.txt`
 
 # Install both 64 and 32 bit libraries. Apparently travis barfs if you try to
 # just install the right ones? This should enable cross compilation in the
 # future anyway.
 if [ -z "${windows}" ]; then
     rm -rf rustc *.tar.gz
-    curl -O https://$host/dist/rust-nightly-i686-$target.tar.gz
-    curl -O https://$host/dist/rust-nightly-x86_64-$target.tar.gz
+    curl -O $url/rust-nightly-i686-$target.tar.gz
+    curl -O $url/rust-nightly-x86_64-$target.tar.gz
     tar xfz rust-nightly-i686-$target.tar.gz
     tar xfz rust-nightly-x86_64-$target.tar.gz
 
@@ -54,7 +54,7 @@ else
     else
         triple=i686-pc-windows-gnu
     fi
-    curl -O http://$host/dist/rust-nightly-$triple.exe
+    curl -O $url/rust-nightly-$triple.exe
     innounp -y -x rust-nightly-$triple.exe
     mv '{app}' rustc
     # Don't use the bundled gcc, see rust-lang/rust#17442

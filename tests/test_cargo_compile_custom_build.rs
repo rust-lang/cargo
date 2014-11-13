@@ -781,6 +781,7 @@ test!(output_separate_lines {
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 })
 
+#[cfg(not(windows))] // FIXME(#867)
 test!(code_generation {
     let p = project("foo")
         .file("Cargo.toml", r#"
