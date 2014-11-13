@@ -407,6 +407,12 @@ fn rustc(package: &Package, target: &Target,
         let mut native_lib_deps = native_lib_deps.into_iter().collect::<Vec<_>>();
         native_lib_deps.sort();
 
+        // If we are a binary and the package also contains a library, then we don't
+        // pass the `-l` flags.
+        let pass_l_flag = target.is_lib() || !package.get_targets().iter().any(|t| {
+            t.is_lib()
+        });
+
         (proc(desc_tx: Sender<String>) {
             let mut rustc = rustc;
 
@@ -419,7 +425,7 @@ fn rustc(package: &Package, target: &Target,
                     for path in output.library_paths.iter() {
                         rustc = rustc.arg("-L").arg(path);
                     }
-                    if id == current_id {
+                    if pass_l_flag && id == current_id {
                         for name in output.library_links.iter() {
                             rustc = rustc.arg("-l").arg(name.as_slice());
                         }
