@@ -818,6 +818,9 @@ test!(code_generation {
 {running} `target[..]foo`
 Hello, World!
 ", compiling = COMPILING, running = RUNNING).as_slice()));
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
 })
 
 test!(release_with_build_script {

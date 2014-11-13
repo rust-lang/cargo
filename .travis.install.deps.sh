@@ -58,7 +58,7 @@ else
     innounp -y -x rust-nightly-$triple.exe
     mv '{app}' rustc
     # Don't use the bundled gcc, see rust-lang/rust#17442
-    rm -rf rustc/bin/rustlib/$triple/gcc
+    rm -rf rustc/bin/rustlib/$triple/bin
     rm -f rust-nightly-$triple.exe
 fi
 
