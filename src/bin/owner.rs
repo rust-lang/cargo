@@ -11,6 +11,7 @@ struct Options {
     flag_remove: Option<Vec<String>>,
     flag_index: Option<String>,
     flag_verbose: bool,
+    flag_list: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -23,6 +24,7 @@ Options:
     -h, --help              Print this message
     -a, --add LOGIN         Login of a user to add as an owner
     -r, --remove LOGIN      Login of a user to remove as an owner
+    -l, --list              List owners of a crate
     --index INDEX           Registry index to modify owners for
     --token TOKEN           API token to use when authenticating
     -v, --verbose           Use verbose output
@@ -35,12 +37,15 @@ versions, and also modify the set of owners, so take caution!
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(None));
-    try!(ops::modify_owners(&root, shell,
-                            options.arg_crate,
-                            options.flag_token,
-                            options.flag_index,
-                            options.flag_add,
-                            options.flag_remove).map_err(|e| {
+    let opts = ops::OwnersOptions {
+        krate: options.arg_crate,
+        token: options.flag_token,
+        index: options.flag_index,
+        to_add: options.flag_add,
+        to_remove: options.flag_remove,
+        list: options.flag_list,
+    };
+    try!(ops::modify_owners(&root, shell, &opts).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));
     Ok(None)
