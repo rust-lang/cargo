@@ -8,6 +8,7 @@ struct Options {
     flag_verbose: bool,
     flag_manifest_path: Option<String>,
     flag_no_verify: bool,
+    flag_list: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -18,8 +19,9 @@ Usage:
 
 Options:
     -h, --help              Print this message
-    --manifest-path PATH    Path to the manifest to compile
+    -l, --list              Print files included in a package without making one
     --no-verify             Don't verify the contents by building them
+    --manifest-path PATH    Path to the manifest to compile
     -v, --verbose           Use verbose output
 
 ";
@@ -27,7 +29,9 @@ Options:
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
-    ops::package(&root, shell, !options.flag_no_verify).map(|_| None).map_err(|err| {
+    ops::package(&root, shell,
+                 !options.flag_no_verify,
+                 options.flag_list).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

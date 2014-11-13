@@ -25,15 +25,28 @@ impl Drop for Bomb {
 
 pub fn package(manifest_path: &Path,
                shell: &mut MultiShell,
-               verify: bool) -> CargoResult<Path> {
+               verify: bool,
+               list: bool) -> CargoResult<Option<Path>> {
     let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(src.update());
     let pkg = try!(src.get_root_package());
 
+    if list {
+        let root = pkg.get_manifest_path().dir_path();
+        let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
+            file.path_relative_from(&root).unwrap()
+        }).collect();
+        list.sort();
+        for file in list.iter() {
+            println!("{}", file.display());
+        }
+        return Ok(None)
+    }
+
     let filename = format!("package/{}-{}.crate", pkg.get_name(),
                            pkg.get_version());
     let dst = pkg.get_absolute_target_dir().join(filename);
-    if dst.exists() { return Ok(dst) }
+    if dst.exists() { return Ok(Some(dst)) }
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
 
@@ -46,7 +59,7 @@ pub fn package(manifest_path: &Path,
             human("failed to verify package tarball")
         }))
     }
-    Ok(bomb.path.take().unwrap())
+    Ok(Some(bomb.path.take().unwrap()))
 }
 
 fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
