@@ -218,15 +218,20 @@ pub fn registry_login(shell: &mut MultiShell, token: String) -> CargoResult<()> 
     config::set_config(&config, config::Global, "registry", config::Table(map))
 }
 
+pub struct OwnersOptions {
+    pub krate: Option<String>,
+    pub token: Option<String>,
+    pub index: Option<String>,
+    pub to_add: Option<Vec<String>>,
+    pub to_remove: Option<Vec<String>>,
+    pub list: bool,
+}
+
 pub fn modify_owners(manifest_path: &Path,
                      shell: &mut MultiShell,
-                     krate: Option<String>,
-                     token: Option<String>,
-                     index: Option<String>,
-                     to_add: Option<Vec<String>>,
-                     to_remove: Option<Vec<String>>) -> CargoResult<()> {
-    let name = match krate {
-        Some(name) => name,
+                     opts: &OwnersOptions) -> CargoResult<()> {
+    let name = match opts.krate {
+        Some(ref name) => name.clone(),
         None => {
             let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
             try!(src.update());
@@ -235,10 +240,11 @@ pub fn modify_owners(manifest_path: &Path,
         }
     };
 
-    let (mut registry, _) = try!(registry(shell, token, index));
+    let (mut registry, _) = try!(registry(shell, opts.token.clone(),
+                                          opts.index.clone()));
 
-    match to_add {
-        Some(v) => {
+    match opts.to_add {
+        Some(ref v) => {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
             try!(shell.status("Owner", format!("adding `{:#}` to `{}`", v, name)));
             try!(registry.add_owners(name.as_slice(), v.as_slice()).map_err(|e| {
@@ -248,8 +254,8 @@ pub fn modify_owners(manifest_path: &Path,
         None => {}
     }
 
-    match to_remove {
-        Some(v) => {
+    match opts.to_remove {
+        Some(ref v) => {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
             try!(shell.status("Owner", format!("removing `{:#}` from `{}`",
                                                v, name)));
@@ -258,6 +264,21 @@ pub fn modify_owners(manifest_path: &Path,
             }));
         }
         None => {}
+    }
+
+    if opts.list {
+        let owners = try!(registry.list_owners(name.as_slice()).map_err(|e| {
+            human(format!("failed to list owners: {}", e))
+        }));
+        for owner in owners.iter() {
+            print!("{}", owner.login);
+            match (owner.name.as_ref(), owner.email.as_ref()) {
+                (Some(name), Some(email)) => println!(" ({} <{}>)", name, email),
+                (Some(s), None) |
+                (None, Some(s)) => println!(" ({})", s),
+                (None, None) => println!(""),
+            }
+        }
     }
 
     Ok(())

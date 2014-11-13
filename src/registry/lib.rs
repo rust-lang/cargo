@@ -8,6 +8,7 @@ use std::io::util::ChainedReader;
 use std::result;
 
 use curl::http;
+use curl::http::handle::{Put, Get, Delete, Method, Request};
 use serialize::json;
 
 pub struct Registry {
@@ -53,10 +54,20 @@ pub struct NewCrateDependency {
     pub target: Option<String>,
 }
 
+#[deriving(Decodable)]
+pub struct User {
+    pub id: uint,
+    pub login: String,
+    pub avatar: String,
+    pub email: Option<String>,
+    pub name: Option<String>,
+}
+
 #[deriving(Decodable)] struct R { ok: bool }
 #[deriving(Decodable)] struct ApiErrorList { errors: Vec<ApiError> }
 #[deriving(Decodable)] struct ApiError { detail: String }
 #[deriving(Encodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
+#[deriving(Decodable)] struct Users { users: Vec<User> }
 
 impl Registry {
     pub fn new(host: String, token: String) -> Registry {
@@ -86,6 +97,11 @@ impl Registry {
                                     Some(body.as_bytes())));
         assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
         Ok(())
+    }
+
+    pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
+        let body = try!(self.get(format!("/crates/{}/owners", krate)));
+        Ok(json::decode::<Users>(body.as_slice()).unwrap().users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
@@ -135,19 +151,25 @@ impl Registry {
     }
 
     fn put(&mut self, path: String, b: &[u8]) -> Result<String> {
-        handle(self.handle.put(format!("{}/api/v1{}", self.host, path), b)
-                          .header("Authorization", self.token.as_slice())
-                          .header("Accept", "application/json")
-                          .content_type("application/json")
-                          .exec())
+        self.req(path, Some(b), Put)
+    }
+
+    fn get(&mut self, path: String) -> Result<String> {
+        self.req(path, None, Get)
     }
 
     fn delete(&mut self, path: String, b: Option<&[u8]>) -> Result<String> {
-        let mut req = self.handle.delete(format!("{}/api/v1{}", self.host, path))
-                                 .header("Authorization", self.token.as_slice())
-                                 .header("Accept", "application/json")
-                                 .content_type("application/json");
-        match b {
+        self.req(path, b, Delete)
+    }
+
+    fn req(&mut self, path: String, body: Option<&[u8]>,
+           method: Method) -> Result<String> {
+        let mut req = Request::new(&mut self.handle, method)
+                              .uri(format!("{}/api/v1{}", self.host, path))
+                              .header("Authorization", self.token.as_slice())
+                              .header("Accept", "application/json")
+                              .content_type("application/json");
+        match body {
             Some(b) => req = req.body(b),
             None => {}
         }
