@@ -481,7 +481,16 @@ fn rustdoc(package: &Package, target: &Target,
         None => {}
     }
 
-    let rustdoc = try!(build_deps_args(rustdoc, target, package, cx, kind));
+    let mut rustdoc = try!(build_deps_args(rustdoc, target, package, cx, kind));
+
+    let has_build_cmd = package.get_targets().iter().any(|t| {
+        t.get_profile().is_custom_build()
+    });
+    rustdoc = rustdoc.env("OUT_DIR", if has_build_cmd {
+        Some(cx.layout(package, kind).build_out(package))
+    } else {
+        None
+    });
 
     log!(5, "commands={}", rustdoc);
 
