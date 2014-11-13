@@ -4,4 +4,3 @@
 /Makefile
 /config.mk
 src/doc/build
-*.swp
