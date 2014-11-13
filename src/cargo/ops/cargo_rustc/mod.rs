@@ -219,31 +219,34 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         // package is needed in both a host and target context, we need to run
         // it once per context.
         if !target.get_profile().is_custom_build() { continue }
-        let mut kinds = Vec::new();
+        let mut reqs = Vec::new();
         let requirement = targets.iter().find(|t| {
             !t.get_profile().is_custom_build() && !t.get_profile().is_doc()
         }).map(|&other_target| {
             cx.get_requirement(pkg, other_target)
         }).unwrap_or(PlatformTarget);
         match requirement {
-            PlatformTarget => kinds.push(KindTarget),
-            PlatformPlugin => kinds.push(KindHost),
+            PlatformTarget => reqs.push(PlatformTarget),
+            PlatformPlugin => reqs.push(PlatformPlugin),
             PlatformPluginAndTarget => {
-                kinds.push(KindTarget);
                 if cx.config.target().is_some() {
-                    kinds.push(KindHost);
+                    reqs.push(PlatformPlugin);
+                    reqs.push(PlatformTarget);
+                } else {
+                    reqs.push(PlatformPluginAndTarget);
                 }
             }
         }
         let before = run_custom.len();
-        for &kind in kinds.iter() {
+        for &req in reqs.iter() {
+            let kind = match req { PlatformPlugin => KindHost, _ => KindTarget };
             let key = (pkg.get_package_id().clone(), kind);
             if pkg.get_manifest().get_links().is_some() &&
                cx.build_state.outputs.lock().contains_key(&key) {
                 continue
             }
             let (dirty, fresh, freshness) =
-                    try!(custom_build::prepare(pkg, target, kind, cx));
+                    try!(custom_build::prepare(pkg, target, req, cx));
             run_custom.push((job(dirty, fresh), freshness));
         }
 

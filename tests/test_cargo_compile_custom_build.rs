@@ -857,3 +857,43 @@ test!(build_script_only {
                        .with_stderr("either a [lib] or [[bin]] section must \
                                      be present"));
 })
+
+test!(shared_dep_with_a_build_script {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [dependencies.a]
+            path = "a"
+
+            [build-dependencies.b]
+            path = "b"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("a/build.rs", "fn main() {}")
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies.a]
+            path = "../b"
+        "#)
+        .file("b/src/lib.rs", "");
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+})
