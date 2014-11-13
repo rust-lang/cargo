@@ -43,30 +43,13 @@
 //!     # Hidden directory that holds all of the fingerprint files for all
 //!     # packages
 //!     .fingerprint/
-//!
-//!     # This is a temporary directory as part of the build process. When a
-//!     # build starts, it initially moves the old `deps` directory to this
-//!     # location. This is done to ensure that there are no stale artifacts
-//!     # lying around in the build directory which may cause a build to
-//!     # succeed where it would fail elsewhere.
-//!     #
-//!     # If a package is determined to be fresh, its files are moved out of
-//!     # this directory and back into `deps`.
-//!     old-deps/
-//!
-//!     # Similar to old-deps, this is where all of the output under
-//!     # `target/` is moved at the start of a build.
-//!     old-root/
-//!
-//!     # Same as the two above old directories
-//!     old-native/
-//!     old-build/
-//!     old-fingerprint/
-//!     old-examples/
 //! ```
 
-use std::io::{mod, fs, IoResult};
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::io::fs::PathExtensions;
+use std::io::{mod, fs, IoResult};
+use std::mem;
 
 use core::Package;
 use util::hex::short_hash;
@@ -78,13 +61,7 @@ pub struct Layout {
     build: Path,
     fingerprint: Path,
     examples: Path,
-
-    old_deps: Path,
-    old_root: Path,
-    old_native: Path,
-    old_build: Path,
-    old_fingerprint: Path,
-    old_examples: Path,
+    to_delete: RefCell<HashSet<Path>>,
 }
 
 pub struct LayoutProxy<'a> {
@@ -113,13 +90,8 @@ impl Layout {
             build: root.join("build"),
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
-            old_deps: root.join("old-deps"),
-            old_root: root.join("old-root"),
-            old_native: root.join("old-native"),
-            old_build: root.join("old-build"),
-            old_fingerprint: root.join("old-fingerprint"),
-            old_examples: root.join("old-examples"),
             root: root,
+            to_delete: RefCell::new(HashSet::new()),
         }
     }
 
@@ -128,36 +100,35 @@ impl Layout {
             try!(fs::mkdir_recursive(&self.root, io::USER_RWX));
         }
 
-        try!(old(&[
-            (&self.old_deps, &self.deps),
-            (&self.old_native, &self.native),
-            (&self.old_fingerprint, &self.fingerprint),
-            (&self.old_examples, &self.examples),
-            (&self.old_build, &self.build),
-        ]));
+        try!(mkdir(self, &self.deps, false));
+        try!(mkdir(self, &self.native, false));
+        try!(mkdir(self, &self.fingerprint, true));
+        try!(mkdir(self, &self.examples, false));
+        try!(mkdir(self, &self.build, false));
 
-        if self.old_root.exists() {
-            try!(fs::rmdir_recursive(&self.old_root));
-        }
-        try!(fs::mkdir(&self.old_root, io::USER_RWX));
-
-        for file in try!(fs::readdir(&self.root)).iter() {
+        for file in try!(fs::readdir(&self.root)).into_iter() {
             if !file.is_file() { continue }
 
-            try!(fs::rename(file, &self.old_root.join(file.filename().unwrap())));
+            self.to_delete.borrow_mut().insert(file);
         }
 
         return Ok(());
 
-        fn old(dirs: &[(&Path, &Path)]) -> IoResult<()> {
-            for &(old, new) in dirs.iter() {
-                if old.exists() {
-                    try!(fs::rmdir_recursive(old));
+        fn mkdir(layout: &Layout, dir: &Path, deep: bool) -> IoResult<()> {
+            if dir.exists() {
+                if deep {
+                    for file in try!(fs::walk_dir(dir)) {
+                        if !file.is_dir() {
+                            layout.to_delete.borrow_mut().insert(file);
+                        }
+                    }
+                } else {
+                    for file in try!(fs::readdir(dir)).into_iter() {
+                        layout.to_delete.borrow_mut().insert(file);
+                    }
                 }
-                if new.exists() {
-                    try!(fs::rename(new, old));
-                }
-                try!(fs::mkdir(new, io::USER_DIR));
+            } else {
+                try!(fs::mkdir(dir, io::USER_DIR));
             }
             Ok(())
         }
@@ -169,49 +140,46 @@ impl Layout {
 
     // TODO: deprecated, remove
     pub fn native(&self, package: &Package) -> Path {
-        self.native.join(self.pkg_dir(package))
+        let ret = self.native.join(self.pkg_dir(package));
+        self.whitelist(&ret);
+        ret
     }
     pub fn fingerprint(&self, package: &Package) -> Path {
-        self.fingerprint.join(self.pkg_dir(package))
+        let ret = self.fingerprint.join(self.pkg_dir(package));
+        self.whitelist(&ret);
+        ret
     }
 
     pub fn build(&self, package: &Package) -> Path {
-        self.build.join(self.pkg_dir(package))
+        let ret = self.build.join(self.pkg_dir(package));
+        self.whitelist(&ret);
+        ret
     }
 
     pub fn build_out(&self, package: &Package) -> Path {
         self.build(package).join("out")
     }
 
-    pub fn old_dest<'a>(&'a self) -> &'a Path { &self.old_root }
-    pub fn old_deps<'a>(&'a self) -> &'a Path { &self.old_deps }
-    pub fn old_examples<'a>(&'a self) -> &'a Path { &self.old_examples }
-
-    // TODO: deprecated, remove
-    pub fn old_native(&self, package: &Package) -> Path {
-        self.old_native.join(self.pkg_dir(package))
+    pub fn clean(&self) -> IoResult<()> {
+        let set = mem::replace(&mut *self.to_delete.borrow_mut(),
+                               HashSet::new());
+        for file in set.iter() {
+            info!("dirty: {}", file.display());
+            if file.is_dir() {
+                try!(fs::rmdir_recursive(file));
+            } else {
+                try!(fs::unlink(file));
+            }
+        }
+        Ok(())
     }
-    pub fn old_fingerprint(&self, package: &Package) -> Path {
-        self.old_fingerprint.join(self.pkg_dir(package))
-    }
 
-    pub fn old_build(&self, package: &Package) -> Path {
-        self.old_build.join(self.pkg_dir(package))
+    pub fn whitelist(&self, p: &Path) {
+        self.to_delete.borrow_mut().remove(p);
     }
 
     fn pkg_dir(&self, pkg: &Package) -> String {
         format!("{}-{}", pkg.get_name(), short_hash(pkg.get_package_id()))
-    }
-}
-
-impl Drop for Layout {
-    fn drop(&mut self) {
-        let _ = fs::rmdir_recursive(&self.old_deps);
-        let _ = fs::rmdir_recursive(&self.old_root);
-        let _ = fs::rmdir_recursive(&self.old_native);
-        let _ = fs::rmdir_recursive(&self.old_fingerprint);
-        let _ = fs::rmdir_recursive(&self.old_examples);
-        let _ = fs::rmdir_recursive(&self.old_build);
     }
 }
 
@@ -236,21 +204,6 @@ impl<'a> LayoutProxy<'a> {
     pub fn build(&self, pkg: &Package) -> Path { self.root.build(pkg) }
 
     pub fn build_out(&self, pkg: &Package) -> Path { self.root.build_out(pkg) }
-
-    pub fn old_root(&self) -> &'a Path {
-        if self.primary {self.root.old_dest()} else {self.root.old_deps()}
-    }
-
-    pub fn old_examples(&self) -> &'a Path { self.root.old_examples() }
-
-    // TODO: deprecated, remove
-    pub fn old_native(&self, pkg: &Package) -> Path {
-        self.root.old_native(pkg)
-    }
-
-    pub fn old_build(&self, pkg: &Package) -> Path {
-        self.root.old_build(pkg)
-    }
 
     pub fn proxy(&self) -> &'a Layout { self.root }
 }

@@ -1,7 +1,8 @@
 use std::collections::hash_map::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
-use std::io::{fs, File, USER_RWX, BufferedReader};
+use std::io::{mod, fs, File, BufferedReader};
+use std::io::fs::PathExtensions;
 
 use core::{Package, Target};
 use util;
@@ -43,10 +44,9 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
                       kind: Kind) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {}",
                                     pkg.get_package_id(), target));
-    let (old, new) = dirs(cx, pkg, kind);
-    let filename = filename(target);
-    let old_loc = old.join(filename.as_slice());
-    let new_loc = new.join(filename.as_slice());
+    let new = dir(cx, pkg, kind);
+    let loc = new.join(filename(target));
+    cx.layout(pkg, kind).proxy().whitelist(&loc);
 
     // We want to use the package fingerprint if we're either a doc target or a
     // path source. If we're a git/registry source, then the mtime of files may
@@ -58,13 +58,13 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
         doc || !path
     };
 
-    info!("fingerprint at: {}", new_loc.display());
+    info!("fingerprint at: {}", loc.display());
 
     // First bit of the freshness calculation, whether the dep-info file
     // indicates that the target is fresh.
-    let (old_dep_info, new_dep_info) = dep_info_loc(cx, pkg, target, kind);
+    let dep_info = dep_info_loc(cx, pkg, target, kind);
     let are_files_fresh = use_pkg ||
-                          try!(calculate_target_fresh(pkg, &old_dep_info));
+                          try!(calculate_target_fresh(pkg, &dep_info));
 
     // Second bit of the freshness calculation, whether rustc itself, the
     // target are fresh, and the enabled set of features are all fresh.
@@ -80,43 +80,38 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     } else {
         mk_fingerprint(cx, &(target, features))
     };
-    let is_rustc_fresh = try!(is_fresh(&old_loc, rustc_fingerprint.as_slice()));
+    let is_rustc_fresh = try!(is_fresh(&loc, rustc_fingerprint.as_slice()));
 
-    let (old_root, root) = {
+    let root = {
         let layout = cx.layout(pkg, kind);
         if target.get_profile().is_custom_build() {
-            (layout.old_build(pkg), layout.build(pkg))
+            layout.build(pkg)
         } else if target.is_example() {
-            (layout.old_examples().clone(), layout.examples().clone())
+            layout.examples().clone()
         } else {
-            (layout.old_root().clone(), layout.root().clone())
+            layout.root().clone()
         }
     };
-    let mut pairs = vec![(old_loc, new_loc.clone())];
     if !target.get_profile().is_doc() {
-        pairs.push((old_dep_info, new_dep_info));
-
         for filename in try!(cx.target_filenames(target)).iter() {
-            let filename = filename.as_slice();
             let dst = root.join(filename);
-            pairs.push((old_root.join(filename), root.join(filename)));
+            cx.layout(pkg, kind).proxy().whitelist(&dst);
 
             if target.get_profile().is_test() {
-                cx.compilation.tests.push((target.get_name().into_string(), dst.clone()));
+                cx.compilation.tests.push((target.get_name().into_string(), dst));
             } else if target.is_bin() {
-                cx.compilation.binaries.push(dst.clone());
+                cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
                 let pkgid = pkg.get_package_id().clone();
                 match cx.compilation.libraries.entry(pkgid) {
                     Occupied(entry) => entry.into_mut(),
                     Vacant(entry) => entry.set(Vec::new()),
-                }.push(root.join(filename));
+                }.push(dst);
             }
         }
     }
 
-    Ok(prepare(is_rustc_fresh && are_files_fresh, new_loc, rustc_fingerprint,
-               pairs))
+    Ok(prepare(is_rustc_fresh && are_files_fresh, loc, rustc_fingerprint))
 }
 
 /// Prepare the necessary work for the fingerprint of a build command.
@@ -147,76 +142,73 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
     if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
         return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))
     }
-    let (old, new) = dirs(cx, pkg, kind);
-    let old_loc = old.join("build");
-    let new_loc = new.join("build");
+    let new = dir(cx, pkg, kind);
+    let loc = new.join("build");
+    cx.layout(pkg, kind).proxy().whitelist(&loc);
 
-    info!("fingerprint at: {}", new_loc.display());
+    info!("fingerprint at: {}", loc.display());
 
     let new_fingerprint = try!(calculate_build_cmd_fingerprint(cx, pkg));
     let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
 
-    let is_fresh = try!(is_fresh(&old_loc, new_fingerprint.as_slice()));
-    let mut pairs = vec![(old_loc, new_loc.clone())];
+    let is_fresh = try!(is_fresh(&loc, new_fingerprint.as_slice()));
 
     // The new custom build command infrastructure handles its own output
     // directory as part of freshness.
     if target.is_none() {
         let native_dir = cx.layout(pkg, kind).native(pkg);
-        pairs.push((cx.layout(pkg, kind).old_native(pkg), native_dir.clone()));
         cx.compilation.native_dirs.insert(pkg.get_package_id().clone(),
                                           native_dir);
     }
 
-    Ok(prepare(is_fresh, new_loc, new_fingerprint, pairs))
+    Ok(prepare(is_fresh, loc, new_fingerprint))
 }
 
 /// Prepare work for when a package starts to build
 pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
                     -> (Work, Work) {
-    let (_, new1) = dirs(cx, pkg, kind);
+    let new1 = dir(cx, pkg, kind);
     let new2 = new1.clone();
 
-    let work1 = proc(_) { try!(fs::mkdir(&new1, USER_RWX)); Ok(()) };
-    let work2 = proc(_) { try!(fs::mkdir(&new2, USER_RWX)); Ok(()) };
+    let work1 = proc(_) {
+        if !new1.exists() {
+            try!(fs::mkdir(&new1, io::USER_DIR));
+        }
+        Ok(())
+    };
+    let work2 = proc(_) {
+        if !new2.exists() {
+            try!(fs::mkdir(&new2, io::USER_DIR));
+        }
+        Ok(())
+    };
 
     (work1, work2)
 }
 
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
-fn prepare(is_fresh: bool, loc: Path, fingerprint: String,
-           to_copy: Vec<(Path, Path)>) -> Preparation {
+fn prepare(is_fresh: bool, loc: Path, fingerprint: String) -> Preparation {
     let write_fingerprint = proc(desc_tx) {
         drop(desc_tx);
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
         Ok(())
     };
 
-    let move_old = proc(desc_tx) {
-        drop(desc_tx);
-        for &(ref src, ref dst) in to_copy.iter() {
-            try!(fs::rename(src, dst));
-        }
-        Ok(())
-    };
-
-    (if is_fresh {Fresh} else {Dirty}, write_fingerprint, move_old)
+    (if is_fresh {Fresh} else {Dirty}, write_fingerprint, proc(_) Ok(()))
 }
 
 /// Return the (old, new) location for fingerprints for a package
-pub fn dirs(cx: &Context, pkg: &Package, kind: Kind) -> (Path, Path) {
-    let layout = cx.layout(pkg, kind);
-    let layout = layout.proxy();
-    (layout.old_fingerprint(pkg), layout.fingerprint(pkg))
+pub fn dir(cx: &Context, pkg: &Package, kind: Kind) -> Path {
+    cx.layout(pkg, kind).proxy().fingerprint(pkg)
 }
 
 /// Returns the (old, new) location for the dep info file of a target.
 pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
-                    kind: Kind) -> (Path, Path) {
-    let (old, new) = dirs(cx, pkg, kind);
-    let filename = format!("dep-{}", filename(target));
-    (old.join(filename.as_slice()), new.join(filename))
+                    kind: Kind) -> Path {
+    let ret = dir(cx, pkg, kind).join(format!("dep-{}", filename(target)));
+    cx.layout(pkg, kind).proxy().whitelist(&ret);
+    return ret;
 }
 
 fn is_fresh(loc: &Path, new_fingerprint: &str) -> CargoResult<bool> {
