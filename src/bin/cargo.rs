@@ -154,7 +154,7 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
         Some(command) => command,
         None => {
             let msg = match find_closest(cmd) {
-                Some(closest) => format!("No such subcommand\n\n\tDid you mean ``{}''?\n", closest),
+                Some(closest) => format!("No such subcommand\n\n\tDid you mean `{}`?\n", closest),
                 None => "No such subcommand".to_string()
             };
             return handle_error(CliError::new(msg, 127), shell)
