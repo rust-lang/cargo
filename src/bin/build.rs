@@ -11,6 +11,7 @@ struct Options {
     flag_package: Option<String>,
     flag_jobs: Option<uint>,
     flag_features: Vec<String>,
+    flag_bin: Option<Vec<String>>,
     flag_no_default_features: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
@@ -30,6 +31,7 @@ Options:
     -j N, --jobs N           The number of jobs to run in parallel
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
+    --bin BIN                Space-separated list of binaries to build
     --no-default-features    Do not build the `default` feature
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to compile
@@ -60,6 +62,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
         dev_deps: false,
         features: options.flag_features.as_slice(),
+        bins: options.flag_bin,
         no_default_features: options.flag_no_default_features,
         spec: options.flag_package.as_ref().map(|s| s.as_slice()),
     };
