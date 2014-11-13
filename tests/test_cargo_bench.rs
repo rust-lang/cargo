@@ -87,7 +87,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
        runnning = RUNNING,
        dir = prj.url());
 
-    assert_that(prj.cargo_process("bench").arg("--name").arg("bin2"),
+    assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
         execs().with_status(0).with_stdout(expected_stdout.as_slice()));
 })
 

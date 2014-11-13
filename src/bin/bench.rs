@@ -11,7 +11,7 @@ struct Options {
     flag_package: Option<String>,
     flag_jobs: Option<uint>,
     flag_features: Vec<String>,
-    flag_name: Option<String>,
+    flag_bench: Option<String>,
     flag_no_default_features: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
@@ -27,7 +27,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --name NAME              Name of the bench to run
+    --bench NAME             Name of the bench to run
     --no-run                 Compile, but don't run benchmarks
     -p SPEC, --package SPEC  Package to run benchmarks for
     -j N, --jobs N           The number of jobs to run in parallel
@@ -52,7 +52,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     shell.set_verbose(options.flag_verbose);
 
     let mut ops = ops::TestOptions {
-        name: options.flag_name.as_ref().map(|s| s.as_slice()),
+        name: options.flag_bench.as_ref().map(|s| s.as_slice()),
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
             env: "bench",

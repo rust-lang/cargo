@@ -98,7 +98,7 @@ test!(too_many_bins {
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
                        .with_stderr("`cargo run` requires that a project only \
-                                     have one executable. Use the `--name` option \
+                                     have one executable. Use the `--bin` option \
                                      to specify which one to run\n"));
 })
 
@@ -120,7 +120,7 @@ test!(specify_name {
             fn main() { println!("hello b.rs"); }
         "#);
 
-    assert_that(p.cargo_process("run").arg("--name").arg("a"),
+    assert_that(p.cargo_process("run").arg("--bin").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}a`
@@ -131,7 +131,7 @@ hello a.rs
         dir = path2url(p.root()),
         sep = path::SEP).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("--name").arg("b"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("--bin").arg("b"),
                 execs().with_status(0).with_stdout(format!("\
 {running} `target{sep}b`
 hello b.rs
@@ -183,9 +183,9 @@ test!(either_name_or_example {
             fn main() { println!("hello b.rs"); }
         "#);
 
-    assert_that(p.cargo_process("run").arg("--name").arg("a").arg("--example").arg("b"),
+    assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("--example").arg("b"),
                 execs().with_status(1)
-                       .with_stderr("specify either `--name` or `--example`, \
+                       .with_stderr("specify either `--bin` or `--example`, \
                                      not both"));
 })
 
