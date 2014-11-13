@@ -731,6 +731,36 @@ test!(missing_lib_and_bin {
                                      must be present\n"));
 })
 
+test!(lto_build {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+            lto = true
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} test v0.0.0 ({url})
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type bin -g \
+        -C lto \
+        -C metadata=[..] \
+        -C extra-filename=-[..] \
+        --out-dir {dir}{sep}target \
+        --dep-info [..] \
+        -L {dir}{sep}target \
+        -L {dir}{sep}target{sep}deps`
+",
+running = RUNNING, compiling = COMPILING, sep = path::SEP,
+dir = p.root().display(),
+url = p.url(),
+)));
+})
+
 test!(verbose_build {
     let mut p = project("foo");
     p = p
