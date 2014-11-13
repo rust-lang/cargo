@@ -29,8 +29,8 @@ test!(simple {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
-{downloading} bar v0.0.1 (the package registry)
-{compiling} bar v0.0.1 (the package registry)
+{downloading} bar v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
@@ -43,7 +43,7 @@ test!(simple {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
-[..] bar v0.0.1 (the package registry)
+[..] bar v0.0.1 (registry file://[..])
 [..] foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
@@ -70,10 +70,10 @@ test!(deps {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
-{downloading} [..] v0.0.1 (the package registry)
-{downloading} [..] v0.0.1 (the package registry)
-{compiling} baz v0.0.1 (the package registry)
-{compiling} bar v0.0.1 (the package registry)
+{downloading} [..] v0.0.1 (registry file://[..])
+{downloading} [..] v0.0.1 (registry file://[..])
+{compiling} baz v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
@@ -99,7 +99,7 @@ test!(nonexistent {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
 no package named `nonexistent` found (required by `foo`)
-location searched: the package registry
+location searched: registry file://[..]
 version required: >= 0.0.0
 "));
 })
@@ -125,10 +125,10 @@ test!(bad_cksum {
 Unable to get packages from source
 
 Caused by:
-  Failed to download package `bad-cksum v0.0.1 (the package registry)` from [..]
+  Failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
 
 Caused by:
-  Failed to verify the checksum of `bad-cksum v0.0.1 (the package registry)`
+  Failed to verify the checksum of `bad-cksum v0.0.1 (registry file://[..])`
 "));
 })
 
@@ -148,7 +148,7 @@ test!(update_registry {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
 no package named `notyet` found (required by `foo`)
-location searched: the package registry
+location searched: registry file://[..]
 version required: >= 0.0.0
 "));
 
@@ -157,8 +157,8 @@ version required: >= 0.0.0
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
-{downloading} notyet v0.0.1 (the package registry)
-{compiling} notyet v0.0.1 (the package registry)
+{downloading} notyet v0.0.1 (registry file://[..])
+{compiling} notyet v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
@@ -196,7 +196,7 @@ failed to verify package tarball
 
 Caused by:
   no package named `notyet` found (required by `foo`)
-location searched: the package registry
+location searched: registry file://[..]
 version required: ^0.0.1
 "));
 
@@ -207,8 +207,8 @@ version required: ^0.0.1
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
 {updating} registry `[..]`
-{downloading} notyet v0.0.1 (the package registry)
-{compiling} notyet v0.0.1 (the package registry)
+{downloading} notyet v0.0.1 (registry file://[..])
+{compiling} notyet v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir}[..])
 ",
     packaging = PACKAGING,
@@ -239,8 +239,8 @@ test!(lockfile_locks {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
-{downloading} bar v0.0.1 (the package registry)
-{compiling} bar v0.0.1 (the package registry)
+{downloading} bar v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
@@ -272,10 +272,10 @@ test!(lockfile_locks_transitively {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
-{downloading} [..] v0.0.1 (the package registry)
-{downloading} [..] v0.0.1 (the package registry)
-{compiling} baz v0.0.1 (the package registry)
-{compiling} bar v0.0.1 (the package registry)
+{downloading} [..] v0.0.1 (registry file://[..])
+{downloading} [..] v0.0.1 (registry file://[..])
+{compiling} baz v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
@@ -310,10 +310,10 @@ test!(yanks_are_not_used {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
-{downloading} [..] v0.0.1 (the package registry)
-{downloading} [..] v0.0.1 (the package registry)
-{compiling} baz v0.0.1 (the package registry)
-{compiling} bar v0.0.1 (the package registry)
+{downloading} [..] v0.0.1 (registry file://[..])
+{downloading} [..] v0.0.1 (registry file://[..])
+{compiling} baz v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
@@ -340,7 +340,7 @@ test!(relying_on_a_yank_is_bad {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(101).with_stderr("\
 no package named `baz` found (required by `bar`)
-location searched: the package registry
+location searched: registry file://[..]
 version required: = 0.0.2
 "));
 })
@@ -374,7 +374,7 @@ test!(yanks_in_lockfiles_are_ok {
     assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_status(101).with_stderr("\
 no package named `bar` found (required by `foo`)
-location searched: the package registry
+location searched: registry file://[..]
 version required: *
 "));
 })
@@ -402,7 +402,7 @@ test!(update_with_lockfile_if_packages_missing {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
-{downloading} bar v0.0.1 (the package registry)
+{downloading} bar v0.0.1 (registry file://[..])
 ", updating = UPDATING, downloading = DOWNLOADING).as_slice()));
 })
 
@@ -434,8 +434,8 @@ test!(update_lockfile {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
-{downloading} [..] v0.0.2 (the package registry)
-{compiling} bar v0.0.2 (the package registry)
+{downloading} [..] v0.0.2 (registry file://[..])
+{compiling} bar v0.0.2 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));

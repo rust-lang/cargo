@@ -48,14 +48,14 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
         if dep.get_source_id().is_path() {
             if dep.get_specified_req().is_none() {
                 return Err(human(format!("all path dependencies must have \
-                                          a version specified when being \
-                                          uploaded to the registry.\n\
+                                          a version specified when \
+                                          publishing.\n\
                                           dependency `{}` does not specify \
                                           a version", dep.get_name())))
             }
         } else if dep.get_source_id() != registry_src {
             return Err(human(format!("all dependencies must come from the \
-                                      same registry.\ndependency `{}` comes \
+                                      same source.\ndependency `{}` comes \
                                       from {} instead", dep.get_name(),
                                      dep.get_source_id())))
         }
