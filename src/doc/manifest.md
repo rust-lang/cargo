@@ -74,7 +74,7 @@ There are a number of optional metadata fields also accepted under the
 # ...
 
 # A short blurb about the package. This is not rendered in any format when
-# uploaded to registries.
+# uploaded to crates.io (aka this is not markdown)
 description = "..."
 
 # These URLs point to more information about the repository
@@ -91,8 +91,8 @@ readme = "..."
 keywords = ["...", "..."]
 
 # This is a string description of the license for this package. Currently
-# the registry will validate the license provided against a whitelist of known
-# licenses.
+# crates.io will validate the license provided against a whitelist of known
+# licenses. Multiple licenses can be separated with a `/`
 license = "..."
 ```
 
