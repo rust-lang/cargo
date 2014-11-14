@@ -1,0 +1,281 @@
+#compdef cargo
+typeset -A opt_args
+
+_cargo() {
+
+_arguments \
+    '(- 1 *)'{-h,--help}'[show help message]' \
+    '(- 1 *)'--list'[list installed commands]' \
+    '(- 1 *)'{-v,--verbose}'[use verbose output]' \
+    '(- 1 *)'{-V,--version}'[show version information]' \
+    '1: :_cargo_cmds' \
+    '*:: :->args' 
+
+case $state in
+    args)
+        #TODO: add path completion to manifest-path options
+        case $words[1] in 
+            bench)
+                _arguments \
+                    '--features=[space separated feature list]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--name=[benchmark name]: :_benchmark_names' \
+                    '--no-default-features[do not build the default features]' \
+                    '--no-run[compile but do not run]' \
+                    '(-p,--package)'{-p=,--package=}'[package to run benchmarks for]:_get_packages' \
+                    '--target=[target triple]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            build)
+                _arguments \
+                    '--features=[space separated feature list]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--no-default-features[do not build the default features]' \
+                    '(-p,--package)'{-p=,--package=}'[package to build]:_get_packages' \
+                    '--release=[build in release mode]' \
+                    '--target=[target triple]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            clean)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-p,--package)'{-p=,--package=}'[package to build]:_get_packages' \
+                    '--target=[target triple(default:all)]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            config-for-key)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--human[]' \
+                    '--key=[key]' \
+                    ;;
+
+            config-list)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--human[]' \
+                    ;;
+
+            doc)
+                _arguments \
+                    '--features=[space separated feature list]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--no-deps[do not build docs for dependencies]' \
+                    '--no-default-features[do not build the default features]' \
+                    '--open[oen docs in browser after the build]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            fetch)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            generate-lockfile)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            git-checkout)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--reference=[REF]' \
+                    '--url=[URL]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            help)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '*: :_cargo_cmds' \
+                    ;;
+
+            locate-project)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    ;;
+
+            login)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--host=[Host to set the token for]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            new)
+                _arguments \
+                    '--bin[use binary template]' \
+                    '--git[initialize new git repo]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--hg[initialize new mercurial repo]' \
+                    '--no-git[no new git repo]' \
+                    '--travis[create new .travis.yml]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            owner)
+                _arguments \
+                    '(-a, --add)'{-a,--add}'[add owner LOGIN]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--index[registry index]' \
+                    '(-r, --remove)'{-r,--remove}'[remove owner LOGIN]' \
+                    '--token[API token]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            package)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--no-verify[do not build to verify contents]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            pkgid)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            read-manifest)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            run)
+                _arguments \
+                    '--example=[name of the bin target]' \
+                    '--features=[space separated feature list]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--name=[name of the bin target]' \
+                    '--no-default-features[do not build the default features]' \
+                    '--release=[build in release mode]' \
+                    '--target=[target triple]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                ;;
+
+
+            test)
+                _arguments \
+                    '--features=[space separated feature list]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--name=[test name]: :_test_names' \
+                    '--no-default-features[do not build the default features]' \
+                    '--no-run[compile but do not run]' \
+                    '(-p,--package)'{-p=,--package=}'[package to run tests for]:_get_packages' \
+                    '--target=[target triple]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            update)
+                _arguments \
+                    '--aggressive=[force dependency update]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-p,--package)'{-p=,--package=}'[package to run tests for]:_get_packages' \
+                    '--precise=[update single dependency to PRECISE]: :_test_names' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            verify-project)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--manifest-path=[path to manifest]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            version)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            yank)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--index[registry index]' \
+                    '--token[API token]' \
+                    '--undo[undo yank]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--vers[yank version]' \
+                    ;;
+        esac
+        ;;
+esac 
+}
+
+_cargo_cmds(){
+local -a commands;commands=(
+'bench:execute all benchmarks of a local package'
+'build:compile the current project'
+'clean:remove generated artifacts'
+'config-for-key:print key from cargo config file'
+'config-list:print all config from cargo config file'
+'doc:build package documentation'
+'fetch:fetch package dependencie"'
+'generate-lockfile:create lockfile'
+'git-checkout:git checkout'
+'help:get help for commands'
+'locate-project:print "Cargo.toml" location'
+'login:login to remote server'
+'new:create a new project'
+'owner:manage the owners of a crate on the registry'
+'package:assemble local package into a distributable tarball'
+'pkgid:print a fully qualified package specification'
+'read-manifest:print manifest in JSON format'
+'run:run the main binary of the local package'
+'test:execute all unit and tests of a local package'
+'update:update dependencies'
+'verify-project:check Cargo.toml'
+'version:show version information'
+'yank:remove pushed file from index'
+)
+_describe 'command' commands
+
+}
+
+
+#TODO:parse Cargo.toml for package names
+_get_packages(){
+local -a packages;packages=(
+)
+_describe 'packages' packages
+}
+
+#TODO:parse Cargo.toml for benchmark names
+_benchmark_names(){
+local -a benchmarks;benchmarks=(
+)
+_describe 'tests' tests
+}
+
+#TODO:parse Cargo.toml for test names
+_test_names(){
+local -a tests;tests=(
+)
+_describe 'tests' tests
+}
+
+_cargo

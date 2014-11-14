@@ -157,9 +157,11 @@ prepare-manifest-$(1):
 	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo \
 		$$(PKGDIR_$(1))/share/man/man1 \
 		$$(PKGDIR_$(1))/share/doc/cargo \
+		$$(PKGDIR_$(1))/share/zsh/site-functions \
 		$$(PKGDIR_$(1))/etc/bash_completion.d
 	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
 	cp src/etc/cargo.1 $$(PKGDIR_$(1))/share/man/man1
+	cp src/etc/_cargo $$(PKGDIR_$(1))/share/zsh/site-functions/_cargo
 	cp src/etc/cargo.bashcomp.sh $$(PKGDIR_$(1))/etc/bash_completion.d/cargo
 	#cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
 	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
