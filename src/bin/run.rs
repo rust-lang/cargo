@@ -8,7 +8,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[deriving(Decodable)]
 struct Options {
-    flag_name: Option<String>,
+    flag_bin: Option<String>,
     flag_example: Option<String>,
     flag_jobs: Option<uint>,
     flag_features: Vec<String>,
@@ -28,7 +28,7 @@ Usage:
 
 Options:
     -h, --help              Print this message
-    --name NAME             Name of the bin target to run
+    --bin NAME              Name of the bin target to run
     --example NAME          Name of the example target to run
     -j N, --jobs N          The number of jobs to run in parallel
     --release               Build artifacts in release mode, with optimizations
@@ -38,9 +38,9 @@ Options:
     --manifest-path PATH    Path to the manifest to execute
     -v, --verbose           Use verbose output
 
-If neither `--name` or `--example` are given, then if the project only has one
-bin target it will be run. Otherwise `--name` specifies the bin target to run,
-and `--example` specifies the example target to run. At most one of `--name` or
+If neither `--bin` or `--example` are given, then if the project only has one
+bin target it will be run. Otherwise `--bin` specifies the bin target to run,
+and `--example` specifies the example target to run. At most one of `--bin` or
 `--example` can be provided.
 
 All of the trailing arguments are passed as to the binary to run.
@@ -70,12 +70,12 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         lib_only: false
     };
 
-    let (target_kind, name) = match (options.flag_name, options.flag_example) {
+    let (target_kind, name) = match (options.flag_bin, options.flag_example) {
         (Some(bin), None) => (BinTarget, Some(bin)),
         (None, Some(example)) => (ExampleTarget, Some(example)),
         (None, None) => (BinTarget, None),
         (Some(_), Some(_)) => return Err(CliError::from_boxed(
-            human("specify either `--name` or `--example`, not both"), 1)),
+            human("specify either `--bin` or `--example`, not both"), 1)),
     };
 
     let err = try!(ops::run(&root,

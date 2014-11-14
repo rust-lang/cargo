@@ -31,7 +31,7 @@ pub fn run(manifest_path: &Path,
     match bins.next() {
         Some(..) => return Err(
             human("`cargo run` requires that a project only have one executable. \
-                   Use the `--name` option to specify which one to run")),
+                   Use the `--bin` option to specify which one to run")),
         None => {}
     }
 
