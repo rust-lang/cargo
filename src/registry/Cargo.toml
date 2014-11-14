@@ -8,5 +8,4 @@ name = "registry"
 path = "lib.rs"
 
 [dependencies.curl]
-git = "https://github.com/alexcrichton/curl-rust"
-branch = "build-cmd"
+git = "https://github.com/carllerche/curl-rust"
