@@ -49,6 +49,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
             target: None,
             dev_deps: false,
             features: options.flag_features.as_slice(),
+            bins: None,
             no_default_features: options.flag_no_default_features,
             spec: None,
         },

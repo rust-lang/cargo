@@ -45,6 +45,8 @@ pub struct CompileOptions<'a> {
     /// True if dev-dependencies must be compiled.
     pub dev_deps: bool,
     pub features: &'a [String],
+    // is Some, compile only listed binaries
+    pub bins: Option<Vec<String>>,
     pub no_default_features: bool,
     pub spec: Option<&'a str>,
 }
@@ -70,11 +72,15 @@ pub fn compile(manifest_path: &Path,
 pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { env, ref mut shell, jobs, target, spec,
-                         dev_deps, features, no_default_features } = *options;
+                         dev_deps, features, ref bins, no_default_features } = *options;
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
         s.as_slice().split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
+
+    let bins = bins.as_ref().map(|v| v.iter().flat_map(|s| {
+        s.as_slice().split(' ')
+    }).map(|s| s.to_string()).collect::<Vec<String>>());
 
     if spec.is_some() && (no_default_features || features.len() > 0) {
         return Err(human("features cannot be modified when the main package \
@@ -129,11 +135,30 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         None => package,
     };
 
+    match bins {
+        Some(ref bins_vec) => {
+            for bin in bins_vec.iter() {
+                if !to_build.get_targets().iter().any(|target| {
+                    target.is_bin() && bin.as_slice() == target.get_name()
+                })
+                {
+                    return Err(human(format!("unknown bin target: {}", bin)))
+                }
+            }
+        },
+        None => {},
+    };
+
     let targets = to_build.get_targets().iter().filter(|target| {
         target.get_profile().is_custom_build() || match env {
             // doc-all == document everything, so look for doc targets
             "doc" | "doc-all" => target.get_profile().get_env() == "doc",
             env => target.get_profile().get_env() == env,
+        }
+    }).filter(|target| {
+        !target.is_bin() || match bins {
+            Some(ref bins_vec) => bins_vec.iter().any(|s| s.as_slice() == target.get_name()),
+            _ => true,
         }
     }).collect::<Vec<&Target>>();
 

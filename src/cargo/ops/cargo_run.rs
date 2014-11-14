@@ -35,6 +35,9 @@ pub fn run(manifest_path: &Path,
         None => {}
     }
 
+    // only compile binary that should be run
+    options.bins = Some(vec![bin.get_name().to_string()]);
+
     let compile = try!(ops::compile(manifest_path, options));
     let dst = manifest_path.dir_path().join("target");
     let dst = match options.target {
