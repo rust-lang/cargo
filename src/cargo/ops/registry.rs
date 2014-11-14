@@ -33,7 +33,7 @@ pub fn publish(manifest_path: &Path,
     try!(verify_dependencies(&pkg, &reg_id));
 
     // Prepare a tarball
-    let tarball = try!(ops::package(manifest_path, shell, verify));
+    let tarball = try!(ops::package(manifest_path, shell, verify, false)).unwrap();
 
     // Upload said tarball to the specified destination
     try!(shell.status("Uploading", pkg.get_package_id().to_string()));

@@ -35,6 +35,11 @@ test!(simple {
         compiling = COMPILING,
         dir = p.url()).as_slice()));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
+    assert_that(p.process(cargo_dir().join("cargo")).arg("package").arg("-l"),
+                execs().with_status(0).with_stdout("\
+Cargo.toml
+src[..]main.rs
+"));
     assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
                 execs().with_status(0).with_stdout(""));
 
