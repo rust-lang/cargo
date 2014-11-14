@@ -2,7 +2,8 @@
 name = "cargo"
 version = "0.0.1-pre"
 authors = ["Yehuda Katz <wycats@gmail.com>",
-           "Carl Lerche <me@carllerche.com>"]
+           "Carl Lerche <me@carllerche.com>",
+           "Alex Crichton <alex@alexcrichton.com>"]
 
 [lib]
 name = "cargo"
