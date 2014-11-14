@@ -141,6 +141,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
 
     try!(compile(targets, pkg, true, &mut cx, &mut queue));
 
+    // Clean out any old files sticking around in directories.
+    try!(cx.layout(pkg, KindHost).proxy().clean());
+    try!(cx.layout(pkg, KindTarget).proxy().clean());
+
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
 
@@ -316,7 +320,6 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     //       may be building a C lib for a plugin
     let layout = cx.layout(pkg, KindTarget);
     let output = layout.native(pkg);
-    let old_output = layout.proxy().old_native(pkg);
     let mut p = try!(process(cmd.next().unwrap(), pkg, target, cx))
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
@@ -353,14 +356,10 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
 
     Ok(proc(desc_tx: Sender<String>) {
         desc_tx.send_opt(p.to_string()).ok();
-        if first {
-            try!(if old_output.exists() {
-                fs::rename(&old_output, &output)
-            } else {
-                fs::mkdir(&output, USER_RWX)
-            }.chain_error(|| {
+        if first && !output.exists() {
+            try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
                 internal("failed to create output directory for build command")
-            }));
+            }))
         }
         try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
             e.msg = format!("Failed to run custom build command for `{}`\n{}",
@@ -377,12 +376,15 @@ fn rustc(package: &Package, target: &Target,
     let crate_types = target.rustc_crate_types();
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
-    Ok(rustcs.into_iter().map(|(rustc, kind)| {
+    rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
         let is_path_source = package.get_package_id().get_source_id().is_path();
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
+
+        let filenames = try!(cx.target_filenames(target));
+        let root = cx.layout(package, kind).root().clone();
 
         // Prepare the native lib state (extra -L and -l flags)
         let build_state = cx.build_state.clone();
@@ -416,7 +418,7 @@ fn rustc(package: &Package, target: &Target,
             t.is_lib()
         });
 
-        (proc(desc_tx: Sender<String>) {
+        Ok((proc(desc_tx: Sender<String>) {
             let mut rustc = rustc;
 
             // Only at runtime have we discovered what the extra -L and -l
@@ -436,6 +438,15 @@ fn rustc(package: &Package, target: &Target,
                 }
             }
 
+            // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
+            //                              this manually
+            for filename in filenames.iter() {
+                let dst = root.join(filename);
+                if dst.exists() {
+                    try!(fs::unlink(&dst));
+                }
+            }
+
             desc_tx.send_opt(rustc.to_string()).ok();
             try!(rustc.exec().chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
@@ -443,8 +454,8 @@ fn rustc(package: &Package, target: &Target,
 
             Ok(())
 
-        }, kind)
-    }).collect())
+        }, kind))
+    }).collect()
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
@@ -622,7 +633,7 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
     cmd = cmd.arg("--out-dir");
     cmd = cmd.arg(out_dir);
 
-    let (_, dep_info_loc) = fingerprint::dep_info_loc(cx, pkg, target, kind);
+    let dep_info_loc = fingerprint::dep_info_loc(cx, pkg, target, kind);
     cmd = cmd.arg("--dep-info").arg(dep_info_loc);
 
     if kind == KindTarget {

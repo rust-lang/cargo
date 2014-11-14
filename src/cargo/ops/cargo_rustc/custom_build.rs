@@ -39,11 +39,9 @@ pub struct BuildState {
 pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
                cx: &mut Context) -> CargoResult<(Work, Work, Freshness)> {
     let kind = match req { PlatformPlugin => KindHost, _ => KindTarget, };
-    let (script_output, build_output, old_build_output) = {
-        let target = cx.layout(pkg, kind);
+    let (script_output, build_output) = {
         (cx.layout(pkg, KindHost).build(pkg),
-         target.build_out(pkg),
-         target.proxy().old_build(pkg).join("out"))
+         cx.layout(pkg, KindTarget).build_out(pkg))
     };
 
     // Building the command to execute
@@ -99,7 +97,6 @@ pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
     let build_state = cx.build_state.clone();
     let id = pkg.get_package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
-               old_build_output.clone(),
                build_output.clone());
 
     try!(fs::mkdir_recursive(&cx.layout(pkg, KindTarget).build(pkg), USER_RWX));
@@ -115,14 +112,12 @@ pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
         //
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
-        try!(if old_build_output.exists() {
-            fs::rename(&old_build_output, &build_output)
-        } else {
-            fs::mkdir(&build_output, USER_RWX)
-        }.chain_error(|| {
-            internal("failed to create script output directory for \
-                      build command")
-        }));
+        if !build_output.exists() {
+            try!(fs::mkdir(&build_output, USER_RWX).chain_error(|| {
+                internal("failed to create script output directory for \
+                          build command")
+            }));
+        }
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command.
@@ -183,10 +178,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
     let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
     let fresh = proc(tx) {
-        let (id, pkg_name, build_state, old_build_output, build_output) = all;
+        let (id, pkg_name, build_state, build_output) = all;
         let new_loc = build_output.dir_path().join("output");
-        try!(fs::rename(&old_build_output.dir_path().join("output"), &new_loc));
-        try!(fs::rename(&old_build_output, &build_output));
         let mut f = try!(File::open(&new_loc).map_err(|e| {
             human(format!("failed to read cached build command output: {}", e))
         }));
