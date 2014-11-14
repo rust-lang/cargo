@@ -579,12 +579,11 @@ fn build_base_args(cx: &Context,
     if profile.get_opt_level() != 0 {
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
-    if target.is_bin() && profile.get_lto() {
+    if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {
         cmd = cmd.args(["-C", "lto"]);
     } else {
-        // @alexchrichton says that there may be some restrictions with LTO
-        // and codegen-units, so that we should only add codegen units when
-        // LTO is not used.
+        // There are some restrictions with LTO and codegen-units, so we
+        // only add codegen units when LTO is not used.
         match profile.get_codegen_units() {
             Some(n) => cmd = cmd.arg("-C").arg(format!("codegen-units={}", n)),
             None => {},

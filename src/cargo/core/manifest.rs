@@ -162,7 +162,6 @@ impl Profile {
         Profile {
             env: "compile".to_string(), // run in the default environment only
             opt_level: 0,
-            lto: false,
             debug: true,
             .. Profile::default()
         }
@@ -182,7 +181,6 @@ impl Profile {
         Profile {
             env: "bench".to_string(),
             opt_level: 3,
-            lto: false,
             test: true,
             dest: Some("release".to_string()),
             .. Profile::default()
@@ -193,7 +191,6 @@ impl Profile {
         Profile {
             env: "release".to_string(),
             opt_level: 3,
-            lto: false,
             dest: Some("release".to_string()),
             .. Profile::default()
         }

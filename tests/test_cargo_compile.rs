@@ -740,20 +740,22 @@ test!(lto_build {
             name = "test"
             version = "0.0.0"
             authors = []
+
+            [profile.release]
             lto = true
         "#)
         .file("src/main.rs", "fn main() {}");
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type bin -g \
+{running} `rustc {dir}{sep}src{sep}main.rs --crate-name test --crate-type bin \
+        --opt-level 3 \
         -C lto \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
-        --out-dir {dir}{sep}target \
+        --cfg ndebug \
+        --out-dir {dir}{sep}target{sep}release \
         --dep-info [..] \
-        -L {dir}{sep}target \
-        -L {dir}{sep}target{sep}deps`
+        -L {dir}{sep}target{sep}release \
+        -L {dir}{sep}target{sep}release{sep}deps`
 ",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),

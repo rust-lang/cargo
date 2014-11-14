@@ -142,30 +142,35 @@ along with the defaults for each profile.
 opt-level = 0  # Controls the --opt-level the compiler builds with
 debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
 rpath = false  # Controls whether the compiler passes `-C rpath`
+lto = false    # Controls `-C lto` for binaries and staticlibs
 
 # The release profile, used for `cargo build --release`
 [profile.release]
 opt-level = 3
 debug = false
 rpath = false
+lto = false
 
 # The testing profile, used for `cargo test`
 [profile.test]
 opt-level = 0
 debug = true
 rpath = false
+lto = false
 
 # The benchmarking profile, used for `cargo bench`
 [profile.bench]
 opt-level = 3
 debug = false
 rpath = false
+lto = false
 
 # The documentation profile, used for `cargo doc`
 [profile.doc]
 opt-level = 0
 debug = true
 rpath = false
+lto = false
 ```
 
 # The `[features]` Section
@@ -187,7 +192,7 @@ name = "awesome"
 
 # The "default" set of optional packages. Most people will
 # want to use these packages, but they are strictly optional
-default = ["jquery", "uglifier"]
+default = ["jquery", "uglifier", "session"]
 
 # The "secure-password" feature depends on the bcrypt package.
 # This aliasing will allow people to talk about the feature in
