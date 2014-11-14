@@ -139,6 +139,7 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
         features: [],
         no_default_features: false,
         spec: None,
+        lib_only: false,
     }));
 
     Ok(())

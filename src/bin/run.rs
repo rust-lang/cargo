@@ -67,6 +67,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,
         spec: None,
+        lib_only: false
     };
 
     let (target_kind, name) = match (options.flag_name, options.flag_example) {

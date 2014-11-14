@@ -47,6 +47,7 @@ pub struct CompileOptions<'a> {
     pub features: &'a [String],
     pub no_default_features: bool,
     pub spec: Option<&'a str>,
+    pub lib_only: bool
 }
 
 pub fn compile(manifest_path: &Path,
@@ -70,7 +71,8 @@ pub fn compile(manifest_path: &Path,
 pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { env, ref mut shell, jobs, target, spec,
-                         dev_deps, features, no_default_features } = *options;
+                         dev_deps, features, no_default_features,
+                         lib_only } = *options;
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
         s.as_slice().split(' ')
@@ -135,7 +137,11 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
             "doc" | "doc-all" => target.get_profile().get_env() == "doc",
             env => target.get_profile().get_env() == env,
         }
-    }).collect::<Vec<&Target>>();
+    }).filter(|target| !lib_only || target.is_lib()).collect::<Vec<&Target>>();
+
+    if lib_only && targets.len() == 0 {
+        return Err(human("There is no lib to build, remove `--lib` flag".to_string()));
+    }
 
     let ret = {
         let _p = profile::start("compiling");
