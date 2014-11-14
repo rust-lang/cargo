@@ -126,6 +126,7 @@ pub enum TargetKind {
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
+    lto: bool,
     codegen_units: Option<uint>,    // None = use rustc default
     debug: bool,
     rpath: bool,
@@ -143,6 +144,7 @@ impl Profile {
         Profile {
             env: String::new(),
             opt_level: 0,
+            lto: false,
             codegen_units: None,
             debug: false,
             rpath: false,
@@ -160,6 +162,7 @@ impl Profile {
         Profile {
             env: "compile".to_string(), // run in the default environment only
             opt_level: 0,
+            lto: false,
             debug: true,
             .. Profile::default()
         }
@@ -179,6 +182,7 @@ impl Profile {
         Profile {
             env: "bench".to_string(),
             opt_level: 3,
+            lto: false,
             test: true,
             dest: Some("release".to_string()),
             .. Profile::default()
@@ -189,6 +193,7 @@ impl Profile {
         Profile {
             env: "release".to_string(),
             opt_level: 3,
+            lto: false,
             dest: Some("release".to_string()),
             .. Profile::default()
         }
@@ -236,6 +241,10 @@ impl Profile {
         self.opt_level
     }
 
+    pub fn get_lto(&self) -> bool {
+        self.lto
+    }
+
     pub fn get_codegen_units(&self) -> Option<uint> {
         self.codegen_units
     }
@@ -258,6 +267,11 @@ impl Profile {
 
     pub fn opt_level(mut self, level: uint) -> Profile {
         self.opt_level = level;
+        self
+    }
+
+    pub fn lto(mut self, lto: bool) -> Profile {
+        self.lto = lto;
         self
     }
 
@@ -315,6 +329,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
         // to the actual hash of a profile.
         let Profile {
             opt_level,
+            lto,
             codegen_units,
             debug,
             rpath,
@@ -332,7 +347,8 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
 
             custom_build: _,
         } = *self;
-        (opt_level, codegen_units, debug, rpath, for_host, dest, harness).hash(into)
+        (opt_level, lto, codegen_units, debug,
+         rpath, for_host, dest, harness).hash(into)
     }
 }
 
