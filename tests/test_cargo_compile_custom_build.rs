@@ -897,3 +897,45 @@ test!(shared_dep_with_a_build_script {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 })
+
+test!(transitive_dep_host {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.b]
+            path = "b"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("a/build.rs", "fn main() {}")
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+
+            [lib]
+            name = "b"
+            plugin = true
+
+            [dependencies.a]
+            path = "../a"
+        "#)
+        .file("b/src/lib.rs", "");
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+})

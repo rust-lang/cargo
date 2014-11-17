@@ -110,6 +110,10 @@ impl Package {
     pub fn get_absolute_target_dir(&self) -> Path {
         self.get_root().join(self.get_target_dir())
     }
+
+    pub fn has_custom_build(&self) -> bool {
+        self.get_targets().iter().any(|t| t.get_profile().is_custom_build())
+    }
 }
 
 impl Show for Package {
