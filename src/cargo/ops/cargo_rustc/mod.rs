@@ -326,6 +326,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
                      .env("TARGET", Some(cx.target_triple()))
                      .env("DEBUG", Some(profile.get_debug().to_string()))
                      .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
+                     .env("LTO", Some(profile.get_lto().to_string()))
                      .env("PROFILE", Some(profile.get_env()));
     for arg in cmd {
         p = p.arg(arg);
@@ -578,10 +579,16 @@ fn build_base_args(cx: &Context,
     if profile.get_opt_level() != 0 {
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
-
-    match profile.get_codegen_units() {
-        Some(n) => cmd = cmd.arg("-C").arg(format!("codegen-units={}", n)),
-        None => {},
+    if target.is_bin() && profile.get_lto() {
+        cmd = cmd.args(["-C", "lto"]);
+    } else {
+        // @alexchrichton says that there may be some restrictions with LTO
+        // and codegen-units, so that we should only add codegen units when
+        // LTO is not used.
+        match profile.get_codegen_units() {
+            Some(n) => cmd = cmd.arg("-C").arg(format!("codegen-units={}", n)),
+            None => {},
+        }
     }
 
     if profile.get_debug() {
