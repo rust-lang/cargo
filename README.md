@@ -43,7 +43,8 @@ Cargo can then be compiled like many other standard unix-like projects:
 ```sh
 git clone https://github.com/rust-lang/cargo
 cd cargo
-./configure
+./.travis.install.deps.sh
+./configure --local-rust-root=`pwd`/rustc
 make
 make install
 ```
