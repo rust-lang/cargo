@@ -939,3 +939,37 @@ test!(transitive_dep_host {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 })
+
+test!(test_a_lib_with_a_build_command {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", r#"
+            include!(concat!(env!("OUT_DIR"), "/foo.rs"))
+
+            /// ```
+            /// foo::bar();
+            /// ```
+            pub fn bar() {
+                assert_eq!(foo(), 1);
+            }
+        "#)
+        .file("build.rs", r#"
+            use std::os;
+            use std::io::File;
+
+            fn main() {
+                let out = Path::new(os::getenv("OUT_DIR").unwrap());
+                File::create(&out.join("foo.rs")).write_str("
+                    fn foo() -> int { 1 }
+                ").unwrap();
+            }
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+})
