@@ -12,8 +12,8 @@ $ curl https://static.rust-lang.org/rustup.sh | sudo bash
 This will get you the latest Rust nightly for your platform along with
 the latest Cargo. You should run this script almost every day to get the latest updates.
 
-If you are on Windows, you can directly download the latest 32bit ([Rust](https://static.rust-lang.org/dist/rust-nightly-i686-w64-mingw32.exe)
-and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-w64-mingw32.tar.gz)) or 64bit ([Rust](https://static.rust-lang.org/dist/rust-nightly-x86_64-w64-mingw32.exe) and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-w64-mingw32.tar.gz)) nightlies.
+If you are on Windows, you can directly download the latest 32bit ([Rust](https://static.rust-lang.org/dist/rust-nightly-i686-pc-windows-gnu.exe)
+and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz)) or 64bit ([Rust](https://static.rust-lang.org/dist/rust-nightly-x86_64-pc-windows-gnu.exe) and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz)) nightlies.
 
 Alternatively, you can build Cargo from source.
 
