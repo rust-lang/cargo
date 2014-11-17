@@ -75,7 +75,7 @@ are interpreted by Cargo and must be of the form `key=value`.
 
 Example output:
 
-```
+```notrust
 cargo:rustc-flags=-l foo:static -L /path/to/foo
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
@@ -205,7 +205,7 @@ build = "build.rs"
 Here we can se we've got a build script specified which we'll use to generate
 some code. Let's see what's inside the build script:
 
-```
+```rust,no_run
 // build.rs
 
 use std::os;
@@ -235,7 +235,7 @@ There's a couple of points of note here:
 
 Next, let's peek at the library itself:
 
-```
+```rust,ignore
 // src/main.rs
 
 include!(concat!(env!("OUT_DIR"), "/hello.rs"))
@@ -290,7 +290,7 @@ build = "build.rs"
 For now we're not going to use any build dependencies, so let's take a look at
 the build script now:
 
-```rust
+```rust,no_run
 // build.rs
 
 use std::io::Command;
@@ -301,18 +301,12 @@ fn main() {
 
     // note that there are a number of downsides to this approach, the comments
     // below detail how to improve the portability of these commands.
-    Command::new("gcc").arg("src/hello.c")
-                       .arg("-c")
-                       .arg("-o")
+    Command::new("gcc").args(&["src/hello.c", "-c", "-o"])
                        .arg(format!("{}/hello.o", out_dir))
-                       .status()
-                       .unwrap();
-    Command::new("ar").arg("crus")
-                      .arg("libhello.a")
-                      .arg("hello.o")
-                      .cwd(&out_dir)
-                      .status()
-                      .unwrap();
+                       .status().unwrap();
+    Command::new("ar").args(&["crus", "libhello.a", "hello.o"])
+                      .cwd(&Path::new(&out_dir))
+                      .status().unwrap();
 
     println!("cargo:rustc-flags=-L {} -l hello:static", out_dir);
 }
@@ -337,7 +331,7 @@ Not to fear, though, this is where a `build-dependencies` entry would help! The
 Cargo ecosystem has a number of packages to make this sort of task much easier,
 portable, and standardized. For example, the build script could be written as:
 
-```rust
+```rust,ignore
 // build.rs
 
 // Bring in a dependency on an externally maintained `cc` package which manages
@@ -378,7 +372,7 @@ void hello() {
 }
 ```
 
-```rust
+```rust,ignore
 // src/main.rs
 
 // Note the lack of the `#[link]` attribute. We're delegating the responsibility
