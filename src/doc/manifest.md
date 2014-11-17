@@ -26,26 +26,16 @@ basic rules:
 
 ## The `build` Field (optional)
 
-You can specify a script that Cargo should execute before invoking
-`rustc`. You can use this to compile C code that you will [link][1] into
-your Rust code, for example. More information can be found in the building
-non-rust code [guide][2]
+This field specifies a file in the repository which is a [build
+script][1] for building native code. More information can be
+found in the build script [guide][1].
 
-[1]: http://doc.rust-lang.org/reference.html#external-blocks
-[2]: build-script.html
+[1]: build-script.html
 
 ```toml
 [package]
 # ...
-build = "make"
-```
-
-```toml
-[package]
-# ...
-
-# Specify two commands to be run sequentially
-build = ["./configure", "make"]
+build = "build.rs"
 ```
 
 ## The `exclude` Field (optional)
@@ -122,7 +112,24 @@ You can specify the source of a dependency in one of two ways at the moment:
 * `path = "<relative-path>"`: A path relative to the current `Cargo.toml`
   with a `Cargo.toml` in its root.
 
-Soon, you will be able to load packages from the Cargo registry as well.
+Dependencies from crates.io are not declared with separate sections:
+
+```toml
+[dependencies]
+hammer = "0.5.0"
+color = "0.6.0"
+```
+
+Platform-specific dependencies take the same format, but are listed under the
+`target.$triple` section:
+
+```toml
+[target.x86_64-unknown-linux-gnu.dependencies]
+openssl = "1.0.1"
+
+[target.x86_64-pc-windows-gnu.dependencies]
+winhttp = "0.4.0"
+```
 
 # The `[profile.*]` Sections
 
@@ -366,10 +373,10 @@ When you run `cargo test`, Cargo will:
 
 # Configuring a target
 
-Both `[[bin]]` and `[lib]` sections support similar configuration for specifying
-how a target should be built. The example below uses `[lib]`, but it also
-applies to all `[[bin]]` sections as well. All values listed are the defaults
-for that option unless otherwise specified.
+All of the  `[[bin]]`, `[lib]`, `[[bench]]`, and `[[test]]` sections support
+similar configuration for specifying how a target should be built. The example
+below uses `[lib]`, but it also applies to all other sections as well. All
+values listed are the defaults for that option unless otherwise specified.
 
 ```toml
 [package]
@@ -388,7 +395,7 @@ path = "src/lib.rs"
 test = true
 
 # A flag for enabling documentation tests for this target. This is only
-# relevant for libraries, it has no effect on [[bin]] sections. This is used by
+# relevant for libraries, it has no effect on other sections. This is used by
 # `cargo test`.
 doctest = true
 

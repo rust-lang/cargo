@@ -154,11 +154,9 @@ footer a {
 footer a:hover {
     color: #e6e6e6;
 }
-footer .sep, #header .sep {
-    margin: 0 10px;
-    color: #284725;
-}
-
+footer .sep, #header .sep { color: #284725; }
+footer .sep { margin: 0 10px; }
+#header .sep { margin-left: 10px; }
 
 .headerlink {
   display: none;
@@ -237,6 +235,11 @@ button {
     border: 0;
     padding: 10px;
     color: white;
+}
+
+button.active {
+  background:#2a4f27;
+  box-shadow:inset -2px 2px 4px 0 #243d26
 }
 
 ul.dropdown {
