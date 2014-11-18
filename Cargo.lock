@@ -11,6 +11,7 @@ dependencies = [
  "registry 0.0.1-pre",
  "semver 0.1.0 (git+https://github.com/rust-lang/semver)",
  "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs)",
+ "time 0.0.1 (git+https://github.com/rust-lang/time)",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
@@ -92,9 +93,10 @@ source = "git+https://github.com/alexcrichton/gcc-rs#f23b4ba15348508b9ac557fc7ee
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#847a4902f3e0971c394ac3f35995e49a774b275a"
+source = "git+https://github.com/alexcrichton/git2-rs#afec995029fae2d1eedf4d635b2131080b5b196d"
 dependencies = [
  "libgit2-sys 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
+ "time 0.0.1 (git+https://github.com/rust-lang/time)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
 
@@ -111,7 +113,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#998036d000095f72c8
 [[package]]
 name = "libgit2-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#847a4902f3e0971c394ac3f35995e49a774b275a"
+source = "git+https://github.com/alexcrichton/git2-rs#afec995029fae2d1eedf4d635b2131080b5b196d"
 dependencies = [
  "libssh2-sys 0.0.1 (git+https://github.com/alexcrichton/ssh2-rs)",
  "openssl-sys 0.0.1 (git+https://github.com/alexcrichton/openssl-sys)",
@@ -173,6 +175,14 @@ source = "git+https://github.com/rust-lang/semver#7dca047a9cd40e929a4545b37a1917
 name = "tar"
 version = "0.0.1"
 source = "git+https://github.com/alexcrichton/tar-rs#47d2cc4b09e373a4cc7bee7c71ebf96b42ea620d"
+
+[[package]]
+name = "time"
+version = "0.0.1"
+source = "git+https://github.com/rust-lang/time#76698f52381a78cf654dbedfefd04c28a9806788"
+dependencies = [
+ "gcc 0.0.1 (git+https://github.com/alexcrichton/gcc-rs)",
+]
 
 [[package]]
 name = "toml"

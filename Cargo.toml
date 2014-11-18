@@ -39,6 +39,9 @@ git = "https://github.com/alexcrichton/git2-rs"
 [dependencies.glob]
 git = "https://github.com/rust-lang/glob"
 
+[dependencies.time]
+git = "https://github.com/rust-lang/time"
+
 [dependencies.registry]
 path = "src/registry"
 
