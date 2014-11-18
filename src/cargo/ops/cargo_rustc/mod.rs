@@ -148,6 +148,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
 
+    let out_dir = cx.layout(pkg, KindTarget).build_out(pkg).display().to_string();
+    cx.compilation.extra_env.insert("OUT_DIR".to_string(), Some(out_dir));
     Ok(cx.compilation)
 }
 
