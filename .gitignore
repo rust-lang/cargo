@@ -4,3 +4,4 @@
 /Makefile
 /config.mk
 src/doc/build
+rustc
