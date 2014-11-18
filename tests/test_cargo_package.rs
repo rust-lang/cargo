@@ -4,7 +4,7 @@ use tar::Archive;
 use flate2::reader::GzDecoder;
 
 use support::{project, execs, cargo_dir, ResultTest};
-use support::{PACKAGING, VERIFYING, COMPILING};
+use support::{PACKAGING, WARNING, VERIFYING, COMPILING};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -18,6 +18,8 @@ test!(simple {
             version = "0.0.1"
             authors = []
             exclude = ["*.txt"]
+            license = "MIT"
+            description = "foo"
         "#)
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
@@ -54,4 +56,77 @@ src[..]main.rs
                 fname == Path::new("foo-0.0.1/src/main.rs").as_vec(),
                 "unexpected filename: {}", f.filename())
     }
+})
+
+test!(metadata_warning {
+    let p = project("all")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("package"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir}[..])
+",
+        packaging = PACKAGING,
+        verifying = VERIFYING,
+        compiling = COMPILING,
+        dir = p.url()).as_slice())
+                .with_stderr("Warning: manifest has no description or license. See \
+                              http://doc.crates.io/manifest.html#package-metadata for more info."));
+
+    let p = project("one")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("package"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir}[..])
+",
+        packaging = PACKAGING,
+        verifying = VERIFYING,
+        compiling = COMPILING,
+        dir = p.url()).as_slice())
+                .with_stderr("Warning: manifest has no description. See \
+                              http://doc.crates.io/manifest.html#package-metadata for more info."));
+
+    let p = project("both")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#))
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("package"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir}[..])
+",
+        packaging = PACKAGING,
+        verifying = VERIFYING,
+        compiling = COMPILING,
+        dir = p.url()).as_slice()));
+
 })

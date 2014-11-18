@@ -32,8 +32,9 @@ pub fn publish(manifest_path: &Path,
     let (mut registry, reg_id) = try!(registry(shell, token, index));
     try!(verify_dependencies(&pkg, &reg_id));
 
-    // Prepare a tarball
-    let tarball = try!(ops::package(manifest_path, shell, verify, false)).unwrap();
+    // Prepare a tarball, with a non-surpressable warning if metadata
+    // is missing since this is being put online.
+    let tarball = try!(ops::package(manifest_path, shell, verify, false, true)).unwrap();
 
     // Upload said tarball to the specified destination
     try!(shell.status("Uploading", pkg.get_package_id().to_string()));
