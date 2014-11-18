@@ -154,6 +154,16 @@ case $state in
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
+            publish)
+                _arguments \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--host=[Host to set the token for]' \
+                    '--manifest-path=[path to manifest]' \
+                    '--no-verify[Do not verify tarball until before publish]' \
+                    '--token[Token to use when uploading]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
             read-manifest)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
@@ -245,6 +255,7 @@ local -a commands;commands=(
 'owner:manage the owners of a crate on the registry'
 'package:assemble local package into a distributable tarball'
 'pkgid:print a fully qualified package specification'
+'publish:upload package to the registry'
 'read-manifest:print manifest in JSON format'
 'run:run the main binary of the local package'
 'test:execute all unit and tests of a local package'
