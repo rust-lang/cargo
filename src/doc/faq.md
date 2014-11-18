@@ -2,8 +2,8 @@
 
 # Is the plan to use Github as a package repository?
 
-No. The plan for Cargo is to have a central registry of packages, like
-npm or Rubygems.
+No. The plan for Cargo is to use crates.io, like npm or Rubygems do with
+npmjs.org and rubygems.org.
 
 We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
@@ -16,15 +16,14 @@ track the latest Rust. This makes downloading the latest `master` from
 Github the best approach to getting packages at the current point in the
 community's lifecycle.
 
-# Why build a package registry rather than use Github as a registry?
+# Why build crates.io rather than use Github as a registry?
 
 We think that it's very important to support multiple ways to download
 packages, including downloading from Github and copying packages into
 your project itself.
 
-That said, we think that a central registry offers a number of important
-benefits, and will likely become the primary way that people download
-packages in Cargo.
+That said, we think that crates.io offers a number of important benefits, and
+will likely become the primary way that people download packages in Cargo.
 
 For precedent, both Node.js's [npm][1] and Ruby's [bundler][2] support both a
 central registry model as well as a Git-based model, and most packages
@@ -50,6 +49,17 @@ languages include:
   down fast. Also remember that not everybody has a high-speed,
   low-latency Internet connection.
 
+# Why build crates.io before Rust 1.0?
+
+One of Rust's greatest strengths is its thriving community, and Cargo is a key
+tool in helping it grow even further. A central repository like crates.io has
+always been part of Cargo's vision and by building it before Rust 1.0 we're able
+to flesh out bugs and streamline the experience for new 1.0 users.
+
+Crates may have difficulty publishing to the registry in the interim due to the
+language changing, invalidating all previously published versions. This is a
+transitionary pain which will not exist once Rust 1.0 is released.
+
 # Will Cargo work with C code (or other languages)?
 
 Yes!
@@ -58,10 +68,10 @@ Cargo handles compiling Rust code, but we know that many Rust projects
 link against C code. We also know that there are decades of tooling
 built up around compiling languages other than Rust.
 
-Our solution: Cargo allows a package to specify a script to run
-before invoking `rustc`. We plan to add support for platform-specific
-configuration, so you can use `make` on Linux and `cmake` on BSD, for
-example.
+Our solution: Cargo allows a package to [specify a script](build-script.html)
+(written in Rust) to run before invoking `rustc`. Rust is leveraged to
+implement platform-specific configuration and refactor out common build
+functionality among packages.
 
 # Can Cargo be used inside of `make` (or `ninja`, or ...)
 
@@ -78,28 +88,26 @@ will continue to prioritize.
 # Does Cargo handle multi-platform projects or cross-compilation?
 
 Rust itself provides facilities for configuring sections of code based
-on the platform. We plan to support per-platform configuration in
-`Cargo.toml`, including platform-specific dependencies, in the near
-future.
+on the platform. Cargo also supports [platform-specific
+dependencies][target-deps], and we plan to support more per-platform
+configuration in `Cargo.toml` in the future.
+
+[target-deps]: manifest.html#the-[dependencies.*]-sections
 
 In the longer-term, we're looking at ways to conveniently cross-compile
 projects using Cargo.
 
 # Does Cargo support environments, like `production` or `test`?
 
-We are planning on support environments in the near future, that can
-support:
+We support environments through the use of [profiles][profile] to support:
+
+[profile]: manifest.html#the-[profile.*]-sections
 
 * environment-specific flags (like `-g --opt-level=0` for development
   and `--opt-level=3` for production).
 * environment-specific dependencies (like `hamcrest` for test assertions).
 * environment-specific `#[cfg]`
 * a `cargo test` command
-
-We also plan to make it possible to specify "profiles", which can
-specify flags or dependencies for a combination of multiple environments
-and platforms ("use `fsevents`, but only in OSX in `development` or
-`test`").
 
 # Does Cargo work on Windows?
 
@@ -137,3 +145,19 @@ conflict.
 In other words, libraries specify semver requirements for their dependencies but
 cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
+
+# Why `Cargo.toml`?
+
+As one of the most frequent interactions with Cargo, the question of why the
+configuration file is named `Cargo.toml` arises from time to time. The leading
+capital-`C` was chosen to ensure that the manifest was grouped with other
+similar configuration files in directory listings. Sorting files often puts
+capital letters before lowercase letters, ensuring files like `Makefile` and
+`Cargo.toml` are placed together. The trailing `.toml` was chosen to emphasize
+the fact that the file is in the [TOML configuration
+format](https://github.com/toml-lang/toml).
+
+Cargo does not allow other names such as `cargo.toml` or `Cargofile` to
+emphasize the ease of how a Cargo repository can be identified. An option of
+many possible names has historically led to confusion where one case was handled
+but others were accidentally forgotten.
