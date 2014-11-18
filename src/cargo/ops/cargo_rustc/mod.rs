@@ -390,30 +390,38 @@ fn rustc(package: &Package, target: &Target,
         let build_state = cx.build_state.clone();
         let mut native_lib_deps = HashSet::new();
         let current_id = package.get_package_id().clone();
-        let has_custom_build = package.get_targets().iter().any(|t| {
-            t.get_profile().is_custom_build()
-        });
 
-        if has_custom_build && !target.get_profile().is_custom_build() {
+        if package.has_custom_build() && !target.get_profile().is_custom_build() {
             native_lib_deps.insert(current_id.clone());
         }
         // Visit dependencies transitively to figure out what our native
         // dependencies are (for -L and -l flags).
-        for &(pkg, _) in cx.dep_targets(package, target).iter() {
-            each_dep(pkg, cx, |dep| {
-                let has_custom_build = dep.get_targets().iter().any(|t| {
-                    t.get_profile().is_custom_build()
-                });
-                if has_custom_build {
-                    native_lib_deps.insert(dep.get_package_id().clone());
+        //
+        // Be sure to only look at targets of the same Kind, however, as we
+        // don't want to include native libs of plugins for targets for example.
+        fn visit<'a>(cx: &'a Context, pkg: &'a Package, target: &Target,
+                     kind: Kind,
+                     visiting: &mut HashSet<&'a PackageId>,
+                     libs: &mut HashSet<PackageId>) {
+            for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
+                let req = cx.get_requirement(pkg, target);
+                if !req.includes(kind) { continue }
+                if !visiting.insert(pkg.get_package_id()) { continue }
+
+                if pkg.has_custom_build() {
+                    libs.insert(pkg.get_package_id().clone());
                 }
-            });
+                visit(cx, pkg, target, kind, visiting, libs);
+                visiting.remove(&pkg.get_package_id());
+            }
         }
+        visit(cx, package, target, kind,
+              &mut HashSet::new(), &mut native_lib_deps);
         let mut native_lib_deps = native_lib_deps.into_iter().collect::<Vec<_>>();
         native_lib_deps.sort();
 
-        // If we are a binary and the package also contains a library, then we don't
-        // pass the `-l` flags.
+        // If we are a binary and the package also contains a library, then we
+        // don't pass the `-l` flags.
         let pass_l_flag = target.is_lib() || !package.get_targets().iter().any(|t| {
             t.is_lib()
         });
@@ -503,10 +511,7 @@ fn rustdoc(package: &Package, target: &Target,
 
     let mut rustdoc = try!(build_deps_args(rustdoc, target, package, cx, kind));
 
-    let has_build_cmd = package.get_targets().iter().any(|t| {
-        t.get_profile().is_custom_build()
-    });
-    rustdoc = rustdoc.env("OUT_DIR", if has_build_cmd {
+    rustdoc = rustdoc.env("OUT_DIR", if package.has_custom_build() {
         Some(cx.layout(package, kind).build_out(package))
     } else {
         None
@@ -663,10 +668,7 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
 
-    let has_build_cmd = package.get_targets().iter().any(|t| {
-        t.get_profile().is_custom_build()
-    });
-    cmd = cmd.env("OUT_DIR", if has_build_cmd {
+    cmd = cmd.env("OUT_DIR", if package.has_custom_build() {
         Some(layout.build_out(package))
     } else {
         None

@@ -326,4 +326,21 @@ impl PlatformRequirement {
             _ => PlatformPluginAndTarget,
         }
     }
+
+    pub fn includes(self, kind: Kind) -> bool {
+        match (self, kind) {
+            (PlatformPluginAndTarget, _) |
+            (PlatformTarget, KindTarget) |
+            (PlatformPlugin, KindHost) => true,
+            _ => false,
+        }
+    }
+
+    pub fn each_kind(self, f: |Kind|) {
+        match self {
+            PlatformTarget => f(KindTarget),
+            PlatformPlugin => f(KindHost),
+            PlatformPluginAndTarget => { f(KindTarget); f(KindHost); }
+        }
+    }
 }
