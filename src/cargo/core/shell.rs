@@ -4,9 +4,15 @@ use term::attr::{Attr, Bold};
 use std::io::{IoResult, stderr};
 use std::fmt::Show;
 
+pub enum Verbosity {
+    Verbose,
+    Normal,
+    Quiet
+}
+
 pub struct ShellConfig {
     pub color: bool,
-    pub verbose: bool,
+    pub verbosity: Verbosity,
     pub tty: bool
 }
 
@@ -23,7 +29,7 @@ pub struct Shell {
 pub struct MultiShell {
     out: Shell,
     err: Shell,
-    verbose: bool
+    verbose: Verbosity
 }
 
 pub type Callback<'a> = |&mut MultiShell|:'a -> IoResult<()>;
@@ -33,8 +39,8 @@ struct UghWhyIsThisNecessary {
 }
 
 impl MultiShell {
-    pub fn new(out: Shell, err: Shell, verbose: bool) -> MultiShell {
-        MultiShell { out: out, err: err, verbose: verbose }
+    pub fn new(out: Shell, err: Shell, verbosity: Verbosity) -> MultiShell {
+        MultiShell { out: out, err: err, verbosity: verbosity }
     }
 
     pub fn out(&mut self) -> &mut Shell {
@@ -46,21 +52,31 @@ impl MultiShell {
     }
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
-        self.out().say(message, color)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.out().say(message, color)
+        }
     }
 
     pub fn status<T: Show, U: Show>(&mut self, status: T, message: U) -> IoResult<()> {
-        self.out().say_status(status, message, GREEN)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.out().say_status(status, message, GREEN)
+        }
     }
 
     pub fn verbose(&mut self, callback: Callback) -> IoResult<()> {
-        if self.verbose { return callback(self) }
-        Ok(())
+        match self.verbosity {
+            Verbose => return callback(self),
+            _ => Ok(())
+        }
     }
 
     pub fn concise(&mut self, callback: Callback) -> IoResult<()> {
-        if !self.verbose { return callback(self) }
-        Ok(())
+        match self.verbosity {
+            Verbose => Ok(()),
+            _ => return callback(self)
+        }
     }
 
     pub fn error<T: ToString>(&mut self, message: T) -> IoResult<()> {
@@ -71,8 +87,17 @@ impl MultiShell {
         self.err().say(message, YELLOW)
     }
 
+    pub fn set_verbosity(&mut self, verbosity: Verbosity) {
+        self.verbosity = verbosity;
+    }
+
+    /// shortcut for commands that don't have both --verbose and --quiet
     pub fn set_verbose(&mut self, verbose: bool) {
-        self.verbose = verbose;
+        if verbose {
+            self.verbosity = Verbose;
+        } else {
+            self.verbosity = Normal;
+        }
     }
 }
 
@@ -95,13 +120,17 @@ impl Shell {
     }
 
     pub fn verbose(&mut self, callback: ShellCallback) -> IoResult<()> {
-        if self.config.verbose { return callback(self) }
-        Ok(())
+        match self.config.verbosity {
+            Verbose => return callback(self),
+            _ => Ok(())
+        }
     }
 
     pub fn concise(&mut self, callback: ShellCallback) -> IoResult<()> {
-        if !self.config.verbose { return callback(self) }
-        Ok(())
+        match self.config.verbosity {
+            Verbose => Ok(()),
+            _ => return callback(self)
+        }
     }
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {

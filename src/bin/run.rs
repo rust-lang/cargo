@@ -16,6 +16,7 @@ struct Options {
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_release: bool,
     arg_args: Vec<String>,
 }
@@ -37,6 +38,7 @@ Options:
     --target TRIPLE         Build for the target triple
     --manifest-path PATH    Path to the manifest to execute
     -v, --verbose           Use verbose output
+    -q, --quiet             No output printed to stdout
 
 If neither `--bin` or `--example` are given, then if the project only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
@@ -46,8 +48,23 @@ and `--example` specifies the example target to run. At most one of `--bin` or
 All of the trailing arguments are passed as to the binary to run.
 ";
 
+
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+    shell.set_verbosity(match (options.flag_verbose, options.flag_quiet) {
+        (true, true) => {
+            fail!("You cannot set both --verbose and --quiet");
+        },
+        (true, _) => {
+            shell::Verbose
+        },
+        (_, true) => {
+            shell::Quiet
+        }
+        _ => {
+            shell::Normal
+        }
+    });
+
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let env = if options.flag_example.is_some() {
