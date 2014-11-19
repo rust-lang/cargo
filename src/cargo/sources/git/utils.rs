@@ -19,9 +19,9 @@ pub struct GitRevision(String);
 impl GitReference {
     pub fn for_str<S: Str>(string: S) -> GitReference {
         if string.as_slice() == "master" {
-            Master
+            GitReference::Master
         } else {
-            Other(string.as_slice().to_string())
+            GitReference::Other(string.as_slice().to_string())
         }
     }
 }
@@ -29,8 +29,8 @@ impl GitReference {
 impl Str for GitReference {
     fn as_slice(&self) -> &str {
         match *self {
-            Master => "master",
-            Other(ref string) => string.as_slice()
+            GitReference::Master => "master",
+            GitReference::Other(ref string) => string.as_slice()
         }
     }
 }

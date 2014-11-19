@@ -6,16 +6,16 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{mod, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, KindHost, KindTarget, Compilation, BuildConfig};
+use super::{Kind, Compilation, BuildConfig};
 use super::TargetConfig;
 use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
 
 #[deriving(Show)]
-pub enum PlatformRequirement {
-    PlatformTarget,
-    PlatformPlugin,
-    PlatformPluginAndTarget,
+pub enum Platform {
+    Target,
+    Plugin,
+    PluginAndTarget,
 }
 
 pub struct Context<'a, 'b: 'a> {
@@ -34,7 +34,7 @@ pub struct Context<'a, 'b: 'a> {
     package_set: &'a PackageSet,
     target_dylib: Option<(String, String)>,
     target_exe: String,
-    requirements: HashMap<(&'a PackageId, &'a str), PlatformRequirement>,
+    requirements: HashMap<(&'a PackageId, &'a str), Platform>,
     build_config: BuildConfig,
 }
 
@@ -134,30 +134,30 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         let targets = pkg.get_targets().iter();
         for target in targets.filter(|t| t.get_profile().is_compile()) {
-            self.build_requirements(pkg, target, PlatformTarget);
+            self.build_requirements(pkg, target, Platform::Target);
         }
 
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
                                           Some(self.config.jobs().to_string()));
         self.compilation.root_output =
-                self.layout(pkg, KindTarget).proxy().dest().clone();
+                self.layout(pkg, Kind::Target).proxy().dest().clone();
         self.compilation.deps_output =
-                self.layout(pkg, KindTarget).proxy().deps().clone();
+                self.layout(pkg, Kind::Target).proxy().deps().clone();
 
         return Ok(());
     }
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
-                          req: PlatformRequirement) {
+                          req: Platform) {
 
-        let req = if target.get_profile().is_for_host() {PlatformPlugin} else {req};
+        let req = if target.get_profile().is_for_host() {Platform::Plugin} else {req};
         match self.requirements.entry((pkg.get_package_id(), target.get_name())) {
             Occupied(mut entry) => match (*entry.get(), req) {
-                (PlatformPlugin, PlatformPlugin) |
-                (PlatformPluginAndTarget, PlatformPlugin) |
-                (PlatformTarget, PlatformTarget) |
-                (PlatformPluginAndTarget, PlatformTarget) |
-                (PlatformPluginAndTarget, PlatformPluginAndTarget) => return,
+                (Platform::Plugin, Platform::Plugin) |
+                (Platform::PluginAndTarget, Platform::Plugin) |
+                (Platform::Target, Platform::Target) |
+                (Platform::PluginAndTarget, Platform::Target) |
+                (Platform::PluginAndTarget, Platform::PluginAndTarget) => return,
                 _ => *entry.get_mut() = entry.get().combine(req),
             },
             Vacant(entry) => { entry.set(req); }
@@ -169,18 +169,18 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         match pkg.get_targets().iter().find(|t| t.get_profile().is_custom_build()) {
             Some(custom_build) => {
-                self.build_requirements(pkg, custom_build, PlatformPlugin);
+                self.build_requirements(pkg, custom_build, Platform::Plugin);
             }
             None => {}
         }
     }
 
     pub fn get_requirement(&self, pkg: &'a Package,
-                           target: &'a Target) -> PlatformRequirement {
+                           target: &'a Target) -> Platform {
         let default = if target.get_profile().is_for_host() {
-            PlatformPlugin
+            Platform::Plugin
         } else {
-            PlatformTarget
+            Platform::Target
         };
         self.requirements.get(&(pkg.get_package_id(), target.get_name()))
             .map(|a| *a).unwrap_or(default)
@@ -190,8 +190,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
         let primary = pkg.get_package_id() == self.resolve.root();
         match kind {
-            KindHost => LayoutProxy::new(&self.host, primary),
-            KindTarget =>  LayoutProxy::new(self.target.as_ref()
+            Kind::Host => LayoutProxy::new(&self.host, primary),
+            Kind::Target =>  LayoutProxy::new(self.target.as_ref()
                                                 .unwrap_or(&self.host),
                                             primary),
         }
@@ -202,7 +202,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
-        let (triple, pair) = if kind == KindHost {
+        let (triple, pair) = if kind == Kind::Host {
             (self.config.rustc_host(), &self.host_dylib)
         } else {
             (self.target_triple.as_slice(), &self.target_dylib)
@@ -235,7 +235,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         } else {
             if target.is_dylib() {
                 let plugin = target.get_profile().is_for_host();
-                let kind = if plugin {KindHost} else {KindTarget};
+                let kind = if plugin {Kind::Host} else {Kind::Target};
                 let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
             }
@@ -312,35 +312,35 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// Get the target configuration for a particular host or target
     fn target_config(&self, kind: Kind) -> &TargetConfig {
         match kind {
-            KindHost => &self.build_config.host,
-            KindTarget => &self.build_config.target,
+            Kind::Host => &self.build_config.host,
+            Kind::Target => &self.build_config.target,
         }
     }
 }
 
-impl PlatformRequirement {
-    fn combine(self, other: PlatformRequirement) -> PlatformRequirement {
+impl Platform {
+    fn combine(self, other: Platform) -> Platform {
         match (self, other) {
-            (PlatformTarget, PlatformTarget) => PlatformTarget,
-            (PlatformPlugin, PlatformPlugin) => PlatformPlugin,
-            _ => PlatformPluginAndTarget,
+            (Platform::Target, Platform::Target) => Platform::Target,
+            (Platform::Plugin, Platform::Plugin) => Platform::Plugin,
+            _ => Platform::PluginAndTarget,
         }
     }
 
     pub fn includes(self, kind: Kind) -> bool {
         match (self, kind) {
-            (PlatformPluginAndTarget, _) |
-            (PlatformTarget, KindTarget) |
-            (PlatformPlugin, KindHost) => true,
+            (Platform::PluginAndTarget, _) |
+            (Platform::Target, Kind::Target) |
+            (Platform::Plugin, Kind::Host) => true,
             _ => false,
         }
     }
 
     pub fn each_kind(self, f: |Kind|) {
         match self {
-            PlatformTarget => f(KindTarget),
-            PlatformPlugin => f(KindHost),
-            PlatformPluginAndTarget => { f(KindTarget); f(KindHost); }
+            Platform::Target => f(Kind::Target),
+            Platform::Plugin => f(Kind::Host),
+            Platform::PluginAndTarget => { f(Kind::Target); f(Kind::Host); }
         }
     }
 }

@@ -86,8 +86,12 @@ pub enum PackageIdError {
 impl CargoError for PackageIdError {
     fn description(&self) -> String {
         match *self {
-            InvalidVersion(ref v) => format!("invalid version: {}", *v),
-            InvalidNamespace(ref ns) => format!("invalid namespace: {}", *ns),
+            PackageIdError::InvalidVersion(ref v) => {
+                format!("invalid version: {}", *v)
+            }
+            PackageIdError::InvalidNamespace(ref ns) => {
+                format!("invalid namespace: {}", *ns)
+            }
         }
     }
     fn is_human(&self) -> bool { true }
@@ -102,7 +106,7 @@ pub struct Metadata {
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T,
                              sid: &SourceId) -> CargoResult<PackageId> {
-        let v = try!(version.to_semver().map_err(InvalidVersion));
+        let v = try!(version.to_semver().map_err(PackageIdError::InvalidVersion));
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
                 name: name.to_string(),

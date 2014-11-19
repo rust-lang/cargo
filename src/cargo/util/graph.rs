@@ -56,14 +56,14 @@ impl<N: Eq + Hash + Clone> Graph<N> {
             return;
         }
 
-        marks.insert(node.clone(), InProgress);
+        marks.insert(node.clone(), Mark::InProgress);
 
         for child in self.nodes[*node].iter() {
             self.visit(child, dst, marks);
         }
 
         dst.push(node.clone());
-        marks.insert(node.clone(), Done);
+        marks.insert(node.clone(), Mark::Done);
     }
 
     pub fn iter(&self) -> Nodes<N> {

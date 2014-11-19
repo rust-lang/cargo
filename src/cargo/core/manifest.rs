@@ -91,10 +91,10 @@ pub enum LibKind {
 impl LibKind {
     pub fn from_str(string: &str) -> CargoResult<LibKind> {
         match string {
-            "lib" => Ok(Lib),
-            "rlib" => Ok(Rlib),
-            "dylib" => Ok(Dylib),
-            "staticlib" => Ok(StaticLib),
+            "lib" => Ok(LibKind::Lib),
+            "rlib" => Ok(LibKind::Rlib),
+            "dylib" => Ok(LibKind::Dylib),
+            "staticlib" => Ok(LibKind::StaticLib),
             _ => Err(human(format!("{} was not one of lib|rlib|dylib|staticlib",
                                    string)))
         }
@@ -107,19 +107,19 @@ impl LibKind {
     /// Returns the argument suitable for `--crate-type` to pass to rustc.
     pub fn crate_type(&self) -> &'static str {
         match *self {
-            Lib => "lib",
-            Rlib => "rlib",
-            Dylib => "dylib",
-            StaticLib => "staticlib"
+            LibKind::Lib => "lib",
+            LibKind::Rlib => "rlib",
+            LibKind::Dylib => "dylib",
+            LibKind::StaticLib => "staticlib"
         }
     }
 }
 
 #[deriving(Show, Clone, Hash, PartialEq, Encodable)]
 pub enum TargetKind {
-    LibTarget(Vec<LibKind>),
-    BinTarget,
-    ExampleTarget,
+    Lib(Vec<LibKind>),
+    Bin,
+    Example,
 }
 
 #[deriving(Encodable, Decodable, Clone, PartialEq, Show)]
@@ -371,9 +371,9 @@ pub struct SerializedTarget {
 impl<E, S: Encoder<E>> Encodable<S, E> for Target {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         let kind = match self.kind {
-            LibTarget(ref kinds) => kinds.iter().map(|k| k.crate_type()).collect(),
-            BinTarget => vec!("bin"),
-            ExampleTarget => vec!["example"],
+            TargetKind::Lib(ref kinds) => kinds.iter().map(|k| k.crate_type()).collect(),
+            TargetKind::Bin => vec!("bin"),
+            TargetKind::Example => vec!["example"],
         };
 
         SerializedTarget {
@@ -487,7 +487,7 @@ impl Target {
                       src_path: &Path, profile: &Profile,
                       metadata: Metadata) -> Target {
         Target {
-            kind: LibTarget(crate_targets),
+            kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -498,7 +498,7 @@ impl Target {
     pub fn bin_target(name: &str, src_path: &Path, profile: &Profile,
                       metadata: Option<Metadata>) -> Target {
         Target {
-            kind: BinTarget,
+            kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -510,7 +510,7 @@ impl Target {
     pub fn custom_build_target(name: &str, src_path: &Path, profile: &Profile,
                                metadata: Option<Metadata>) -> Target {
         Target {
-            kind: BinTarget,
+            kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -520,7 +520,7 @@ impl Target {
 
     pub fn example_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
         Target {
-            kind: ExampleTarget,
+            kind: TargetKind::Example,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -531,7 +531,7 @@ impl Target {
     pub fn test_target(name: &str, src_path: &Path,
                        profile: &Profile, metadata: Metadata) -> Target {
         Target {
-            kind: BinTarget,
+            kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -542,7 +542,7 @@ impl Target {
     pub fn bench_target(name: &str, src_path: &Path,
                         profile: &Profile, metadata: Metadata) -> Target {
         Target {
-            kind: BinTarget,
+            kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.clone(),
             profile: profile.clone(),
@@ -560,29 +560,29 @@ impl Target {
 
     pub fn is_lib(&self) -> bool {
         match self.kind {
-            LibTarget(_) => true,
+            TargetKind::Lib(_) => true,
             _ => false
         }
     }
 
     pub fn is_dylib(&self) -> bool {
         match self.kind {
-            LibTarget(ref kinds) => kinds.iter().any(|&k| k == Dylib),
+            TargetKind::Lib(ref kinds) => kinds.iter().any(|&k| k == LibKind::Dylib),
             _ => false
         }
     }
 
     pub fn is_rlib(&self) -> bool {
         match self.kind {
-            LibTarget(ref kinds) =>
-                kinds.iter().any(|&k| k == Rlib || k == Lib),
+            TargetKind::Lib(ref kinds) =>
+                kinds.iter().any(|&k| k == LibKind::Rlib || k == LibKind::Lib),
             _ => false
         }
     }
 
     pub fn is_staticlib(&self) -> bool {
         match self.kind {
-            LibTarget(ref kinds) => kinds.iter().any(|&k| k == StaticLib),
+            TargetKind::Lib(ref kinds) => kinds.iter().any(|&k| k == LibKind::StaticLib),
             _ => false
         }
     }
@@ -590,7 +590,7 @@ impl Target {
     /// Returns true for binary, bench, and tests.
     pub fn is_bin(&self) -> bool {
         match self.kind {
-            BinTarget => true,
+            TargetKind::Bin => true,
             _ => false
         }
     }
@@ -598,7 +598,7 @@ impl Target {
     /// Returns true for exampels
     pub fn is_example(&self) -> bool {
         match self.kind {
-            ExampleTarget => true,
+            TargetKind::Example => true,
             _ => false
         }
     }
@@ -614,11 +614,11 @@ impl Target {
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<&'static str> {
         match self.kind {
-            LibTarget(ref kinds) => {
+            TargetKind::Lib(ref kinds) => {
                 kinds.iter().map(|kind| kind.crate_type()).collect()
             },
-            ExampleTarget |
-            BinTarget => vec!("bin"),
+            TargetKind::Example |
+            TargetKind::Bin => vec!("bin"),
         }
     }
 }

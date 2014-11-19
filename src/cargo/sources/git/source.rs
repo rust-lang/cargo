@@ -8,7 +8,7 @@ use core::source::{Source, SourceId};
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
-use sources::git::utils::{GitReference, GitRemote, Master, Other, GitRevision};
+use sources::git::utils::{GitReference, GitRemote, GitRevision};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
@@ -141,8 +141,8 @@ impl<'a, 'b> Show for GitSource<'a, 'b> {
         try!(write!(f, "git repo at {}", self.remote.get_url()));
 
         match self.reference {
-            Master => Ok(()),
-            Other(ref reference) => write!(f, " ({})", reference)
+            GitReference::Master => Ok(()),
+            GitReference::Other(ref reference) => write!(f, " ({})", reference)
         }
     }
 }

@@ -10,9 +10,7 @@ use util::{CargoResult, CargoError, human};
 use util::{internal, ChainError, Require};
 
 use super::job::Work;
-use super::{fingerprint, process, KindTarget, KindHost, Kind, Context};
-use super::{PlatformPlugin, PlatformPluginAndTarget, PlatformTarget};
-use super::PlatformRequirement;
+use super::{fingerprint, process, Kind, Context, Platform};
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
@@ -36,12 +34,12 @@ pub struct BuildState {
 /// prepare work for. If the requirement is specified as both the target and the
 /// host platforms it is assumed that the two are equal and the build script is
 /// only run once (not twice).
-pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
+pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                cx: &mut Context) -> CargoResult<(Work, Work, Freshness)> {
-    let kind = match req { PlatformPlugin => KindHost, _ => KindTarget, };
+    let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target, };
     let (script_output, build_output) = {
-        (cx.layout(pkg, KindHost).build(pkg),
-         cx.layout(pkg, KindTarget).build_out(pkg))
+        (cx.layout(pkg, Kind::Host).build(pkg),
+         cx.layout(pkg, Kind::Target).build_out(pkg))
     };
 
     // Building the command to execute
@@ -58,8 +56,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
                                                         .display().to_string()))
                      .env("NUM_JOBS", Some(cx.config.jobs().to_string()))
                      .env("TARGET", Some(match kind {
-                         KindHost => cx.config.rustc_host(),
-                         KindTarget => cx.target_triple(),
+                         Kind::Host => cx.config.rustc_host(),
+                         Kind::Target => cx.target_triple(),
                      }))
                      .env("DEBUG", Some(profile.get_debug().to_string()))
                      .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
@@ -99,8 +97,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: PlatformRequirement,
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                build_output.clone());
 
-    try!(fs::mkdir_recursive(&cx.layout(pkg, KindTarget).build(pkg), USER_RWX));
-    try!(fs::mkdir_recursive(&cx.layout(pkg, KindHost).build(pkg), USER_RWX));
+    try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Target).build(pkg), USER_RWX));
+    try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Host).build(pkg), USER_RWX));
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -208,8 +206,8 @@ impl BuildState {
             }
         }
         let mut outputs = HashMap::new();
-        let i1 = config.host.overrides.into_iter().map(|p| (p, KindHost));
-        let i2 = config.target.overrides.into_iter().map(|p| (p, KindTarget));
+        let i1 = config.host.overrides.into_iter().map(|p| (p, Kind::Host));
+        let i2 = config.target.overrides.into_iter().map(|p| (p, Kind::Target));
         for ((name, output), kind) in i1.chain(i2) {
             match sources.get(&name) {
                 Some(id) => { outputs.insert((id.clone(), kind), output); }
@@ -222,18 +220,18 @@ impl BuildState {
         BuildState { outputs: Mutex::new(outputs) }
     }
 
-    fn insert(&self, id: PackageId, req: PlatformRequirement,
+    fn insert(&self, id: PackageId, req: Platform,
               output: BuildOutput) {
         let mut outputs = self.outputs.lock();
         match req {
-            PlatformTarget => { outputs.insert((id, KindTarget), output); }
-            PlatformPlugin => { outputs.insert((id, KindHost), output); }
+            Platform::Target => { outputs.insert((id, Kind::Target), output); }
+            Platform::Plugin => { outputs.insert((id, Kind::Host), output); }
 
             // If this build output was for both the host and target platforms,
             // we need to insert it at both places.
-            PlatformPluginAndTarget => {
-                outputs.insert((id.clone(), KindHost), output.clone());
-                outputs.insert((id, KindTarget), output);
+            Platform::PluginAndTarget => {
+                outputs.insert((id.clone(), Kind::Host), output.clone());
+                outputs.insert((id, Kind::Target), output);
             }
         }
     }

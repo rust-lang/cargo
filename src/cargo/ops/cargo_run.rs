@@ -2,7 +2,7 @@ use std::os;
 
 use ops;
 use util::{CargoResult, human, process, ProcessError, Require};
-use core::manifest::{TargetKind, LibTarget, BinTarget, ExampleTarget};
+use core::manifest::TargetKind;
 use core::source::Source;
 use sources::PathSource;
 
@@ -17,9 +17,9 @@ pub fn run(manifest_path: &Path,
     let env = options.env;
     let mut bins = root.get_manifest().get_targets().iter().filter(|a| {
         let matches_kind = match target_kind {
-            BinTarget => a.is_bin(),
-            ExampleTarget => a.is_example(),
-            LibTarget(_) => false,
+            TargetKind::Bin => a.is_bin(),
+            TargetKind::Example => a.is_example(),
+            TargetKind::Lib(_) => false,
         };
         let matches_name = name.as_ref().map_or(true, |n| n.as_slice() == a.get_name());
         matches_kind && matches_name && a.get_profile().get_env() == env &&

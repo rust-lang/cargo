@@ -11,13 +11,13 @@ use cargo::core::source::SourceId;
 use cargo::core::dependency::Development;
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
-use cargo::core::resolver::{mod, ResolveEverything};
+use cargo::core::resolver::{mod, Method};
 
 fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
                         registry: &mut R)
                         -> CargoResult<Vec<PackageId>> {
     let summary = Summary::new(pkg, deps, HashMap::new()).unwrap();
-    let method = ResolveEverything;
+    let method = Method::Everything;
     Ok(try!(resolver::resolve(&summary, method, registry)).iter().map(|p| {
         p.clone()
     }).collect())

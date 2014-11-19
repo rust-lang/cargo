@@ -15,14 +15,14 @@ use super::job::Job;
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a, 'b> {
     pool: TaskPool,
-    queue: DependencyQueue<(&'a PackageId, TargetStage),
+    queue: DependencyQueue<(&'a PackageId, Stage),
                            (&'a Package, Vec<(Job, Freshness)>)>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
     resolve: &'a Resolve,
     packages: &'a PackageSet,
     active: uint,
-    pending: HashMap<(&'a PackageId, TargetStage), PendingBuild>,
+    pending: HashMap<(&'a PackageId, Stage), PendingBuild>,
     state: HashMap<&'a PackageId, Freshness>,
     ignored: HashSet<&'a PackageId>,
     printed: HashSet<&'a PackageId>,
@@ -47,17 +47,17 @@ struct PendingBuild {
 /// Each build step for a package is registered with one of these stages, and
 /// each stage has a vector of work to perform in parallel.
 #[deriving(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show)]
-pub enum TargetStage {
-    StageStart,
-    StageBuildCustomBuild,
-    StageRunCustomBuild,
-    StageLibraries,
-    StageBinaries,
-    StageLibraryTests,
-    StageBinaryTests,
+pub enum Stage {
+    Start,
+    BuildCustomBuild,
+    RunCustomBuild,
+    Libraries,
+    Binaries,
+    LibraryTests,
+    BinaryTests,
 }
 
-type Message = (PackageId, TargetStage, Freshness, CargoResult<()>);
+type Message = (PackageId, Stage, Freshness, CargoResult<()>);
 
 impl<'a, 'b> JobQueue<'a, 'b> {
     pub fn new(resolve: &'a Resolve, packages: &'a PackageSet,
@@ -78,7 +78,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         }
     }
 
-    pub fn enqueue(&mut self, pkg: &'a Package, stage: TargetStage,
+    pub fn enqueue(&mut self, pkg: &'a Package, stage: Stage,
                    jobs: Vec<(Job, Freshness)>) {
         // Record the freshness state of this package as dirty if any job is
         // dirty or fresh otherwise
@@ -158,7 +158,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     /// The input freshness is from `dequeue()` and indicates the combined
     /// freshness of all upstream dependencies. This function will schedule all
     /// work in `jobs` to be executed.
-    fn run(&mut self, pkg: &'a Package, stage: TargetStage, fresh: Freshness,
+    fn run(&mut self, pkg: &'a Package, stage: Stage, fresh: Freshness,
            jobs: Vec<(Job, Freshness)>, config: &Config) -> CargoResult<()> {
         let njobs = jobs.len();
         let amt = if njobs == 0 {1} else {njobs};
@@ -210,7 +210,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // out any more information for a package after we've printed it once.
         let print = !self.ignored.contains(&pkg.get_package_id());
         let print = print && !self.printed.contains(&pkg.get_package_id());
-        if print && (stage == StageLibraries ||
+        if print && (stage == Stage::Libraries ||
                      (total_fresh == Dirty && running.len() > 0)) {
             self.printed.insert(pkg.get_package_id());
             match total_fresh {
@@ -228,10 +228,10 @@ impl<'a, 'b> JobQueue<'a, 'b> {
 }
 
 impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
-    for (&'a PackageId, TargetStage)
+    for (&'a PackageId, Stage)
 {
     fn dependencies(&self, &(resolve, packages): &(&'a Resolve, &'a PackageSet))
-                    -> Vec<(&'a PackageId, TargetStage)> {
+                    -> Vec<(&'a PackageId, Stage)> {
         // This implementation of `Dependency` is the driver for the structure
         // of the dependency graph of packages to be built. The "key" here is
         // a pair of the package being built and the stage that it's at.
@@ -249,15 +249,15 @@ impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
                               }).unwrap())
                           });
         match stage {
-            StageStart => Vec::new(),
+            Stage::Start => Vec::new(),
 
             // Building the build command itself starts off pretty easily,we
             // just need to depend on all of the library stages of our own build
             // dependencies (making them available to us).
-            StageBuildCustomBuild => {
-                let mut base = vec![(id, StageStart)];
+            Stage::BuildCustomBuild => {
+                let mut base = vec![(id, Stage::Start)];
                 base.extend(deps.filter(|&(_, dep)| dep.is_build())
-                                .map(|(id, _)| (id, StageLibraries)));
+                                .map(|(id, _)| (id, Stage::Libraries)));
                 base
             }
 
@@ -265,37 +265,37 @@ impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
             // own custom build command is actually built, and then we need to
             // wait for all our dependencies to finish their custom build
             // commands themselves (as they may provide input to us).
-            StageRunCustomBuild => {
-                let mut base = vec![(id, StageBuildCustomBuild)];
+            Stage::RunCustomBuild => {
+                let mut base = vec![(id, Stage::BuildCustomBuild)];
                 base.extend(deps.filter(|&(_, dep)| dep.is_transitive())
-                                .map(|(id, _)| (id, StageRunCustomBuild)));
+                                .map(|(id, _)| (id, Stage::RunCustomBuild)));
                 base
             }
 
             // Building a library depends on our own custom build command plus
             // all our transitive dependencies.
-            StageLibraries => {
-                let mut base = vec![(id, StageRunCustomBuild)];
+            Stage::Libraries => {
+                let mut base = vec![(id, Stage::RunCustomBuild)];
                 base.extend(deps.filter(|&(_, dep)| dep.is_transitive())
-                                .map(|(id, _)| (id, StageLibraries)));
+                                .map(|(id, _)| (id, Stage::Libraries)));
                 base
             }
 
             // Binaries only depend on libraries being available. Note that they
             // do not depend on dev-dependencies.
-            StageBinaries => vec![(id, StageLibraries)],
+            Stage::Binaries => vec![(id, Stage::Libraries)],
 
             // Tests depend on all dependencies (including dev-dependencies) in
             // addition to the library stage for this package. Note, however,
             // that library tests only need to depend the custom build command
             // being run, not the libraries themselves.
-            StageBinaryTests | StageLibraryTests => {
-                let mut base = if stage == StageBinaryTests {
-                    vec![(id, StageLibraries)]
+            Stage::BinaryTests | Stage::LibraryTests => {
+                let mut base = if stage == Stage::BinaryTests {
+                    vec![(id, Stage::Libraries)]
                 } else {
-                    vec![(id, StageRunCustomBuild)]
+                    vec![(id, Stage::RunCustomBuild)]
                 };
-                base.extend(deps.map(|(id, _)| (id, StageLibraries)));
+                base.extend(deps.map(|(id, _)| (id, Stage::Libraries)));
                 base
             }
         }
