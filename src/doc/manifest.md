@@ -86,6 +86,12 @@ keywords = ["...", "..."]
 license = "..."
 ```
 
+The [crates.io](https://crates.io) registry will render the description, display
+the license, link to the three URLs and categorize by the keywords. These keys
+provide useful information to users of the registry and also influence the
+search ranking of a crate. It is highly discouraged to omit everything in a
+published crate.
+
 
 # The `[dependencies.*]` Sections
 

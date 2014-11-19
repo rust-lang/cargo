@@ -26,10 +26,15 @@ impl Drop for Bomb {
 pub fn package(manifest_path: &Path,
                shell: &mut MultiShell,
                verify: bool,
-               list: bool) -> CargoResult<Option<Path>> {
+               list: bool,
+               metadata: bool) -> CargoResult<Option<Path>> {
     let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(src.update());
     let pkg = try!(src.get_root_package());
+
+    if metadata {
+        try!(check_metadata(&pkg, shell));
+    }
 
     if list {
         let root = pkg.get_manifest_path().dir_path();
@@ -60,6 +65,40 @@ pub fn package(manifest_path: &Path,
         }))
     }
     Ok(Some(bomb.path.take().unwrap()))
+}
+
+// check that the package has some piece of metadata that a human can
+// use to tell what the package is about.
+fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
+    let md = pkg.get_manifest().get_metadata();
+
+    let mut missing = vec![];
+
+    macro_rules! lacking {
+        ($($field: ident),*) => {{
+            $(
+                if md.$field.as_ref().map_or(true, |s| s.is_empty()) {
+                    missing.push(stringify!($field))
+                }
+                )*
+        }}
+    }
+    lacking!(description, license)
+
+    if !missing.is_empty() {
+        let mut things = missing.slice_to(missing.len() - 1).connect(", ");
+        // things will be empty if and only if length == 1 (i.e. the only case to have no `or`).
+        if !things.is_empty() {
+            things.push_str(" or ");
+        }
+        things.push_str(*missing.last().unwrap());
+
+        try!(shell.warn(
+            format!("Warning: manifest has no {things}. \
+                    See http://doc.crates.io/manifest.html#package-metadata for more info.",
+                    things = things).as_slice()))
+    }
+    Ok(())
 }
 
 fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,

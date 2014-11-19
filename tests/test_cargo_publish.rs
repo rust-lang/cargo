@@ -41,6 +41,8 @@ test!(simple {
             name = "foo"
             version = "0.0.1"
             authors = []
+            license = "MIT"
+            description = "foo"
         "#)
         .file("src/main.rs", "fn main() {}");
 
@@ -82,6 +84,8 @@ test!(git_deps {
             name = "foo"
             version = "0.0.1"
             authors = []
+            license = "MIT"
+            description = "foo"
 
             [dependencies.foo]
             git = "git://path/to/nowhere"
@@ -102,6 +106,8 @@ test!(path_dependency_no_version {
             name = "foo"
             version = "0.0.1"
             authors = []
+            license = "MIT"
+            description = "foo"
 
             [dependencies.bar]
             path = "bar"

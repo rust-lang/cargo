@@ -175,6 +175,8 @@ test!(package_with_path_deps {
             name = "foo"
             version = "0.0.1"
             authors = []
+            license = "MIT"
+            description = "foo"
 
             [dependencies.notyet]
             version = "0.0.1"
