@@ -1,4 +1,5 @@
 set -x
+set -e
 
 if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${PLATFORM}" = "mac" ]; then
     target=apple-darwin
