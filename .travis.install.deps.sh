@@ -1,7 +1,7 @@
 set -x
 set -e
 
-if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${PLATFORM}" = "mac" ]; then
+if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${PLATFORM}" = "mac" ] || [ "`uname`" = "Darwin" ]; then
     target=apple-darwin
 elif [ "${OS}" = "Windows_NT" ] || [ "${PLATFORM}" = "win" ]; then
     windows=1
