@@ -113,7 +113,7 @@ impl<'a> PackageRegistry<'a> {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
             // slightly different precise version listed.
-            Some(&(_, Locked)) => return Ok(()),
+            Some(&(_, Kind::Locked)) => return Ok(()),
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
@@ -132,20 +132,20 @@ impl<'a> PackageRegistry<'a> {
             None => {}
         }
 
-        try!(self.load(namespace, Normal));
+        try!(self.load(namespace, Kind::Normal));
         Ok(())
     }
 
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, Locked));
+            try!(self.load(id, Kind::Locked));
         }
         Ok(())
     }
 
     pub fn add_overrides(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, Override));
+            try!(self.load(id, Kind::Override));
         }
         Ok(())
     }
@@ -171,7 +171,7 @@ impl<'a> PackageRegistry<'a> {
             try!(source.update());
             drop(p);
 
-            if kind == Override {
+            if kind == Kind::Override {
                 self.overrides.push(source_id.clone());
             }
 

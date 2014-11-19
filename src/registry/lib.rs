@@ -20,12 +20,12 @@ pub struct Registry {
 pub type Result<T> = result::Result<T, Error>;
 
 pub enum Error {
-    CurlError(curl::ErrCode),
+    Curl(curl::ErrCode),
     NotOkResponse(http::Response),
     NonUtf8Body,
-    ApiErrors(Vec<String>),
+    Api(Vec<String>),
     Unauthorized,
-    IoError(io::IoError),
+    Io(io::IoError),
 }
 
 #[deriving(Encodable)]
@@ -112,7 +112,7 @@ impl Registry {
         //      <json request> (metadata for the package)
         //      <le u32 of tarball>
         //      <source tarball>
-        let stat = try!(fs::stat(tarball).map_err(IoError));
+        let stat = try!(fs::stat(tarball).map_err(Error::Io));
         let header = {
             let mut w = MemWriter::new();
             w.write_le_u32(json.len() as u32).unwrap();
@@ -120,7 +120,7 @@ impl Registry {
             w.write_le_u32(stat.size as u32).unwrap();
             MemReader::new(w.unwrap())
         };
-        let tarball = try!(File::open(tarball).map_err(IoError));
+        let tarball = try!(File::open(tarball).map_err(Error::Io));
         let size = stat.size as uint + header.get_ref().len();
         let mut body = ChainedReader::new(vec![box header as Box<Reader>,
                                                box tarball as Box<Reader>].into_iter());
@@ -179,22 +179,22 @@ impl Registry {
 
 fn handle(response: result::Result<http::Response, curl::ErrCode>)
           -> Result<String> {
-    let response = try!(response.map_err(CurlError));
+    let response = try!(response.map_err(Error::Curl));
     match response.get_code() {
         0 => {} // file upload url sometimes
         200 => {}
-        403 => return Err(Unauthorized),
-        _ => return Err(NotOkResponse(response))
+        403 => return Err(Error::Unauthorized),
+        _ => return Err(Error::NotOkResponse(response))
     }
 
     let body = match String::from_utf8(response.move_body()) {
         Ok(body) => body,
-        Err(..) => return Err(NonUtf8Body),
+        Err(..) => return Err(Error::NonUtf8Body),
     };
     match json::decode::<ApiErrorList>(body.as_slice()) {
         Ok(errors) => {
-            return Err(ApiErrors(errors.errors.into_iter().map(|s| s.detail)
-                                       .collect()))
+            return Err(Error::Api(errors.errors.into_iter().map(|s| s.detail)
+                                        .collect()))
         }
         Err(..) => {}
     }
@@ -204,16 +204,16 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
 impl fmt::Show for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            NonUtf8Body => write!(f, "reponse body was not utf-8"),
-            CurlError(ref err) => write!(f, "http error: {}", err),
-            NotOkResponse(ref resp) => {
+            Error::NonUtf8Body => write!(f, "reponse body was not utf-8"),
+            Error::Curl(ref err) => write!(f, "http error: {}", err),
+            Error::NotOkResponse(ref resp) => {
                 write!(f, "failed to get a 200 OK response: {}", resp)
             }
-            ApiErrors(ref errs) => {
+            Error::Api(ref errs) => {
                 write!(f, "api errors: {}", errs.connect(", "))
             }
-            Unauthorized => write!(f, "unauthorized API access"),
-            IoError(ref e) => write!(f, "io error: {}", e),
+            Error::Unauthorized => write!(f, "unauthorized API access"),
+            Error::Io(ref e) => write!(f, "io error: {}", e),
         }
     }
 }

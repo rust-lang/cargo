@@ -28,7 +28,7 @@ use std::default::Default;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
-use core::resolver;
+use core::resolver::Method;
 use ops::{mod, BuildOutput};
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
@@ -104,9 +104,8 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         try!(registry.add_overrides(override_ids));
 
         let platform = target.as_ref().map(|e| e.as_slice()).or(Some(rustc_host.as_slice()));
-        let method = resolver::ResolveRequired(dev_deps, features.as_slice(),
-                                               !no_default_features,
-                                               platform);
+        let method = Method::Required(dev_deps, features.as_slice(),
+                                      !no_default_features, platform);
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, package, method,
                                                 Some(&resolve), None));

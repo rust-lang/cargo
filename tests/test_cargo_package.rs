@@ -52,8 +52,8 @@ src[..]main.rs
     for f in ar.files().assert() {
         let f = f.assert();
         let fname = f.filename_bytes();
-        assert!(fname == Path::new("foo-0.0.1/Cargo.toml").as_vec() ||
-                fname == Path::new("foo-0.0.1/src/main.rs").as_vec(),
+        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {}", f.filename())
     }
 })

@@ -11,8 +11,8 @@ use serialize::{Decodable, Decoder};
 
 use core::SourceId;
 use core::{Summary, Manifest, Target, Dependency, PackageId};
-use core::dependency::{Build, Development};
-use core::manifest::{LibKind, Lib, Dylib, Profile, ManifestMetadata};
+use core::dependency::Kind;
+use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
 use util::{CargoResult, Require, human, ToUrl, ToSemver};
 
@@ -183,8 +183,8 @@ type TomlBenchTarget = TomlTarget;
 
 #[deriving(Decodable)]
 pub enum TomlDependency {
-    SimpleDep(String),
-    DetailedDep(DetailedTomlDependency)
+    Simple(String),
+    Detailed(DetailedTomlDependency)
 }
 
 
@@ -245,8 +245,8 @@ pub enum ManyOrOne<T> {
 impl<T> ManyOrOne<T> {
     fn as_slice(&self) -> &[T] {
         match *self {
-            Many(ref v) => v.as_slice(),
-            One(ref t) => slice::ref_slice(t),
+            ManyOrOne::Many(ref v) => v.as_slice(),
+            ManyOrOne::One(ref t) => slice::ref_slice(t),
         }
     }
 }
@@ -256,7 +256,7 @@ pub struct TomlProject {
     name: String,
     version: TomlVersion,
     authors: Vec<String>,
-    build: Option<TomlBuildCommandsList>,       // TODO: `String` instead
+    build: Option<BuildCommand>,       // TODO: `String` instead
     links: Option<String>,
     exclude: Option<Vec<String>>,
 
@@ -272,9 +272,9 @@ pub struct TomlProject {
 
 // TODO: deprecated, remove
 #[deriving(Decodable)]
-pub enum TomlBuildCommandsList {
-    SingleBuildCommand(String),
-    MultipleBuildCommands(Vec<String>)
+pub enum BuildCommand {
+    Single(String),
+    Multiple(Vec<String>)
 }
 
 pub struct TomlVersion {
@@ -314,7 +314,7 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Vec<TomlTarget> {
     layout.lib.as_ref().map(|lib| {
         vec![TomlTarget {
             name: name.to_string(),
-            path: Some(TomlPath(lib.clone())),
+            path: Some(PathValue::Path(lib.clone())),
             .. TomlTarget::new()
         }]
     }).unwrap_or(Vec::new())
@@ -332,7 +332,7 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
         name.map(|name| {
             TomlTarget {
                 name: name,
-                path: Some(TomlPath(bin.clone())),
+                path: Some(PathValue::Path(bin.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -344,7 +344,7 @@ fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
-                path: Some(TomlPath(ex.clone())),
+                path: Some(PathValue::Path(ex.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -356,7 +356,7 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
-                path: Some(TomlPath(ex.clone())),
+                path: Some(PathValue::Path(ex.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -368,7 +368,7 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.filestem_str().map(|name| {
             TomlTarget {
                 name: name.to_string(),
-                path: Some(TomlPath(ex.clone())),
+                path: Some(PathValue::Path(ex.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -396,13 +396,13 @@ impl TomlManifest {
         let lib = match self.lib {
             Some(ref libs) => {
                 match *libs {
-                    Many(..) => used_deprecated_lib = true,
+                    ManyOrOne::Many(..) => used_deprecated_lib = true,
                     _ => {}
                 }
                 libs.as_slice().iter().map(|t| {
                     if layout.lib.is_some() && t.path.is_none() {
                         TomlTarget {
-                            path: layout.lib.as_ref().map(|p| TomlPath(p.clone())),
+                            path: layout.lib.as_ref().map(|p| PathValue::Path(p.clone())),
                             .. t.clone()
                         }
                     } else {
@@ -420,7 +420,7 @@ impl TomlManifest {
                 bins.iter().map(|t| {
                     if bin.is_some() && t.path.is_none() {
                         TomlTarget {
-                            path: bin.as_ref().map(|&p| TomlPath(p.clone())),
+                            path: bin.as_ref().map(|&p| PathValue::Path(p.clone())),
                             .. t.clone()
                         }
                     } else {
@@ -449,14 +449,14 @@ impl TomlManifest {
 
         // processing the custom build script
         let (new_build, old_build) = match project.build {
-            Some(SingleBuildCommand(ref cmd)) => {
+            Some(BuildCommand::Single(ref cmd)) => {
                 if cmd.as_slice().ends_with(".rs") && layout.root.join(cmd.as_slice()).exists() {
                     (Some(Path::new(cmd.as_slice())), Vec::new())
                 } else {
                     (None, vec!(cmd.clone()))
                 }
             },
-            Some(MultipleBuildCommands(ref cmd)) => (None, cmd.clone()),
+            Some(BuildCommand::Multiple(ref cmd)) => (None, cmd.clone()),
             None => (None, Vec::new())
         };
 
@@ -489,9 +489,9 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
                                       |dep| dep));
             try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
-                                      |dep| dep.kind(Development)));
+                                      |dep| dep.kind(Kind::Development)));
             try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
-                                      |dep| dep.kind(Build)));
+                                      |dep| dep.kind(Kind::Build)));
 
             if let Some(targets) = self.target.as_ref() {
                 for (name, platform) in targets.iter() {
@@ -555,12 +555,12 @@ fn process_dependencies<'a>(cx: &mut Context<'a>,
     };
     for (n, v) in dependencies.iter() {
         let details = match *v {
-            SimpleDep(ref version) => {
+            TomlDependency::Simple(ref version) => {
                 let mut d: DetailedTomlDependency = Default::default();
                 d.version = Some(version.clone());
                 d
             }
-            DetailedDep(ref details) => details.clone(),
+            TomlDependency::Detailed(ref details) => details.clone(),
         };
         let reference = details.branch.clone()
             .or_else(|| details.tag.clone())
@@ -600,7 +600,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>,
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
-    path: Option<TomlPathValue>,
+    path: Option<PathValue>,
     test: Option<bool>,
     doctest: Option<bool>,
     bench: Option<bool>,
@@ -610,9 +610,9 @@ struct TomlTarget {
 }
 
 #[deriving(Decodable, Clone)]
-enum TomlPathValue {
-    TomlString(String),
-    TomlPath(Path),
+enum PathValue {
+    String(String),
+    Path(Path),
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
@@ -637,20 +637,20 @@ impl TomlTarget {
     }
 }
 
-impl TomlPathValue {
+impl PathValue {
     fn to_path(&self) -> Path {
         match *self {
-            TomlString(ref s) => Path::new(s.as_slice()),
-            TomlPath(ref p) => p.clone(),
+            PathValue::String(ref s) => Path::new(s.as_slice()),
+            PathValue::Path(ref p) => p.clone(),
         }
     }
 }
 
-impl fmt::Show for TomlPathValue {
+impl fmt::Show for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            TomlString(ref s) => s.fmt(f),
-            TomlPath(ref p) => p.display().fmt(f),
+            PathValue::String(ref s) => s.fmt(f),
+            PathValue::Path(ref p) => p.display().fmt(f),
         }
     }
 }
@@ -713,7 +713,7 @@ fn normalize(libs: &[TomlLibTarget],
         }
 
         match dep {
-            Needed => {
+            TestDep::Needed => {
                 ret.push(merge(Profile::default_test().test(false),
                                &profiles.test));
                 ret.push(merge(Profile::default_doc().doc(false),
@@ -735,12 +735,12 @@ fn normalize(libs: &[TomlLibTarget],
                    dep: TestDep, metadata: &Metadata, profiles: &TomlProfiles) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| {
-            TomlString(format!("src/{}.rs", l.name))
+            PathValue::String(format!("src/{}.rs", l.name))
         });
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             LibKind::from_strs(kinds).ok()
         }).unwrap_or_else(|| {
-            vec![if l.plugin == Some(true) {Dylib} else {Lib}]
+            vec![if l.plugin == Some(true) {LibKind::Dylib} else {LibKind::Lib}]
         });
 
         for profile in target_profiles(l, profiles, dep).iter() {
@@ -761,7 +761,7 @@ fn normalize(libs: &[TomlLibTarget],
                    default: |&TomlBinTarget| -> String) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
-                TomlString(default(bin))
+                PathValue::String(default(bin))
             });
 
             for profile in target_profiles(bin, profiles, dep).iter() {
@@ -802,7 +802,7 @@ fn normalize(libs: &[TomlLibTarget],
                        profiles: &TomlProfiles,
                        default: |&TomlExampleTarget| -> String) {
         for ex in examples.iter() {
-            let path = ex.path.clone().unwrap_or_else(|| TomlString(default(ex)));
+            let path = ex.path.clone().unwrap_or_else(|| PathValue::String(default(ex)));
 
             let profile = Profile::default_test().test(false);
             let profile = merge(profile, &profiles.test);
@@ -817,7 +817,7 @@ fn normalize(libs: &[TomlLibTarget],
                     default: |&TomlTestTarget| -> String) {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
-                TomlString(default(test))
+                PathValue::String(default(test))
             });
             let harness = test.harness.unwrap_or(true);
 
@@ -839,7 +839,7 @@ fn normalize(libs: &[TomlLibTarget],
                      default: |&TomlBenchTarget| -> String) {
         for bench in benches.iter() {
             let path = bench.path.clone().unwrap_or_else(|| {
-                TomlString(default(bench))
+                PathValue::String(default(bench))
             });
             let harness = bench.harness.unwrap_or(true);
 
@@ -859,19 +859,19 @@ fn normalize(libs: &[TomlLibTarget],
     let mut ret = Vec::new();
 
     let test_dep = if examples.len() > 0 || tests.len() > 0 || benches.len() > 0 {
-        Needed
+        TestDep::Needed
     } else {
-        NotNeeded
+        TestDep::NotNeeded
     };
 
     match (libs, bins) {
         ([_, ..], [_, ..]) => {
-            lib_targets(&mut ret, libs, Needed, metadata, profiles);
+            lib_targets(&mut ret, libs, TestDep::Needed, metadata, profiles);
             bin_targets(&mut ret, bins, test_dep, metadata, profiles,
                         |bin| format!("src/bin/{}.rs", bin.name));
         },
         ([_, ..], []) => {
-            lib_targets(&mut ret, libs, Needed, metadata, profiles);
+            lib_targets(&mut ret, libs, TestDep::Needed, metadata, profiles);
         },
         ([], [_, ..]) => {
             bin_targets(&mut ret, bins, test_dep, metadata, profiles,

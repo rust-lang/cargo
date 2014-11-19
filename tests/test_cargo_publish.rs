@@ -71,8 +71,8 @@ test!(simple {
     for file in ar.files().unwrap() {
         let file = file.unwrap();
         let fname = file.filename_bytes();
-        assert!(fname == Path::new("foo-0.0.1/Cargo.toml").as_vec() ||
-                fname == Path::new("foo-0.0.1/src/main.rs").as_vec(),
+        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {}", file.filename())
     }
 })

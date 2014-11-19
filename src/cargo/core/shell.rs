@@ -4,6 +4,8 @@ use term::attr::{Attr, Bold};
 use std::io::{IoResult, stderr};
 use std::fmt::Show;
 
+use self::AdequateTerminal::{NoColor, Colored};
+
 pub struct ShellConfig {
     pub color: bool,
     pub verbose: bool,

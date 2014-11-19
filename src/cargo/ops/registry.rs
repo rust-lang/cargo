@@ -13,7 +13,7 @@ use ops;
 use sources::{PathSource, RegistrySource};
 use util::config;
 use util::{CargoResult, human, internal, ChainError, Require, ToUrl};
-use util::config::{Config, Table};
+use util::config::{Config, ConfigValue, Location};
 
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -210,13 +210,14 @@ pub fn registry_login(shell: &mut MultiShell, token: String) -> CargoResult<()> 
     let p = os::getcwd();
     match index {
         Some(index) => {
-            map.insert("index".to_string(), config::String(index, p.clone()));
+            map.insert("index".to_string(), ConfigValue::String(index, p.clone()));
         }
         None => {}
     }
-    map.insert("token".to_string(), config::String(token, p));
+    map.insert("token".to_string(), ConfigValue::String(token, p));
 
-    config::set_config(&config, config::Global, "registry", config::Table(map))
+    config::set_config(&config, Location::Global, "registry",
+                       ConfigValue::Table(map))
 }
 
 pub struct OwnersOptions {

@@ -2,7 +2,8 @@ use std::collections::HashSet;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, Resolve, resolver};
+use core::{MultiShell, Source, Resolve};
+use core::resolver::Method;
 use ops;
 use sources::{PathSource};
 use util::config::{Config};
@@ -24,7 +25,7 @@ pub fn generate_lockfile(manifest_path: &Path,
     let mut config = try!(Config::new(shell, None, None));
     let mut registry = PackageRegistry::new(&mut config);
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
-                                                  resolver::ResolveEverything,
+                                                  Method::Everything,
                                                   None, None));
     try!(ops::write_pkg_lockfile(&package, &resolve));
     Ok(())
@@ -73,7 +74,7 @@ pub fn update_lockfile(manifest_path: &Path,
 
     let resolve = try!(ops::resolve_with_previous(&mut registry,
                                                   &package,
-                                                  resolver::ResolveEverything,
+                                                  Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid)));
     try!(ops::write_pkg_lockfile(&package, &resolve));

@@ -8,7 +8,7 @@ use core::{Package, Target};
 use util;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
 
-use super::{Kind, KindTarget};
+use super::Kind;
 use super::job::Work;
 use super::context::Context;
 
@@ -136,8 +136,8 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
     let _p = profile::start(format!("fingerprint build cmd: {}",
                                     pkg.get_package_id()));
 
-    // TODO: this should not explicitly pass KindTarget
-    let kind = KindTarget;
+    // TODO: this should not explicitly pass Kind::Target
+    let kind = Kind::Target;
 
     if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
         return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))

@@ -8,6 +8,8 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::{Occupied, Vacant};
 use std::hash::Hash;
 
+pub use self::Freshness::{Fresh, Dirty};
+
 pub struct DependencyQueue<K, V> {
     /// A list of all known keys to build.
     ///

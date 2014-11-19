@@ -2,7 +2,7 @@ use std::io::process::ExitStatus;
 
 use cargo::ops;
 use cargo::core::{MultiShell};
-use cargo::core::manifest::{BinTarget, ExampleTarget};
+use cargo::core::manifest::TargetKind;
 use cargo::util::{CliResult, CliError, human};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
@@ -71,9 +71,9 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     };
 
     let (target_kind, name) = match (options.flag_bin, options.flag_example) {
-        (Some(bin), None) => (BinTarget, Some(bin)),
-        (None, Some(example)) => (ExampleTarget, Some(example)),
-        (None, None) => (BinTarget, None),
+        (Some(bin), None) => (TargetKind::Bin, Some(bin)),
+        (None, Some(example)) => (TargetKind::Example, Some(example)),
+        (None, None) => (TargetKind::Bin, None),
         (Some(_), Some(_)) => return Err(CliError::from_boxed(
             human("specify either `--bin` or `--example`, not both"), 1)),
     };

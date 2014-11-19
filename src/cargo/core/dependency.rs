@@ -62,7 +62,7 @@ impl Dependency {
             name: name.to_string(),
             source_id: source_id.clone(),
             req: VersionReq::any(),
-            kind: Normal,
+            kind: Kind::Normal,
             only_match_name: true,
             optional: false,
             features: Vec::new(),
@@ -141,12 +141,12 @@ impl Dependency {
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool {
         match self.kind {
-            Normal | Build => true,
-            Development => false,
+            Kind::Normal | Kind::Build => true,
+            Kind::Development => false,
         }
     }
     pub fn is_build(&self) -> bool {
-        match self.kind { Build => true, _ => false }
+        match self.kind { Kind::Build => true, _ => false }
     }
     pub fn is_optional(&self) -> bool { self.optional }
     /// Returns true if the default features of the dependency are requested.

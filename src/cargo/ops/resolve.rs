@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use core::{Package, PackageId, SourceId};
 use core::registry::PackageRegistry;
-use core::resolver::{mod, Resolve};
+use core::resolver::{mod, Resolve, Method};
 use ops;
 use util::CargoResult;
 
@@ -15,7 +15,7 @@ pub fn resolve_pkg(registry: &mut PackageRegistry, package: &Package)
                    -> CargoResult<Resolve> {
     let prev = try!(ops::load_pkg_lockfile(package));
     let resolve = try!(resolve_with_previous(registry, package,
-                                             resolver::ResolveEverything,
+                                             Method::Everything,
                                              prev.as_ref(), None));
     try!(ops::write_pkg_lockfile(package, &resolve));
     Ok(resolve)
@@ -32,7 +32,7 @@ pub fn resolve_pkg(registry: &mut PackageRegistry, package: &Package)
 /// read or write lockfiles from the filesystem.
 pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  package: &Package,
-                                 method: resolver::ResolveMethod,
+                                 method: Method,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>)
                                  -> CargoResult<Resolve> {
