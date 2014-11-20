@@ -305,7 +305,7 @@ impl BuildOutput {
             }
             let value = match flags_iter.next() {
                 Some(v) => v,
-                None => return Err(human(format!("Flag in rustc-flags has no value\
+                None => return Err(human(format!("Flag in rustc-flags has no value \
                                                   in {}: `{}`",
                                                   whence, value)))
             };
