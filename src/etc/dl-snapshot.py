@@ -25,20 +25,44 @@ win32 = lines[5]
 win64 = lines[6]
 triple = sys.argv[1]
 
-if triple == 'i686-unknown-linux-gnu':
-    me = linux32
-elif triple == 'x86_64-unknown-linux-gnu':
-    me = linux64
-elif triple == 'i686-apple-darwin':
-    me = mac32
-elif triple == 'x86_64-apple-darwin':
-    me = mac64
-elif triple == 'i686-pc-windows-gnu':
-    me = win32
-elif triple == 'x86_64-pc-windows-gnu':
-    me = win64
+ts = triple.split('-')
+arch = ts[0]
+if len(ts) == 2:
+    vendor = 'unknown'
+    target_os = ts[1]
 else:
+    vendor = ts[1]
+    target_os = ts[2]
+
+intel32 = (arch == 'i686') or (arch == 'i586')
+
+me = None
+if target_os == 'linux':
+    if intel32:
+        me = linux32
+        new_triple = 'i686-unknown-linux-gnu'
+    elif arch == 'x86_64':
+        me = linux64
+        new_triple = 'x86_64-unknown-linux-gnu'
+elif target_os == 'darwin':
+    if intel32:
+        me = mac32
+        new_triple = 'i686-apple-darwin'
+    elif arch == 'x86_64':
+        me = mac64
+        new_triple = 'x86_64-apple-darwin'
+elif target_os == 'windows':
+    if intel32:
+        me = win32
+        new_triple = 'i686-pc-windows-gnu'
+    elif arch == 'x86_64':
+        me = win64
+        new_triple = 'x86_64-pc-windows-gnu'
+
+if me is None:
     raise Exception("no snapshot for the triple: " + triple)
+
+triple = new_triple
 
 platform, hash = me.strip().split()
 
