@@ -387,7 +387,7 @@ fn rustc(package: &Package, target: &Target,
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
 
         let filenames = try!(cx.target_filenames(target));
-        let root = cx.layout(package, kind).root().clone();
+        let root = cx.out_dir(package, kind, target);
 
         // Prepare the native lib state (extra -L and -l flags)
         let build_state = cx.build_state.clone();
@@ -634,17 +634,8 @@ fn build_base_args(cx: &Context,
 
 fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) -> ProcessBuilder {
-    let out_dir = cx.layout(pkg, kind);
-    let out_dir = if target.get_profile().is_custom_build() {
-        out_dir.build(pkg)
-    } else if target.is_example() {
-        out_dir.examples().clone()
-    } else {
-        out_dir.root().clone()
-    };
-
     cmd = cmd.arg("--out-dir");
-    cmd = cmd.arg(out_dir);
+    cmd = cmd.arg(cx.out_dir(pkg, kind, target));
 
     let dep_info_loc = fingerprint::dep_info_loc(cx, pkg, target, kind);
     cmd = cmd.arg("--dep-info").arg(dep_info_loc);

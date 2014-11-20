@@ -197,6 +197,19 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         }
     }
 
+    /// Returns the appropriate output directory for the specified package and
+    /// target.
+    pub fn out_dir(&self, pkg: &Package, kind: Kind, target: &Target) -> Path {
+        let out_dir = self.layout(pkg, kind);
+        if target.get_profile().is_custom_build() {
+            out_dir.build(pkg)
+        } else if target.is_example() {
+            out_dir.examples().clone()
+        } else {
+            out_dir.root().clone()
+        }
+    }
+
     /// Return the (prefix, suffix) pair for dynamic libraries.
     ///
     /// If `plugin` is true, the pair corresponds to the host platform,
