@@ -355,7 +355,7 @@ performs tasks such as:
 * The stdout output and `OUT_DIR` locations are also handled by the `gcc`
   library.
 
-here we can start to see some of the major benefits of farming as much
+Here we can start to see some of the major benefits of farming as much
 functionality as possible out to common build dependencies rather than
 duplicating logic across all build scripts!
 
