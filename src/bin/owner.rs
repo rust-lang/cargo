@@ -1,7 +1,6 @@
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
-use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[deriving(Decodable)]
 struct Options {
@@ -36,7 +35,6 @@ versions, and also modify the set of owners, so take caution!
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
-    let root = try!(find_root_manifest_for_cwd(None));
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,
@@ -45,7 +43,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         to_remove: options.flag_remove,
         list: options.flag_list,
     };
-    try!(ops::modify_owners(&root, shell, &opts).map_err(|e| {
+    try!(ops::modify_owners(shell, &opts).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));
     Ok(None)
