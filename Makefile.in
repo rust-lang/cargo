@@ -53,6 +53,7 @@ else
 TARGET_$(1) = $$(TARGET_ROOT)/$(1)
 endif
 DISTDIR_$(1) = $$(TARGET_$(1))/dist
+IMGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)-image
 PKGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)
 BIN_TARGETS_$(1) := $$(BIN_TARGETS:%=$$(TARGET_$(1))/%$$(X))
 endef
@@ -128,6 +129,8 @@ $(DOC_DIR)/%: src/doc/%
 
 # === Distribution
 
+NON_INSTALLED_PREFIXES := README.md,LICENSE-MIT,LICENSE-APACHE,LICENSE-THIRD-PARTY
+
 define DO_DIST_TARGET
 dist-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 
@@ -147,34 +150,38 @@ distcheck-$(1): dist-$(1)
 		--prefix=$$(TARGET_$(1))/distcheck/install --uninstall
 	[ -f $$(TARGET_$(1))/distcheck/install/bin/cargo$(X) ] && exit 1 || exit 0
 
-$$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-manifest-$(1)
-	tar -czvf $$@ -C $$(@D) $$(PKG_NAME)-$(1)
-
-prepare-manifest-$(1):
+prepare-image-$(1):
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ] || echo 'Please run `make` first'
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
-	rm -rf $$(PKGDIR_$(1))
-	mkdir -p $$(PKGDIR_$(1))/bin $$(PKGDIR_$(1))/lib/cargo \
-		$$(PKGDIR_$(1))/share/man/man1 \
-		$$(PKGDIR_$(1))/share/doc/cargo \
-		$$(PKGDIR_$(1))/share/zsh/site-functions \
-		$$(PKGDIR_$(1))/etc/bash_completion.d
-	cp $$(TARGET_$(1))/cargo$$(X) $$(PKGDIR_$(1))/bin
-	cp src/etc/cargo.1 $$(PKGDIR_$(1))/share/man/man1
-	cp src/etc/_cargo $$(PKGDIR_$(1))/share/zsh/site-functions/_cargo
-	cp src/etc/cargo.bashcomp.sh $$(PKGDIR_$(1))/etc/bash_completion.d/cargo
-	#cp $$(BIN_TARGETS_$(1)) $$(PKGDIR_$(1))/lib/cargo
+	rm -rf $$(IMGDIR_$(1))
+	mkdir -p $$(IMGDIR_$(1))/bin $$(IMGDIR_$(1))/lib/cargo \
+		$$(IMGDIR_$(1))/share/man/man1 \
+		$$(IMGDIR_$(1))/share/doc/cargo \
+		$$(IMGDIR_$(1))/share/zsh/site-functions \
+		$$(IMGDIR_$(1))/etc/bash_completion.d
+	cp $$(TARGET_$(1))/cargo$$(X) $$(IMGDIR_$(1))/bin
+	cp src/etc/cargo.1 $$(IMGDIR_$(1))/share/man/man1
+	cp src/etc/_cargo $$(IMGDIR_$(1))/share/zsh/site-functions/_cargo
+	cp src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))/etc/bash_completion.d/cargo
 	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
-		$$(PKGDIR_$(1))/share/doc/cargo
-	(cd $$(PKGDIR_$(1)) && find . -type f | sed 's/^\.\///') \
-		> $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in
-	cp src/etc/install.sh $$(PKGDIR_$(1))
+		$$(IMGDIR_$(1))/share/doc/cargo
 	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
-		$$(PKGDIR_$(1))
-	mv $$(DISTDIR_$(1))/manifest-$$(PKG_NAME).in \
-		$$(PKGDIR_$(1))/lib/cargo/manifest.in
+		$$(IMGDIR_$(1))
 
-install-$(1): prepare-manifest-$(1)
+$$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-image-$(1)
+	sh src/rust-installer/gen-installer.sh \
+		--product-name=Cargo \
+		--verify-bin=cargo \
+		--rel-manifest-dir=cargo \
+		--success-message=Cargo-is-ready-to-roll. \
+		--image-dir=$$(IMGDIR_$(1)) \
+		--work-dir=./$$(DISTDIR_$(1)) \
+		--output-dir=./$$(DISTDIR_$(1)) \
+		--non-installed-prefixes=$$(NON_INSTALLED_PREFIXES) \
+		--package-name=$$(PKG_NAME)-$(1)
+	rm -Rf $$(IMGDIR_$(1))
+
+install-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 	$$(PKGDIR_$(1))/install.sh \
 		--prefix="$$(CFG_PREFIX)" \
 		--destdir="$$(DESTDIR)" $$(MAYBE_DISABLE_VERIFY)
