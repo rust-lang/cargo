@@ -1,4 +1,5 @@
-use std::io::{fs, File};
+use std::io::{mod, fs, File};
+use cargo::util::process;
 
 use support::{project, execs, cargo_dir};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
@@ -468,4 +469,14 @@ test!(dev_dependency_not_used {
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
+})
+
+test!(login_with_no_cargo_dir {
+    let home = paths::home().join("new-home");
+    fs::mkdir(&home, io::USER_DIR).unwrap();
+    assert_that(process(cargo_dir().join("cargo")).unwrap()
+                       .arg("login").arg("foo").arg("-v")
+                       .cwd(paths::root())
+                       .env("HOME", Some(home)),
+                execs().with_status(0));
 })

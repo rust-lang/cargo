@@ -1,7 +1,8 @@
 use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::{HashMap, Occupied, Vacant};
-use std::io::fs::{PathExtensions, File};
+use std::io;
+use std::io::fs::{mod, PathExtensions, File};
 use std::string;
 
 use serialize::{Encodable,Encoder};
@@ -344,6 +345,7 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
         Location::Global => cfg.home_path.join(".cargo").join("config"),
         Location::Project => unimplemented!(),
     };
+    try!(fs::mkdir_recursive(&file.dir_path(), io::USER_DIR));
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
     toml.insert(key.to_string(), value.into_toml());
