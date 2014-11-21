@@ -9,6 +9,7 @@ use registry::{Registry, NewCrate, NewCrateDependency};
 
 use core::source::Source;
 use core::{Package, MultiShell, SourceId};
+use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
 use sources::{PathSource, RegistrySource};
@@ -76,6 +77,11 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
             features: dep.get_features().to_vec(),
             version_req: dep.get_version_req().to_string(),
             target: dep.get_only_for_platform().map(|s| s.to_string()),
+            kind: match dep.get_kind() {
+                Kind::Normal => "normal",
+                Kind::Build => "build",
+                Kind::Development => "dev",
+            }.to_string(),
         }
     }).collect::<Vec<NewCrateDependency>>();
     let manifest = pkg.get_manifest();

@@ -34,18 +34,22 @@ pub fn init() {
         .build();
 }
 
-pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str)]) {
+pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     let mut manifest = format!(r#"
         [package]
         name = "{}"
         version = "{}"
         authors = []
     "#, name, version);
-    for &(dep, req) in deps.iter() {
+    for &(dep, req, kind) in deps.iter() {
         manifest.push_str(format!(r#"
-            [dependencies.{}]
+            [{}dependencies.{}]
             version = "{}"
-        "#, dep, req).as_slice());
+        "#, match kind {
+            "build" => "build-",
+            "dev" => "dev-",
+            _ => ""
+        }, dep, req).as_slice());
     }
     let p = project(name)
         .file("Cargo.toml", manifest.as_slice())
@@ -67,11 +71,11 @@ pub fn mock_archive_dst(name: &str, version: &str) -> Path {
     dl_path().join(name).join(version).join("download")
 }
 
-pub fn mock_pkg(name: &str, version: &str, deps: &[(&str, &str)]) {
+pub fn mock_pkg(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     mock_pkg_yank(name, version, deps, false)
 }
 
-pub fn mock_pkg_yank(name: &str, version: &str, deps: &[(&str, &str)],
+pub fn mock_pkg_yank(name: &str, version: &str, deps: &[(&str, &str, &str)],
                      yanked: bool) {
     mock_archive(name, version, deps);
     let c = File::open(&mock_archive_dst(name, version)).read_to_end().unwrap();
@@ -107,22 +111,23 @@ pub fn publish(file: &str, line: &str) {
                 &[&parent]).unwrap();
 }
 
-pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str)], cksum: &str,
+pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str, &str)], cksum: &str,
            yanked: bool) -> String {
-    let deps = deps.iter().map(|&(a, b)| dep(a, b)).collect::<Vec<String>>();
+    let deps = deps.iter().map(|&(a, b, c)| dep(a, b, c)).collect::<Vec<String>>();
     format!("{{\"name\":\"{}\",\"vers\":\"{}\",\
                \"deps\":{},\"cksum\":\"{}\",\"features\":{{}},\
                \"yanked\":{}}}",
             name, vers, deps, cksum, yanked)
 }
 
-pub fn dep(name: &str, req: &str) -> String {
+pub fn dep(name: &str, req: &str, kind: &str) -> String {
     format!("{{\"name\":\"{}\",\
                \"req\":\"{}\",\
                \"features\":[],\
                \"default_features\":false,\
                \"target\":null,\
-               \"optional\":false}}", name, req)
+               \"optional\":false,\
+               \"kind\":\"{}\"}}", name, req, kind)
 }
 
 pub fn cksum(s: &[u8]) -> String {

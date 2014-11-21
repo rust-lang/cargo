@@ -90,6 +90,8 @@ impl Dependency {
         &self.source_id
     }
 
+    pub fn get_kind(&self) -> Kind { self.kind }
+
     pub fn kind(mut self, kind: Kind) -> Dependency {
         self.kind = kind;
         self

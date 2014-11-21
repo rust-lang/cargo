@@ -171,7 +171,7 @@ use tar::Archive;
 use url::Url;
 
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
-use core::Dependency;
+use core::dependency::{Dependency, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
 use util::{hex, Require, Sha256};
@@ -222,6 +222,7 @@ struct RegistryDependency {
     optional: bool,
     default_features: bool,
     target: Option<String>,
+    kind: Option<String>,
 }
 
 impl<'a, 'b> RegistrySource<'a, 'b> {
@@ -412,16 +413,22 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     fn parse_registry_dependency(&self, dep: RegistryDependency)
                                  -> CargoResult<Dependency> {
         let RegistryDependency {
-            name, req, features, optional, default_features, target
+            name, req, features, optional, default_features, target, kind
         } = dep;
 
         let dep = try!(Dependency::parse(name.as_slice(), Some(req.as_slice()),
                                          &self.source_id));
+        let kind = match kind.as_ref().map(|s| s.as_slice()).unwrap_or("") {
+            "dev" => Kind::Development,
+            "build" => Kind::Build,
+            _ => Kind::Normal,
+        };
 
         Ok(dep.optional(optional)
               .default_features(default_features)
               .features(features)
-              .only_for_platform(target))
+              .only_for_platform(target)
+              .kind(kind))
     }
 
     /// Actually perform network operations to update the registry
