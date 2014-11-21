@@ -98,7 +98,11 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     try!(links::validate(deps));
 
     let dest = uniq_target_dest(targets);
-    let root = deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap();
+    let root = if resolve.root() == pkg.get_package_id() {
+        pkg
+    } else {
+        deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap()
+    };
     let host_layout = Layout::new(root, None, dest);
     let target_layout = config.target().map(|target| {
         layout::Layout::new(root, Some(target), dest)

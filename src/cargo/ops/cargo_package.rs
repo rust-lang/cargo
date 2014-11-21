@@ -165,6 +165,7 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
     });
     let mut new_manifest = pkg.get_manifest().clone();
     new_manifest.set_summary(new_summary);
+    new_manifest.set_target_dir(dst.join("target"));
     let new_pkg = Package::new(new_manifest, &manifest_path,
                                pkg.get_package_id().get_source_id());
 
