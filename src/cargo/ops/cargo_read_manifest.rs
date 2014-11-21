@@ -27,20 +27,29 @@ pub fn read_package(path: &Path, source_id: &SourceId)
 
 pub fn read_packages(path: &Path,
                      source_id: &SourceId) -> CargoResult<Vec<Package>> {
-    let mut all_packages = Vec::new();
+    let mut all_packages = HashSet::new();
     let mut visited = HashSet::<Path>::new();
 
     log!(5, "looking for root package: {}, source_id={}", path.display(), source_id);
-    try!(process_possible_package(path, &mut all_packages, source_id, &mut visited));
 
-    try!(walk(path, true, |root, dir| {
+    try!(walk(path, |dir| {
         log!(5, "looking for child package: {}", dir.display());
-        if root && dir.join("target").is_dir() { return Ok(false); }
-        if root { return Ok(true) }
+
+        // Don't recurse into git databases
         if dir.filename_str() == Some(".git") { return Ok(false); }
-        if dir.join(".git").exists() { return Ok(false); }
-        try!(process_possible_package(dir, &mut all_packages, source_id,
+
+        // Don't automatically discover packages across git submodules
+        if dir != path && dir.join(".git").exists() { return Ok(false); }
+
+        // Don't ever look at target directories
+        if dir.filename_str() == Some("target") && has_manifest(&dir.dir_path()) {
+            return Ok(false)
+        }
+
+        if has_manifest(dir) {
+            try!(read_nested_packages(dir, &mut all_packages, source_id,
                                       &mut visited));
+        }
         Ok(true)
     }));
 
@@ -48,14 +57,14 @@ pub fn read_packages(path: &Path,
         Err(human(format!("Could not find Cargo.toml in `{}`", path.display())))
     } else {
         log!(5, "all packages: {}", all_packages);
-        Ok(all_packages)
+        Ok(all_packages.into_iter().collect())
     }
 }
 
-fn walk(path: &Path, is_root: bool,
-        callback: |bool, &Path| -> CargoResult<bool>) -> CargoResult<()> {
+fn walk(path: &Path,
+        callback: |&Path| -> CargoResult<bool>) -> CargoResult<()> {
     if path.is_dir() {
-        let continues = try!(callback(is_root, path));
+        let continues = try!(callback(path));
         if !continues {
             log!(5, "not processing {}", path.display());
             return Ok(());
@@ -69,22 +78,9 @@ fn walk(path: &Path, is_root: bool,
             Err(e) => return Err(FromError::from_error(e)),
         };
         for dir in dirs.iter() {
-            try!(walk(dir, false, |a, x| callback(a, x)))
+            try!(walk(dir, |x| callback(x)))
         }
     }
-
-    Ok(())
-}
-
-fn process_possible_package(dir: &Path,
-                            all_packages: &mut Vec<Package>,
-                            source_id: &SourceId,
-                            visited: &mut HashSet<Path>) -> CargoResult<()> {
-
-    if !has_manifest(dir) { return Ok(()); }
-
-    let packages = try!(read_nested_packages(dir, source_id, visited));
-    push_all(all_packages, packages);
 
     Ok(())
 }
@@ -93,32 +89,25 @@ fn has_manifest(path: &Path) -> bool {
     find_project_manifest_exact(path, "Cargo.toml").is_ok()
 }
 
-fn read_nested_packages(path: &Path, source_id: &SourceId,
-                 visited: &mut HashSet<Path>) -> CargoResult<Vec<Package>> {
-    if !visited.insert(path.clone()) { return Ok(Vec::new()) }
+fn read_nested_packages(path: &Path,
+                        all_packages: &mut HashSet<Package>,
+                        source_id: &SourceId,
+                        visited: &mut HashSet<Path>) -> CargoResult<()> {
+    if !visited.insert(path.clone()) { return Ok(()) }
 
     let manifest = try!(find_project_manifest_exact(path, "Cargo.toml"));
 
     let (pkg, nested) = try!(read_package(&manifest, source_id));
-    let mut ret = vec![pkg];
+    all_packages.insert(pkg);
 
     // Registry sources are not allowed to have `path=` dependencies because
     // they're all translated to actual registry dependencies.
     if !source_id.is_registry() {
         for p in nested.iter() {
-            ret.extend(try!(read_nested_packages(&path.join(p),
-                                            source_id,
-                                            visited)).into_iter());
+            try!(read_nested_packages(&path.join(p), all_packages, source_id,
+                                      visited));
         }
     }
 
-    Ok(ret)
-}
-
-fn push_all(set: &mut Vec<Package>, packages: Vec<Package>) {
-    for package in packages.into_iter() {
-        if set.contains(&package) { continue; }
-
-        set.push(package)
-    }
+    Ok(())
 }

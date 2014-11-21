@@ -45,7 +45,7 @@ impl PathSource {
             return Err(internal("source has not been updated"))
         }
 
-        match self.packages.as_slice().head() {
+        match self.packages.iter().find(|p| p.get_root() == self.path) {
             Some(pkg) => Ok(pkg.clone()),
             None => Err(internal("no package found in source"))
         }
