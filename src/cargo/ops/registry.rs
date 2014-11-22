@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::File;
 use std::os;
+use term::color::BLACK;
 
 use curl::http;
 use git2;
@@ -12,7 +13,7 @@ use core::manifest::ManifestMetadata;
 use ops;
 use sources::{PathSource, RegistrySource};
 use util::config;
-use util::{CargoResult, human, internal, ChainError, Require, ToUrl};
+use util::{CargoResult, human, internal, ChainError, ToUrl};
 use util::config::{Config, ConfigValue, Location};
 
 pub struct RegistryConfig {
@@ -143,9 +144,7 @@ pub fn registry(shell: &mut MultiShell,
         token: token_config,
         index: index_config,
     } = try!(registry_configuration());
-    let token = try!(token.or(token_config).require(|| {
-        human("no upload token found, please run `cargo login`")
-    }));
+    let token = token.or(token_config);
     let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
     let index = try!(index.as_slice().to_url().map_err(human));
     let sid = SourceId::for_registry(&index);
@@ -319,6 +318,49 @@ pub fn yank(manifest_path: &Path,
         try!(registry.yank(name.as_slice(), version.as_slice()).map_err(|e| {
             human(format!("failed to yank: {}", e))
         }));
+    }
+
+    Ok(())
+}
+
+pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> CargoResult<()> {
+    fn truncate_with_ellipsis(s: &str, max_length: uint) -> String {
+        if s.len() < max_length {
+            s.to_string()
+        } else {
+            format!("{}…", s[..max_length - 1])
+        }
+    }
+
+    let (mut registry, _) = try!(registry(shell, None, index));
+
+    let crates = try!(registry.search(query).map_err(|e| {
+        human(format!("failed to retrieve search results from the registry: {}", e))
+    }));
+
+    let list_items = crates.iter()
+        .map(|krate| (
+            format!("{} ({})", krate.name, krate.max_version),
+            krate.description.as_ref().map(|desc|
+                truncate_with_ellipsis(desc.replace("\n", " ").as_slice(), 128))
+        ))
+        .collect::<Vec<_>>();
+    let description_margin = list_items.iter()
+        .map(|&(ref left, _)| left.len() + 4)
+        .max()
+        .unwrap_or(0);
+
+    for (name, description) in list_items.into_iter() {
+        let line = match description {
+            Some(desc) => {
+                let space = String::from_char(
+                    description_margin - name.len(),
+                    ' ');
+                name + space + desc
+            }
+            None => name
+        };
+        try!(shell.say(line, BLACK));
     }
 
     Ok(())
