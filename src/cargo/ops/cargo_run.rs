@@ -45,12 +45,13 @@ pub fn run(manifest_path: &Path,
         Some(s) => dst.join(s).join(bin.get_name()),
         None => dst.join(bin.get_name()),
     };
-    let exe = match exe.path_relative_from(&os::getcwd()) {
+    let exe = match exe.path_relative_from(&try!(os::getcwd())) {
         Some(path) => path,
         None => exe,
     };
     let process = try!(compile.process(exe, &root))
-                              .args(args).cwd(os::getcwd());
+                              .args(args)
+                              .cwd(try!(os::getcwd()));
 
     try!(options.shell.status("Running", process.to_string()));
     Ok(process.exec().err())

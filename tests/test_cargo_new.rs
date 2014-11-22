@@ -11,13 +11,13 @@ fn setup() {
 }
 
 fn my_process(s: &str) -> ProcessBuilder {
-    process(s)
+    process(s).unwrap()
         .cwd(paths::root())
         .env("HOME", Some(paths::home()))
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    process(cargo_dir().join("cargo")).arg(s)
+    process(cargo_dir().join("cargo")).unwrap().arg(s)
         .cwd(paths::root())
         .env("HOME", Some(paths::home()))
 }
@@ -136,9 +136,9 @@ test!(finds_author_username {
 })
 
 test!(finds_author_git {
-    my_process("git").args(["config", "--global", "user.name", "bar"])
+    my_process("git").args(&["config", "--global", "user.name", "bar"])
                      .exec().assert();
-    my_process("git").args(["config", "--global", "user.email", "baz"])
+    my_process("git").args(&["config", "--global", "user.email", "baz"])
                      .exec().assert();
     assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
                 execs().with_status(0));
@@ -149,9 +149,9 @@ test!(finds_author_git {
 })
 
 test!(author_prefers_cargo {
-    my_process("git").args(["config", "--global", "user.name", "bar"])
+    my_process("git").args(&["config", "--global", "user.name", "bar"])
                      .exec().assert();
-    my_process("git").args(["config", "--global", "user.email", "baz"])
+    my_process("git").args(&["config", "--global", "user.email", "baz"])
                      .exec().assert();
     let root = paths::root();
     fs::mkdir(&root.join(".cargo"), USER_RWX).assert();

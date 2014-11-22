@@ -214,7 +214,7 @@ impl<'a> PackageRegistry<'a> {
     // map a dependency though, we just pass it on through.
     fn lock(&self, summary: Summary) -> Summary {
         let pair = self.locked.get(summary.get_source_id()).and_then(|map| {
-            map.find_equiv(summary.get_name())
+            map.get(summary.get_name())
         }).and_then(|vec| {
             vec.iter().find(|&&(ref id, _)| id == summary.get_package_id())
         });
@@ -243,7 +243,7 @@ impl<'a> PackageRegistry<'a> {
                 // on.
                 None => {
                     let v = self.locked.get(dep.get_source_id()).and_then(|map| {
-                        map.find_equiv(dep.get_name())
+                        map.get(dep.get_name())
                     }).and_then(|vec| {
                         vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
                     });

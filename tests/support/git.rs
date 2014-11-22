@@ -45,6 +45,6 @@ impl RepoBuilder {
         let tree = self.repo.find_tree(id).unwrap();
         let sig = self.repo.signature().unwrap();
         self.repo.commit(Some("HEAD"), &sig, &sig,
-                         "Initial commit", &tree, []).unwrap();
+                         "Initial commit", &tree, &[]).unwrap();
     }
 }

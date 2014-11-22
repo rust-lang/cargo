@@ -23,7 +23,7 @@ struct CargoNewConfig {
 }
 
 pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
-    let path = os::getcwd().join(opts.path);
+    let path = try!(os::getcwd()).join(opts.path);
     if path.exists() {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
@@ -130,19 +130,19 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
 }
 
 fn global_config() -> CargoResult<CargoNewConfig> {
-    let user_configs = try!(config::all_configs(os::getcwd()));
+    let user_configs = try!(config::all_configs(try!(os::getcwd())));
     let mut cfg = CargoNewConfig {
         name: None,
         email: None,
         git: None,
     };
-    let cargo_new = match user_configs.find_equiv("cargo-new") {
+    let cargo_new = match user_configs.get("cargo-new") {
         None => return Ok(cfg),
         Some(target) => try!(target.table().chain_error(|| {
             internal("invalid configuration for the key `cargo-new`")
         })),
     };
-    cfg.name = match cargo_new.find_equiv("name") {
+    cfg.name = match cargo_new.get("name") {
         None => None,
         Some(name) => {
             Some(try!(name.string().chain_error(|| {
@@ -150,7 +150,7 @@ fn global_config() -> CargoResult<CargoNewConfig> {
             })).ref0().to_string())
         }
     };
-    cfg.email = match cargo_new.find_equiv("email") {
+    cfg.email = match cargo_new.get("email") {
         None => None,
         Some(email) => {
             Some(try!(email.string().chain_error(|| {
@@ -158,7 +158,7 @@ fn global_config() -> CargoResult<CargoNewConfig> {
             })).ref0().to_string())
         }
     };
-    cfg.git = match cargo_new.find_equiv("git") {
+    cfg.git = match cargo_new.get("git") {
         None => None,
         Some(git) => {
             Some(try!(git.boolean().chain_error(|| {

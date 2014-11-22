@@ -89,7 +89,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
 
     // Strip a trailing slash
     match url.scheme_data {
-        url::RelativeSchemeData(ref mut rel) => {
+        url::SchemeData::Relative(ref mut rel) => {
             if rel.path.last().map(|s| s.is_empty()).unwrap_or(false) {
                 rel.path.pop();
             }
@@ -105,7 +105,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
     if url.domain() == Some("github.com") {
         url.scheme = "https".to_string();
         match url.scheme_data {
-            url::RelativeSchemeData(ref mut rel) => {
+            url::SchemeData::Relative(ref mut rel) => {
                 rel.port = Some(443);
                 rel.default_port = Some(443);
                 let path = mem::replace(&mut rel.path, Vec::new());
@@ -119,7 +119,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
 
     // Repos generally can be accessed with or w/o '.git'
     match url.scheme_data {
-        url::RelativeSchemeData(ref mut rel) => {
+        url::SchemeData::Relative(ref mut rel) => {
             let needs_chopping = {
                 let last = rel.path.last().map(|s| s.as_slice()).unwrap_or("");
                 last.ends_with(".git")

@@ -119,6 +119,7 @@ impl ProjectBuilder {
 
     pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {
         process(program)
+            .unwrap()
             .cwd(self.root())
             .env("HOME", Some(paths::home().display().to_string().as_slice()))
     }
@@ -516,4 +517,5 @@ pub static PACKAGING:   &'static str = "   Packaging";
 pub static DOWNLOADING: &'static str = " Downloading";
 pub static UPLOADING:   &'static str = "   Uploading";
 pub static VERIFYING:   &'static str = "   Verifying";
+#[allow(dead_code)]
 pub static WARNING:     &'static str = "     Warning";
