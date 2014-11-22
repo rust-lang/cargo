@@ -83,7 +83,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
                           is not being built"))
     }
 
-    let user_configs = try!(config::all_configs(os::getcwd()));
+    let user_configs = try!(config::all_configs(try!(os::getcwd())));
     let override_ids = try!(source_ids_from_config(&user_configs,
                                                    package.get_root()));
     let config = try!(Config::new(*shell, jobs, target.clone()));
@@ -159,7 +159,7 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
                           cur_path: Path) -> CargoResult<Vec<SourceId>> {
     debug!("loaded config; configs={}", configs);
 
-    let config_paths = match configs.find_equiv("paths") {
+    let config_paths = match configs.get("paths") {
         Some(cfg) => cfg,
         None => return Ok(Vec::new())
     };
@@ -182,7 +182,7 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 fn scrape_build_config(config: &Config,
                        configs: &HashMap<String, config::ConfigValue>)
                        -> CargoResult<ops::BuildConfig> {
-    let target = match configs.find_equiv("target") {
+    let target = match configs.get("target") {
         None => return Ok(Default::default()),
         Some(target) => try!(target.table().chain_error(|| {
             internal("invalid configuration for the key `target`")

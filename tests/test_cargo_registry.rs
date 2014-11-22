@@ -24,7 +24,7 @@ test!(simple {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    r::mock_pkg("bar", "0.0.1", []);
+    r::mock_pkg("bar", "0.0.1", &[]);
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -64,8 +64,8 @@ test!(deps {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    r::mock_pkg("baz", "0.0.1", []);
-    r::mock_pkg("bar", "0.0.1", [("baz", "*")]);
+    r::mock_pkg("baz", "0.0.1", &[]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*")]);
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -117,7 +117,7 @@ test!(bad_cksum {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    r::mock_pkg("bad-cksum", "0.0.1", []);
+    r::mock_pkg("bad-cksum", "0.0.1", &[]);
     File::create(&r::mock_archive_dst("bad-cksum", "0.0.1")).unwrap();
 
     assert_that(p.cargo_process("build").arg("-v"),
@@ -152,7 +152,7 @@ location searched: registry file://[..]
 version required: >= 0.0.0
 "));
 
-    r::mock_pkg("notyet", "0.0.1", []);
+    r::mock_pkg("notyet", "0.0.1", &[]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -202,7 +202,7 @@ location searched: registry file://[..]
 version required: ^0.0.1
 "));
 
-    r::mock_pkg("notyet", "0.0.1", []);
+    r::mock_pkg("notyet", "0.0.1", &[]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
                 execs().with_status(0).with_stdout(format!("\
@@ -236,7 +236,7 @@ test!(lockfile_locks {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("bar", "0.0.1", []);
+    r::mock_pkg("bar", "0.0.1", &[]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -248,7 +248,7 @@ test!(lockfile_locks {
    dir = p.url()).as_slice()));
 
     p.root().move_into_the_past().unwrap();
-    r::mock_pkg("bar", "0.0.2", []);
+    r::mock_pkg("bar", "0.0.2", &[]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
@@ -268,8 +268,8 @@ test!(lockfile_locks_transitively {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("baz", "0.0.1", []);
-    r::mock_pkg("bar", "0.0.1", [("baz", "*")]);
+    r::mock_pkg("baz", "0.0.1", &[]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -283,8 +283,8 @@ test!(lockfile_locks_transitively {
    dir = p.url()).as_slice()));
 
     p.root().move_into_the_past().unwrap();
-    r::mock_pkg("baz", "0.0.2", []);
-    r::mock_pkg("bar", "0.0.2", [("baz", "*")]);
+    r::mock_pkg("baz", "0.0.2", &[]);
+    r::mock_pkg("bar", "0.0.2", &[("baz", "*")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
@@ -304,10 +304,10 @@ test!(yanks_are_not_used {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("baz", "0.0.1", []);
-    r::mock_pkg_yank("baz", "0.0.2", [], true);
-    r::mock_pkg("bar", "0.0.1", [("baz", "*")]);
-    r::mock_pkg_yank("bar", "0.0.2", [("baz", "*")], true);
+    r::mock_pkg("baz", "0.0.1", &[]);
+    r::mock_pkg_yank("baz", "0.0.2", &[], true);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*")]);
+    r::mock_pkg_yank("bar", "0.0.2", &[("baz", "*")], true);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -335,9 +335,9 @@ test!(relying_on_a_yank_is_bad {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("baz", "0.0.1", []);
-    r::mock_pkg_yank("baz", "0.0.2", [], true);
-    r::mock_pkg("bar", "0.0.1", [("baz", "=0.0.2")]);
+    r::mock_pkg("baz", "0.0.1", &[]);
+    r::mock_pkg_yank("baz", "0.0.2", &[], true);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "=0.0.2")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(101).with_stderr("\
@@ -361,14 +361,14 @@ test!(yanks_in_lockfiles_are_ok {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("bar", "0.0.1", []);
+    r::mock_pkg("bar", "0.0.1", &[]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 
     fs::rmdir_recursive(&r::registry_path().join("3")).unwrap();
 
-    r::mock_pkg_yank("bar", "0.0.1", [], true);
+    r::mock_pkg_yank("bar", "0.0.1", &[], true);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
@@ -395,7 +395,7 @@ test!(update_with_lockfile_if_packages_missing {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("bar", "0.0.1", []);
+    r::mock_pkg("bar", "0.0.1", &[]);
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
     p.root().move_into_the_past().unwrap();
@@ -422,11 +422,11 @@ test!(update_lockfile {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    r::mock_pkg("bar", "0.0.1", []);
+    r::mock_pkg("bar", "0.0.1", &[]);
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 
-    r::mock_pkg("bar", "0.0.2", []);
+    r::mock_pkg("bar", "0.0.2", &[]);
     fs::rmdir_recursive(&paths::home().join(".cargo/registry")).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("update")
                  .arg("-p").arg("bar"),

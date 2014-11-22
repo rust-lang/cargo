@@ -6,7 +6,7 @@ use util::{human, CargoResult};
 
 pub fn realpath(original: &Path) -> io::IoResult<Path> {
     static MAX_LINKS_FOLLOWED: uint = 256;
-    let original = os::make_absolute(original);
+    let original = try!(os::make_absolute(original));
 
     // Right now lstat on windows doesn't work quite well
     if cfg!(windows) {

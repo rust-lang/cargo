@@ -109,14 +109,14 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
 }
 
 pub fn registry_configuration() -> CargoResult<RegistryConfig> {
-    let configs = try!(config::all_configs(os::getcwd()));
-    let registry = match configs.find_equiv("registry") {
+    let configs = try!(config::all_configs(try!(os::getcwd())));
+    let registry = match configs.get("registry") {
         None => return Ok(RegistryConfig { index: None, token: None }),
         Some(registry) => try!(registry.table().chain_error(|| {
             internal("invalid configuration for the key `registry`")
         })),
     };
-    let index = match registry.find_equiv("index") {
+    let index = match registry.get("index") {
         None => None,
         Some(index) => {
             Some(try!(index.string().chain_error(|| {
@@ -124,7 +124,7 @@ pub fn registry_configuration() -> CargoResult<RegistryConfig> {
             })).ref0().to_string())
         }
     };
-    let token = match registry.find_equiv("token") {
+    let token = match registry.get("token") {
         None => None,
         Some(token) => {
             Some(try!(token.string().chain_error(|| {
@@ -174,13 +174,13 @@ pub fn http_handle() -> CargoResult<http::Handle> {
 /// Favor cargo's `http.proxy`, then git's `http.proxy`, then finally a
 /// HTTP_PROXY env var.
 pub fn http_proxy() -> CargoResult<Option<String>> {
-    let configs = try!(config::all_configs(os::getcwd()));
-    match configs.find_equiv("http") {
+    let configs = try!(config::all_configs(try!(os::getcwd())));
+    match configs.get("http") {
         Some(http) => {
             let http = try!(http.table().chain_error(|| {
                 internal("invalid configuration for the key `http`")
             }));
-            match http.find_equiv("proxy") {
+            match http.get("proxy") {
                 Some(proxy) => {
                     return Ok(Some(try!(proxy.string().chain_error(|| {
                         internal("invalid configuration for key `http.proxy`")
@@ -207,7 +207,7 @@ pub fn registry_login(shell: &mut MultiShell, token: String) -> CargoResult<()> 
     let config = try!(Config::new(shell, None, None));
     let RegistryConfig { index, token: _ } = try!(registry_configuration());
     let mut map = HashMap::new();
-    let p = os::getcwd();
+    let p = try!(os::getcwd());
     match index {
         Some(index) => {
             map.insert("index".to_string(), ConfigValue::String(index, p.clone()));

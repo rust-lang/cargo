@@ -121,7 +121,7 @@ fn url(s: &str) -> url::ParseResult<Url> {
 
     fn mapper(scheme: &str) -> url::SchemeType {
         if scheme == "cargo" {
-            url::RelativeScheme(1)
+            url::SchemeType::Relative(1)
         } else {
             url::whatwg_scheme_type_mapper(scheme)
         }

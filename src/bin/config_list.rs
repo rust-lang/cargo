@@ -25,7 +25,9 @@ Options:
 
 pub fn execute(args: ConfigListFlags,
                _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
-    let configs = try!(config::all_configs(os::getcwd()).map_err(|_|
+    let cwd = try!(os::getcwd().map_err(|_|
+        CliError::new("Couldn't determine the current working directory", 1)));
+    let configs = try!(config::all_configs(cwd).map_err(|_|
         CliError::new("Couldn't load configuration", 1)));
 
     if args.flag_human {

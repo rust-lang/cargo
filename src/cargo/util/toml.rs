@@ -93,7 +93,7 @@ pub fn to_manifest(contents: &[u8],
                    layout: Layout)
                    -> CargoResult<(Manifest, Vec<Path>)> {
     let manifest = layout.root.join("Cargo.toml");
-    let manifest = match manifest.path_relative_from(&os::getcwd()) {
+    let manifest = match manifest.path_relative_from(&try!(os::getcwd())) {
         Some(path) => path,
         None => manifest,
     };
