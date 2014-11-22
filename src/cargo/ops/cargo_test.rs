@@ -26,7 +26,7 @@ pub fn run_tests(manifest_path: &Path,
         target_name.map_or(true, |target_name| target_name == test_name.as_slice())
     });
 
-    let cwd = os::getcwd();
+    let cwd = try!(os::getcwd());
     for &(_, ref exe) in tests_to_run {
         let to_display = match exe.path_relative_from(&cwd) {
             Some(path) => path,

@@ -46,8 +46,10 @@ pub struct TargetConfig {
 /// The second element of the tuple returned is the target triple that rustc
 /// is a host for.
 pub fn rustc_version() -> CargoResult<(String, String)> {
-    let output = try!(util::process("rustc").arg("-v").arg("verbose")
-                           .exec_with_output());
+    let output = try!(try!(util::process("rustc"))
+        .arg("-v")
+        .arg("verbose")
+        .exec_with_output());
     let output = try!(String::from_utf8(output.output).map_err(|_| {
         internal("rustc -v didn't return utf8 output")
     }));
@@ -585,7 +587,7 @@ fn build_base_args(cx: &Context,
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
     if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {
-        cmd = cmd.args(["-C", "lto"]);
+        cmd = cmd.args(&["-C", "lto"]);
     } else {
         // There are some restrictions with LTO and codegen-units, so we
         // only add codegen units when LTO is not used.
@@ -598,7 +600,7 @@ fn build_base_args(cx: &Context,
     if profile.get_debug() {
         cmd = cmd.arg("-g");
     } else {
-        cmd = cmd.args(["--cfg", "ndebug"]);
+        cmd = cmd.args(&["--cfg", "ndebug"]);
     }
 
     if profile.is_test() && profile.uses_test_harness() {

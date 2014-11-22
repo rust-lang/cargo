@@ -34,8 +34,10 @@ fn new_path() -> Vec<Path> {
 test!(list_commands_looks_at_path {
     let proj = project("list-non-overlapping");
     let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
-    let pr = process(cargo_dir().join("cargo")).cwd(proj.root())
-                    .env("HOME", Some(paths::home()));
+    let pr = process(cargo_dir().join("cargo"))
+        .unwrap()
+        .cwd(proj.root())
+        .env("HOME", Some(paths::home()));
 
     let mut path = new_path();
     path.push(proj.root().join("path-test"));
@@ -47,7 +49,7 @@ test!(list_commands_looks_at_path {
 })
 
 test!(find_closest_biuld_to_build {
-    let pr = process(cargo_dir().join("cargo"))
+    let pr = process(cargo_dir().join("cargo")).unwrap()
                     .arg("biuld").cwd(paths::root())
                     .env("HOME", Some(paths::home()));
 
@@ -62,7 +64,7 @@ Did you mean `build`?
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 test!(find_closest_dont_correct_nonsense {
-    let pr = process(cargo_dir().join("cargo"))
+    let pr = process(cargo_dir().join("cargo")).unwrap()
                     .arg("asdf").cwd(paths::root())
                     .env("HOME", Some(paths::home()));
 

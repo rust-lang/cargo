@@ -4,7 +4,7 @@ use std::c_str::CString;
 use std::io::process::{Command, ProcessOutput, InheritFd};
 use std::collections::HashMap;
 
-use util::{ProcessError, process_error};
+use util::{CargoResult, ProcessError, process_error};
 
 #[deriving(Clone,PartialEq)]
 pub struct ProcessBuilder {
@@ -119,11 +119,11 @@ impl ProcessBuilder {
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T) -> ProcessBuilder {
-    ProcessBuilder {
+pub fn process<T: ToCStr>(cmd: T) -> CargoResult<ProcessBuilder> {
+    Ok(ProcessBuilder {
         program: cmd.to_c_str(),
         args: Vec::new(),
-        cwd: os::getcwd(),
+        cwd: try!(os::getcwd()),
         env: HashMap::new(),
-    }
+    })
 }

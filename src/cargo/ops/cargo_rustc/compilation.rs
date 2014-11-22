@@ -69,8 +69,8 @@ impl Compilation {
         search_path.push(self.deps_output.clone());
         let search_path = try!(util::join_paths(search_path.as_slice(),
                                                 DynamicLibrary::envvar()));
-        let mut cmd = util::process(cmd).env(DynamicLibrary::envvar(),
-                                             Some(search_path.as_slice()));
+        let mut cmd = try!(util::process(cmd)).env(
+            DynamicLibrary::envvar(), Some(search_path.as_slice()));
         for (k, v) in self.extra_env.iter() {
             cmd = cmd.env(k.as_slice(), v.as_ref().map(|s| s.as_slice()));
         }

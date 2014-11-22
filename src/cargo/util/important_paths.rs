@@ -33,14 +33,15 @@ pub fn find_project_manifest(pwd: &Path, file: &str) -> CargoResult<Path> {
 
 /// Find the root Cargo.toml
 pub fn find_root_manifest_for_cwd(manifest_path: Option<String>) -> CliResult<Path> {
-    match manifest_path {
-        Some(path) => Ok(Path::new(path)),
-        None => match find_project_manifest(&os::getcwd(), "Cargo.toml") {
-            Ok(x) => Ok(x),
-            Err(_) => Err(CliError::new("Could not find Cargo.toml in this \
-                                         directory or any parent directory", 102))
-        }
-    }.map(|path| os::make_absolute(&path))
+    manifest_path.map(|path| Ok(Path::new(path))).unwrap_or_else(|| os::getcwd()
+        .map_err(|_| CliError::new("Couldn't determine the current working directory", 103))
+        .and_then(|cwd| find_project_manifest(&cwd, "Cargo.toml")
+            .map_err(|_| CliError::new("Could not find Cargo.toml in this \
+                    directory or any parent directory", 102))
+        )
+    )
+        .and_then(|path| os::make_absolute(&path).map_err(|_|
+            CliError::new("Could not determine the absolute path of the manifest", 104)))
 }
 
 /// Return the path to the `file` in `pwd`, if it exists.

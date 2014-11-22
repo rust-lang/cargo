@@ -104,7 +104,7 @@ pub fn publish(file: &str, line: &str) {
     let parent = repo.find_commit(parent).unwrap();
     repo.commit(Some("HEAD"), &sig, &sig,
                 "Another commit", &tree,
-                [&parent]).unwrap();
+                &[&parent]).unwrap();
 }
 
 pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str)], cksum: &str,

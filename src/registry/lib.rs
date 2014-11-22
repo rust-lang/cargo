@@ -145,7 +145,7 @@ impl Registry {
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.put(format!("/crates/{}/{}/unyank", krate, version),
-                                 []));
+                                 &[]));
         assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
         Ok(())
     }

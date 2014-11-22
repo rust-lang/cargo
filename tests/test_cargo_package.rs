@@ -4,7 +4,7 @@ use tar::Archive;
 use flate2::reader::GzDecoder;
 
 use support::{project, execs, cargo_dir, ResultTest};
-use support::{PACKAGING, WARNING, VERIFYING, COMPILING};
+use support::{PACKAGING, VERIFYING, COMPILING};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {

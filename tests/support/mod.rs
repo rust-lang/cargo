@@ -4,7 +4,7 @@ use std::io::process::{ProcessOutput};
 use std::io;
 use std::os;
 use std::path::{Path,BytesContainer};
-use std::str;
+use std::str::{mod, Str};
 use std::vec::Vec;
 use url::Url;
 use hamcrest as ham;
@@ -119,6 +119,7 @@ impl ProjectBuilder {
 
     pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {
         process(program)
+            .unwrap()
             .cwd(self.root())
             .env("HOME", Some(paths::home().display().to_string().as_slice()))
     }
@@ -296,7 +297,7 @@ impl Execs {
 
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
                  description: &str, extra: &[u8]) -> ham::MatchResult {
-        match expected.as_ref().map(|s| s.as_slice()) {
+        match expected.map(|s| Str::as_slice(s)) {
             None => ham::success(),
             Some(out) => {
                 let actual = match str::from_utf8(actual) {
@@ -516,4 +517,5 @@ pub static PACKAGING:   &'static str = "   Packaging";
 pub static DOWNLOADING: &'static str = " Downloading";
 pub static UPLOADING:   &'static str = "   Uploading";
 pub static VERIFYING:   &'static str = "   Verifying";
+#[allow(dead_code)]
 pub static WARNING:     &'static str = "     Warning";

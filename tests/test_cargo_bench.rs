@@ -32,7 +32,7 @@ test!(cargo_bench_simple {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        process(p.bin("foo")),
+        process(p.bin("foo")).unwrap(),
         execs().with_stdout("hello\n"));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
@@ -169,7 +169,7 @@ test!(cargo_bench_failing_test {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        process(p.bin("foo")),
+        process(p.bin("foo")).unwrap(),
         execs().with_stdout("hello\n"));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),

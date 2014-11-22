@@ -4,22 +4,22 @@ version = "0.0.1-pre"
 dependencies = [
  "curl 0.1.0 (git+https://github.com/carllerche/curl-rust)",
  "docopt 0.6.8 (git+https://github.com/docopt/docopt.rs)",
- "flate2 0.0.1 (git+https://github.com/alexcrichton/flate2-rs)",
+ "flate2 0.0.3 (git+https://github.com/alexcrichton/flate2-rs)",
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
- "glob 0.0.1 (git+https://github.com/rust-lang/glob)",
+ "glob 0.0.3 (git+https://github.com/rust-lang/glob)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git)",
  "registry 0.0.1-pre",
- "semver 0.1.0 (git+https://github.com/rust-lang/semver)",
- "tar 0.0.1 (git+https://github.com/alexcrichton/tar-rs)",
- "time 0.0.1 (git+https://github.com/rust-lang/time)",
- "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs)",
+ "semver 0.1.3 (git+https://github.com/rust-lang/semver)",
+ "tar 0.0.3 (git+https://github.com/alexcrichton/tar-rs)",
+ "time 0.0.3 (git+https://github.com/rust-lang/time)",
+ "toml 0.1.2 (git+https://github.com/alexcrichton/toml-rs)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
 
 [[package]]
 name = "curl"
 version = "0.1.0"
-source = "git+https://github.com/carllerche/curl-rust#e6e31d8d601bffdf3c9b31993e6ffe3bc8a99618"
+source = "git+https://github.com/carllerche/curl-rust#c1b96e146f6752353a1e84cca932c628e6bf73af"
 dependencies = [
  "curl-sys 0.1.0 (git+https://github.com/carllerche/curl-rust)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
@@ -28,7 +28,7 @@ dependencies = [
 [[package]]
 name = "curl-sys"
 version = "0.1.0"
-source = "git+https://github.com/carllerche/curl-rust#e6e31d8d601bffdf3c9b31993e6ffe3bc8a99618"
+source = "git+https://github.com/carllerche/curl-rust#c1b96e146f6752353a1e84cca932c628e6bf73af"
 dependencies = [
  "libz-sys 0.0.1 (git+https://github.com/alexcrichton/libz-sys)",
  "openssl-sys 0.0.1 (git+https://github.com/sfackler/rust-openssl)",
@@ -38,92 +38,35 @@ dependencies = [
 [[package]]
 name = "docopt"
 version = "0.6.8"
-source = "git+https://github.com/docopt/docopt.rs#911d25c7328c0fdc6499757b9dcb831472e3cc13"
-
-[[package]]
-name = "encoding"
-version = "0.2.1"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
-dependencies = [
- "encoding-index-japanese 1.0.20140915 (git+https://github.com/lifthrasiir/rust-encoding)",
- "encoding-index-korean 1.0.20140915 (git+https://github.com/lifthrasiir/rust-encoding)",
- "encoding-index-simpchinese 1.0.20140915 (git+https://github.com/lifthrasiir/rust-encoding)",
- "encoding-index-singlebyte 1.0.20140915 (git+https://github.com/lifthrasiir/rust-encoding)",
- "encoding-index-tradchinese 1.0.20140915 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
-
-[[package]]
-name = "encoding-index-japanese"
-version = "1.0.20140915"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
-dependencies = [
- "encoding_index_tests 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
-
-[[package]]
-name = "encoding-index-korean"
-version = "1.0.20140915"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
-dependencies = [
- "encoding_index_tests 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
-
-[[package]]
-name = "encoding-index-simpchinese"
-version = "1.0.20140915"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
-dependencies = [
- "encoding_index_tests 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
-
-[[package]]
-name = "encoding-index-singlebyte"
-version = "1.0.20140915"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
-dependencies = [
- "encoding_index_tests 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
-
-[[package]]
-name = "encoding-index-tradchinese"
-version = "1.0.20140915"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
-dependencies = [
- "encoding_index_tests 0.1.0 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
-
-[[package]]
-name = "encoding_index_tests"
-version = "0.1.0"
-source = "git+https://github.com/lifthrasiir/rust-encoding#6a5a95950572590485cbbf64509036b252339205"
+source = "git+https://github.com/docopt/docopt.rs#be2e3b6b91ab1912d79f1e840d9397dead6e6a6e"
 
 [[package]]
 name = "flate2"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/flate2-rs#f81e6dc401b2bf32c8274fa1b8327699fb9345c0"
+version = "0.0.3"
+source = "git+https://github.com/alexcrichton/flate2-rs#044e4dc2a766bc32fd5ae76bbe958be6e85be481"
 dependencies = [
- "miniz-sys 0.0.1 (git+https://github.com/alexcrichton/flate2-rs)",
+ "miniz-sys 0.0.2 (git+https://github.com/alexcrichton/flate2-rs)",
 ]
 
 [[package]]
 name = "gcc"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/gcc-rs#f25b3ba9c40303781189cc137fb98fffe5b56de7"
+version = "0.0.2"
+source = "git+https://github.com/alexcrichton/gcc-rs#903e8f8a2e3766ad3d514404d452dbaa1d3b2d79"
 
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#f188fc297b00261372bd3b4f7855cd8082e78cfc"
+source = "git+https://github.com/alexcrichton/git2-rs#d0d21ca14b4a410806b577b04c2d29f7f8e45f61"
 dependencies = [
  "libgit2-sys 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
- "time 0.0.1 (git+https://github.com/rust-lang/time)",
+ "time 0.0.3 (git+https://github.com/rust-lang/time)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
 
 [[package]]
 name = "glob"
-version = "0.0.1"
-source = "git+https://github.com/rust-lang/glob#5d7ad1dc2f10f8e23b93c025cf5b984d79cf7169"
+version = "0.0.3"
+source = "git+https://github.com/rust-lang/glob#9efe98bd82ad4932819888a94eb933ac618312f0"
 
 [[package]]
 name = "hamcrest"
@@ -133,7 +76,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#2b9bd6cdae5dcf08ac
 [[package]]
 name = "libgit2-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#f188fc297b00261372bd3b4f7855cd8082e78cfc"
+source = "git+https://github.com/alexcrichton/git2-rs#d0d21ca14b4a410806b577b04c2d29f7f8e45f61"
 dependencies = [
  "libssh2-sys 0.0.1 (git+https://github.com/alexcrichton/ssh2-rs)",
  "openssl-sys 0.0.1 (git+https://github.com/sfackler/rust-openssl)",
@@ -143,7 +86,7 @@ dependencies = [
 [[package]]
 name = "libssh2-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/ssh2-rs#6118d76bb383420be32160af866cbe5fc7141f42"
+source = "git+https://github.com/alexcrichton/ssh2-rs#922531da4c22abe7a216672314315d41769d7fb1"
 dependencies = [
  "libz-sys 0.0.1 (git+https://github.com/alexcrichton/libz-sys)",
  "openssl-sys 0.0.1 (git+https://github.com/sfackler/rust-openssl)",
@@ -160,16 +103,16 @@ dependencies = [
 
 [[package]]
 name = "miniz-sys"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/flate2-rs#f81e6dc401b2bf32c8274fa1b8327699fb9345c0"
+version = "0.0.2"
+source = "git+https://github.com/alexcrichton/flate2-rs#044e4dc2a766bc32fd5ae76bbe958be6e85be481"
 dependencies = [
- "gcc 0.0.1 (git+https://github.com/alexcrichton/gcc-rs)",
+ "gcc 0.0.2 (git+https://github.com/alexcrichton/gcc-rs)",
 ]
 
 [[package]]
 name = "openssl-sys"
 version = "0.0.1"
-source = "git+https://github.com/sfackler/rust-openssl#af5533d936558a77c2de8c5d2d572bb1f89dfada"
+source = "git+https://github.com/sfackler/rust-openssl#b084ddc7b0fe9c7816fef6e415a05db6ec43fb71"
 dependencies = [
  "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
 ]
@@ -188,32 +131,29 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "0.1.0"
-source = "git+https://github.com/rust-lang/semver#1672853e20ef4bde672b08d55de40941d907649a"
+version = "0.1.3"
+source = "git+https://github.com/rust-lang/semver#29212953f839337c672d185dde74e14b5dfb1f46"
 
 [[package]]
 name = "tar"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/tar-rs#868632ea0dd36200377af2c445d71d387cba1702"
+version = "0.0.3"
+source = "git+https://github.com/alexcrichton/tar-rs#55fa87d43eaf2a54c55ddd245e1c13859a06193c"
 
 [[package]]
 name = "time"
-version = "0.0.1"
-source = "git+https://github.com/rust-lang/time#3194d911a136a7bfa3218cdd5bd3379537de4133"
+version = "0.0.3"
+source = "git+https://github.com/rust-lang/time#533d3823dbe200aaa2a2599176a6b30579581232"
 dependencies = [
- "gcc 0.0.1 (git+https://github.com/alexcrichton/gcc-rs)",
+ "gcc 0.0.2 (git+https://github.com/alexcrichton/gcc-rs)",
 ]
 
 [[package]]
 name = "toml"
-version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#4bb575fdaf5fd88580abbac6fdb057ef76d32251"
+version = "0.1.2"
+source = "git+https://github.com/alexcrichton/toml-rs#1e35b001094b20d2452adff305e418591d4000fb"
 
 [[package]]
 name = "url"
 version = "0.1.0"
-source = "git+https://github.com/servo/rust-url#c3d32dae4c5641d034a848d42f88db48dd9feb96"
-dependencies = [
- "encoding 0.2.1 (git+https://github.com/lifthrasiir/rust-encoding)",
-]
+source = "git+https://github.com/servo/rust-url#a838a41263472de966f7ec8db758caa9cc4699a4"
 

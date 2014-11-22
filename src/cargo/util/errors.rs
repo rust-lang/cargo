@@ -1,6 +1,6 @@
 use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::io::IoError;
-use std::fmt::{mod, Show, Formatter, FormatError};
+use std::fmt::{mod, Show, Formatter};
 use std::str;
 use serialize::json;
 use semver;
@@ -107,13 +107,13 @@ impl CargoError for TomlError {
 
 from_error!(TomlError)
 
-impl CargoError for FormatError {
+impl CargoError for fmt::Error {
     fn description(&self) -> String {
         "formatting failed".to_string()
     }
 }
 
-from_error!(FormatError)
+from_error!(fmt::Error)
 
 impl CargoError for curl::ErrCode {
     fn description(&self) -> String { self.to_string() }

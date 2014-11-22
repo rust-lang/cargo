@@ -79,7 +79,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// specified as well as the exe suffix
     fn filename_parts(target: Option<&str>)
                       -> CargoResult<(Option<(String, String)>, String)> {
-        let process = util::process("rustc")
+        let process = try!(util::process("rustc"))
                            .arg("-")
                            .arg("--crate-name").arg("-")
                            .arg("--crate-type").arg("dylib")
