@@ -32,7 +32,7 @@ impl EncodableResolve {
                                    .map(|s| s.to_string());
                 assert!(tmp.insert(pkgid.clone(), precise).is_none(),
                         "a package was referenced twice in the lockfile");
-                g.add(try!(pkg.to_package_id(default)), []);
+                g.add(try!(pkg.to_package_id(default)), &[]);
                 Ok(())
             };
 

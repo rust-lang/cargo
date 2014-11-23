@@ -18,7 +18,7 @@ impl GitRepo {
 impl HgRepo {
     pub fn init(path: &Path) -> CargoResult<HgRepo> {
         let path_str = path.as_str().unwrap();
-        try!(process("hg").arg("init").arg(path_str).exec());
+        try!(try!(process("hg")).arg("init").arg(path_str).exec());
         return Ok(HgRepo)
     }
 }

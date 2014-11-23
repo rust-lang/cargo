@@ -112,7 +112,7 @@ test!(cargo_compile_simple_git_dep {
 
             name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
@@ -130,7 +130,7 @@ test!(cargo_compile_simple_git_dep {
     assert_that(&project.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(project.bin("foo")),
+      cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
 })
 
@@ -179,7 +179,7 @@ test!(cargo_compile_git_dep_branch {
 
             name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
@@ -197,7 +197,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(&project.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(project.bin("foo")),
+      cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
 })
 
@@ -249,7 +249,7 @@ test!(cargo_compile_git_dep_tag {
 
             name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
@@ -267,7 +267,7 @@ test!(cargo_compile_git_dep_tag {
     assert_that(&project.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(project.bin("foo")),
+      cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
 })
 
@@ -333,7 +333,7 @@ test!(cargo_compile_with_nested_paths {
             name = "parent"
         "#, git_project.url()))
         .file("src/parent.rs",
-              main_file(r#""{}", dep1::hello()"#, ["dep1"]).as_slice());
+              main_file(r#""{}", dep1::hello()"#, &["dep1"]).as_slice());
 
     p.cargo_process("build")
         .exec_with_output()
@@ -342,7 +342,7 @@ test!(cargo_compile_with_nested_paths {
     assert_that(&p.bin("parent"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("parent")),
+      cargo::util::process(p.bin("parent")).unwrap(),
       execs().with_stdout("hello world\n"));
 })
 
@@ -406,7 +406,7 @@ test!(cargo_compile_with_meta_package {
             name = "parent"
         "#, git_project.url(), git_project.url()))
         .file("src/parent.rs",
-              main_file(r#""{} {}", dep1::hello(), dep2::hello()"#, ["dep1", "dep2"]).as_slice());
+              main_file(r#""{} {}", dep1::hello(), dep2::hello()"#, &["dep1", "dep2"]).as_slice());
 
     p.cargo_process("build")
         .exec_with_output()
@@ -415,7 +415,7 @@ test!(cargo_compile_with_meta_package {
     assert_that(&p.bin("parent"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("parent")),
+      cargo::util::process(p.bin("parent")).unwrap(),
       execs().with_stdout("this is dep1 this is dep2\n"));
 })
 
@@ -438,13 +438,13 @@ test!(cargo_compile_with_short_ssh_git {
 
             name = "foo"
         "#, url))
-        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, ["dep1"]));
+        .file("src/foo.rs", main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     assert_that(project.cargo_process("build"),
         execs()
         .with_stdout("")
         .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
-                              invalid url `{}`: Relative URL without a base\n", url)));
+                              invalid url `{}`: relative URL without a base\n", url)));
 })
 
 test!(two_revs_same_deps {
@@ -552,7 +552,7 @@ test!(recompilation {
             name = "foo"
         "#, git_project.url()))
         .file("src/foo.rs",
-              main_file(r#""{}", bar::bar()"#, ["bar"]).as_slice());
+              main_file(r#""{}", bar::bar()"#, &["bar"]).as_slice());
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
@@ -1230,7 +1230,7 @@ test!(git_dep_build_cmd {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -1254,7 +1254,7 @@ test!(git_dep_build_cmd {
         execs().with_status(0));
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("0\n"));
 
     // Touching bar.rs.in should cause the `build` command to run again.
@@ -1266,7 +1266,7 @@ test!(git_dep_build_cmd {
         execs().with_status(0));
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("1\n"));
 })
 

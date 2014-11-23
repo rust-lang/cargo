@@ -83,7 +83,7 @@ test!(custom_build_env_vars {
 
                 let out = os::getenv("CARGO_MANIFEST_DIR").unwrap();
                 let p1 = Path::new(out);
-                let p2 = os::make_absolute(&Path::new(file!()).dir_path().dir_path());
+                let p2 = os::make_absolute(&Path::new(file!()).dir_path().dir_path()).unwrap();
                 assert!(p1 == p2, "{{}} != {{}}", p1.display(), p2.display());
 
                 let opt = os::getenv("OPT_LEVEL").unwrap();

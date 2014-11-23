@@ -26,8 +26,9 @@ Options:
 
 pub fn execute(args: ConfigForKeyFlags,
                _: &mut MultiShell) -> CliResult<Option<ConfigOut>> {
-    let value = try!(config::get_config(os::getcwd(),
-                                        args.flag_key.as_slice()).map_err(|_| {
+    let cwd = try!(os::getcwd().map_err(|_|
+        CliError::new("Couldn't determine the current working directory", 1)));
+    let value = try!(config::get_config(cwd, args.flag_key.as_slice()).map_err(|_| {
         CliError::new("Couldn't load configuration",  1)
     }));
 

@@ -41,13 +41,13 @@ pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
     let pkg = {
         let mut source = pkgid.get_source_id().load(&mut cfg);
         try!(source.update());
-        (try!(source.get([pkgid.clone()]))).into_iter().next().unwrap()
+        (try!(source.get(&[pkgid.clone()]))).into_iter().next().unwrap()
     };
 
     // Create a compilation context to have access to information like target
     // filenames and such
     let srcs = SourceMap::new();
-    let pkgs = PackageSet::new([]);
+    let pkgs = PackageSet::new(&[]);
     let cx = try!(Context::new("compile", &resolve, &srcs, &pkgs, &mut cfg,
                                Layout::at(root.get_absolute_target_dir()),
                                None, &pkg, Default::default()));

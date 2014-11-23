@@ -29,7 +29,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -81,7 +81,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 
     println!("cleaning");
@@ -119,7 +119,7 @@ test!(cargo_compile_with_root_dev_deps {
             name = "foo"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice());
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice());
     let p2 = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -157,7 +157,7 @@ test!(cargo_compile_with_root_dev_deps_with_testing {
             name = "foo"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice());
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice());
     let p2 = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -205,7 +205,7 @@ test!(cargo_compile_with_transitive_dev_deps {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -236,7 +236,7 @@ test!(cargo_compile_with_transitive_dev_deps {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("zoidberg\n"));
 })
 
@@ -457,7 +457,7 @@ test!(nested_deps_recompile {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("src/bar/Cargo.toml", r#"
             [project]
 
@@ -648,7 +648,7 @@ test!(path_dep_build_cmd {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -677,7 +677,7 @@ test!(path_dep_build_cmd {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("0\n"));
 
     // Touching bar.rs.in should cause the `build` command to run again.
@@ -693,7 +693,7 @@ test!(path_dep_build_cmd {
                                     COMPILING, p.url())));
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("1\n"));
 })
 

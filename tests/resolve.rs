@@ -125,7 +125,7 @@ fn test_resolving_empty_dependency_list() {
     let res = resolve(pkg_id("root"), Vec::new(),
                       &mut registry(vec!())).unwrap();
 
-    assert_that(&res, equal_to(&names(["root"])));
+    assert_that(&res, equal_to(&names(&["root"])));
 }
 
 #[test]
@@ -133,7 +133,7 @@ fn test_resolving_only_package() {
     let mut reg = registry(vec!(pkg("foo")));
     let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
 
-    assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
+    assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
 }
 
 #[test]
@@ -141,7 +141,7 @@ fn test_resolving_one_dep() {
     let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
     let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
 
-    assert_that(&res.unwrap(), contains(names(["root", "foo"])).exactly());
+    assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn test_resolving_multiple_deps() {
     let res = resolve(pkg_id("root"), vec![dep("foo"), dep("baz")],
                       &mut reg).unwrap();
 
-    assert_that(&res, contains(names(["root", "foo", "baz"])).exactly());
+    assert_that(&res, contains(names(&["root", "foo", "baz"])).exactly());
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn test_resolving_transitive_deps() {
     let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => ["foo"])));
     let res = resolve(pkg_id("root"), vec![dep("bar")], &mut reg).unwrap();
 
-    assert_that(&res, contains(names(["root", "foo", "bar"])));
+    assert_that(&res, contains(names(&["root", "foo", "bar"])));
 }
 
 #[test]
@@ -167,7 +167,7 @@ fn test_resolving_common_transitive_deps() {
     let res = resolve(pkg_id("root"), vec![dep("foo"), dep("bar")],
                       &mut reg).unwrap();
 
-    assert_that(&res, contains(names(["root", "foo", "bar"])));
+    assert_that(&res, contains(names(&["root", "foo", "bar"])));
 }
 
 #[test]
@@ -181,8 +181,8 @@ fn test_resolving_with_same_name() {
                            dep_loc("bar", "http://second.example.com")],
                       &mut reg);
 
-    let mut names = loc_names([("foo", "http://first.example.com"),
-                               ("bar", "http://second.example.com")]);
+    let mut names = loc_names(&[("foo", "http://first.example.com"),
+                                ("bar", "http://second.example.com")]);
 
     names.push(pkg_id("root"));
 
@@ -202,7 +202,7 @@ fn test_resolving_with_dev_deps() {
                       vec![dep("foo"), dep("baz").kind(Development)],
                       &mut reg).unwrap();
 
-    assert_that(&res, contains(names(["root", "foo", "bar", "baz"])));
+    assert_that(&res, contains(names(&["root", "foo", "bar", "baz"])));
 }
 
 #[test]
@@ -214,8 +214,8 @@ fn resolving_with_many_versions() {
 
     let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg).unwrap();
 
-    assert_that(&res, contains(names([("root", "1.0.0"),
-                                      ("foo", "1.0.2")])));
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.2")])));
 }
 
 #[test]
@@ -228,8 +228,8 @@ fn resolving_with_specific_version() {
     let res = resolve(pkg_id("root"), vec![dep_req("foo", "=1.0.1")],
                       &mut reg).unwrap();
 
-    assert_that(&res, contains(names([("root", "1.0.0"),
-                                      ("foo", "1.0.1")])));
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.1")])));
 }
 
 #[test]
@@ -259,9 +259,9 @@ fn resolving_backtrack() {
         dep_req("foo", "^1"),
     ], &mut reg).unwrap();
 
-    assert_that(&res, contains(names([("root", "1.0.0"),
-                                      ("foo", "1.0.1"),
-                                      ("baz", "1.0.0")])));
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.1"),
+                                       ("baz", "1.0.0")])));
 }
 
 #[test]
@@ -283,16 +283,16 @@ fn resolving_allows_multiple_compatible_versions() {
         dep("bar"),
     ], &mut reg).unwrap();
 
-    assert_that(&res, contains(names([("root", "1.0.0"),
-                                      ("foo", "1.0.0"),
-                                      ("foo", "2.0.0"),
-                                      ("foo", "0.1.0"),
-                                      ("foo", "0.2.0"),
-                                      ("d1", "1.0.0"),
-                                      ("d2", "1.0.0"),
-                                      ("d3", "1.0.0"),
-                                      ("d4", "1.0.0"),
-                                      ("bar", "1.0.0")])));
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("foo", "2.0.0"),
+                                       ("foo", "0.1.0"),
+                                       ("foo", "0.2.0"),
+                                       ("d1", "1.0.0"),
+                                       ("d2", "1.0.0"),
+                                       ("d3", "1.0.0"),
+                                       ("d4", "1.0.0"),
+                                       ("bar", "1.0.0")])));
 }
 
 #[test]
@@ -316,10 +316,10 @@ fn resolving_with_deep_backtracking() {
         dep_req("foo", "1"),
     ], &mut reg).unwrap();
 
-    assert_that(&res, contains(names([("root", "1.0.0"),
-                                      ("foo", "1.0.0"),
-                                      ("bar", "2.0.0"),
-                                      ("baz", "1.0.1")])));
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "2.0.0"),
+                                       ("baz", "1.0.1")])));
 }
 
 #[test]

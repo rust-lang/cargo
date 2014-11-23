@@ -40,7 +40,7 @@ pub enum Method<'a> {
 impl Resolve {
     fn new(root: PackageId) -> Resolve {
         let mut g = Graph::new();
-        g.add(root.clone(), []);
+        g.add(root.clone(), &[]);
         Resolve { graph: g, root: root, features: HashMap::new(), metadata: None }
     }
 
@@ -251,7 +251,7 @@ fn activate_deps<'a, R: Registry>(cx: Context,
                     None => features.len() == 0,
                 }
             } else {
-                my_cx.resolve.graph.add(candidate.get_package_id().clone(), []);
+                my_cx.resolve.graph.add(candidate.get_package_id().clone(), &[]);
                 prev.push(candidate.clone());
                 false
             }
@@ -374,11 +374,10 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // features that correspond to optional dependencies
     for dep in deps {
         // weed out optional dependencies, but not those required
-        if dep.is_optional() && !feature_deps.contains_key_equiv(dep.get_name()) {
+        if dep.is_optional() && !feature_deps.contains_key(dep.get_name()) {
             continue
         }
-        let mut base = feature_deps.pop_equiv(dep.get_name())
-                                   .unwrap_or(Vec::new());
+        let mut base = feature_deps.remove(dep.get_name()).unwrap_or(vec![]);
         for feature in dep.get_features().iter() {
             base.push(feature.clone());
             if feature.as_slice().contains("/") {
@@ -451,8 +450,8 @@ fn build_features(s: &Summary, method: Method)
     }
     match method {
         Method::Everything | Method::Required(_, _, true, _) => {
-            if s.get_features().find_equiv("default").is_some() &&
-               !visited.contains_equiv("default") {
+            if s.get_features().get("default").is_some() &&
+               !visited.contains("default") {
                 try!(add_feature(s, "default", &mut deps, &mut used,
                                  &mut visited));
             }
@@ -490,7 +489,7 @@ fn build_features(s: &Summary, method: Method)
                                               feat)))
                 }
                 used.insert(feat.to_string());
-                match s.get_features().find_equiv(feat) {
+                match s.get_features().get(feat) {
                     Some(recursive) => {
                         for f in recursive.iter() {
                             try!(add_feature(s, f.as_slice(), deps, used,

@@ -1,7 +1,7 @@
 use std::io::File;
 
 use serialize::{Encodable, Decodable};
-use toml::{mod, Encoder};
+use toml::{mod, Encoder, Value};
 
 use core::{Resolve, resolver, Package, SourceId};
 use util::CargoResult;
@@ -76,12 +76,12 @@ fn emit_package(dep: &toml::TomlTable, out: &mut String) {
     }
 
     if let Some(ref s) = dep.get(&"dependencies".to_string()) {
-        let slice = s.as_slice().unwrap();
+        let slice = Value::as_slice(*s).unwrap();
 
         if !slice.is_empty() {
             out.push_str("dependencies = [\n");
 
-            for child in s.as_slice().unwrap().iter() {
+            for child in slice.iter() {
                 out.push_str(format!(" {},\n", child).as_slice());
             }
 

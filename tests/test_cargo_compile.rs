@@ -6,7 +6,6 @@ use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
 use hamcrest::{assert_that, existing_file};
 use support::paths::PathExt;
-use cargo;
 use cargo::util::process;
 
 fn setup() {
@@ -15,20 +14,20 @@ fn setup() {
 test!(cargo_compile_simple {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice());
+        .file("src/foo.rs", main_file(r#""i am foo""#, &[]).as_slice());
 
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("i am foo\n"));
 })
 
 test!(cargo_compile_manifest_path {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice());
+        .file("src/foo.rs", main_file(r#""i am foo""#, &[]).as_slice());
 
     assert_that(p.cargo_process("build")
                  .arg("--manifest-path").arg("foo/Cargo.toml")
@@ -187,7 +186,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -222,7 +221,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 })
 
@@ -242,7 +241,7 @@ test!(cargo_compile_with_nested_deps_inferred {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -280,7 +279,7 @@ test!(cargo_compile_with_nested_deps_inferred {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 })
 
@@ -300,7 +299,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
             name = "foo"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -338,7 +337,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 })
 
@@ -359,7 +358,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -405,7 +404,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 })
 
@@ -427,7 +426,7 @@ test!(cargo_compile_with_nested_deps_longhand {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -472,7 +471,7 @@ test!(cargo_compile_with_nested_deps_longhand {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 })
 
@@ -495,9 +494,9 @@ test!(cargo_compile_with_dep_name_mismatch {
 
             path = "bar"
         "#)
-        .file("src/foo.rs", main_file(r#""i am foo""#, ["bar"]).as_slice())
+        .file("src/foo.rs", main_file(r#""i am foo""#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", basic_bin_manifest("bar").as_slice())
-        .file("bar/src/bar.rs", main_file(r#""i am bar""#, []).as_slice());
+        .file("bar/src/bar.rs", main_file(r#""i am bar""#, &[]).as_slice());
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!(
@@ -548,7 +547,7 @@ test!(crate_version_env_vars {
     assert_that(p.cargo_process("build"), execs().with_status(0));
 
     assert_that(
-      process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout(format!("0-5-1 @ alpha.1 in {}\n",
                                   p.root().display()).as_slice()));
 
@@ -704,14 +703,14 @@ test!(self_dependency {
 test!(ignore_broken_symlinks {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", main_file(r#""i am foo""#, []).as_slice())
+        .file("src/foo.rs", main_file(r#""i am foo""#, &[]).as_slice())
         .symlink("Notafile", "bar");
 
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("i am foo\n"));
 })
 
@@ -918,9 +917,9 @@ test!(explicit_examples {
         "#);
 
     assert_that(p.cargo_process("test"), execs());
-    assert_that(process(p.bin("examples/hello")),
+    assert_that(process(p.bin("examples/hello")).unwrap(),
                         execs().with_stdout("Hello, World!\n"));
-    assert_that(process(p.bin("examples/goodbye")),
+    assert_that(process(p.bin("examples/goodbye")).unwrap(),
                         execs().with_stdout("Goodbye, World!\n"));
 })
 
@@ -947,9 +946,9 @@ test!(implicit_examples {
         "#);
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
-    assert_that(process(p.bin("examples/hello")),
+    assert_that(process(p.bin("examples/hello")).unwrap(),
                 execs().with_stdout("Hello, World!\n"));
-    assert_that(process(p.bin("examples/goodbye")),
+    assert_that(process(p.bin("examples/goodbye")).unwrap(),
                 execs().with_stdout("Goodbye, World!\n"));
 })
 
@@ -967,7 +966,7 @@ test!(standard_build_no_ndebug {
         "#);
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(process(p.bin("foo")), execs().with_stdout("slow\n"));
+    assert_that(process(p.bin("foo")).unwrap(), execs().with_stdout("slow\n"));
 })
 
 test!(release_build_ndebug {
@@ -985,7 +984,7 @@ test!(release_build_ndebug {
 
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
-    assert_that(process(p.bin("release/foo")), execs().with_stdout("fast\n"));
+    assert_that(process(p.bin("release/foo")).unwrap(), execs().with_stdout("fast\n"));
 })
 
 test!(inferred_main_bin {
@@ -1001,7 +1000,7 @@ test!(inferred_main_bin {
         "#);
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(process(p.bin("foo")), execs().with_status(0));
+    assert_that(process(p.bin("foo")).unwrap(), execs().with_status(0));
 })
 
 test!(deletion_causes_failure {
@@ -1051,7 +1050,7 @@ test!(bad_cargo_toml_in_target_dir {
         .file("target/Cargo.toml", "bad-toml");
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(process(p.bin("foo")), execs().with_status(0));
+    assert_that(process(p.bin("foo")).unwrap(), execs().with_status(0));
 })
 
 test!(lib_with_standard_name {
@@ -1370,7 +1369,7 @@ test!(cargo_platform_specific_dependency {
             path = "bar"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -1391,7 +1390,7 @@ test!(cargo_platform_specific_dependency {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs().with_stdout("test passed\n"));
 })
 
@@ -1411,7 +1410,7 @@ test!(cargo_platform_specific_dependency {
             path = "bar"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, ["bar"]).as_slice())
+              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -1464,7 +1463,7 @@ test!(cargo_platform_specific_dependency_wrong_platform {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      cargo::util::process(p.bin("foo")),
+      process(p.bin("foo")).unwrap(),
       execs());
 
     let lockfile = p.root().join("Cargo.lock");
