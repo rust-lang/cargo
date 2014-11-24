@@ -15,6 +15,7 @@ use sources::{PathSource, RegistrySource};
 use util::config;
 use util::{CargoResult, human, internal, ChainError, ToUrl};
 use util::config::{Config, ConfigValue, Location};
+use util::important_paths::find_root_manifest_for_cwd;
 
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -228,12 +229,12 @@ pub struct OwnersOptions {
     pub list: bool,
 }
 
-pub fn modify_owners(manifest_path: &Path,
-                     shell: &mut MultiShell,
+pub fn modify_owners(shell: &mut MultiShell,
                      opts: &OwnersOptions) -> CargoResult<()> {
     let name = match opts.krate {
         Some(ref name) => name.clone(),
         None => {
+            let manifest_path = try!(find_root_manifest_for_cwd(None));
             let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
             try!(src.update());
             let pkg = try!(src.get_root_package());
