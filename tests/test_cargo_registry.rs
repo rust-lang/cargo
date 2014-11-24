@@ -65,7 +65,7 @@ test!(deps {
         .file("src/main.rs", "fn main() {}");
 
     r::mock_pkg("baz", "0.0.1", &[]);
-    r::mock_pkg("bar", "0.0.1", &[("baz", "*")]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*", "normal")]);
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -269,7 +269,7 @@ test!(lockfile_locks_transitively {
     p.build();
 
     r::mock_pkg("baz", "0.0.1", &[]);
-    r::mock_pkg("bar", "0.0.1", &[("baz", "*")]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*", "normal")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -284,7 +284,7 @@ test!(lockfile_locks_transitively {
 
     p.root().move_into_the_past().unwrap();
     r::mock_pkg("baz", "0.0.2", &[]);
-    r::mock_pkg("bar", "0.0.2", &[("baz", "*")]);
+    r::mock_pkg("bar", "0.0.2", &[("baz", "*", "normal")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
@@ -306,8 +306,8 @@ test!(yanks_are_not_used {
 
     r::mock_pkg("baz", "0.0.1", &[]);
     r::mock_pkg_yank("baz", "0.0.2", &[], true);
-    r::mock_pkg("bar", "0.0.1", &[("baz", "*")]);
-    r::mock_pkg_yank("bar", "0.0.2", &[("baz", "*")], true);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*", "normal")]);
+    r::mock_pkg_yank("bar", "0.0.2", &[("baz", "*", "normal")], true);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
@@ -337,7 +337,7 @@ test!(relying_on_a_yank_is_bad {
 
     r::mock_pkg("baz", "0.0.1", &[]);
     r::mock_pkg_yank("baz", "0.0.2", &[], true);
-    r::mock_pkg("bar", "0.0.1", &[("baz", "=0.0.2")]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "=0.0.2", "normal")]);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(101).with_stderr("\
@@ -440,5 +440,32 @@ test!(update_lockfile {
 {compiling} bar v0.0.2 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+})
+
+test!(dev_dependency_not_used {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("baz", "0.0.1", &[]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "*", "dev")]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} [..] v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 })

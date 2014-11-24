@@ -66,6 +66,7 @@ pub struct NewCrateDependency {
     pub features: Vec<String>,
     pub version_req: String,
     pub target: Option<String>,
+    pub kind: String,
 }
 
 #[deriving(Decodable)]
