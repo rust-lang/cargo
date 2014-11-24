@@ -1563,3 +1563,72 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
     assert!(!lockfile.as_slice().contains(rev1.to_string().as_slice()),
             "{} in {}", rev1, lockfile);
 })
+
+test!(switch_sources {
+    let a1 = git_repo("a1", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+    }).assert();
+    let a2 = git_repo("a2", |project| {
+        project.file("Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.5.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+    }).assert();
+
+    let p = project("project")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "project"
+            version = "0.5.0"
+            authors = []
+            [dependencies.b]
+            path = "b"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("b/Cargo.toml", format!(r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            [dependencies.a]
+            git = '{}'
+        "#, a1.url()).as_slice())
+        .file("b/src/lib.rs", "fn main() {}");
+
+    p.build();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} git repository `file://[..]a1`
+{compiling} a v0.5.0 ([..]a1#[..]
+{compiling} b v0.5.0 ([..])
+{compiling} project v0.5.0 ([..])
+", updating = UPDATING, compiling = COMPILING).as_slice()));
+
+    File::create(&p.root().join("b/Cargo.toml")).write_str(format!(r#"
+        [project]
+        name = "b"
+        version = "0.5.0"
+        authors = []
+        [dependencies.a]
+        git = '{}'
+    "#, a2.url()).as_slice()).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} git repository `file://[..]a2`
+{compiling} a v0.5.1 ([..]a2#[..]
+{compiling} b v0.5.0 ([..])
+{compiling} project v0.5.0 ([..])
+", updating = UPDATING, compiling = COMPILING).as_slice()));
+})
