@@ -82,7 +82,8 @@ keywords = ["...", "..."]
 
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
-# licenses. Multiple licenses can be separated with a `/`
+# license identifiers from http://spdx.org/licenses/. Multiple licenses can 
+# be separated with a `/`
 license = "..."
 ```
 
