@@ -1470,3 +1470,29 @@ test!(cargo_platform_specific_dependency_wrong_platform {
     let lockfile = File::open(&lockfile).read_to_string().assert();
     assert!(lockfile.as_slice().contains("bar"))
 })
+
+test!(example_bin_same_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/foo.rs", "fn main() {}");
+
+    p.cargo_process("test").arg("--no-run")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("examples/foo"), existing_file());
+
+    p.process(cargo_dir().join("cargo")).arg("test").arg("--no-run")
+        .exec_with_output()
+        .assert();
+
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("examples/foo"), existing_file());
+})

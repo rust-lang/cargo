@@ -82,16 +82,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     };
     let is_rustc_fresh = try!(is_fresh(&loc, rustc_fingerprint.as_slice()));
 
-    let root = {
-        let layout = cx.layout(pkg, kind);
-        if target.get_profile().is_custom_build() {
-            layout.build(pkg)
-        } else if target.is_example() {
-            layout.examples().clone()
-        } else {
-            layout.root().clone()
-        }
-    };
+    let root = cx.out_dir(pkg, kind, target);
     if !target.get_profile().is_doc() {
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
