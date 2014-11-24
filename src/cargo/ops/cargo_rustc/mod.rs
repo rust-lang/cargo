@@ -148,8 +148,18 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
 
-    let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg).display().to_string();
+    let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
+                    .display().to_string();
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), Some(out_dir));
+    for (&(ref pkg, _), output) in cx.build_state.outputs.lock().iter() {
+        let any_dylib = output.library_links.iter().any(|l| {
+            !l.ends_with(":static") && !l.ends_with(":framework")
+        });
+        if !any_dylib { continue }
+        for dir in output.library_paths.iter() {
+            cx.compilation.native_dirs.insert(pkg.clone(), dir.clone());
+        }
+    }
     Ok(cx.compilation)
 }
 
