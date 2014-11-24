@@ -74,6 +74,7 @@ macro_rules! each_subcommand( ($macro:ident) => ({
     $macro!(publish)
     $macro!(read_manifest)
     $macro!(run)
+    $macro!(search)
     $macro!(test)
     $macro!(update)
     $macro!(verify_project)

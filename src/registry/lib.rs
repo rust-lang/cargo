@@ -13,11 +13,17 @@ use serialize::json;
 
 pub struct Registry {
     host: String,
-    token: String,
+    token: Option<String>,
     handle: http::Handle,
 }
 
 pub type Result<T> = result::Result<T, Error>;
+
+#[deriving(PartialEq)]
+pub enum Auth {
+    Authorized,
+    Unauthorized
+}
 
 pub enum Error {
     Curl(curl::ErrCode),
@@ -25,7 +31,15 @@ pub enum Error {
     NonUtf8Body,
     Api(Vec<String>),
     Unauthorized,
+    TokenMissing,
     Io(io::IoError),
+}
+
+#[deriving(Decodable)]
+pub struct Crate {
+    pub name: String,
+    pub description: Option<String>,
+    pub max_version: String
 }
 
 #[deriving(Encodable)]
@@ -68,13 +82,14 @@ pub struct User {
 #[deriving(Decodable)] struct ApiError { detail: String }
 #[deriving(Encodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
 #[deriving(Decodable)] struct Users { users: Vec<User> }
+#[deriving(Decodable)] struct Crates { crates: Vec<Crate> }
 
 impl Registry {
-    pub fn new(host: String, token: String) -> Registry {
+    pub fn new(host: String, token: Option<String>) -> Registry {
         Registry::new_handle(host, token, http::Handle::new())
     }
 
-    pub fn new_handle(host: String, token: String,
+    pub fn new_handle(host: String, token: Option<String>,
                       handle: http::Handle) -> Registry {
         Registry {
             host: host,
@@ -126,14 +141,21 @@ impl Registry {
                                                box tarball as Box<Reader>].into_iter());
 
         let url = format!("{}/api/v1/crates/new", self.host);
-        let response = handle(self.handle.put(url, &mut body)
-                                         .content_length(size)
-                                         .header("Authorization",
-                                                 self.token.as_slice())
-                                         .header("Accept", "application/json")
-                                         .exec());
+
+        let token = try!(self.token.as_ref().ok_or(Error::TokenMissing)).as_slice();
+        let request = self.handle.put(url, &mut body)
+            .content_length(size)
+            .header("Accept", "application/json")
+            .header("Authorization", token);
+        let response = handle(request.exec());
         let _body = try!(response);
         Ok(())
+    }
+
+    pub fn search(&mut self, query: &str) -> Result<Vec<Crate>> {
+        let body = try!(self.req(format!("/crates?q={}", query), None, Get, Auth::Unauthorized));
+
+        Ok(json::decode::<Crates>(body.as_slice()).unwrap().crates)
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
@@ -151,24 +173,28 @@ impl Registry {
     }
 
     fn put(&mut self, path: String, b: &[u8]) -> Result<String> {
-        self.req(path, Some(b), Put)
+        self.req(path, Some(b), Put, Auth::Authorized)
     }
 
     fn get(&mut self, path: String) -> Result<String> {
-        self.req(path, None, Get)
+        self.req(path, None, Get, Auth::Authorized)
     }
 
     fn delete(&mut self, path: String, b: Option<&[u8]>) -> Result<String> {
-        self.req(path, b, Delete)
+        self.req(path, b, Delete, Auth::Authorized)
     }
 
     fn req(&mut self, path: String, body: Option<&[u8]>,
-           method: Method) -> Result<String> {
+           method: Method, authorized: Auth) -> Result<String> {
         let mut req = Request::new(&mut self.handle, method)
                               .uri(format!("{}/api/v1{}", self.host, path))
-                              .header("Authorization", self.token.as_slice())
                               .header("Accept", "application/json")
                               .content_type("application/json");
+
+        let token = try!(self.token.as_ref().ok_or(Error::TokenMissing)).as_slice();
+        if authorized == Auth::Authorized {
+            req = req.header("Authorization", token);
+        }
         match body {
             Some(b) => req = req.body(b),
             None => {}
@@ -213,6 +239,7 @@ impl fmt::Show for Error {
                 write!(f, "api errors: {}", errs.connect(", "))
             }
             Error::Unauthorized => write!(f, "unauthorized API access"),
+            Error::TokenMissing => write!(f, "no upload token found, please run `cargo login`"),
             Error::Io(ref e) => write!(f, "io error: {}", e),
         }
     }
