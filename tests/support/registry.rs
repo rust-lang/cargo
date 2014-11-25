@@ -18,7 +18,7 @@ pub fn dl_path() -> Path { paths::root().join("dl") }
 pub fn dl_url() -> Url { Url::from_file_path(&dl_path()).unwrap() }
 
 pub fn init() {
-    let config = paths::root().join(".cargo/config");
+    let config = paths::home().join(".cargo/config");
     fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
     File::create(&config).write_str(format!(r#"
         [registry]

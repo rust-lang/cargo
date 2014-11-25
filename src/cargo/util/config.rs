@@ -307,6 +307,21 @@ fn walk_tree(pwd: &Path,
         if !current.pop() { break; }
     }
 
+    // Once we're done, also be sure to walk the home directory even if it's not
+    // in our history to be sure we pick up that standard location for
+    // information.
+    let home = try!(os::homedir().require(|| {
+        human("Cargo couldn't find your home directory. \
+              This probably means that $HOME was not set.")
+    }));
+    if !home.is_ancestor_of(pwd) {
+        let config = home.join(".cargo/config");
+        if config.exists() {
+            let file = try!(File::open(&config));
+            try!(walk(file));
+        }
+    }
+
     Ok(())
 }
 
