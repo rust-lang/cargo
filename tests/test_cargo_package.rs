@@ -130,3 +130,28 @@ test!(metadata_warning {
         dir = p.url()).as_slice()));
 
 })
+
+test!(package_verification {
+    let p = project("all")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+    assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir}[..])
+",
+        packaging = PACKAGING,
+        verifying = VERIFYING,
+        compiling = COMPILING,
+        dir = p.url()).as_slice()));
+})
