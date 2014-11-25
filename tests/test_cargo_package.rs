@@ -80,8 +80,9 @@ test!(metadata_warning {
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice())
-                .with_stderr("Warning: manifest has no description or license. See \
-                              http://doc.crates.io/manifest.html#package-metadata for more info."));
+                .with_stderr("\
+warning: manifest has no description, license or license-file. See \
+http://doc.crates.io/manifest.html#package-metadata for more info."));
 
     let p = project("one")
         .file("Cargo.toml", r#"
@@ -104,8 +105,9 @@ test!(metadata_warning {
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice())
-                .with_stderr("Warning: manifest has no description. See \
-                              http://doc.crates.io/manifest.html#package-metadata for more info."));
+                .with_stderr("\
+warning: manifest has no description. See \
+http://doc.crates.io/manifest.html#package-metadata for more info."));
 
     let p = project("both")
         .file("Cargo.toml", format!(r#"
