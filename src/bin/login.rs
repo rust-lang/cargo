@@ -1,9 +1,9 @@
 use std::io;
 
 use cargo::ops;
-use cargo::core::{MultiShell};
+use cargo::core::{MultiShell, SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 
 #[deriving(Decodable)]
 struct Options {
@@ -30,12 +30,20 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let default = RegistrySource::url().unwrap().to_string();
-            let host = options.flag_host.unwrap_or(default);
-            println!("please visit {}/me and paste the API Token below", host);
-            try!(io::stdin().read_line().map_err(|e| {
-                CliError::from_boxed(box e, 101)
-            }))
+            let err = (|| {
+                let config = try!(Config::new(shell, None, None));
+                let src = try!(SourceId::for_central());
+                let mut src = RegistrySource::new(&src, &config);
+                try!(src.update());
+                let config = try!(src.config());
+                let host = options.flag_host.clone().unwrap_or(config.api);
+                println!("please visit {}me and paste the API Token below",
+                         host);
+                let line = try!(io::stdin().read_line());
+                Ok(line)
+            })();
+
+            try!(err.map_err(|e| CliError::from_boxed(e, 101)))
         }
     };
 

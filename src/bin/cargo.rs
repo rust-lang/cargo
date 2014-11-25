@@ -3,8 +3,7 @@
 
 extern crate serialize;
 #[phase(plugin, link)] extern crate log;
-
-extern crate cargo;
+#[phase(plugin, link)] extern crate cargo;
 
 use std::collections::TreeSet;
 use std::os;
