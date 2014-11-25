@@ -2,9 +2,10 @@ use std::io::{File, MemReader};
 
 use tar::Archive;
 use flate2::reader::GzDecoder;
+use cargo::util::process;
 
-use support::{project, execs, cargo_dir, ResultTest};
-use support::{PACKAGING, VERIFYING, COMPILING};
+use support::{project, execs, cargo_dir, ResultTest, paths, git};
+use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -128,7 +129,41 @@ test!(metadata_warning {
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice()));
+})
 
+test!(package_verbose {
+    let root = paths::root().join("all");
+    let p = git::repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    p.build();
+    let cargo = process(cargo_dir().join("cargo")).unwrap()
+                                                  .cwd(root)
+                                                  .env("HOME", Some(paths::home()));
+    assert_that(cargo.clone().arg("build"), execs().with_status(0));
+    assert_that(cargo.arg("package").arg("-v")
+                                                    .arg("--no-verify"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ([..])
+{archiving} [..]
+{archiving} [..]
+",
+        packaging = PACKAGING,
+        archiving = ARCHIVING).as_slice()));
 })
 
 test!(package_verification {

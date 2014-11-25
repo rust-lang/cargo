@@ -96,7 +96,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                 (d.get_name(), d)
             }).collect::<HashMap<_, _>>();
             summary.map_dependencies(|d| {
-                match map.find_equiv(d.get_name()) {
+                match map.get(d.get_name()) {
                     Some(&lock) if d.matches_id(lock) => d.lock_to(lock),
                     _ => d,
                 }

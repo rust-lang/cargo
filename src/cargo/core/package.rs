@@ -1,4 +1,5 @@
 use std::fmt::{mod, Show, Formatter};
+use std::hash;
 use std::slice;
 use semver::Version;
 
@@ -125,6 +126,14 @@ impl Show for Package {
 impl PartialEq for Package {
     fn eq(&self, other: &Package) -> bool {
         self.get_package_id() == other.get_package_id()
+    }
+}
+
+impl Eq for Package {}
+
+impl hash::Hash for Package {
+    fn hash(&self, into: &mut hash::sip::SipState) {
+        self.get_package_id().hash(into)
     }
 }
 

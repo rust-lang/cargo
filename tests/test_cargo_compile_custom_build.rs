@@ -241,8 +241,8 @@ test!(links_duplicates {
 native library `a` is being linked to by more than one package, and can only be \
 linked to by one package
 
-  foo v0.5.0 (file://[..])
-  a v0.5.0 (file://[..])
+  [..] v0.5.0 (file://[..])
+  [..] v0.5.0 (file://[..])
 "));
 })
 
