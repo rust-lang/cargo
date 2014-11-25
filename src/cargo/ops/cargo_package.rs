@@ -75,15 +75,15 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
     let mut missing = vec![];
 
     macro_rules! lacking {
-        ($($field: ident),*) => {{
+        ($( $($field: ident)||* ),*) => {{
             $(
-                if md.$field.as_ref().map_or(true, |s| s.is_empty()) {
-                    missing.push(stringify!($field))
+                if $(md.$field.as_ref().map_or(true, |s| s.is_empty()))&&* {
+                    $(missing.push(stringify!($field).replace("_", "-"));)*
                 }
-                )*
+            )*
         }}
     }
-    lacking!(description, license)
+    lacking!(description, license || license_file)
 
     if !missing.is_empty() {
         let mut things = missing.slice_to(missing.len() - 1).connect(", ");
@@ -91,10 +91,10 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
         if !things.is_empty() {
             things.push_str(" or ");
         }
-        things.push_str(*missing.last().unwrap());
+        things.push_str(missing.last().unwrap().as_slice());
 
         try!(shell.warn(
-            format!("Warning: manifest has no {things}. \
+            format!("warning: manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
                     things = things).as_slice()))
     }

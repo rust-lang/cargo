@@ -82,9 +82,14 @@ keywords = ["...", "..."]
 
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
-# license identifiers from http://spdx.org/licenses/. Multiple licenses can 
+# license identifiers from http://spdx.org/licenses/. Multiple licenses can
 # be separated with a `/`
 license = "..."
+
+# If a project is using a nonstandard license, then this key may be specified in
+# lieu of the above key and must point to a file relative to this manifest
+# (similar to the readme key)
+license-file = "..."
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display

@@ -267,6 +267,7 @@ pub struct TomlProject {
     readme: Option<String>,
     keywords: Option<Vec<String>>,
     license: Option<String>,
+    license_file: Option<String>,
     repository: Option<String>,
 }
 
@@ -518,6 +519,7 @@ impl TomlManifest {
             readme: project.readme.clone(),
             authors: project.authors.clone(),
             license: project.license.clone(),
+            license_file: project.license_file.clone(),
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
         };
@@ -541,6 +543,11 @@ impl TomlManifest {
             manifest.add_warning(format!("         For more information, see \
                                           http://doc.crates.io/build-script.html"));
         }
+        if project.license_file.is_some() && project.license.is_some() {
+            manifest.add_warning(format!("warning: only one of `license` or \
+                                                   `license-file` is necessary"));
+        }
+
         Ok((manifest, nested_paths))
     }
 }
