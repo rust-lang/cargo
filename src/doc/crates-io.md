@@ -19,7 +19,7 @@ syntax for doing so is:
 
 ```toml
 [dependencies]
-color = "1.0.3"
+glob = "0.0.3"
 ```
 
 With this format, adding new dependencies should just add a new line, you don't
@@ -27,8 +27,8 @@ need to add `[dependencies]` for each dependency listed, for example:
 
 ```toml
 [dependencies]
-color = "1.0.3"
-gl = "1.2.0"
+glob = "0.0.3"
+num = "0.0.4"
 ```
 
 The string value for each key in this table is a [semver](http://semver.org/)
