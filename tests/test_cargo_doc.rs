@@ -206,3 +206,41 @@ Cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
 "));
 })
+
+test!(doc_dash_p {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "extern crate a;")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.b]
+            path = "../b"
+        "#)
+        .file("a/src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("doc").arg("-p").arg("a"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} b v0.0.1 (file://[..])
+{compiling} a v0.0.1 (file://[..])
+", compiling = COMPILING).as_slice()));
+})

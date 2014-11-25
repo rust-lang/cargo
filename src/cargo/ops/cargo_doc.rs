@@ -1,5 +1,7 @@
+use std::io::fs::PathExtensions;
 use std::collections::HashSet;
 
+use core::PackageIdSpec;
 use core::source::Source;
 use ops;
 use sources::PathSource;
@@ -20,31 +22,41 @@ pub fn doc(manifest_path: &Path,
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
-    for target in package.get_targets().iter().filter(|t| t.get_profile().is_doc()) {
-        if target.is_lib() {
-            assert!(lib_names.insert(target.get_name()));
-        } else {
-            assert!(bin_names.insert(target.get_name()));
+    if options.compile_opts.spec.is_none() {
+        for target in package.get_targets().iter().filter(|t| t.get_profile().is_doc()) {
+            if target.is_lib() {
+                assert!(lib_names.insert(target.get_name()));
+            } else {
+                assert!(bin_names.insert(target.get_name()));
+            }
         }
-    }
-    for bin in bin_names.iter() {
-        if lib_names.contains(bin) {
-            return Err(human("Cannot document a package where a library and a \
-                              binary have the same name. Consider renaming one \
-                              or marking the target as `doc = false`"))
+        for bin in bin_names.iter() {
+            if lib_names.contains(bin) {
+                return Err(human("Cannot document a package where a library \
+                                  and a binary have the same name. Consider \
+                                  renaming one or marking the target as \
+                                  `doc = false`"))
+            }
         }
     }
 
     try!(ops::compile(manifest_path, &mut options.compile_opts));
 
     if options.open_result {
-        use std::io::fs::PathExtensions;
+        let name = match options.compile_opts.spec {
+            Some(spec) => try!(PackageIdSpec::parse(spec)).get_name().to_string(),
+            None => {
+                match lib_names.iter().nth(0) {
+                    Some(s) => s.to_string(),
+                    None => return Ok(())
+                }
+            }
+        };
 
-        match lib_names.iter().nth(0).map(|l| package.get_absolute_target_dir()
-                                                     .join("doc").join(*l).join("index.html"))
-        {
-            Some(ref path) if path.exists() => open_docs(path),
-            _ => ()
+        let path = package.get_absolute_target_dir().join("doc").join(name)
+                                                    .join("index.html");
+        if path.exists() {
+            open_docs(&path);
         }
     }
 
