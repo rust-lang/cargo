@@ -12,6 +12,7 @@ struct Options {
     flag_no_deps: bool,
     flag_open: bool,
     flag_verbose: bool,
+    flag_package: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -21,17 +22,23 @@ Usage:
     cargo doc [options]
 
 Options:
-    -h, --help              Print this message
-    --open                  Opens the docs in a browser after the operation
-    --no-deps               Don't build documentation for dependencies
-    -j N, --jobs N          The number of jobs to run in parallel
-    --features FEATURES     Space-separated list of features to also build
-    --no-default-features   Do not build the `default` feature
-    --manifest-path PATH    Path to the manifest to document
-    -v, --verbose           Use verbose output
+    -h, --help               Print this message
+    --open                   Opens the docs in a browser after the operation
+    -p SPEC, --package SPEC  Package to document
+    --no-deps                Don't build documentation for dependencies
+    -j N, --jobs N           The number of jobs to run in parallel
+    --features FEATURES      Space-separated list of features to also build
+    --no-default-features    Do not build the `default` feature
+    --manifest-path PATH     Path to the manifest to document
+    -v, --verbose            Use verbose output
 
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
+
+If the --package argument is given, then SPEC is a package id specification
+which indicates which package should be documented. If it is not given, then the
+current package is documented. For more information on SPEC and its format, see
+the `cargo help pkgid` command.
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
@@ -50,7 +57,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
             dev_deps: false,
             features: options.flag_features.as_slice(),
             no_default_features: options.flag_no_default_features,
-            spec: None,
+            spec: options.flag_package.as_ref().map(|s| s.as_slice()),
             lib_only: false
         },
     };
