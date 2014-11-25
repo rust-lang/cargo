@@ -55,6 +55,7 @@ pub struct NewCrate {
     pub readme: Option<String>,
     pub keywords: Vec<String>,
     pub license: Option<String>,
+    pub license_file: Option<String>,
     pub repository: Option<String>,
 }
 

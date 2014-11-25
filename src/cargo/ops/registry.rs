@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::File;
+use std::io::fs::PathExtensions;
 use std::os;
 use term::color::BLACK;
 
@@ -87,7 +88,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     let manifest = pkg.get_manifest();
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,
-        ref keywords, ref readme, ref repository, ref license,
+        ref keywords, ref readme, ref repository, ref license, ref license_file,
     } = *manifest.get_metadata();
     let readme = match *readme {
         Some(ref readme) => {
@@ -98,6 +99,15 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         }
         None => None,
     };
+    match *license_file {
+        Some(ref file) => {
+            if !pkg.get_root().join(file).exists() {
+                return Err(human(format!("the license file `{}` does not exist",
+                                         file)))
+            }
+        }
+        None => {}
+    }
     registry.publish(&NewCrate {
         name: pkg.get_name().to_string(),
         vers: pkg.get_version().to_string(),
@@ -111,6 +121,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         readme: readme,
         repository: repository.clone(),
         license: license.clone(),
+        license_file: license_file.clone(),
     }, tarball).map_err(|e| {
         human(e.to_string())
     })

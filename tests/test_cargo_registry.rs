@@ -480,3 +480,22 @@ test!(login_with_no_cargo_dir {
                        .env("HOME", Some(home)),
                 execs().with_status(0));
 })
+
+test!(bad_license_file {
+    let p = project("all")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license-file = "foo"
+            description = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    assert_that(p.cargo_process("publish"),
+                execs().with_status(101)
+                       .with_stderr("\
+the license file `foo` does not exist"));
+})
