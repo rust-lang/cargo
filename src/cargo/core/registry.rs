@@ -226,13 +226,30 @@ impl<'a> PackageRegistry<'a> {
         };
         summary.map_dependencies(|dep| {
             match pair {
-                // If this summary has a locked version, then we need to lock
-                // this dependency. If this dependency doesn't have a locked
-                // version, then it was likely an optional dependency which
-                // wasn't included and we just pass it through anyway.
+                // If we've got a known set of overrides for this summary, then
+                // one of a few cases can arise:
+                //
+                // 1. We have a lock entry for this dependency from the same
+                //    source as its listed as coming from. In this case we make
+                //    sure to lock to precisely the given package id.
+                //
+                // 2. We have a lock entry for this dependency, but it's from a
+                //    different source than what's listed. In this case we must
+                //    discard the locked version because the listed source must
+                //    have changed.
+                //
+                // 3. We don't have a lock entry for this dependency, in which
+                //    case it was likely an optional dependency which wasn't
+                //    included previously so we just pass it through anyway.
                 Some(&(_, ref deps)) => {
                     match deps.iter().find(|d| d.get_name() == dep.get_name()) {
-                        Some(lock) => dep.lock_to(lock),
+                        Some(lock) => {
+                            if lock.get_source_id() == dep.get_source_id() {
+                                dep.lock_to(lock)
+                            } else {
+                                dep
+                            }
+                        }
                         None => dep,
                     }
                 }
