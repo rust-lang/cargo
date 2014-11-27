@@ -183,6 +183,7 @@ case $state in
                     '--release=[build in release mode]' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '*: :_normal' \
                 ;;
 
             test)
