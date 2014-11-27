@@ -234,9 +234,10 @@ impl<'a> PackageRegistry<'a> {
                 //    sure to lock to precisely the given package id.
                 //
                 // 2. We have a lock entry for this dependency, but it's from a
-                //    different source than what's listed. In this case we must
-                //    discard the locked version because the listed source must
-                //    have changed.
+                //    different source than what's listed, or the version
+                //    requirement has changed. In this case we must discard the
+                //    locked version because the dependency needs to be
+                //    re-resolved.
                 //
                 // 3. We don't have a lock entry for this dependency, in which
                 //    case it was likely an optional dependency which wasn't
@@ -244,7 +245,7 @@ impl<'a> PackageRegistry<'a> {
                 Some(&(_, ref deps)) => {
                     match deps.iter().find(|d| d.get_name() == dep.get_name()) {
                         Some(lock) => {
-                            if lock.get_source_id() == dep.get_source_id() {
+                            if dep.matches_id(lock) {
                                 dep.lock_to(lock)
                             } else {
                                 dep
