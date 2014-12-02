@@ -58,7 +58,7 @@ Here's what's in `src/main.rs`:
 
 ```
 fn main() {
-    println!("Hello, world!")
+    println!("Hello, world!");
 }
 ```
 
