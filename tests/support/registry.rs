@@ -1,6 +1,6 @@
 use std::io::{mod, fs, File};
 
-use flate2::Default;
+use flate2::CompressionLevel::Default;
 use flate2::writer::GzEncoder;
 use git2;
 use serialize::hex::ToHex;

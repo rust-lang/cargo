@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use hamcrest::{assert_that, equal_to, contains};
 
 use cargo::core::source::SourceId;
-use cargo::core::dependency::Development;
+use cargo::core::dependency::Kind::Development;
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
 use cargo::core::resolver::{mod, Method};

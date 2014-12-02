@@ -313,7 +313,7 @@ impl Execs {
                 let e = out.lines();
 
                 let diffs = zip_all(a, e).enumerate();
-                let mut diffs = diffs.filter_map(|(i, (a,e))| {
+                let diffs = diffs.filter_map(|(i, (a,e))| {
                     match (a, e) {
                         (Some(a), Some(e)) => {
                             if lines_match(e.as_slice(), a.as_slice()) {

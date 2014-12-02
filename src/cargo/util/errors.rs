@@ -253,7 +253,7 @@ from_error!(CliError)
 impl CargoError for docopt::Error {
     fn description(&self) -> String {
         match *self {
-            docopt::WithProgramUsage(ref other, _) => other.description(),
+            docopt::Error::WithProgramUsage(ref other, _) => other.description(),
             ref e if e.fatal() => self.to_string(),
             _ => "".to_string(),
         }
@@ -261,7 +261,7 @@ impl CargoError for docopt::Error {
 
     fn detail(&self) -> Option<String> {
         match *self {
-            docopt::WithProgramUsage(_, ref usage) => Some(usage.clone()),
+            docopt::Error::WithProgramUsage(_, ref usage) => Some(usage.clone()),
             ref e if e.fatal() => None,
             ref e => Some(e.to_string()),
         }
