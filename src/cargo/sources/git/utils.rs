@@ -324,9 +324,12 @@ impl<'a> GitCheckout<'a> {
                 // clone it. If it has been checked out and the head is the same
                 // as the submodule's head, then we can bail out and go to the
                 // next submodule.
-                let repo = match child.open() {
-                    Ok(repo) => {
-                        if child.head_id() == try!(repo.head()).target() {
+                let head_and_repo = child.open().and_then(|repo| {
+                    Ok((try!(repo.head()).target(), repo))
+                });
+                let repo = match head_and_repo {
+                    Ok((head, repo)) => {
+                        if child.head_id() == head {
                             continue
                         }
                         repo
