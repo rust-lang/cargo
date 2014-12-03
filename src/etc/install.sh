@@ -308,7 +308,7 @@ then
         "${CFG_SRC_DIR}/bin/cargo" -V 2> /dev/null
         if [ $? -ne 0 ]
         then
-            err "can't execute rustc binary on this platform"
+            err "can't execute cargo binary on this platform"
         fi
     fi
 fi
