@@ -327,7 +327,7 @@ pub struct SourceMap<'src> {
 pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
 pub type SourcesMut<'a, 'src> = iter::Map<'static, (&'a SourceId,
                                                   &'a mut Box<Source+'src>),
-                                    &'a mut Source+'src,
+                                    &'a mut (Source+'src),
                                     MutEntries<'a, SourceId, Box<Source+'src>>>;
 
 impl<'src> SourceMap<'src> {
@@ -341,23 +341,23 @@ impl<'src> SourceMap<'src> {
         self.map.contains_key(id)
     }
 
-    pub fn get(&self, id: &SourceId) -> Option<&Source+'src> {
+    pub fn get(&self, id: &SourceId) -> Option<&(Source+'src)> {
         let source = self.map.get(id);
 
         source.map(|s| {
-            let s: &Source+'src = &**s;
+            let s: &(Source+'src) = &**s;
             s
         })
     }
 
-    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut Source+'src> {
+    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source+'src)> {
         self.map.get_mut(id).map(|s| {
-            let s: &mut Source+'src = &mut **s;
+            let s: &mut (Source+'src) = &mut **s;
             s
         })
     }
 
-    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&Source+'src> {
+    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source+'src)> {
         self.get(pkg_id.get_source_id())
     }
 

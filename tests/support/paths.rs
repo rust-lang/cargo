@@ -6,16 +6,13 @@ use std::{io, os};
 use cargo::util::realpath;
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
-
-local_data_key!(task_id: uint)
-
 static NEXT_ID: atomic::AtomicUint = atomic::INIT_ATOMIC_UINT;
+thread_local!(static TASK_ID: uint = NEXT_ID.fetch_add(1, atomic::SeqCst))
 
 pub fn root() -> Path {
-    let my_id = *task_id.get().unwrap();
     let path = os::self_exe_path().unwrap()
                   .join(CARGO_INTEGRATION_TEST_DIR)
-                  .join(format!("test-{}", my_id));
+                  .join(TASK_ID.with(|my_id| format!("test-{}", my_id)));
     realpath(&path).unwrap()
 }
 
@@ -91,8 +88,6 @@ impl PathExt for Path {
 
 /// Ensure required test directories exist and are empty
 pub fn setup() {
-    let my_id = NEXT_ID.fetch_add(1, atomic::SeqCst);
-    task_id.replace(Some(my_id));
     debug!("path setup; root={}; home={}", root().display(), home().display());
     root().rm_rf().unwrap();
     home().mkdir_p().unwrap();

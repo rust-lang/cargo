@@ -297,7 +297,7 @@ impl<'a> GitCheckout<'a> {
               self.revision.as_slice());
         let oid = try!(git2::Oid::from_str(self.revision.as_slice()));
         let object = try!(self.repo.find_object(oid, None));
-        try!(self.repo.reset(&object, git2::Hard, None, None));
+        try!(self.repo.reset(&object, git2::ResetType::Hard, None, None));
         Ok(())
     }
 
@@ -345,7 +345,7 @@ impl<'a> GitCheckout<'a> {
                 }));
 
                 let obj = try!(repo.find_object(head, None));
-                try!(repo.reset(&obj, git2::Hard, None, None));
+                try!(repo.reset(&obj, git2::ResetType::Hard, None, None));
                 try!(update_submodules(&repo));
             }
             Ok(())

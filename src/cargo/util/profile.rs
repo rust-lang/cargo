@@ -2,9 +2,10 @@ use std::os;
 use std::mem;
 use std::fmt::Show;
 use time;
+use std::cell::RefCell;
 
-local_data_key!(PROFILE_STACK: Vec<u64>)
-local_data_key!(MESSAGES: Vec<Message>)
+thread_local!(static PROFILE_STACK: RefCell<Vec<u64>> = RefCell::new(Vec::new()))
+thread_local!(static MESSAGES: RefCell<Vec<Message>> = RefCell::new(Vec::new()))
 
 type Message = (uint, u64, String);
 
@@ -17,9 +18,7 @@ fn enabled() -> bool { os::getenv("CARGO_PROFILE").is_some() }
 pub fn start<T: Show>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }
 
-    let mut stack = PROFILE_STACK.replace(None).unwrap_or(Vec::new());
-    stack.push(time::precise_time_ns());
-    PROFILE_STACK.replace(Some(stack));
+    PROFILE_STACK.with(|stack| stack.borrow_mut().push(time::precise_time_ns()));
 
     Profiler {
         desc: desc.to_string(),
@@ -30,14 +29,11 @@ impl Drop for Profiler {
     fn drop(&mut self) {
         if !enabled() { return }
 
-        let mut stack = PROFILE_STACK.replace(None).unwrap_or(Vec::new());
-        let mut msgs = MESSAGES.replace(None).unwrap_or(Vec::new());
-
-        let start = stack.pop().unwrap();
+        let start = PROFILE_STACK.with(|stack| stack.borrow_mut().pop().unwrap());
         let end = time::precise_time_ns();
 
-        let msg = mem::replace(&mut self.desc, String::new());
-        if stack.len() == 0 {
+        let stack_len = PROFILE_STACK.with(|stack| stack.borrow().len());
+        if stack_len == 0 {
             fn print(lvl: uint, msgs: &[Message]) {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
@@ -50,13 +46,16 @@ impl Drop for Profiler {
                 }
 
             }
-            msgs.push((0, end - start, msg));
-            print(0, msgs.as_slice());
+            MESSAGES.with(|msgs_rc| {
+                let mut msgs = msgs_rc.borrow_mut();
+                msgs.push((0, end - start, mem::replace(&mut self.desc, String::new())));
+                print(0, msgs.as_slice());
+            });
         } else {
-            msgs.push((stack.len(), end - start, msg));
-            MESSAGES.replace(Some(msgs));
+            MESSAGES.with(|msgs| {
+                let msg = mem::replace(&mut self.desc, String::new());
+                msgs.borrow_mut().push((stack_len, end - start, msg));
+            });
         }
-        PROFILE_STACK.replace(Some(stack));
-
     }
 }

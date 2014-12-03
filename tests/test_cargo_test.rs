@@ -138,8 +138,8 @@ failures:
 <tab>task 'test_hello' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:12
-<tab>
-<tab>
+
+
 
 failures:
     test_hello

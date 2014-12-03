@@ -3,15 +3,15 @@ name = "cargo"
 version = "0.1.0"
 dependencies = [
  "curl 0.1.0 (git+https://github.com/carllerche/curl-rust)",
- "docopt 0.6.8 (git+https://github.com/docopt/docopt.rs)",
- "flate2 0.0.3 (git+https://github.com/alexcrichton/flate2-rs)",
+ "docopt 0.6.12 (git+https://github.com/docopt/docopt.rs)",
+ "flate2 0.1.0 (git+https://github.com/alexcrichton/flate2-rs)",
  "git2 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
- "glob 0.0.3 (git+https://github.com/rust-lang/glob)",
+ "glob 0.1.0 (git+https://github.com/rust-lang/glob)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git)",
  "registry 0.1.0",
  "semver 0.1.3 (git+https://github.com/rust-lang/semver)",
- "tar 0.0.3 (git+https://github.com/alexcrichton/tar-rs)",
- "time 0.0.3 (git+https://github.com/rust-lang/time)",
+ "tar 0.1.0 (git+https://github.com/alexcrichton/tar-rs)",
+ "time 0.1.0 (git+https://github.com/rust-lang/time)",
  "toml 0.1.2 (git+https://github.com/alexcrichton/toml-rs)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
@@ -19,7 +19,7 @@ dependencies = [
 [[package]]
 name = "curl"
 version = "0.1.0"
-source = "git+https://github.com/carllerche/curl-rust#c1b96e146f6752353a1e84cca932c628e6bf73af"
+source = "git+https://github.com/carllerche/curl-rust#5d0f5c8848e3cf1e12480a1923ae888e24d58f63"
 dependencies = [
  "curl-sys 0.1.0 (git+https://github.com/carllerche/curl-rust)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
@@ -28,45 +28,50 @@ dependencies = [
 [[package]]
 name = "curl-sys"
 version = "0.1.0"
-source = "git+https://github.com/carllerche/curl-rust#c1b96e146f6752353a1e84cca932c628e6bf73af"
+source = "git+https://github.com/carllerche/curl-rust#5d0f5c8848e3cf1e12480a1923ae888e24d58f63"
 dependencies = [
- "libz-sys 0.0.1 (git+https://github.com/alexcrichton/libz-sys)",
- "openssl-sys 0.0.1 (git+https://github.com/sfackler/rust-openssl)",
- "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+ "libz-sys 0.1.0 (git+https://github.com/alexcrichton/libz-sys)",
+ "openssl-sys 0.2.2 (git+https://github.com/sfackler/rust-openssl)",
+ "pkg-config 0.1.0 (git+https://github.com/alexcrichton/pkg-config-rs)",
 ]
 
 [[package]]
 name = "docopt"
-version = "0.6.8"
-source = "git+https://github.com/docopt/docopt.rs#be2e3b6b91ab1912d79f1e840d9397dead6e6a6e"
+version = "0.6.12"
+source = "git+https://github.com/docopt/docopt.rs#938d640720d91529252adddc79d020714cba7346"
 
 [[package]]
 name = "flate2"
-version = "0.0.3"
-source = "git+https://github.com/alexcrichton/flate2-rs#044e4dc2a766bc32fd5ae76bbe958be6e85be481"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/flate2-rs#861f52e4c71681f96605dd65cb7c1c9f6e6ecc3c"
 dependencies = [
- "miniz-sys 0.0.2 (git+https://github.com/alexcrichton/flate2-rs)",
+ "miniz-sys 0.1.0 (git+https://github.com/alexcrichton/flate2-rs)",
 ]
 
 [[package]]
 name = "gcc"
-version = "0.0.2"
-source = "git+https://github.com/alexcrichton/gcc-rs#903e8f8a2e3766ad3d514404d452dbaa1d3b2d79"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/gcc-rs#d32b24466d3e0094cef1c1809a04d7a28536f0e0"
+
+[[package]]
+name = "gcc"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#d0d21ca14b4a410806b577b04c2d29f7f8e45f61"
+source = "git+https://github.com/alexcrichton/git2-rs#1676b0196c4b130ef670aa5c09903dd00aac33a6"
 dependencies = [
  "libgit2-sys 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
- "time 0.0.3 (git+https://github.com/rust-lang/time)",
+ "time 0.1.0 (git+https://github.com/rust-lang/time)",
  "url 0.1.0 (git+https://github.com/servo/rust-url)",
 ]
 
 [[package]]
 name = "glob"
-version = "0.0.3"
-source = "git+https://github.com/rust-lang/glob#9efe98bd82ad4932819888a94eb933ac618312f0"
+version = "0.1.0"
+source = "git+https://github.com/rust-lang/glob#923126289064ded89f028d14dc2f28bb347ae178"
 
 [[package]]
 name = "hamcrest"
@@ -76,51 +81,56 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#2b9bd6cdae5dcf08ac
 [[package]]
 name = "libgit2-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#d0d21ca14b4a410806b577b04c2d29f7f8e45f61"
+source = "git+https://github.com/alexcrichton/git2-rs#1676b0196c4b130ef670aa5c09903dd00aac33a6"
 dependencies = [
  "libssh2-sys 0.0.1 (git+https://github.com/alexcrichton/ssh2-rs)",
- "openssl-sys 0.0.1 (git+https://github.com/sfackler/rust-openssl)",
- "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+ "openssl-sys 0.2.2 (git+https://github.com/sfackler/rust-openssl)",
+ "pkg-config 0.1.0 (git+https://github.com/alexcrichton/pkg-config-rs)",
 ]
 
 [[package]]
 name = "libssh2-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/ssh2-rs#922531da4c22abe7a216672314315d41769d7fb1"
+source = "git+https://github.com/alexcrichton/ssh2-rs#490f91fb9e90bf4e305f1a23a051228c59e60eaf"
 dependencies = [
- "libz-sys 0.0.1 (git+https://github.com/alexcrichton/libz-sys)",
- "openssl-sys 0.0.1 (git+https://github.com/sfackler/rust-openssl)",
- "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+ "libz-sys 0.1.0 (git+https://github.com/alexcrichton/libz-sys)",
+ "openssl-sys 0.2.2 (git+https://github.com/sfackler/rust-openssl)",
+ "pkg-config 0.1.0 (git+https://github.com/alexcrichton/pkg-config-rs)",
 ]
 
 [[package]]
 name = "libz-sys"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/libz-sys#37926b786b09e013e5fd64cc278b3df1b49c4fbe"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/libz-sys#5622ae17a0262af56055b71f0d74fa5ee91d3a41"
 dependencies = [
- "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+ "pkg-config 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "miniz-sys"
-version = "0.0.2"
-source = "git+https://github.com/alexcrichton/flate2-rs#044e4dc2a766bc32fd5ae76bbe958be6e85be481"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/flate2-rs#861f52e4c71681f96605dd65cb7c1c9f6e6ecc3c"
 dependencies = [
- "gcc 0.0.2 (git+https://github.com/alexcrichton/gcc-rs)",
+ "gcc 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "openssl-sys"
-version = "0.0.1"
-source = "git+https://github.com/sfackler/rust-openssl#b084ddc7b0fe9c7816fef6e415a05db6ec43fb71"
+version = "0.2.2"
+source = "git+https://github.com/sfackler/rust-openssl#fd680e8a336f8870a411a3047c45b47ee72beb37"
 dependencies = [
- "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+ "pkg-config 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "pkg-config"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/pkg-config-rs#d24a08d87d63df8dc9526c503944415b86719220"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/pkg-config-rs#9b3b44a2e1a8ccc70c3f701aeb5154ad79e665e9"
+
+[[package]]
+name = "pkg-config"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "registry"
@@ -136,15 +146,15 @@ source = "git+https://github.com/rust-lang/semver#29212953f839337c672d185dde74e1
 
 [[package]]
 name = "tar"
-version = "0.0.3"
-source = "git+https://github.com/alexcrichton/tar-rs#55fa87d43eaf2a54c55ddd245e1c13859a06193c"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/tar-rs#d54cc716e6d809498941f38d8ab0759543402abe"
 
 [[package]]
 name = "time"
-version = "0.0.3"
-source = "git+https://github.com/rust-lang/time#533d3823dbe200aaa2a2599176a6b30579581232"
+version = "0.1.0"
+source = "git+https://github.com/rust-lang/time#afab521f3b91658a3ba2d3e877b7e01699733bef"
 dependencies = [
- "gcc 0.0.2 (git+https://github.com/alexcrichton/gcc-rs)",
+ "gcc 0.1.0 (git+https://github.com/alexcrichton/gcc-rs)",
 ]
 
 [[package]]
@@ -155,5 +165,5 @@ source = "git+https://github.com/alexcrichton/toml-rs#1e35b001094b20d2452adff305
 [[package]]
 name = "url"
 version = "0.1.0"
-source = "git+https://github.com/servo/rust-url#a838a41263472de966f7ec8db758caa9cc4699a4"
+source = "git+https://github.com/servo/rust-url#9f05a0108025a1c9002e8977a42dce764895d170"
 
