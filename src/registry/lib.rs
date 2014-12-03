@@ -8,7 +8,8 @@ use std::io::util::ChainedReader;
 use std::result;
 
 use curl::http;
-use curl::http::handle::{Put, Get, Delete, Method, Request};
+use curl::http::handle::Method::{Put, Get, Delete};
+use curl::http::handle::{Method, Request};
 use serialize::json;
 
 pub struct Registry {
@@ -135,7 +136,7 @@ impl Registry {
             w.write_le_u32(json.len() as u32).unwrap();
             w.write_str(json.as_slice()).unwrap();
             w.write_le_u32(stat.size as u32).unwrap();
-            MemReader::new(w.unwrap())
+            MemReader::new(w.into_inner())
         };
         let tarball = try!(File::open(tarball).map_err(Error::Io));
         let size = stat.size as uint + header.get_ref().len();

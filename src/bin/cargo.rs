@@ -220,7 +220,7 @@ fn list_commands() -> TreeSet<String> {
 
 fn is_executable(path: &Path) -> bool {
     match fs::stat(path) {
-        Ok(io::FileStat{ kind: io::TypeFile, perm, ..}) =>
+        Ok(io::FileStat{ kind: io::FileType::RegularFile, perm, ..}) =>
             perm.contains(io::OTHER_EXECUTE),
         _ => false
     }
