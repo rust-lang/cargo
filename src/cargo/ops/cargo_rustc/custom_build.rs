@@ -4,6 +4,7 @@ use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
+use std::os;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, CargoError, human};
@@ -61,7 +62,15 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                      }))
                      .env("DEBUG", Some(profile.get_debug().to_string()))
                      .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
-                     .env("PROFILE", Some(profile.get_env()));
+                     .env("PROFILE", Some(profile.get_env()))
+                     .env("CC", match kind {
+                         Kind::Host => os::getenv("HOST_CC").or(os::getenv("CC")),
+                         Kind::Target => os::getenv("CC")
+                     })
+                     .env("CFLAGS", match kind {
+                         Kind::Host => os::getenv("HOST_CFLAGS").or(os::getenv("CFLAGS")),
+                         Kind::Target => os::getenv("CFLAGS"),
+                     });
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
