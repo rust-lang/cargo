@@ -61,7 +61,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                      }))
                      .env("DEBUG", Some(profile.get_debug().to_string()))
                      .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
-                     .env("PROFILE", Some(profile.get_env()));
+                     .env("PROFILE", Some(profile.get_env()))
+                     .env("HOST", Some(cx.config.rustc_host()));
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
