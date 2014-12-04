@@ -499,3 +499,62 @@ test!(bad_license_file {
                        .with_stderr("\
 the license file `foo` does not exist"));
 })
+
+test!(updating_a_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("a/src/lib.rs", "");
+    p.build();
+
+    r::mock_pkg("bar", "0.0.1", &[]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} bar v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
+{compiling} a v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+
+    File::create(&p.root().join("a/Cargo.toml")).write_str(r#"
+        [project]
+        name = "a"
+        version = "0.0.1"
+        authors = []
+
+        [dependencies]
+        bar = "0.1.0"
+    "#).unwrap();
+    r::mock_pkg("bar", "0.1.0", &[]);
+
+    println!("second");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} bar v0.1.0 (registry file://[..])
+{compiling} bar v0.1.0 (registry file://[..])
+{compiling} a v0.0.1 ({dir})
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+})
