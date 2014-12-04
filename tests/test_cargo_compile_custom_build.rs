@@ -99,6 +99,8 @@ test!(custom_build_env_vars {
                 assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());
 
+                let _host = os::getenv("HOST").unwrap();
+
                 let _feat = os::getenv("CARGO_FEATURE_FOO").unwrap();
             }}
         "#,
