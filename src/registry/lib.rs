@@ -194,8 +194,8 @@ impl Registry {
                               .header("Accept", "application/json")
                               .content_type("application/json");
 
-        let token = try!(self.token.as_ref().ok_or(Error::TokenMissing)).as_slice();
         if authorized == Auth::Authorized {
+            let token = try!(self.token.as_ref().ok_or(Error::TokenMissing)).as_slice();
             req = req.header("Authorization", token);
         }
         match body {
