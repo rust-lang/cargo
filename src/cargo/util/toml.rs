@@ -101,7 +101,7 @@ pub fn to_manifest(contents: &[u8],
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
     let root = try!(parse(contents, &manifest));
-    let mut d = toml::Decoder::new(toml::Table(root));
+    let mut d = toml::Decoder::new(toml::Value::Table(root));
     let toml_manifest: TomlManifest = match Decodable::decode(&mut d) {
         Ok(t) => t,
         Err(e) => return Err(human(format!("{} is not a valid \
@@ -128,7 +128,7 @@ pub fn to_manifest(contents: &[u8],
 
     fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
         match *toml {
-            toml::Table(ref table) => {
+            toml::Value::Table(ref table) => {
                 for (k, v) in table.iter() {
                     add_unused_keys(m, v, if key.len() == 0 {
                         k.clone()
@@ -137,7 +137,7 @@ pub fn to_manifest(contents: &[u8],
                     })
                 }
             }
-            toml::Array(ref arr) => {
+            toml::Value::Array(ref arr) => {
                 for v in arr.iter() {
                     add_unused_keys(m, v, key.clone());
                 }
@@ -147,7 +147,7 @@ pub fn to_manifest(contents: &[u8],
     }
 }
 
-pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::TomlTable> {
+pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
     let mut parser = toml::Parser::new(toml.as_slice());
     match parser.parse() {
         Some(toml) => return Ok(toml),

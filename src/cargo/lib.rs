@@ -3,7 +3,6 @@
 
 #![feature(macro_rules, phase)]
 #![feature(default_type_params)]
-#![feature(if_let)]
 #![deny(bad_style)]
 
 extern crate libc;

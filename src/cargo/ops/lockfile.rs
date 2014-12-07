@@ -22,7 +22,7 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
 
     let s = try!(f.read_to_string());
 
-    let table = toml::Table(try!(cargo_toml::parse(s.as_slice(), path)));
+    let table = toml::Value::Table(try!(cargo_toml::parse(s.as_slice(), path)));
     let mut d = toml::Decoder::new(table);
     let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
     Ok(Some(try!(v.to_resolve(sid))))
@@ -67,7 +67,7 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
     Ok(())
 }
 
-fn emit_package(dep: &toml::TomlTable, out: &mut String) {
+fn emit_package(dep: &toml::Table, out: &mut String) {
     out.push_str(format!("name = {}\n", lookup(dep, "name")).as_slice());
     out.push_str(format!("version = {}\n", lookup(dep, "version")).as_slice());
 
@@ -91,6 +91,6 @@ fn emit_package(dep: &toml::TomlTable, out: &mut String) {
     }
 }
 
-fn lookup<'a>(table: &'a toml::TomlTable, key: &str) -> &'a toml::Value {
+fn lookup<'a>(table: &'a toml::Table, key: &str) -> &'a toml::Value {
     table.get(&key.to_string()).expect(format!("Didn't find {}", key).as_slice())
 }

@@ -146,17 +146,17 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
 impl ConfigValue {
     fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
-            toml::String(val) => Ok(CV::String(val, path.clone())),
-            toml::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
-            toml::Array(val) => {
+            toml::Value::String(val) => Ok(CV::String(val, path.clone())),
+            toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
+            toml::Value::Array(val) => {
                 Ok(CV::List(try!(val.into_iter().map(|toml| {
                     match toml {
-                        toml::String(val) => Ok((val, path.clone())),
+                        toml::Value::String(val) => Ok((val, path.clone())),
                         _ => Err(internal("")),
                     }
                 }).collect::<CargoResult<_>>())))
             }
-            toml::Table(val) => {
+            toml::Value::Table(val) => {
                 Ok(CV::Table(try!(val.into_iter().map(|(key, value)| {
                     let value = raw_try!(CV::from_toml(path, value));
                     Ok((key, value))
@@ -235,13 +235,15 @@ impl ConfigValue {
 
     fn into_toml(self) -> toml::Value {
         match self {
-            CV::Boolean(s, _) => toml::Boolean(s),
-            CV::String(s, _) => toml::String(s),
-            CV::List(l) => toml::Array(l.into_iter().map(|(s, _)| toml::String(s))
-                                    .collect()),
-            CV::Table(l) => toml::Table(l.into_iter()
-                                         .map(|(k, v)| (k, v.into_toml()))
-                                         .collect()),
+            CV::Boolean(s, _) => toml::Value::Boolean(s),
+            CV::String(s, _) => toml::Value::String(s),
+            CV::List(l) => toml::Value::Array(l
+                                        .into_iter()
+                                        .map(|(s, _)| toml::Value::String(s))
+                                        .collect()),
+            CV::Table(l) => toml::Value::Table(l.into_iter()
+                                        .map(|(k, v)| (k, v.into_toml()))
+                                        .collect()),
         }
     }
 }
@@ -261,7 +263,7 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<string::String, ConfigValue
             internal(format!("could not parse Toml manifest; path={}",
                              path.display()))
         }));
-        let value = try!(CV::from_toml(&path, toml::Table(table)));
+        let value = try!(CV::from_toml(&path, toml::Value::Table(table)));
         try!(cfg.merge(value));
         Ok(())
     }).chain_error(|| human("Couldn't load Cargo configuration")));
@@ -349,6 +351,6 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
     toml.insert(key.to_string(), value.into_toml());
-    try!(File::create(&file).write(toml::Table(toml).to_string().as_bytes()));
+    try!(File::create(&file).write(toml::Value::Table(toml).to_string().as_bytes()));
     Ok(())
 }
