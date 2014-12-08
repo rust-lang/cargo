@@ -42,7 +42,7 @@ fn add(repo: &git2::Repository) {
     }
     let mut index = repo.index().unwrap();
     index.add_all(&["*"], git2::ADD_DEFAULT, Some(|a: &[u8], _b: &[u8]| {
-        if s.iter().any(|s| s.path().as_vec() == a) {1} else {0}
+        if s.iter().any(|s| a.starts_with(s.path().as_vec())) {1} else {0}
     })).unwrap();
     index.write().unwrap();
 }
@@ -53,7 +53,7 @@ fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
     let subrepo = s.open().unwrap();
     let mut origin = subrepo.find_remote("origin").unwrap();
     origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
-    origin.fetch(None, None).unwrap();
+    origin.fetch(&[], None, None).unwrap();
     origin.save().unwrap();
     subrepo.checkout_head(None).unwrap();
     s.add_finalize().unwrap();
@@ -979,7 +979,7 @@ test!(dep_with_changed_submodule {
         let mut origin = subrepo.find_remote("origin").unwrap();
         origin.set_url(git_project3.url().to_string().as_slice()).unwrap();
         origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();;
-        origin.fetch(None, None).unwrap();
+        origin.fetch(&[], None, None).unwrap();
         origin.save().unwrap();
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();

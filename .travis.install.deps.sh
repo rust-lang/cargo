@@ -60,6 +60,8 @@ else
     mv '{app}' rustc
     # Don't use the bundled gcc, see rust-lang/rust#17442
     rm -rf rustc/bin/rustlib/$triple/bin
+    # Don't use bundled gcc libs, see rust-lang/rust#19519
+    rm -rf rustc/bin/rustlib/$triple/libmingw*.a
     rm -f rust-nightly-$triple.exe
 fi
 
