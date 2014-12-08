@@ -89,7 +89,7 @@ impl<'a> PackageRegistry<'a> {
         // source
         let mut ret = Vec::new();
 
-        for source in self.sources.sources_mut() {
+        for (_, source) in self.sources.sources_mut() {
             try!(source.download(package_ids));
             let packages = try!(source.get(package_ids));
 
@@ -283,8 +283,10 @@ impl<'a> Registry for PackageRegistry<'a> {
             // Ensure the requested source_id is loaded
             try!(self.ensure_loaded(dep.get_source_id()));
             let mut ret = Vec::new();
-            for src in self.sources.sources_mut() {
-                ret.extend(try!(src.query(dep)).into_iter());
+            for (id, src) in self.sources.sources_mut() {
+                if id == dep.get_source_id() {
+                    ret.extend(try!(src.query(dep)).into_iter());
+                }
             }
             ret
         } else {
