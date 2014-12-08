@@ -38,7 +38,7 @@ registry at `crates.io`
 
 ## Brevity of Specifications
 
-The goal of this is to enable both succinct and exhausitive syntaxes for
+The goal of this is to enable both succinct and exhaustive syntaxes for
 referring to packages in a dependency graph. Ambiguous references may refer to
 one or more packages. Most commands generate an error if more than one package
 could be referred to with the same specification.

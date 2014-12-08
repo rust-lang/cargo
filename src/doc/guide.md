@@ -245,7 +245,7 @@ rev = "bf739419e2d31050615c1ba1a395b474269a4"
 
 Now, our builds will be the same. But, there's a big drawback: now we have to
 manually think about SHA-1s every time we want to update our library. This is
-both tedius and error prone.
+both tedious and error prone.
 
 Enter the `Cargo.lock`. Because of its existence, we don't need to manually
 keep track of the exact revisions: Cargo will do it for us. When we have a
