@@ -63,8 +63,8 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     // First bit of the freshness calculation, whether the dep-info file
     // indicates that the target is fresh.
     let dep_info = dep_info_loc(cx, pkg, target, kind);
-    let are_files_fresh = use_pkg ||
-                          try!(calculate_target_fresh(pkg, &dep_info));
+    let mut are_files_fresh = use_pkg ||
+                              try!(calculate_target_fresh(pkg, &dep_info));
 
     // Second bit of the freshness calculation, whether rustc itself, the
     // target are fresh, and the enabled set of features are all fresh.
@@ -87,6 +87,9 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
             cx.layout(pkg, kind).proxy().whitelist(&dst);
+            if are_files_fresh && !dst.exists() {
+                are_files_fresh = false;
+            }
 
             if target.get_profile().is_test() {
                 cx.compilation.tests.push((target.get_name().into_string(), dst));

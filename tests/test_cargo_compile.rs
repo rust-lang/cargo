@@ -1496,3 +1496,20 @@ test!(example_bin_same_name {
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("examples/foo"), existing_file());
 })
+
+test!(compile_then_delete {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("run"), execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    fs::unlink(&p.bin("foo")).unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("run"),
+                execs().with_status(0));
+})
