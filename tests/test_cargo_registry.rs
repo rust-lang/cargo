@@ -5,6 +5,7 @@ use support::{project, execs, cargo_dir};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
 use support::paths::{mod, PathExt};
 use support::registry as r;
+use support::git;
 
 use hamcrest::assert_that;
 
@@ -557,4 +558,53 @@ test!(updating_a_dep {
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
+})
+
+test!(git_and_registry_dep {
+    let b = git::repo(&paths::root().join("b"))
+        .file("Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = "0.0.1"
+        "#)
+        .file("src/lib.rs", "");
+    b.build();
+    let p = project("foo")
+        .file("Cargo.toml", format!(r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = "0.0.1"
+
+            [dependencies.b]
+            git = '{}'
+        "#, b.url()))
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("a", "0.0.1", &[]);
+
+    p.root().move_into_the_past().unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} [..]
+{updating} [..]
+{downloading} a v0.0.1 (registry file://[..])
+{compiling} a v0.0.1 (registry [..])
+{compiling} b v0.0.1 ([..])
+{compiling} foo v0.0.1 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+    p.root().move_into_the_past().unwrap();
+
+    println!("second");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(""));
 })

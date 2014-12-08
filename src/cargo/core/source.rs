@@ -327,7 +327,7 @@ pub struct SourceMap<'src> {
 pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
 pub type SourcesMut<'a, 'src> = iter::Map<'static, (&'a SourceId,
                                                   &'a mut Box<Source+'src>),
-                                    &'a mut (Source+'src),
+                                    (&'a SourceId, &'a mut (Source+'src)),
                                     MutEntries<'a, SourceId, Box<Source+'src>>>;
 
 impl<'src> SourceMap<'src> {
@@ -374,7 +374,7 @@ impl<'src> SourceMap<'src> {
     }
 
     pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
-        self.map.iter_mut().map(|(_, v)| &mut **v)
+        self.map.iter_mut().map(|(k, v)| (k, &mut **v))
     }
 }
 
