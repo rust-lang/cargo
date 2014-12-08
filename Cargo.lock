@@ -61,7 +61,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "git2"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#1676b0196c4b130ef670aa5c09903dd00aac33a6"
+source = "git+https://github.com/alexcrichton/git2-rs#a20191dde5d482debb90b5913f03a58ca73720e2"
 dependencies = [
  "libgit2-sys 0.0.1 (git+https://github.com/alexcrichton/git2-rs)",
  "time 0.1.0 (git+https://github.com/rust-lang/time)",
@@ -81,7 +81,7 @@ source = "git+https://github.com/carllerche/hamcrest-rust.git#2b9bd6cdae5dcf08ac
 [[package]]
 name = "libgit2-sys"
 version = "0.0.1"
-source = "git+https://github.com/alexcrichton/git2-rs#1676b0196c4b130ef670aa5c09903dd00aac33a6"
+source = "git+https://github.com/alexcrichton/git2-rs#a20191dde5d482debb90b5913f03a58ca73720e2"
 dependencies = [
  "libssh2-sys 0.0.1 (git+https://github.com/alexcrichton/ssh2-rs)",
  "openssl-sys 0.2.2 (git+https://github.com/sfackler/rust-openssl)",

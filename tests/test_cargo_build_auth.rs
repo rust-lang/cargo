@@ -169,7 +169,7 @@ Caused by:
 ",
         addr = addr,
         errmsg = if cfg!(windows) {
-            "Failed to send request: The connection with the server \
+            "failed to send request: The connection with the server \
              was terminated abnormally\n"
         } else {
             "SSL error: [..]"
