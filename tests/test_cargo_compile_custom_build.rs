@@ -975,3 +975,28 @@ test!(test_a_lib_with_a_build_command {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
 })
+
+test!(test_dev_dep_build_script {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dev-dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("a/build.rs", "fn main() {}")
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("test"), execs().with_status(0));
+})
