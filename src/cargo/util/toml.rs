@@ -11,7 +11,7 @@ use semver;
 use rustc_serialize::{Decodable, Decoder};
 
 use core::SourceId;
-use core::{Summary, Manifest, Target, Dependency, PackageId};
+use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
@@ -571,17 +571,17 @@ fn process_dependencies<'a>(cx: &mut Context<'a>,
             }
             TomlDependency::Detailed(ref details) => details.clone(),
         };
-        let reference = details.branch.clone()
-            .or_else(|| details.tag.clone())
-            .or_else(|| details.rev.clone())
-            .unwrap_or_else(|| "master".to_string());
+        let reference = details.branch.clone().map(GitReference::Branch)
+            .or_else(|| details.tag.clone().map(GitReference::Tag))
+            .or_else(|| details.rev.clone().map(GitReference::Rev))
+            .unwrap_or_else(|| GitReference::Branch("master".to_string()));
 
         let new_source_id = match details.git {
             Some(ref git) => {
                 let loc = try!(git.as_slice().to_url().map_err(|e| {
                     human(e)
                 }));
-                Some(SourceId::for_git(&loc, reference.as_slice()))
+                Some(SourceId::for_git(&loc, reference))
             }
             None => {
                 details.path.as_ref().map(|path| {

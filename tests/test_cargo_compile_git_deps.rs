@@ -187,7 +187,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}?ref=branchy#[..])\n\
+                              {} dep1 v0.5.0 ({}?branch=branchy#[..])\n\
                               {} foo v0.5.0 ({})\n",
                              UPDATING, path2url(git_root.clone()),
                              COMPILING, path2url(git_root),
@@ -257,18 +257,19 @@ test!(cargo_compile_git_dep_tag {
     assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}?ref=v0.1.0#[..])\n\
+                              {} dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
                               {} foo v0.5.0 ({})\n",
                              UPDATING, path2url(git_root.clone()),
                              COMPILING, path2url(git_root),
-                             COMPILING, path2url(root)))
-        .with_stderr(""));
+                             COMPILING, path2url(root))));
 
     assert_that(&project.bin("foo"), existing_file());
 
-    assert_that(
-      cargo::util::process(project.bin("foo")).unwrap(),
-      execs().with_stdout("hello world\n"));
+    assert_that(cargo::util::process(project.bin("foo")).unwrap(),
+                execs().with_stdout("hello world\n"));
+
+    assert_that(project.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
 });
 
 test!(cargo_compile_with_nested_paths {

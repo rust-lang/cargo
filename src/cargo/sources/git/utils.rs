@@ -5,52 +5,16 @@ use rustc_serialize::{Encodable, Encoder};
 use url::Url;
 use git2;
 
+use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal, Require};
 
-#[deriving(PartialEq,Clone,RustcEncodable)]
-pub enum GitReference {
-    Master,
-    Other(String)
-}
-
-#[deriving(PartialEq,Clone,RustcEncodable)]
-pub struct GitRevision(String);
-
-impl GitReference {
-    pub fn for_str<S: Str>(string: S) -> GitReference {
-        if string.as_slice() == "master" {
-            GitReference::Master
-        } else {
-            GitReference::Other(string.as_slice().to_string())
-        }
-    }
-}
-
-impl Str for GitReference {
-    fn as_slice(&self) -> &str {
-        match *self {
-            GitReference::Master => "master",
-            GitReference::Other(ref string) => string.as_slice()
-        }
-    }
-}
-
-impl Show for GitReference {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.as_slice().fmt(f)
-    }
-}
-
-impl Str for GitRevision {
-    fn as_slice(&self) -> &str {
-        let GitRevision(ref me) = *self;
-        me.as_slice()
-    }
-}
+#[deriving(PartialEq, Clone)]
+#[allow(missing_copy_implementations)]
+pub struct GitRevision(git2::Oid);
 
 impl Show for GitRevision {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.as_slice().fmt(f)
+        self.0.fmt(f)
     }
 }
 
@@ -138,8 +102,8 @@ impl GitRemote {
         &self.url
     }
 
-    pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
-                           -> CargoResult<GitRevision> {
+    pub fn rev_for(&self, path: &Path, reference: &GitReference)
+                   -> CargoResult<GitRevision> {
         let db = try!(self.db_at(path));
         db.rev_for(reference)
     }
@@ -215,9 +179,36 @@ impl GitDatabase {
         Ok(checkout)
     }
 
-    pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<GitRevision> {
-        let rev = try!(self.repo.revparse_single(reference.as_slice()));
-        Ok(GitRevision(rev.id().to_string()))
+    pub fn rev_for(&self, reference: &GitReference) -> CargoResult<GitRevision> {
+        let id = match *reference {
+            GitReference::Tag(ref s) => {
+                try!((|| {
+                    let refname = format!("refs/tags/{}", s);
+                    let id = try!(self.repo.refname_to_id(refname.as_slice()));
+                    let tag = try!(self.repo.find_tag(id));
+                    let obj = try!(tag.peel());
+                    Ok(obj.id())
+                }).chain_error(|| {
+                    human(format!("failed to find tag `{}`", s))
+                }))
+            }
+            GitReference::Branch(ref s) => {
+                try!((|| {
+                    let b = try!(self.repo.find_branch(s.as_slice(),
+                                                       git2::BranchType::Local));
+                    b.get().target().require(|| {
+                        human(format!("branch `{}` did not have a target", s))
+                    })
+                }).chain_error(|| {
+                    human(format!("failed to find branch `{}`", s))
+                }))
+            }
+            GitReference::Rev(ref s) => {
+                let obj = try!(self.repo.revparse_single(s.as_slice()));
+                obj.id()
+            }
+        };
+        Ok(GitRevision(id))
     }
 
     pub fn has_ref<S: Str>(&self, reference: S) -> CargoResult<()> {
@@ -247,10 +238,6 @@ impl<'a> GitCheckout<'a> {
         let checkout = GitCheckout::new(into, database, revision, repo);
         try!(checkout.reset());
         Ok(checkout)
-    }
-
-    pub fn get_rev(&self) -> &str {
-        self.revision.as_slice()
     }
 
     fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
@@ -293,10 +280,8 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn reset(&self) -> CargoResult<()> {
-        info!("reset {} to {}", self.repo.path().display(),
-              self.revision.as_slice());
-        let oid = try!(git2::Oid::from_str(self.revision.as_slice()));
-        let object = try!(self.repo.find_object(oid, None));
+        info!("reset {} to {}", self.repo.path().display(), self.revision);
+        let object = try!(self.repo.find_object(self.revision.0, None));
         try!(self.repo.reset(&object, git2::ResetType::Hard, None, None));
         Ok(())
     }

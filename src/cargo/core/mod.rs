@@ -6,7 +6,7 @@ pub use self::package_id_spec::PackageIdSpec;
 pub use self::registry::Registry;
 pub use self::resolver::Resolve;
 pub use self::shell::{Shell, MultiShell, ShellConfig};
-pub use self::source::{Source, SourceId, SourceMap, SourceSet};
+pub use self::source::{Source, SourceId, SourceMap, SourceSet, GitReference};
 pub use self::summary::Summary;
 
 pub mod source;
