@@ -272,13 +272,22 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Some(deps) => deps,
         };
         deps.map(|id| self.get_package(id)).filter(|dep| {
-            // If this target is a build command, then we only want build
-            // dependencies, otherwise we want everything *other than* build
-            // dependencies.
             let pkg_dep = pkg.get_dependencies().iter().find(|d| {
                 d.get_name() == dep.get_name()
             }).unwrap();
-            target.get_profile().is_custom_build() == pkg_dep.is_build()
+
+            // If this target is a build command, then we only want build
+            // dependencies, otherwise we want everything *other than* build
+            // dependencies.
+            let is_correct_dep =
+                target.get_profile().is_custom_build() == pkg_dep.is_build();
+
+            // If this dependency is *not* a transitive dependency, then it
+            // only applies to test targets
+            let is_actual_dep = pkg_dep.is_transitive() ||
+                                target.get_profile().is_test();
+
+            is_correct_dep && is_actual_dep
         }).filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
