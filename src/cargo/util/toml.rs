@@ -12,7 +12,7 @@ use serialize::{Decodable, Decoder};
 use core::SourceId;
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::dependency::Kind;
-use core::manifest::{LibKind, Profile, ManifestMetadata};
+use core::manifest::{LibKind, EmitKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
 use util::{CargoResult, Require, human, ToUrl, ToSemver};
 
@@ -231,6 +231,7 @@ pub struct TomlProfiles {
 pub struct TomlProfile {
     opt_level: Option<uint>,
     lto: Option<bool>,
+    emit: Option<Vec<String>>,
     codegen_units: Option<uint>,
     debug: Option<bool>,
     rpath: Option<bool>,
@@ -682,11 +683,13 @@ fn normalize(libs: &[TomlLibTarget],
         };
         let opt_level = toml.opt_level.unwrap_or(profile.get_opt_level());
         let lto = toml.lto.unwrap_or(profile.get_lto());
+        let emit = toml.emit.as_ref().and_then(|e| EmitKind::from_strs(e[]).ok())
+                            .unwrap_or_else(|| (*profile.get_emit()).clone());
         let codegen_units = toml.codegen_units;
         let debug = toml.debug.unwrap_or(profile.get_debug());
         let rpath = toml.rpath.unwrap_or(profile.get_rpath());
-        profile.opt_level(opt_level).lto(lto).codegen_units(codegen_units)
-               .debug(debug).rpath(rpath)
+        profile.opt_level(opt_level).lto(lto).emit(emit)
+               .codegen_units(codegen_units).debug(debug).rpath(rpath)
     }
 
     fn target_profiles(target: &TomlTarget, profiles: &TomlProfiles,
