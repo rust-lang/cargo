@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::sync::TaskPool;
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
-use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
+use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, Dependency, profile};
 
 use super::job::Job;
