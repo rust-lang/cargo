@@ -116,49 +116,6 @@ impl LibKind {
     }
 }
 
-#[deriving(Show, Clone, PartialEq, Eq, Hash, Encodable, Decodable)]
-pub enum EmitKind {
-    Asm,  // assembly
-    Bc,   // LLVM bitcode
-    Ir,   // LLVM IR
-    Obj,  // .o
-    Link, // binary
-}
-
-impl EmitKind {
-    pub fn from_str(string: &str) -> CargoResult<EmitKind> {
-        match string {
-            "asm"  => Ok(EmitKind::Asm),
-            "bc"   => Ok(EmitKind::Bc),
-            "ir"   => Ok(EmitKind::Ir),
-            "obj"  => Ok(EmitKind::Obj),
-            "link" => Ok(EmitKind::Link),
-            _ => Err(human(format!("{} was not one of asm|bc|ir|obj|link",
-                                   string))),
-        }
-    }
-
-    pub fn from_strs<S: Str>(strings: &[S]) -> CargoResult<Vec<EmitKind>> {
-        let mut v = vec!();
-
-        for s in strings.iter() {
-            v.push(try!(EmitKind::from_str(s.as_slice())));
-        }
-
-        Ok(v)
-    }
-
-    pub fn emit(&self) -> &'static str {
-        match *self {
-            EmitKind::Asm  => "asm",
-            EmitKind::Bc   => "bc",
-            EmitKind::Ir   => "ir",
-            EmitKind::Obj  => "obj",
-            EmitKind::Link => "link",
-        }
-    }
-}
-
 #[deriving(Show, Clone, Hash, PartialEq, Encodable)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
@@ -171,7 +128,6 @@ pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
     lto: bool,
-    emit: Vec<EmitKind>,
     codegen_units: Option<uint>,    // None = use rustc default
     debug: bool,
     rpath: bool,
@@ -190,7 +146,6 @@ impl Profile {
             env: String::new(),
             opt_level: 0,
             lto: false,
-            emit: vec!(),
             codegen_units: None,
             debug: false,
             rpath: false,
@@ -227,7 +182,6 @@ impl Profile {
         Profile {
             env: "bench".to_string(),
             opt_level: 3,
-            emit: vec!(EmitKind::Ir, EmitKind::Asm, EmitKind::Link),
             test: true,
             dest: Some("release".to_string()),
             .. Profile::default()
@@ -289,10 +243,6 @@ impl Profile {
         self.lto
     }
 
-    pub fn get_emit(&self) -> &Vec<EmitKind> {
-        &self.emit
-    }
-
     pub fn get_codegen_units(&self) -> Option<uint> {
         self.codegen_units
     }
@@ -320,11 +270,6 @@ impl Profile {
 
     pub fn lto(mut self, lto: bool) -> Profile {
         self.lto = lto;
-        self
-    }
-
-    pub fn emit(mut self, emit: Vec<EmitKind>) -> Profile {
-        self.emit = emit;
         self
     }
 
@@ -383,7 +328,6 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
         let Profile {
             opt_level,
             lto,
-            ref emit,
             codegen_units,
             debug,
             rpath,
@@ -401,7 +345,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
 
             custom_build: _,
         } = *self;
-        (opt_level, lto, emit, codegen_units, debug,
+        (opt_level, lto, codegen_units, debug,
          rpath, for_host, dest, harness).hash(into)
     }
 }

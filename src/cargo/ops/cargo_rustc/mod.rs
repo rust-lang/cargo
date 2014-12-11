@@ -601,8 +601,10 @@ fn build_base_args(cx: &Context,
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
 
-    for e in profile.get_emit().iter() {
-        cmd = cmd.arg("--emit").arg(e.emit());
+    if cx.config.emit_intermediate() {
+        for to_emit in [ "asm", "bc", "ir", "obj", "link" ].iter() {
+            cmd = cmd.arg("--emit").arg(to_emit);
+        }
     }
 
     if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {

@@ -162,7 +162,6 @@ opt-level = 0  # Controls the --opt-level the compiler builds with
 debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
 rpath = false  # Controls whether the compiler passes `-C rpath`
 lto = false    # Controls `-C lto` for binaries and staticlibs
-emit = []      # A subset of asm|bc|ir|obj|link.
 
 # The release profile, used for `cargo build --release`
 [profile.release]
@@ -170,7 +169,6 @@ opt-level = 3
 debug = false
 rpath = false
 lto = false
-emit = []
 
 # The testing profile, used for `cargo test`
 [profile.test]
@@ -178,7 +176,6 @@ opt-level = 0
 debug = true
 rpath = false
 lto = false
-emit = []
 
 # The benchmarking profile, used for `cargo bench`
 [profile.bench]
@@ -186,7 +183,6 @@ opt-level = 3
 debug = false
 rpath = false
 lto = false
-emit = []
 
 # The documentation profile, used for `cargo doc`
 [profile.doc]
@@ -194,7 +190,6 @@ opt-level = 0
 debug = true
 rpath = false
 lto = false
-emit = []
 ```
 
 # The `[features]` Section

@@ -13,6 +13,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_test: Option<String>,
     flag_no_default_features: bool,
+    flag_emit_intermediate: bool,
     flag_no_run: bool,
     flag_package: Option<String>,
     flag_target: Option<String>,
@@ -33,6 +34,7 @@ Options:
     -j N, --jobs N           The number of jobs to run in parallel
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
+    --emit-intermediate      Emit intermediate .ll, .o, .bc, and .s files
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to build tests for
     -v, --verbose            Use verbose output
@@ -64,6 +66,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
             dev_deps: true,
             features: options.flag_features.as_slice(),
             no_default_features: options.flag_no_default_features,
+            emit_intermediate: options.flag_emit_intermediate,
             spec: options.flag_package.as_ref().map(|s| s.as_slice()),
             lib_only: false
         },

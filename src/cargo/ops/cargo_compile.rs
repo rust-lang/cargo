@@ -46,6 +46,7 @@ pub struct CompileOptions<'a> {
     pub dev_deps: bool,
     pub features: &'a [String],
     pub no_default_features: bool,
+    pub emit_intermediate: bool,
     pub spec: Option<&'a str>,
     pub lib_only: bool
 }
@@ -72,7 +73,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { env, ref mut shell, jobs, target, spec,
                          dev_deps, features, no_default_features,
-                         lib_only } = *options;
+                         emit_intermediate, lib_only } = *options;
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
         s.as_slice().split(' ')
@@ -86,7 +87,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
     let user_configs = try!(config::all_configs(try!(os::getcwd())));
     let override_ids = try!(source_ids_from_config(&user_configs,
                                                    package.get_root()));
-    let config = try!(Config::new(*shell, jobs, target.clone()));
+    let config = try!(Config::new(*shell, jobs, target.clone(), emit_intermediate));
 
     let (packages, resolve_with_overrides, sources) = {
         let rustc_host = config.rustc_host().to_string();

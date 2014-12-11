@@ -22,7 +22,7 @@ pub fn generate_lockfile(manifest_path: &Path,
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
     try!(source.update());
     let package = try!(source.get_root_package());
-    let mut config = try!(Config::new(shell, None, None));
+    let mut config = try!(Config::new(shell, None, None, false));
     let mut registry = PackageRegistry::new(&mut config);
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
@@ -47,7 +47,7 @@ pub fn update_lockfile(manifest_path: &Path,
                           simultaneously"))
     }
 
-    let mut config = try!(Config::new(opts.shell, None, None));
+    let mut config = try!(Config::new(opts.shell, None, None, false));
     let mut registry = PackageRegistry::new(&mut config);
     let mut to_avoid = HashSet::new();
 
