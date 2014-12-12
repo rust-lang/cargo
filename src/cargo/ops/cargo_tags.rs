@@ -27,7 +27,7 @@ use util::{mod, CargoResult, BoxError};
 
 /// Contains informations about how a package should be compiled.
 pub struct TagsOptions {
-    pub vi_tags: bool,
+    pub emacs_tags: bool,
 }
 
 fn to_display(files: &Vec<Path>) -> Vec<String> {
@@ -52,7 +52,7 @@ pub fn generate_tags(manifest_path: &Path, options: &mut TagsOptions) -> CargoRe
 
     let rust_cfg: [&'static str, ..11] = include!("ctags.rust");
     let extra_params = [ "--languages=Rust", "--recurse" ];
-    let vi_tags = if options.vi_tags { None } else { Some("-e") };
+    let emacs_tags = if options.emacs_tags { Some("-e") } else { None };
 
     for opt in rust_cfg.iter().chain(extra_params.iter()).chain(vi_tags.iter()) {
         ctags = ctags.arg(opt);

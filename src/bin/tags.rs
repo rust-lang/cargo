@@ -38,7 +38,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let mut opts = TagsOptions {
-        vi_tags: options.flag_emacs.unwrap_or(false),
+        emacs_tags: options.flag_emacs.unwrap_or(false),
     };
 
     ops::generate_tags(&root, &mut opts).map(|_| None).map_err(|err| {
