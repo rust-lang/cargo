@@ -51,7 +51,7 @@ impl PathSource {
         }
     }
 
-    fn read_packages(&self) -> CargoResult<Vec<Package>> {
+    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
         } else {
