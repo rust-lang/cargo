@@ -687,8 +687,8 @@ fn normalize(libs: &[TomlLibTarget],
         let codegen_units = toml.codegen_units;
         let debug = toml.debug.unwrap_or(profile.get_debug());
         let rpath = toml.rpath.unwrap_or(profile.get_rpath());
-        profile.opt_level(opt_level).lto(lto).codegen_units(codegen_units)
-               .debug(debug).rpath(rpath)
+        profile.opt_level(opt_level).lto(lto)
+               .codegen_units(codegen_units).debug(debug).rpath(rpath)
     }
 
     fn target_profiles(target: &TomlTarget, profiles: &TomlProfiles,

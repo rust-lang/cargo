@@ -31,7 +31,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         Some(token) => token,
         None => {
             let err = (|| {
-                let config = try!(Config::new(shell, None, None));
+                let config = try!(Config::new(shell, None, None, false));
                 let src = try!(SourceId::for_central());
                 let mut src = RegistrySource::new(&src, &config);
                 try!(src.update());
@@ -53,4 +53,3 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     }));
     Ok(None)
 }
-

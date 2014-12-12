@@ -12,7 +12,7 @@ pub fn fetch(manifest_path: &Path,
     try!(source.update());
     let package = try!(source.get_root_package());
 
-    let mut config = try!(Config::new(shell, None, None));
+    let mut config = try!(Config::new(shell, None, None, false));
     let mut registry = PackageRegistry::new(&mut config);
     try!(ops::resolve_pkg(&mut registry, &package));
     Ok(())

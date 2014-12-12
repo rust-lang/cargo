@@ -13,6 +13,7 @@ struct Options {
     flag_jobs: Option<uint>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,
+    flag_emit_intermediate: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
@@ -34,6 +35,7 @@ Options:
     --release               Build artifacts in release mode, with optimizations
     --features FEATURES     Space-separated list of features to also build
     --no-default-features   Do not build the `default` feature
+    --emit-intermediate      Emit intermediate .ll, .o, .bc, and .s files
     --target TRIPLE         Build for the target triple
     --manifest-path PATH    Path to the manifest to execute
     -v, --verbose           Use verbose output
@@ -66,6 +68,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         dev_deps: true,
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,
+        emit_intermediate: options.flag_emit_intermediate,
         spec: None,
         lib_only: false
     };

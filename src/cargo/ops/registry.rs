@@ -167,7 +167,7 @@ pub fn registry(shell: &mut MultiShell,
     let index = try!(index.as_slice().to_url().map_err(human));
     let sid = SourceId::for_registry(&index);
     let api_host = {
-        let mut config = try!(Config::new(shell, None, None));
+        let mut config = try!(Config::new(shell, None, None, false));
         let mut src = RegistrySource::new(&sid, &mut config);
         try!(src.update().chain_error(|| {
             human(format!("Failed to update registry {}", index))
@@ -221,7 +221,7 @@ pub fn http_proxy() -> CargoResult<Option<String>> {
 }
 
 pub fn registry_login(shell: &mut MultiShell, token: String) -> CargoResult<()> {
-    let config = try!(Config::new(shell, None, None));
+    let config = try!(Config::new(shell, None, None, false));
     let RegistryConfig { index, token: _ } = try!(registry_configuration());
     let mut map = HashMap::new();
     let p = try!(os::getcwd());

@@ -600,6 +600,13 @@ fn build_base_args(cx: &Context,
     if profile.get_opt_level() != 0 {
         cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
     }
+
+    if cx.config.emit_intermediate() {
+        for to_emit in [ "asm", "bc", "ir", "obj", "link" ].iter() {
+            cmd = cmd.arg("--emit").arg(to_emit);
+        }
+    }
+
     if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {
         cmd = cmd.args(&["-C", "lto"]);
     } else {

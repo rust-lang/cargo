@@ -19,6 +19,7 @@ pub struct Config<'a> {
     home_path: Path,
     shell: RefCell<&'a mut MultiShell>,
     jobs: uint,
+    emit_intermediate: bool,
     target: Option<string::String>,
     rustc_version: string::String,
     /// The current host and default target of rustc
@@ -28,7 +29,8 @@ pub struct Config<'a> {
 impl<'a> Config<'a> {
     pub fn new<'a>(shell: &'a mut MultiShell,
                    jobs: Option<uint>,
-                   target: Option<string::String>) -> CargoResult<Config<'a>> {
+                   target: Option<string::String>,
+                   emit_intermediate: bool) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
@@ -42,6 +44,7 @@ impl<'a> Config<'a> {
             })),
             shell: RefCell::new(shell),
             jobs: jobs.unwrap_or(os::num_cpus()),
+            emit_intermediate: emit_intermediate,
             target: target,
             rustc_version: rustc_version,
             rustc_host: rustc_host,
@@ -80,6 +83,10 @@ impl<'a> Config<'a> {
 
     pub fn target(&self) -> Option<&str> {
         self.target.as_ref().map(|t| t.as_slice())
+    }
+
+    pub fn emit_intermediate(&self) -> bool {
+        self.emit_intermediate
     }
 
     /// Return the output of `rustc -v verbose`

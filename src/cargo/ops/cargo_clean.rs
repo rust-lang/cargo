@@ -37,7 +37,7 @@ pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
     let pkgid = try!(resolve.query(spec));
 
     // Translate the PackageId to a Package
-    let mut cfg = try!(Config::new(opts.shell, None, None));
+    let mut cfg = try!(Config::new(opts.shell, None, None, false));
     let pkg = {
         let mut source = pkgid.get_source_id().load(&mut cfg);
         try!(source.update());
