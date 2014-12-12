@@ -93,7 +93,7 @@ impl<'a> Config<'a> {
     }
 }
 
-#[deriving(Eq,PartialEq,Clone,Encodable,Decodable)]
+#[deriving(Eq, PartialEq, Clone, Encodable, Decodable, Copy)]
 pub enum Location {
     Project,
     Global

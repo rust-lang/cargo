@@ -63,7 +63,7 @@ pub struct PackageRegistry<'a> {
     locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
 }
 
-#[deriving(PartialEq, Eq)]
+#[deriving(PartialEq, Eq, Copy)]
 enum Kind {
     Override,
     Locked,

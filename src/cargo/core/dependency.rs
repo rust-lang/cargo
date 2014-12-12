@@ -22,7 +22,7 @@ pub struct Dependency {
     only_for_platform: Option<String>,
 }
 
-#[deriving(PartialEq, Clone, Show)]
+#[deriving(PartialEq, Clone, Show, Copy)]
 pub enum Kind {
     Normal,
     Development,

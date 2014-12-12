@@ -228,6 +228,7 @@ pub struct TomlProfiles {
 }
 
 #[deriving(Decodable, Clone, Default)]
+#[allow(missing_copy_implementations)]
 pub struct TomlProfile {
     opt_level: Option<uint>,
     lto: Option<bool>,
@@ -673,6 +674,7 @@ fn normalize(libs: &[TomlLibTarget],
     log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}, benches={}",
          libs, bins, examples, tests, benches);
 
+    #[deriving(Copy)]
     enum TestDep { Needed, NotNeeded }
 
     fn merge(profile: Profile, toml: &Option<TomlProfile>) -> Profile {
