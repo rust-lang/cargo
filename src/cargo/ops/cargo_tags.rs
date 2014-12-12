@@ -1,27 +1,7 @@
 //!
-//! Cargo compile currently does the following steps:
+//! Cargo tags generates ctags files in either emacs or vi format, using a copy
+//! of exuberant that exists on the PATH.
 //!
-//! All configurations are already injected as environment variables via the
-//! main cargo command
-//!
-//! 1. Read the manifest
-//! 2. Shell out to `cargo-resolve` with a list of dependencies and sources as
-//!    stdin
-//!
-//!    a. Shell out to `--do update` and `--do list` for each source
-//!    b. Resolve dependencies and return a list of name/version/source
-//!
-//! 3. Shell out to `--do download` for each source
-//! 4. Shell out to `--do get` for each source, and build up the list of paths
-//!    to pass to rustc -L
-//! 5. Call `cargo-rustc` with the results of the resolver zipped together with
-//!    the results of the `get`
-//!
-//!    a. Topologically sort the dependencies
-//!    b. Compile each dependency in order, passing in the -L's pointing at each
-//!       previously compiled dependency
-//!
-
 use sources::PathSource;
 use util::{mod, CargoResult, BoxError};
 
