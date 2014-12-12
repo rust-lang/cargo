@@ -8,7 +8,7 @@ use cargo::util::{CliResult, CliError};
 
 #[deriving(Decodable)]
 struct Options {
-    flag_emacs: Option<bool>,
+    flag_emacs: bool,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
 }
@@ -21,7 +21,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -e                       Generate emacs-compatible tags
+    --emacs                  Generate emacs-compatible tags
     --manifest-path PATH     Path to the manifest to compile
     -v, --verbose            Use verbose output
 
@@ -38,7 +38,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let mut opts = TagsOptions {
-        emacs_tags: options.flag_emacs.unwrap_or(false),
+        emacs_tags: options.flag_emacs,
     };
 
     ops::generate_tags(&root, &mut opts).map(|_| None).map_err(|err| {
