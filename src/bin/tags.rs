@@ -21,7 +21,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --emacs                  Generate emacs-compatible tags
+    -e --emacs               Generate emacs-compatible tags
     --manifest-path PATH     Path to the manifest to compile
     -v, --verbose            Use verbose output
 

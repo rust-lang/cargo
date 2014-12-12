@@ -5,3 +5,5 @@
 /config.mk
 src/doc/build
 rustc
+tags
+TAGS
