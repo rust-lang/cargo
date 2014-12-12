@@ -54,7 +54,7 @@ pub fn generate_tags(manifest_path: &Path, options: &mut TagsOptions) -> CargoRe
     let extra_params = [ "--languages=Rust", "--recurse" ];
     let emacs_tags = if options.emacs_tags { Some("-e") } else { None };
 
-    for opt in rust_cfg.iter().chain(extra_params.iter()).chain(vi_tags.iter()) {
+    for opt in rust_cfg.iter().chain(extra_params.iter()).chain(emacs_tags.iter()) {
         ctags = ctags.arg(opt);
     }
     for path in files.iter() {
