@@ -25,7 +25,7 @@ mod job_queue;
 mod layout;
 mod links;
 
-#[deriving(PartialEq, Eq, Hash, Show)]
+#[deriving(PartialEq, Eq, Hash, Show, Copy)]
 pub enum Kind { Host, Target }
 
 #[deriving(Default, Clone)]

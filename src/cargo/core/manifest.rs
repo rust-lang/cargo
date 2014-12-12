@@ -81,7 +81,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     }
 }
 
-#[deriving(Show, Clone, PartialEq, Hash, Encodable)]
+#[deriving(Show, Clone, PartialEq, Hash, Encodable, Copy)]
 pub enum LibKind {
     Lib,
     Rlib,
