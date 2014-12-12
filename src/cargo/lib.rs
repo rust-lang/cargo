@@ -116,6 +116,20 @@ pub fn execute_main_without_stdin<'a,
                                                        options_first));
 }
 
+pub fn execute_main_with_args_and_without_stdin<'a,
+                                  T: Decodable<docopt::Decoder, docopt::Error>,
+                                  V: Encodable<json::Encoder<'a>, io::IoError>>(
+                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
+                                      options_first: bool,
+                                      usage: &str,
+                                      args: &[String]) {
+    let mut shell = shell(true);
+
+    process_executed(
+        call_main_without_stdin(exec, &mut shell, usage, args, options_first),
+        &mut shell)
+}
+
 pub fn call_main_without_stdin<'a,
                                T: Decodable<docopt::Decoder, docopt::Error>,
                                V: Encodable<json::Encoder<'a>, io::IoError>>(
