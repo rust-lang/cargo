@@ -77,6 +77,10 @@ impl MultiShell {
     pub fn set_verbose(&mut self, verbose: bool) {
         self.verbose = verbose;
     }
+
+    pub fn get_verbose(&self) -> bool {
+        self.verbose
+    }
 }
 
 pub type ShellCallback<'a> = |&mut Shell|:'a -> IoResult<()>;
