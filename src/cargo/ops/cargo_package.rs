@@ -83,7 +83,7 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
             )*
         }}
     }
-    lacking!(description, license || license_file)
+    lacking!(description, license || license_file, documentation || homepage || repository)
 
     if !missing.is_empty() {
         let mut things = missing.slice_to(missing.len() - 1).connect(", ");

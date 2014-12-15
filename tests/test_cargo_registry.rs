@@ -179,6 +179,7 @@ test!(package_with_path_deps {
             authors = []
             license = "MIT"
             description = "foo"
+            repository = "bar"
 
             [dependencies.notyet]
             version = "0.0.1"
@@ -491,6 +492,7 @@ test!(bad_license_file {
             authors = []
             license-file = "foo"
             description = "bar"
+            repository = "baz"
         "#)
         .file("src/main.rs", r#"
             fn main() {}
