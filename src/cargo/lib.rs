@@ -199,7 +199,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
 
     let CliError { error, exit_code, unknown } = err;
     let verbose = shell.get_verbose();
-    let fatal = exit_code == 1; // exit_code == 0 is non-fatal error
+    let fatal = exit_code != 0; // exit_code == 0 is non-fatal error
 
     if unknown {
         output(Some("An unknown error occurred".to_string()), None, shell, fatal);
