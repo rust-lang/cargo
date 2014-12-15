@@ -10,4 +10,9 @@ test!(simple {
     assert_that(p.cargo_process("version"),
                 execs().with_status(0).with_stdout(format!("{}\n",
         cargo::version()).as_slice()));
+
+    assert_that(p.cargo_process("--version"),
+                execs().with_status(0).with_stdout(format!("{}\n",
+        cargo::version()).as_slice()));
+
 })
