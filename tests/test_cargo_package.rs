@@ -81,7 +81,8 @@ test!(metadata_warning {
         compiling = COMPILING,
         dir = p.url()).as_slice())
                 .with_stderr("\
-warning: manifest has no description, license or license-file. See \
+warning: manifest has no description, license, license-file, documentation, \
+homepage or repository. See \
 http://doc.crates.io/manifest.html#package-metadata for more info."));
 
     let p = project("one")
@@ -106,10 +107,10 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         compiling = COMPILING,
         dir = p.url()).as_slice())
                 .with_stderr("\
-warning: manifest has no description. See \
+warning: manifest has no description, documentation, homepage or repository. See \
 http://doc.crates.io/manifest.html#package-metadata for more info."));
 
-    let p = project("both")
+    let p = project("all")
         .file("Cargo.toml", format!(r#"
             [project]
             name = "foo"
@@ -117,6 +118,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
             authors = []
             license = "MIT"
             description = "foo"
+            repository = "bar"
         "#))
         .file("src/main.rs", r#"
             fn main() {}
