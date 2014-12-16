@@ -39,8 +39,7 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 }
 
 test!(simple {
-    let crates = api_path().join("api/v1/crates");
-    File::create(&crates).write_str(r#"{
+    let contents = r#"{
         "crates": [{
             "created_at": "2014-11-16T20:17:35Z",
             "description": "Design by contract style assertions for Rust",
@@ -65,7 +64,19 @@ test!(simple {
         "meta": {
             "total": 1
         }
-    }"#).assert();
+    }"#;
+    let base = api_path().join("api/v1/crates");
+
+    // Older versions of curl don't peel off query parameters when looking for
+    // filenames, so just make both files.
+    //
+    // On windows, though, `?` is an invalid character, but we always build curl
+    // from source there anyway!
+    File::create(&base).write_str(contents).unwrap();
+    if !cfg!(windows) {
+        File::create(&base.with_filename("crates?q=postgres"))
+             .write_str(contents).unwrap();
+    }
 
     assert_that(cargo_process("search").arg("postgres"),
                 execs().with_status(0).with_stdout(format!("\
