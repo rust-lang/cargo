@@ -28,22 +28,6 @@ pub trait CargoError: Send {
     }
 }
 
-impl<E: CargoError> FromError<E> for Box<CargoError> {
-    fn from_error(error: E) -> Box<CargoError> {
-        box error as Box<CargoError>
-    }
-}
-
-macro_rules! from_error {
-    ($ty:ty) => {
-        impl FromError<$ty> for $ty {
-            fn from_error(error: $ty) -> $ty {
-                error
-            }
-        }
-    }
-}
-
 impl Show for Box<CargoError> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.description()));
@@ -96,13 +80,9 @@ impl CargoError for IoError {
     fn description(&self) -> String { self.to_string() }
 }
 
-from_error!(IoError);
-
 impl CargoError for TomlError {
     fn description(&self) -> String { self.to_string() }
 }
-
-from_error!(TomlError);
 
 impl CargoError for fmt::Error {
     fn description(&self) -> String {
@@ -110,19 +90,13 @@ impl CargoError for fmt::Error {
     }
 }
 
-from_error!(fmt::Error);
-
 impl CargoError for curl::ErrCode {
     fn description(&self) -> String { self.to_string() }
 }
 
-from_error!(curl::ErrCode);
-
 impl CargoError for json::DecoderError {
     fn description(&self) -> String { self.to_string() }
 }
-
-from_error!(json::DecoderError);
 
 pub struct ProcessError {
     pub msg: String,
@@ -131,8 +105,6 @@ pub struct ProcessError {
     pub detail: Option<String>,
     pub cause: Option<Box<CargoError>>
 }
-
-from_error!(ProcessError);
 
 impl Show for ProcessError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -244,8 +216,6 @@ impl CargoError for CliError {
     }
 }
 
-from_error!(CliError);
-
 impl CargoError for docopt::Error {
     fn description(&self) -> String {
         match *self {
@@ -266,19 +236,13 @@ impl CargoError for docopt::Error {
     fn is_human(&self) -> bool { true }
 }
 
-from_error!(docopt::Error);
-
 impl CargoError for url::ParseError {
     fn description(&self) -> String { self.to_string() }
 }
 
-from_error!(url::ParseError);
-
 impl CargoError for git2::Error {
     fn description(&self) -> String { self.to_string() }
 }
-
-from_error!(git2::Error);
 
 impl CliError {
     pub fn new<S: Str>(error: S, code: uint) -> CliError {
