@@ -27,6 +27,7 @@ extern crate url;
 extern crate registry;
 
 use std::os;
+use std::error;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
 use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
@@ -58,7 +59,7 @@ mod cargo {
 #[macro_export]
 macro_rules! try {
     ($expr:expr) => ({
-        use cargo::util::FromError;
+        use std::error::FromError;
         match $expr.map_err(FromError::from_error) {
             Ok(val) => val,
             Err(err) => return Err(err)

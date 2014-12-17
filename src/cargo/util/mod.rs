@@ -2,7 +2,7 @@ pub use self::config::Config;
 pub use self::process_builder::{process, ProcessBuilder};
 pub use self::result::{Wrap, Require};
 pub use self::errors::{CargoResult, CargoError, BoxError, ChainError, CliResult};
-pub use self::errors::{CliError, FromError, ProcessError};
+pub use self::errors::{CliError, ProcessError};
 pub use self::errors::{process_error, internal_error, internal, human, caused_human};
 pub use self::paths::{realpath, join_paths};
 pub use self::lev_distance::{lev_distance};

@@ -4,6 +4,7 @@ use std::fmt::{mod, Show, Formatter};
 use std::str;
 use rustc_serialize::json;
 use semver;
+use std::error::FromError;
 
 use curl;
 use docopt;
@@ -25,10 +26,6 @@ pub trait CargoError: Send {
             is_human: self.is_human()
         }
     }
-}
-
-pub trait FromError<E> {
-    fn from_error(error: E) -> Self;
 }
 
 impl<E: CargoError> FromError<E> for Box<CargoError> {
