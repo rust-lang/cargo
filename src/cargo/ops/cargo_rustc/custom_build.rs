@@ -39,7 +39,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target, };
     let (script_output, build_output) = {
         (cx.layout(pkg, Kind::Host).build(pkg),
-         cx.layout(pkg, Kind::Target).build_out(pkg))
+         cx.layout(pkg, kind).build_out(pkg))
     };
 
     // Building the command to execute
