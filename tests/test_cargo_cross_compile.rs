@@ -639,3 +639,44 @@ test!(build_deps_for_the_right_arch {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
 })
+
+test!(build_script_only_host {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.d1]
+            path = "d1"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "extern crate d1; fn main() {}")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("d1/src/lib.rs", "
+            pub fn d1() {}
+        ")
+        .file("d1/build.rs", r#"
+            use std::os;
+
+            fn main() {
+                assert!(os::getenv("OUT_DIR").unwrap()
+                                             .contains("target/build/d1-"),
+                        "bad: {}", os::getenv("OUT_DIR"));
+            }
+        "#);
+
+    let target = alternate();
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+                execs().with_status(0));
+})
