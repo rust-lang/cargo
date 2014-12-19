@@ -464,9 +464,13 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.get_source_id().get_precise().is_some() &&
-           try!(self.summaries(dep.get_name())).len() == 0 {
-            try!(self.do_update());
+        if dep.get_source_id().get_precise().is_some() {
+            let mut summaries = try!(self.summaries(dep.get_name())).iter().map(|s| {
+                s.0.clone()
+            }).collect::<Vec<_>>();
+            if try!(summaries.query(dep)).len() == 0 {
+                try!(self.do_update());
+            }
         }
 
         let summaries = try!(self.summaries(dep.get_name()));
