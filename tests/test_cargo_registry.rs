@@ -610,3 +610,43 @@ test!(git_and_registry_dep {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
 })
+
+test!(update_publish_then_update {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("a", "0.1.0", &[]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+
+
+    r::mock_pkg("a", "0.1.1", &[]);
+
+    let lock = p.root().join("Cargo.lock");
+    let s = File::open(&lock).unwrap().read_to_string().unwrap();
+    File::create(&lock).unwrap().write_str(s.replace("0.1.0", "0.1.1").as_slice())
+                       .unwrap();
+    println!("second");
+
+    fs::rmdir_recursive(&p.root().join("target")).unwrap();
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} [..]
+{downloading} a v0.1.1 (registry file://[..])
+{compiling} a v0.1.1 (registry [..])
+{compiling} foo v0.5.0 ({dir})
+", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+
+})
