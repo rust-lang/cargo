@@ -26,9 +26,9 @@ pub struct Config<'a> {
 }
 
 impl<'a> Config<'a> {
-    pub fn new<'a>(shell: &'a mut MultiShell,
-                   jobs: Option<uint>,
-                   target: Option<string::String>) -> CargoResult<Config<'a>> {
+    pub fn new(shell: &'a mut MultiShell,
+               jobs: Option<uint>,
+               target: Option<string::String>) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
@@ -134,7 +134,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
         match *self {
             CV::String(ref string, _) => string.encode(s),
             CV::List(ref list) => {
-                let list: Vec<&string::String> = list.iter().map(|s| s.ref0()).collect();
+                let list: Vec<&string::String> = list.iter().map(|s| &s.0).collect();
                 list.encode(s)
             }
             CV::Table(ref table) => table.encode(s),

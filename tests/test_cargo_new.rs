@@ -34,7 +34,7 @@ test!(simple_lib {
 
     assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
-})
+});
 
 test!(simple_bin {
     os::setenv("USER", "foo");
@@ -50,7 +50,7 @@ test!(simple_bin {
     assert_that(&paths::root().join(format!("foo/target/foo{}",
                                             os::consts::EXE_SUFFIX)),
                 existing_file());
-})
+});
 
 test!(simple_git {
     let td = TempDir::new("cargo").unwrap();
@@ -66,7 +66,7 @@ test!(simple_git {
 
     assert_that(cargo_process("build").cwd(td.path().clone().join("foo")),
                 execs().with_status(0));
-})
+});
 
 test!(simple_travis {
     os::setenv("USER", "foo");
@@ -80,7 +80,7 @@ test!(simple_travis {
 
     assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
-})
+});
 
 test!(no_argument {
     assert_that(cargo_process("new"),
@@ -90,7 +90,7 @@ Usage:
     cargo new [options] <path>
     cargo new -h | --help
 "));
-})
+});
 
 test!(existing {
     let dst = paths::root().join("foo");
@@ -99,13 +99,13 @@ test!(existing {
                 execs().with_status(101)
                        .with_stderr(format!("Destination `{}` already exists\n",
                                             dst.display())));
-})
+});
 
 test!(invalid_characters {
     assert_that(cargo_process("new").arg("foo.rs"),
                 execs().with_status(101)
                        .with_stderr("Invalid character `.` in crate name: `foo.rs`"));
-})
+});
 
 test!(finds_author_user {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
@@ -118,7 +118,7 @@ test!(finds_author_user {
     let toml = td.path().join("foo/Cargo.toml");
     let toml = File::open(&toml).read_to_string().assert();
     assert!(toml.as_slice().contains(r#"authors = ["foo"]"#));
-})
+});
 
 test!(finds_author_username {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
@@ -133,7 +133,7 @@ test!(finds_author_username {
     let toml = td.path().join("foo/Cargo.toml");
     let toml = File::open(&toml).read_to_string().assert();
     assert!(toml.as_slice().contains(r#"authors = ["foo"]"#));
-})
+});
 
 test!(finds_author_git {
     my_process("git").args(&["config", "--global", "user.name", "bar"])
@@ -146,7 +146,7 @@ test!(finds_author_git {
     let toml = paths::root().join("foo/Cargo.toml");
     let toml = File::open(&toml).read_to_string().assert();
     assert!(toml.as_slice().contains(r#"authors = ["bar <baz>"]"#));
-})
+});
 
 test!(author_prefers_cargo {
     my_process("git").args(&["config", "--global", "user.name", "bar"])
@@ -169,7 +169,7 @@ test!(author_prefers_cargo {
     let toml = File::open(&toml).read_to_string().assert();
     assert!(toml.as_slice().contains(r#"authors = ["new-foo <new-bar>"]"#));
     assert!(!root.join("foo/.gitignore").exists());
-})
+});
 
 test!(git_prefers_command_line {
     let root = paths::root();
@@ -186,7 +186,7 @@ test!(git_prefers_command_line {
                                     .env("USER", Some("foo")),
                 execs().with_status(0));
     assert!(td.path().join("foo/.gitignore").exists());
-})
+});
 
 test!(subpackage_no_git {
     os::setenv("USER", "foo");
@@ -201,4 +201,4 @@ test!(subpackage_no_git {
                  is_not(existing_file()));
     assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
                  is_not(existing_file()));
-})
+});

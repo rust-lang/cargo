@@ -26,7 +26,7 @@ test!(simple {
         dir = path2url(p.root())).as_slice()));
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
-})
+});
 
 test!(doc_no_libs {
     let p = project("foo")
@@ -46,7 +46,7 @@ test!(doc_no_libs {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
-})
+});
 
 test!(doc_twice {
     let p = project("foo")
@@ -69,7 +69,7 @@ test!(doc_twice {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("doc"),
                 execs().with_status(0).with_stdout(""))
-})
+});
 
 test!(doc_deps {
     let p = project("foo")
@@ -115,7 +115,7 @@ test!(doc_deps {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
-})
+});
 
 test!(doc_no_deps {
     let p = project("foo")
@@ -153,7 +153,7 @@ test!(doc_no_deps {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), is_not(existing_file()));
-})
+});
 
 test!(doc_only_bin {
     let p = project("foo")
@@ -186,7 +186,7 @@ test!(doc_only_bin {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
-})
+});
 
 test!(doc_lib_bin_same_name {
     let p = project("foo")
@@ -205,7 +205,7 @@ test!(doc_lib_bin_same_name {
 Cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
 "));
-})
+});
 
 test!(doc_dash_p {
     let p = project("foo")
@@ -243,4 +243,4 @@ test!(doc_dash_p {
 {compiling} b v0.0.1 (file://[..])
 {compiling} a v0.0.1 (file://[..])
 ", compiling = COMPILING).as_slice()));
-})
+});

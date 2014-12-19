@@ -57,7 +57,7 @@ src[..]main.rs
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {}", f.filename())
     }
-})
+});
 
 test!(metadata_warning {
     let p = project("all")
@@ -133,7 +133,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice()));
-})
+});
 
 test!(package_verbose {
     let root = paths::root().join("all");
@@ -168,7 +168,7 @@ test!(package_verbose {
 ",
         packaging = PACKAGING,
         archiving = ARCHIVING).as_slice()));
-})
+});
 
 test!(package_verification {
     let p = project("all")
@@ -193,4 +193,4 @@ test!(package_verification {
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice()));
-})
+});

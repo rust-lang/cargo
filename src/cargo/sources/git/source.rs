@@ -24,8 +24,8 @@ pub struct GitSource<'a, 'b:'a> {
 }
 
 impl<'a, 'b> GitSource<'a, 'b> {
-    pub fn new<'a, 'b>(source_id: &SourceId,
-                       config: &'a Config<'b>) -> GitSource<'a, 'b> {
+    pub fn new(source_id: &SourceId,
+               config: &'a Config<'b>) -> GitSource<'a, 'b> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let reference = match source_id.git_reference() {

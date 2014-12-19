@@ -83,7 +83,7 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
             )*
         }}
     }
-    lacking!(description, license || license_file, documentation || homepage || repository)
+    lacking!(description, license || license_file, documentation || homepage || repository);
 
     if !missing.is_empty() {
         let mut things = missing.slice_to(missing.len() - 1).connect(", ");
@@ -109,7 +109,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
                                  dst.display())))
     }
 
-    try!(fs::mkdir_recursive(&dst.dir_path(), USER_DIR))
+    try!(fs::mkdir_recursive(&dst.dir_path(), USER_DIR));
 
     let tmpfile = try!(File::create(dst));
 

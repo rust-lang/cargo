@@ -47,7 +47,7 @@ test!(old_custom_build {
                        .with_stderr("warning: [..] deprecated.\n\
                                               [..]\n\
                                               [..]"));
-})
+});
 
 test!(old_custom_multiple_build {
     let mut build1 = project("builder1");
@@ -110,7 +110,7 @@ test!(old_custom_multiple_build {
                 execs().with_status(0)
                        .with_stdout(format!("   Compiling foo v0.5.0 ({})\n",
                                             p.url())));
-})
+});
 
 test!(old_custom_build_failure {
     let mut build = project("builder");
@@ -159,7 +159,7 @@ task '<main>' panicked at 'nope', {filename}:2\n\
 \n\
 ", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP),
    dir = p.url())));
-})
+});
 
 test!(old_custom_second_build_failure {
     let mut build1 = project("builder1");
@@ -225,7 +225,7 @@ task '<main>' panicked at 'nope', {filename}:2\n\
 \n\
 ", build2.bin("bar").display(), filename = format!("src{}bar.rs", path::SEP),
    dir = p.url())));
-})
+});
 
 test!(old_custom_build_env_vars {
     let bar = project("bar")
@@ -312,7 +312,7 @@ test!(old_custom_build_env_vars {
         "#);
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(0));
-})
+});
 
 test!(old_custom_build_in_dependency {
     let mut p = project("foo");
@@ -369,7 +369,7 @@ test!(old_custom_build_in_dependency {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
-})
+});
 
 // tests that custom build in dep can be built twice in a row - issue 227
 test!(old_custom_build_in_dependency_twice {
@@ -405,4 +405,4 @@ test!(old_custom_build_in_dependency_twice {
                 execs().with_status(0));
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
-})
+});

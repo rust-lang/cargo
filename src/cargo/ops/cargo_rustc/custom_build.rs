@@ -106,7 +106,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     //
     // Note that this has to do some extra work just before running the command
     // to determine extra environment variables and such.
-    let work = proc(desc_tx: Sender<String>) {
+    let work = move |: desc_tx: Sender<String>| {
         // Make sure that OUT_DIR exists.
         //
         // If we have an old build directory, then just move it into place,
@@ -175,8 +175,11 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // Also note that a fresh build command needs to
     let (freshness, dirty, fresh) =
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
-    let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
-    let fresh = proc(tx) {
+    let dirty = Work::new(move |tx: Sender<String>| {
+        try!(work(tx.clone()));
+        dirty.call(tx)
+    });
+    let fresh = Work::new(move |tx| {
         let (id, pkg_name, build_state, build_output) = all;
         let new_loc = build_output.dir_path().join("output");
         let mut f = try!(File::open(&new_loc).map_err(|e| {
@@ -187,8 +190,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                                              pkg_name.as_slice()));
         build_state.insert(id, req, output);
 
-        fresh(tx)
-    };
+        fresh.call(tx)
+    });
 
     Ok((dirty, fresh, freshness))
 }
@@ -248,7 +251,7 @@ impl BuildOutput {
         let whence = format!("build script of `{}`", pkg_name);
 
         for line in input.lines() {
-            let mut iter = line.splitn(1, |c: char| c == ':');
+            let mut iter = line.splitn(1, |&: c: char| c == ':');
             if iter.next() != Some("cargo") {
                 // skip this line since it doesn't start with "cargo:"
                 continue;
@@ -259,7 +262,7 @@ impl BuildOutput {
             };
 
             // getting the `key=value` part of the line
-            let mut iter = data.splitn(1, |c: char| c == '=');
+            let mut iter = data.splitn(1, |&: c: char| c == '=');
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {

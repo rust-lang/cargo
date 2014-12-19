@@ -227,9 +227,9 @@ impl GitDatabase {
 }
 
 impl<'a> GitCheckout<'a> {
-    fn new<'a>(path: &Path, database: &'a GitDatabase, revision: GitRevision,
-               repo: git2::Repository)
-               -> GitCheckout<'a>
+    fn new(path: &Path, database: &'a GitDatabase, revision: GitRevision,
+           repo: git2::Repository)
+           -> GitCheckout<'a>
     {
         GitCheckout {
             location: path.clone(),
@@ -239,9 +239,9 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn clone_into<'a>(into: &Path, database: &'a GitDatabase,
-                      revision: GitRevision)
-                      -> CargoResult<GitCheckout<'a>>
+    fn clone_into(into: &Path, database: &'a GitDatabase,
+                  revision: GitRevision)
+                  -> CargoResult<GitCheckout<'a>>
     {
         let repo = try!(GitCheckout::clone_repo(database.get_path(), into));
         let checkout = GitCheckout::new(into, database, revision, repo);

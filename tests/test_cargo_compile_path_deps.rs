@@ -99,7 +99,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
-})
+});
 
 test!(cargo_compile_with_root_dev_deps {
     let p = project("foo")
@@ -137,7 +137,7 @@ test!(cargo_compile_with_root_dev_deps {
     p2.build();
     assert_that(p.cargo_process("build"),
                 execs().with_status(101))
-})
+});
 
 test!(cargo_compile_with_root_dev_deps_with_testing {
     let p = project("foo")
@@ -184,7 +184,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, url = p.url(), running = RUNNING)));
-})
+});
 
 test!(cargo_compile_with_transitive_dev_deps {
     let p = project("foo")
@@ -238,7 +238,7 @@ test!(cargo_compile_with_transitive_dev_deps {
     assert_that(
       cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("zoidberg\n"));
-})
+});
 
 test!(no_rebuild_dependency {
     let mut p = project("foo");
@@ -286,7 +286,7 @@ test!(no_rebuild_dependency {
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
-})
+});
 
 test!(deep_dependencies_trigger_rebuild {
     let mut p = project("foo");
@@ -374,7 +374,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
 
-})
+});
 
 test!(no_rebuild_two_deps {
     let mut p = project("foo");
@@ -436,7 +436,7 @@ test!(no_rebuild_two_deps {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
     assert_that(&p.bin("foo"), existing_file());
-})
+});
 
 test!(nested_deps_recompile {
     let p = project("foo")
@@ -487,7 +487,7 @@ test!(nested_deps_recompile {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
-})
+});
 
 test!(error_message_for_missing_manifest {
     let p = project("foo")
@@ -514,7 +514,7 @@ test!(error_message_for_missing_manifest {
                 .with_stderr(format!("Could not find `Cargo.toml` in `{}`\n",
                                      p.root().join_many(&["src", "bar"]).display())));
 
-})
+});
 
 test!(override_relative {
     let bar = project("bar")
@@ -547,7 +547,7 @@ test!(override_relative {
     bar.build();
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 
-})
+});
 
 test!(override_self {
     let bar = project("bar")
@@ -583,7 +583,7 @@ test!(override_self {
     bar.build();
     assert_that(p.cargo_process("build"), execs().with_status(0));
 
-})
+});
 
 test!(override_path_dep {
     let bar = project("bar")
@@ -627,7 +627,7 @@ test!(override_path_dep {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 
-})
+});
 
 test!(path_dep_build_cmd {
     let p = project("foo")
@@ -695,7 +695,7 @@ test!(path_dep_build_cmd {
     assert_that(
       cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("1\n"));
-})
+});
 
 test!(dev_deps_no_rebuild_lib {
     let p = project("foo")
@@ -743,4 +743,4 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", COMPILING, p.url(), COMPILING, p.url())));
-})
+});

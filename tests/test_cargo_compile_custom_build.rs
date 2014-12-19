@@ -38,7 +38,7 @@ url = p.url(), compiling = COMPILING, running = RUNNING))
 Failed to run custom build command for `foo v0.5.0 ({})`
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` (status=101)",
 p.url())));
-})
+});
 
 test!(custom_build_env_vars {
     let p = project("foo")
@@ -111,7 +111,7 @@ test!(custom_build_env_vars {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar_feat"),
                 execs().with_status(0));
-})
+});
 
 test!(custom_build_script_wrong_rustc_flags {
     let p = project("foo")
@@ -138,7 +138,7 @@ test!(custom_build_script_wrong_rustc_flags {
 Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
 `-aaa -bbb`",
 p.url())));
-})
+});
 
 /*
 test!(custom_build_script_rustc_flags {
@@ -189,7 +189,7 @@ running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
-})
+});
 */
 
 test!(links_no_build_cmd {
@@ -209,7 +209,7 @@ test!(links_no_build_cmd {
 package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
 not have a custom build script
 "));
-})
+});
 
 test!(links_duplicates {
     let p = project("foo")
@@ -246,7 +246,7 @@ linked to by one package
   [..] v0.5.0 (file://[..])
   [..] v0.5.0 (file://[..])
 "));
-})
+});
 
 test!(overrides_and_links {
     let (_, target) = ::cargo::ops::rustc_version().unwrap();
@@ -297,7 +297,7 @@ test!(overrides_and_links {
 [..]
 {running} `rustc [..] --crate-name foo [..] -L foo -L bar[..]`
 ", running = RUNNING).as_slice()));
-})
+});
 
 test!(unused_overrides {
     let (_, target) = ::cargo::ops::rustc_version().unwrap();
@@ -321,7 +321,7 @@ test!(unused_overrides {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-})
+});
 
 test!(links_passes_env_vars {
     let p = project("foo")
@@ -371,7 +371,7 @@ test!(links_passes_env_vars {
 {running} `[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 test!(only_rerun_build_script {
     let p = project("foo")
@@ -401,7 +401,7 @@ test!(only_rerun_build_script {
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 test!(rebuild_continues_to_pass_env_vars {
     let a = project("a")
@@ -452,7 +452,7 @@ test!(rebuild_continues_to_pass_env_vars {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
                 execs().with_status(0));
-})
+});
 
 test!(testing_and_such {
     let p = project("foo")
@@ -512,7 +512,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 {compiling} foo v0.5.0 (file://[..])
 {running} `target[..]foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 test!(propagation_of_l_flags {
     let (_, target) = ::cargo::ops::rustc_version().unwrap();
@@ -570,7 +570,7 @@ test!(propagation_of_l_flags {
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar -L foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 test!(build_deps_simple {
     let p = project("foo")
@@ -606,7 +606,7 @@ test!(build_deps_simple {
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 test!(build_deps_not_for_normal {
     let (_, target) = ::cargo::ops::rustc_version().unwrap();
@@ -645,7 +645,7 @@ Could not compile `foo`.
 Caused by:
   Process didn't exit successfully: [..]
 "));
-})
+});
 
 test!(build_cmd_with_a_build_cmd {
     let p = project("foo")
@@ -708,7 +708,7 @@ test!(build_cmd_with_a_build_cmd {
     --out-dir [..]target --dep-info [..]fingerprint[..]dep-lib-foo \
     -L [..]target -L [..]target[..]deps`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 test!(out_dir_is_preserved {
     let p = project("foo")
@@ -755,7 +755,7 @@ test!(out_dir_is_preserved {
     File::create(&p.root().join("foo")).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
                 execs().with_status(0));
-})
+});
 
 test!(output_separate_lines {
     let p = project("foo")
@@ -781,7 +781,7 @@ test!(output_separate_lines {
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
-})
+});
 
 #[cfg(not(windows))] // FIXME(#867)
 test!(code_generation {
@@ -794,7 +794,7 @@ test!(code_generation {
             build = "build.rs"
         "#)
         .file("src/main.rs", r#"
-            include!(concat!(env!("OUT_DIR"), "/hello.rs"))
+            include!(concat!(env!("OUT_DIR"), "/hello.rs"));
 
             fn main() {
                 println!("{}", message());
@@ -824,7 +824,7 @@ Hello, World!
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
-})
+});
 
 test!(release_with_build_script {
     let p = project("foo")
@@ -842,7 +842,7 @@ test!(release_with_build_script {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0));
-})
+});
 
 test!(build_script_only {
     let p = project("foo")
@@ -858,7 +858,7 @@ test!(build_script_only {
                 execs().with_status(101)
                        .with_stderr("either a [lib] or [[bin]] section must \
                                      be present"));
-})
+});
 
 test!(shared_dep_with_a_build_script {
     let p = project("foo")
@@ -898,7 +898,7 @@ test!(shared_dep_with_a_build_script {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
-})
+});
 
 test!(transitive_dep_host {
     let p = project("foo")
@@ -940,7 +940,7 @@ test!(transitive_dep_host {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
-})
+});
 
 test!(test_a_lib_with_a_build_command {
     let p = project("foo")
@@ -952,7 +952,7 @@ test!(test_a_lib_with_a_build_command {
             build = "build.rs"
         "#)
         .file("src/lib.rs", r#"
-            include!(concat!(env!("OUT_DIR"), "/foo.rs"))
+            include!(concat!(env!("OUT_DIR"), "/foo.rs"));
 
             /// ```
             /// foo::bar();
@@ -974,7 +974,7 @@ test!(test_a_lib_with_a_build_command {
         "#);
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
-})
+});
 
 test!(test_dev_dep_build_script {
     let p = project("foo")
@@ -999,4 +999,4 @@ test!(test_dev_dep_build_script {
         .file("a/src/lib.rs", "");
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
-})
+});

@@ -133,7 +133,7 @@ pub fn to_manifest(contents: &[u8],
                     add_unused_keys(m, v, if key.len() == 0 {
                         k.clone()
                     } else {
-                        key + "." + k.as_slice()
+                        key.clone() + "." + k.as_slice()
                     })
                 }
             }

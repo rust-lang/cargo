@@ -71,7 +71,7 @@ test!(simple_cross {
     assert_that(
       process(p.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(simple_deps {
     if disabled() { return }
@@ -108,7 +108,7 @@ test!(simple_deps {
     assert_that(
       process(p.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(plugin_deps {
     if disabled() { return }
@@ -186,7 +186,7 @@ test!(plugin_deps {
     assert_that(
       process(foo.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(plugin_to_the_max {
     if disabled() { return }
@@ -271,7 +271,7 @@ test!(plugin_to_the_max {
     assert_that(
       process(foo.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(linker_and_ar {
     if disabled() { return }
@@ -311,7 +311,7 @@ test!(linker_and_ar {
                             target = target,
                             sep = path::SEP,
                             ).as_slice()));
-})
+});
 
 test!(plugin_with_extra_dylib_dep {
     if disabled() { return }
@@ -377,7 +377,7 @@ test!(plugin_with_extra_dylib_dep {
     let target = alternate();
     assert_that(foo.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
-})
+});
 
 test!(cross_tests {
     if disabled() { return }
@@ -433,7 +433,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
    doctest = DOCTEST)));
-})
+});
 
 test!(simple_cargo_run {
     if disabled() { return }
@@ -455,7 +455,7 @@ test!(simple_cargo_run {
     let target = alternate();
     assert_that(p.cargo_process("run").arg("--target").arg(target),
                 execs().with_status(0));
-})
+});
 
 test!(cross_but_no_dylibs {
     let p = project("foo")
@@ -474,7 +474,7 @@ test!(cross_but_no_dylibs {
                 execs().with_status(101)
                        .with_stderr("dylib outputs are not supported for \
                                      arm-apple-ios"));
-})
+});
 
 test!(cross_with_a_build_script {
     if disabled() { return }
@@ -515,7 +515,7 @@ test!(cross_with_a_build_script {
 {running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..]`
 ", compiling = COMPILING, running = RUNNING, target = target,
    dir = p.root().display(), sep = path::SEP).as_slice()));
-})
+});
 
 test!(build_script_needed_for_host_and_target {
     if disabled() { return }
@@ -597,7 +597,7 @@ test!(build_script_needed_for_host_and_target {
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
    dir = p.root().display(), sep = path::SEP).as_slice()));
-})
+});
 
 test!(build_deps_for_the_right_arch {
     if disabled() { return }
@@ -638,7 +638,7 @@ test!(build_deps_for_the_right_arch {
     let target = alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
-})
+});
 
 test!(build_script_only_host {
     if disabled() { return }
@@ -679,4 +679,4 @@ test!(build_script_only_host {
     let target = alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
-})
+});

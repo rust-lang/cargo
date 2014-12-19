@@ -42,7 +42,7 @@ running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
-})
+});
 
 test!(top_level_overrides_deps {
     let mut p = project("foo");
@@ -112,4 +112,4 @@ test!(top_level_overrides_deps {
                     sep = path::SEP,
                     prefix = os::consts::DLL_PREFIX,
                     suffix = os::consts::DLL_SUFFIX).as_slice()));
-})
+});

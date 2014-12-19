@@ -182,7 +182,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             let my_tx = self.tx.clone();
             let id = id.clone();
             let (desc_tx, desc_rx) = channel();
-            self.pool.execute(proc() {
+            self.pool.execute(move|| {
                 my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
             });
             // only the first message of each job is processed

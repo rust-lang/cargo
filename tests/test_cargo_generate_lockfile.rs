@@ -28,7 +28,7 @@ test!(ignores_carriage_return {
     File::create(&lockfile).write_str(lock.as_slice()).assert();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
-})
+});
 
 test!(adding_and_removing_packages {
     let p = project("foo")
@@ -93,7 +93,7 @@ test!(adding_and_removing_packages {
                 execs().with_status(0));
     let lock4 = File::open(&lockfile).read_to_string().assert();
     assert_eq!(lock1, lock4);
-})
+});
 
 test!(preserve_metadata {
     let p = project("foo")
@@ -137,4 +137,4 @@ foo = "bar"
                 execs().with_status(0));
     let lock = File::open(&lockfile).read_to_string().assert();
     assert!(lock.as_slice().contains(metadata.trim()), "{}", lock);
-})
+});

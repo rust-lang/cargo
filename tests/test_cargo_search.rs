@@ -82,4 +82,4 @@ test!(simple {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 hoare (0.1.1)    Design by contract style assertions for Rust", updating = UPDATING)));
-})
+});

@@ -147,7 +147,7 @@ fn global_config() -> CargoResult<CargoNewConfig> {
         Some(name) => {
             Some(try!(name.string().chain_error(|| {
                 internal("invalid configuration for key `cargo-new.name`")
-            })).ref0().to_string())
+            })).0.to_string())
         }
     };
     cfg.email = match cargo_new.get("email") {
@@ -155,7 +155,7 @@ fn global_config() -> CargoResult<CargoNewConfig> {
         Some(email) => {
             Some(try!(email.string().chain_error(|| {
                 internal("invalid configuration for key `cargo-new.email`")
-            })).ref0().to_string())
+            })).0.to_string())
         }
     };
     cfg.git = match cargo_new.get("git") {
@@ -163,7 +163,7 @@ fn global_config() -> CargoResult<CargoNewConfig> {
         Some(git) => {
             Some(try!(git.boolean().chain_error(|| {
                 internal("invalid configuration for key `cargo-new.git`")
-            })).val0())
+            })).0)
         }
     };
 

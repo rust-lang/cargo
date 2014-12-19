@@ -15,4 +15,4 @@ test!(simple {
                 execs().with_status(0).with_stdout(format!("{}\n",
         cargo::version()).as_slice()));
 
-})
+});

@@ -4,8 +4,8 @@ use std::fmt::Show;
 use time;
 use std::cell::RefCell;
 
-thread_local!(static PROFILE_STACK: RefCell<Vec<u64>> = RefCell::new(Vec::new()))
-thread_local!(static MESSAGES: RefCell<Vec<Message>> = RefCell::new(Vec::new()))
+thread_local!(static PROFILE_STACK: RefCell<Vec<u64>> = RefCell::new(Vec::new()));
+thread_local!(static MESSAGES: RefCell<Vec<Message>> = RefCell::new(Vec::new()));
 
 type Message = (uint, u64, String);
 

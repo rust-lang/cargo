@@ -18,4 +18,4 @@ test!(no_deps {
 
     assert_that(p.cargo_process("fetch"),
                 execs().with_status(0).with_stdout(""));
-})
+});

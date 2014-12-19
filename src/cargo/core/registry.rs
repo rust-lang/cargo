@@ -71,7 +71,7 @@ enum Kind {
 }
 
 impl<'a> PackageRegistry<'a> {
-    pub fn new<'a>(config: &'a Config<'a>) -> PackageRegistry<'a> {
+    pub fn new(config: &'a Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),

@@ -15,7 +15,7 @@ test!(cargo_clean_simple {
     assert_that(p.process(cargo_dir().join("cargo")).arg("clean"),
                 execs().with_status(0));
     assert_that(&p.build_dir(), is_not(existing_dir()));
-})
+});
 
 test!(different_dir {
     let p = project("foo")
@@ -30,4 +30,4 @@ test!(different_dir {
                  .cwd(p.root().join("src")),
                 execs().with_status(0).with_stdout(""));
     assert_that(&p.build_dir(), is_not(existing_dir()));
-})
+});

@@ -36,14 +36,14 @@ use term::color::{BLACK, RED};
 
 pub use util::{CargoError, CliError, CliResult, human};
 
-macro_rules! some(
+macro_rules! some {
     ($e:expr) => (
         match $e {
             Some(e) => e,
             None => return None
         }
     )
-)
+}
 
 // Added so that the try! macro below can refer to cargo::util, while
 // other external importers of this macro can use it as well.
@@ -54,7 +54,7 @@ mod cargo {
 }
 
 #[macro_export]
-macro_rules! try (
+macro_rules! try {
     ($expr:expr) => ({
         use cargo::util::FromError;
         match $expr.map_err(FromError::from_error) {
@@ -62,16 +62,16 @@ macro_rules! try (
             Err(err) => return Err(err)
         }
     })
-)
+}
 
-macro_rules! raw_try (
+macro_rules! raw_try {
     ($expr:expr) => ({
         match $expr {
             Ok(val) => val,
             Err(err) => return Err(err)
         }
     })
-)
+}
 
 pub mod core;
 pub mod ops;

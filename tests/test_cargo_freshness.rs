@@ -38,7 +38,7 @@ test!(modifying_and_moving {
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).assert();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(101));
-})
+});
 
 test!(modify_only_some_files {
     let p = project("foo")
@@ -82,4 +82,4 @@ test!(modify_only_some_files {
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
-})
+});
