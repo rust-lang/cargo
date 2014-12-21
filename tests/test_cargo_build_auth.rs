@@ -1,6 +1,7 @@
-use std::io::{TcpListener, Listener, Acceptor, BufferedStream};
-use std::io::net::tcp::TcpAcceptor;
 use std::collections::HashSet;
+use std::io::net::tcp::TcpAcceptor;
+use std::io::{TcpListener, Listener, Acceptor, BufferedStream};
+use std::thread::Thread;
 use git2;
 
 use support::{project, execs, ResultTest, UPDATING};
@@ -25,7 +26,6 @@ test!(http_auth_offered {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let (tx, rx) = channel();
 
     fn headers<R: Buffer>(rdr: &mut R) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept", "User-Agent"];
@@ -38,7 +38,7 @@ test!(http_auth_offered {
            .collect()
     }
 
-    spawn(move|| {
+    let t = Thread::spawn(move|| {
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
         s.write(b"\
@@ -66,8 +66,6 @@ test!(http_auth_offered {
             "Accept: */*",
             "User-Agent: git/1.0 (libgit2 0.21.0)",
         ].into_iter().map(|s| s.to_string()).collect());
-
-        tx.send(());
     });
 
     let script = project("script")
@@ -122,7 +120,7 @@ Caused by:
 ",
         addr = addr)));
 
-    rx.recv();
+    t.join().ok().unwrap();
 });
 
 // Boy, sure would be nice to have a TLS implementation in rust!
@@ -132,11 +130,8 @@ test!(https_something_happens {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let (tx, rx) = channel();
-    spawn(move|| {
+    let t = Thread::spawn(move|| {
         drop(a.accept().unwrap());
-
-        tx.send(());
     });
 
     let p = project("foo")
@@ -175,7 +170,7 @@ Caused by:
             "SSL error: [..]"
         })));
 
-    rx.recv();
+    t.join().ok().unwrap();
 });
 
 // Boy, sure would be nice to have an SSH implementation in rust!
@@ -185,11 +180,8 @@ test!(ssh_something_happens {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let (tx, rx) = channel();
-    spawn(move|| {
+    let t = Thread::spawn(move|| {
         drop(a.accept().unwrap());
-
-        tx.send(());
     });
 
     let p = project("foo")
@@ -221,6 +213,5 @@ Caused by:
   [23] Failed to start SSH session: Failed getting banner
 ",
         addr = addr)));
-
-    rx.recv();
+    t.join().ok().unwrap();
 });

@@ -155,7 +155,7 @@ warning: an arbitrary build command has now been deprecated.
 Failed to run custom build command for `foo v0.5.0 ({dir})`
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
-task '<main>' panicked at 'nope', {filename}:2\n\
+thread '<main>' panicked at 'nope', {filename}:2\n\
 \n\
 ", build.bin("foo").display(), filename = format!("src{}foo.rs", path::SEP),
    dir = p.url())));
@@ -221,7 +221,7 @@ warning: an arbitrary build command has now been deprecated.
 Failed to run custom build command for `foo v0.5.0 ({dir})`
 Process didn't exit successfully: `{}` (status=101)\n\
 --- stderr\n\
-task '<main>' panicked at 'nope', {filename}:2\n\
+thread '<main>' panicked at 'nope', {filename}:2\n\
 \n\
 ", build2.bin("bar").display(), filename = format!("src{}bar.rs", path::SEP),
    dir = p.url())));

@@ -13,7 +13,7 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
 ",

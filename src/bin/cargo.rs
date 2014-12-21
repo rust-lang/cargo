@@ -1,11 +1,11 @@
 #![feature(phase, macro_rules)]
-#![deny(unused)]
+#![deny(warnings)]
 
 extern crate serialize;
 #[phase(plugin, link)] extern crate log;
 #[phase(plugin, link)] extern crate cargo;
 
-use std::collections::TreeSet;
+use std::collections::BTreeSet;
 use std::os;
 use std::io;
 use std::io::fs::{mod, PathExtensions};
@@ -187,9 +187,9 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
 
 /// List all runnable commands. find_command should always succeed
 /// if given one of returned command.
-fn list_commands() -> TreeSet<String> {
+fn list_commands() -> BTreeSet<String> {
     let command_prefix = "cargo-";
-    let mut commands = TreeSet::new();
+    let mut commands = BTreeSet::new();
     for dir in list_command_directory().iter() {
         let entries = match fs::readdir(dir) {
             Ok(entries) => entries,

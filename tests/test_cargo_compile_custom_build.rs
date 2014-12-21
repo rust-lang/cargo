@@ -181,7 +181,7 @@ test!(custom_build_script_rustc_flags {
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
 ",
@@ -694,18 +694,18 @@ test!(build_cmd_with_a_build_cmd {
 {running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name a --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \
-    --out-dir [..]target[..]deps --dep-info [..]fingerprint[..]dep-lib-a \
+    --out-dir [..]target[..]deps --emit=dep-info,link \
     -L [..]target[..]deps -L [..]target[..]deps`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs --crate-name build-script-build --crate-type bin \
     -C prefer-dynamic -g \
-    --out-dir [..]build[..]foo-[..] --dep-info [..]fingerprint[..]dep-[..] \
+    --out-dir [..]build[..]foo-[..] --emit=dep-info,link \
     -L [..]target -L [..]target[..]deps \
     --extern a=[..]liba-[..].rlib`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name foo --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \
-    --out-dir [..]target --dep-info [..]fingerprint[..]dep-lib-foo \
+    --out-dir [..]target --emit=dep-info,link \
     -L [..]target -L [..]target[..]deps`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
