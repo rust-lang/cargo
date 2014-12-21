@@ -181,7 +181,7 @@ running 1 test
 test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
               .with_stderr(format!("\
-task '<main>' panicked at 'assertion failed: \
+thread '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:13
 ", sep = path::SEP))
@@ -646,7 +646,6 @@ test!(bin_there_for_integration {
                             output);
 });
 
-#[cfg(not(windows))] // FIXME(#456)
 test!(bench_dylib {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -696,11 +695,11 @@ test!(bench_dylib {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
-{running} [..] --opt-level 3 [..]
+{running} [..] -C opt-level=3 [..]
 {compiling} foo v0.0.1 ({dir})
-{running} [..] --opt-level 3 [..]
-{running} [..] --opt-level 3 [..]
-{running} [..] --opt-level 3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
 {running} [..]target[..]release[..]bench-[..]
 
 running 1 test

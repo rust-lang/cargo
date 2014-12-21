@@ -468,7 +468,10 @@ fn rustc(package: &Package, target: &Target,
             t.is_lib()
         });
 
-        Ok((Work::new(move |desc_tx: Sender<String>| {
+        let rustc_dep_info_loc = root.join(target.file_stem()).with_extension("d");
+        let dep_info_loc = fingerprint::dep_info_loc(cx, package, target, kind);
+
+        Ok((Work::new(move |desc_tx| {
             let mut rustc = rustc;
 
             // Only at runtime have we discovered what the extra -L and -l
@@ -501,6 +504,8 @@ fn rustc(package: &Package, target: &Target,
             try!(rustc.exec().chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
+
+            try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc));
 
             Ok(())
 
@@ -623,7 +628,7 @@ fn build_base_args(cx: &Context,
     }
 
     if profile.get_opt_level() != 0 {
-        cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
+        cmd = cmd.arg("-C").arg(format!("opt-level={}", profile.get_opt_level()));
     }
     if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {
         cmd = cmd.args(&["-C", "lto"]);
@@ -676,8 +681,7 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
     cmd = cmd.arg("--out-dir");
     cmd = cmd.arg(cx.out_dir(pkg, kind, target));
 
-    let dep_info_loc = fingerprint::dep_info_loc(cx, pkg, target, kind);
-    cmd = cmd.arg("--dep-info").arg(dep_info_loc);
+    cmd = cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
         fn opt(cmd: ProcessBuilder, key: &str, prefix: &str,

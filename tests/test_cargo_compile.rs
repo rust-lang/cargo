@@ -699,8 +699,10 @@ test!(self_dependency {
                 execs().with_status(0));
 });
 
-#[cfg(not(windows))]
 test!(ignore_broken_symlinks {
+    // windows and symlinks don't currently agree that well
+    if cfg!(windows) { return }
+
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", main_file(r#""i am foo""#, &[]).as_slice())
@@ -748,11 +750,11 @@ test!(lto_build {
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}main.rs --crate-name test --crate-type bin \
-        --opt-level 3 \
+        -C opt-level=3 \
         -C lto \
         --cfg ndebug \
         --out-dir {dir}{sep}target{sep}release \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps`
 ",
@@ -780,7 +782,7 @@ test!(verbose_build {
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
 ",
@@ -805,12 +807,12 @@ test!(verbose_release_build {
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
-        --opt-level 3 \
+        -C opt-level=3 \
         --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps`
 ",
@@ -851,22 +853,22 @@ test!(verbose_release_build_deps {
 {compiling} foo v0.0.0 ({url})
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
-        --opt-level 3 \
+        -C opt-level=3 \
         --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps`
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
-        --opt-level 3 \
+        -C opt-level=3 \
         --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps/\

@@ -28,13 +28,13 @@ test!(profile_overrides {
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
-        --opt-level 1 \
+        -C opt-level=1 \
         --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         -C rpath \
         --out-dir {dir}{sep}target \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
 ",
@@ -83,22 +83,22 @@ test!(top_level_overrides_deps {
 {compiling} foo v0.0.0 ({url})
 {running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
-        --opt-level 1 \
+        -C opt-level=1 \
         -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target{sep}release{sep}deps \
         -L {dir}{sep}target{sep}release{sep}deps`
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
-        --opt-level 1 \
+        -C opt-level=1 \
         -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target{sep}release \
         -L {dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps/\

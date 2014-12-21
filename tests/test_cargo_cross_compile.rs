@@ -1,7 +1,3 @@
-// Currently the only cross compilers available via nightlies are on linux/osx,
-// so we can only run these tests on those platforms
-#![cfg(any(target_os = "linux", target_os = "macos"))]
-
 use std::os;
 use std::path;
 
@@ -15,10 +11,16 @@ fn setup() {
 }
 
 fn disabled() -> bool {
+    // First, disable if ./configure requested so
     match os::getenv("CFG_DISABLE_CROSS_TESTS") {
-        Some(ref s) if s.as_slice() == "1" => true,
-        _ => false,
+        Some(ref s) if s.as_slice() == "1" => return true,
+        _ => {}
     }
+
+    // Right now the windows bots cannot cross compile due to the mingw setup,
+    // so we disable ourselves on all but macos/linux setups where the rustc
+    // install script ensures we have both architectures
+    return !cfg!(target_os = "macos") && !cfg!(target_os = "linux");
 }
 
 fn alternate() -> &'static str {
@@ -298,7 +300,7 @@ test!(linker_and_ar {
 {compiling} foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}{sep}target{sep}{target} \
-    --dep-info [..] \
+    --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
     -L {dir}{sep}target{sep}{target} \

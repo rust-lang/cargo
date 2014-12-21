@@ -1,5 +1,5 @@
 #![feature(phase, macro_rules)]
-#![deny(unused)]
+#![deny(warnings)]
 
 extern crate serialize;
 #[phase(plugin, link)] extern crate log;

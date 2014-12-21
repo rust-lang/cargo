@@ -69,7 +69,7 @@ all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
 define CARGO_TARGET
 cargo-$(1): $$(CARGO)
-	"$$(CFG_RUSTC)" -v
+	"$$(CFG_RUSTC)" -V
 	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(ARGS)
 
 test-unit-$(1): $$(CARGO)
