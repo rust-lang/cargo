@@ -1,6 +1,6 @@
 use std::io::{fs, File, USER_RWX};
 
-use support::{ResultTest, project, execs, main_file, cargo_dir};
+use support::{project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
 use support::paths::{mod, PathExt};
 use hamcrest::{assert_that, existing_file};
@@ -278,7 +278,7 @@ test!(no_rebuild_dependency {
     // This time we shouldn't compile bar
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
 
     p.build(); // rebuild the files (rewriting them in the process)
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
@@ -350,10 +350,10 @@ test!(deep_dependencies_trigger_rebuild {
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
     File::create(&p.root().join("baz/src/baz.rs")).write_str(r#"
         pub fn baz() { println!("hello!"); }
-    "#).assert();
+    "#).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
                                              {} bar v0.5.0 ({})\n\
@@ -363,11 +363,11 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, p.url())));
 
     // Make sure an update to bar doesn't trigger baz
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
     File::create(&p.root().join("bar/src/bar.rs")).write_str(r#"
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
-    "#).assert();
+    "#).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
@@ -477,11 +477,11 @@ test!(nested_deps_recompile {
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, bar,
                                             COMPILING, p.url())));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
 
     File::create(&p.root().join("src/foo.rs")).write_str(r#"
         fn main() {}
-    "#).assert();
+    "#).unwrap();
 
     // This shouldn't recompile `bar`
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
@@ -527,10 +527,10 @@ test!(override_relative {
         "#)
        .file("src/lib.rs", "");
 
-    fs::mkdir(&paths::root().join(".cargo"), USER_RWX).assert();
+    fs::mkdir(&paths::root().join(".cargo"), USER_RWX).unwrap();
     File::create(&paths::root().join(".cargo/config")).write_str(r#"
         paths = ["bar"]
-    "#).assert();
+    "#).unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -666,7 +666,7 @@ test!(path_dep_build_cmd {
         "#);
 
     p.build();
-    p.root().join("bar").move_into_the_past().assert();
+    p.root().join("bar").move_into_the_past().unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
         execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
@@ -682,8 +682,8 @@ test!(path_dep_build_cmd {
 
     // Touching bar.rs.in should cause the `build` command to run again.
     {
-        let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).assert();
-        file.write_str(r#"pub fn gimme() -> int { 1 }"#).assert();
+        let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).unwrap();
+        file.write_str(r#"pub fn gimme() -> int { 1 }"#).unwrap();
     }
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),

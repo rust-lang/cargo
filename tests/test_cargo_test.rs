@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, RUNNING, DOCTEST};
+use support::{COMPILING, cargo_dir, RUNNING, DOCTEST};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -93,8 +93,8 @@ test!(many_similar_names {
             #[test] fn test_test() { foo::foo() }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
     assert!(output.contains("test test_test"), "test_test missing\n{}", output);
@@ -638,8 +638,8 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
 });
@@ -716,7 +716,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\

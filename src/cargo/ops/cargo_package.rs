@@ -9,7 +9,7 @@ use flate2::reader::GzDecoder;
 use core::source::{Source, SourceId};
 use core::{Package, MultiShell};
 use sources::PathSource;
-use util::{CargoResult, human, internal, ChainError, Require};
+use util::{CargoResult, human, internal, ChainError};
 use ops;
 
 struct Bomb { path: Option<Path> }
@@ -123,7 +123,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
     for file in try!(src.list_files(pkg)).iter() {
         if file == dst { continue }
         let relative = file.path_relative_from(&root).unwrap();
-        let relative = try!(relative.as_str().require(|| {
+        let relative = try!(relative.as_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         }));

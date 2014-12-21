@@ -6,7 +6,7 @@ use std::io::fs::PathExtensions;
 
 use core::{Package, Target};
 use util;
-use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
+use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
 
 use super::Kind;
 use super::job::Work;
@@ -233,7 +233,7 @@ fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
     };
     let line = line.as_slice();
     let mtime = try!(fs::stat(dep_info)).modified;
-    let pos = try!(line.find_str(": ").require(|| {
+    let pos = try!(line.find_str(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
     }));

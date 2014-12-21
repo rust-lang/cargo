@@ -35,7 +35,7 @@ test!(custom_build_script_failed {
 ",
 url = p.url(), compiling = COMPILING, running = RUNNING))
                        .with_stderr(format!("\
-Failed to run custom build command for `foo v0.5.0 ({})`
+failed to run custom build command for `foo v0.5.0 ({})`
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` (status=101)",
 p.url())));
 });

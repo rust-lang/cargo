@@ -1,205 +1,166 @@
-use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
+use std::error::{FromError, Error};
+use std::fmt::{mod, Show};
 use std::io::IoError;
-use std::fmt::{mod, Show, Formatter};
+use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::str;
-use rustc_serialize::json;
+
 use semver;
-use std::error::FromError;
+use rustc_serialize::json;
 
 use curl;
-use docopt;
 use toml::Error as TomlError;
 use url;
 use git2;
 
-pub trait CargoError: Send {
-    fn description(&self) -> String;
-    fn detail(&self) -> Option<String> { None }
-    fn cause(&self) -> Option<&CargoError> { None }
-    fn is_human(&self) -> bool { false }
+pub type CargoResult<T> = Result<T, Box<CargoError>>;
 
-    fn concrete(&self) -> ConcreteCargoError {
-        ConcreteCargoError {
-            description: self.description(),
-            detail: self.detail(),
-            cause: self.cause().map(|c| box c.concrete() as Box<CargoError>),
-            is_human: self.is_human()
-        }
-    }
+// =============================================================================
+// CargoError trait
+
+pub trait CargoError: Error {
+    fn is_human(&self) -> bool { false }
 }
 
 impl Show for Box<CargoError> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.description()));
         Ok(())
     }
 }
 
-impl CargoError for Box<CargoError> {
-    fn description(&self) -> String { (**self).description() }
+impl Error for Box<CargoError> {
+    fn description(&self) -> &str { (**self).description() }
     fn detail(&self) -> Option<String> { (**self).detail() }
-    fn cause(&self) -> Option<&CargoError> { (**self).cause() }
+    fn cause(&self) -> Option<&Error> { (**self).cause() }
+}
+
+impl CargoError for Box<CargoError> {
     fn is_human(&self) -> bool { (**self).is_human() }
 }
 
-impl CargoError for semver::ReqParseError {
-    fn description(&self) -> String {
-        self.to_string()
-    }
-}
-
-pub type CargoResult<T> = Result<T, Box<CargoError>>;
-
-pub trait BoxError<T> {
-    fn box_error(self) -> CargoResult<T>;
-}
+// =============================================================================
+// Chaining errors
 
 pub trait ChainError<T> {
-    fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T> ;
+    fn chain_error<E, F>(self, callback: F) -> CargoResult<T>
+                         where E: CargoError, F: FnOnce() -> E;
 }
 
-impl<'a, T> ChainError<T> for ||:'a -> CargoResult<T> {
-    fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T> {
-        self().map_err(|err| callback().concrete().with_cause(err))
+struct ChainedError<E> {
+    error: E,
+    cause: Box<Error>,
+}
+
+impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
+    fn chain_error<E, C>(self, callback: C) -> CargoResult<T>
+                         where E: CargoError, C: FnOnce() -> E {
+        self().chain_error(callback)
     }
 }
 
-impl<T, E: CargoError> BoxError<T> for Result<T, E> {
-    fn box_error(self) -> CargoResult<T> {
-        self.map_err(|err| box err as Box<CargoError>)
+impl<T, E: Error> ChainError<T> for Result<T, E> {
+    fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
+                         where E2: CargoError, C: FnOnce() -> E2 {
+        self.map_err(move |err| {
+            box ChainedError {
+                error: callback(),
+                cause: box err,
+            } as Box<CargoError>
+        })
     }
 }
 
-impl<T, E: CargoError> ChainError<T> for Result<T, E> {
-    fn chain_error<E: CargoError>(self, callback: || -> E) -> CargoResult<T>  {
-        self.map_err(|err| callback().concrete().with_cause(err))
+impl<T> ChainError<T> for Option<T> {
+    fn chain_error<E, C>(self, callback: C) -> CargoResult<T>
+                         where E: CargoError, C: FnOnce() -> E {
+        match self {
+            Some(t) => Ok(t),
+            None => Err(box callback() as Box<CargoError>),
+        }
     }
 }
 
-impl CargoError for IoError {
-    fn description(&self) -> String { self.to_string() }
+impl<E: Error> Error for ChainedError<E> {
+    fn description(&self) -> &str { self.error.description() }
+    fn detail(&self) -> Option<String> { self.error.detail() }
+    fn cause(&self) -> Option<&Error> { Some(&*self.cause) }
 }
 
-impl CargoError for TomlError {
-    fn description(&self) -> String { self.to_string() }
+impl<E: CargoError> CargoError for ChainedError<E> {
+    fn is_human(&self) -> bool { self.error.is_human() }
 }
 
-impl CargoError for fmt::Error {
-    fn description(&self) -> String {
-        "formatting failed".to_string()
-    }
-}
-
-impl CargoError for curl::ErrCode {
-    fn description(&self) -> String { self.to_string() }
-}
-
-impl CargoError for json::DecoderError {
-    fn description(&self) -> String { self.to_string() }
-}
+// =============================================================================
+// Process errors
 
 pub struct ProcessError {
-    pub msg: String,
+    pub desc: String,
     pub exit: Option<ProcessExit>,
     pub output: Option<ProcessOutput>,
-    pub detail: Option<String>,
-    pub cause: Option<Box<CargoError>>
+    cause: Option<IoError>,
 }
 
-impl Show for ProcessError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let exit = match self.exit {
-            Some(ExitStatus(i)) | Some(ExitSignal(i)) => i.to_string(),
-            None => "never executed".to_string()
-        };
-        try!(write!(f, "{} (status={})", self.msg, exit));
-        if let Some(out) = self.output() {
-            try!(write!(f, "{}", out));
-        }
-        Ok(())
+impl Error for ProcessError {
+    fn description(&self) -> &str { self.desc.as_slice() }
+    fn detail(&self) -> Option<String> { None }
+    fn cause(&self) -> Option<&Error> {
+        self.cause.as_ref().map(|s| s as &Error)
     }
 }
 
-impl ProcessError {
-    pub fn output(&self) -> Option<String> {
-        match self.output {
-            Some(ref out) => {
-                let mut string = String::new();
-                match str::from_utf8(out.output.as_slice()) {
-                    Ok(s) if s.trim().len() > 0 => {
-                        string.push_str("\n--- stdout\n");
-                        string.push_str(s);
-                    }
-                    Ok(..) | Err(..) => {}
-                }
-                match str::from_utf8(out.error.as_slice()) {
-                    Ok(s) if s.trim().len() > 0 => {
-                        string.push_str("\n--- stderr\n");
-                        string.push_str(s);
-                    }
-                    Ok(..) | Err(..) => {}
-                }
-                Some(string)
-            },
-            None => None
-        }
+impl fmt::Show for ProcessError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.desc.fmt(f)
     }
 }
 
-impl CargoError for ProcessError {
-    fn description(&self) -> String { self.to_string() }
+// =============================================================================
+// Concrete errors
 
-    fn detail(&self) -> Option<String> {
-        self.detail.clone()
-    }
-
-    fn cause(&self) -> Option<&CargoError> {
-        self.cause.as_ref().map(|c| { let err: &CargoError = &**c; err })
-    }
-}
-
-pub struct ConcreteCargoError {
+struct ConcreteCargoError {
     description: String,
     detail: Option<String>,
-    cause: Option<Box<CargoError>>,
-    is_human: bool
+    cause: Option<Box<Error>>,
+    is_human: bool,
 }
 
-impl ConcreteCargoError {
-    pub fn with_cause<E: CargoError>(mut self, err: E) -> Box<CargoError> {
-        self.cause = Some(box err as Box<CargoError>);
-        box self as Box<CargoError>
-    }
-
-    pub fn mark_human(mut self) -> Box<CargoError> {
-        self.is_human = true;
-        box self as Box<CargoError>
-    }
-}
-
-impl Show for ConcreteCargoError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+impl fmt::Show for ConcreteCargoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.description)
     }
 }
 
+impl Error for ConcreteCargoError {
+    fn description(&self) -> &str { self.description.as_slice() }
+    fn detail(&self) -> Option<String> { self.detail.clone() }
+    fn cause(&self) -> Option<&Error> {
+        self.cause.as_ref().map(|c| &**c)
+    }
+}
+
 impl CargoError for ConcreteCargoError {
-    fn description(&self) -> String {
-        self.description.clone()
-    }
-
-    fn detail(&self) -> Option<String> {
-        self.detail.clone()
-    }
-
-    fn cause(&self) -> Option<&CargoError> {
-        self.cause.as_ref().map(|c| { let err: &CargoError = &**c; err })
-    }
-
     fn is_human(&self) -> bool {
         self.is_human
     }
 }
+
+// =============================================================================
+// Human errors
+
+pub struct Human<E>(pub E);
+
+impl<E: Error> Error for Human<E> {
+    fn description(&self) -> &str { self.0.description() }
+    fn detail(&self) -> Option<String> { self.0.detail() }
+    fn cause(&self) -> Option<&Error> { self.0.cause() }
+}
+
+impl<E: Error> CargoError for Human<E> {
+    fn is_human(&self) -> bool { true }
+}
+
+// =============================================================================
+// CLI errors
 
 pub type CliResult<T> = Result<T, CliError>;
 
@@ -210,38 +171,10 @@ pub struct CliError {
     pub exit_code: uint
 }
 
-impl CargoError for CliError {
-    fn description(&self) -> String {
-        self.error.to_string()
-    }
-}
-
-impl CargoError for docopt::Error {
-    fn description(&self) -> String {
-        match *self {
-            docopt::Error::WithProgramUsage(ref other, _) => other.description(),
-            ref e if e.fatal() => self.to_string(),
-            _ => "".to_string(),
-        }
-    }
-
-    fn detail(&self) -> Option<String> {
-        match *self {
-            docopt::Error::WithProgramUsage(_, ref usage) => Some(usage.clone()),
-            ref e if e.fatal() => None,
-            ref e => Some(e.to_string()),
-        }
-    }
-
-    fn is_human(&self) -> bool { true }
-}
-
-impl CargoError for url::ParseError {
-    fn description(&self) -> String { self.to_string() }
-}
-
-impl CargoError for git2::Error {
-    fn description(&self) -> String { self.to_string() }
+impl Error for CliError {
+    fn description(&self) -> &str { self.error.description() }
+    fn detail(&self) -> Option<String> { self.error.detail() }
+    fn cause(&self) -> Option<&Error> { self.error.cause() }
 }
 
 impl CliError {
@@ -261,16 +194,78 @@ impl CliError {
     }
 }
 
+// =============================================================================
+// various impls
+
+macro_rules! from_error {
+    ($($p:ty,)*) => (
+        $(impl FromError<$p> for Box<CargoError> {
+            fn from_error(t: $p) -> Box<CargoError> { box t }
+        })*
+    )
+}
+
+from_error! {
+    semver::ReqParseError,
+    IoError,
+    ProcessError,
+    git2::Error,
+    json::DecoderError,
+    curl::ErrCode,
+    CliError,
+    TomlError,
+    url::ParseError,
+}
+
+impl<E: Error> FromError<Human<E>> for Box<CargoError> {
+    fn from_error(t: Human<E>) -> Box<CargoError> { box t }
+}
+
+impl CargoError for semver::ReqParseError {}
+impl CargoError for IoError {}
+impl CargoError for git2::Error {}
+impl CargoError for json::DecoderError {}
+impl CargoError for curl::ErrCode {}
+impl CargoError for ProcessError {}
+impl CargoError for CliError {}
+impl CargoError for TomlError {}
+impl CargoError for url::ParseError {}
+
+// =============================================================================
+// Construction helpers
+
 pub fn process_error<S: Str>(msg: S,
                              cause: Option<IoError>,
                              status: Option<&ProcessExit>,
                              output: Option<&ProcessOutput>) -> ProcessError {
+    let exit = match status {
+        Some(&ExitStatus(i)) | Some(&ExitSignal(i)) => i.to_string(),
+        None => "never executed".to_string(),
+    };
+    let mut desc = format!("{} (status={})", msg.as_slice(), exit);
+
+    if let Some(out) = output {
+        match str::from_utf8(out.output.as_slice()) {
+            Ok(s) if s.trim().len() > 0 => {
+                desc.push_str("\n--- stdout\n");
+                desc.push_str(s);
+            }
+            Ok(..) | Err(..) => {}
+        }
+        match str::from_utf8(out.error.as_slice()) {
+            Ok(s) if s.trim().len() > 0 => {
+                desc.push_str("\n--- stderr\n");
+                desc.push_str(s);
+            }
+            Ok(..) | Err(..) => {}
+        }
+    }
+
     ProcessError {
-        msg: msg.as_slice().to_string(),
-        exit: status.map(|o| o.clone()),
-        output: output.map(|o| o.clone()),
-        detail: None,
-        cause: cause.map(|c| box c as Box<CargoError>)
+        desc: desc,
+        exit: status.map(|a| a.clone()),
+        output: output.map(|a| a.clone()),
+        cause: cause,
     }
 }
 
@@ -281,7 +276,7 @@ pub fn internal_error<S1: Str, S2: Str>(error: S1,
         detail: Some(detail.as_slice().to_string()),
         cause: None,
         is_human: false
-    } as Box<CargoError>
+    }
 }
 
 pub fn internal<S: Show>(error: S) -> Box<CargoError> {
@@ -290,7 +285,7 @@ pub fn internal<S: Show>(error: S) -> Box<CargoError> {
         detail: None,
         cause: None,
         is_human: false
-    } as Box<CargoError>
+    }
 }
 
 pub fn human<S: Show>(error: S) -> Box<CargoError> {
@@ -299,14 +294,14 @@ pub fn human<S: Show>(error: S) -> Box<CargoError> {
         detail: None,
         cause: None,
         is_human: true
-    } as Box<CargoError>
+    }
 }
 
-pub fn caused_human<S: Show, E: CargoError>(error: S, cause: E) -> Box<CargoError> {
+pub fn caused_human<S: Show, E: Error>(error: S, cause: E) -> Box<CargoError> {
     box ConcreteCargoError {
         description: error.to_string(),
         detail: None,
-        cause: Some(box cause as Box<CargoError>),
+        cause: Some(box cause as Box<Error>),
         is_human: true
-    } as Box<CargoError>
+    }
 }

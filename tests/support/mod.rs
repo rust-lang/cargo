@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fmt::{mod, Show};
 use std::io::fs::{mod, PathExtensions};
 use std::io::process::{ProcessOutput};
@@ -5,7 +6,7 @@ use std::io;
 use std::os;
 use std::path::{Path,BytesContainer};
 use std::str::{mod, Str};
-use std::vec::Vec;
+
 use url::Url;
 use hamcrest as ham;
 use cargo::util::{process,ProcessBuilder};
@@ -398,9 +399,9 @@ impl ham::Matcher<ProcessBuilder> for Execs {
             }
             Err(e) => {
                 let mut s = format!("could not exec process {}: {}", process, e);
-                match e.cause {
+                match e.cause() {
                     Some(cause) => s.push_str(format!("\ncaused by: {}",
-                                                      cause).as_slice()),
+                                                      cause.description()).as_slice()),
                     None => {}
                 }
                 Err(s)
@@ -441,28 +442,6 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
 
 pub fn shell_writes<T: Show>(string: T) -> ShellWrites {
     ShellWrites { expected: string.to_string() }
-}
-
-pub trait ResultTest<T,E> {
-    fn assert(self) -> T;
-}
-
-impl<T,E: Show> ResultTest<T,E> for Result<T,E> {
-    fn assert(self) -> T {
-        match self {
-            Ok(val) => val,
-            Err(err) => panic!("Result was error: {}", err)
-        }
-    }
-}
-
-impl<T> ResultTest<T,()> for Option<T> {
-    fn assert(self) -> T {
-        match self {
-            Some(val) => val,
-            None => panic!("Option was None")
-        }
-    }
 }
 
 pub trait Tap {

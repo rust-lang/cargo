@@ -78,7 +78,7 @@ impl ProcessBuilder {
 
         let output = try!(command.output().map_err(|e| {
             process_error(format!("Could not execute process `{}`",
-                                  self.debug_string()),
+                              self.debug_string()),
                           Some(e), None, None)
         }));
 

@@ -4,7 +4,7 @@ use std::io::{TcpListener, Listener, Acceptor, BufferedStream};
 use std::thread::Thread;
 use git2;
 
-use support::{project, execs, ResultTest, UPDATING};
+use support::{project, execs, UPDATING};
 use support::paths;
 use hamcrest::assert_that;
 
@@ -21,8 +21,8 @@ impl Drop for Closer {
 
 // Test that HTTP auth is offered from `credential.helper`
 test!(http_auth_offered {
-    let mut listener = TcpListener::bind("127.0.0.1:0").assert();
-    let addr = listener.socket_name().assert();
+    let mut listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.socket_name().unwrap();
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
@@ -116,7 +116,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  [12] [..] status code: 401
+  [..] status code: 401
 ",
         addr = addr)));
 
@@ -125,8 +125,8 @@ Caused by:
 
 // Boy, sure would be nice to have a TLS implementation in rust!
 test!(https_something_happens {
-    let mut listener = TcpListener::bind("127.0.0.1:0").assert();
-    let addr = listener.socket_name().assert();
+    let mut listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.socket_name().unwrap();
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
@@ -160,7 +160,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  [[..]] {errmsg}
+  {errmsg}
 ",
         addr = addr,
         errmsg = if cfg!(windows) {
@@ -175,8 +175,8 @@ Caused by:
 
 // Boy, sure would be nice to have an SSH implementation in rust!
 test!(ssh_something_happens {
-    let mut listener = TcpListener::bind("127.0.0.1:0").assert();
-    let addr = listener.socket_name().assert();
+    let mut listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.socket_name().unwrap();
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
@@ -210,7 +210,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  [23] Failed to start SSH session: Failed getting banner
+  Failed to start SSH session: Failed getting banner
 ",
         addr = addr)));
     t.join().ok().unwrap();

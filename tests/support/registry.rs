@@ -7,7 +7,7 @@ use serialize::hex::ToHex;
 use tar::Archive;
 use url::Url;
 
-use support::{ResultTest, project};
+use support::project;
 use support::paths;
 use support::git::repo;
 use cargo::util::Sha256;
@@ -19,12 +19,12 @@ pub fn dl_url() -> Url { Url::from_file_path(&dl_path()).unwrap() }
 
 pub fn init() {
     let config = paths::home().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
+    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).unwrap();
     File::create(&config).write_str(format!(r#"
         [registry]
             index = "{reg}"
             token = "api-token"
-    "#, reg = registry()).as_slice()).assert();
+    "#, reg = registry()).as_slice()).unwrap();
 
     // Init a new registry
     repo(&registry_path())
@@ -57,7 +57,7 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     p.build();
 
     let dst = mock_archive_dst(name, version);
-    fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).assert();
+    fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).unwrap();
     let f = File::create(&dst).unwrap();
     let a = Archive::new(GzEncoder::new(f, Default));
     a.append(format!("{}-{}/Cargo.toml", name, version).as_slice(),

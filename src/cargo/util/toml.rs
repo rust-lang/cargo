@@ -15,7 +15,7 @@ use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
-use util::{CargoResult, Require, human, ToUrl, ToSemver};
+use util::{CargoResult, human, ToUrl, ToSemver, ChainError};
 
 /// Representation of the projects file layout.
 ///
@@ -98,7 +98,7 @@ pub fn to_manifest(contents: &[u8],
         Some(path) => path,
         None => manifest,
     };
-    let contents = raw_try!(str::from_utf8(contents).map_err(|_| {
+    let contents = try!(str::from_utf8(contents).chain_error(|| {
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
     let root = try!(parse(contents, &manifest));
@@ -286,7 +286,7 @@ pub struct TomlVersion {
 
 impl<E, D: Decoder<E>> Decodable<D, E> for TomlVersion {
     fn decode(d: &mut D) -> Result<TomlVersion, E> {
-        let s = raw_try!(d.read_str());
+        let s = try!(d.read_str());
         match s.as_slice().to_semver() {
             Ok(s) => Ok(TomlVersion { version: s }),
             Err(e) => Err(d.error(e.as_slice())),
@@ -384,7 +384,7 @@ impl TomlManifest {
         let mut nested_paths = vec!();
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
-        let project = try!(project.require(|| {
+        let project = try!(project.chain_error(|| {
             human("No `package` or `project` section found.")
         }));
 

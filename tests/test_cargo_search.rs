@@ -4,7 +4,7 @@ use url::Url;
 
 use cargo::util::{process, ProcessBuilder};
 use support::UPDATING;
-use support::{ResultTest, execs, cargo_dir};
+use support::{execs, cargo_dir};
 use support::paths;
 use support::git::repo;
 
@@ -17,12 +17,12 @@ fn api() -> Url { Url::from_file_path(&api_path()).unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
+    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).unwrap();
     File::create(&config).write_str(format!(r#"
         [registry]
             index = "{reg}"
-    "#, reg = registry()).as_slice()).assert();
-    fs::mkdir_recursive(&api_path().join("api/v1"), io::USER_DIR).assert();
+    "#, reg = registry()).as_slice()).unwrap();
+    fs::mkdir_recursive(&api_path().join("api/v1"), io::USER_DIR).unwrap();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{

@@ -4,8 +4,8 @@ use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
-use util::{Require, Config, internal, ChainError, Fresh, profile, join_paths};
+use util::{mod, CargoResult, ProcessBuilder, human, caused_human};
+use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
 
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, Stage};
@@ -61,7 +61,7 @@ pub fn rustc_old_version() -> CargoResult<(String, String)> {
         let triple = output.as_slice().lines().filter(|l| {
             l.starts_with("host: ")
         }).map(|l| l.slice_from(6)).next();
-        let triple = try!(triple.require(|| {
+        let triple = try!(triple.chain_error(|| {
             internal("rustc -v didn't have a line for `host:`")
         }));
         triple.to_string()
@@ -80,7 +80,7 @@ pub fn rustc_new_version() -> CargoResult<(String, String)> {
         let triple = output.as_slice().lines().filter(|l| {
             l.starts_with("host: ")
         }).map(|l| l.slice_from(6)).next();
-        let triple = try!(triple.require(|| {
+        let triple = try!(triple.chain_error(|| {
             internal("rustc -v didn't have a line for `host:`")
         }));
         triple.to_string()
@@ -408,9 +408,9 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
             }))
         }
         try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
-            e.msg = format!("Failed to run custom build command for `{}`\n{}",
-                            pkg, e.msg);
-            e.concrete().mark_human()
+            e.desc = format!("Failed to run custom build command for `{}`\n{}",
+                             pkg, e.desc);
+            Human(e)
         }));
         Ok(())
     }))
@@ -581,10 +581,10 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         } else {
             try!(rustdoc.exec_with_output().and(Ok(())).map_err(|err| {
-                match err.output() {
-                    Some(output) => {
-                        caused_human(format!("Could not document `{}`.\n{}",
-                                             name, output), err)
+                match err.exit {
+                    Some(..) => {
+                        caused_human(format!("Could not document `{}`.",
+                                             name), err)
                     }
                     None => {
                         caused_human("Failed to run rustdoc", err)
