@@ -46,9 +46,32 @@ pub struct TargetConfig {
 /// The second element of the tuple returned is the target triple that rustc
 /// is a host for.
 pub fn rustc_version() -> CargoResult<(String, String)> {
+    rustc_new_version().or_else(|_| rustc_old_version())
+}
+
+pub fn rustc_old_version() -> CargoResult<(String, String)> {
     let output = try!(try!(util::process("rustc"))
         .arg("-v")
         .arg("verbose")
+        .exec_with_output());
+    let output = try!(String::from_utf8(output.output).map_err(|_| {
+        internal("rustc -v didn't return utf8 output")
+    }));
+    let triple = {
+        let triple = output.as_slice().lines().filter(|l| {
+            l.starts_with("host: ")
+        }).map(|l| l.slice_from(6)).next();
+        let triple = try!(triple.require(|| {
+            internal("rustc -v didn't have a line for `host:`")
+        }));
+        triple.to_string()
+    };
+    Ok((output, triple))
+}
+
+pub fn rustc_new_version() -> CargoResult<(String, String)> {
+    let output = try!(try!(util::process("rustc"))
+        .arg("-vV")
         .exec_with_output());
     let output = try!(String::from_utf8(output.output).map_err(|_| {
         internal("rustc -v didn't return utf8 output")
