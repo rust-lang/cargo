@@ -1,4 +1,4 @@
-use std::collections::{HashMap, TreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 use regex::Regex;
 use serialize::{Encodable, Encoder, Decodable, Decoder};
@@ -15,7 +15,7 @@ pub struct EncodableResolve {
     metadata: Option<Metadata>,
 }
 
-pub type Metadata = TreeMap<String, String>;
+pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
     pub fn to_resolve(&self, default: &SourceId) -> CargoResult<Resolve> {
