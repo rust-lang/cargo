@@ -14,7 +14,7 @@ extern crate url;
 extern crate log;
 
 mod support;
-macro_rules! test(
+macro_rules! test {
     ($name:ident $expr:expr) => (
         #[test]
         fn $name() {
@@ -23,7 +23,7 @@ macro_rules! test(
             $expr;
         }
     )
-)
+}
 
 mod test_cargo;
 mod test_cargo_bench;

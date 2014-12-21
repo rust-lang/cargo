@@ -132,7 +132,7 @@ test!(cargo_compile_simple_git_dep {
     assert_that(
       cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_git_dep_branch {
     let project = project("foo");
@@ -199,7 +199,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(
       cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_git_dep_tag {
     let project = project("foo");
@@ -269,7 +269,7 @@ test!(cargo_compile_git_dep_tag {
     assert_that(
       cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_with_nested_paths {
     let git_project = git_repo("dep1", |project| {
@@ -344,7 +344,7 @@ test!(cargo_compile_with_nested_paths {
     assert_that(
       cargo::util::process(p.bin("parent")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_with_meta_package {
     let git_project = git_repo("meta-dep", |project| {
@@ -417,7 +417,7 @@ test!(cargo_compile_with_meta_package {
     assert_that(
       cargo::util::process(p.bin("parent")).unwrap(),
       execs().with_stdout("this is dep1 this is dep2\n"));
-})
+});
 
 test!(cargo_compile_with_short_ssh_git {
     let url = "git@github.com:a/dep";
@@ -445,7 +445,7 @@ test!(cargo_compile_with_short_ssh_git {
         .with_stdout("")
         .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
                               invalid url `{}`: relative URL without a base\n", url)));
-})
+});
 
 test!(two_revs_same_deps {
     let bar = git_repo("meta-dep", |project| {
@@ -514,7 +514,7 @@ test!(two_revs_same_deps {
                 execs().with_status(0));
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
-})
+});
 
 test!(recompilation {
     let git_project = git_repo("bar", |project| {
@@ -613,7 +613,7 @@ test!(recompilation {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
-})
+});
 
 test!(update_with_shared_deps {
     let git_project = git_repo("bar", |project| {
@@ -731,7 +731,7 @@ test!(update_with_shared_deps {
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
-})
+});
 
 test!(dep_with_submodule {
     let project = project("foo");
@@ -773,7 +773,7 @@ test!(dep_with_submodule {
 
     assert_that(project.cargo_process("build"),
         execs().with_stderr("").with_status(0));
-})
+});
 
 test!(two_deps_only_update_one {
     let project = project("foo");
@@ -840,7 +840,7 @@ test!(two_deps_only_update_one {
         .with_stdout(format!("{} git repository `{}`\n",
                              UPDATING, git1.url()))
         .with_stderr(""));
-})
+});
 
 test!(stale_cached_version {
     let bar = git_repo("meta-dep", |project| {
@@ -910,7 +910,7 @@ test!(stale_cached_version {
 {compiling} foo v0.0.0 ({foo})
 ", updating = UPDATING, compiling = COMPILING, bar = bar.url(), foo = foo.url())));
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
-})
+});
 
 test!(dep_with_changed_submodule {
     let project = project("foo");
@@ -1009,7 +1009,7 @@ test!(dep_with_changed_submodule {
                                       compiling = COMPILING, running = RUNNING))
                 .with_stderr("")
                 .with_status(0));
-})
+});
 
 test!(dev_deps_with_testing {
     let p2 = git_repo("bar", |project| {
@@ -1068,7 +1068,7 @@ test tests::foo ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING)));
-})
+});
 
 test!(git_build_cmd_freshness {
     let foo = git_repo("foo", |project| {
@@ -1106,7 +1106,7 @@ test!(git_build_cmd_freshness {
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(""));
-})
+});
 
 test!(git_name_not_always_needed {
     let p2 = git_repo("bar", |project| {
@@ -1145,7 +1145,7 @@ test!(git_name_not_always_needed {
 {updating} git repository `{bar}`
 {compiling} foo v0.5.0 ({url})
 ", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
-})
+});
 
 test!(git_repo_changing_no_rebuild {
     let bar = git_repo("bar", |project| {
@@ -1209,7 +1209,7 @@ test!(git_repo_changing_no_rebuild {
     // even though the git repo has changed.
     assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
-})
+});
 
 test!(git_dep_build_cmd {
     let p = git_repo("foo", |project| {
@@ -1268,7 +1268,7 @@ test!(git_dep_build_cmd {
     assert_that(
       cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("1\n"));
-})
+});
 
 test!(fetch_downloads {
     let bar = git_repo("bar", |project| {
@@ -1298,7 +1298,7 @@ test!(fetch_downloads {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("fetch"),
                 execs().with_status(0).with_stdout(""));
-})
+});
 
 test!(warnings_in_git_dep {
     let bar = git_repo("bar", |project| {
@@ -1331,7 +1331,7 @@ test!(warnings_in_git_dep {
                              COMPILING, bar.url(),
                              COMPILING, p.url()))
         .with_stderr(""));
-})
+});
 
 test!(update_ambiguous {
     let foo1 = git_repo("foo1", |project| {
@@ -1390,7 +1390,7 @@ following:
   foo:0.[..].0
   foo:0.[..].0
 "));
-})
+});
 
 test!(update_one_dep_in_repo_with_many_deps {
     let foo = git_repo("foo", |project| {
@@ -1430,7 +1430,7 @@ test!(update_one_dep_in_repo_with_many_deps {
                        .with_stdout(format!("\
 Updating git repository `{}`
 ", foo.url())));
-})
+});
 
 test!(switch_deps_does_not_update_transitive {
     let transitive = git_repo("transitive", |project| {
@@ -1507,7 +1507,7 @@ Updating git repository `{}`
 {compiling} dep [..]
 {compiling} project [..]
 ", dep2.url(), compiling = COMPILING)));
-})
+});
 
 test!(update_one_source_updates_all_packages_in_that_git_source {
     let dep = git_repo("dep", |project| {
@@ -1562,7 +1562,7 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
                                                            .unwrap();
     assert!(!lockfile.as_slice().contains(rev1.to_string().as_slice()),
             "{} in {}", rev1, lockfile);
-})
+});
 
 test!(switch_sources {
     let a1 = git_repo("a1", |project| {
@@ -1631,4 +1631,4 @@ test!(switch_sources {
 {compiling} b v0.5.0 ([..])
 {compiling} project v0.5.0 ([..])
 ", updating = UPDATING, compiling = COMPILING).as_slice()));
-})
+});

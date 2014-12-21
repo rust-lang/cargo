@@ -58,7 +58,7 @@ impl ToPkgId for (&'static str, &'static str) {
     }
 }
 
-macro_rules! pkg(
+macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
 
@@ -68,7 +68,7 @@ macro_rules! pkg(
     ($pkgid:expr) => (
         Summary::new($pkgid.to_pkgid(), Vec::new(), HashMap::new()).unwrap()
     )
-)
+}
 
 fn registry_loc() -> SourceId {
     let remote = "http://example.com".to_url().unwrap();

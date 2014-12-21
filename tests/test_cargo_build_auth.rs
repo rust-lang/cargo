@@ -38,7 +38,7 @@ test!(http_auth_offered {
            .collect()
     }
 
-    spawn(proc() {
+    spawn(move|| {
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
         s.write(b"\
@@ -123,7 +123,7 @@ Caused by:
         addr = addr)));
 
     rx.recv();
-})
+});
 
 // Boy, sure would be nice to have a TLS implementation in rust!
 test!(https_something_happens {
@@ -133,7 +133,7 @@ test!(https_something_happens {
     let a2 = a.clone();
     let _c = Closer { a: a2 };
     let (tx, rx) = channel();
-    spawn(proc() {
+    spawn(move|| {
         drop(a.accept().unwrap());
 
         tx.send(());
@@ -176,7 +176,7 @@ Caused by:
         })));
 
     rx.recv();
-})
+});
 
 // Boy, sure would be nice to have an SSH implementation in rust!
 test!(ssh_something_happens {
@@ -186,7 +186,7 @@ test!(ssh_something_happens {
     let a2 = a.clone();
     let _c = Closer { a: a2 };
     let (tx, rx) = channel();
-    spawn(proc() {
+    spawn(move|| {
         drop(a.accept().unwrap());
 
         tx.send(());
@@ -223,4 +223,4 @@ Caused by:
         addr = addr)));
 
     rx.recv();
-})
+});

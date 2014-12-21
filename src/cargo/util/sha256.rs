@@ -107,11 +107,11 @@ mod imp {
         fn CryptDestroyHash(hHash: HCRYPTHASH) -> BOOL;
     }
 
-    macro_rules! call( ($e:expr) => ({
+    macro_rules! call{ ($e:expr) => ({
         if $e == 0 {
             panic!("failed {}: {}", stringify!($e), os::last_os_error())
         }
-    }) )
+    }) }
 
     pub struct Sha256 {
         hcryptprov: HCRYPTPROV,

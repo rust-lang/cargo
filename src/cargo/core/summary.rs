@@ -97,7 +97,8 @@ impl Summary {
         self
     }
 
-    pub fn map_dependencies(mut self, f: |Dependency| -> Dependency) -> Summary {
+    pub fn map_dependencies<F>(mut self, f: F) -> Summary
+                               where F: FnMut(Dependency) -> Dependency {
         let deps = mem::replace(&mut self.dependencies, Vec::new());
         self.dependencies = deps.into_iter().map(f).collect();
         self

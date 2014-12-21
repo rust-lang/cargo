@@ -9,38 +9,24 @@ authors = ["Yehuda Katz <wycats@gmail.com>",
 name = "cargo"
 path = "src/cargo/lib.rs"
 
-[dependencies.docopt]
-git = "https://github.com/docopt/docopt.rs"
+[dependencies]
+toml = "0.1.4"
+url = "0.2.0"
+semver = "0.1.0"
+curl = "0.1.0"
+tar = "0.1.0"
+flate2 = "0.1.0"
+git2 = "0.1.0"
+glob = "0.1.0"
+time = "0.1.0"
+log = "0.1.0"
 
-[dependencies.toml]
-git = "https://github.com/alexcrichton/toml-rs"
+[dependencies.docopt]
+git = "https://github.com/alexcrichton/docopt.rs"
+branch = "update"
 
 [dev-dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"
-
-[dependencies.url]
-git = "https://github.com/servo/rust-url"
-
-[dependencies.semver]
-git = "https://github.com/rust-lang/semver"
-
-[dependencies.curl]
-git = "https://github.com/carllerche/curl-rust"
-
-[dependencies.tar]
-git = "https://github.com/alexcrichton/tar-rs"
-
-[dependencies.flate2]
-git = "https://github.com/alexcrichton/flate2-rs"
-
-[dependencies.git2]
-git = "https://github.com/alexcrichton/git2-rs"
-
-[dependencies.glob]
-git = "https://github.com/rust-lang/glob"
-
-[dependencies.time]
-git = "https://github.com/rust-lang/time"
 
 [dependencies.registry]
 path = "src/registry"

@@ -218,7 +218,7 @@ fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,
             "ar" | "linker" => {
                 let v = try!(v.string().chain_error(|| {
                     internal(format!("invalid configuration for key `{}`", k))
-                })).ref0().to_string();
+                })).0.to_string();
                 if k.as_slice() == "linker" {
                     ret.linker = Some(v);
                 } else {
@@ -240,7 +240,7 @@ fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,
                         internal(format!("invalid configuration for the key \
                                           `target.{}.{}.{}`", triple, lib_name,
                                           k))
-                    })).val0();
+                    })).0;
                     if k.as_slice() == "rustc-flags" {
                         let whence = format!("in `target.{}.{}.rustc-flags`",
                                              triple, lib_name);

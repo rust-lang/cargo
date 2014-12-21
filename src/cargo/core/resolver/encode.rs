@@ -117,16 +117,12 @@ impl<E, D: Decoder<E>> Decodable<D, E> for EncodablePackageId {
         let captures = regex.captures(string.as_slice())
                             .expect("invalid serialized PackageId");
 
-        let name = captures.at(1);
-        let version = captures.at(2);
+        let name = captures.at(1).unwrap();
+        let version = captures.at(2).unwrap();
 
         let source = captures.at(3);
 
-        let source_id = if source == "" {
-            None
-        } else {
-            Some(SourceId::from_url(source.to_string()))
-        };
+        let source_id = source.map(|s| SourceId::from_url(s.to_string()));
 
         Ok(EncodablePackageId {
             name: name.to_string(),

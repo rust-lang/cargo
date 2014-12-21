@@ -38,9 +38,11 @@ impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
         let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
 
-        let name = captures.at(1);
-        let version = semver::Version::parse(captures.at(2)).ok().expect("invalid version");
-        let source_id = SourceId::from_url(captures.at(3).to_string());
+        let name = captures.at(1).unwrap();
+        let version = captures.at(2).unwrap();
+        let url = captures.at(3).unwrap();
+        let version = semver::Version::parse(version).ok().expect("invalid version");
+        let source_id = SourceId::from_url(url.to_string());
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {

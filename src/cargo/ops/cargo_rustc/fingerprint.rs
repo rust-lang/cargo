@@ -134,7 +134,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
     let kind = Kind::Target;
 
     if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
-        return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))
+        return Ok((Fresh, Work::noop(), Work::noop()));
     }
     let new = dir(cx, pkg, kind);
     let loc = new.join("build");
@@ -164,18 +164,18 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
     let new1 = dir(cx, pkg, kind);
     let new2 = new1.clone();
 
-    let work1 = proc(_) {
+    let work1 = Work::new(move |_| {
         if !new1.exists() {
             try!(fs::mkdir(&new1, io::USER_DIR));
         }
         Ok(())
-    };
-    let work2 = proc(_) {
+    });
+    let work2 = Work::new(move |_| {
         if !new2.exists() {
             try!(fs::mkdir(&new2, io::USER_DIR));
         }
         Ok(())
-    };
+    });
 
     (work1, work2)
 }
@@ -183,13 +183,13 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
 fn prepare(is_fresh: bool, loc: Path, fingerprint: String) -> Preparation {
-    let write_fingerprint = proc(desc_tx) {
+    let write_fingerprint = Work::new(move |desc_tx| {
         drop(desc_tx);
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
         Ok(())
-    };
+    });
 
-    (if is_fresh {Fresh} else {Dirty}, write_fingerprint, proc(_) Ok(()))
+    (if is_fresh {Fresh} else {Dirty}, write_fingerprint, Work::noop())
 }
 
 /// Return the (old, new) location for fingerprints for a package

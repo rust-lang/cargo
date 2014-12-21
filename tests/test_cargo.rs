@@ -46,7 +46,7 @@ test!(list_commands_looks_at_path {
     let output = output.exec_with_output().assert();
     let output = str::from_utf8(output.output.as_slice()).assert();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);
-})
+});
 
 test!(find_closest_biuld_to_build {
     let pr = process(cargo_dir().join("cargo")).unwrap()
@@ -60,7 +60,7 @@ test!(find_closest_biuld_to_build {
 Did you mean `build`?
 
 "));
-})
+});
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 test!(find_closest_dont_correct_nonsense {
@@ -72,4 +72,4 @@ test!(find_closest_dont_correct_nonsense {
                 execs().with_status(127)
                        .with_stderr("No such subcommand
 "));
-})
+});

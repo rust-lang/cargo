@@ -226,10 +226,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
-            let dirty = proc(desc_tx: Sender<String>) {
-                try!(work(desc_tx.clone()));
-                dirty(desc_tx)
-            };
+            let dirty = Work::new(move |desc_tx: Sender<String>| {
+                try!(work.call(desc_tx.clone()));
+                dirty.call(desc_tx)
+            });
             dst.push((job(dirty, fresh), freshness));
         }
 
@@ -296,13 +296,15 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             1 => pkg.get_manifest().get_build()[0].to_string(),
             _ => format!("custom build commands"),
         };
-        let dirty = proc(desc_tx: Sender<String>) {
+        let dirty = Work::new(move |desc_tx: Sender<String>| {
             if desc.len() > 0 {
                 desc_tx.send_opt(desc).ok();
             }
-            for cmd in build_cmds.into_iter() { try!(cmd(desc_tx.clone())) }
-            dirty(desc_tx)
-        };
+            for cmd in build_cmds.into_iter() {
+                try!(cmd.call(desc_tx.clone()))
+            }
+            dirty.call(desc_tx)
+        });
         jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
         jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh),
                                                          freshness)]);
@@ -371,7 +373,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     }
     let pkg = pkg.to_string();
 
-    Ok(proc(desc_tx: Sender<String>) {
+    Ok(Work::new(move |desc_tx: Sender<String>| {
         desc_tx.send_opt(p.to_string()).ok();
         if first && !output.exists() {
             try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
@@ -384,7 +386,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
             e.concrete().mark_human()
         }));
         Ok(())
-    })
+    }))
 }
 
 fn rustc(package: &Package, target: &Target,
@@ -443,7 +445,7 @@ fn rustc(package: &Package, target: &Target,
             t.is_lib()
         });
 
-        Ok((proc(desc_tx: Sender<String>) {
+        Ok((Work::new(move |desc_tx: Sender<String>| {
             let mut rustc = rustc;
 
             // Only at runtime have we discovered what the extra -L and -l
@@ -479,7 +481,7 @@ fn rustc(package: &Package, target: &Target,
 
             Ok(())
 
-        }, kind))
+        }), kind))
     }).collect()
 }
 
@@ -539,7 +541,7 @@ fn rustdoc(package: &Package, target: &Target,
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();
     let desc = rustdoc.to_string();
-    Ok(proc(desc_tx: Sender<String>) {
+    Ok(Work::new(move |desc_tx: Sender<String>| {
         desc_tx.send(desc);
         if primary {
             try!(rustdoc.exec().chain_error(|| {
@@ -559,7 +561,7 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         }
         Ok(())
-    })
+    }))
 }
 
 fn build_base_args(cx: &Context,

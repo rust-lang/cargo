@@ -27,7 +27,7 @@ Cargo.toml is not a valid manifest
 
 Feature `bar` includes `baz` which is neither a dependency nor another feature
 ").as_slice()));
-})
+});
 
 test!(invalid2 {
     let p = project("foo")
@@ -51,7 +51,7 @@ Cargo.toml is not a valid manifest
 
 Features and dependencies cannot have the same name: `bar`
 ").as_slice()));
-})
+});
 
 test!(invalid3 {
     let p = project("foo")
@@ -76,7 +76,7 @@ Cargo.toml is not a valid manifest
 Feature `bar` depends on `baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
 ").as_slice()));
-})
+});
 
 test!(invalid4 {
     let p = project("foo")
@@ -115,7 +115,7 @@ Package `bar v0.0.1 ([..])` does not have these features: `bar`
                 execs().with_status(101).with_stderr(format!("\
 Package `foo v0.0.1 ([..])` does not have these features: `test`
 ").as_slice()));
-})
+});
 
 test!(invalid5 {
     let p = project("foo")
@@ -137,7 +137,7 @@ Cargo.toml is not a valid manifest
 
 Dev-dependencies are not allowed to be optional: `bar`
 ").as_slice()));
-})
+});
 
 test!(invalid6 {
     let p = project("foo")
@@ -158,7 +158,7 @@ Cargo.toml is not a valid manifest
 
 Feature `foo` requires `bar` which is not an optional dependency
 ").as_slice()));
-})
+});
 
 test!(invalid7 {
     let p = project("foo")
@@ -180,7 +180,7 @@ Cargo.toml is not a valid manifest
 
 Feature `foo` requires `bar` which is not an optional dependency
 ").as_slice()));
-})
+});
 
 test!(invalid8 {
     let p = project("foo")
@@ -207,7 +207,7 @@ test!(invalid8 {
                 execs().with_status(101).with_stderr(format!("\
 features in dependencies cannot enable features in other dependencies: `foo/bar`
 ").as_slice()));
-})
+});
 
 test!(no_feature_doesnt_build {
     let p = project("foo")
@@ -251,7 +251,7 @@ test!(no_feature_doesnt_build {
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     assert_that(p.process(p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
-})
+});
 
 test!(default_feature_pulled_in {
     let p = project("foo")
@@ -298,7 +298,7 @@ test!(default_feature_pulled_in {
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     assert_that(p.process(p.bin("foo")), execs().with_status(0).with_stdout(""));
-})
+});
 
 test!(cyclic_feature {
     let p = project("foo")
@@ -317,7 +317,7 @@ test!(cyclic_feature {
                 execs().with_status(101).with_stderr("\
 Cyclic feature dependency: feature `default` depends on itself
 "));
-})
+});
 
 test!(cyclic_feature2 {
     let p = project("foo")
@@ -337,7 +337,7 @@ test!(cyclic_feature2 {
                 execs().with_status(101).with_stderr("\
 Cyclic feature dependency: feature `[..]` depends on itself
 "));
-})
+});
 
 test!(groups_on_groups_on_groups {
     let p = project("foo")
@@ -391,7 +391,7 @@ test!(groups_on_groups_on_groups {
 {compiling} ba[..] v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-})
+});
 
 test!(many_cli_features {
     let p = project("foo")
@@ -435,7 +435,7 @@ test!(many_cli_features {
 {compiling} ba[..] v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-})
+});
 
 test!(union_features {
     let p = project("foo")
@@ -496,7 +496,7 @@ test!(union_features {
 {compiling} d1 v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-})
+});
 
 test!(many_features_no_rebuilds {
     let p = project("foo")
@@ -536,7 +536,7 @@ test!(many_features_no_rebuilds {
 {fresh} a v0.1.0 ([..])
 {fresh} b v0.1.0 ([..])
 ", fresh = FRESH).as_slice()));
-})
+});
 
 // Tests that all cmd lines work with `--features ""`
 test!(empty_features {
@@ -551,7 +551,7 @@ test!(empty_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg(""),
                 execs().with_status(0));
-})
+});
 
 // Tests that all cmd lines work with `--features ""`
 test!(transitive_features {
@@ -588,7 +588,7 @@ test!(transitive_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(0));
-})
+});
 
 test!(everything_in_the_lockfile {
     let p = project("foo")
@@ -646,4 +646,4 @@ test!(everything_in_the_lockfile {
     assert!(lockfile.contains(r#"name = "d1""#), "d1 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d2""#), "d2 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d3""#), "d3 not found\n{}", lockfile);
-})
+});

@@ -24,7 +24,7 @@ test!(non_tty {
 
     let buf = rx.read_to_end().unwrap();
     assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
-})
+});
 
 test!(color_explicitly_disabled {
     let config = ShellConfig { color: false, verbose: true, tty: true };
@@ -35,7 +35,7 @@ test!(color_explicitly_disabled {
     });
     let buf = rx.read_to_end().unwrap();
     assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
-})
+});
 
 test!(colored_shell {
     let term = TerminfoTerminal::new(MemWriter::new());
@@ -51,7 +51,7 @@ test!(colored_shell {
     assert_that(buf.as_slice(),
                 shell_writes(colored_output("Hey Alex\n",
                                             color::RED).assert()));
-})
+});
 
 fn colored_output<S: Str>(string: S, color: color::Color) -> IoResult<String> {
     let mut term = TerminfoTerminal::new(MemWriter::new()).unwrap();

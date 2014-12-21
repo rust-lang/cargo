@@ -53,33 +53,33 @@ fn main() {
     execute_main_without_stdin(execute, true, USAGE)
 }
 
-macro_rules! each_subcommand( ($macro:ident) => ({
-    $macro!(bench)
-    $macro!(build)
-    $macro!(clean)
-    $macro!(config_for_key)
-    $macro!(config_list)
-    $macro!(doc)
-    $macro!(fetch)
-    $macro!(generate_lockfile)
-    $macro!(git_checkout)
-    $macro!(help)
-    $macro!(locate_project)
-    $macro!(login)
-    $macro!(new)
-    $macro!(owner)
-    $macro!(package)
-    $macro!(pkgid)
-    $macro!(publish)
-    $macro!(read_manifest)
-    $macro!(run)
-    $macro!(search)
-    $macro!(test)
-    $macro!(update)
-    $macro!(verify_project)
-    $macro!(version)
-    $macro!(yank)
-}) )
+macro_rules! each_subcommand{ ($macro:ident) => ({
+    $macro!(bench);
+    $macro!(build);
+    $macro!(clean);
+    $macro!(config_for_key);
+    $macro!(config_list);
+    $macro!(doc);
+    $macro!(fetch);
+    $macro!(generate_lockfile);
+    $macro!(git_checkout);
+    $macro!(help);
+    $macro!(locate_project);
+    $macro!(login);
+    $macro!(new);
+    $macro!(owner);
+    $macro!(package);
+    $macro!(pkgid);
+    $macro!(publish);
+    $macro!(read_manifest);
+    $macro!(run);
+    $macro!(search);
+    $macro!(test);
+    $macro!(update);
+    $macro!(verify_project);
+    $macro!(version);
+    $macro!(yank);
+}) }
 
 /**
   The top-level `cargo` command handles configuration and project location
@@ -116,7 +116,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     args.insert(0, command.to_string());
     args.insert(0, os::args()[0].clone());
 
-    macro_rules! cmd( ($name:ident) => (
+    macro_rules! cmd{ ($name:ident) => (
         if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {
             mod $name;
             shell.set_verbose(true);
@@ -127,8 +127,8 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
             cargo::process_executed(r, shell);
             return Ok(None)
         }
-    ) )
-    each_subcommand!(cmd)
+    ) }
+    each_subcommand!(cmd);
 
     execute_subcommand(command.as_slice(), args.as_slice(), shell);
     Ok(None)
@@ -211,9 +211,9 @@ fn list_commands() -> TreeSet<String> {
         }
     }
 
-    macro_rules! add_cmd( ($cmd:ident) => ({
+    macro_rules! add_cmd{ ($cmd:ident) => ({
         commands.insert(stringify!($cmd).replace("_", "-"));
-    }) )
+    }) }
     each_subcommand!(add_cmd);
     commands
 }

@@ -80,7 +80,7 @@ test!(plugin_to_the_max {
                 execs().with_status(0));
     assert_that(foo.process(cargo_dir().join("cargo")).arg("doc"),
                 execs().with_status(0));
-})
+});
 
 test!(plugin_with_dynamic_native_dependency {
     let build = project("builder")
@@ -166,4 +166,4 @@ test!(plugin_with_dynamic_native_dependency {
 
     assert_that(foo.cargo_process("build").env("SRC", Some(lib.as_vec())),
                 execs().with_status(0));
-})
+});

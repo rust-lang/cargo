@@ -1,7 +1,6 @@
 use std::collections::hash_map::{HashMap, Values, MutEntries};
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
-use std::iter;
 use std::mem;
 use std::sync::Arc;
 use serialize::{Decodable, Decoder, Encodable, Encoder};
@@ -325,10 +324,10 @@ pub struct SourceMap<'src> {
 }
 
 pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
-pub type SourcesMut<'a, 'src> = iter::Map<'static, (&'a SourceId,
-                                                  &'a mut Box<Source+'src>),
-                                    (&'a SourceId, &'a mut (Source+'src)),
-                                    MutEntries<'a, SourceId, Box<Source+'src>>>;
+
+pub struct SourcesMut<'a, 'src: 'a> {
+    inner: MutEntries<'a, SourceId, Box<Source + 'src>>,
+}
 
 impl<'src> SourceMap<'src> {
     pub fn new() -> SourceMap<'src> {
@@ -374,7 +373,15 @@ impl<'src> SourceMap<'src> {
     }
 
     pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
-        self.map.iter_mut().map(|(k, v)| (k, &mut **v))
+        SourcesMut { inner: self.map.iter_mut() }
+    }
+}
+
+impl<'a, 'src> Iterator<(&'a SourceId, &'a mut (Source + 'src))>
+    for SourcesMut<'a, 'src>
+{
+    fn next(&mut self) -> Option<(&'a SourceId, &'a mut (Source + 'src))> {
+        self.inner.next().map(|(a, b)| (a, &mut **b))
     }
 }
 

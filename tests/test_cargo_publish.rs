@@ -75,7 +75,7 @@ test!(simple {
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {}", file.filename())
     }
-})
+});
 
 test!(git_deps {
     let p = project("foo")
@@ -97,7 +97,7 @@ test!(git_deps {
 all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
 "));
-})
+});
 
 test!(path_dependency_no_version {
     let p = project("foo")
@@ -126,4 +126,4 @@ test!(path_dependency_no_version {
 all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 "));
-})
+});
