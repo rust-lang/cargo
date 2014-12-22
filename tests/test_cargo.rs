@@ -1,5 +1,6 @@
 use std::io::fs::{mod, PathExtensions};
 use std::io;
+use std::io::{USER_RWX, File};
 use std::os;
 use std::str;
 use cargo::util::process;
@@ -72,4 +73,29 @@ test!(find_closest_dont_correct_nonsense {
                 execs().with_status(127)
                        .with_stderr("No such subcommand
 "));
+});
+
+test!(override_cargo_home {
+    let root = paths::root();
+    let my_home = root.join("my_home");
+    fs::mkdir(&my_home, USER_RWX).assert();
+    fs::mkdir(&my_home.join(".cargo"), USER_RWX).assert();
+    File::create(&my_home.join(".cargo/config")).write_str(r#"
+        [cargo-new]
+        name = "foo"
+        email = "bar"
+        git = false
+    "#).assert();
+
+    assert_that(process(cargo_dir().join("cargo")).unwrap()
+                .arg("new").arg("foo")
+                .cwd(paths::root())
+                .env("USER", Some("foo"))
+                .env("HOME", Some(paths::home()))
+                .env("CARGO_HOME", Some(my_home.clone())),
+                execs().with_status(0));
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let toml = File::open(&toml).read_to_string().assert();
+    assert!(toml.as_slice().contains(r#"authors = ["foo <bar>"]"#));
 });
