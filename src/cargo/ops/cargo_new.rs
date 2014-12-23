@@ -76,7 +76,13 @@ fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
     };
 
     if opts.travis {
-        try!(File::create(&path.join(".travis.yml")).write_str("language: rust\nsudo: false\n"));
+        try!(File::create(&path.join(".travis.yml")).write_str(
+r#"language: rust
+sudo: false
+cache:
+  directories:
+  - $HOME/.cargo/registry
+"#));
     }
 
     try!(File::create(&path.join("Cargo.toml")).write_str(format!(
