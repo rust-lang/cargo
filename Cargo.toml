@@ -11,19 +11,16 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 toml = "0.1.4"
-url = "0.2.0"
 semver = "0.1.0"
 curl = "0.1.0"
+url = "0.2.7"
 tar = "0.1.0"
 flate2 = "0.1.0"
 git2 = "0.1.0"
 glob = "0.1.0"
 time = "0.1.0"
 log = "0.1.0"
-
-[dependencies.docopt]
-git = "https://github.com/alexcrichton/docopt.rs"
-branch = "update"
+docopt = "0.6.18"
 
 [dev-dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"
