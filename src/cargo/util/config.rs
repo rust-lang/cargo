@@ -36,7 +36,7 @@ impl<'a> Config<'a> {
         let (rustc_version, rustc_host) = try!(ops::rustc_version());
 
         Ok(Config {
-            home_path: try!(os::homedir().require(|| {
+            home_path: try!(homedir().require(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
@@ -248,6 +248,12 @@ impl ConfigValue {
     }
 }
 
+fn homedir() -> Option<Path> {
+    let cargo_home = os::getenv("CARGO_HOME").map(|p| Path::new(p));
+    let user_home = os::homedir();
+    return cargo_home.or(user_home);
+}
+
 pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
     find_in_tree(&pwd, |file| extract_config(file, key)).map_err(|_|
         human(format!("`{}` not found in your configuration", key)))
@@ -313,7 +319,7 @@ fn walk_tree(pwd: &Path,
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = try!(os::homedir().require(|| {
+    let home = try!(homedir().require(|| {
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
