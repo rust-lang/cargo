@@ -1,6 +1,7 @@
 use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut};
-use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::collections::hash_map::{HashMap};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::io;
 use std::io::fs::{mod, PathExtensions, File};
 use std::string;

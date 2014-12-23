@@ -4,8 +4,9 @@
 //! This structure is used to store the dependency graph and dynamically update
 //! it to figure out when a dependency should be built.
 
-use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::{Occupied, Vacant};
+use std::collections::hash_set::HashSet;
+use std::collections::hash_map::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::Hash;
 
 pub use self::Freshness::{Fresh, Dirty};
