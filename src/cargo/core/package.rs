@@ -193,7 +193,7 @@ impl PackageSet {
         })
     }
 
-    pub fn iter(&self) -> slice::Items<Package> {
+    pub fn iter(&self) -> slice::Iter<Package> {
         self.packages.iter()
     }
 }

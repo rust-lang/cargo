@@ -326,7 +326,7 @@ pub struct SourceMap<'src> {
 pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
 
 pub struct SourcesMut<'a, 'src: 'a> {
-    inner: MutEntries<'a, SourceId, Box<Source + 'src>>,
+    inner: IterMut<'a, SourceId, Box<Source + 'src>>,
 }
 
 impl<'src> SourceMap<'src> {
