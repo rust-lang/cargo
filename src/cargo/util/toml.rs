@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use std::fmt;
 use std::io::fs::{mod, PathExtensions};
 use std::os;
@@ -97,7 +98,7 @@ pub fn to_manifest(contents: &[u8],
         Some(path) => path,
         None => manifest,
     };
-    let contents = try!(str::from_utf8(contents).require(|| {
+    let contents = raw_try!(str::from_utf8(contents).map_err(|_| {
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
     let root = try!(parse(contents, &manifest));

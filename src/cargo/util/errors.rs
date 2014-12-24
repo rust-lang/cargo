@@ -157,18 +157,18 @@ impl ProcessError {
             Some(ref out) => {
                 let mut string = String::new();
                 match str::from_utf8(out.output.as_slice()) {
-                    Some(s) if s.trim().len() > 0 => {
+                    Ok(s) if s.trim().len() > 0 => {
                         string.push_str("\n--- stdout\n");
                         string.push_str(s);
                     }
-                    Some(..) | None => {}
+                    Ok(..) | Err(..) => {}
                 }
                 match str::from_utf8(out.error.as_slice()) {
-                    Some(s) if s.trim().len() > 0 => {
+                    Ok(s) if s.trim().len() > 0 => {
                         string.push_str("\n--- stderr\n");
                         string.push_str(s);
                     }
-                    Some(..) | None => {}
+                    Ok(..) | Err(..) => {}
                 }
                 Some(string)
             },
