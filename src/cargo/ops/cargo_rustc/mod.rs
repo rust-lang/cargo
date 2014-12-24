@@ -201,7 +201,6 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // a real job. Packages which are *not* compiled still have their jobs
     // executed, but only if the work is fresh. This is to preserve their
     // artifacts if any exist.
-    let job = if compiled {Job::new} else {Job::noop};
     if !compiled { jobs.ignore(pkg); }
 
     if targets.is_empty() {
@@ -253,7 +252,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 try!(work.call(desc_tx.clone()));
                 dirty.call(desc_tx)
             });
-            dst.push((job(dirty, fresh), freshness));
+            dst.push((if compiled { Job::new(dirty, fresh) } else { Job::noop(dirty, fresh) }, freshness));
         }
 
         // If this is a custom build command, we need to not only build the
@@ -290,7 +289,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             }
             let (dirty, fresh, freshness) =
                     try!(custom_build::prepare(pkg, target, req, cx));
-            run_custom.push((job(dirty, fresh), freshness));
+            run_custom.push((if compiled { Job::new(dirty, fresh) } else { Job::noop(dirty, fresh) }, freshness));
         }
 
         // If no build scripts were run, no need to compile the build script!
@@ -329,7 +328,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             dirty.call(desc_tx)
         });
         jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh),
+        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(if compiled { Job::new(dirty, fresh) } else { Job::noop(dirty, fresh) },
                                                          freshness)]);
     }
 
