@@ -301,9 +301,9 @@ impl Execs {
             None => ham::success(),
             Some(out) => {
                 let actual = match str::from_utf8(actual) {
-                    None => return Err(format!("{} was not utf8 encoded",
+                    Err(..) => return Err(format!("{} was not utf8 encoded",
                                                description)),
-                    Some(actual) => actual,
+                    Ok(actual) => actual,
                 };
                 // Let's not deal with \r\n vs \n on windows...
                 let actual = actual.replace("\r", "");
