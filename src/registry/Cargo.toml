@@ -9,3 +9,4 @@ path = "lib.rs"
 
 [dependencies]
 curl = "0.1.0"
+rustc-serialize = "0.1.1"
