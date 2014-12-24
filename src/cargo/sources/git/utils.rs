@@ -1,19 +1,19 @@
 use std::fmt::{mod, Show, Formatter};
 use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
-use serialize::{Encodable, Encoder};
+use rustc_serialize::{Encodable, Encoder};
 use url::Url;
 use git2;
 
 use util::{CargoResult, ChainError, human, ToUrl, internal, Require};
 
-#[deriving(PartialEq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,RustcEncodable)]
 pub enum GitReference {
     Master,
     Other(String)
 }
 
-#[deriving(PartialEq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,RustcEncodable)]
 pub struct GitRevision(String);
 
 impl GitReference {
@@ -61,7 +61,7 @@ pub struct GitRemote {
     url: Url,
 }
 
-#[deriving(PartialEq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,RustcEncodable)]
 struct EncodableGitRemote {
     url: String,
 }
@@ -82,7 +82,7 @@ pub struct GitDatabase {
     repo: git2::Repository,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct EncodableGitDatabase {
     remote: GitRemote,
     path: String,
@@ -107,7 +107,7 @@ pub struct GitCheckout<'a> {
     repo: git2::Repository,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct EncodableGitCheckout {
     database: EncodableGitDatabase,
     location: String,

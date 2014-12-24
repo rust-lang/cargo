@@ -1,9 +1,9 @@
-use std::collections::hash_map::{HashMap, Values, MutEntries};
+use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use std::mem;
 use std::sync::Arc;
-use serialize::{Decodable, Decoder, Encodable, Encoder};
+use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
 
@@ -42,7 +42,7 @@ pub trait Source: Registry {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
-#[deriving(Encodable, Decodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[deriving(RustcEncodable, RustcDecodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
     /// Kind::Git(<git reference>) represents a git repository
     Git(String),

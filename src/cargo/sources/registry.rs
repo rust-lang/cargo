@@ -165,8 +165,8 @@ use std::collections::HashMap;
 use curl::http;
 use git2;
 use flate2::reader::GzDecoder;
-use serialize::json;
-use serialize::hex::ToHex;
+use rustc_serialize::json;
+use rustc_serialize::hex::ToHex;
 use tar::Archive;
 use url::Url;
 
@@ -192,7 +192,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     updated: bool,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub struct RegistryConfig {
     /// Download endpoint for all crates. This will be appended with
     /// `/<crate>/<version>/download` and then will be hit with an HTTP GET
@@ -204,7 +204,7 @@ pub struct RegistryConfig {
     pub api: String,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct RegistryPackage {
     name: String,
     vers: String,
@@ -214,7 +214,7 @@ struct RegistryPackage {
     yanked: Option<bool>,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct RegistryDependency {
     name: String,
     req: String,

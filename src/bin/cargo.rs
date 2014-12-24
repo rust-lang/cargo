@@ -1,7 +1,7 @@
 #![feature(phase, macro_rules)]
 #![deny(warnings)]
 
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 #[phase(plugin, link)] extern crate log;
 #[phase(plugin, link)] extern crate cargo;
 
@@ -15,7 +15,7 @@ use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
 use cargo::util::{CliError, CliResult};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Flags {
     flag_list: bool,
     flag_verbose: bool,

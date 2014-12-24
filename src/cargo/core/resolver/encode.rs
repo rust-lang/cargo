@@ -1,14 +1,14 @@
 use std::collections::{HashMap, BTreeMap};
 
 use regex::Regex;
-use serialize::{Encodable, Encoder, Decodable, Decoder};
+use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 use core::{PackageId, SourceId};
 use util::{CargoResult, Graph};
 
 use super::Resolve;
 
-#[deriving(Encodable, Decodable, Show)]
+#[deriving(RustcEncodable, RustcDecodable, Show)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
     root: EncodableDependency,
@@ -76,7 +76,7 @@ impl EncodableResolve {
     }
 }
 
-#[deriving(Encodable, Decodable, Show, PartialOrd, Ord, PartialEq, Eq)]
+#[deriving(RustcEncodable, RustcDecodable, Show, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodableDependency {
     name: String,
     version: String,

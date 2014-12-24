@@ -2,7 +2,7 @@ use std::io::MemWriter;
 use std::hash::{Hasher, Hash};
 use std::hash::sip::SipHasher;
 
-use serialize::hex::ToHex;
+use rustc_serialize::hex::ToHex;
 
 pub fn to_hex(num: u64) -> String {
     let mut writer = MemWriter::with_capacity(8);

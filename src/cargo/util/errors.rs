@@ -2,7 +2,7 @@ use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::io::IoError;
 use std::fmt::{mod, Show, Formatter};
 use std::str;
-use serialize::json;
+use rustc_serialize::json;
 use semver;
 
 use curl;

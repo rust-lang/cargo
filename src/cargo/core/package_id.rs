@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
-use serialize::{Encodable, Encoder, Decodable, Decoder};
+use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 use regex::Regex;
 
@@ -99,7 +99,7 @@ impl CargoError for PackageIdError {
     fn is_human(&self) -> bool { true }
 }
 
-#[deriving(PartialEq, Hash, Clone, Encodable)]
+#[deriving(PartialEq, Hash, Clone, RustcEncodable)]
 pub struct Metadata {
     pub metadata: String,
     pub extra_filename: String

@@ -3,7 +3,7 @@ use std::io::{mod, fs, File};
 use flate2::CompressionLevel::Default;
 use flate2::writer::GzEncoder;
 use git2;
-use serialize::hex::ToHex;
+use rustc_serialize::hex::ToHex;
 use tar::Archive;
 use url::Url;
 
