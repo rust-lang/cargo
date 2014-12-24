@@ -38,8 +38,13 @@ impl Drop for Profiler {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }
-                    println!("{} {:6}ms - {}", "    ".repeat(lvl + 1),
-                             time / 1000000, msg);
+
+                    let mut spaces = String::new();
+                    for _ in range(0u, lvl + 1) {
+                        spaces.push_str("    ");
+                    }
+
+                    println!("{} {:6}ms - {}", spaces, time / 1000000, msg);
 
                     print(lvl + 1, msgs.slice(last, i));
                     last = i;

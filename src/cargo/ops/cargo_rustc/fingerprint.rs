@@ -92,7 +92,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
             }
 
             if target.get_profile().is_test() {
-                cx.compilation.tests.push((target.get_name().into_string(), dst));
+                cx.compilation.tests.push((target.get_name().to_string(), dst));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
