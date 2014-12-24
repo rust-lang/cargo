@@ -13,7 +13,7 @@ use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
-use cargo::util::{CliError, CliResult};
+use cargo::util::{CliError, CliResult, lev_distance};
 
 #[deriving(RustcDecodable)]
 struct Flags {
@@ -139,7 +139,7 @@ fn find_closest(cmd: &str) -> Option<String> {
                             // doing it this way (instead of just .min_by(|c| c.lev_distance(cmd)))
                             // allows us to only make suggestions that have an edit distance of
                             // 3 or less
-                            .map(|c| (c.lev_distance(cmd), c))
+                            .map(|c| (lev_distance(c.as_slice(), cmd), c))
                             .filter(|&(d, _): &(uint, &String)| d < 4u)
                             .min_by(|&(d, _)| d) {
         Some((_, c)) => {
