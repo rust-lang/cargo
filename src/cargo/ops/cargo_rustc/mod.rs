@@ -252,7 +252,8 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 try!(work.call(desc_tx.clone()));
                 dirty.call(desc_tx)
             });
-            dst.push((if compiled { Job::new(dirty, fresh) } else { Job::noop(dirty, fresh) }, freshness));
+            dst.push((if compiled { Job::new(dirty, fresh) } 
+                      else { Job::noop(dirty, fresh) }, freshness));
         }
 
         // If this is a custom build command, we need to not only build the
@@ -284,12 +285,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
             let key = (pkg.get_package_id().clone(), kind);
             if pkg.get_manifest().get_links().is_some() &&
-               cx.build_state.outputs.lock().contains_key(&key) {
-                continue
-            }
+                cx.build_state.outputs.lock().contains_key(&key) {
+                    continue
+                }
             let (dirty, fresh, freshness) =
-                    try!(custom_build::prepare(pkg, target, req, cx));
-            run_custom.push((if compiled { Job::new(dirty, fresh) } else { Job::noop(dirty, fresh) }, freshness));
+                try!(custom_build::prepare(pkg, target, req, cx));
+            run_custom.push((if compiled { Job::new(dirty, fresh) } 
+                             else { Job::noop(dirty, fresh) }, freshness));
         }
 
         // If no build scripts were run, no need to compile the build script!
@@ -328,8 +330,8 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             dirty.call(desc_tx)
         });
         jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(if compiled { Job::new(dirty, fresh) } else { Job::noop(dirty, fresh) },
-                                                         freshness)]);
+        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(if compiled { Job::new(dirty, fresh) } 
+                           else { Job::noop(dirty, fresh) }, freshness)]);
     }
 
     jobs.enqueue(pkg, Stage::Libraries, libs);
