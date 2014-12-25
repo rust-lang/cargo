@@ -2,7 +2,7 @@ use cargo::core::{MultiShell, Package, Source};
 use cargo::util::{CliResult, CliError};
 use cargo::sources::{PathSource};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Options {
     flag_manifest_path: String,
 }

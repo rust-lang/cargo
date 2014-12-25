@@ -5,7 +5,7 @@ use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, CargoError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Options {
     flag_no_run: bool,
     flag_package: Option<String>,

@@ -2,7 +2,7 @@ use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, human, Require};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct LocateProjectFlags {
     flag_manifest_path: Option<String>,
 }
@@ -16,7 +16,7 @@ Options:
     -h, --help              Print this message
 ";
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 struct ProjectLocation {
     root: String
 }

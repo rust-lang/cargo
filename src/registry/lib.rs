@@ -1,5 +1,5 @@
 extern crate curl;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 
 use std::fmt;
 use std::io::{mod, fs, MemReader, MemWriter, File};
@@ -10,7 +10,8 @@ use std::result;
 use curl::http;
 use curl::http::handle::Method::{Put, Get, Delete};
 use curl::http::handle::{Method, Request};
-use serialize::json;
+use rustc_serialize::json;
+
 
 pub struct Registry {
     host: String,
@@ -36,14 +37,14 @@ pub enum Error {
     Io(io::IoError),
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub struct Crate {
     pub name: String,
     pub description: Option<String>,
     pub max_version: String
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct NewCrate {
     pub name: String,
     pub vers: String,
@@ -60,7 +61,7 @@ pub struct NewCrate {
     pub repository: Option<String>,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct NewCrateDependency {
     pub optional: bool,
     pub default_features: bool,
@@ -71,7 +72,7 @@ pub struct NewCrateDependency {
     pub kind: String,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub struct User {
     pub id: uint,
     pub login: String,
@@ -80,12 +81,12 @@ pub struct User {
     pub name: Option<String>,
 }
 
-#[deriving(Decodable)] struct R { ok: bool }
-#[deriving(Decodable)] struct ApiErrorList { errors: Vec<ApiError> }
-#[deriving(Decodable)] struct ApiError { detail: String }
-#[deriving(Encodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
-#[deriving(Decodable)] struct Users { users: Vec<User> }
-#[deriving(Decodable)] struct Crates { crates: Vec<Crate> }
+#[deriving(RustcDecodable)] struct R { ok: bool }
+#[deriving(RustcDecodable)] struct ApiErrorList { errors: Vec<ApiError> }
+#[deriving(RustcDecodable)] struct ApiError { detail: String }
+#[deriving(RustcEncodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
+#[deriving(RustcDecodable)] struct Users { users: Vec<User> }
+#[deriving(RustcDecodable)] struct Crates { crates: Vec<Crate> }
 
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {

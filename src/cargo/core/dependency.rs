@@ -184,7 +184,7 @@ impl Dependency {
     }
 }
 
-#[deriving(PartialEq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,RustcEncodable)]
 pub struct SerializedDependency {
     name: String,
     req: String

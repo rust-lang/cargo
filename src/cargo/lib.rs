@@ -7,8 +7,8 @@
 #![cfg_attr(test, deny(warnings))]
 
 extern crate libc;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate regex;
-extern crate serialize;
 extern crate term;
 extern crate time;
 #[phase(plugin, link)] extern crate log;
@@ -29,7 +29,8 @@ extern crate registry;
 use std::os;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
-use serialize::{Decoder, Encoder, Decodable, Encodable, json};
+use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
+use rustc_serialize::json;
 use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig};

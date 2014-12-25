@@ -7,7 +7,7 @@ use std::sync::Mutex;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, CargoError, human};
-use util::{internal, ChainError, Require};
+use util::{internal, ChainError};
 
 use super::job::Work;
 use super::{fingerprint, process, Kind, Context, Platform};
@@ -149,7 +149,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(output.output.as_slice()).require(|| {
+        let output = raw_try!(str::from_utf8(output.output.as_slice()).map_err(|_| {
             human("build script output was not valid utf-8")
         }));
         let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));

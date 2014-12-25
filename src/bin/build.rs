@@ -6,7 +6,7 @@ use cargo::ops;
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 use cargo::util::{CliResult, CliError};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Options {
     flag_package: Option<String>,
     flag_jobs: Option<uint>,

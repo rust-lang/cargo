@@ -1,11 +1,12 @@
 use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut};
-use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::collections::hash_map::{HashMap};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::io;
 use std::io::fs::{mod, PathExtensions, File};
 use std::string;
 
-use serialize::{Encodable,Encoder};
+use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::MultiShell;
 use ops;
@@ -93,13 +94,13 @@ impl<'a> Config<'a> {
     }
 }
 
-#[deriving(Eq, PartialEq, Clone, Encodable, Decodable, Copy)]
+#[deriving(Eq, PartialEq, Clone, RustcEncodable, RustcDecodable, Copy)]
 pub enum Location {
     Project,
     Global
 }
 
-#[deriving(Eq,PartialEq,Clone,Decodable)]
+#[deriving(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
     String(string::String, Path),
     List(Vec<(string::String, Path)>),

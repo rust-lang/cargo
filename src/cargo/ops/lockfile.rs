@@ -1,6 +1,6 @@
 use std::io::File;
 
-use serialize::{Encodable, Decodable};
+use rustc_serialize::{Encodable, Decodable};
 use toml::{mod, Encoder, Value};
 
 use core::{Resolve, resolver, Package, SourceId};

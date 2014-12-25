@@ -201,7 +201,12 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // a real job. Packages which are *not* compiled still have their jobs
     // executed, but only if the work is fresh. This is to preserve their
     // artifacts if any exist.
-    let job = if compiled {Job::new} else {Job::noop};
+    let job = if compiled {
+        Job::new as fn(Work, Work) -> Job
+    } else {
+        Job::noop as fn(Work, Work) -> Job
+    };
+
     if !compiled { jobs.ignore(pkg); }
 
     if targets.is_empty() {
@@ -285,11 +290,11 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
             let key = (pkg.get_package_id().clone(), kind);
             if pkg.get_manifest().get_links().is_some() &&
-               cx.build_state.outputs.lock().contains_key(&key) {
-                continue
-            }
+                cx.build_state.outputs.lock().contains_key(&key) {
+                    continue
+                }
             let (dirty, fresh, freshness) =
-                    try!(custom_build::prepare(pkg, target, req, cx));
+                try!(custom_build::prepare(pkg, target, req, cx));
             run_custom.push((job(dirty, fresh), freshness));
         }
 
@@ -329,8 +334,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             dirty.call(desc_tx)
         });
         jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh),
-                                                         freshness)]);
+        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh), freshness)]);
     }
 
     jobs.enqueue(pkg, Stage::Libraries, libs);

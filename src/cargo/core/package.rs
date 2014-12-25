@@ -13,7 +13,7 @@ use core::{
 };
 use core::dependency::SerializedDependency;
 use util::{CargoResult, graph};
-use serialize::{Encoder,Encodable};
+use rustc_serialize::{Encoder,Encodable};
 use core::source::{SourceId, Source};
 
 /// Informations about a package that is available somewhere in the file system.
@@ -30,7 +30,7 @@ pub struct Package {
     source_id: SourceId,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 struct SerializedPackage {
     name: String,
     version: String,
@@ -193,7 +193,7 @@ impl PackageSet {
         })
     }
 
-    pub fn iter(&self) -> slice::Items<Package> {
+    pub fn iter(&self) -> slice::Iter<Package> {
         self.packages.iter()
     }
 }

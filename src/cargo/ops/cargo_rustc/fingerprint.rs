@@ -1,4 +1,4 @@
-use std::collections::hash_map::{Occupied, Vacant};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
 use std::io::{mod, fs, File, BufferedReader};
@@ -92,7 +92,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
             }
 
             if target.get_profile().is_test() {
-                cx.compilation.tests.push((target.get_name().into_string(), dst));
+                cx.compilation.tests.push((target.get_name().to_string(), dst));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {

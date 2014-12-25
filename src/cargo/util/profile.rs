@@ -2,6 +2,7 @@ use std::os;
 use std::mem;
 use std::fmt::Show;
 use time;
+use std::iter::repeat;
 use std::cell::RefCell;
 
 thread_local!(static PROFILE_STACK: RefCell<Vec<u64>> = RefCell::new(Vec::new()));
@@ -38,8 +39,8 @@ impl Drop for Profiler {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }
-                    println!("{} {:6}ms - {}", "    ".repeat(lvl + 1),
-                             time / 1000000, msg);
+                    println!("{} {:6}ms - {}", repeat("    ").take(lvl + 1).collect::<String>(),
+                        time / 1000000, msg);
 
                     print(lvl + 1, msgs.slice(last, i));
                     last = i;

@@ -2,7 +2,7 @@ use std::hash;
 use std::fmt::{mod, Show, Formatter};
 
 use semver::Version;
-use serialize::{Encoder,Encodable};
+use rustc_serialize::{Encoder,Encodable};
 
 use core::{Dependency, PackageId, Summary};
 use core::package_id::Metadata;
@@ -53,7 +53,7 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[deriving(PartialEq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,RustcEncodable)]
 pub struct SerializedManifest {
     name: String,
     version: String,
@@ -81,7 +81,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     }
 }
 
-#[deriving(Show, Clone, PartialEq, Hash, Encodable, Copy)]
+#[deriving(Show, Clone, PartialEq, Hash, RustcEncodable, Copy)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -116,14 +116,14 @@ impl LibKind {
     }
 }
 
-#[deriving(Show, Clone, Hash, PartialEq, Encodable)]
+#[deriving(Show, Clone, Hash, PartialEq, RustcEncodable)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
     Example,
 }
 
-#[deriving(Encodable, Decodable, Clone, PartialEq, Show)]
+#[deriving(RustcEncodable, RustcDecodable, Clone, PartialEq, Show)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
@@ -360,7 +360,7 @@ pub struct Target {
     metadata: Option<Metadata>,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct SerializedTarget {
     kind: Vec<&'static str>,
     name: String,
