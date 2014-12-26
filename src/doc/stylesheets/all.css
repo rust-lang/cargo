@@ -17,6 +17,7 @@ body {
   -webkit-align-items: center;
           align-items: center;
   font-family: sans-serif;
+  overflow-y: scroll;
 }
 
 a { color: #00ac5b; text-decoration: none; }
