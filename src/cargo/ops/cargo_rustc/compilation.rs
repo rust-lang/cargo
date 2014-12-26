@@ -84,6 +84,8 @@ impl Compilation {
                    Some(pkg.get_version().patch.to_string()))
               .env("CARGO_PKG_VERSION_PRE",
                    pre_version_component(pkg.get_version()))
+              .env("CARGO_PKG_VERSION",
+                   Some(pkg.get_version().to_string()))
               .cwd(pkg.get_root()))
     }
 }
