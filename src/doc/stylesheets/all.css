@@ -5,10 +5,6 @@ html {
 
 main, #header { width: 900px; }
 
-body {
-  font-family: sans-serif;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -20,6 +16,8 @@ body {
           flex-direction: column;
   -webkit-align-items: center;
           align-items: center;
+  font-family: sans-serif;
+  overflow-y: scroll;
 }
 
 a { color: #00ac5b; text-decoration: none; }
