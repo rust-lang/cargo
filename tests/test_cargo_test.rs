@@ -1273,3 +1273,40 @@ test!(test_with_example_twice {
                 execs().with_status(0));
     assert_that(&p.bin("examples/foo"), existing_file());
 });
+
+test!(example_with_dev_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            test = false
+            doctest = false
+
+            [dev-dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "extern crate a; fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+[..]
+[..]
+[..]
+[..]
+{running} `rustc [..] --crate-name ex [..] --extern a=[..]`
+", running = RUNNING).as_slice()));
+});

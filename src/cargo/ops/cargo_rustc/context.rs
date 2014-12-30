@@ -284,9 +284,10 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                 target.get_profile().is_custom_build() == pkg_dep.is_build();
 
             // If this dependency is *not* a transitive dependency, then it
-            // only applies to test targets
+            // only applies to test/example targets
             let is_actual_dep = pkg_dep.is_transitive() ||
-                                target.get_profile().is_test();
+                                target.get_profile().is_test() ||
+                                target.is_example();
 
             is_correct_dep && is_actual_dep
         }).filter_map(|pkg| {
