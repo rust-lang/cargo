@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use hamcrest::{assert_that, equal_to, contains};
 
-use cargo::core::source::SourceId;
+use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::Development;
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
@@ -85,7 +85,8 @@ fn pkg_id(name: &str) -> PackageId {
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
     let remote = loc.to_url();
-    let source_id = SourceId::for_git(&remote.unwrap(), "master");
+    let master = GitReference::Branch("master".to_string());
+    let source_id = SourceId::for_git(&remote.unwrap(), master);
 
     PackageId::new(name, "1.0.0", &source_id).unwrap()
 }
@@ -103,7 +104,8 @@ fn dep_req(name: &str, req: &str) -> Dependency {
 
 fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
-    let source_id = SourceId::for_git(&url, "master");
+    let master = GitReference::Branch("master".to_string());
+    let source_id = SourceId::for_git(&url, master);
     Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
 }
 

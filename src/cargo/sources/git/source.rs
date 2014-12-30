@@ -5,10 +5,11 @@ use std::mem;
 use url::{mod, Url};
 
 use core::source::{Source, SourceId};
+use core::GitReference;
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
-use sources::git::utils::{GitReference, GitRemote, GitRevision};
+use sources::git::utils::{GitRemote, GitRevision};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
@@ -39,17 +40,23 @@ impl<'a, 'b> GitSource<'a, 'b> {
         let db_path = config.git_db_path()
             .join(ident.as_slice());
 
+        let reference_path = match *reference {
+            GitReference::Branch(ref s) |
+            GitReference::Tag(ref s) |
+            GitReference::Rev(ref s) => s.to_string(),
+        };
         let checkout_path = config.git_checkout_path()
-            .join(ident.as_slice()).join(reference.as_slice());
+                                  .join(ident)
+                                  .join(reference_path);
 
         let reference = match source_id.get_precise() {
-            Some(s) => s,
-            None => reference.as_slice(),
+            Some(s) => GitReference::Rev(s.to_string()),
+            None => source_id.git_reference().unwrap().clone(),
         };
 
         GitSource {
             remote: remote,
-            reference: GitReference::for_str(reference.as_slice()),
+            reference: reference,
             db_path: db_path,
             checkout_path: checkout_path,
             source_id: source_id.clone(),
@@ -140,9 +147,9 @@ impl<'a, 'b> Show for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "git repo at {}", self.remote.get_url()));
 
-        match self.reference {
-            GitReference::Master => Ok(()),
-            GitReference::Other(ref reference) => write!(f, " ({})", reference)
+        match self.reference.to_ref_string() {
+            Some(s) => write!(f, " ({})", s),
+            None => Ok(())
         }
     }
 }
@@ -157,8 +164,7 @@ impl<'a, 'b> Registry for GitSource<'a, 'b> {
 
 impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
-        let actual_rev = self.remote.rev_for(&self.db_path,
-                                             self.reference.as_slice());
+        let actual_rev = self.remote.rev_for(&self.db_path, &self.reference);
         let should_update = actual_rev.is_err() ||
                             self.source_id.get_precise().is_none();
 
@@ -168,7 +174,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
 
             log!(5, "updating git source `{}`", self.remote);
             let repo = try!(self.remote.checkout(&self.db_path));
-            let rev = try!(repo.rev_for(self.reference.as_slice()));
+            let rev = try!(repo.rev_for(&self.reference));
             (repo, rev)
         } else {
             (try!(self.remote.db_at(&self.db_path)), actual_rev.unwrap())

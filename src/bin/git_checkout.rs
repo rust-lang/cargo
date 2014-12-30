@@ -1,5 +1,5 @@
 use cargo::core::MultiShell;
-use cargo::core::source::{Source, SourceId};
+use cargo::core::source::{Source, SourceId, GitReference};
 use cargo::sources::git::{GitSource};
 use cargo::util::{Config, CliResult, CliError, human, ToUrl};
 
@@ -30,7 +30,8 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
                    })
                    .map_err(|e| CliError::from_boxed(e, 1)));
 
-    let source_id = SourceId::for_git(&url, reference.as_slice());
+    let reference = GitReference::Branch(reference.to_string());
+    let source_id = SourceId::for_git(&url, reference);
 
     let mut config = try!(Config::new(shell, None, None).map_err(|e| {
         CliError::from_boxed(e, 1)
