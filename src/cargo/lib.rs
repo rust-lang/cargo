@@ -27,6 +27,7 @@ extern crate url;
 extern crate registry;
 
 use std::os;
+use std::error::Error;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
 use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
@@ -53,26 +54,6 @@ macro_rules! some {
 // "Hygiene strikes again" - @acrichton
 mod cargo {
     pub use super::util;
-}
-
-#[macro_export]
-macro_rules! try {
-    ($expr:expr) => ({
-        use cargo::util::FromError;
-        match $expr.map_err(FromError::from_error) {
-            Ok(val) => val,
-            Err(err) => return Err(err)
-        }
-    })
-}
-
-macro_rules! raw_try {
-    ($expr:expr) => ({
-        match $expr {
-            Ok(val) => val,
-            Err(err) => return Err(err)
-        }
-    })
 }
 
 pub mod core;
@@ -232,12 +213,15 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     std::os::set_exit_status(exit_code as int);
 }
 
-fn handle_cause(err: &CargoError, shell: &mut MultiShell) {
-    let _ = shell.err().say("\nCaused by:", BLACK);
-    let _ = shell.err().say(format!("  {}", err.description()), BLACK);
+fn handle_cause(mut err: &Error, shell: &mut MultiShell) {
+    loop {
+        let _ = shell.err().say("\nCaused by:", BLACK);
+        let _ = shell.err().say(format!("  {}", err.description()), BLACK);
 
-    if let Some(e) = err.cause() {
-        handle_cause(e, shell)
+        match err.cause() {
+            Some(e) => err = e,
+            None => break,
+        }
     }
 }
 
@@ -255,6 +239,30 @@ pub fn version() -> String {
 fn flags_from_args<'a, T>(usage: &str, args: &[String],
                           options_first: bool) -> CliResult<T>
                           where T: Decodable<docopt::Decoder, docopt::Error> {
+    struct CargoDocoptError { err: docopt::Error }
+    impl Error for CargoDocoptError {
+        fn description(&self) -> &str {
+            match self.err {
+                docopt::Error::WithProgramUsage(..) => "",
+                ref e if e.fatal() => self.err.description(),
+                _ => "",
+            }
+        }
+
+        fn detail(&self) -> Option<String> {
+            match self.err {
+                docopt::Error::WithProgramUsage(_, ref usage) => {
+                    Some(usage.clone())
+                }
+                ref e if e.fatal() => None,
+                ref e => Some(e.to_string())
+            }
+        }
+    }
+    impl CargoError for CargoDocoptError {
+        fn is_human(&self) -> bool { true }
+    }
+
     let docopt = Docopt::new(usage).unwrap()
                                    .options_first(options_first)
                                    .argv(args.iter().map(|s| s.as_slice()))
@@ -262,7 +270,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                                    .version(Some(version()));
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::from_error(e, code)
+        CliError::from_error(CargoDocoptError { err: e }, code)
     })
 }
 

@@ -6,7 +6,7 @@ use url::Url;
 use git2;
 
 use core::GitReference;
-use util::{CargoResult, ChainError, human, ToUrl, internal, Require};
+use util::{CargoResult, ChainError, human, ToUrl, internal};
 
 #[deriving(PartialEq, Clone)]
 #[allow(missing_copy_implementations)]
@@ -182,7 +182,7 @@ impl GitDatabase {
     pub fn rev_for(&self, reference: &GitReference) -> CargoResult<GitRevision> {
         let id = match *reference {
             GitReference::Tag(ref s) => {
-                try!((|| {
+                try!((|:| {
                     let refname = format!("refs/tags/{}", s);
                     let id = try!(self.repo.refname_to_id(refname.as_slice()));
                     let tag = try!(self.repo.find_tag(id));
@@ -193,10 +193,10 @@ impl GitDatabase {
                 }))
             }
             GitReference::Branch(ref s) => {
-                try!((|| {
+                try!((|:| {
                     let b = try!(self.repo.find_branch(s.as_slice(),
                                                        git2::BranchType::Local));
-                    b.get().target().require(|| {
+                    b.get().target().chain_error(|| {
                         human(format!("branch `{}` did not have a target", s))
                     })
                 }).chain_error(|| {
@@ -294,7 +294,7 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in try!(repo.submodules()).into_iter() {
                 try!(child.init(false));
-                let url = try!(child.url().require(|| {
+                let url = try!(child.url().chain_error(|| {
                     internal("non-utf8 url for submodule")
                 }));
 

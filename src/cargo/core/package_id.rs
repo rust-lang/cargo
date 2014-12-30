@@ -1,4 +1,5 @@
 use semver;
+use std::error::{Error, FromError};
 use std::hash::Hash;
 use std::sync::Arc;
 use std::fmt::{mod, Show, Formatter};
@@ -34,7 +35,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for PackageId {
 
 impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
     fn decode(d: &mut D) -> Result<PackageId, E> {
-        let string: String = raw_try!(Decodable::decode(d));
+        let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
         let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
 
@@ -85,18 +86,26 @@ pub enum PackageIdError {
     InvalidNamespace(String)
 }
 
-impl CargoError for PackageIdError {
-    fn description(&self) -> String {
-        match *self {
+impl Error for PackageIdError {
+    fn description(&self) -> &str { "failed to parse package id" }
+    fn detail(&self) -> Option<String> {
+        Some(match *self {
             PackageIdError::InvalidVersion(ref v) => {
                 format!("invalid version: {}", *v)
             }
             PackageIdError::InvalidNamespace(ref ns) => {
                 format!("invalid namespace: {}", *ns)
             }
-        }
+        })
     }
+}
+
+impl CargoError for PackageIdError {
     fn is_human(&self) -> bool { true }
+}
+
+impl FromError<PackageIdError> for Box<CargoError> {
+    fn from_error(t: PackageIdError) -> Box<CargoError> { box t }
 }
 
 #[deriving(PartialEq, Hash, Clone, RustcEncodable)]

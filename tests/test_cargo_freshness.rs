@@ -1,7 +1,7 @@
 use std::io::{fs, File};
 
 use support::{project, execs, path2url};
-use support::{COMPILING, cargo_dir, ResultTest};
+use support::{COMPILING, cargo_dir};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 
@@ -27,15 +27,15 @@ test!(modifying_and_moving {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
 
-    File::create(&p.root().join("src/a.rs")).write_str("fn main() {}").assert();
+    File::create(&p.root().join("src/a.rs")).write_str("fn main() {}").unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = path2url(p.root()))));
 
-    fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).assert();
+    fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(101));
 });
@@ -69,11 +69,11 @@ test!(modify_only_some_files {
     let lib = p.root().join("src/lib.rs");
     let bin = p.root().join("src/b.rs");
 
-    File::create(&lib).write_str("invalid rust code").assert();
-    lib.move_into_the_past().assert();
-    p.root().move_into_the_past().assert();
+    File::create(&lib).write_str("invalid rust code").unwrap();
+    lib.move_into_the_past().unwrap();
+    p.root().move_into_the_past().unwrap();
 
-    File::create(&bin).write_str("fn foo() {}").assert();
+    File::create(&bin).write_str("fn foo() {}").unwrap();
 
     // Make sure the binary is rebuilt, not the lib
     assert_that(p.process(cargo_dir().join("cargo")).arg("build")

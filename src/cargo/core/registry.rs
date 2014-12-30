@@ -164,7 +164,7 @@ impl<'a> PackageRegistry<'a> {
     }
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
-        (|| {
+        (|:| {
             let mut source = source_id.load(self.config);
 
             // Ensure the source has fetched all necessary remote data.

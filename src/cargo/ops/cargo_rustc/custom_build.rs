@@ -6,7 +6,7 @@ use std::str;
 use std::sync::Mutex;
 
 use core::{Package, Target, PackageId, PackageSet};
-use util::{CargoResult, CargoError, human};
+use util::{CargoResult, human, Human};
 use util::{internal, ChainError};
 
 use super::job::Work;
@@ -137,9 +137,9 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // And now finally, run the build command itself!
         desc_tx.send_opt(p.to_string()).ok();
         let output = try!(p.exec_with_output().map_err(|mut e| {
-            e.msg = format!("Failed to run custom build command for `{}`\n{}",
-                            pkg_name, e.msg);
-            e.concrete().mark_human()
+            e.desc = format!("failed to run custom build command for `{}`\n{}",
+                             pkg_name, e.desc);
+            Human(e)
         }));
 
         // After the build command has finished running, we need to be sure to
@@ -149,7 +149,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = raw_try!(str::from_utf8(output.output.as_slice()).map_err(|_| {
+        let output = try!(str::from_utf8(output.output.as_slice()).chain_error(|| {
             human("build script output was not valid utf-8")
         }));
         let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));

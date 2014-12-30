@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, FRESH, RUNNING};
+use support::{COMPILING, cargo_dir, FRESH, RUNNING};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -140,8 +140,8 @@ test!(many_similar_names {
             #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
         "#);
 
-    let output = p.cargo_process("bench").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("bench").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("test bin_bench"), "bin_bench missing\n{}", output);
     assert!(output.contains("test lib_bench"), "lib_bench missing\n{}", output);
     assert!(output.contains("test bench_bench"), "bench_bench missing\n{}", output);
@@ -636,8 +636,8 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("bench").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("bench").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
                             "no main_bench\n{}",
                             output);
@@ -717,7 +717,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\

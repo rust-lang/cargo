@@ -2,7 +2,7 @@ use std::io::{mod, fs, TempDir, File};
 use std::os;
 use std::path;
 
-use support::{ResultTest, project, execs, main_file, basic_bin_manifest};
+use support::{project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
 use hamcrest::{assert_that, existing_file};
 use support::paths::PathExt;
@@ -274,7 +274,7 @@ test!(cargo_compile_with_nested_deps_inferred {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -332,7 +332,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -399,7 +399,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -577,7 +577,7 @@ test!(many_crate_types_old_style_lib_location {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 
-    let files = fs::readdir(&p.root().join("target")).assert();
+    let files = fs::readdir(&p.root().join("target")).unwrap();
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
             "build" | "examples" | "deps" => None,
@@ -615,7 +615,7 @@ test!(many_crate_types_correct {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 
-    let files = fs::readdir(&p.root().join("target")).assert();
+    let files = fs::readdir(&p.root().join("target")).unwrap();
     let mut files: Vec<String> = files.iter().filter_map(|f| {
         match f.filename_str().unwrap() {
             "build" | "examples" | "deps" => None,
@@ -1196,7 +1196,7 @@ test!(freshness_ignores_excluded {
         "#)
         .file("src/lib.rs", "pub fn bar() -> int { 1 }");
     foo.build();
-    foo.root().move_into_the_past().assert();
+    foo.root().move_into_the_past().unwrap();
 
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
@@ -1212,7 +1212,7 @@ test!(freshness_ignores_excluded {
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
-    File::create(&foo.root().join("src/bar.rs")).assert();
+    File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(""));
@@ -1252,7 +1252,7 @@ test!(rebuild_preserves_out_dir {
         "#, build.bin("builder").display()).as_slice())
         .file("src/lib.rs", "pub fn bar() -> int { 1 }");
     foo.build();
-    foo.root().move_into_the_past().assert();
+    foo.root().move_into_the_past().unwrap();
 
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build")
                    .env("FIRST", Some("1")),
@@ -1261,7 +1261,7 @@ test!(rebuild_preserves_out_dir {
 {compiling} foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 
-    File::create(&foo.root().join("src/bar.rs")).assert();
+    File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
@@ -1308,7 +1308,7 @@ test!(recompile_space_in_name {
         "#)
         .file("src/my lib.rs", "");
     assert_that(foo.cargo_process("build"), execs().with_status(0));
-    foo.root().move_into_the_past().assert();
+    foo.root().move_into_the_past().unwrap();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
 });
@@ -1387,7 +1387,7 @@ test!(cargo_platform_specific_dependency {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -1460,7 +1460,7 @@ test!(cargo_platform_specific_dependency_wrong_platform {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -1469,7 +1469,7 @@ test!(cargo_platform_specific_dependency_wrong_platform {
       execs());
 
     let lockfile = p.root().join("Cargo.lock");
-    let lockfile = File::open(&lockfile).read_to_string().assert();
+    let lockfile = File::open(&lockfile).read_to_string().unwrap();
     assert!(lockfile.as_slice().contains("bar"))
 });
 
@@ -1486,14 +1486,14 @@ test!(example_bin_same_name {
 
     p.cargo_process("test").arg("--no-run")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("examples/foo"), existing_file());
 
     p.process(cargo_dir().join("cargo")).arg("test").arg("--no-run")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("examples/foo"), existing_file());

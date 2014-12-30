@@ -3,9 +3,10 @@ use std::io::{mod, File, fs};
 use std::io::fs::PathExtensions;
 
 use core::{Package,Manifest,SourceId};
-use util::{mod, CargoResult, human, FromError};
+use util::{mod, CargoResult, human};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
+use std::error::FromError;
 
 pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId)
     -> CargoResult<(Manifest, Vec<Path>)> {

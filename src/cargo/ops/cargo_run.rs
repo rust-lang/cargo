@@ -1,7 +1,7 @@
 use std::os;
 
 use ops;
-use util::{CargoResult, human, process, ProcessError, Require};
+use util::{CargoResult, human, process, ProcessError, ChainError};
 use core::manifest::TargetKind;
 use core::source::Source;
 use sources::PathSource;
@@ -25,7 +25,7 @@ pub fn run(manifest_path: &Path,
         matches_kind && matches_name && a.get_profile().get_env() == env &&
             !a.get_profile().is_custom_build()
     });
-    let bin = try!(bins.next().require(|| {
+    let bin = try!(bins.next().chain_error(|| {
         human("a bin target must be available for `cargo run`")
     }));
     match bins.next() {

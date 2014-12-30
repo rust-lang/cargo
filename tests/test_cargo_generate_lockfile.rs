@@ -1,6 +1,6 @@
 use std::io::File;
 
-use support::{project, execs, cargo_dir, ResultTest};
+use support::{project, execs, cargo_dir};
 use hamcrest::assert_that;
 
 fn setup() {}
@@ -23,9 +23,9 @@ test!(ignores_carriage_return {
 
     let lockfile = p.root().join("Cargo.lock");
     let lock = File::open(&lockfile).read_to_string();
-    let lock = lock.assert();
+    let lock = lock.unwrap();
     let lock = lock.as_slice().replace("\n", "\r\n");
-    File::create(&lockfile).write_str(lock.as_slice()).assert();
+    File::create(&lockfile).write_str(lock.as_slice()).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 });
@@ -52,7 +52,7 @@ test!(adding_and_removing_packages {
 
     let lockfile = p.root().join("Cargo.lock");
     let toml = p.root().join("Cargo.toml");
-    let lock1 = File::open(&lockfile).read_to_string().assert();
+    let lock1 = File::open(&lockfile).read_to_string().unwrap();
 
     // add a dep
     File::create(&toml).write_str(r#"
@@ -63,10 +63,10 @@ test!(adding_and_removing_packages {
 
         [dependencies.bar]
         path = "bar"
-    "#).assert();
+    "#).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
-    let lock2 = File::open(&lockfile).read_to_string().assert();
+    let lock2 = File::open(&lockfile).read_to_string().unwrap();
     assert!(lock1 != lock2);
 
     // change the dep
@@ -75,10 +75,10 @@ test!(adding_and_removing_packages {
         name = "bar"
         authors = []
         version = "0.0.2"
-    "#).assert();
+    "#).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
-    let lock3 = File::open(&lockfile).read_to_string().assert();
+    let lock3 = File::open(&lockfile).read_to_string().unwrap();
     assert!(lock1 != lock3);
     assert!(lock2 != lock3);
 
@@ -88,10 +88,10 @@ test!(adding_and_removing_packages {
         name = "foo"
         authors = []
         version = "0.0.1"
-    "#).assert();
+    "#).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("generate-lockfile"),
                 execs().with_status(0));
-    let lock4 = File::open(&lockfile).read_to_string().assert();
+    let lock4 = File::open(&lockfile).read_to_string().unwrap();
     assert_eq!(lock1, lock4);
 });
 
@@ -122,19 +122,19 @@ foo = "bar"
 "#;
     let lockfile = p.root().join("Cargo.lock");
     {
-        let lock = File::open(&lockfile).read_to_string().assert();
-        File::create(&lockfile).write_str((lock + metadata).as_slice()).assert();
+        let lock = File::open(&lockfile).read_to_string().unwrap();
+        File::create(&lockfile).write_str((lock + metadata).as_slice()).unwrap();
     }
 
     // Build and make sure the metadata is still there
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
-    let lock = File::open(&lockfile).read_to_string().assert();
+    let lock = File::open(&lockfile).read_to_string().unwrap();
     assert!(lock.as_slice().contains(metadata.trim()), "{}", lock);
 
     // Update and make sure the metadata is still there
     assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_status(0));
-    let lock = File::open(&lockfile).read_to_string().assert();
+    let lock = File::open(&lockfile).read_to_string().unwrap();
     assert!(lock.as_slice().contains(metadata.trim()), "{}", lock);
 });

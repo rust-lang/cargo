@@ -10,7 +10,7 @@ use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::MultiShell;
 use ops;
-use util::{CargoResult, ChainError, Require, internal, human};
+use util::{CargoResult, ChainError, internal, human};
 
 use util::toml as cargo_toml;
 
@@ -37,7 +37,7 @@ impl<'a> Config<'a> {
         let (rustc_version, rustc_host) = try!(ops::rustc_version());
 
         Ok(Config {
-            home_path: try!(homedir().require(|| {
+            home_path: try!(homedir().chain_error(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
@@ -159,7 +159,7 @@ impl ConfigValue {
             }
             toml::Value::Table(val) => {
                 Ok(CV::Table(try!(val.into_iter().map(|(key, value)| {
-                    let value = raw_try!(CV::from_toml(path, value));
+                    let value = try!(CV::from_toml(path, value));
                     Ok((key, value))
                 }).collect::<CargoResult<_>>())))
             }
@@ -320,7 +320,7 @@ fn walk_tree(pwd: &Path,
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = try!(homedir().require(|| {
+    let home = try!(homedir().chain_error(|| {
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
@@ -338,7 +338,7 @@ fn walk_tree(pwd: &Path,
 fn extract_config(mut file: File, key: &str) -> CargoResult<ConfigValue> {
     let contents = try!(file.read_to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), file.path()));
-    let val = try!(toml.remove(&key.to_string()).require(|| internal("")));
+    let val = try!(toml.remove(&key.to_string()).chain_error(|| internal("")));
 
     CV::from_toml(file.path(), val)
 }
