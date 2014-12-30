@@ -91,7 +91,8 @@ style:
 
 no-exes:
 	find $$(git ls-files) -perm +111 -type f \
-		-not -name configure -not -name '*.sh' -not -name '*.rs' | \
+		-not -name configure -not -name '*.sh' -not -name '*.rs' \
+		-not -wholename "*/rust-installer/*" | \
 		grep '.*' \
 		&& exit 1 || exit 0
 
