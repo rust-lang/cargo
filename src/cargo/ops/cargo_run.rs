@@ -1,6 +1,6 @@
 use std::os;
 
-use ops;
+use ops::{mod, ExecEngine};
 use util::{CargoResult, human, process, ProcessError, ChainError};
 use core::manifest::TargetKind;
 use core::source::Source;
@@ -49,7 +49,8 @@ pub fn run(manifest_path: &Path,
         Some(path) => path,
         None => exe,
     };
-    let process = try!(compile.process(exe, &root))
+    let process = try!(try!(compile.target_process(exe, &root))
+                              .into_process_builder())
                               .args(args)
                               .cwd(try!(os::getcwd()));
 

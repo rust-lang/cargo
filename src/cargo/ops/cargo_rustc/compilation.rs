@@ -5,6 +5,8 @@ use semver::Version;
 use core::{PackageId, Package};
 use util::{mod, CargoResult};
 
+use super::{CommandType, CommandPrototype};
+
 /// A structure returning the result of a compilation.
 pub struct Compilation {
     /// All libraries which were built for a package.
@@ -54,13 +56,35 @@ impl Compilation {
         }
     }
 
+    /// See `process`.
+    pub fn rustc_process(&self, pkg: &Package) -> CargoResult<CommandPrototype> {
+        self.process(CommandType::Rustc, pkg)
+    }
+
+    /// See `process`.
+    pub fn rustdoc_process(&self, pkg: &Package) -> CargoResult<CommandPrototype> {
+        self.process(CommandType::Rustdoc, pkg)
+    }
+
+    /// See `process`.
+    pub fn target_process<T: ToCStr>(&self, cmd: T, pkg: &Package)
+                                     -> CargoResult<CommandPrototype> {
+        self.process(CommandType::Target(cmd.to_c_str()), pkg)
+    }
+
+    /// See `process`.
+    pub fn host_process<T: ToCStr>(&self, cmd: T, pkg: &Package)
+                                   -> CargoResult<CommandPrototype> {
+        self.process(CommandType::Host(cmd.to_c_str()), pkg)
+    }
+
     /// Prepares a new process with an appropriate environment to run against
     /// the artifacts produced by the build process.
     ///
     /// The package argument is also used to configure environment variables as
     /// well as the working directory of the child process.
-    pub fn process<T: ToCStr>(&self, cmd: T, pkg: &Package)
-                              -> CargoResult<util::ProcessBuilder> {
+    pub fn process(&self, cmd: CommandType, pkg: &Package)
+                   -> CargoResult<CommandPrototype> {
         let mut search_path = DynamicLibrary::search_path();
         for dir in self.native_dirs.values() {
             search_path.push(dir.clone());
@@ -69,7 +93,7 @@ impl Compilation {
         search_path.push(self.deps_output.clone());
         let search_path = try!(util::join_paths(search_path.as_slice(),
                                                 DynamicLibrary::envvar()));
-        let mut cmd = try!(util::process(cmd)).env(
+        let mut cmd = try!(CommandPrototype::new(cmd)).env(
             DynamicLibrary::envvar(), Some(search_path.as_slice()));
         for (k, v) in self.extra_env.iter() {
             cmd = cmd.env(k.as_slice(), v.as_ref().map(|s| s.as_slice()));

@@ -65,7 +65,8 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
             features: options.flag_features.as_slice(),
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| s.as_slice()),
-            lib_only: false
+            lib_only: false,
+            exec_engine: None,
         },
     };
 

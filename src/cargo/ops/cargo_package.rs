@@ -180,6 +180,7 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
         no_default_features: false,
         spec: None,
         lib_only: false,
+        exec_engine: None,
     }));
 
     Ok(())

@@ -11,6 +11,7 @@ use super::{Kind, Compilation, BuildConfig};
 use super::TargetConfig;
 use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
+use super::{ProcessEngine, ExecEngine};
 
 #[deriving(Show, Copy)]
 pub enum Platform {
@@ -25,6 +26,7 @@ pub struct Context<'a, 'b: 'a> {
     pub sources: &'a SourceMap<'b>,
     pub compilation: Compilation,
     pub build_state: Arc<BuildState>,
+    pub exec_engine: Arc<Box<ExecEngine>>,
 
     env: &'a str,
     host: Layout,
@@ -73,6 +75,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             compilation: Compilation::new(root_pkg),
             build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
             build_config: build_config,
+            exec_engine: Arc::new(box ProcessEngine as Box<ExecEngine>),
         })
     }
 

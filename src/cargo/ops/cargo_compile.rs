@@ -25,11 +25,12 @@
 use std::os;
 use std::collections::HashMap;
 use std::default::Default;
+use std::sync::Arc;
 
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver::Method;
-use ops::{mod, BuildOutput};
+use ops::{mod, BuildOutput, ExecEngine};
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, config, internal, human, ChainError, profile};
@@ -47,7 +48,8 @@ pub struct CompileOptions<'a> {
     pub features: &'a [String],
     pub no_default_features: bool,
     pub spec: Option<&'a str>,
-    pub lib_only: bool
+    pub lib_only: bool,
+    pub exec_engine: Option<Arc<Box<ExecEngine>>>,
 }
 
 pub fn compile(manifest_path: &Path,
@@ -72,7 +74,8 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { env, ref mut shell, jobs, target, spec,
                          dev_deps, features, no_default_features,
-                         lib_only } = *options;
+                         lib_only, ref mut exec_engine } = *options;
+
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
         s.as_slice().split(' ')
@@ -149,7 +152,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
                                   &PackageSet::new(packages.as_slice()),
                                   &resolve_with_overrides, &sources,
-                                  &config, lib_overrides))
+                                  &config, lib_overrides, exec_engine.clone()))
     };
 
     return Ok(ret);

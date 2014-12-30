@@ -64,7 +64,8 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         features: options.flag_features.as_slice(),
         no_default_features: options.flag_no_default_features,
         spec: options.flag_package.as_ref().map(|s| s.as_slice()),
-        lib_only: options.flag_lib
+        lib_only: options.flag_lib,
+        exec_engine: None,
     };
 
     ops::compile(&root, &mut opts).map(|_| None).map_err(|err| {
