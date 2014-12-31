@@ -173,7 +173,7 @@ $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-image-$(1)
 	sh src/rust-installer/gen-installer.sh \
 		--product-name=Cargo \
 		--verify-bin=cargo \
-		--rel-manifest-dir=cargo \
+		--rel-manifest-dir=rustlib \
 		--success-message=Cargo-is-ready-to-roll. \
 		--image-dir=$$(IMGDIR_$(1)) \
 		--work-dir=./$$(DISTDIR_$(1)) \
