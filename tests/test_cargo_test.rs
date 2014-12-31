@@ -268,9 +268,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 {doctest} bar
 
-running 0 tests
+running 1 test
+test bar_0 ... ok
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
@@ -567,9 +568,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 {doctest} syntax
 
-running 0 tests
+running 1 test
+test foo_0 ... ok
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,

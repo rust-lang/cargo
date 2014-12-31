@@ -5,6 +5,11 @@ authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
 
+[profile.test]
+debug = false
+[profile.dev]
+debug = false
+
 [lib]
 name = "cargo"
 path = "src/cargo/lib.rs"
@@ -22,6 +27,7 @@ log = "0.1.0"
 docopt = "0.6.19"
 url = "0.2.7"
 rustc-serialize = "0.1.5"
+term = "0.1"
 
 [dev-dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"

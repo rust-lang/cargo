@@ -1,8 +1,7 @@
 #![crate_name="cargo"]
 #![crate_type="rlib"]
 
-#![feature(macro_rules, phase)]
-#![feature(default_type_params)]
+#![feature(macro_rules, phase, default_type_params, unboxed_closures)]
 #![deny(unused)]
 #![cfg_attr(test, deny(warnings))]
 
