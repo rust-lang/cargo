@@ -523,6 +523,7 @@ test!(crate_version_env_vars {
             static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
             static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
             static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
+            static VERSION: &'static str = env!("CARGO_PKG_VERSION");
             static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
 
             fn main() {
@@ -531,6 +532,7 @@ test!(crate_version_env_vars {
                                 CARGO_MANIFEST_DIR);
                 assert_eq!(s, foo::version());
                 println!("{}", s);
+                assert_eq!(s, VERSION);
             }
         "#)
         .file("src/lib.rs", r#"
