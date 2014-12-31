@@ -343,7 +343,7 @@ impl<'a> GitCheckout<'a> {
 
 fn with_authentication<T>(url: &str,
                           cfg: &git2::Config,
-                          f: |git2::Credentials| -> CargoResult<T>)
+                          f: |&mut git2::Credentials| -> CargoResult<T>)
                           -> CargoResult<T> {
     // Prepare the authentication callbacks.
     //
@@ -365,7 +365,7 @@ fn with_authentication<T>(url: &str,
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
     let mut cred_error = false;
-    let ret = f(|url, username, allowed| {
+    let ret = f(&mut |&mut: url, username, allowed| {
         let creds = if allowed.contains(git2::SSH_KEY) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())
@@ -395,9 +395,10 @@ pub fn fetch(repo: &git2::Repository, url: &str,
     // Create a local anonymous remote in the repository to fetch the url
 
     with_authentication(url, &try!(repo.config()), |f| {
-        let mut cb = git2::RemoteCallbacks::new()
-                                       .credentials(f);
-        let mut remote = try!(repo.remote_anonymous(url.as_slice(), refspec));
+        let mut cb = git2::RemoteCallbacks::new();
+        cb.credentials(|a, b, c| f.call_mut((a, b, c)));
+        let mut remote = try!(repo.remote_anonymous(url.as_slice(),
+                                                    Some(refspec)));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
         remote.set_callbacks(&mut cb);
         try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None, None));

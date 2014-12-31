@@ -13,6 +13,7 @@ dependencies = [
  "rustc-serialize 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "term 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -177,6 +178,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "tar"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "term"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "log 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "time"
