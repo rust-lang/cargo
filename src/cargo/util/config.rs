@@ -30,6 +30,13 @@ impl<'a> Config<'a> {
     pub fn new(shell: &'a mut MultiShell,
                jobs: Option<uint>,
                target: Option<string::String>) -> CargoResult<Config<'a>> {
+        let config_jobs = match get_config(try!(os::getcwd()), "jobs").integer() {
+            Ok(jobs) if jobs.to_uint().is_some() => Some(jobs as uint),
+            Ok(..) => return Err(human("jobs from config is negative or too big")),
+            Err(e) if e.is_human() => None,
+            Err(e) => return Err(e),
+        };
+
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
@@ -42,7 +49,7 @@ impl<'a> Config<'a> {
                       This probably means that $HOME was not set.")
             })),
             shell: RefCell::new(shell),
-            jobs: jobs.unwrap_or(os::num_cpus()),
+            jobs: config_jobs.and_then(jobs).unwrap_or(os::num_cpus()),
             target: target,
             rustc_version: rustc_version,
             rustc_host: rustc_host,
@@ -102,6 +109,7 @@ pub enum Location {
 
 #[deriving(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
+    Integer(i64, Path),
     String(string::String, Path),
     List(Vec<(string::String, Path)>),
     Table(HashMap<string::String, ConfigValue>),
@@ -111,6 +119,9 @@ pub enum ConfigValue {
 impl fmt::Show for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            CV::Integer(num, ref path) => {
+                write!(f, "{} (from {})", num, path.display())
+            }
             CV::String(ref string, ref path) => {
                 write!(f, "{} (from {})", string, path.display())
             }
@@ -133,6 +144,7 @@ impl fmt::Show for ConfigValue {
 impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         match *self {
+            CV::Integer(num, _) => num.encode(s),
             CV::String(ref string, _) => string.encode(s),
             CV::List(ref list) => {
                 let list: Vec<&string::String> = list.iter().map(|s| &s.0).collect();
@@ -147,6 +159,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
 impl ConfigValue {
     fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
+            toml::Value::Integer(val) => Ok(CV::Integer(val as f64, path.clone())),
             toml::Value::String(val) => Ok(CV::String(val, path.clone())),
             toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
             toml::Value::Array(val) => {
@@ -169,6 +182,7 @@ impl ConfigValue {
 
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
+            (&CV::Integer(..), CV::Integer(..)) |
             (&CV::String(..), CV::String(..)) |
             (&CV::Boolean(..), CV::Boolean(..)) => {}
             (&CV::List(ref mut old), CV::List(ref mut new)) => {
@@ -191,6 +205,14 @@ impl ConfigValue {
         }
 
         Ok(())
+    }
+
+    pub fn integer(&self) -> CargoResult<(f64, &Path)> {
+        match *self {
+            CV::Integer(val, ref p) => Ok((val, p)),
+            _ => Err(internal(format!("expected a number, but found a {}",
+                                      self.desc()))),
+        }
     }
 
     pub fn string(&self) -> CargoResult<(&str, &Path)> {

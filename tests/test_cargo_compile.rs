@@ -1357,6 +1357,56 @@ Caused by:
 "));
 });
 
+test!(bad_cargo_config_jobs {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+              jobs = -1
+        "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+jobs from config is negative or too big
+"));
+});
+
+test!(default_cargo_config_jobs {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+              jobs = 1
+        "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});
+
+test!(good_cargo_config_jobs {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+              jobs = 4
+        "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0)):
+});
+
 #[cfg(target_os = "linux")]
 test!(cargo_platform_specific_dependency {
     let p = project("foo")
