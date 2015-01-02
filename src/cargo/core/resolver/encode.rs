@@ -26,7 +26,7 @@ impl EncodableResolve {
         let packages = self.package.as_ref().unwrap_or(&packages);
 
         {
-            let register_pkg = |pkg: &EncodableDependency| {
+            let register_pkg = |pkg: &EncodableDependency| -> CargoResult<()> {
                 let pkgid = try!(pkg.to_package_id(default));
                 let precise = pkgid.get_source_id().get_precise()
                                    .map(|s| s.to_string());
@@ -43,7 +43,7 @@ impl EncodableResolve {
         }
 
         {
-            let add_dependencies = |pkg: &EncodableDependency| {
+            let add_dependencies = |pkg: &EncodableDependency| -> CargoResult<()> {
                 let package_id = try!(pkg.to_package_id(default));
 
                 let deps = match pkg.dependencies {

@@ -42,6 +42,9 @@ doc = false
 
 [[test]]
 name = "tests"
+[[bench]]
+name = "tests"
+path = "tests/tests.rs"
 
 [[test]]
 name = "resolve"

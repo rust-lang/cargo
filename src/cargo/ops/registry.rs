@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::io::File;
 use std::io::fs::PathExtensions;
+use std::iter::repeat;
 use std::os;
-use term::color::BLACK;
 
 use curl::http;
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
+use term::color::BLACK;
 
 use core::source::Source;
 use core::{Package, MultiShell, SourceId};
@@ -371,9 +372,8 @@ pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> Car
     for (name, description) in list_items.into_iter() {
         let line = match description {
             Some(desc) => {
-                let space = String::from_char(
-                    description_margin - name.len(),
-                    ' ');
+                let space = repeat(' ').take(description_margin - name.len())
+                                       .collect::<String>();
                 name.to_string() + space.as_slice() + desc.as_slice()
             }
             None => name

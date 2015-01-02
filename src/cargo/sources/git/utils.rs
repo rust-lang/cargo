@@ -366,6 +366,7 @@ fn with_authentication<T>(url: &str,
     cred_helper.config(cfg);
     let mut cred_error = false;
     let ret = f(&mut |&mut: url, username, allowed| {
+        let username = if username.is_empty() {None} else {Some(username)};
         let creds = if allowed.contains(git2::SSH_KEY) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())

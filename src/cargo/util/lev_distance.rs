@@ -14,7 +14,7 @@ pub fn lev_distance(me: &str, t: &str) -> uint {
     if me.is_empty() { return t.chars().count(); }
     if t.is_empty() { return me.chars().count(); }
 
-    let mut dcol = Vec::from_fn(t.len() + 1, |x| x);
+    let mut dcol = range(0, t.len() + 1).collect::<Vec<_>>();
     let mut t_last = 0;
 
     for (i, sc) in me.chars().enumerate() {
@@ -47,7 +47,7 @@ fn test_lev_distance() {
     // Test bytelength agnosticity
     for c in range(0u32, MAX as u32)
              .filter_map(|i| from_u32(i))
-             .map(|i| String::from_char(1, i)) {
+             .map(|i| i.to_string()) {
         assert_eq!(lev_distance(c[], c[]), 0);
     }
 
