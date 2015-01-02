@@ -2,6 +2,7 @@
 #![crate_type="rlib"]
 
 #![feature(macro_rules, phase, default_type_params, unboxed_closures)]
+#![feature(slicing_syntax)]
 #![deny(unused)]
 #![cfg_attr(test, deny(warnings))]
 

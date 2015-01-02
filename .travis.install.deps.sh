@@ -42,8 +42,8 @@ if [ -z "${windows}" ]; then
     cp -r rust-nightly-$src-$target/lib/rustlib/$src-$target \
           rust-nightly-$dst-$target/lib/rustlib
     (cd rust-nightly-$dst-$target && \
-     find lib/rustlib/$src-$target/lib -type f >> \
-     lib/rustlib/manifest.in)
+     find lib/rustlib/$src-$target/lib -type f | sed 's/^/file:/' >> \
+     manifest-rustc.in)
 
     ./rust-nightly-$dst-$target/install.sh --prefix=rustc
     rm -rf rust-nightly-$src-$target

@@ -106,7 +106,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     //
     // Note that this has to do some extra work just before running the command
     // to determine extra environment variables and such.
-    let work = move |: desc_tx: Sender<String>| {
+    let work = move |: desc_tx: Sender<String>| -> CargoResult<()> {
         // Make sure that OUT_DIR exists.
         //
         // If we have an old build directory, then just move it into place,
@@ -122,7 +122,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // along to this custom build command.
         let mut p = p;
         {
-            let build_state = build_state.outputs.lock();
+            let build_state = build_state.outputs.lock().unwrap();
             for &(ref name, ref id) in lib_deps.iter() {
                 let data = &build_state[(id.clone(), kind)].metadata;
                 for &(ref key, ref value) in data.iter() {
@@ -226,7 +226,7 @@ impl BuildState {
 
     fn insert(&self, id: PackageId, req: Platform,
               output: BuildOutput) {
-        let mut outputs = self.outputs.lock();
+        let mut outputs = self.outputs.lock().unwrap();
         match req {
             Platform::Target => { outputs.insert((id, Kind::Target), output); }
             Platform::Plugin => { outputs.insert((id, Kind::Host), output); }

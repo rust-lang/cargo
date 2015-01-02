@@ -178,7 +178,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
                     .display().to_string();
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), Some(out_dir));
-    for (&(ref pkg, _), output) in cx.build_state.outputs.lock().iter() {
+    for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
         let any_dylib = output.library_links.iter().any(|l| {
             !l.ends_with(":static") && !l.ends_with(":framework")
         });
@@ -290,7 +290,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
             let key = (pkg.get_package_id().clone(), kind);
             if pkg.get_manifest().get_links().is_some() &&
-                cx.build_state.outputs.lock().contains_key(&key) {
+                cx.build_state.outputs.lock().unwrap().contains_key(&key) {
                     continue
                 }
             let (dirty, fresh, freshness) =
@@ -481,7 +481,7 @@ fn rustc(package: &Package, target: &Target,
             // Only at runtime have we discovered what the extra -L and -l
             // arguments are for native libraries, so we process those here.
             {
-                let build_state = build_state.outputs.lock();
+                let build_state = build_state.outputs.lock().unwrap();
                 for id in native_lib_deps.into_iter() {
                     let output = &build_state[(id.clone(), kind)];
                     for path in output.library_paths.iter() {
