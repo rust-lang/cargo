@@ -50,12 +50,11 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    let env = if options.flag_example.is_some() {
-        "test"
-    } else if options.flag_release {
-        "release"
-    } else {
-        "compile"
+    let env = match (options.flag_release, options.flag_example.is_some()) {
+        (true, true) => "bench",
+        (true, false) => "release",
+        (false, true) => "test",
+        (false, false) => "compile"
     };
 
     let mut compile_opts = ops::CompileOptions {
