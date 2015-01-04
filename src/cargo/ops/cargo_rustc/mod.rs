@@ -727,8 +727,8 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
                    cx: &Context,
                    kind: Kind) -> CargoResult<CommandPrototype> {
     let layout = cx.layout(package, kind);
-    cmd = cmd.arg("-L").arg(layout.root());
-    cmd = cmd.arg("-L").arg(layout.deps());
+    cmd = cmd.arg("-L").arg(format!("dependency={}", layout.root().display()));
+    cmd = cmd.arg("-L").arg(format!("dependency={}", layout.deps().display()));
 
     cmd = cmd.env("OUT_DIR", if package.has_custom_build() {
         Some(layout.build_out(package))
@@ -746,7 +746,7 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         }
     });
     for dir in dirs.into_iter() {
-        cmd = cmd.arg("-L").arg(dir);
+        cmd = cmd.arg("-L").arg(format!("native={}", dir.display()));
     }
 
     for &(pkg, target) in cx.dep_targets(package, target).iter() {
@@ -757,8 +757,9 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         target.is_lib() && target.get_profile().is_compile()
     });
 
-    if target.is_bin() && !target.get_profile().is_custom_build() {
-        for target in targets.filter(|f| !f.is_staticlib()) {
+    if (target.is_bin() || target.is_example()) &&
+       !target.get_profile().is_custom_build() {
+        for target in targets.filter(|f| f.is_rlib() || f.is_dylib()) {
             cmd = try!(link_to(cmd, package, target, cx, kind));
         }
     }
@@ -777,6 +778,7 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         });
 
         for filename in try!(cx.target_filenames(target)).iter() {
+            if filename.as_bytes().ends_with(b".a") { continue }
             let mut v = Vec::new();
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');

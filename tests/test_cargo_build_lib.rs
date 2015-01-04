@@ -14,8 +14,8 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
         --emit=dep-info,link \
-        -L {dir}{sep}target \
-        -L {dir}{sep}target{sep}deps`
+        -L dependency={dir}{sep}target \
+        -L dependency={dir}{sep}target{sep}deps`
 ",
             running = RUNNING, compiling = COMPILING, sep = path::SEP,
             dir = p.root().display(), url = p.url(),

@@ -757,8 +757,8 @@ test!(lto_build {
         --cfg ndebug \
         --out-dir {dir}{sep}target{sep}release \
         --emit=dep-info,link \
-        -L {dir}{sep}target{sep}release \
-        -L {dir}{sep}target{sep}release{sep}deps`
+        -L dependency={dir}{sep}target{sep}release \
+        -L dependency={dir}{sep}target{sep}release{sep}deps`
 ",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
@@ -785,8 +785,8 @@ test!(verbose_build {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
         --emit=dep-info,link \
-        -L {dir}{sep}target \
-        -L {dir}{sep}target{sep}deps`
+        -L dependency={dir}{sep}target \
+        -L dependency={dir}{sep}target{sep}deps`
 ",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
@@ -815,8 +815,8 @@ test!(verbose_release_build {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
         --emit=dep-info,link \
-        -L {dir}{sep}target{sep}release \
-        -L {dir}{sep}target{sep}release{sep}deps`
+        -L dependency={dir}{sep}target{sep}release \
+        -L dependency={dir}{sep}target{sep}release{sep}deps`
 ",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
@@ -861,8 +861,8 @@ test!(verbose_release_build_deps {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
         --emit=dep-info,link \
-        -L {dir}{sep}target{sep}release{sep}deps \
-        -L {dir}{sep}target{sep}release{sep}deps`
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
+        -L dependency={dir}{sep}target{sep}release{sep}deps`
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
@@ -871,8 +871,8 @@ test!(verbose_release_build_deps {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
         --emit=dep-info,link \
-        -L {dir}{sep}target{sep}release \
-        -L {dir}{sep}target{sep}release{sep}deps \
+        -L dependency={dir}{sep}target{sep}release \
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`
@@ -1119,7 +1119,7 @@ test!(staticlib_rlib_and_bin {
                   foo::foo();
               }"#);
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 });
 
 test!(opt_out_of_lib {
@@ -1522,4 +1522,48 @@ test!(compile_then_delete {
     fs::unlink(&p.bin("foo")).unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("run"),
                 execs().with_status(0));
+});
+
+test!(transitive_dependencies_not_available {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/main.rs", "extern crate b; extern crate a; fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.b]
+            path = "../b"
+        "#)
+        .file("a/src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(101)
+                       .with_stderr("\
+[..] can't find crate for `b`
+[..] extern crate b; [..]
+[..]
+error: aborting due to previous error
+Could not compile `foo`.
+
+Caused by:
+  [..]
+"));
 });
