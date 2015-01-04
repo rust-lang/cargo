@@ -1,8 +1,8 @@
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 use std::hash::Hasher;
 use std::hash::sip::SipHasher;
 use std::mem;
-use url::{mod, Url};
+use url::{self, Url};
 
 use core::source::{Source, SourceId};
 use core::GitReference;

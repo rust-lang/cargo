@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::c_str::CString;
+use std::c_str::{CString, ToCStr};
 use std::io::process::ProcessOutput;
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 
-use util::{mod, CargoResult, ProcessError, ProcessBuilder};
+use util::{self, CargoResult, ProcessError, ProcessBuilder};
 
 /// Trait for objects that can execute commands.
 pub trait ExecEngine: Send + Sync {
@@ -12,7 +12,7 @@ pub trait ExecEngine: Send + Sync {
 }
 
 /// Default implementation of `ExecEngine`.
-#[deriving(Copy)]
+#[derive(Copy)]
 pub struct ProcessEngine;
 
 impl ExecEngine for ProcessEngine {
@@ -27,7 +27,7 @@ impl ExecEngine for ProcessEngine {
 }
 
 /// Prototype for a command that must be executed.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct CommandPrototype {
     ty: CommandType,
     args: Vec<CString>,
@@ -125,7 +125,7 @@ impl Show for CommandPrototype {
     }
 }
 
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 pub enum CommandType {
     Rustc,
     Rustdoc,

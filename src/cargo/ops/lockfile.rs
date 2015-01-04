@@ -1,7 +1,7 @@
 use std::io::File;
 
 use rustc_serialize::{Encodable, Decodable};
-use toml::{mod, Encoder, Value};
+use toml::{self, Encoder, Value};
 
 use core::{Resolve, resolver, Package, SourceId};
 use util::CargoResult;

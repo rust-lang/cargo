@@ -4,7 +4,7 @@ use std::str;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
-use util::{mod, CargoResult, ChainError, internal, Config, profile};
+use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
 use super::{Kind, Compilation, BuildConfig};
@@ -13,7 +13,7 @@ use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
 use super::{ProcessEngine, ExecEngine};
 
-#[deriving(Show, Copy)]
+#[derive(Show, Copy)]
 pub enum Platform {
     Target,
     Plugin,
@@ -155,7 +155,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                           req: Platform) {
 
         let req = if target.get_profile().is_for_host() {Platform::Plugin} else {req};
-        match self.requirements.entry((pkg.get_package_id(), target.get_name())) {
+        match self.requirements.entry(&(pkg.get_package_id(), target.get_name())) {
             Occupied(mut entry) => match (*entry.get(), req) {
                 (Platform::Plugin, Platform::Plugin) |
                 (Platform::PluginAndTarget, Platform::Plugin) |
@@ -164,7 +164,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                 (Platform::PluginAndTarget, Platform::PluginAndTarget) => return,
                 _ => *entry.get_mut() = entry.get().combine(req),
             },
-            Vacant(entry) => { entry.set(req); }
+            Vacant(entry) => { entry.insert(req); }
         };
 
         for &(pkg, dep) in self.dep_targets(pkg, target).iter() {

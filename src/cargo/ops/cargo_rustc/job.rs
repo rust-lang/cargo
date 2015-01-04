@@ -1,3 +1,5 @@
+use std::sync::mpsc::Sender;
+
 use util::{CargoResult, Fresh, Dirty, Freshness};
 
 pub struct Job { dirty: Work, fresh: Work }

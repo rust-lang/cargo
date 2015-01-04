@@ -1,4 +1,5 @@
 use std::io::{MemWriter, IoResult, ChanReader, ChanWriter};
+use std::sync::mpsc::channel;
 use term::{Terminal, TerminfoTerminal, color};
 use hamcrest::{assert_that};
 

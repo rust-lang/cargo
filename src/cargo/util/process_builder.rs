@@ -1,12 +1,12 @@
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 use std::os;
-use std::c_str::CString;
+use std::c_str::{CString, ToCStr};
 use std::io::process::{Command, ProcessOutput, InheritFd};
 use std::collections::HashMap;
 
 use util::{CargoResult, ProcessError, process_error};
 
-#[deriving(Clone,PartialEq)]
+#[derive(Clone,PartialEq)]
 pub struct ProcessBuilder {
     program: CString,
     args: Vec<CString>,

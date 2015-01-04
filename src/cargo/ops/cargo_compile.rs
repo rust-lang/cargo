@@ -30,7 +30,7 @@ use std::sync::Arc;
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver::Method;
-use ops::{mod, BuildOutput, ExecEngine};
+use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, config, internal, human, ChainError, profile};

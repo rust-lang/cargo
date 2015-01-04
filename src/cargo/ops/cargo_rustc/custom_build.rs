@@ -1,9 +1,11 @@
+use std::c_str::ToCStr;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
+use std::sync::mpsc::Sender;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, human, Human};
@@ -15,7 +17,7 @@ use super::CommandType;
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
     pub library_paths: Vec<Path>,
@@ -138,7 +140,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         }
 
         // And now finally, run the build command itself!
-        desc_tx.send_opt(p.to_string()).ok();
+        desc_tx.send(p.to_string()).ok();
         let output = try!(exec_engine.exec_with_output(p).map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);
@@ -178,7 +180,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // Also note that a fresh build command needs to
     let (freshness, dirty, fresh) =
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
-    let dirty = Work::new(move |tx: Sender<String>| {
+    let dirty = Work::new(move |tx| {
         try!(work(tx.clone()));
         dirty.call(tx)
     });

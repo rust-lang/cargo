@@ -1,4 +1,4 @@
-use std::io::{mod, fs, TempDir, File};
+use std::io::{self, fs, TempDir, File};
 use std::os;
 use std::path;
 
@@ -920,7 +920,7 @@ test!(explicit_examples {
             fn main() { println!("{}, {}!", world::get_goodbye(), world::get_world()); }
         "#);
 
-    assert_that(p.cargo_process("test"), execs());
+    assert_that(p.cargo_process("test"), execs().with_status(0));
     assert_that(process(p.bin("examples/hello")).unwrap(),
                         execs().with_stdout("Hello, World!\n"));
     assert_that(process(p.bin("examples/goodbye")).unwrap(),

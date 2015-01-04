@@ -1,5 +1,5 @@
 use std::error::{FromError, Error};
-use std::fmt::{mod, Show};
+use std::fmt::{self, Show};
 use std::io::IoError;
 use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::str;
@@ -164,7 +164,7 @@ impl<E: Error> CargoError for Human<E> {
 
 pub type CliResult<T> = Result<T, CliError>;
 
-#[deriving(Show)]
+#[derive(Show)]
 pub struct CliError {
     pub error: Box<CargoError>,
     pub unknown: bool,

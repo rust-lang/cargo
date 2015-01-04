@@ -3,7 +3,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::io;
-use std::io::fs::{mod, PathExtensions, File};
+use std::io::fs::{self, PathExtensions, File};
 use std::string;
 
 use rustc_serialize::{Encodable,Encoder};
@@ -94,13 +94,13 @@ impl<'a> Config<'a> {
     }
 }
 
-#[deriving(Eq, PartialEq, Clone, RustcEncodable, RustcDecodable, Copy)]
+#[derive(Eq, PartialEq, Clone, RustcEncodable, RustcDecodable, Copy)]
 pub enum Location {
     Project,
     Global
 }
 
-#[deriving(Eq,PartialEq,Clone,RustcDecodable)]
+#[derive(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
     String(string::String, Path),
     List(Vec<(string::String, Path)>),
@@ -178,9 +178,9 @@ impl ConfigValue {
             (&CV::Table(ref mut old), CV::Table(ref mut new)) => {
                 let new = mem::replace(new, HashMap::new());
                 for (key, value) in new.into_iter() {
-                    match old.entry(key) {
+                    match old.entry(&key) {
                         Occupied(mut entry) => { try!(entry.get_mut().merge(value)); }
-                        Vacant(entry) => { entry.set(value); }
+                        Vacant(entry) => { entry.insert(value); }
                     };
                 }
             }

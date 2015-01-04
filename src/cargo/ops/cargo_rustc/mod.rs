@@ -1,11 +1,12 @@
+use std::c_str::ToCStr;
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
-use std::io::{fs, USER_RWX};
-use std::io::fs::PathExtensions;
+use std::io::USER_RWX;
+use std::io::fs::{self, PathExtensions};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{mod, CargoResult, human, caused_human};
+use util::{self, CargoResult, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
 
 use self::job::{Job, Work};
@@ -28,16 +29,16 @@ mod job_queue;
 mod layout;
 mod links;
 
-#[deriving(PartialEq, Eq, Hash, Show, Copy)]
+#[derive(PartialEq, Eq, Hash, Show, Copy)]
 pub enum Kind { Host, Target }
 
-#[deriving(Default, Clone)]
+#[derive(Default, Clone)]
 pub struct BuildConfig {
     pub host: TargetConfig,
     pub target: TargetConfig,
 }
 
-#[deriving(Clone, Default)]
+#[derive(Clone, Default)]
 pub struct TargetConfig {
     pub ar: Option<String>,
     pub linker: Option<String>,
@@ -262,7 +263,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
-            let dirty = Work::new(move |desc_tx: Sender<String>| {
+            let dirty = Work::new(move |desc_tx| {
                 try!(work.call(desc_tx.clone()));
                 dirty.call(desc_tx)
             });
@@ -332,9 +333,9 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             1 => pkg.get_manifest().get_build()[0].to_string(),
             _ => format!("custom build commands"),
         };
-        let dirty = Work::new(move |desc_tx: Sender<String>| {
+        let dirty = Work::new(move |desc_tx| {
             if desc.len() > 0 {
-                desc_tx.send_opt(desc).ok();
+                desc_tx.send(desc).ok();
             }
             for cmd in build_cmds.into_iter() {
                 try!(cmd.call(desc_tx.clone()))
@@ -411,8 +412,8 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
 
     let exec_engine = cx.exec_engine.clone();
 
-    Ok(Work::new(move |desc_tx: Sender<String>| {
-        desc_tx.send_opt(p.to_string()).ok();
+    Ok(Work::new(move |desc_tx| {
+        desc_tx.send(p.to_string()).ok();
         if first && !output.exists() {
             try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
                 internal("failed to create output directory for build command")
@@ -516,7 +517,7 @@ fn rustc(package: &Package, target: &Target,
                 }
             }
 
-            desc_tx.send_opt(rustc.to_string()).ok();
+            desc_tx.send(rustc.to_string()).ok();
             try!(exec_engine.exec(rustc).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
@@ -588,8 +589,8 @@ fn rustdoc(package: &Package, target: &Target,
     let desc = rustdoc.to_string();
     let exec_engine = cx.exec_engine.clone();
 
-    Ok(Work::new(move |desc_tx: Sender<String>| {
-        desc_tx.send(desc);
+    Ok(Work::new(move |desc_tx| {
+        desc_tx.send(desc).unwrap();
         if primary {
             try!(exec_engine.exec(rustdoc).chain_error(|| {
                 human(format!("Could not document `{}`.", name))

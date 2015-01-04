@@ -1,11 +1,12 @@
+use std::c_str::ToCStr;
 use std::error::Error;
-use std::fmt::{mod, Show};
-use std::io::fs::{mod, PathExtensions};
+use std::fmt::{self, Show};
+use std::io::fs::{self, PathExtensions};
 use std::io::process::{ProcessOutput};
 use std::io;
 use std::os;
 use std::path::{Path,BytesContainer};
-use std::str::{mod, Str};
+use std::str::{self, Str};
 
 use url::Url;
 use hamcrest as ham;
@@ -24,7 +25,7 @@ pub mod registry;
  *
  */
 
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 struct FileBuilder {
     path: Path,
     body: String
@@ -53,7 +54,7 @@ impl FileBuilder {
     }
 }
 
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 struct SymlinkBuilder {
     dst: Path,
     src: Path
@@ -77,7 +78,7 @@ impl SymlinkBuilder {
     }
 }
 
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: Path,
@@ -241,7 +242,7 @@ pub fn cargo_dir() -> Path {
  *
  */
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct Execs {
     expect_stdout: Option<String>,
     expect_stdin: Option<String>,
@@ -363,7 +364,8 @@ struct ZipAll<T, I1, I2> {
     second: I2,
 }
 
-impl<T, I1: Iterator<T>, I2: Iterator<T>> Iterator<(Option<T>, Option<T>)> for ZipAll<T, I1, I2> {
+impl<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>> Iterator for ZipAll<T, I1, I2> {
+    type Item = (Option<T>, Option<T>);
     fn next(&mut self) -> Option<(Option<T>, Option<T>)> {
         let first = self.first.next();
         let second = self.second.next();
@@ -375,7 +377,7 @@ impl<T, I1: Iterator<T>, I2: Iterator<T>> Iterator<(Option<T>, Option<T>)> for Z
     }
 }
 
-fn zip_all<T, I1: Iterator<T>, I2: Iterator<T>>(a: I1, b: I2) -> ZipAll<T, I1, I2> {
+fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAll<T, I1, I2> {
     ZipAll {
         first: a,
         second: b
@@ -419,7 +421,7 @@ pub fn execs() -> Execs {
     }
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct ShellWrites {
     expected: String
 }

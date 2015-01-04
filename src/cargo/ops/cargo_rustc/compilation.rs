@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::c_str::ToCStr;
 use std::dynamic_lib::DynamicLibrary;
 use semver::Version;
 
 use core::{PackageId, Package};
-use util::{mod, CargoResult};
+use util::{self, CargoResult};
 
 use super::{CommandType, CommandPrototype};
 

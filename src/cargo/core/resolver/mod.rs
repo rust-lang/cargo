@@ -22,7 +22,7 @@ mod encode;
 ///
 /// Each instance of `Resolve` also understands the full set of features used
 /// for each package as well as what the root package is.
-#[deriving(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
@@ -30,7 +30,7 @@ pub struct Resolve {
     metadata: Option<Metadata>,
 }
 
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Method<'a> {
     Everything,
     Required(/* dev_deps = */ bool,
@@ -92,11 +92,10 @@ impl Resolve {
                     spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
             for id in ids.iter() {
-                let slot = match version_cnt.entry(id.get_version()) {
-                    Occupied(e) => e.into_mut(),
-                    Vacant(e) => e.set(0u),
-                };
-                *slot += 1;
+                match version_cnt.entry(&id.get_version()) {
+                    Vacant(e) => { e.insert(1u); }
+                    Occupied(e) => *e.into_mut() += 1u,
+                }
             }
             for id in ids.iter() {
                 if version_cnt[id.get_version()] == 1 {
@@ -122,7 +121,7 @@ impl fmt::Show for Resolve {
     }
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct Context {
     activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
     resolve: Resolve,
@@ -241,9 +240,9 @@ fn activate_deps<'a, R: Registry>(cx: Context,
         let early_return = {
             my_cx.resolve.graph.link(parent.get_package_id().clone(),
                                      candidate.get_package_id().clone());
-            let prev = match my_cx.activations.entry(key.clone()) {
+            let prev = match my_cx.activations.entry(&key) {
                 Occupied(e) => e.into_mut(),
-                Vacant(e) => e.set(Vec::new()),
+                Vacant(e) => e.insert(Vec::new()),
             };
             if prev.iter().any(|c| c == candidate) {
                 match cx.resolve.features(candidate.get_package_id()) {
@@ -408,10 +407,10 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
 
     // Record what list of features is active for this package.
     if used_features.len() > 0 {
-        let pkgid = parent.get_package_id().clone();
+        let pkgid = parent.get_package_id();
         match cx.resolve.features.entry(pkgid) {
             Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.set(HashSet::new()),
+            Vacant(entry) => entry.insert(HashSet::new()),
         }.extend(used_features.into_iter());
     }
 
@@ -478,9 +477,9 @@ fn build_features(s: &Summary, method: Method)
         match parts.next() {
             Some(feat) => {
                 let package = feat_or_package;
-                match deps.entry(package.to_string()) {
+                match deps.entry(package) {
                     Occupied(e) => e.into_mut(),
-                    Vacant(e) => e.set(Vec::new()),
+                    Vacant(e) => e.insert(Vec::new()),
                 }.push(feat.to_string());
             }
             None => {
@@ -499,9 +498,9 @@ fn build_features(s: &Summary, method: Method)
                         }
                     }
                     None => {
-                        match deps.entry(feat.to_string()) {
+                        match deps.entry(feat) {
                             Occupied(..) => {} // already activated
-                            Vacant(e) => { e.set(Vec::new()); }
+                            Vacant(e) => { e.insert(Vec::new()); }
                         }
                     }
                 }
