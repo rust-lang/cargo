@@ -1,21 +1,21 @@
-use std::collections::{HashMap, TreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 use regex::Regex;
-use serialize::{Encodable, Encoder, Decodable, Decoder};
+use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 use core::{PackageId, SourceId};
 use util::{CargoResult, Graph};
 
 use super::Resolve;
 
-#[deriving(Encodable, Decodable, Show)]
+#[deriving(RustcEncodable, RustcDecodable, Show)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
     root: EncodableDependency,
     metadata: Option<Metadata>,
 }
 
-pub type Metadata = TreeMap<String, String>;
+pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
     pub fn to_resolve(&self, default: &SourceId) -> CargoResult<Resolve> {
@@ -26,7 +26,7 @@ impl EncodableResolve {
         let packages = self.package.as_ref().unwrap_or(&packages);
 
         {
-            let register_pkg = |pkg: &EncodableDependency| {
+            let register_pkg = |pkg: &EncodableDependency| -> CargoResult<()> {
                 let pkgid = try!(pkg.to_package_id(default));
                 let precise = pkgid.get_source_id().get_precise()
                                    .map(|s| s.to_string());
@@ -43,7 +43,7 @@ impl EncodableResolve {
         }
 
         {
-            let add_dependencies = |pkg: &EncodableDependency| {
+            let add_dependencies = |pkg: &EncodableDependency| -> CargoResult<()> {
                 let package_id = try!(pkg.to_package_id(default));
 
                 let deps = match pkg.dependencies {
@@ -76,7 +76,7 @@ impl EncodableResolve {
     }
 }
 
-#[deriving(Encodable, Decodable, Show, PartialOrd, Ord, PartialEq, Eq)]
+#[deriving(RustcEncodable, RustcDecodable, Show, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodableDependency {
     name: String,
     version: String,
@@ -112,21 +112,17 @@ impl<E, S: Encoder<E>> Encodable<S, E> for EncodablePackageId {
 
 impl<E, D: Decoder<E>> Decodable<D, E> for EncodablePackageId {
     fn decode(d: &mut D) -> Result<EncodablePackageId, E> {
-        let string: String = raw_try!(Decodable::decode(d));
+        let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
         let captures = regex.captures(string.as_slice())
                             .expect("invalid serialized PackageId");
 
-        let name = captures.at(1);
-        let version = captures.at(2);
+        let name = captures.at(1).unwrap();
+        let version = captures.at(2).unwrap();
 
         let source = captures.at(3);
 
-        let source_id = if source == "" {
-            None
-        } else {
-            Some(SourceId::from_url(source.to_string()))
-        };
+        let source_id = source.map(|s| SourceId::from_url(s.to_string()));
 
         Ok(EncodablePackageId {
             name: name.to_string(),

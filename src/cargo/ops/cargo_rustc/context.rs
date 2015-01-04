@@ -1,4 +1,5 @@
-use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::collections::hash_map::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::str;
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use super::TargetConfig;
 use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
 
-#[deriving(Show)]
+#[deriving(Show, Copy)]
 pub enum Platform {
     Target,
     Plugin,
@@ -272,13 +273,23 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Some(deps) => deps,
         };
         deps.map(|id| self.get_package(id)).filter(|dep| {
-            // If this target is a build command, then we only want build
-            // dependencies, otherwise we want everything *other than* build
-            // dependencies.
             let pkg_dep = pkg.get_dependencies().iter().find(|d| {
                 d.get_name() == dep.get_name()
             }).unwrap();
-            target.get_profile().is_custom_build() == pkg_dep.is_build()
+
+            // If this target is a build command, then we only want build
+            // dependencies, otherwise we want everything *other than* build
+            // dependencies.
+            let is_correct_dep =
+                target.get_profile().is_custom_build() == pkg_dep.is_build();
+
+            // If this dependency is *not* a transitive dependency, then it
+            // only applies to test/example targets
+            let is_actual_dep = pkg_dep.is_transitive() ||
+                                target.get_profile().is_test() ||
+                                target.is_example();
+
+            is_correct_dep && is_actual_dep
         }).filter_map(|pkg| {
             pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))

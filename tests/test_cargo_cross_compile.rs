@@ -1,7 +1,3 @@
-// Currently the only cross compilers available via nightlies are on linux/osx,
-// so we can only run these tests on those platforms
-#![cfg(any(target_os = "linux", target_os = "macos"))]
-
 use std::os;
 use std::path;
 
@@ -15,10 +11,16 @@ fn setup() {
 }
 
 fn disabled() -> bool {
+    // First, disable if ./configure requested so
     match os::getenv("CFG_DISABLE_CROSS_TESTS") {
-        Some(ref s) if s.as_slice() == "1" => true,
-        _ => false,
+        Some(ref s) if s.as_slice() == "1" => return true,
+        _ => {}
     }
+
+    // Right now the windows bots cannot cross compile due to the mingw setup,
+    // so we disable ourselves on all but macos/linux setups where the rustc
+    // install script ensures we have both architectures
+    return !cfg!(target_os = "macos") && !cfg!(target_os = "linux");
 }
 
 fn alternate() -> &'static str {
@@ -71,7 +73,7 @@ test!(simple_cross {
     assert_that(
       process(p.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(simple_deps {
     if disabled() { return }
@@ -108,7 +110,7 @@ test!(simple_deps {
     assert_that(
       process(p.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(plugin_deps {
     if disabled() { return }
@@ -186,7 +188,7 @@ test!(plugin_deps {
     assert_that(
       process(foo.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(plugin_to_the_max {
     if disabled() { return }
@@ -271,7 +273,7 @@ test!(plugin_to_the_max {
     assert_that(
       process(foo.target_bin(target, "foo")).unwrap(),
       execs().with_status(0));
-})
+});
 
 test!(linker_and_ar {
     if disabled() { return }
@@ -298,7 +300,7 @@ test!(linker_and_ar {
 {compiling} foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}{sep}target{sep}{target} \
-    --dep-info [..] \
+    --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
     -L {dir}{sep}target{sep}{target} \
@@ -311,7 +313,7 @@ test!(linker_and_ar {
                             target = target,
                             sep = path::SEP,
                             ).as_slice()));
-})
+});
 
 test!(plugin_with_extra_dylib_dep {
     if disabled() { return }
@@ -377,7 +379,7 @@ test!(plugin_with_extra_dylib_dep {
     let target = alternate();
     assert_that(foo.cargo_process("build").arg("--target").arg(target),
                 execs().with_status(0));
-})
+});
 
 test!(cross_tests {
     if disabled() { return }
@@ -433,7 +435,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
    doctest = DOCTEST)));
-})
+});
 
 test!(simple_cargo_run {
     if disabled() { return }
@@ -455,7 +457,7 @@ test!(simple_cargo_run {
     let target = alternate();
     assert_that(p.cargo_process("run").arg("--target").arg(target),
                 execs().with_status(0));
-})
+});
 
 test!(cross_but_no_dylibs {
     let p = project("foo")
@@ -474,7 +476,7 @@ test!(cross_but_no_dylibs {
                 execs().with_status(101)
                        .with_stderr("dylib outputs are not supported for \
                                      arm-apple-ios"));
-})
+});
 
 test!(cross_with_a_build_script {
     if disabled() { return }
@@ -515,7 +517,7 @@ test!(cross_with_a_build_script {
 {running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..]`
 ", compiling = COMPILING, running = RUNNING, target = target,
    dir = p.root().display(), sep = path::SEP).as_slice()));
-})
+});
 
 test!(build_script_needed_for_host_and_target {
     if disabled() { return }
@@ -597,7 +599,7 @@ test!(build_script_needed_for_host_and_target {
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
    dir = p.root().display(), sep = path::SEP).as_slice()));
-})
+});
 
 test!(build_deps_for_the_right_arch {
     if disabled() { return }
@@ -638,4 +640,45 @@ test!(build_deps_for_the_right_arch {
     let target = alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
-})
+});
+
+test!(build_script_only_host {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.d1]
+            path = "d1"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "extern crate d1; fn main() {}")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("d1/src/lib.rs", "
+            pub fn d1() {}
+        ")
+        .file("d1/build.rs", r#"
+            use std::os;
+
+            fn main() {
+                assert!(os::getenv("OUT_DIR").unwrap()
+                                             .contains("target/build/d1-"),
+                        "bad: {}", os::getenv("OUT_DIR"));
+            }
+        "#);
+
+    let target = alternate();
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+                execs().with_status(0));
+});

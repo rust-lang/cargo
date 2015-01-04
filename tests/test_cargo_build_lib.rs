@@ -13,7 +13,7 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
-        --dep-info [..] \
+        --emit=dep-info,link \
         -L {dir}{sep}target \
         -L {dir}{sep}target{sep}deps`
 ",
@@ -40,7 +40,7 @@ test!(build_lib_only {
                 execs()
                 .with_status(0)
                 .with_stdout(verbose_output_for_lib(&p)));
-})
+});
 
 
 test!(build_with_no_lib {
@@ -54,4 +54,4 @@ test!(build_with_no_lib {
                 execs()
                 .with_status(101)
                 .with_stderr("There is no lib to build, remove `--lib` flag"));
-})
+});

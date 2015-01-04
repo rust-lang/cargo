@@ -3,7 +3,7 @@ use std::io::{timer, File};
 use std::time::Duration;
 use git2;
 
-use support::{ProjectBuilder, ResultTest, project, execs, main_file};
+use support::{ProjectBuilder, project, execs, main_file};
 use support::{cargo_dir, path2url};
 use support::{COMPILING, UPDATING, RUNNING};
 use support::paths::PathExt;
@@ -42,7 +42,7 @@ fn add(repo: &git2::Repository) {
     }
     let mut index = repo.index().unwrap();
     index.add_all(&["*"], git2::ADD_DEFAULT, Some(|a: &[u8], _b: &[u8]| {
-        if s.iter().any(|s| s.path().as_vec() == a) {1} else {0}
+        if s.iter().any(|s| a.starts_with(s.path().as_vec())) {1} else {0}
     })).unwrap();
     index.write().unwrap();
 }
@@ -53,7 +53,7 @@ fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
     let subrepo = s.open().unwrap();
     let mut origin = subrepo.find_remote("origin").unwrap();
     origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
-    origin.fetch(None, None).unwrap();
+    origin.fetch(&[], None, None).unwrap();
     origin.save().unwrap();
     subrepo.checkout_head(None).unwrap();
     s.add_finalize().unwrap();
@@ -94,7 +94,7 @@ test!(cargo_compile_simple_git_dep {
                     "hello world"
                 }
             "#)
-    }).assert();
+    }).unwrap();
 
     let project = project
         .file("Cargo.toml", format!(r#"
@@ -132,7 +132,7 @@ test!(cargo_compile_simple_git_dep {
     assert_that(
       cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_git_dep_branch {
     let project = project("foo");
@@ -154,7 +154,7 @@ test!(cargo_compile_git_dep_branch {
                     "hello world"
                 }
             "#)
-    }).assert();
+    }).unwrap();
 
     // Make a new branch based on the current HEAD commit
     let repo = git2::Repository::open(&git_project.root()).unwrap();
@@ -187,7 +187,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}?ref=branchy#[..])\n\
+                              {} dep1 v0.5.0 ({}?branch=branchy#[..])\n\
                               {} foo v0.5.0 ({})\n",
                              UPDATING, path2url(git_root.clone()),
                              COMPILING, path2url(git_root),
@@ -199,7 +199,7 @@ test!(cargo_compile_git_dep_branch {
     assert_that(
       cargo::util::process(project.bin("foo")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_git_dep_tag {
     let project = project("foo");
@@ -221,7 +221,7 @@ test!(cargo_compile_git_dep_tag {
                     "hello world"
                 }
             "#)
-    }).assert();
+    }).unwrap();
 
     // Make a tag correponding to the current HEAD
     let repo = git2::Repository::open(&git_project.root()).unwrap();
@@ -257,19 +257,20 @@ test!(cargo_compile_git_dep_tag {
     assert_that(project.cargo_process("build"),
         execs()
         .with_stdout(format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}?ref=v0.1.0#[..])\n\
+                              {} dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
                               {} foo v0.5.0 ({})\n",
                              UPDATING, path2url(git_root.clone()),
                              COMPILING, path2url(git_root),
-                             COMPILING, path2url(root)))
-        .with_stderr(""));
+                             COMPILING, path2url(root))));
 
     assert_that(&project.bin("foo"), existing_file());
 
-    assert_that(
-      cargo::util::process(project.bin("foo")).unwrap(),
-      execs().with_stdout("hello world\n"));
-})
+    assert_that(cargo::util::process(project.bin("foo")).unwrap(),
+                execs().with_stdout("hello world\n"));
+
+    assert_that(project.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+});
 
 test!(cargo_compile_with_nested_paths {
     let git_project = git_repo("dep1", |project| {
@@ -313,7 +314,7 @@ test!(cargo_compile_with_nested_paths {
                     "hello world"
                 }
             "#)
-    }).assert();
+    }).unwrap();
 
     let p = project("parent")
         .file("Cargo.toml", format!(r#"
@@ -337,14 +338,14 @@ test!(cargo_compile_with_nested_paths {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("parent"), existing_file());
 
     assert_that(
       cargo::util::process(p.bin("parent")).unwrap(),
       execs().with_stdout("hello world\n"));
-})
+});
 
 test!(cargo_compile_with_meta_package {
     let git_project = git_repo("meta-dep", |project| {
@@ -381,7 +382,7 @@ test!(cargo_compile_with_meta_package {
                     "this is dep2"
                 }
             "#)
-    }).assert();
+    }).unwrap();
 
     let p = project("parent")
         .file("Cargo.toml", format!(r#"
@@ -410,14 +411,14 @@ test!(cargo_compile_with_meta_package {
 
     p.cargo_process("build")
         .exec_with_output()
-        .assert();
+        .unwrap();
 
     assert_that(&p.bin("parent"), existing_file());
 
     assert_that(
       cargo::util::process(p.bin("parent")).unwrap(),
       execs().with_stdout("this is dep1 this is dep2\n"));
-})
+});
 
 test!(cargo_compile_with_short_ssh_git {
     let url = "git@github.com:a/dep";
@@ -445,7 +446,7 @@ test!(cargo_compile_with_short_ssh_git {
         .with_stdout("")
         .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
                               invalid url `{}`: relative URL without a base\n", url)));
-})
+});
 
 test!(two_revs_same_deps {
     let bar = git_repo("meta-dep", |project| {
@@ -456,7 +457,7 @@ test!(two_revs_same_deps {
             authors = []
         "#)
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
-    }).assert();
+    }).unwrap();
 
     let repo = git2::Repository::open(&bar.root()).unwrap();
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
@@ -464,7 +465,7 @@ test!(two_revs_same_deps {
     // Commit the changes and make sure we trigger a recompile
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 2 }
-    "#).assert();
+    "#).unwrap();
     add(&repo);
     let rev2 = commit(&repo);
 
@@ -514,7 +515,7 @@ test!(two_revs_same_deps {
                 execs().with_status(0));
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
-})
+});
 
 test!(recompilation {
     let git_project = git_repo("bar", |project| {
@@ -532,7 +533,7 @@ test!(recompilation {
             .file("src/bar.rs", r#"
                 pub fn bar() {}
             "#)
-    }).assert();
+    }).unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -570,7 +571,7 @@ test!(recompilation {
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
-    "#).assert();
+    "#).unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
@@ -592,7 +593,7 @@ test!(recompilation {
     println!("compile after commit");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
 
     // Update the dependency and carry on!
     assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
@@ -613,7 +614,7 @@ test!(recompilation {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
-})
+});
 
 test!(update_with_shared_deps {
     let git_project = git_repo("bar", |project| {
@@ -631,7 +632,7 @@ test!(update_with_shared_deps {
             .file("src/bar.rs", r#"
                 pub fn bar() {}
             "#)
-    }).assert();
+    }).unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -687,7 +688,7 @@ test!(update_with_shared_deps {
     // Modify a file manually, and commit it
     File::create(&git_project.root().join("src/bar.rs")).write_str(r#"
         pub fn bar() { println!("hello!"); }
-    "#).assert();
+    "#).unwrap();
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let old_head = repo.head().unwrap().target().unwrap();
     add(&repo);
@@ -731,7 +732,7 @@ test!(update_with_shared_deps {
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));
-})
+});
 
 test!(dep_with_submodule {
     let project = project("foo");
@@ -743,11 +744,11 @@ test!(dep_with_submodule {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
             "#)
-    }).assert();
+    }).unwrap();
     let git_project2 = git_repo("dep2", |project| {
         project
             .file("lib.rs", "pub fn dep() {}")
-    }).assert();
+    }).unwrap();
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let url = path2url(git_project2.root()).to_string();
@@ -773,7 +774,7 @@ test!(dep_with_submodule {
 
     assert_that(project.cargo_process("build"),
         execs().with_stderr("").with_status(0));
-})
+});
 
 test!(two_deps_only_update_one {
     let project = project("foo");
@@ -786,7 +787,7 @@ test!(two_deps_only_update_one {
                 authors = ["carlhuda@example.com"]
             "#)
             .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
     let git2 = git_repo("dep2", |project| {
         project
             .file("Cargo.toml", r#"
@@ -796,7 +797,7 @@ test!(two_deps_only_update_one {
                 authors = ["carlhuda@example.com"]
             "#)
             .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
 
     let project = project
         .file("Cargo.toml", format!(r#"
@@ -829,7 +830,7 @@ test!(two_deps_only_update_one {
 
     File::create(&git1.root().join("src/lib.rs")).write_str(r#"
         pub fn foo() {}
-    "#).assert();
+    "#).unwrap();
     let repo = git2::Repository::open(&git1.root()).unwrap();
     add(&repo);
     commit(&repo);
@@ -840,7 +841,7 @@ test!(two_deps_only_update_one {
         .with_stdout(format!("{} git repository `{}`\n",
                              UPDATING, git1.url()))
         .with_stderr(""));
-})
+});
 
 test!(stale_cached_version {
     let bar = git_repo("meta-dep", |project| {
@@ -851,7 +852,7 @@ test!(stale_cached_version {
             authors = []
         "#)
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
-    }).assert();
+    }).unwrap();
 
     // Update the git database in the cache with the current state of the git
     // repo
@@ -878,7 +879,7 @@ test!(stale_cached_version {
     // us pulling it down.
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 1 + 0 }
-    "#).assert();
+    "#).unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     add(&repo);
     commit(&repo);
@@ -899,7 +900,7 @@ test!(stale_cached_version {
         name = "bar"
         version = "0.0.0"
         source = 'git+{url}#{hash}'
-    "#, url = bar.url(), hash = rev).as_slice()).assert();
+    "#, url = bar.url(), hash = rev).as_slice()).unwrap();
 
     // Now build!
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
@@ -910,7 +911,7 @@ test!(stale_cached_version {
 {compiling} foo v0.0.0 ({foo})
 ", updating = UPDATING, compiling = COMPILING, bar = bar.url(), foo = foo.url())));
     assert_that(foo.process(foo.bin("foo")), execs().with_status(0));
-})
+});
 
 test!(dep_with_changed_submodule {
     let project = project("foo");
@@ -922,17 +923,17 @@ test!(dep_with_changed_submodule {
                 version = "0.5.0"
                 authors = ["carlhuda@example.com"]
             "#)
-    }).assert();
+    }).unwrap();
 
     let git_project2 = git_repo("dep2", |project| {
         project
             .file("lib.rs", "pub fn dep() -> &'static str { \"project2\" }")
-    }).assert();
+    }).unwrap();
 
     let git_project3 = git_repo("dep3", |project| {
         project
             .file("lib.rs", "pub fn dep() -> &'static str { \"project3\" }")
-    }).assert();
+    }).unwrap();
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let mut sub = add_submodule(&repo, git_project2.url().to_string().as_slice(),
@@ -970,7 +971,7 @@ test!(dep_with_changed_submodule {
 
     let mut file = File::create(&git_project.root().join(".gitmodules"));
     file.write_str(format!("[submodule \"src\"]\n\tpath = src\n\turl={}",
-                           git_project3.url()).as_slice()).assert();
+                           git_project3.url()).as_slice()).unwrap();
 
     // Sync the submodule and reset it to the new remote.
     sub.sync().unwrap();
@@ -979,7 +980,7 @@ test!(dep_with_changed_submodule {
         let mut origin = subrepo.find_remote("origin").unwrap();
         origin.set_url(git_project3.url().to_string().as_slice()).unwrap();
         origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();;
-        origin.fetch(None, None).unwrap();
+        origin.fetch(&[], None, None).unwrap();
         origin.save().unwrap();
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();
@@ -1009,7 +1010,7 @@ test!(dep_with_changed_submodule {
                                       compiling = COMPILING, running = RUNNING))
                 .with_stderr("")
                 .with_status(0));
-})
+});
 
 test!(dev_deps_with_testing {
     let p2 = git_repo("bar", |project| {
@@ -1022,7 +1023,7 @@ test!(dev_deps_with_testing {
         .file("src/lib.rs", r#"
             pub fn gimme() -> &'static str { "zoidberg" }
         "#)
-    }).assert();
+    }).unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -1068,7 +1069,7 @@ test tests::foo ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING)));
-})
+});
 
 test!(git_build_cmd_freshness {
     let foo = git_repo("foo", |project| {
@@ -1083,8 +1084,8 @@ test!(git_build_cmd_freshness {
         .file(".gitignore", "
             src/bar.rs
         ")
-    }).assert();
-    foo.root().move_into_the_past().assert();
+    }).unwrap();
+    foo.root().move_into_the_past().unwrap();
 
     timer::sleep(Duration::milliseconds(1000));
 
@@ -1102,11 +1103,11 @@ test!(git_build_cmd_freshness {
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
-    File::create(&foo.root().join("src/bar.rs")).assert();
+    File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(""));
-})
+});
 
 test!(git_name_not_always_needed {
     let p2 = git_repo("bar", |project| {
@@ -1119,7 +1120,7 @@ test!(git_name_not_always_needed {
         .file("src/lib.rs", r#"
             pub fn gimme() -> &'static str { "zoidberg" }
         "#)
-    }).assert();
+    }).unwrap();
 
     let repo = git2::Repository::open(&p2.root()).unwrap();
     let mut cfg = repo.config().unwrap();
@@ -1145,7 +1146,7 @@ test!(git_name_not_always_needed {
 {updating} git repository `{bar}`
 {compiling} foo v0.5.0 ({url})
 ", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
-})
+});
 
 test!(git_repo_changing_no_rebuild {
     let bar = git_repo("bar", |project| {
@@ -1156,7 +1157,7 @@ test!(git_repo_changing_no_rebuild {
             authors = ["wycats@example.com"]
         "#)
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
-    }).assert();
+    }).unwrap();
 
     // Lock p1 to the first rev in the git repo
     let p1 = project("p1")
@@ -1171,7 +1172,7 @@ test!(git_repo_changing_no_rebuild {
         "#, bar.url()).as_slice())
         .file("src/main.rs", "fn main() {}");
     p1.build();
-    p1.root().move_into_the_past().assert();
+    p1.root().move_into_the_past().unwrap();
     assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(format!("\
 {updating} git repository `{bar}`
@@ -1182,7 +1183,7 @@ test!(git_repo_changing_no_rebuild {
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 2 }
-    "#).assert();
+    "#).unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     add(&repo);
     commit(&repo);
@@ -1209,7 +1210,7 @@ test!(git_repo_changing_no_rebuild {
     // even though the git repo has changed.
     assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_stdout(""));
-})
+});
 
 test!(git_dep_build_cmd {
     let p = git_repo("foo", |project| {
@@ -1246,9 +1247,9 @@ test!(git_dep_build_cmd {
         .file("bar/src/bar.rs.in", r#"
             pub fn gimme() -> int { 0 }
         "#)
-    }).assert();
+    }).unwrap();
 
-    p.root().join("bar").move_into_the_past().assert();
+    p.root().join("bar").move_into_the_past().unwrap();
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
         execs().with_status(0));
@@ -1258,8 +1259,8 @@ test!(git_dep_build_cmd {
       execs().with_stdout("0\n"));
 
     // Touching bar.rs.in should cause the `build` command to run again.
-    let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).assert();
-    file.write_str(r#"pub fn gimme() -> int { 1 }"#).assert();
+    let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).unwrap();
+    file.write_str(r#"pub fn gimme() -> int { 1 }"#).unwrap();
     drop(file);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
@@ -1268,7 +1269,7 @@ test!(git_dep_build_cmd {
     assert_that(
       cargo::util::process(p.bin("foo")).unwrap(),
       execs().with_stdout("1\n"));
-})
+});
 
 test!(fetch_downloads {
     let bar = git_repo("bar", |project| {
@@ -1279,7 +1280,7 @@ test!(fetch_downloads {
             authors = ["wycats@example.com"]
         "#)
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
-    }).assert();
+    }).unwrap();
 
     let p = project("p1")
         .file("Cargo.toml", format!(r#"
@@ -1298,7 +1299,7 @@ test!(fetch_downloads {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("fetch"),
                 execs().with_status(0).with_stdout(""));
-})
+});
 
 test!(warnings_in_git_dep {
     let bar = git_repo("bar", |project| {
@@ -1309,7 +1310,7 @@ test!(warnings_in_git_dep {
             authors = ["wycats@example.com"]
         "#)
         .file("src/lib.rs", "fn unused() {}")
-    }).assert();
+    }).unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", format!(r#"
@@ -1331,7 +1332,7 @@ test!(warnings_in_git_dep {
                              COMPILING, bar.url(),
                              COMPILING, p.url()))
         .with_stderr(""));
-})
+});
 
 test!(update_ambiguous {
     let foo1 = git_repo("foo1", |project| {
@@ -1342,7 +1343,7 @@ test!(update_ambiguous {
             authors = ["wycats@example.com"]
         "#)
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
     let foo2 = git_repo("foo2", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1351,7 +1352,7 @@ test!(update_ambiguous {
             authors = ["wycats@example.com"]
         "#)
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
     let bar = git_repo("bar", |project| {
         project.file("Cargo.toml", format!(r#"
             [package]
@@ -1363,7 +1364,7 @@ test!(update_ambiguous {
             git = '{}'
         "#, foo2.url()).as_slice())
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
 
     let p = project("project")
         .file("Cargo.toml", format!(r#"
@@ -1390,7 +1391,7 @@ following:
   foo:0.[..].0
   foo:0.[..].0
 "));
-})
+});
 
 test!(update_one_dep_in_repo_with_many_deps {
     let foo = git_repo("foo", |project| {
@@ -1408,7 +1409,7 @@ test!(update_one_dep_in_repo_with_many_deps {
             authors = ["wycats@example.com"]
         "#)
         .file("a/src/lib.rs", "")
-    }).assert();
+    }).unwrap();
 
     let p = project("project")
         .file("Cargo.toml", format!(r#"
@@ -1430,7 +1431,7 @@ test!(update_one_dep_in_repo_with_many_deps {
                        .with_stdout(format!("\
 Updating git repository `{}`
 ", foo.url())));
-})
+});
 
 test!(switch_deps_does_not_update_transitive {
     let transitive = git_repo("transitive", |project| {
@@ -1441,7 +1442,7 @@ test!(switch_deps_does_not_update_transitive {
             authors = ["wycats@example.com"]
         "#)
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
     let dep1 = git_repo("dep1", |project| {
         project.file("Cargo.toml", format!(r#"
             [package]
@@ -1453,7 +1454,7 @@ test!(switch_deps_does_not_update_transitive {
             git = '{}'
         "#, transitive.url()).as_slice())
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
     let dep2 = git_repo("dep2", |project| {
         project.file("Cargo.toml", format!(r#"
             [package]
@@ -1465,7 +1466,7 @@ test!(switch_deps_does_not_update_transitive {
             git = '{}'
         "#, transitive.url()).as_slice())
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
 
     let p = project("project")
         .file("Cargo.toml", format!(r#"
@@ -1507,7 +1508,7 @@ Updating git repository `{}`
 {compiling} dep [..]
 {compiling} project [..]
 ", dep2.url(), compiling = COMPILING)));
-})
+});
 
 test!(update_one_source_updates_all_packages_in_that_git_source {
     let dep = git_repo("dep", |project| {
@@ -1528,7 +1529,7 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
             authors = []
         "#)
         .file("a/src/lib.rs", "")
-    }).assert();
+    }).unwrap();
 
     let p = project("project")
         .file("Cargo.toml", format!(r#"
@@ -1551,7 +1552,7 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
     // Just be sure to change a file
     File::create(&dep.root().join("src/lib.rs")).write_str(r#"
         pub fn bar() -> int { 2 }
-    "#).assert();
+    "#).unwrap();
     add(&repo);
     commit(&repo);
 
@@ -1562,7 +1563,7 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
                                                            .unwrap();
     assert!(!lockfile.as_slice().contains(rev1.to_string().as_slice()),
             "{} in {}", rev1, lockfile);
-})
+});
 
 test!(switch_sources {
     let a1 = git_repo("a1", |project| {
@@ -1573,7 +1574,7 @@ test!(switch_sources {
             authors = []
         "#)
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
     let a2 = git_repo("a2", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1582,7 +1583,7 @@ test!(switch_sources {
             authors = []
         "#)
         .file("src/lib.rs", "")
-    }).assert();
+    }).unwrap();
 
     let p = project("project")
         .file("Cargo.toml", r#"
@@ -1631,4 +1632,4 @@ test!(switch_sources {
 {compiling} b v0.5.0 ([..])
 {compiling} project v0.5.0 ([..])
 ", updating = UPDATING, compiling = COMPILING).as_slice()));
-})
+});

@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, FRESH, RUNNING};
+use support::{COMPILING, cargo_dir, FRESH, RUNNING};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -48,7 +48,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
         COMPILING, p.url(),
         RUNNING)));
-})
+});
 
 test!(bench_target_name {
     let prj = project("foo")
@@ -89,7 +89,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
     assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
         execs().with_status(0).with_stdout(expected_stdout.as_slice()));
-})
+});
 
 test!(cargo_bench_verbose {
     let p = project("foo")
@@ -113,7 +113,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         compiling = COMPILING, url = p.url(), running = RUNNING)));
-})
+});
 
 test!(many_similar_names {
     let p = project("foo")
@@ -140,12 +140,12 @@ test!(many_similar_names {
             #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
         "#);
 
-    let output = p.cargo_process("bench").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("bench").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("test bin_bench"), "bin_bench missing\n{}", output);
     assert!(output.contains("test lib_bench"), "lib_bench missing\n{}", output);
     assert!(output.contains("test bench_bench"), "bench_bench missing\n{}", output);
-})
+});
 
 test!(cargo_bench_failing_test {
     let p = project("foo")
@@ -181,12 +181,12 @@ running 1 test
 test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
               .with_stderr(format!("\
-task '<main>' panicked at 'assertion failed: \
+thread '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:13
 ", sep = path::SEP))
               .with_status(101));
-})
+});
 
 test!(bench_with_lib_dep {
     let p = project("foo")
@@ -242,7 +242,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         COMPILING, p.url(), running = RUNNING)))
-})
+});
 
 test!(bench_with_deep_lib_dep {
     let p = project("bar")
@@ -295,7 +295,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(external_bench_explicit {
     let p = project("foo")
@@ -343,7 +343,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         COMPILING, p.url(), running = RUNNING)))
-})
+});
 
 test!(external_bench_implicit {
     let p = project("foo")
@@ -388,7 +388,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         COMPILING, p.url(), running = RUNNING)))
-})
+});
 
 test!(dont_run_examples {
     let p = project("foo")
@@ -405,7 +405,7 @@ test!(dont_run_examples {
         "#);
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0));
-})
+});
 
 test!(pass_through_command_line {
     let p = project("foo")
@@ -451,7 +451,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 // Regression test for running cargo-bench twice with
 // tests in an rlib
@@ -473,7 +473,7 @@ test!(cargo_bench_twice {
         assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
                     execs().with_status(0));
     }
-})
+});
 
 test!(lib_bin_same_name {
     let p = project("foo")
@@ -519,7 +519,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
         COMPILING, p.url(), running = RUNNING)))
-})
+});
 
 test!(lib_with_standard_name {
     let p = project("foo")
@@ -569,7 +569,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(lib_with_standard_name2 {
     let p = project("foo")
@@ -611,7 +611,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(bin_there_for_integration {
     let p = project("foo")
@@ -636,17 +636,16 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("bench").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("bench").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
                             "no main_bench\n{}",
                             output);
     assert!(output.contains("bench_bench ... bench:         0 ns/iter (+/- 0)"),
                             "no bench_bench\n{}",
                             output);
-})
+});
 
-#[cfg(not(windows))] // FIXME(#456)
 test!(bench_dylib {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -696,11 +695,11 @@ test!(bench_dylib {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
-{running} [..] --opt-level 3 [..]
+{running} [..] -C opt-level=3 [..]
 {compiling} foo v0.0.1 ({dir})
-{running} [..] --opt-level 3 [..]
-{running} [..] --opt-level 3 [..]
-{running} [..] --opt-level 3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
 {running} [..]target[..]release[..]bench-[..]
 
 running 1 test
@@ -718,7 +717,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
@@ -741,7 +740,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        fresh = FRESH, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(bench_twice_with_build_cmd {
     let p = project("foo")
@@ -785,4 +784,4 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        running = RUNNING)));
-})
+});

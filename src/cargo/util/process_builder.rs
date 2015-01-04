@@ -78,7 +78,7 @@ impl ProcessBuilder {
 
         let output = try!(command.output().map_err(|e| {
             process_error(format!("Could not execute process `{}`",
-                                  self.debug_string()),
+                              self.debug_string()),
                           Some(e), None, None)
         }));
 
@@ -109,7 +109,7 @@ impl ProcessBuilder {
 
     fn debug_string(&self) -> String {
         let program = String::from_utf8_lossy(self.program.as_bytes_no_nul());
-        let mut program = program.into_string();
+        let mut program = program.to_string();
         for arg in self.args.iter() {
             program.push(' ');
             let s = String::from_utf8_lossy(arg.as_bytes_no_nul());

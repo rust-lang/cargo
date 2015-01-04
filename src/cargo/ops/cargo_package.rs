@@ -9,7 +9,7 @@ use flate2::reader::GzDecoder;
 use core::source::{Source, SourceId};
 use core::{Package, MultiShell};
 use sources::PathSource;
-use util::{CargoResult, human, internal, ChainError, Require};
+use util::{CargoResult, human, internal, ChainError};
 use ops;
 
 struct Bomb { path: Option<Path> }
@@ -83,7 +83,7 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
             )*
         }}
     }
-    lacking!(description, license || license_file)
+    lacking!(description, license || license_file, documentation || homepage || repository);
 
     if !missing.is_empty() {
         let mut things = missing.slice_to(missing.len() - 1).connect(", ");
@@ -109,7 +109,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
                                  dst.display())))
     }
 
-    try!(fs::mkdir_recursive(&dst.dir_path(), USER_DIR))
+    try!(fs::mkdir_recursive(&dst.dir_path(), USER_DIR));
 
     let tmpfile = try!(File::create(dst));
 
@@ -123,7 +123,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
     for file in try!(src.list_files(pkg)).iter() {
         if file == dst { continue }
         let relative = file.path_relative_from(&root).unwrap();
-        let relative = try!(relative.as_str().require(|| {
+        let relative = try!(relative.as_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         }));

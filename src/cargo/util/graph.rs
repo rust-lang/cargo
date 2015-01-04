@@ -1,8 +1,9 @@
 use std::fmt;
 use std::hash::Hash;
-use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::{Keys, Occupied, Vacant};
-use std::collections::hash_set::SetItems;
+use std::collections::hash_set::HashSet;
+use std::collections::hash_map::{HashMap, Keys};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::collections::hash_set::Iter;
 
 pub struct Graph<N> {
     nodes: HashMap<N, HashSet<N>>
@@ -14,7 +15,7 @@ enum Mark {
 }
 
 pub type Nodes<'a, N> = Keys<'a, N, HashSet<N>>;
-pub type Edges<'a, N> = SetItems<'a, N>;
+pub type Edges<'a, N> = Iter<'a, N>;
 
 impl<N: Eq + Hash + Clone> Graph<N> {
     pub fn new() -> Graph<N> {

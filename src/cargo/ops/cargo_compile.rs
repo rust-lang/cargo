@@ -32,7 +32,7 @@ use core::resolver::Method;
 use ops::{mod, BuildOutput};
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
-use util::{CargoResult, Wrap, config, internal, human, ChainError, profile};
+use util::{CargoResult, config, internal, human, ChainError, profile};
 
 /// Contains informations about how a package should be compiled.
 pub struct CompileOptions<'a> {
@@ -113,7 +113,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
             r.clone()
         }).collect();
-        let packages = try!(registry.get(req.as_slice()).wrap({
+        let packages = try!(registry.get(req.as_slice()).chain_error(|| {
             human("Unable to get packages from source")
         }));
 
@@ -218,7 +218,7 @@ fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,
             "ar" | "linker" => {
                 let v = try!(v.string().chain_error(|| {
                     internal(format!("invalid configuration for key `{}`", k))
-                })).ref0().to_string();
+                })).0.to_string();
                 if k.as_slice() == "linker" {
                     ret.linker = Some(v);
                 } else {
@@ -240,7 +240,7 @@ fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,
                         internal(format!("invalid configuration for the key \
                                           `target.{}.{}.{}`", triple, lib_name,
                                           k))
-                    })).val0();
+                    })).0;
                     if k.as_slice() == "rustc-flags" {
                         let whence = format!("in `target.{}.{}.rustc-flags`",
                                              triple, lib_name);

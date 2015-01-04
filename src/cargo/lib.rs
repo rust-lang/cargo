@@ -1,14 +1,14 @@
 #![crate_name="cargo"]
 #![crate_type="rlib"]
 
-#![feature(macro_rules, phase)]
-#![feature(default_type_params)]
-#![feature(if_let)]
-#![deny(bad_style)]
+#![feature(macro_rules, phase, default_type_params, unboxed_closures)]
+#![feature(slicing_syntax)]
+#![deny(unused)]
+#![cfg_attr(test, deny(warnings))]
 
 extern crate libc;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate regex;
-extern crate serialize;
 extern crate term;
 extern crate time;
 #[phase(plugin, link)] extern crate log;
@@ -27,24 +27,26 @@ extern crate url;
 extern crate registry;
 
 use std::os;
+use std::error::Error;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
-use serialize::{Decoder, Encoder, Decodable, Encodable, json};
+use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
+use rustc_serialize::json;
 use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig};
-use term::color::{BLACK};
+use term::color::{BLACK, RED};
 
 pub use util::{CargoError, CliError, CliResult, human};
 
-macro_rules! some(
+macro_rules! some {
     ($e:expr) => (
         match $e {
             Some(e) => e,
             None => return None
         }
     )
-)
+}
 
 // Added so that the try! macro below can refer to cargo::util, while
 // other external importers of this macro can use it as well.
@@ -53,26 +55,6 @@ macro_rules! some(
 mod cargo {
     pub use super::util;
 }
-
-#[macro_export]
-macro_rules! try (
-    ($expr:expr) => ({
-        use cargo::util::FromError;
-        match $expr.map_err(FromError::from_error) {
-            Ok(val) => val,
-            Err(err) => return Err(err)
-        }
-    })
-)
-
-macro_rules! raw_try (
-    ($expr:expr) => ({
-        match $expr {
-            Ok(val) => val,
-            Err(err) => return Err(err)
-        }
-    })
-)
 
 pub mod core;
 pub mod ops;
@@ -115,6 +97,20 @@ pub fn execute_main_without_stdin<'a,
                                       usage: &str) {
     process::<V>(|rest, shell| call_main_without_stdin(exec, shell, usage, rest,
                                                        options_first));
+}
+
+pub fn execute_main_with_args_and_without_stdin<'a,
+                                  T: Decodable<docopt::Decoder, docopt::Error>,
+                                  V: Encodable<json::Encoder<'a>, io::IoError>>(
+                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
+                                      options_first: bool,
+                                      usage: &str,
+                                      args: &[String]) {
+    let mut shell = shell(true);
+
+    process_executed(
+        call_main_without_stdin(exec, &mut shell, usage, args, options_first),
+        &mut shell)
 }
 
 pub fn call_main_without_stdin<'a,
@@ -165,45 +161,67 @@ pub fn shell(verbose: bool) -> MultiShell {
     MultiShell::new(out, err, verbose)
 }
 
+
+// `output` print variant error strings to either stderr or stdout.
+// For fatal errors, print to stderr;
+// and for others, e.g. docopt version info, print to stdout.
+fn output(caption: Option<String>, detail: Option<String>,
+          shell: &mut MultiShell, fatal: bool) {
+    let std_shell = if fatal {shell.err()} else {shell.out()};
+    if let Some(caption) = caption {
+        let color = if fatal {RED} else {BLACK};
+        let _ = std_shell.say(caption, color);
+    }
+    if let Some(detail) = detail {
+        let _ = std_shell.say(detail, BLACK); // always black
+    }
+}
+
 pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     log!(4, "handle_error; err={}", err);
 
     let CliError { error, exit_code, unknown } = err;
+    let verbose = shell.get_verbose();
+    let fatal = exit_code != 0; // exit_code == 0 is non-fatal error
 
     if unknown {
-        let _ = shell.error("An unknown error occurred");
+        output(Some("An unknown error occurred".to_string()), None, shell, fatal);
     } else if error.to_string().len() > 0 {
-        let _ = shell.error(error.to_string());
+        output(Some(error.to_string()), None, shell, fatal);
     }
 
     if error.cause().is_some() || unknown {
-        let _ = shell.concise(|shell| {
-            shell.err().say("\nTo learn more, run the command again with --verbose.", BLACK)
-        });
+        if !verbose {
+            output(None,
+                   Some("\nTo learn more, run the command again with --verbose.".to_string()),
+                   shell, fatal);
+        }
     }
 
-    let _ = shell.verbose(|shell| {
+    if verbose {
         if unknown {
-            let _ = shell.error(error.to_string());
+            output(Some(error.to_string()), None, shell, fatal);
         }
         if let Some(detail) = error.detail() {
-            let _ = shell.err().say(format!("{}", detail), BLACK);
+            output(None, Some(detail), shell, fatal);
         }
         if let Some(err) = error.cause() {
             let _ = handle_cause(err, shell);
         }
-        Ok(())
-      });
+    }
 
     std::os::set_exit_status(exit_code as int);
 }
 
-fn handle_cause(err: &CargoError, shell: &mut MultiShell) {
-    let _ = shell.err().say("\nCaused by:", BLACK);
-    let _ = shell.err().say(format!("  {}", err.description()), BLACK);
+fn handle_cause(mut err: &Error, shell: &mut MultiShell) {
+    loop {
+        let _ = shell.err().say("\nCaused by:", BLACK);
+        let _ = shell.err().say(format!("  {}", err.description()), BLACK);
 
-    if let Some(e) = err.cause() {
-        handle_cause(e, shell)
+        match err.cause() {
+            Some(e) => err = e,
+            None => break,
+        }
     }
 }
 
@@ -221,6 +239,30 @@ pub fn version() -> String {
 fn flags_from_args<'a, T>(usage: &str, args: &[String],
                           options_first: bool) -> CliResult<T>
                           where T: Decodable<docopt::Decoder, docopt::Error> {
+    struct CargoDocoptError { err: docopt::Error }
+    impl Error for CargoDocoptError {
+        fn description(&self) -> &str {
+            match self.err {
+                docopt::Error::WithProgramUsage(..) => "",
+                ref e if e.fatal() => self.err.description(),
+                _ => "",
+            }
+        }
+
+        fn detail(&self) -> Option<String> {
+            match self.err {
+                docopt::Error::WithProgramUsage(_, ref usage) => {
+                    Some(usage.clone())
+                }
+                ref e if e.fatal() => None,
+                ref e => Some(e.to_string())
+            }
+        }
+    }
+    impl CargoError for CargoDocoptError {
+        fn is_human(&self) -> bool { true }
+    }
+
     let docopt = Docopt::new(usage).unwrap()
                                    .options_first(options_first)
                                    .argv(args.iter().map(|s| s.as_slice()))
@@ -228,7 +270,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                                    .version(Some(version()));
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::from_error(e, code)
+        CliError::from_error(CargoDocoptError { err: e }, code)
     })
 }
 

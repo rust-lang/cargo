@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::io::File;
 use std::io::fs::PathExtensions;
+use std::iter::repeat;
 use std::os;
-use term::color::BLACK;
 
 use curl::http;
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
+use term::color::BLACK;
 
 use core::source::Source;
 use core::{Package, MultiShell, SourceId};
@@ -140,7 +141,7 @@ pub fn registry_configuration() -> CargoResult<RegistryConfig> {
         Some(index) => {
             Some(try!(index.string().chain_error(|| {
                 internal("invalid configuration for key `index`")
-            })).ref0().to_string())
+            })).0.to_string())
         }
     };
     let token = match registry.get("token") {
@@ -148,7 +149,7 @@ pub fn registry_configuration() -> CargoResult<RegistryConfig> {
         Some(token) => {
             Some(try!(token.string().chain_error(|| {
                 internal("invalid configuration for key `token`")
-            })).ref0().to_string())
+            })).0.to_string())
         }
     };
     Ok(RegistryConfig { index: index, token: token })
@@ -201,7 +202,7 @@ pub fn http_proxy() -> CargoResult<Option<String>> {
                 Some(proxy) => {
                     return Ok(Some(try!(proxy.string().chain_error(|| {
                         internal("invalid configuration for key `http.proxy`")
-                    })).ref0().to_string()))
+                    })).0.to_string()))
                 }
                 None => {},
             }
@@ -371,10 +372,9 @@ pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> Car
     for (name, description) in list_items.into_iter() {
         let line = match description {
             Some(desc) => {
-                let space = String::from_char(
-                    description_margin - name.len(),
-                    ' ');
-                name + space + desc
+                let space = repeat(' ').take(description_margin - name.len())
+                                       .collect::<String>();
+                name.to_string() + space.as_slice() + desc.as_slice()
             }
             None => name
         };

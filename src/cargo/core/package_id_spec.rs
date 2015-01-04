@@ -3,7 +3,7 @@ use semver::Version;
 use url::{mod, Url, UrlParser};
 
 use core::PackageId;
-use util::{CargoResult, ToUrl, Require, human, ToSemver};
+use util::{CargoResult, ToUrl, human, ToSemver, ChainError};
 
 #[deriving(Clone, PartialEq, Eq)]
 pub struct PackageIdSpec {
@@ -60,10 +60,10 @@ impl PackageIdSpec {
         }
         let frag = url.fragment.take();
         let (name, version) = {
-            let path = try!(url.path().require(|| {
+            let path = try!(url.path().chain_error(|| {
                 human(format!("pkgid urls must have a path: {}", url))
             }));
-            let path_name = try!(path.last().require(|| {
+            let path_name = try!(path.last().chain_error(|| {
                 human(format!("pkgid urls must have at least one path \
                                component: {}", url))
             }));

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -x
 set -e
 
@@ -40,8 +42,8 @@ if [ -z "${windows}" ]; then
     cp -r rust-nightly-$src-$target/lib/rustlib/$src-$target \
           rust-nightly-$dst-$target/lib/rustlib
     (cd rust-nightly-$dst-$target && \
-     find lib/rustlib/$src-$target/lib -type f >> \
-     lib/rustlib/manifest.in)
+     find lib/rustlib/$src-$target/lib -type f | sed 's/^/file:/' >> \
+     manifest-rustc.in)
 
     ./rust-nightly-$dst-$target/install.sh --prefix=rustc
     rm -rf rust-nightly-$src-$target
@@ -60,6 +62,8 @@ else
     mv '{app}' rustc
     # Don't use the bundled gcc, see rust-lang/rust#17442
     rm -rf rustc/bin/rustlib/$triple/bin
+    # Don't use bundled gcc libs, see rust-lang/rust#19519
+    rm -rf rustc/bin/rustlib/$triple/lib/libmingw*.a
     rm -f rust-nightly-$triple.exe
 fi
 

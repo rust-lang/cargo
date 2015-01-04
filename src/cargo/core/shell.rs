@@ -6,6 +6,7 @@ use std::fmt::Show;
 
 use self::AdequateTerminal::{NoColor, Colored};
 
+#[deriving(Copy)]
 pub struct ShellConfig {
     pub color: bool,
     pub verbose: bool,
@@ -75,6 +76,10 @@ impl MultiShell {
 
     pub fn set_verbose(&mut self, verbose: bool) {
         self.verbose = verbose;
+    }
+
+    pub fn get_verbose(&self) -> bool {
+        self.verbose
     }
 }
 

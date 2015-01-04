@@ -1,3 +1,5 @@
+#![allow(missing_copy_implementations)]
+
 use git2;
 
 use util::{CargoResult, process};

@@ -2,7 +2,7 @@ use cargo::ops;
 use cargo::core::{MultiShell};
 use cargo::util::{CliResult, CliError};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Options {
     flag_host: Option<String>,
     flag_verbose: bool,

@@ -2,10 +2,10 @@ use std::io::process::ExitStatus;
 
 use cargo::ops;
 use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError, CargoError};
+use cargo::util::{CliResult, CliError, Human};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Options {
     flag_no_run: bool,
     flag_package: Option<String>,
@@ -76,7 +76,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         Some(err) => {
             Err(match err.exit {
                 Some(ExitStatus(i)) => CliError::new("", i as uint),
-                _ => CliError::from_boxed(err.concrete().mark_human(), 101)
+                _ => CliError::from_boxed(box Human(err), 101)
             })
         }
     }

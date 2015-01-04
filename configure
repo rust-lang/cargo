@@ -313,7 +313,7 @@ if [ $HELP -eq 0 ]; then
     else
         probe_need CFG_RUSTC        rustc
     fi
-    DEFAULT_BUILD=$("${CFG_RUSTC}" --version verbose | grep 'host: ' | sed 's/host: //')
+    DEFAULT_BUILD=$("${CFG_RUSTC}" -vV | grep 'host: ' | sed 's/host: //')
 fi
 
 valopt build "${DEFAULT_BUILD}" "GNUs ./configure syntax LLVM build triple"

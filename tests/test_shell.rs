@@ -4,7 +4,7 @@ use hamcrest::{assert_that};
 
 use cargo::core::shell::{Shell,ShellConfig};
 
-use support::{ResultTest,Tap,shell_writes};
+use support::{Tap, shell_writes};
 
 fn setup() {
 }
@@ -19,23 +19,23 @@ test!(non_tty {
     let (tx, mut rx) = pair();
 
     Shell::create(box tx, config).tap(|shell| {
-        shell.say("Hey Alex", color::RED).assert();
+        shell.say("Hey Alex", color::RED).unwrap();
     });
 
     let buf = rx.read_to_end().unwrap();
     assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
-})
+});
 
 test!(color_explicitly_disabled {
     let config = ShellConfig { color: false, verbose: true, tty: true };
     let (tx, mut rx) = pair();
 
     Shell::create(box tx, config).tap(|shell| {
-        shell.say("Hey Alex", color::RED).assert();
+        shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = rx.read_to_end().unwrap();
     assert_that(buf.as_slice(), shell_writes("Hey Alex\n"));
-})
+});
 
 test!(colored_shell {
     let term = TerminfoTerminal::new(MemWriter::new());
@@ -45,13 +45,13 @@ test!(colored_shell {
     let (tx, mut rx) = pair();
 
     Shell::create(box tx, config).tap(|shell| {
-        shell.say("Hey Alex", color::RED).assert();
+        shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = rx.read_to_end().unwrap();
     assert_that(buf.as_slice(),
                 shell_writes(colored_output("Hey Alex\n",
-                                            color::RED).assert()));
-})
+                                            color::RED).unwrap()));
+});
 
 fn colored_output<S: Str>(string: S, color: color::Color) -> IoResult<String> {
     let mut term = TerminfoTerminal::new(MemWriter::new()).unwrap();

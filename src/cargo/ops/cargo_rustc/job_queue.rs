@@ -1,9 +1,11 @@
 use std::collections::HashSet;
-use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::collections::hash_map::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::sync::TaskPool;
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
-use util::{Config, TaskPool, DependencyQueue, Fresh, Dirty, Freshness};
+use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, Dependency, profile};
 
 use super::job::Job;
@@ -46,7 +48,7 @@ struct PendingBuild {
 ///
 /// Each build step for a package is registered with one of these stages, and
 /// each stage has a vector of work to perform in parallel.
-#[deriving(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show)]
+#[deriving(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show, Copy)]
 pub enum Stage {
     Start,
     BuildCustomBuild,
@@ -181,7 +183,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             let my_tx = self.tx.clone();
             let id = id.clone();
             let (desc_tx, desc_rx) = channel();
-            self.pool.execute(proc() {
+            self.pool.execute(move|| {
                 my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
             });
             // only the first message of each job is processed

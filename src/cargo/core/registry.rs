@@ -1,5 +1,6 @@
 use std::collections::HashSet;
-use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::collections::hash_map::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
@@ -63,7 +64,7 @@ pub struct PackageRegistry<'a> {
     locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
 }
 
-#[deriving(PartialEq, Eq)]
+#[deriving(PartialEq, Eq, Copy)]
 enum Kind {
     Override,
     Locked,
@@ -71,7 +72,7 @@ enum Kind {
 }
 
 impl<'a> PackageRegistry<'a> {
-    pub fn new<'a>(config: &'a Config<'a>) -> PackageRegistry<'a> {
+    pub fn new(config: &'a Config<'a>) -> PackageRegistry<'a> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
@@ -89,7 +90,7 @@ impl<'a> PackageRegistry<'a> {
         // source
         let mut ret = Vec::new();
 
-        for source in self.sources.sources_mut() {
+        for (_, source) in self.sources.sources_mut() {
             try!(source.download(package_ids));
             let packages = try!(source.get(package_ids));
 
@@ -163,7 +164,7 @@ impl<'a> PackageRegistry<'a> {
     }
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
-        (|| {
+        (|:| {
             let mut source = source_id.load(self.config);
 
             // Ensure the source has fetched all necessary remote data.
@@ -283,8 +284,10 @@ impl<'a> Registry for PackageRegistry<'a> {
             // Ensure the requested source_id is loaded
             try!(self.ensure_loaded(dep.get_source_id()));
             let mut ret = Vec::new();
-            for src in self.sources.sources_mut() {
-                ret.extend(try!(src.query(dep)).into_iter());
+            for (id, src) in self.sources.sources_mut() {
+                if id == dep.get_source_id() {
+                    ret.extend(try!(src.query(dep)).into_iter());
+                }
             }
             ret
         } else {

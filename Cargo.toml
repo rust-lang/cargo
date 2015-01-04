@@ -5,42 +5,32 @@ authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
 
+[profile.test]
+debug = false
+[profile.dev]
+debug = false
+
 [lib]
 name = "cargo"
 path = "src/cargo/lib.rs"
 
-[dependencies.docopt]
-git = "https://github.com/docopt/docopt.rs"
-
-[dependencies.toml]
-git = "https://github.com/alexcrichton/toml-rs"
+[dependencies]
+toml = "0.1.7"
+semver = "0.1.6"
+curl = "0.1.3"
+tar = "0.1.3"
+flate2 = "0.1.0"
+git2 = "0.1.0"
+glob = "0.1.0"
+time = "0.1.0"
+log = "0.1.0"
+docopt = "0.6.19"
+url = "0.2.7"
+rustc-serialize = "0.1.5"
+term = "0.1"
 
 [dev-dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"
-
-[dependencies.url]
-git = "https://github.com/servo/rust-url"
-
-[dependencies.semver]
-git = "https://github.com/rust-lang/semver"
-
-[dependencies.curl]
-git = "https://github.com/carllerche/curl-rust"
-
-[dependencies.tar]
-git = "https://github.com/alexcrichton/tar-rs"
-
-[dependencies.flate2]
-git = "https://github.com/alexcrichton/flate2-rs"
-
-[dependencies.git2]
-git = "https://github.com/alexcrichton/git2-rs"
-
-[dependencies.glob]
-git = "https://github.com/rust-lang/glob"
-
-[dependencies.time]
-git = "https://github.com/rust-lang/time"
 
 [dependencies.registry]
 path = "src/registry"
@@ -52,6 +42,9 @@ doc = false
 
 [[test]]
 name = "tests"
+[[bench]]
+name = "tests"
+path = "tests/tests.rs"
 
 [[test]]
 name = "resolve"

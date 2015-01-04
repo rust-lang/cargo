@@ -1,11 +1,10 @@
 #![feature(phase, macro_rules)]
-#![deny(unused)]
 
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 #[phase(plugin, link)] extern crate log;
 #[phase(plugin, link)] extern crate cargo;
 
-use std::collections::TreeSet;
+use std::collections::BTreeSet;
 use std::os;
 use std::io;
 use std::io::fs::{mod, PathExtensions};
@@ -13,9 +12,9 @@ use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
-use cargo::util::{CliError, CliResult};
+use cargo::util::{CliError, CliResult, lev_distance};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct Flags {
     flag_list: bool,
     flag_verbose: bool,
@@ -53,33 +52,33 @@ fn main() {
     execute_main_without_stdin(execute, true, USAGE)
 }
 
-macro_rules! each_subcommand( ($macro:ident) => ({
-    $macro!(bench)
-    $macro!(build)
-    $macro!(clean)
-    $macro!(config_for_key)
-    $macro!(config_list)
-    $macro!(doc)
-    $macro!(fetch)
-    $macro!(generate_lockfile)
-    $macro!(git_checkout)
-    $macro!(help)
-    $macro!(locate_project)
-    $macro!(login)
-    $macro!(new)
-    $macro!(owner)
-    $macro!(package)
-    $macro!(pkgid)
-    $macro!(publish)
-    $macro!(read_manifest)
-    $macro!(run)
-    $macro!(search)
-    $macro!(test)
-    $macro!(update)
-    $macro!(verify_project)
-    $macro!(version)
-    $macro!(yank)
-}) )
+macro_rules! each_subcommand{ ($macro:ident) => ({
+    $macro!(bench);
+    $macro!(build);
+    $macro!(clean);
+    $macro!(config_for_key);
+    $macro!(config_list);
+    $macro!(doc);
+    $macro!(fetch);
+    $macro!(generate_lockfile);
+    $macro!(git_checkout);
+    $macro!(help);
+    $macro!(locate_project);
+    $macro!(login);
+    $macro!(new);
+    $macro!(owner);
+    $macro!(package);
+    $macro!(pkgid);
+    $macro!(publish);
+    $macro!(read_manifest);
+    $macro!(run);
+    $macro!(search);
+    $macro!(test);
+    $macro!(update);
+    $macro!(verify_project);
+    $macro!(version);
+    $macro!(yank);
+}) }
 
 /**
   The top-level `cargo` command handles configuration and project location
@@ -116,7 +115,7 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     args.insert(0, command.to_string());
     args.insert(0, os::args()[0].clone());
 
-    macro_rules! cmd( ($name:ident) => (
+    macro_rules! cmd{ ($name:ident) => (
         if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {
             mod $name;
             shell.set_verbose(true);
@@ -127,8 +126,8 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
             cargo::process_executed(r, shell);
             return Ok(None)
         }
-    ) )
-    each_subcommand!(cmd)
+    ) }
+    each_subcommand!(cmd);
 
     execute_subcommand(command.as_slice(), args.as_slice(), shell);
     Ok(None)
@@ -139,7 +138,7 @@ fn find_closest(cmd: &str) -> Option<String> {
                             // doing it this way (instead of just .min_by(|c| c.lev_distance(cmd)))
                             // allows us to only make suggestions that have an edit distance of
                             // 3 or less
-                            .map(|c| (c.lev_distance(cmd), c))
+                            .map(|c| (lev_distance(c.as_slice(), cmd), c))
                             .filter(|&(d, _): &(uint, &String)| d < 4u)
                             .min_by(|&(d, _)| d) {
         Some((_, c)) => {
@@ -187,9 +186,9 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
 
 /// List all runnable commands. find_command should always succeed
 /// if given one of returned command.
-fn list_commands() -> TreeSet<String> {
+fn list_commands() -> BTreeSet<String> {
     let command_prefix = "cargo-";
-    let mut commands = TreeSet::new();
+    let mut commands = BTreeSet::new();
     for dir in list_command_directory().iter() {
         let entries = match fs::readdir(dir) {
             Ok(entries) => entries,
@@ -211,9 +210,9 @@ fn list_commands() -> TreeSet<String> {
         }
     }
 
-    macro_rules! add_cmd( ($cmd:ident) => ({
+    macro_rules! add_cmd{ ($cmd:ident) => ({
         commands.insert(stringify!($cmd).replace("_", "-"));
-    }) )
+    }) }
     each_subcommand!(add_cmd);
     commands
 }

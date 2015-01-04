@@ -4,8 +4,8 @@ use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{mod, CargoResult, ProcessBuilder, CargoError, human, caused_human};
-use util::{Require, Config, internal, ChainError, Fresh, profile, join_paths};
+use util::{mod, CargoResult, ProcessBuilder, human, caused_human};
+use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
 
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, Stage};
@@ -25,7 +25,7 @@ mod job_queue;
 mod layout;
 mod links;
 
-#[deriving(PartialEq, Eq, Hash, Show)]
+#[deriving(PartialEq, Eq, Hash, Show, Copy)]
 pub enum Kind { Host, Target }
 
 #[deriving(Default, Clone)]
@@ -46,6 +46,10 @@ pub struct TargetConfig {
 /// The second element of the tuple returned is the target triple that rustc
 /// is a host for.
 pub fn rustc_version() -> CargoResult<(String, String)> {
+    rustc_new_version().or_else(|_| rustc_old_version())
+}
+
+pub fn rustc_old_version() -> CargoResult<(String, String)> {
     let output = try!(try!(util::process("rustc"))
         .arg("-v")
         .arg("verbose")
@@ -57,7 +61,26 @@ pub fn rustc_version() -> CargoResult<(String, String)> {
         let triple = output.as_slice().lines().filter(|l| {
             l.starts_with("host: ")
         }).map(|l| l.slice_from(6)).next();
-        let triple = try!(triple.require(|| {
+        let triple = try!(triple.chain_error(|| {
+            internal("rustc -v didn't have a line for `host:`")
+        }));
+        triple.to_string()
+    };
+    Ok((output, triple))
+}
+
+pub fn rustc_new_version() -> CargoResult<(String, String)> {
+    let output = try!(try!(util::process("rustc"))
+        .arg("-vV")
+        .exec_with_output());
+    let output = try!(String::from_utf8(output.output).map_err(|_| {
+        internal("rustc -v didn't return utf8 output")
+    }));
+    let triple = {
+        let triple = output.as_slice().lines().filter(|l| {
+            l.starts_with("host: ")
+        }).map(|l| l.slice_from(6)).next();
+        let triple = try!(triple.chain_error(|| {
             internal("rustc -v didn't have a line for `host:`")
         }));
         triple.to_string()
@@ -155,7 +178,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
                     .display().to_string();
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), Some(out_dir));
-    for (&(ref pkg, _), output) in cx.build_state.outputs.lock().iter() {
+    for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
         let any_dylib = output.library_links.iter().any(|l| {
             !l.ends_with(":static") && !l.ends_with(":framework")
         });
@@ -178,7 +201,12 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // a real job. Packages which are *not* compiled still have their jobs
     // executed, but only if the work is fresh. This is to preserve their
     // artifacts if any exist.
-    let job = if compiled {Job::new} else {Job::noop};
+    let job = if compiled {
+        Job::new as fn(Work, Work) -> Job
+    } else {
+        Job::noop as fn(Work, Work) -> Job
+    };
+
     if !compiled { jobs.ignore(pkg); }
 
     if targets.is_empty() {
@@ -226,10 +254,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, kind));
 
-            let dirty = proc(desc_tx: Sender<String>) {
-                try!(work(desc_tx.clone()));
-                dirty(desc_tx)
-            };
+            let dirty = Work::new(move |desc_tx: Sender<String>| {
+                try!(work.call(desc_tx.clone()));
+                dirty.call(desc_tx)
+            });
             dst.push((job(dirty, fresh), freshness));
         }
 
@@ -262,11 +290,11 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
             let key = (pkg.get_package_id().clone(), kind);
             if pkg.get_manifest().get_links().is_some() &&
-               cx.build_state.outputs.lock().contains_key(&key) {
-                continue
-            }
+                cx.build_state.outputs.lock().unwrap().contains_key(&key) {
+                    continue
+                }
             let (dirty, fresh, freshness) =
-                    try!(custom_build::prepare(pkg, target, req, cx));
+                try!(custom_build::prepare(pkg, target, req, cx));
             run_custom.push((job(dirty, fresh), freshness));
         }
 
@@ -296,16 +324,17 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             1 => pkg.get_manifest().get_build()[0].to_string(),
             _ => format!("custom build commands"),
         };
-        let dirty = proc(desc_tx: Sender<String>) {
+        let dirty = Work::new(move |desc_tx: Sender<String>| {
             if desc.len() > 0 {
                 desc_tx.send_opt(desc).ok();
             }
-            for cmd in build_cmds.into_iter() { try!(cmd(desc_tx.clone())) }
-            dirty(desc_tx)
-        };
+            for cmd in build_cmds.into_iter() {
+                try!(cmd.call(desc_tx.clone()))
+            }
+            dirty.call(desc_tx)
+        });
         jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh),
-                                                         freshness)]);
+        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh), freshness)]);
     }
 
     jobs.enqueue(pkg, Stage::Libraries, libs);
@@ -371,7 +400,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     }
     let pkg = pkg.to_string();
 
-    Ok(proc(desc_tx: Sender<String>) {
+    Ok(Work::new(move |desc_tx: Sender<String>| {
         desc_tx.send_opt(p.to_string()).ok();
         if first && !output.exists() {
             try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
@@ -379,12 +408,12 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
             }))
         }
         try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
-            e.msg = format!("Failed to run custom build command for `{}`\n{}",
-                            pkg, e.msg);
-            e.concrete().mark_human()
+            e.desc = format!("Failed to run custom build command for `{}`\n{}",
+                             pkg, e.desc);
+            Human(e)
         }));
         Ok(())
-    })
+    }))
 }
 
 fn rustc(package: &Package, target: &Target,
@@ -443,13 +472,16 @@ fn rustc(package: &Package, target: &Target,
             t.is_lib()
         });
 
-        Ok((proc(desc_tx: Sender<String>) {
+        let rustc_dep_info_loc = root.join(target.file_stem()).with_extension("d");
+        let dep_info_loc = fingerprint::dep_info_loc(cx, package, target, kind);
+
+        Ok((Work::new(move |desc_tx| {
             let mut rustc = rustc;
 
             // Only at runtime have we discovered what the extra -L and -l
             // arguments are for native libraries, so we process those here.
             {
-                let build_state = build_state.outputs.lock();
+                let build_state = build_state.outputs.lock().unwrap();
                 for id in native_lib_deps.into_iter() {
                     let output = &build_state[(id.clone(), kind)];
                     for path in output.library_paths.iter() {
@@ -477,9 +509,11 @@ fn rustc(package: &Package, target: &Target,
                 human(format!("Could not compile `{}`.", name))
             }));
 
+            try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc));
+
             Ok(())
 
-        }, kind))
+        }), kind))
     }).collect()
 }
 
@@ -539,7 +573,7 @@ fn rustdoc(package: &Package, target: &Target,
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();
     let desc = rustdoc.to_string();
-    Ok(proc(desc_tx: Sender<String>) {
+    Ok(Work::new(move |desc_tx: Sender<String>| {
         desc_tx.send(desc);
         if primary {
             try!(rustdoc.exec().chain_error(|| {
@@ -547,10 +581,10 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         } else {
             try!(rustdoc.exec_with_output().and(Ok(())).map_err(|err| {
-                match err.output() {
-                    Some(output) => {
-                        caused_human(format!("Could not document `{}`.\n{}",
-                                             name, output), err)
+                match err.exit {
+                    Some(..) => {
+                        caused_human(format!("Could not document `{}`.",
+                                             name), err)
                     }
                     None => {
                         caused_human("Failed to run rustdoc", err)
@@ -559,7 +593,7 @@ fn rustdoc(package: &Package, target: &Target,
             }))
         }
         Ok(())
-    })
+    }))
 }
 
 fn build_base_args(cx: &Context,
@@ -598,7 +632,7 @@ fn build_base_args(cx: &Context,
     }
 
     if profile.get_opt_level() != 0 {
-        cmd = cmd.arg("--opt-level").arg(profile.get_opt_level().to_string());
+        cmd = cmd.arg("-C").arg(format!("opt-level={}", profile.get_opt_level()));
     }
     if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {
         cmd = cmd.args(&["-C", "lto"]);
@@ -651,8 +685,7 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
     cmd = cmd.arg("--out-dir");
     cmd = cmd.arg(cx.out_dir(pkg, kind, target));
 
-    let dep_info_loc = fingerprint::dep_info_loc(cx, pkg, target, kind);
-    cmd = cmd.arg("--dep-info").arg(dep_info_loc);
+    cmd = cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
         fn opt(cmd: ProcessBuilder, key: &str, prefix: &str,

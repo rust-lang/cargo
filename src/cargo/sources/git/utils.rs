@@ -1,56 +1,20 @@
 use std::fmt::{mod, Show, Formatter};
 use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
-use serialize::{Encodable, Encoder};
+use rustc_serialize::{Encodable, Encoder};
 use url::Url;
 use git2;
 
-use util::{CargoResult, ChainError, human, ToUrl, internal, Require};
+use core::GitReference;
+use util::{CargoResult, ChainError, human, ToUrl, internal};
 
-#[deriving(PartialEq,Clone,Encodable)]
-pub enum GitReference {
-    Master,
-    Other(String)
-}
-
-#[deriving(PartialEq,Clone,Encodable)]
-pub struct GitRevision(String);
-
-impl GitReference {
-    pub fn for_str<S: Str>(string: S) -> GitReference {
-        if string.as_slice() == "master" {
-            GitReference::Master
-        } else {
-            GitReference::Other(string.as_slice().to_string())
-        }
-    }
-}
-
-impl Str for GitReference {
-    fn as_slice(&self) -> &str {
-        match *self {
-            GitReference::Master => "master",
-            GitReference::Other(ref string) => string.as_slice()
-        }
-    }
-}
-
-impl Show for GitReference {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.as_slice().fmt(f)
-    }
-}
-
-impl Str for GitRevision {
-    fn as_slice(&self) -> &str {
-        let GitRevision(ref me) = *self;
-        me.as_slice()
-    }
-}
+#[deriving(PartialEq, Clone)]
+#[allow(missing_copy_implementations)]
+pub struct GitRevision(git2::Oid);
 
 impl Show for GitRevision {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.as_slice().fmt(f)
+        self.0.fmt(f)
     }
 }
 
@@ -61,7 +25,7 @@ pub struct GitRemote {
     url: Url,
 }
 
-#[deriving(PartialEq,Clone,Encodable)]
+#[deriving(PartialEq,Clone,RustcEncodable)]
 struct EncodableGitRemote {
     url: String,
 }
@@ -82,7 +46,7 @@ pub struct GitDatabase {
     repo: git2::Repository,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct EncodableGitDatabase {
     remote: GitRemote,
     path: String,
@@ -107,7 +71,7 @@ pub struct GitCheckout<'a> {
     repo: git2::Repository,
 }
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 pub struct EncodableGitCheckout {
     database: EncodableGitDatabase,
     location: String,
@@ -138,8 +102,8 @@ impl GitRemote {
         &self.url
     }
 
-    pub fn rev_for<S: Str>(&self, path: &Path, reference: S)
-                           -> CargoResult<GitRevision> {
+    pub fn rev_for(&self, path: &Path, reference: &GitReference)
+                   -> CargoResult<GitRevision> {
         let db = try!(self.db_at(path));
         db.rev_for(reference)
     }
@@ -215,9 +179,36 @@ impl GitDatabase {
         Ok(checkout)
     }
 
-    pub fn rev_for<S: Str>(&self, reference: S) -> CargoResult<GitRevision> {
-        let rev = try!(self.repo.revparse_single(reference.as_slice()));
-        Ok(GitRevision(rev.id().to_string()))
+    pub fn rev_for(&self, reference: &GitReference) -> CargoResult<GitRevision> {
+        let id = match *reference {
+            GitReference::Tag(ref s) => {
+                try!((|:| {
+                    let refname = format!("refs/tags/{}", s);
+                    let id = try!(self.repo.refname_to_id(refname.as_slice()));
+                    let tag = try!(self.repo.find_tag(id));
+                    let obj = try!(tag.peel());
+                    Ok(obj.id())
+                }).chain_error(|| {
+                    human(format!("failed to find tag `{}`", s))
+                }))
+            }
+            GitReference::Branch(ref s) => {
+                try!((|:| {
+                    let b = try!(self.repo.find_branch(s.as_slice(),
+                                                       git2::BranchType::Local));
+                    b.get().target().chain_error(|| {
+                        human(format!("branch `{}` did not have a target", s))
+                    })
+                }).chain_error(|| {
+                    human(format!("failed to find branch `{}`", s))
+                }))
+            }
+            GitReference::Rev(ref s) => {
+                let obj = try!(self.repo.revparse_single(s.as_slice()));
+                obj.id()
+            }
+        };
+        Ok(GitRevision(id))
     }
 
     pub fn has_ref<S: Str>(&self, reference: S) -> CargoResult<()> {
@@ -227,9 +218,9 @@ impl GitDatabase {
 }
 
 impl<'a> GitCheckout<'a> {
-    fn new<'a>(path: &Path, database: &'a GitDatabase, revision: GitRevision,
-               repo: git2::Repository)
-               -> GitCheckout<'a>
+    fn new(path: &Path, database: &'a GitDatabase, revision: GitRevision,
+           repo: git2::Repository)
+           -> GitCheckout<'a>
     {
         GitCheckout {
             location: path.clone(),
@@ -239,18 +230,14 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn clone_into<'a>(into: &Path, database: &'a GitDatabase,
-                      revision: GitRevision)
-                      -> CargoResult<GitCheckout<'a>>
+    fn clone_into(into: &Path, database: &'a GitDatabase,
+                  revision: GitRevision)
+                  -> CargoResult<GitCheckout<'a>>
     {
         let repo = try!(GitCheckout::clone_repo(database.get_path(), into));
         let checkout = GitCheckout::new(into, database, revision, repo);
         try!(checkout.reset());
         Ok(checkout)
-    }
-
-    pub fn get_rev(&self) -> &str {
-        self.revision.as_slice()
     }
 
     fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
@@ -293,10 +280,8 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn reset(&self) -> CargoResult<()> {
-        info!("reset {} to {}", self.repo.path().display(),
-              self.revision.as_slice());
-        let oid = try!(git2::Oid::from_str(self.revision.as_slice()));
-        let object = try!(self.repo.find_object(oid, None));
+        info!("reset {} to {}", self.repo.path().display(), self.revision);
+        let object = try!(self.repo.find_object(self.revision.0, None));
         try!(self.repo.reset(&object, git2::ResetType::Hard, None, None));
         Ok(())
     }
@@ -309,7 +294,7 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in try!(repo.submodules()).into_iter() {
                 try!(child.init(false));
-                let url = try!(child.url().require(|| {
+                let url = try!(child.url().chain_error(|| {
                     internal("non-utf8 url for submodule")
                 }));
 
@@ -358,7 +343,7 @@ impl<'a> GitCheckout<'a> {
 
 fn with_authentication<T>(url: &str,
                           cfg: &git2::Config,
-                          f: |git2::Credentials| -> CargoResult<T>)
+                          f: |&mut git2::Credentials| -> CargoResult<T>)
                           -> CargoResult<T> {
     // Prepare the authentication callbacks.
     //
@@ -380,7 +365,8 @@ fn with_authentication<T>(url: &str,
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
     let mut cred_error = false;
-    let ret = f(|url, username, allowed| {
+    let ret = f(&mut |&mut: url, username, allowed| {
+        let username = if username.is_empty() {None} else {Some(username)};
         let creds = if allowed.contains(git2::SSH_KEY) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())
@@ -410,12 +396,13 @@ pub fn fetch(repo: &git2::Repository, url: &str,
     // Create a local anonymous remote in the repository to fetch the url
 
     with_authentication(url, &try!(repo.config()), |f| {
-        let mut cb = git2::RemoteCallbacks::new()
-                                       .credentials(f);
-        let mut remote = try!(repo.remote_anonymous(url.as_slice(), refspec));
+        let mut cb = git2::RemoteCallbacks::new();
+        cb.credentials(|a, b, c| f.call_mut((a, b, c)));
+        let mut remote = try!(repo.remote_anonymous(url.as_slice(),
+                                                    Some(refspec)));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
         remote.set_callbacks(&mut cb);
-        try!(remote.fetch(None, None));
+        try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None, None));
         Ok(())
     })
 }

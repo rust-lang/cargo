@@ -30,7 +30,7 @@ hello
         dir = path2url(p.root()),
         sep = path::SEP).as_slice()));
     assert_that(&p.bin("foo"), existing_file());
-})
+});
 
 test!(simple_with_args {
     let p = project("foo")
@@ -49,7 +49,7 @@ test!(simple_with_args {
 
     assert_that(p.cargo_process("run").arg("hello").arg("world"),
                 execs().with_status(0));
-})
+});
 
 test!(exit_code {
     let p = project("foo")
@@ -65,7 +65,7 @@ test!(exit_code {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(2));
-})
+});
 
 test!(no_main_file {
     let p = project("foo")
@@ -81,7 +81,7 @@ test!(no_main_file {
                 execs().with_status(101)
                        .with_stderr("a bin target must be available \
                                      for `cargo run`\n"));
-})
+});
 
 test!(too_many_bins {
     let p = project("foo")
@@ -100,7 +100,7 @@ test!(too_many_bins {
                        .with_stderr("`cargo run` requires that a project only \
                                      have one executable. Use the `--bin` option \
                                      to specify which one to run\n"));
-})
+});
 
 test!(specify_name {
     let p = project("foo")
@@ -138,7 +138,7 @@ hello b.rs
 ",
         running = RUNNING,
         sep = path::SEP).as_slice()));
-})
+});
 
 test!(run_example {
     let p = project("foo")
@@ -166,7 +166,7 @@ example
         running = RUNNING,
         dir = path2url(p.root()),
         sep = path::SEP).as_slice()));
-})
+});
 
 test!(either_name_or_example {
     let p = project("foo")
@@ -187,7 +187,7 @@ test!(either_name_or_example {
                 execs().with_status(1)
                        .with_stderr("specify either `--bin` or `--example`, \
                                      not both"));
-})
+});
 
 test!(one_bin_multiple_examples {
     let p = project("foo")
@@ -218,7 +218,7 @@ hello main.rs
         running = RUNNING,
         dir = path2url(p.root()),
         sep = path::SEP).as_slice()));
-})
+});
 
 test!(run_dylib_dep {
     let p = project("foo")
@@ -249,7 +249,7 @@ test!(run_dylib_dep {
 
     assert_that(p.cargo_process("run").arg("hello").arg("world"),
                 execs().with_status(0));
-})
+});
 
 test!(release_works {
     let p = project("foo")
@@ -273,7 +273,7 @@ test!(release_works {
         dir = path2url(p.root()),
         sep = path::SEP).as_slice()));
     assert_that(&p.release_bin("foo"), existing_file());
-})
+});
 
 test!(run_bin_different_name {
     let p = project("foo")
@@ -291,4 +291,4 @@ test!(run_bin_different_name {
         "#);
 
     assert_that(p.cargo_process("run"), execs().with_status(0));
-})
+});

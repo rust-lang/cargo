@@ -1,6 +1,9 @@
 use std::io::{mod, fs, File};
 
+use url::Url;
 use git2;
+
+use support::path2url;
 
 pub struct RepoBuilder {
     repo: git2::Repository,
@@ -47,4 +50,6 @@ impl RepoBuilder {
         self.repo.commit(Some("HEAD"), &sig, &sig,
                          "Initial commit", &tree, &[]).unwrap();
     }
+
+    pub fn url(&self) -> Url { path2url(self.repo.path().dir_path()) }
 }

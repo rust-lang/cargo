@@ -1,15 +1,16 @@
 use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut};
-use std::collections::hash_map::{HashMap, Occupied, Vacant};
+use std::collections::hash_map::{HashMap};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::io;
 use std::io::fs::{mod, PathExtensions, File};
 use std::string;
 
-use serialize::{Encodable,Encoder};
+use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::MultiShell;
 use ops;
-use util::{CargoResult, ChainError, Require, internal, human};
+use util::{CargoResult, ChainError, internal, human};
 
 use util::toml as cargo_toml;
 
@@ -26,9 +27,9 @@ pub struct Config<'a> {
 }
 
 impl<'a> Config<'a> {
-    pub fn new<'a>(shell: &'a mut MultiShell,
-                   jobs: Option<uint>,
-                   target: Option<string::String>) -> CargoResult<Config<'a>> {
+    pub fn new(shell: &'a mut MultiShell,
+               jobs: Option<uint>,
+               target: Option<string::String>) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
         }
@@ -36,7 +37,7 @@ impl<'a> Config<'a> {
         let (rustc_version, rustc_host) = try!(ops::rustc_version());
 
         Ok(Config {
-            home_path: try!(os::homedir().require(|| {
+            home_path: try!(homedir().chain_error(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
@@ -93,13 +94,13 @@ impl<'a> Config<'a> {
     }
 }
 
-#[deriving(Eq,PartialEq,Clone,Encodable,Decodable)]
+#[deriving(Eq, PartialEq, Clone, RustcEncodable, RustcDecodable, Copy)]
 pub enum Location {
     Project,
     Global
 }
 
-#[deriving(Eq,PartialEq,Clone,Decodable)]
+#[deriving(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
     String(string::String, Path),
     List(Vec<(string::String, Path)>),
@@ -134,7 +135,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
         match *self {
             CV::String(ref string, _) => string.encode(s),
             CV::List(ref list) => {
-                let list: Vec<&string::String> = list.iter().map(|s| s.ref0()).collect();
+                let list: Vec<&string::String> = list.iter().map(|s| &s.0).collect();
                 list.encode(s)
             }
             CV::Table(ref table) => table.encode(s),
@@ -146,19 +147,19 @@ impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
 impl ConfigValue {
     fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
-            toml::String(val) => Ok(CV::String(val, path.clone())),
-            toml::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
-            toml::Array(val) => {
+            toml::Value::String(val) => Ok(CV::String(val, path.clone())),
+            toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
+            toml::Value::Array(val) => {
                 Ok(CV::List(try!(val.into_iter().map(|toml| {
                     match toml {
-                        toml::String(val) => Ok((val, path.clone())),
+                        toml::Value::String(val) => Ok((val, path.clone())),
                         _ => Err(internal("")),
                     }
                 }).collect::<CargoResult<_>>())))
             }
-            toml::Table(val) => {
+            toml::Value::Table(val) => {
                 Ok(CV::Table(try!(val.into_iter().map(|(key, value)| {
-                    let value = raw_try!(CV::from_toml(path, value));
+                    let value = try!(CV::from_toml(path, value));
                     Ok((key, value))
                 }).collect::<CargoResult<_>>())))
             }
@@ -235,15 +236,23 @@ impl ConfigValue {
 
     fn into_toml(self) -> toml::Value {
         match self {
-            CV::Boolean(s, _) => toml::Boolean(s),
-            CV::String(s, _) => toml::String(s),
-            CV::List(l) => toml::Array(l.into_iter().map(|(s, _)| toml::String(s))
-                                    .collect()),
-            CV::Table(l) => toml::Table(l.into_iter()
-                                         .map(|(k, v)| (k, v.into_toml()))
-                                         .collect()),
+            CV::Boolean(s, _) => toml::Value::Boolean(s),
+            CV::String(s, _) => toml::Value::String(s),
+            CV::List(l) => toml::Value::Array(l
+                                        .into_iter()
+                                        .map(|(s, _)| toml::Value::String(s))
+                                        .collect()),
+            CV::Table(l) => toml::Value::Table(l.into_iter()
+                                        .map(|(k, v)| (k, v.into_toml()))
+                                        .collect()),
         }
     }
+}
+
+fn homedir() -> Option<Path> {
+    let cargo_home = os::getenv("CARGO_HOME").map(|p| Path::new(p));
+    let user_home = os::homedir();
+    return cargo_home.or(user_home);
 }
 
 pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
@@ -261,7 +270,7 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<string::String, ConfigValue
             internal(format!("could not parse Toml manifest; path={}",
                              path.display()))
         }));
-        let value = try!(CV::from_toml(&path, toml::Table(table)));
+        let value = try!(CV::from_toml(&path, toml::Value::Table(table)));
         try!(cfg.merge(value));
         Ok(())
     }).chain_error(|| human("Couldn't load Cargo configuration")));
@@ -311,7 +320,7 @@ fn walk_tree(pwd: &Path,
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = try!(os::homedir().require(|| {
+    let home = try!(homedir().chain_error(|| {
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
@@ -329,7 +338,7 @@ fn walk_tree(pwd: &Path,
 fn extract_config(mut file: File, key: &str) -> CargoResult<ConfigValue> {
     let contents = try!(file.read_to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), file.path()));
-    let val = try!(toml.remove(&key.to_string()).require(|| internal("")));
+    let val = try!(toml.remove(&key.to_string()).chain_error(|| internal("")));
 
     CV::from_toml(file.path(), val)
 }
@@ -349,6 +358,6 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
     toml.insert(key.to_string(), value.into_toml());
-    try!(File::create(&file).write(toml::Table(toml).to_string().as_bytes()));
+    try!(File::create(&file).write(toml::Value::Table(toml).to_string().as_bytes()));
     Ok(())
 }

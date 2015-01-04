@@ -4,7 +4,7 @@ use tar::Archive;
 use flate2::reader::GzDecoder;
 use cargo::util::process;
 
-use support::{project, execs, cargo_dir, ResultTest, paths, git};
+use support::{project, execs, cargo_dir, paths, git};
 use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
 use hamcrest::{assert_that, existing_file};
 
@@ -46,18 +46,18 @@ src[..]main.rs
     assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
                 execs().with_status(0).with_stdout(""));
 
-    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).assert();
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let mut rdr = GzDecoder::new(f);
-    let contents = rdr.read_to_end().assert();
+    let contents = rdr.read_to_end().unwrap();
     let ar = Archive::new(MemReader::new(contents));
-    for f in ar.files().assert() {
-        let f = f.assert();
+    for f in ar.files().unwrap() {
+        let f = f.unwrap();
         let fname = f.filename_bytes();
         assert!(fname == b"foo-0.0.1/Cargo.toml" ||
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {}", f.filename())
     }
-})
+});
 
 test!(metadata_warning {
     let p = project("all")
@@ -81,7 +81,8 @@ test!(metadata_warning {
         compiling = COMPILING,
         dir = p.url()).as_slice())
                 .with_stderr("\
-warning: manifest has no description, license or license-file. See \
+warning: manifest has no description, license, license-file, documentation, \
+homepage or repository. See \
 http://doc.crates.io/manifest.html#package-metadata for more info."));
 
     let p = project("one")
@@ -106,10 +107,10 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         compiling = COMPILING,
         dir = p.url()).as_slice())
                 .with_stderr("\
-warning: manifest has no description. See \
+warning: manifest has no description, documentation, homepage or repository. See \
 http://doc.crates.io/manifest.html#package-metadata for more info."));
 
-    let p = project("both")
+    let p = project("all")
         .file("Cargo.toml", format!(r#"
             [project]
             name = "foo"
@@ -117,6 +118,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
             authors = []
             license = "MIT"
             description = "foo"
+            repository = "bar"
         "#))
         .file("src/main.rs", r#"
             fn main() {}
@@ -131,7 +133,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice()));
-})
+});
 
 test!(package_verbose {
     let root = paths::root().join("all");
@@ -166,7 +168,7 @@ test!(package_verbose {
 ",
         packaging = PACKAGING,
         archiving = ARCHIVING).as_slice()));
-})
+});
 
 test!(package_verification {
     let p = project("all")
@@ -191,4 +193,4 @@ test!(package_verification {
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url()).as_slice()));
-})
+});

@@ -2,7 +2,7 @@ use std::path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, ResultTest, RUNNING, DOCTEST};
+use support::{COMPILING, cargo_dir, RUNNING, DOCTEST};
 use support::paths::PathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -46,7 +46,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 ",
         COMPILING, p.url(),
         RUNNING)));
-})
+});
 
 test!(cargo_test_verbose {
     let p = project("foo")
@@ -69,7 +69,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
         compiling = COMPILING, url = p.url(), running = RUNNING)));
-})
+});
 
 test!(many_similar_names {
     let p = project("foo")
@@ -93,12 +93,12 @@ test!(many_similar_names {
             #[test] fn test_test() { foo::foo() }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
     assert!(output.contains("test test_test"), "test_test missing\n{}", output);
-})
+});
 
 test!(cargo_test_failing_test {
     let p = project("foo")
@@ -135,7 +135,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>task 'test_hello' panicked at 'assertion failed: \
+<tab>thread 'test_hello' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `hello`, right: `nope`)', src{sep}foo.rs:12
 
@@ -150,10 +150,10 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
         COMPILING, p.url(), RUNNING,
         sep = path::SEP))
               .with_stderr(format!("\
-task '<main>' panicked at 'Some tests failed', [..]
+thread '<main>' panicked at 'Some tests failed', [..]
 "))
               .with_status(101));
-})
+});
 
 test!(test_with_lib_dep {
     let p = project("foo")
@@ -214,7 +214,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
-})
+});
 
 test!(test_with_deep_lib_dep {
     let p = project("bar")
@@ -277,7 +277,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(external_test_explicit {
     let p = project("foo")
@@ -329,7 +329,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
-})
+});
 
 test!(external_test_implicit {
     let p = project("foo")
@@ -377,7 +377,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
-})
+});
 
 test!(dont_run_examples {
     let p = project("foo")
@@ -394,7 +394,7 @@ test!(dont_run_examples {
         "#);
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
-})
+});
 
 test!(pass_through_command_line {
     let p = project("foo")
@@ -452,7 +452,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
-})
+});
 
 // Regression test for running cargo-test twice with
 // tests in an rlib
@@ -472,7 +472,7 @@ test!(cargo_test_twice {
         assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                     execs().with_status(0));
     }
-})
+});
 
 test!(lib_bin_same_name {
     let p = project("foo")
@@ -522,7 +522,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
-})
+});
 
 test!(lib_with_standard_name {
     let p = project("foo")
@@ -576,7 +576,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST, dir = p.url()).as_slice()));
-})
+});
 
 test!(lib_with_standard_name2 {
     let p = project("foo")
@@ -617,7 +617,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(bin_there_for_integration {
     let p = project("foo")
@@ -640,11 +640,11 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().assert();
-    let output = str::from_utf8(output.output.as_slice()).assert();
+    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
-})
+});
 
 test!(test_dylib {
     let p = project("foo")
@@ -718,7 +718,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
-    p.root().move_into_the_past().assert();
+    p.root().move_into_the_past().unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
@@ -746,7 +746,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        running = RUNNING,
                        doctest = DOCTEST)));
 
-})
+});
 
 test!(test_twice_with_build_cmd {
     let p = project("foo")
@@ -803,7 +803,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        running = RUNNING,
                        doctest = DOCTEST)));
-})
+});
 
 test!(test_then_build {
     let p = project("foo")
@@ -843,7 +843,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0)
                        .with_stdout(""));
-})
+});
 
 test!(test_no_run {
     let p = project("foo")
@@ -865,7 +865,7 @@ test!(test_no_run {
 ",
                        compiling = COMPILING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(test_run_specific_bin_target {
     let prj = project("foo")
@@ -902,7 +902,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
     assert_that(prj.cargo_process("test").arg("--test").arg("bin2"),
         execs().with_status(0).with_stdout(expected_stdout.as_slice()));
-})
+});
 
 test!(test_run_specific_test_target {
     let prj = project("foo")
@@ -940,7 +940,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
     assert_that(prj.cargo_process("test").arg("--test").arg("b"),
         execs().with_status(0).with_stdout(expected_stdout.as_slice()));
-})
+});
 
 test!(test_no_harness {
     let p = project("foo")
@@ -970,7 +970,7 @@ test!(test_no_harness {
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
-})
+});
 
 test!(selective_testing {
     let p = project("foo")
@@ -1057,7 +1057,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
-})
+});
 
 test!(almost_cyclic_but_not_quite {
     let p = project("a")
@@ -1099,7 +1099,7 @@ test!(almost_cyclic_but_not_quite {
     assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0));
-})
+});
 
 test!(build_then_selective_test {
     let p = project("a")
@@ -1127,7 +1127,7 @@ test!(build_then_selective_test {
     assert_that(p.process(cargo_dir().join("cargo")).arg("test")
                  .arg("-p").arg("b"),
                 execs().with_status(0));
-})
+});
 
 test!(example_dev_dep {
     let p = project("foo")
@@ -1155,25 +1155,25 @@ test!(example_dev_dep {
         .file("bar/src/lib.rs", r#"
             #![feature(macro_rules)]
             // make sure this file takes awhile to compile
-            macro_rules! f0( () => (1u) )
-            macro_rules! f1( () => ({(f0!()) + (f0!())}) )
-            macro_rules! f2( () => ({(f1!()) + (f1!())}) )
-            macro_rules! f3( () => ({(f2!()) + (f2!())}) )
-            macro_rules! f4( () => ({(f3!()) + (f3!())}) )
-            macro_rules! f5( () => ({(f4!()) + (f4!())}) )
-            macro_rules! f6( () => ({(f5!()) + (f5!())}) )
-            macro_rules! f7( () => ({(f6!()) + (f6!())}) )
-            macro_rules! f8( () => ({(f7!()) + (f7!())}) )
-            macro_rules! f9( () => ({(f8!()) + (f8!())}) )
-            macro_rules! f10( () => ({(f9!()) + (f9!())}) )
-            macro_rules! f11( () => ({(f10!()) + (f10!())}) )
+            macro_rules! f0( () => (1u) );
+            macro_rules! f1( () => ({(f0!()) + (f0!())}) );
+            macro_rules! f2( () => ({(f1!()) + (f1!())}) );
+            macro_rules! f3( () => ({(f2!()) + (f2!())}) );
+            macro_rules! f4( () => ({(f3!()) + (f3!())}) );
+            macro_rules! f5( () => ({(f4!()) + (f4!())}) );
+            macro_rules! f6( () => ({(f5!()) + (f5!())}) );
+            macro_rules! f7( () => ({(f6!()) + (f6!())}) );
+            macro_rules! f8( () => ({(f7!()) + (f7!())}) );
+            macro_rules! f9( () => ({(f8!()) + (f8!())}) );
+            macro_rules! f10( () => ({(f9!()) + (f9!())}) );
+            macro_rules! f11( () => ({(f10!()) + (f10!())}) );
             pub fn bar() {
                 f11!();
             }
         "#);
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
-})
+});
 
 test!(selective_testing_with_docs {
     let p = project("foo")
@@ -1224,7 +1224,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, dir = p.url(),
    doctest = DOCTEST).as_slice()));
-})
+});
 
 test!(example_bin_same_name {
     let p = project("foo")
@@ -1253,7 +1253,7 @@ test!(example_bin_same_name {
                 execs().with_status(0).with_stdout("bin\n"));
     assert_that(p.process(p.bin("examples/foo")),
                 execs().with_status(0).with_stdout("example\n"));
-})
+});
 
 test!(test_with_example_twice {
     let p = project("foo")
@@ -1274,4 +1274,41 @@ test!(test_with_example_twice {
     assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.bin("examples/foo"), existing_file());
-})
+});
+
+test!(example_with_dev_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            test = false
+            doctest = false
+
+            [dev-dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "extern crate a; fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+[..]
+[..]
+[..]
+[..]
+{running} `rustc [..] --crate-name ex [..] --extern a=[..]`
+", running = RUNNING).as_slice()));
+});

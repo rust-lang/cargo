@@ -4,7 +4,7 @@ use flate2::reader::GzDecoder;
 use tar::Archive;
 use url::Url;
 
-use support::{ResultTest, project, execs};
+use support::{project, execs};
 use support::{UPDATING, PACKAGING, UPLOADING};
 use support::paths;
 use support::git::repo;
@@ -18,13 +18,13 @@ fn upload() -> Url { Url::from_file_path(&upload_path()).unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).assert();
+    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).unwrap();
     File::create(&config).write_str(format!(r#"
         [registry]
             index = "{reg}"
             token = "api-token"
-    "#, reg = registry()).as_slice()).assert();
-    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), io::USER_DIR).assert();
+    "#, reg = registry()).as_slice()).unwrap();
+    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), io::USER_DIR).unwrap();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{
@@ -75,7 +75,7 @@ test!(simple {
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {}", file.filename())
     }
-})
+});
 
 test!(git_deps {
     let p = project("foo")
@@ -97,7 +97,7 @@ test!(git_deps {
 all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
 "));
-})
+});
 
 test!(path_dependency_no_version {
     let p = project("foo")
@@ -126,4 +126,4 @@ test!(path_dependency_no_version {
 all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 "));
-})
+});

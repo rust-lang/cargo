@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use std::fmt;
 use std::io::fs::{mod, PathExtensions};
 use std::os;
@@ -7,14 +8,14 @@ use std::str;
 use std::default::Default;
 use toml;
 use semver;
-use serialize::{Decodable, Decoder};
+use rustc_serialize::{Decodable, Decoder};
 
 use core::SourceId;
-use core::{Summary, Manifest, Target, Dependency, PackageId};
+use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
-use util::{CargoResult, Require, human, ToUrl, ToSemver};
+use util::{CargoResult, human, ToUrl, ToSemver, ChainError};
 
 /// Representation of the projects file layout.
 ///
@@ -97,11 +98,11 @@ pub fn to_manifest(contents: &[u8],
         Some(path) => path,
         None => manifest,
     };
-    let contents = try!(str::from_utf8(contents).require(|| {
+    let contents = try!(str::from_utf8(contents).chain_error(|| {
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
     let root = try!(parse(contents, &manifest));
-    let mut d = toml::Decoder::new(toml::Table(root));
+    let mut d = toml::Decoder::new(toml::Value::Table(root));
     let toml_manifest: TomlManifest = match Decodable::decode(&mut d) {
         Ok(t) => t,
         Err(e) => return Err(human(format!("{} is not a valid \
@@ -128,16 +129,16 @@ pub fn to_manifest(contents: &[u8],
 
     fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
         match *toml {
-            toml::Table(ref table) => {
+            toml::Value::Table(ref table) => {
                 for (k, v) in table.iter() {
                     add_unused_keys(m, v, if key.len() == 0 {
                         k.clone()
                     } else {
-                        key + "." + k.as_slice()
+                        key.clone() + "." + k.as_slice()
                     })
                 }
             }
-            toml::Array(ref arr) => {
+            toml::Value::Array(ref arr) => {
                 for v in arr.iter() {
                     add_unused_keys(m, v, key.clone());
                 }
@@ -147,7 +148,7 @@ pub fn to_manifest(contents: &[u8],
     }
 }
 
-pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::TomlTable> {
+pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
     let mut parser = toml::Parser::new(toml.as_slice());
     match parser.parse() {
         Some(toml) => return Ok(toml),
@@ -181,14 +182,14 @@ type TomlBenchTarget = TomlTarget;
  * TODO: Make all struct fields private
  */
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency)
 }
 
 
-#[deriving(Decodable, Clone, Default)]
+#[deriving(RustcDecodable, Clone, Default)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -201,7 +202,7 @@ pub struct DetailedTomlDependency {
     default_features: Option<bool>,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -218,7 +219,7 @@ pub struct TomlManifest {
     target: Option<HashMap<String, TomlPlatform>>,
 }
 
-#[deriving(Decodable, Clone, Default)]
+#[deriving(RustcDecodable, Clone, Default)]
 pub struct TomlProfiles {
     test: Option<TomlProfile>,
     doc: Option<TomlProfile>,
@@ -227,7 +228,8 @@ pub struct TomlProfiles {
     release: Option<TomlProfile>,
 }
 
-#[deriving(Decodable, Clone, Default)]
+#[deriving(RustcDecodable, Clone, Default)]
+#[allow(missing_copy_implementations)]
 pub struct TomlProfile {
     opt_level: Option<uint>,
     lto: Option<bool>,
@@ -236,7 +238,7 @@ pub struct TomlProfile {
     rpath: Option<bool>,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub enum ManyOrOne<T> {
     Many(Vec<T>),
     One(T),
@@ -251,7 +253,7 @@ impl<T> ManyOrOne<T> {
     }
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
@@ -272,7 +274,7 @@ pub struct TomlProject {
 }
 
 // TODO: deprecated, remove
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub enum BuildCommand {
     Single(String),
     Multiple(Vec<String>)
@@ -284,7 +286,7 @@ pub struct TomlVersion {
 
 impl<E, D: Decoder<E>> Decodable<D, E> for TomlVersion {
     fn decode(d: &mut D) -> Result<TomlVersion, E> {
-        let s = raw_try!(d.read_str());
+        let s = try!(d.read_str());
         match s.as_slice().to_semver() {
             Ok(s) => Ok(TomlVersion { version: s }),
             Err(e) => Err(d.error(e.as_slice())),
@@ -382,7 +384,7 @@ impl TomlManifest {
         let mut nested_paths = vec!();
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
-        let project = try!(project.require(|| {
+        let project = try!(project.chain_error(|| {
             human("No `package` or `project` section found.")
         }));
 
@@ -569,17 +571,17 @@ fn process_dependencies<'a>(cx: &mut Context<'a>,
             }
             TomlDependency::Detailed(ref details) => details.clone(),
         };
-        let reference = details.branch.clone()
-            .or_else(|| details.tag.clone())
-            .or_else(|| details.rev.clone())
-            .unwrap_or_else(|| "master".to_string());
+        let reference = details.branch.clone().map(GitReference::Branch)
+            .or_else(|| details.tag.clone().map(GitReference::Tag))
+            .or_else(|| details.rev.clone().map(GitReference::Rev))
+            .unwrap_or_else(|| GitReference::Branch("master".to_string()));
 
         let new_source_id = match details.git {
             Some(ref git) => {
                 let loc = try!(git.as_slice().to_url().map_err(|e| {
                     human(e)
                 }));
-                Some(SourceId::for_git(&loc, reference.as_slice()))
+                Some(SourceId::for_git(&loc, reference))
             }
             None => {
                 details.path.as_ref().map(|path| {
@@ -603,7 +605,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>,
     Ok(())
 }
 
-#[deriving(Decodable, Show, Clone)]
+#[deriving(RustcDecodable, Show, Clone)]
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
@@ -616,14 +618,14 @@ struct TomlTarget {
     harness: Option<bool>,
 }
 
-#[deriving(Decodable, Clone)]
+#[deriving(RustcDecodable, Clone)]
 enum PathValue {
     String(String),
     Path(Path),
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
 }
@@ -673,6 +675,7 @@ fn normalize(libs: &[TomlLibTarget],
     log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}, benches={}",
          libs, bins, examples, tests, benches);
 
+    #[deriving(Copy)]
     enum TestDep { Needed, NotNeeded }
 
     fn merge(profile: Profile, toml: &Option<TomlProfile>) -> Profile {

@@ -1,10 +1,9 @@
-use std::collections::hash_map::{HashMap, Values, MutEntries};
+use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
-use std::iter;
 use std::mem;
 use std::sync::Arc;
-use serialize::{Decodable, Decoder, Encodable, Encoder};
+use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
 
@@ -43,14 +42,21 @@ pub trait Source: Registry {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
-#[deriving(Encodable, Decodable, Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
     /// Kind::Git(<git reference>) represents a git repository
-    Git(String),
+    Git(GitReference),
     /// represents a local path
     Path,
     /// represents the central registry
     Registry,
+}
+
+#[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum GitReference {
+    Tag(String),
+    Branch(String),
+    Rev(String),
 }
 
 type Error = Box<CargoError + Send>;
@@ -98,16 +104,22 @@ impl SourceId {
         match kind {
             "git" => {
                 let mut url = url.to_url().unwrap();
-                let mut reference = "master".to_string();
+                let mut reference = GitReference::Branch("master".to_string());
                 let pairs = url.query_pairs().unwrap_or(Vec::new());
                 for &(ref k, ref v) in pairs.iter() {
-                    if k.as_slice() == "ref" {
-                        reference = v.clone();
+                    match k.as_slice() {
+                        // map older 'ref' to branch
+                        "branch" |
+                        "ref" => reference = GitReference::Branch(v.clone()),
+
+                        "rev" => reference = GitReference::Rev(v.clone()),
+                        "tag" => reference = GitReference::Tag(v.clone()),
+                        _ => {}
                     }
                 }
                 url.query = None;
                 let precise = mem::replace(&mut url.fragment, None);
-                SourceId::for_git(&url, reference.as_slice())
+                SourceId::for_git(&url, reference)
                          .with_precise(precise)
             },
             "registry" => {
@@ -129,11 +141,7 @@ impl SourceId {
             SourceIdInner {
                 kind: Kind::Git(ref reference), ref url, ref precise, ..
             } => {
-                let ref_str = if reference.as_slice() != "master" {
-                    format!("?ref={}", reference)
-                } else {
-                    "".to_string()
-                };
+                let ref_str = url_ref(reference);
 
                 let precise_str = if precise.is_some() {
                     format!("#{}", precise.as_ref().unwrap())
@@ -155,8 +163,8 @@ impl SourceId {
         Ok(SourceId::new(Kind::Path, url))
     }
 
-    pub fn for_git(url: &Url, reference: &str) -> SourceId {
-        SourceId::new(Kind::Git(reference.to_string()), url.clone())
+    pub fn for_git(url: &Url, reference: GitReference) -> SourceId {
+        SourceId::new(Kind::Git(reference), url.clone())
     }
 
     pub fn for_registry(url: &Url) -> SourceId {
@@ -204,9 +212,9 @@ impl SourceId {
         self.inner.precise.as_ref().map(|s| s.as_slice())
     }
 
-    pub fn git_reference(&self) -> Option<&str> {
+    pub fn git_reference(&self) -> Option<&GitReference> {
         match self.inner.kind {
-            Kind::Git(ref s) => Some(s.as_slice()),
+            Kind::Git(ref s) => Some(s),
             _ => None,
         }
     }
@@ -270,10 +278,7 @@ impl Show for SourceId {
             SourceIdInner { kind: Kind::Path, ref url, .. } => url.fmt(f),
             SourceIdInner { kind: Kind::Git(ref reference), ref url,
                             ref precise, .. } => {
-                try!(write!(f, "{}", url));
-                if reference.as_slice() != "master" {
-                    try!(write!(f, "?ref={}", reference));
-                }
+                try!(write!(f, "{}{}", url, url_ref(reference)));
 
                 match *precise {
                     Some(ref s) => {
@@ -320,15 +325,38 @@ impl<S: hash::Writer> hash::Hash<S> for SourceId {
     }
 }
 
+fn url_ref(r: &GitReference) -> String {
+    match r.to_ref_string() {
+        None => "".to_string(),
+        Some(s) => format!("?{}", s),
+    }
+}
+
+impl GitReference {
+    pub fn to_ref_string(&self) -> Option<String> {
+        match *self {
+            GitReference::Branch(ref s) => {
+                if s.as_slice() == "master" {
+                    None
+                } else {
+                    Some(format!("branch={}", s))
+                }
+            }
+            GitReference::Tag(ref s) => Some(format!("tag={}", s)),
+            GitReference::Rev(ref s) => Some(format!("rev={}", s)),
+        }
+    }
+}
+
 pub struct SourceMap<'src> {
     map: HashMap<SourceId, Box<Source+'src>>
 }
 
 pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
-pub type SourcesMut<'a, 'src> = iter::Map<'static, (&'a SourceId,
-                                                  &'a mut Box<Source+'src>),
-                                    &'a mut (Source+'src),
-                                    MutEntries<'a, SourceId, Box<Source+'src>>>;
+
+pub struct SourcesMut<'a, 'src: 'a> {
+    inner: IterMut<'a, SourceId, Box<Source + 'src>>,
+}
 
 impl<'src> SourceMap<'src> {
     pub fn new() -> SourceMap<'src> {
@@ -374,7 +402,15 @@ impl<'src> SourceMap<'src> {
     }
 
     pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
-        self.map.iter_mut().map(|(_, v)| &mut **v)
+        SourcesMut { inner: self.map.iter_mut() }
+    }
+}
+
+impl<'a, 'src> Iterator<(&'a SourceId, &'a mut (Source + 'src))>
+    for SourcesMut<'a, 'src>
+{
+    fn next(&mut self) -> Option<(&'a SourceId, &'a mut (Source + 'src))> {
+        self.inner.next().map(|(a, b)| (a, &mut **b))
     }
 }
 
@@ -439,20 +475,22 @@ impl<'src> Source for SourceSet<'src> {
 
 #[cfg(test)]
 mod tests {
-    use super::{SourceId, Kind};
+    use super::{SourceId, Kind, GitReference};
     use util::ToUrl;
 
     #[test]
     fn github_sources_equal() {
         let loc = "https://github.com/foo/bar".to_url().unwrap();
-        let s1 = SourceId::new(Kind::Git("master".to_string()), loc);
+        let master = Kind::Git(GitReference::Branch("master".to_string()));
+        let s1 = SourceId::new(master.clone(), loc);
 
         let loc = "git://github.com/foo/bar".to_url().unwrap();
-        let s2 = SourceId::new(Kind::Git("master".to_string()), loc.clone());
+        let s2 = SourceId::new(master, loc.clone());
 
         assert_eq!(s1, s2);
 
-        let s3 = SourceId::new(Kind::Git("foo".to_string()), loc);
+        let foo = Kind::Git(GitReference::Branch("foo".to_string()));
+        let s3 = SourceId::new(foo, loc);
         assert!(s1 != s3);
     }
 }

@@ -1,8 +1,8 @@
 use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError, human, Require};
+use cargo::util::{CliResult, CliError, human, ChainError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct LocateProjectFlags {
     flag_manifest_path: Option<String>,
 }
@@ -16,7 +16,7 @@ Options:
     -h, --help              Print this message
 ";
 
-#[deriving(Encodable)]
+#[deriving(RustcEncodable)]
 struct ProjectLocation {
     root: String
 }
@@ -26,8 +26,9 @@ pub fn execute(flags: LocateProjectFlags,
     let root = try!(find_root_manifest_for_cwd(flags.flag_manifest_path));
 
     let string = try!(root.as_str()
-                      .require(|| human("Your project path contains characters \
-                                         not representable in Unicode"))
+                      .chain_error(|| human("Your project path contains \
+                                             characters not representable in \
+                                             Unicode"))
                       .map_err(|e| CliError::from_boxed(e, 1)));
 
     Ok(Some(ProjectLocation { root: string.to_string() }))

@@ -1,4 +1,4 @@
-use std::collections::hash_map::{Occupied, Vacant};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
 use std::io::{mod, fs, File, BufferedReader};
@@ -6,7 +6,7 @@ use std::io::fs::PathExtensions;
 
 use core::{Package, Target};
 use util;
-use util::{CargoResult, Fresh, Dirty, Freshness, internal, Require, profile};
+use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
 
 use super::Kind;
 use super::job::Work;
@@ -63,8 +63,8 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     // First bit of the freshness calculation, whether the dep-info file
     // indicates that the target is fresh.
     let dep_info = dep_info_loc(cx, pkg, target, kind);
-    let are_files_fresh = use_pkg ||
-                          try!(calculate_target_fresh(pkg, &dep_info));
+    let mut are_files_fresh = use_pkg ||
+                              try!(calculate_target_fresh(pkg, &dep_info));
 
     // Second bit of the freshness calculation, whether rustc itself, the
     // target are fresh, and the enabled set of features are all fresh.
@@ -87,9 +87,12 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
             cx.layout(pkg, kind).proxy().whitelist(&dst);
+            if are_files_fresh && !dst.exists() {
+                are_files_fresh = false;
+            }
 
             if target.get_profile().is_test() {
-                cx.compilation.tests.push((target.get_name().into_string(), dst));
+                cx.compilation.tests.push((target.get_name().to_string(), dst));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
@@ -131,7 +134,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
     let kind = Kind::Target;
 
     if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
-        return Ok((Fresh, proc(_) Ok(()), proc(_) Ok(())))
+        return Ok((Fresh, Work::noop(), Work::noop()));
     }
     let new = dir(cx, pkg, kind);
     let loc = new.join("build");
@@ -161,18 +164,18 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
     let new1 = dir(cx, pkg, kind);
     let new2 = new1.clone();
 
-    let work1 = proc(_) {
+    let work1 = Work::new(move |_| {
         if !new1.exists() {
             try!(fs::mkdir(&new1, io::USER_DIR));
         }
         Ok(())
-    };
-    let work2 = proc(_) {
+    });
+    let work2 = Work::new(move |_| {
         if !new2.exists() {
             try!(fs::mkdir(&new2, io::USER_DIR));
         }
         Ok(())
-    };
+    });
 
     (work1, work2)
 }
@@ -180,13 +183,13 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
 fn prepare(is_fresh: bool, loc: Path, fingerprint: String) -> Preparation {
-    let write_fingerprint = proc(desc_tx) {
+    let write_fingerprint = Work::new(move |desc_tx| {
         drop(desc_tx);
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
         Ok(())
-    };
+    });
 
-    (if is_fresh {Fresh} else {Dirty}, write_fingerprint, proc(_) Ok(()))
+    (if is_fresh {Fresh} else {Dirty}, write_fingerprint, Work::noop())
 }
 
 /// Return the (old, new) location for fingerprints for a package
@@ -230,7 +233,7 @@ fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
     };
     let line = line.as_slice();
     let mtime = try!(fs::stat(dep_info)).modified;
-    let pos = try!(line.find_str(": ").require(|| {
+    let pos = try!(line.find_str(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
     }));

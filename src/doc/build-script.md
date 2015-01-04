@@ -27,7 +27,7 @@ Some example use cases of the build command are:
 * Building a bundled C library.
 * Finding a C library on the host system.
 * Generating a Rust module from a specification.
-* Performing any platform-specific configuration neeeded for the crate.
+* Performing any platform-specific configuration needed for the crate.
 
 Each of these use cases will be detailed in full below to give examples of how
 the build command works.
@@ -203,7 +203,7 @@ authors = ["you@example.com"]
 build = "build.rs"
 ```
 
-Here we can se we've got a build script specified which we'll use to generate
+Here we can see we've got a build script specified which we'll use to generate
 some code. Let's see what's inside the build script:
 
 ```rust,no_run
@@ -225,10 +225,10 @@ fn main() {
 
 There's a couple of points of note here:
 
-* The script uses the `OUT_DIR` environment variable to discover where the ouput
-  files should be located. It can use the process's current working directory to
-  find where the input files should be located, but in this case we don't have
-  any input files.
+* The script uses the `OUT_DIR` environment variable to discover where the
+  output files should be located. It can use the process's current working
+  directory to find where the input files should be located, but in this case we
+  don't have any input files.
 * This script is relatively simple as it just writes out a small generated file.
   One could imagine that other more fanciful operations could take place such as
   generating a Rust module from a C header file or another language definition,

@@ -4,8 +4,9 @@
 //! This structure is used to store the dependency graph and dynamically update
 //! it to figure out when a dependency should be built.
 
-use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::{Occupied, Vacant};
+use std::collections::hash_set::HashSet;
+use std::collections::hash_map::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::Hash;
 
 pub use self::Freshness::{Fresh, Dirty};
@@ -39,7 +40,7 @@ pub struct DependencyQueue<K, V> {
 ///
 /// A fresh package does not necessarily need to be rebuilt (unless a dependency
 /// was also rebuilt), and a dirty package must always be rebuilt.
-#[deriving(PartialEq, Eq, Show)]
+#[deriving(PartialEq, Eq, Show, Copy)]
 pub enum Freshness {
     Fresh,
     Dirty,
@@ -127,7 +128,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
             if fresh == Dirty {
                 self.dirty.insert(dep.clone());
             }
-            assert!(self.dep_map[*dep].mut0().remove(key));
+            assert!(self.dep_map[*dep].0.remove(key));
         }
     }
 }

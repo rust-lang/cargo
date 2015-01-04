@@ -165,8 +165,8 @@ use std::collections::HashMap;
 use curl::http;
 use git2;
 use flate2::reader::GzDecoder;
-use serialize::json;
-use serialize::hex::ToHex;
+use rustc_serialize::json;
+use rustc_serialize::hex::ToHex;
 use tar::Archive;
 use url::Url;
 
@@ -174,7 +174,7 @@ use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::{Dependency, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
-use util::{hex, Require, Sha256};
+use util::{hex, Sha256};
 use ops;
 
 static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
@@ -192,7 +192,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     updated: bool,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 pub struct RegistryConfig {
     /// Download endpoint for all crates. This will be appended with
     /// `/<crate>/<version>/download` and then will be hit with an HTTP GET
@@ -204,7 +204,7 @@ pub struct RegistryConfig {
     pub api: String,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct RegistryPackage {
     name: String,
     vers: String,
@@ -214,7 +214,7 @@ struct RegistryPackage {
     yanked: Option<bool>,
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct RegistryDependency {
     name: String,
     req: String,
@@ -320,7 +320,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         // Verify what we just downloaded
         let expected = self.hashes.get(&(pkg.get_name().to_string(),
                                          pkg.get_version().to_string()));
-        let expected = try!(expected.require(|| {
+        let expected = try!(expected.chain_error(|| {
             internal(format!("no hash listed for {}", pkg))
         }));
         let actual = {
@@ -464,9 +464,13 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.get_source_id().get_precise().is_some() &&
-           try!(self.summaries(dep.get_name())).len() == 0 {
-            try!(self.do_update());
+        if dep.get_source_id().get_precise().is_some() {
+            let mut summaries = try!(self.summaries(dep.get_name())).iter().map(|s| {
+                s.0.clone()
+            }).collect::<Vec<_>>();
+            if try!(summaries.query(dep)).len() == 0 {
+                try!(self.do_update());
+            }
         }
 
         let summaries = try!(self.summaries(dep.get_name()));

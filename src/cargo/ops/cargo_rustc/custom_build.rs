@@ -6,8 +6,8 @@ use std::str;
 use std::sync::Mutex;
 
 use core::{Package, Target, PackageId, PackageSet};
-use util::{CargoResult, CargoError, human};
-use util::{internal, ChainError, Require};
+use util::{CargoResult, human, Human};
+use util::{internal, ChainError};
 
 use super::job::Work;
 use super::{fingerprint, process, Kind, Context, Platform};
@@ -39,7 +39,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target, };
     let (script_output, build_output) = {
         (cx.layout(pkg, Kind::Host).build(pkg),
-         cx.layout(pkg, Kind::Target).build_out(pkg))
+         cx.layout(pkg, kind).build_out(pkg))
     };
 
     // Building the command to execute
@@ -106,7 +106,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     //
     // Note that this has to do some extra work just before running the command
     // to determine extra environment variables and such.
-    let work = proc(desc_tx: Sender<String>) {
+    let work = move |: desc_tx: Sender<String>| -> CargoResult<()> {
         // Make sure that OUT_DIR exists.
         //
         // If we have an old build directory, then just move it into place,
@@ -122,7 +122,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // along to this custom build command.
         let mut p = p;
         {
-            let build_state = build_state.outputs.lock();
+            let build_state = build_state.outputs.lock().unwrap();
             for &(ref name, ref id) in lib_deps.iter() {
                 let data = &build_state[(id.clone(), kind)].metadata;
                 for &(ref key, ref value) in data.iter() {
@@ -137,9 +137,9 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // And now finally, run the build command itself!
         desc_tx.send_opt(p.to_string()).ok();
         let output = try!(p.exec_with_output().map_err(|mut e| {
-            e.msg = format!("Failed to run custom build command for `{}`\n{}",
-                            pkg_name, e.msg);
-            e.concrete().mark_human()
+            e.desc = format!("failed to run custom build command for `{}`\n{}",
+                             pkg_name, e.desc);
+            Human(e)
         }));
 
         // After the build command has finished running, we need to be sure to
@@ -149,7 +149,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(output.output.as_slice()).require(|| {
+        let output = try!(str::from_utf8(output.output.as_slice()).chain_error(|| {
             human("build script output was not valid utf-8")
         }));
         let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
@@ -175,8 +175,11 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // Also note that a fresh build command needs to
     let (freshness, dirty, fresh) =
             try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
-    let dirty = proc(tx: Sender<String>) { try!(work(tx.clone())); dirty(tx) };
-    let fresh = proc(tx) {
+    let dirty = Work::new(move |tx: Sender<String>| {
+        try!(work(tx.clone()));
+        dirty.call(tx)
+    });
+    let fresh = Work::new(move |tx| {
         let (id, pkg_name, build_state, build_output) = all;
         let new_loc = build_output.dir_path().join("output");
         let mut f = try!(File::open(&new_loc).map_err(|e| {
@@ -187,8 +190,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                                              pkg_name.as_slice()));
         build_state.insert(id, req, output);
 
-        fresh(tx)
-    };
+        fresh.call(tx)
+    });
 
     Ok((dirty, fresh, freshness))
 }
@@ -223,7 +226,7 @@ impl BuildState {
 
     fn insert(&self, id: PackageId, req: Platform,
               output: BuildOutput) {
-        let mut outputs = self.outputs.lock();
+        let mut outputs = self.outputs.lock().unwrap();
         match req {
             Platform::Target => { outputs.insert((id, Kind::Target), output); }
             Platform::Plugin => { outputs.insert((id, Kind::Host), output); }
@@ -248,7 +251,7 @@ impl BuildOutput {
         let whence = format!("build script of `{}`", pkg_name);
 
         for line in input.lines() {
-            let mut iter = line.splitn(1, |c: char| c == ':');
+            let mut iter = line.splitn(1, |&: c: char| c == ':');
             if iter.next() != Some("cargo") {
                 // skip this line since it doesn't start with "cargo:"
                 continue;
@@ -259,7 +262,7 @@ impl BuildOutput {
             };
 
             // getting the `key=value` part of the line
-            let mut iter = data.splitn(1, |c: char| c == '=');
+            let mut iter = data.splitn(1, |&: c: char| c == '=');
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {
