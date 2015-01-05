@@ -1,5 +1,5 @@
 use std::io::IoResult;
-use std::io::fs::{mod, PathExtensions};
+use std::io::fs::{self, PathExtensions};
 use std::sync::atomic;
 use std::{io, os};
 

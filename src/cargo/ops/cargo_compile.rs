@@ -29,7 +29,7 @@ use std::default::Default;
 use core::registry::PackageRegistry;
 use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver::Method;
-use ops::{mod, BuildOutput};
+use ops::{self, BuildOutput};
 use sources::{PathSource};
 use util::config::{Config, ConfigValue};
 use util::{CargoResult, config, internal, human, ChainError, profile};

@@ -1,4 +1,4 @@
-use std::io::{mod, fs, File};
+use std::io::{self, fs, File};
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir};

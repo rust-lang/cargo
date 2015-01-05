@@ -1,11 +1,11 @@
 use std::fmt;
 use semver::Version;
-use url::{mod, Url, UrlParser};
+use url::{self, Url, UrlParser};
 
 use core::PackageId;
 use util::{CargoResult, ToUrl, human, ToSemver, ChainError};
 
-#[deriving(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PackageIdSpec {
     name: String,
     version: Option<Version>,

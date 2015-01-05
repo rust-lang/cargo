@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use std::error::{Error, FromError};
 use std::hash::Hash;
 use std::sync::Arc;
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 use std::hash;
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
@@ -13,12 +13,12 @@ use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct PackageId {
     inner: Arc<PackageIdInner>,
 }
 
-#[deriving(PartialEq, PartialOrd, Eq, Ord)]
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
 struct PackageIdInner {
     name: String,
     version: semver::Version,
@@ -81,7 +81,7 @@ impl Ord for PackageId {
     }
 }
 
-#[deriving(Clone, Show, PartialEq)]
+#[derive(Clone, Show, PartialEq)]
 pub enum PackageIdError {
     InvalidVersion(String),
     InvalidNamespace(String)
@@ -109,7 +109,7 @@ impl FromError<PackageIdError> for Box<CargoError> {
     fn from_error(t: PackageIdError) -> Box<CargoError> { box t }
 }
 
-#[deriving(PartialEq, Hash, Clone, RustcEncodable)]
+#[derive(PartialEq, Hash, Clone, RustcEncodable)]
 pub struct Metadata {
     pub metadata: String,
     pub extra_filename: String

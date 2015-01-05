@@ -15,7 +15,7 @@ use super::{fingerprint, process, Kind, Context, Platform};
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
     pub library_paths: Vec<Path>,

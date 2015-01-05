@@ -1,4 +1,4 @@
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 use std::hash;
 use std::slice;
 use semver::Version;
@@ -20,7 +20,7 @@ use core::source::{SourceId, Source};
 ///
 /// A package is a `Cargo.toml` file, plus all the files that are part of it.
 // TODO: Is manifest_path a relic?
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
@@ -30,7 +30,7 @@ pub struct Package {
     source_id: SourceId,
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 struct SerializedPackage {
     name: String,
     version: String,
@@ -137,7 +137,7 @@ impl hash::Hash for Package {
     }
 }
 
-#[deriving(PartialEq,Clone,Show)]
+#[derive(PartialEq,Clone,Show)]
 pub struct PackageSet {
     packages: Vec<Package>,
 }

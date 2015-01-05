@@ -158,7 +158,7 @@
 //!         ...
 //! ```
 
-use std::io::{mod, fs, File};
+use std::io::{self, fs, File};
 use std::io::fs::PathExtensions;
 use std::collections::HashMap;
 
@@ -192,7 +192,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     updated: bool,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub struct RegistryConfig {
     /// Download endpoint for all crates. This will be appended with
     /// `/<crate>/<version>/download` and then will be hit with an HTTP GET
@@ -204,7 +204,7 @@ pub struct RegistryConfig {
     pub api: String,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct RegistryPackage {
     name: String,
     vers: String,
@@ -214,7 +214,7 @@ struct RegistryPackage {
     yanked: Option<bool>,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct RegistryDependency {
     name: String,
     req: String,

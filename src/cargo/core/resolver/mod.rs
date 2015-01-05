@@ -22,7 +22,7 @@ mod encode;
 ///
 /// Each instance of `Resolve` also understands the full set of features used
 /// for each package as well as what the root package is.
-#[deriving(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
@@ -30,7 +30,7 @@ pub struct Resolve {
     metadata: Option<Metadata>,
 }
 
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Method<'a> {
     Everything,
     Required(/* dev_deps = */ bool,
@@ -122,7 +122,7 @@ impl fmt::Show for Resolve {
     }
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct Context {
     activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
     resolve: Resolve,

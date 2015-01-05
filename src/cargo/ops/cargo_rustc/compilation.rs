@@ -4,7 +4,7 @@ use std::dynamic_lib::DynamicLibrary;
 use semver::Version;
 
 use core::{PackageId, Package};
-use util::{mod, CargoResult};
+use util::{self, CargoResult};
 
 /// A structure returning the result of a compilation.
 pub struct Compilation {
