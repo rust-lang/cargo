@@ -1357,7 +1357,7 @@ Caused by:
 "));
 });
 
-#[cfg(target_os = "linux")]
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_os = "linux"))]
 test!(cargo_platform_specific_dependency {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1398,7 +1398,7 @@ test!(cargo_platform_specific_dependency {
       execs().with_stdout("test passed\n"));
 });
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), target_os = "linux")))]
 test!(cargo_platform_specific_dependency {
     let p = project("foo")
         .file("Cargo.toml", r#"
