@@ -3,6 +3,8 @@
 
 #![feature(macro_rules, phase, default_type_params, unboxed_closures)]
 #![feature(slicing_syntax)]
+#![feature(associated_types)]
+#![feature(old_orphan_check)]
 #![deny(unused)]
 #![cfg_attr(test, deny(warnings))]
 
@@ -28,6 +30,7 @@ extern crate registry;
 
 use std::os;
 use std::error::Error;
+use std::fmt;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{mod, stdout, stderr};
 use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
@@ -64,34 +67,31 @@ pub mod util;
 pub trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
 impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
 
-pub fn execute_main<'a,
-                    T: Decodable<docopt::Decoder, docopt::Error>,
+pub fn execute_main<T: Decodable<docopt::Decoder, docopt::Error>,
                     U: RepresentsJSON,
-                    V: Encodable<json::Encoder<'a>, io::IoError>>(
+                    V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
                         exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
                         options_first: bool,
                         usage: &str) {
     process::<V>(|rest, shell| call_main(exec, shell, usage, rest, options_first));
 }
 
-pub fn call_main<'a,
-        T: Decodable<docopt::Decoder, docopt::Error>,
-        U: RepresentsJSON,
-        V: Encodable<json::Encoder<'a>, io::IoError>>(
-            exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
-            shell: &mut MultiShell,
-            usage: &str,
-            args: &[String],
-            options_first: bool) -> CliResult<Option<V>> {
+pub fn call_main<T: Decodable<docopt::Decoder, docopt::Error>,
+                 U: RepresentsJSON,
+                 V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
+                    exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
+                    shell: &mut MultiShell,
+                    usage: &str,
+                    args: &[String],
+                    options_first: bool) -> CliResult<Option<V>> {
     let flags = try!(flags_from_args::<T>(usage, args, options_first));
     let json = try!(json_from_stdin::<U>());
 
     exec(flags, json, shell)
 }
 
-pub fn execute_main_without_stdin<'a,
-                                  T: Decodable<docopt::Decoder, docopt::Error>,
-                                  V: Encodable<json::Encoder<'a>, io::IoError>>(
+pub fn execute_main_without_stdin<T: Decodable<docopt::Decoder, docopt::Error>,
+                                  V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
                                       exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
                                       options_first: bool,
                                       usage: &str) {
@@ -99,9 +99,9 @@ pub fn execute_main_without_stdin<'a,
                                                        options_first));
 }
 
-pub fn execute_main_with_args_and_without_stdin<'a,
+pub fn execute_main_with_args_and_without_stdin<
                                   T: Decodable<docopt::Decoder, docopt::Error>,
-                                  V: Encodable<json::Encoder<'a>, io::IoError>>(
+                                  V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
                                       exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
                                       options_first: bool,
                                       usage: &str,
@@ -113,9 +113,8 @@ pub fn execute_main_with_args_and_without_stdin<'a,
         &mut shell)
 }
 
-pub fn call_main_without_stdin<'a,
-                               T: Decodable<docopt::Decoder, docopt::Error>,
-                               V: Encodable<json::Encoder<'a>, io::IoError>>(
+pub fn call_main_without_stdin<T: Decodable<docopt::Decoder, docopt::Error>,
+                               V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
             exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
             shell: &mut MultiShell,
             usage: &str,
@@ -125,14 +124,13 @@ pub fn call_main_without_stdin<'a,
     exec(flags, shell)
 }
 
-fn process<'a, V: Encodable<json::Encoder<'a>, io::IoError>>(
+fn process<V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
                callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>) {
     let mut shell = shell(true);
     process_executed(callback(os::args().as_slice(), &mut shell), &mut shell)
 }
 
-pub fn process_executed<'a,
-                        T: Encodable<json::Encoder<'a>, io::IoError>>(
+pub fn process_executed<T: for<'a> Encodable<json::Encoder<'a>, fmt::Error>>(
                             result: CliResult<Option<T>>,
                             shell: &mut MultiShell) {
     match result {
@@ -280,7 +278,7 @@ fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
         CliError::new("Standard in did not exist or was not UTF-8", 1)
     }));
 
-    let json = try!(json::from_str(input.as_slice()).map_err(|_| {
+    let json = try!(json::Json::from_str(input.as_slice()).map_err(|_| {
         CliError::new("Could not parse standard in as JSON", 1)
     }));
     let mut decoder = json::Decoder::new(json);

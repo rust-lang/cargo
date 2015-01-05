@@ -1,4 +1,5 @@
 use semver;
+use std::cmp::Ordering;
 use std::error::{Error, FromError};
 use std::hash::Hash;
 use std::sync::Arc;
