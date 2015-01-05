@@ -40,7 +40,7 @@ pub struct DependencyQueue<K, V> {
 ///
 /// A fresh package does not necessarily need to be rebuilt (unless a dependency
 /// was also rebuilt), and a dirty package must always be rebuilt.
-#[deriving(PartialEq, Eq, Show, Copy)]
+#[derive(PartialEq, Eq, Show, Copy)]
 pub enum Freshness {
     Fresh,
     Dirty,

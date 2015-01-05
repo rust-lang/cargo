@@ -1,10 +1,12 @@
 use std::collections::{HashSet, HashMap};
+use std::c_str::ToCStr;
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
+use std::sync::mpsc::Sender;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{mod, CargoResult, ProcessBuilder, human, caused_human};
+use util::{self, CargoResult, ProcessBuilder, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
 
 use self::job::{Job, Work};
@@ -25,16 +27,16 @@ mod job_queue;
 mod layout;
 mod links;
 
-#[deriving(PartialEq, Eq, Hash, Show, Copy)]
+#[derive(PartialEq, Eq, Hash, Show, Copy)]
 pub enum Kind { Host, Target }
 
-#[deriving(Default, Clone)]
+#[derive(Default, Clone)]
 pub struct BuildConfig {
     pub host: TargetConfig,
     pub target: TargetConfig,
 }
 
-#[deriving(Clone, Default)]
+#[derive(Clone, Default)]
 pub struct TargetConfig {
     pub ar: Option<String>,
     pub linker: Option<String>,
@@ -326,7 +328,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         };
         let dirty = Work::new(move |desc_tx: Sender<String>| {
             if desc.len() > 0 {
-                desc_tx.send_opt(desc).ok();
+                desc_tx.send(desc).ok();
             }
             for cmd in build_cmds.into_iter() {
                 try!(cmd.call(desc_tx.clone()))
@@ -401,7 +403,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     let pkg = pkg.to_string();
 
     Ok(Work::new(move |desc_tx: Sender<String>| {
-        desc_tx.send_opt(p.to_string()).ok();
+        desc_tx.send(p.to_string()).ok();
         if first && !output.exists() {
             try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
                 internal("failed to create output directory for build command")
@@ -504,7 +506,7 @@ fn rustc(package: &Package, target: &Target,
                 }
             }
 
-            desc_tx.send_opt(rustc.to_string()).ok();
+            desc_tx.send(rustc.to_string()).ok();
             try!(rustc.exec().chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));

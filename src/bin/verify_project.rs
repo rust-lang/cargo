@@ -9,7 +9,7 @@ use cargo::util::CliResult;
 
 pub type Error = HashMap<String, String>;
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct Flags {
     flag_manifest_path: String,
     flag_verbose: bool,

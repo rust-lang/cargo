@@ -1,4 +1,4 @@
-#![feature(phase, macro_rules)]
+#![feature(phase, macro_rules, old_orphan_check)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 #[phase(plugin, link)] extern crate log;
@@ -7,14 +7,14 @@ extern crate "rustc-serialize" as rustc_serialize;
 use std::collections::BTreeSet;
 use std::os;
 use std::io;
-use std::io::fs::{mod, PathExtensions};
+use std::io::fs::{self, PathExtensions};
 use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
 use cargo::util::{CliError, CliResult, lev_distance};
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct Flags {
     flag_list: bool,
     flag_verbose: bool,

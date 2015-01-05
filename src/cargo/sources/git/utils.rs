@@ -1,4 +1,4 @@
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use rustc_serialize::{Encodable, Encoder};
@@ -8,7 +8,7 @@ use git2;
 use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal};
 
-#[deriving(PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 #[allow(missing_copy_implementations)]
 pub struct GitRevision(git2::Oid);
 
@@ -20,12 +20,12 @@ impl Show for GitRevision {
 
 /// GitRemote represents a remote repository. It gets cloned into a local
 /// GitDatabase.
-#[deriving(PartialEq,Clone,Show)]
+#[derive(PartialEq,Clone,Show)]
 pub struct GitRemote {
     url: Url,
 }
 
-#[deriving(PartialEq,Clone,RustcEncodable)]
+#[derive(PartialEq,Clone,RustcEncodable)]
 struct EncodableGitRemote {
     url: String,
 }
@@ -46,7 +46,7 @@ pub struct GitDatabase {
     repo: git2::Repository,
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 pub struct EncodableGitDatabase {
     remote: GitRemote,
     path: String,
@@ -71,7 +71,7 @@ pub struct GitCheckout<'a> {
     repo: git2::Repository,
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 pub struct EncodableGitCheckout {
     database: EncodableGitDatabase,
     location: String,

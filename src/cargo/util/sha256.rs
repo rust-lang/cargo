@@ -48,9 +48,9 @@ mod imp {
             }
         }
 
-        pub fn finish(&mut self) -> [u8, ..32] {
+        pub fn finish(&mut self) -> [u8; 32] {
             unsafe {
-                let mut ret = [0u8, ..32];
+                let mut ret = [0u8; 32];
                 let mut out = 0;
                 let n = EVP_DigestFinal_ex(self.ctx, ret.as_mut_ptr(), &mut out);
                 assert_eq!(n, 1);
@@ -141,8 +141,8 @@ mod imp {
             })
         }
 
-        pub fn finish(&mut self) -> [u8, ..32] {
-            let mut ret = [0u8, ..32];
+        pub fn finish(&mut self) -> [u8; 32] {
+            let mut ret = [0u8; 32];
             let mut len = ret.len() as libc::DWORD;
             call!(unsafe {
                 CryptGetHashParam(self.hcrypthash, HP_HASHVAL, ret.as_mut_ptr(),

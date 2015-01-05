@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError, config};
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct ConfigListFlags {
     flag_human: bool,
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 struct ConfigOut {
     values: HashMap<String, config::ConfigValue>
 }

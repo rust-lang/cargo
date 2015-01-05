@@ -1,12 +1,12 @@
 use std::io::IoResult;
-use std::io::fs::{mod, PathExtensions};
+use std::io::fs::{self, PathExtensions};
 use std::sync::atomic;
 use std::{io, os};
 
 use cargo::util::realpath;
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
-static NEXT_ID: atomic::AtomicUint = atomic::INIT_ATOMIC_UINT;
+static NEXT_ID: atomic::AtomicUint = atomic::ATOMIC_UINT_INIT;
 thread_local!(static TASK_ID: uint = NEXT_ID.fetch_add(1, atomic::SeqCst));
 
 pub fn root() -> Path {

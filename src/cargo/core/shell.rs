@@ -6,7 +6,7 @@ use std::fmt::Show;
 
 use self::AdequateTerminal::{NoColor, Colored};
 
-#[deriving(Copy)]
+#[derive(Copy)]
 pub struct ShellConfig {
     pub color: bool,
     pub verbose: bool,

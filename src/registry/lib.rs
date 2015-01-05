@@ -1,8 +1,10 @@
+#![feature(old_orphan_check)]
+
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;
 
 use std::fmt;
-use std::io::{mod, fs, MemReader, MemWriter, File};
+use std::io::{self, fs, MemReader, MemWriter, File};
 use std::collections::HashMap;
 use std::io::util::ChainedReader;
 use std::result;
@@ -21,7 +23,7 @@ pub struct Registry {
 
 pub type Result<T> = result::Result<T, Error>;
 
-#[deriving(PartialEq, Copy)]
+#[derive(PartialEq, Copy)]
 pub enum Auth {
     Authorized,
     Unauthorized
@@ -37,14 +39,14 @@ pub enum Error {
     Io(io::IoError),
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub struct Crate {
     pub name: String,
     pub description: Option<String>,
     pub max_version: String
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 pub struct NewCrate {
     pub name: String,
     pub vers: String,
@@ -61,7 +63,7 @@ pub struct NewCrate {
     pub repository: Option<String>,
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 pub struct NewCrateDependency {
     pub optional: bool,
     pub default_features: bool,
@@ -72,7 +74,7 @@ pub struct NewCrateDependency {
     pub kind: String,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub struct User {
     pub id: uint,
     pub login: String,
@@ -81,12 +83,12 @@ pub struct User {
     pub name: Option<String>,
 }
 
-#[deriving(RustcDecodable)] struct R { ok: bool }
-#[deriving(RustcDecodable)] struct ApiErrorList { errors: Vec<ApiError> }
-#[deriving(RustcDecodable)] struct ApiError { detail: String }
-#[deriving(RustcEncodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
-#[deriving(RustcDecodable)] struct Users { users: Vec<User> }
-#[deriving(RustcDecodable)] struct Crates { crates: Vec<Crate> }
+#[derive(RustcDecodable)] struct R { ok: bool }
+#[derive(RustcDecodable)] struct ApiErrorList { errors: Vec<ApiError> }
+#[derive(RustcDecodable)] struct ApiError { detail: String }
+#[derive(RustcEncodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
+#[derive(RustcDecodable)] struct Users { users: Vec<User> }
+#[derive(RustcDecodable)] struct Crates { crates: Vec<Crate> }
 
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {

@@ -4,6 +4,7 @@ use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
+use std::sync::mpsc::Sender;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, human, Human};
@@ -14,7 +15,7 @@ use super::{fingerprint, process, Kind, Context, Platform};
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
     pub library_paths: Vec<Path>,
@@ -135,7 +136,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         }
 
         // And now finally, run the build command itself!
-        desc_tx.send_opt(p.to_string()).ok();
+        desc_tx.send(p.to_string()).ok();
         let output = try!(p.exec_with_output().map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);
