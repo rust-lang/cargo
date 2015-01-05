@@ -4,7 +4,7 @@ use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct Options {
     flag_verbose: bool,
     flag_bin: bool,

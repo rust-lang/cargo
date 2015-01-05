@@ -5,7 +5,7 @@ use std::io::fs::PathExtensions;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{mod, CargoResult, human, caused_human};
+use util::{self, CargoResult, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
 
 use self::job::{Job, Work};
@@ -28,16 +28,16 @@ mod job_queue;
 mod layout;
 mod links;
 
-#[deriving(PartialEq, Eq, Hash, Show, Copy)]
+#[derive(PartialEq, Eq, Hash, Show, Copy)]
 pub enum Kind { Host, Target }
 
-#[deriving(Default, Clone)]
+#[derive(Default, Clone)]
 pub struct BuildConfig {
     pub host: TargetConfig,
     pub target: TargetConfig,
 }
 
-#[deriving(Clone, Default)]
+#[derive(Clone, Default)]
 pub struct TargetConfig {
     pub ar: Option<String>,
     pub linker: Option<String>,

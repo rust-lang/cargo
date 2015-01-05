@@ -11,7 +11,7 @@ use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::Development;
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
-use cargo::core::resolver::{mod, Method};
+use cargo::core::resolver::{self, Method};
 
 fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
                         registry: &mut R)

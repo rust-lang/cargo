@@ -48,7 +48,7 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::io::fs::PathExtensions;
-use std::io::{mod, fs, IoResult};
+use std::io::{self, fs, IoResult};
 use std::mem;
 
 use core::Package;

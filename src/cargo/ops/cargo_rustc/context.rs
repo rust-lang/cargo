@@ -4,7 +4,7 @@ use std::str;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
-use util::{mod, CargoResult, ChainError, internal, Config, profile};
+use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
 use super::{Kind, Compilation, BuildConfig};
@@ -13,7 +13,7 @@ use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
 use super::{ProcessEngine, ExecEngine};
 
-#[deriving(Show, Copy)]
+#[derive(Show, Copy)]
 pub enum Platform {
     Target,
     Plugin,

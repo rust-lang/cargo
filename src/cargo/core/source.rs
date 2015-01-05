@@ -1,5 +1,5 @@
 use std::collections::hash_map::{HashMap, Values, IterMut};
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 use std::hash;
 use std::mem;
 use std::sync::Arc;
@@ -42,7 +42,7 @@ pub trait Source: Registry {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
-#[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
     /// Kind::Git(<git reference>) represents a git repository
     Git(GitReference),
@@ -52,7 +52,7 @@ enum Kind {
     Registry,
 }
 
-#[deriving(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum GitReference {
     Tag(String),
     Branch(String),
@@ -62,12 +62,12 @@ pub enum GitReference {
 type Error = Box<CargoError + Send>;
 
 /// Unique identifier for a source of packages.
-#[deriving(Clone, Eq)]
+#[derive(Clone, Eq)]
 pub struct SourceId {
     inner: Arc<SourceIdInner>,
 }
 
-#[deriving(Eq, Clone)]
+#[derive(Eq, Clone)]
 struct SourceIdInner {
     url: Url,
     kind: Kind,

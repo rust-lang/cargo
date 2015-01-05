@@ -8,7 +8,7 @@ use util::{CargoResult, Graph};
 
 use super::Resolve;
 
-#[deriving(RustcEncodable, RustcDecodable, Show)]
+#[derive(RustcEncodable, RustcDecodable, Show)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
     root: EncodableDependency,
@@ -76,7 +76,7 @@ impl EncodableResolve {
     }
 }
 
-#[deriving(RustcEncodable, RustcDecodable, Show, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(RustcEncodable, RustcDecodable, Show, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodableDependency {
     name: String,
     version: String,
@@ -93,7 +93,7 @@ impl EncodableDependency {
     }
 }
 
-#[deriving(Show, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Show, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodablePackageId {
     name: String,
     version: String,

@@ -29,7 +29,7 @@ extern crate registry;
 use std::os;
 use std::error::Error;
 use std::io::stdio::{stdout_raw, stderr_raw};
-use std::io::{mod, stdout, stderr};
+use std::io::{self, stdout, stderr};
 use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
 use rustc_serialize::json;
 use docopt::Docopt;
