@@ -6,7 +6,7 @@ pub use self::cargo_rustc::{Context, LayoutProxy};
 pub use self::cargo_rustc::Platform;
 pub use self::cargo_rustc::{BuildOutput, BuildConfig, TargetConfig};
 pub use self::cargo_run::run;
-pub use self::cargo_new::{new, NewOptions};
+pub use self::cargo_new::{new, NewOptions, VersionControl};
 pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_generate_lockfile::{generate_lockfile};
 pub use self::cargo_generate_lockfile::{update_lockfile};

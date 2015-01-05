@@ -1,26 +1,8 @@
 use std::os;
-use rustc_serialize::{Decodable, Decoder};
 
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
-
-#[deriving(Show, PartialEq)]
-enum VersionControl { Git, Hg, NoVcs }
-
-impl<E, D: Decoder<E>> Decodable<D, E> for VersionControl {
-    fn decode(d: &mut D) -> Result<VersionControl, E> {
-        Ok(match try!(d.read_str()).as_slice() {
-            "git" => VersionControl::Git,
-            "hg" => VersionControl::Hg,
-            "none" => VersionControl::NoVcs,
-            n => {
-                let err = format!("could not decode '{}' as version control", n);
-                return Err(d.error(err.as_slice()));
-            }
-        })
-    }
-}
 
 #[deriving(RustcDecodable)]
 struct Options {
@@ -28,7 +10,7 @@ struct Options {
     flag_bin: bool,
     flag_travis: bool,
     arg_path: String,
-    flag_vcs: Option<VersionControl>,
+    flag_vcs: Option<ops::VersionControl>,
 }
 
 pub const USAGE: &'static str = "
@@ -55,9 +37,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let Options { flag_travis, flag_bin, arg_path, flag_vcs, .. } = options;
 
     let opts = ops::NewOptions {
-        no_git: flag_vcs == Some(VersionControl::NoVcs),
-        git: flag_vcs == Some(VersionControl::Git),
-        hg: flag_vcs == Some(VersionControl::Hg),
+        version_control: flag_vcs,
         travis: flag_travis,
         path: arg_path.as_slice(),
         bin: flag_bin,

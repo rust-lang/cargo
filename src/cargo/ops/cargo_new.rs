@@ -2,24 +2,41 @@ use std::os;
 use std::io::{mod, fs, File};
 use std::io::fs::PathExtensions;
 
+use rustc_serialize::{Decodable, Decoder};
+
 use git2::Config;
 
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, config, internal};
 use core::shell::MultiShell;
 
+#[deriving(Copy, Show, PartialEq)]
+pub enum VersionControl { Git, Hg, NoVcs }
+
 pub struct NewOptions<'a> {
-    pub no_git: bool,
-    pub git: bool,
-    pub hg: bool,
+    pub version_control: Option<VersionControl>,
     pub travis: bool,
     pub bin: bool,
     pub path: &'a str,
 }
 
+impl<E, D: Decoder<E>> Decodable<D, E> for VersionControl {
+    fn decode(d: &mut D) -> Result<VersionControl, E> {
+        Ok(match try!(d.read_str()).as_slice() {
+            "git" => VersionControl::Git,
+            "hg" => VersionControl::Hg,
+            "none" => VersionControl::NoVcs,
+            n => {
+                let err = format!("could not decode '{}' as version control", n);
+                return Err(d.error(err.as_slice()));
+            }
+        })
+    }
+}
+
 struct CargoNewConfig {
     name: Option<String>,
     email: Option<String>,
-    git: Option<bool>,
+    version_control: Option<VersionControl>,
 }
 
 pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
@@ -41,28 +58,38 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
     })
 }
 
-fn existing_git_repo(path: &Path) -> bool {
-    GitRepo::discover(path).is_ok()
+fn existing_vcs_repo(path: &Path) -> bool {
+    GitRepo::discover(path).is_ok() || HgRepo::discover(path).is_ok()
 }
 
 fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config());
     let mut ignore = "/target\n".to_string();
-    let no_git = !opts.git && (opts.no_git || cfg.git == Some(false));
-    let in_existing_git_repo = existing_git_repo(&path.dir_path());
+    let in_existing_vcs_repo = existing_vcs_repo(&path.dir_path());
     if !opts.bin {
         ignore.push_str("/Cargo.lock\n");
     }
 
-    if opts.hg {
-        try!(HgRepo::init(path));
-        try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
-    } else if no_git || in_existing_git_repo {
-        try!(fs::mkdir(path, io::USER_RWX));
-    } else {
-        try!(GitRepo::init(path));
-        try!(File::create(&path.join(".gitignore")).write(ignore.as_bytes()));
-    }
+    let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
+        (None, None, false) => VersionControl::Git,
+        (None, Some(option), false) => option,
+        (Some(option), _, false) => option,
+        (_, _, true) => VersionControl::NoVcs,
+    };
+
+    match vcs {
+        VersionControl::Git => {
+            try!(GitRepo::init(path));
+            try!(File::create(&path.join(".gitignore")).write(ignore.as_bytes()));
+        },
+        VersionControl::Hg => {
+            try!(HgRepo::init(path));
+            try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
+        },
+        VersionControl::NoVcs => {
+            try!(fs::mkdir(path, io::USER_RWX));
+        },
+    };
 
     let (author_name, email) = try!(discover_author());
     // Hoo boy, sure glad we've got exhaustivenes checking behind us.
@@ -134,7 +161,7 @@ fn global_config() -> CargoResult<CargoNewConfig> {
     let mut cfg = CargoNewConfig {
         name: None,
         email: None,
-        git: None,
+        version_control: None,
     };
     let cargo_new = match user_configs.get("cargo-new") {
         None => return Ok(cfg),
@@ -158,12 +185,20 @@ fn global_config() -> CargoResult<CargoNewConfig> {
             })).0.to_string())
         }
     };
-    cfg.git = match cargo_new.get("git") {
+    cfg.version_control = match cargo_new.get("vcs") {
         None => None,
-        Some(git) => {
-            Some(try!(git.boolean().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.git`")
-            })).0)
+        Some(vcs) => {
+            let vcs_str = try!(vcs.string().chain_error(|| {
+                internal("invalid configuration for key `cargo-new.vcs`")
+            })).0;
+            let version_control = match vcs_str.as_slice() {
+                "git" => VersionControl::Git,
+                "hg"  => VersionControl::Hg,
+                "none"=> VersionControl::NoVcs,
+                _  => return Err(internal("invalid configuration for key `cargo-new.vcs`")),
+            };
+
+            Some(version_control)
         }
     };
 
