@@ -3,6 +3,7 @@
 
 #![feature(macro_rules, phase, default_type_params, unboxed_closures)]
 #![feature(slicing_syntax)]
+#![feature(associated_types)]
 #![deny(unused)]
 #![cfg_attr(test, deny(warnings))]
 

@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::c_str::ToCStr;
 use std::fmt;
 use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
+use std::sync::mpsc::Sender;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, human, Human};
@@ -138,7 +140,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         }
 
         // And now finally, run the build command itself!
-        desc_tx.send_opt(p.to_string()).ok();
+        desc_tx.send(p.to_string()).ok();
         let output = try!(exec_engine.exec_with_output(p).map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);

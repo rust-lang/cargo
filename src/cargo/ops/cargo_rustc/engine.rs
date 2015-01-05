@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::c_str::CString;
+use std::c_str::{CString, ToCStr};
 use std::io::process::ProcessOutput;
 use std::fmt::{mod, Show, Formatter};
 

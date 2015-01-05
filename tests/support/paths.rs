@@ -1,13 +1,13 @@
 use std::io::IoResult;
 use std::io::fs::{mod, PathExtensions};
-use std::sync::atomic;
+use std::sync::atomic::{mod, Ordering};
 use std::{io, os};
 
 use cargo::util::realpath;
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
-static NEXT_ID: atomic::AtomicUint = atomic::INIT_ATOMIC_UINT;
-thread_local!(static TASK_ID: uint = NEXT_ID.fetch_add(1, atomic::SeqCst));
+static NEXT_ID: atomic::AtomicUint = atomic::ATOMIC_UINT_INIT;
+thread_local!(static TASK_ID: uint = NEXT_ID.fetch_add(1, Ordering::SeqCst));
 
 pub fn root() -> Path {
     let path = os::self_exe_path().unwrap()

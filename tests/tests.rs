@@ -1,3 +1,4 @@
+#![feature(associated_types)]
 #![feature(macro_rules)]
 #![feature(phase)]
 #![deny(warnings)]

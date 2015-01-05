@@ -1,8 +1,10 @@
 use std::collections::{HashSet, HashMap};
+use std::c_str::ToCStr;
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{mod, CargoResult, human, caused_human};
@@ -334,7 +336,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         };
         let dirty = Work::new(move |desc_tx: Sender<String>| {
             if desc.len() > 0 {
-                desc_tx.send_opt(desc).ok();
+                desc_tx.send(desc).ok();
             }
             for cmd in build_cmds.into_iter() {
                 try!(cmd.call(desc_tx.clone()))
@@ -412,7 +414,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     let exec_engine = cx.exec_engine.clone();
 
     Ok(Work::new(move |desc_tx: Sender<String>| {
-        desc_tx.send_opt(p.to_string()).ok();
+        desc_tx.send(p.to_string()).ok();
         if first && !output.exists() {
             try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
                 internal("failed to create output directory for build command")
@@ -516,7 +518,7 @@ fn rustc(package: &Package, target: &Target,
                 }
             }
 
-            desc_tx.send_opt(rustc.to_string()).ok();
+            desc_tx.send(rustc.to_string()).ok();
             try!(exec_engine.exec(rustc).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
@@ -589,7 +591,7 @@ fn rustdoc(package: &Package, target: &Target,
     let exec_engine = cx.exec_engine.clone();
 
     Ok(Work::new(move |desc_tx: Sender<String>| {
-        desc_tx.send(desc);
+        desc_tx.send(desc).unwrap();
         if primary {
             try!(exec_engine.exec(rustdoc).chain_error(|| {
                 human(format!("Could not document `{}`.", name))
