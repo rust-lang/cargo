@@ -11,6 +11,7 @@ use util::{internal, ChainError};
 
 use super::job::Work;
 use super::{fingerprint, process, Kind, Context, Platform};
+use super::CommandType;
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
@@ -49,7 +50,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // Start preparing the process to execute, starting out with some
     // environment variables.
     let profile = target.get_profile();
-    let mut p = try!(super::process(to_exec, pkg, target, cx))
+    let mut p = try!(super::process(CommandType::Host(to_exec.to_c_str()), pkg, target, cx))
                      .env("OUT_DIR", Some(&build_output))
                      .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
                                                         .dir_path()
@@ -101,6 +102,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Target).build(pkg), USER_RWX));
     try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Host).build(pkg), USER_RWX));
 
+    let exec_engine = cx.exec_engine.clone();
+
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
     //
@@ -136,7 +139,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
 
         // And now finally, run the build command itself!
         desc_tx.send_opt(p.to_string()).ok();
-        let output = try!(p.exec_with_output().map_err(|mut e| {
+        let output = try!(exec_engine.exec_with_output(p).map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);
             Human(e)

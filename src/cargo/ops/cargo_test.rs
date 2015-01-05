@@ -2,7 +2,7 @@ use std::os;
 
 use core::Source;
 use sources::PathSource;
-use ops;
+use ops::{mod, ExecEngine, ProcessEngine};
 use util::{CargoResult, ProcessError};
 
 pub struct TestOptions<'a> {
@@ -32,14 +32,15 @@ pub fn run_tests(manifest_path: &Path,
             Some(path) => path,
             None => exe.clone(),
         };
-        let cmd = try!(compile.process(exe, &compile.package)).args(test_args);
+        let cmd = try!(compile.target_process(exe, &compile.package))
+                  .args(test_args);
         try!(options.compile_opts.shell.concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));
         try!(options.compile_opts.shell.verbose(|shell| {
             shell.status("Running", cmd.to_string())
         }));
-        match cmd.exec() {
+        match ExecEngine::exec(&mut ProcessEngine, cmd) {
             Ok(()) => {}
             Err(e) => return Ok(Some(e))
         }
@@ -58,7 +59,7 @@ pub fn run_tests(manifest_path: &Path,
 
     for (lib, name) in libs {
         try!(options.compile_opts.shell.status("Doc-tests", name));
-        let mut p = try!(compile.process("rustdoc", &compile.package))
+        let mut p = try!(compile.rustdoc_process(&compile.package))
                            .arg("--test").arg(lib)
                            .arg("--crate-name").arg(name)
                            .arg("-L").arg(&compile.root_output)
@@ -82,7 +83,7 @@ pub fn run_tests(manifest_path: &Path,
         try!(options.compile_opts.shell.verbose(|shell| {
             shell.status("Running", p.to_string())
         }));
-        match p.exec() {
+        match ExecEngine::exec(&mut ProcessEngine, p) {
             Ok(()) => {}
             Err(e) => return Ok(Some(e)),
         }

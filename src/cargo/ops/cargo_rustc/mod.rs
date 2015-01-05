@@ -2,9 +2,10 @@ use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::io::{fs, USER_RWX};
 use std::io::fs::PathExtensions;
+use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use util::{mod, CargoResult, ProcessBuilder, human, caused_human};
+use util::{mod, CargoResult, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
 
 use self::job::{Job, Work};
@@ -13,12 +14,14 @@ use self::job_queue::{JobQueue, Stage};
 pub use self::compilation::Compilation;
 pub use self::context::Context;
 pub use self::context::Platform;
+pub use self::engine::{CommandPrototype, CommandType, ExecEngine, ProcessEngine};
 pub use self::layout::{Layout, LayoutProxy};
 pub use self::custom_build::BuildOutput;
 
 mod context;
 mod compilation;
 mod custom_build;
+mod engine;
 mod fingerprint;
 mod job;
 mod job_queue;
@@ -112,7 +115,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
                            deps: &PackageSet, resolve: &'a Resolve,
                            sources: &'a SourceMap,
                            config: &'a Config<'a>,
-                           build_config: BuildConfig)
+                           build_config: BuildConfig,
+                           exec_engine: Option<Arc<Box<ExecEngine>>>)
                            -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
@@ -136,6 +140,10 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
                                    host_layout, target_layout, pkg,
                                    build_config));
+    if let Some(exec_engine) = exec_engine {
+        cx.exec_engine = exec_engine.clone();
+    }
+
     let mut queue = JobQueue::new(cx.resolve, deps, cx.config);
 
     // First ensure that the destination directory exists
@@ -365,7 +373,8 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     //       may be building a C lib for a plugin
     let layout = cx.layout(pkg, Kind::Target);
     let output = layout.native(pkg);
-    let mut p = try!(process(cmd.next().unwrap(), pkg, target, cx))
+    let mut p = try!(process(CommandType::Host(cmd.next().unwrap().to_c_str()), pkg,
+                             target, cx))
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", Some(cx.target_triple()))
@@ -400,6 +409,8 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     }
     let pkg = pkg.to_string();
 
+    let exec_engine = cx.exec_engine.clone();
+
     Ok(Work::new(move |desc_tx: Sender<String>| {
         desc_tx.send_opt(p.to_string()).ok();
         if first && !output.exists() {
@@ -407,7 +418,7 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
                 internal("failed to create output directory for build command")
             }))
         }
-        try!(p.exec_with_output().map(|_| ()).map_err(|mut e| {
+        try!(exec_engine.exec_with_output(p).map(|_| ()).map_err(|mut e| {
             e.desc = format!("Failed to run custom build command for `{}`\n{}",
                              pkg, e.desc);
             Human(e)
@@ -428,6 +439,7 @@ fn rustc(package: &Package, target: &Target,
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
+        let exec_engine = cx.exec_engine.clone();
 
         let filenames = try!(cx.target_filenames(target));
         let root = cx.out_dir(package, kind, target);
@@ -505,7 +517,7 @@ fn rustc(package: &Package, target: &Target,
             }
 
             desc_tx.send_opt(rustc.to_string()).ok();
-            try!(rustc.exec().chain_error(|| {
+            try!(exec_engine.exec(rustc).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
             }));
 
@@ -519,8 +531,8 @@ fn rustc(package: &Package, target: &Target,
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: Platform)
-                 -> CargoResult<Vec<(ProcessBuilder, Kind)>> {
-    let base = try!(process("rustc", package, target, cx));
+                 -> CargoResult<Vec<(CommandPrototype, Kind)>> {
+    let base = try!(process(CommandType::Rustc, package, target, cx));
     let base = build_base_args(cx, base, package, target, crate_types.as_slice());
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, Kind::Target);
@@ -546,7 +558,8 @@ fn rustdoc(package: &Package, target: &Target,
     let kind = Kind::Target;
     let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
-    let rustdoc = try!(process("rustdoc", package, target, cx)).cwd(pkg_root.clone());
+    let rustdoc = try!(process(CommandType::Rustdoc, package, target, cx))
+                  .cwd(pkg_root.clone());
     let mut rustdoc = rustdoc.arg(target.get_src_path())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
@@ -573,14 +586,16 @@ fn rustdoc(package: &Package, target: &Target,
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();
     let desc = rustdoc.to_string();
+    let exec_engine = cx.exec_engine.clone();
+
     Ok(Work::new(move |desc_tx: Sender<String>| {
         desc_tx.send(desc);
         if primary {
-            try!(rustdoc.exec().chain_error(|| {
+            try!(exec_engine.exec(rustdoc).chain_error(|| {
                 human(format!("Could not document `{}`.", name))
             }))
         } else {
-            try!(rustdoc.exec_with_output().and(Ok(())).map_err(|err| {
+            try!(exec_engine.exec_with_output(rustdoc).and(Ok(())).map_err(|err| {
                 match err.exit {
                     Some(..) => {
                         caused_human(format!("Could not document `{}`.",
@@ -597,10 +612,10 @@ fn rustdoc(package: &Package, target: &Target,
 }
 
 fn build_base_args(cx: &Context,
-                   mut cmd: ProcessBuilder,
+                   mut cmd: CommandPrototype,
                    pkg: &Package,
                    target: &Target,
-                   crate_types: &[&str]) -> ProcessBuilder {
+                   crate_types: &[&str]) -> CommandPrototype {
     let metadata = target.get_metadata();
 
     // TODO: Handle errors in converting paths into args
@@ -680,16 +695,16 @@ fn build_base_args(cx: &Context,
 }
 
 
-fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
-                     target: &Target, kind: Kind) -> ProcessBuilder {
+fn build_plugin_args(mut cmd: CommandPrototype, cx: &Context, pkg: &Package,
+                     target: &Target, kind: Kind) -> CommandPrototype {
     cmd = cmd.arg("--out-dir");
     cmd = cmd.arg(cx.out_dir(pkg, kind, target));
 
     cmd = cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
-        fn opt(cmd: ProcessBuilder, key: &str, prefix: &str,
-               val: Option<&str>) -> ProcessBuilder {
+        fn opt(cmd: CommandPrototype, key: &str, prefix: &str,
+               val: Option<&str>) -> CommandPrototype {
             match val {
                 Some(val) => {
                     cmd.arg(key)
@@ -707,9 +722,9 @@ fn build_plugin_args(mut cmd: ProcessBuilder, cx: &Context, pkg: &Package,
     return cmd;
 }
 
-fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
+fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package,
                    cx: &Context,
-                   kind: Kind) -> CargoResult<ProcessBuilder> {
+                   kind: Kind) -> CargoResult<CommandPrototype> {
     let layout = cx.layout(package, kind);
     cmd = cmd.arg("-L").arg(layout.root());
     cmd = cmd.arg("-L").arg(layout.deps());
@@ -749,8 +764,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
 
     return Ok(cmd);
 
-    fn link_to(mut cmd: ProcessBuilder, pkg: &Package, target: &Target,
-               cx: &Context, kind: Kind) -> CargoResult<ProcessBuilder> {
+    fn link_to(mut cmd: CommandPrototype, pkg: &Package, target: &Target,
+               cx: &Context, kind: Kind) -> CargoResult<CommandPrototype> {
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
@@ -773,8 +788,8 @@ fn build_deps_args(mut cmd: ProcessBuilder, target: &Target, package: &Package,
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T, pkg: &Package, target: &Target,
-                          cx: &Context) -> CargoResult<ProcessBuilder> {
+pub fn process(cmd: CommandType, pkg: &Package, target: &Target,
+               cx: &Context) -> CargoResult<CommandPrototype> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let layout = cx.layout(pkg, Kind::Host);
