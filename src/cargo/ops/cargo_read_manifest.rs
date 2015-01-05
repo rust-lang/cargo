@@ -1,9 +1,9 @@
 use std::collections::HashSet;
-use std::io::{mod, File, fs};
+use std::io::{self, File, fs};
 use std::io::fs::PathExtensions;
 
 use core::{Package,Manifest,SourceId};
-use util::{mod, CargoResult, human};
+use util::{self, CargoResult, human};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 use std::error::FromError;

@@ -1,4 +1,4 @@
-use std::io::{mod, fs, File};
+use std::io::{self, fs, File};
 
 use flate2::CompressionLevel::Default;
 use flate2::writer::GzEncoder;

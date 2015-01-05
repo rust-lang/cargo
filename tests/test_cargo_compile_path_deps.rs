@@ -2,7 +2,7 @@ use std::io::{fs, File, USER_RWX};
 
 use support::{project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
-use support::paths::{mod, PathExt};
+use support::paths::{self, PathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};

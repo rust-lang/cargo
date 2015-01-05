@@ -1,9 +1,9 @@
-use std::io::{mod, fs, File};
+use std::io::{self, fs, File};
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
-use support::paths::{mod, PathExt};
+use support::paths::{self, PathExt};
 use support::registry as r;
 use support::git;
 

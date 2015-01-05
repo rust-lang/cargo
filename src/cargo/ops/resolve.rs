@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use core::{Package, PackageId, SourceId};
 use core::registry::PackageRegistry;
-use core::resolver::{mod, Resolve, Method};
+use core::resolver::{self, Resolve, Method};
 use ops;
 use util::CargoResult;
 

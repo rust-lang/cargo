@@ -1,7 +1,7 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
-use std::io::{mod, fs, File, BufferedReader};
+use std::io::{self, fs, File, BufferedReader};
 use std::io::fs::PathExtensions;
 
 use core::{Package, Target};

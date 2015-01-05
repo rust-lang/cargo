@@ -1,4 +1,4 @@
-use std::io::fs::{mod, PathExtensions};
+use std::io::fs::{self, PathExtensions};
 use std::io;
 use std::io::{USER_RWX, File};
 use std::os;

@@ -2,7 +2,7 @@ use std::os;
 
 use core::Source;
 use sources::PathSource;
-use ops::{mod, ExecEngine, ProcessEngine};
+use ops::{self, ExecEngine, ProcessEngine};
 use util::{CargoResult, ProcessError};
 
 pub struct TestOptions<'a> {

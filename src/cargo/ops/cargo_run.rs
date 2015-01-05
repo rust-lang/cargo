@@ -1,6 +1,6 @@
 use std::os;
 
-use ops::{mod, ExecEngine};
+use ops::{self, ExecEngine};
 use util::{CargoResult, human, process, ProcessError, ChainError};
 use core::manifest::TargetKind;
 use core::source::Source;

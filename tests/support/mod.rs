@@ -1,11 +1,11 @@
 use std::error::Error;
-use std::fmt::{mod, Show};
-use std::io::fs::{mod, PathExtensions};
+use std::fmt::{self, Show};
+use std::io::fs::{self, PathExtensions};
 use std::io::process::{ProcessOutput};
 use std::io;
 use std::os;
 use std::path::{Path,BytesContainer};
-use std::str::{mod, Str};
+use std::str::{self, Str};
 
 use url::Url;
 use hamcrest as ham;
@@ -24,7 +24,7 @@ pub mod registry;
  *
  */
 
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 struct FileBuilder {
     path: Path,
     body: String
@@ -53,7 +53,7 @@ impl FileBuilder {
     }
 }
 
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 struct SymlinkBuilder {
     dst: Path,
     src: Path
@@ -77,7 +77,7 @@ impl SymlinkBuilder {
     }
 }
 
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: Path,
@@ -241,7 +241,7 @@ pub fn cargo_dir() -> Path {
  *
  */
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct Execs {
     expect_stdout: Option<String>,
     expect_stdin: Option<String>,
@@ -419,7 +419,7 @@ pub fn execs() -> Execs {
     }
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct ShellWrites {
     expected: String
 }

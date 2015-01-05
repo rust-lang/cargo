@@ -1,4 +1,4 @@
-use std::io::{mod, fs, TempDir, File};
+use std::io::{self, fs, TempDir, File};
 use std::os;
 use std::path;
 
