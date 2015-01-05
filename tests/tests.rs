@@ -1,6 +1,7 @@
-#![feature(macro_rules)]
+#![feature(associated_types, macro_rules)]
 #![feature(phase)]
 #![deny(warnings)]
+#![allow(unused)]
 
 extern crate cargo;
 extern crate flate2;

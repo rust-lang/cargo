@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::c_str::ToCStr;
 use std::dynamic_lib::DynamicLibrary;
 use semver::Version;
 

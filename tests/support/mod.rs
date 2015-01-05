@@ -1,3 +1,4 @@
+use std::c_str::ToCStr;
 use std::error::Error;
 use std::fmt::{mod, Show};
 use std::io::fs::{mod, PathExtensions};
@@ -363,7 +364,12 @@ struct ZipAll<T, I1, I2> {
     second: I2,
 }
 
-impl<T, I1: Iterator<T>, I2: Iterator<T>> Iterator<(Option<T>, Option<T>)> for ZipAll<T, I1, I2> {
+impl<T, I1, I2> Iterator for ZipAll<T, I1, I2>
+    where I1: Iterator<Item=T>,
+          I2: Iterator<Item=T>
+{
+    type Item = (Option<T>, Option<T>);
+
     fn next(&mut self) -> Option<(Option<T>, Option<T>)> {
         let first = self.first.next();
         let second = self.second.next();
@@ -375,7 +381,9 @@ impl<T, I1: Iterator<T>, I2: Iterator<T>> Iterator<(Option<T>, Option<T>)> for Z
     }
 }
 
-fn zip_all<T, I1: Iterator<T>, I2: Iterator<T>>(a: I1, b: I2) -> ZipAll<T, I1, I2> {
+fn zip_all<T, I1, I2>(a: I1, b: I2) -> ZipAll<T, I1, I2>
+    where I1: Iterator<Item=T>, I2: Iterator<Item=T>
+{
     ZipAll {
         first: a,
         second: b

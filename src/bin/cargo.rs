@@ -1,4 +1,4 @@
-#![feature(phase, macro_rules)]
+#![feature(phase, macro_rules, old_orphan_check)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 #[phase(plugin, link)] extern crate log;

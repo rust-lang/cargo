@@ -1,6 +1,6 @@
 use std::fmt::{mod, Show, Formatter};
 use std::os;
-use std::c_str::CString;
+use std::c_str::{CString, ToCStr};
 use std::io::process::{Command, ProcessOutput, InheritFd};
 use std::collections::HashMap;
 

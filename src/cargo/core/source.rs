@@ -1,4 +1,5 @@
 use std::collections::hash_map::{HashMap, Values, IterMut};
+use std::cmp::Ordering;
 use std::fmt::{mod, Show, Formatter};
 use std::hash;
 use std::mem;
@@ -406,9 +407,10 @@ impl<'src> SourceMap<'src> {
     }
 }
 
-impl<'a, 'src> Iterator<(&'a SourceId, &'a mut (Source + 'src))>
-    for SourcesMut<'a, 'src>
+impl<'a, 'src> Iterator for SourcesMut<'a, 'src>
 {
+    type Item = (&'a SourceId, &'a mut (Source + 'src));
+
     fn next(&mut self) -> Option<(&'a SourceId, &'a mut (Source + 'src))> {
         self.inner.next().map(|(a, b)| (a, &mut **b))
     }

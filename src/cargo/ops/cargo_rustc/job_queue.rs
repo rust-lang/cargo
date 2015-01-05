@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::sync::TaskPool;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
@@ -125,7 +126,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             // Now that all possible work has been scheduled, wait for a piece
             // of work to finish. If any package fails to build then we stop
             // scheduling work as quickly as possibly.
-            let (id, stage, fresh, result) = self.rx.recv();
+            let (id, stage, fresh, result) = self.rx.recv().unwrap();
             info!("  end: {} {}", id, stage);
             let id = *self.state.keys().find(|&k| *k == &id).unwrap();
             self.active -= 1;
@@ -187,7 +188,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
                 my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
             });
             // only the first message of each job is processed
-            match desc_rx.recv_opt() {
+            match desc_rx.recv() {
                 Ok(msg) => running.push(msg),
                 Err(..) => {}
             }
