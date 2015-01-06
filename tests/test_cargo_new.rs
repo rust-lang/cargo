@@ -24,7 +24,7 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 
 test!(simple_lib {
     os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo").arg("--no-git"),
+    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("none"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -177,12 +177,12 @@ test!(git_prefers_command_line {
     fs::mkdir(&root.join(".cargo"), USER_RWX).unwrap();
     File::create(&root.join(".cargo/config")).write_str(r#"
         [cargo-new]
-        git = false
+        vcs = "none"
         name = "foo"
         email = "bar"
     "#).unwrap();
 
-    assert_that(cargo_process("new").arg("foo").arg("--git").cwd(td.path().clone())
+    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("git").cwd(td.path().clone())
                                     .env("USER", Some("foo")),
                 execs().with_status(0));
     assert!(td.path().join("foo/.gitignore").exists());

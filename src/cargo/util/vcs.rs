@@ -23,4 +23,9 @@ impl HgRepo {
         try!(try!(process("hg")).arg("init").arg(path_str).exec());
         return Ok(HgRepo)
     }
+    pub fn discover(path: &Path) -> CargoResult<HgRepo> {
+        try!(try!(process("hg")).arg("root").cwd(path.clone()).exec_with_output());
+        return Ok(HgRepo)
+    }
 }
+

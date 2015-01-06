@@ -45,8 +45,8 @@ name = "..."
 email = "..."
 
 # By default `cargo new` will initialize a new git repository. This key can be
-# set to `false` to disable this behavior.
-git = true
+# set to `none` to disable this behavior.
+vcs = "none"
 
 # For the following sections, $triple refers to any valid target triple, not the
 # literal string "$triple", and it will apply whenever that target triple is
