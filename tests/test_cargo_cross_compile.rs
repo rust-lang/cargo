@@ -303,8 +303,8 @@ test!(linker_and_ar {
     --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
-    -L {dir}{sep}target{sep}{target} \
-    -L {dir}{sep}target{sep}{target}{sep}deps`
+    -L dependency={dir}{sep}target{sep}{target} \
+    -L dependency={dir}{sep}target{sep}{target}{sep}deps`
 ",
                             running = RUNNING,
                             compiling = COMPILING,

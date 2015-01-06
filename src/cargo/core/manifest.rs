@@ -1,5 +1,5 @@
 use std::hash;
-use std::fmt::{mod, Show, Formatter};
+use std::fmt::{self, Show, Formatter};
 
 use semver::Version;
 use rustc_serialize::{Encoder,Encodable};
@@ -10,7 +10,7 @@ use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
 /// Contains all the informations about a package, as loaded from a Cargo.toml.
-#[deriving(PartialEq,Clone)]
+#[derive(PartialEq,Clone)]
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
@@ -40,7 +40,7 @@ impl Show for Manifest {
 /// validated by cargo itself, but rather it is up to the registry when uploaded
 /// to validate these fields. Cargo will itself accept any valid TOML
 /// specification for these values.
-#[deriving(PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct ManifestMetadata {
     pub authors: Vec<String>,
     pub keywords: Vec<String>,
@@ -53,7 +53,7 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[deriving(PartialEq,Clone,RustcEncodable)]
+#[derive(PartialEq,Clone,RustcEncodable)]
 pub struct SerializedManifest {
     name: String,
     version: String,
@@ -81,7 +81,7 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
     }
 }
 
-#[deriving(Show, Clone, PartialEq, Hash, RustcEncodable, Copy)]
+#[derive(Show, Clone, PartialEq, Hash, RustcEncodable, Copy)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -116,14 +116,14 @@ impl LibKind {
     }
 }
 
-#[deriving(Show, Clone, Hash, PartialEq, RustcEncodable)]
+#[derive(Show, Clone, Hash, PartialEq, RustcEncodable)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
     Example,
 }
 
-#[deriving(RustcEncodable, RustcDecodable, Clone, PartialEq, Show)]
+#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Show)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: uint,
@@ -351,7 +351,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
 }
 
 /// Informations about a binary, a library, an example, etc. that is part of the package.
-#[deriving(Clone, Hash, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -360,7 +360,7 @@ pub struct Target {
     metadata: Option<Metadata>,
 }
 
-#[deriving(RustcEncodable)]
+#[derive(RustcEncodable)]
 pub struct SerializedTarget {
     kind: Vec<&'static str>,
     name: String,

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use std::fmt;
-use std::io::fs::{mod, PathExtensions};
+use std::io::fs::{self, PathExtensions};
 use std::os;
 use std::slice;
 use std::str;
@@ -21,7 +21,7 @@ use util::{CargoResult, human, ToUrl, ToSemver, ChainError};
 ///
 /// This structure is used to hold references to all project files that are relevant to cargo.
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Layout {
     root: Path,
     lib: Option<Path>,
@@ -182,14 +182,14 @@ type TomlBenchTarget = TomlTarget;
  * TODO: Make all struct fields private
  */
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency)
 }
 
 
-#[deriving(RustcDecodable, Clone, Default)]
+#[derive(RustcDecodable, Clone, Default)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -202,7 +202,7 @@ pub struct DetailedTomlDependency {
     default_features: Option<bool>,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -219,7 +219,7 @@ pub struct TomlManifest {
     target: Option<HashMap<String, TomlPlatform>>,
 }
 
-#[deriving(RustcDecodable, Clone, Default)]
+#[derive(RustcDecodable, Clone, Default)]
 pub struct TomlProfiles {
     test: Option<TomlProfile>,
     doc: Option<TomlProfile>,
@@ -228,7 +228,7 @@ pub struct TomlProfiles {
     release: Option<TomlProfile>,
 }
 
-#[deriving(RustcDecodable, Clone, Default)]
+#[derive(RustcDecodable, Clone, Default)]
 #[allow(missing_copy_implementations)]
 pub struct TomlProfile {
     opt_level: Option<uint>,
@@ -238,7 +238,7 @@ pub struct TomlProfile {
     rpath: Option<bool>,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub enum ManyOrOne<T> {
     Many(Vec<T>),
     One(T),
@@ -253,7 +253,7 @@ impl<T> ManyOrOne<T> {
     }
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
@@ -274,7 +274,7 @@ pub struct TomlProject {
 }
 
 // TODO: deprecated, remove
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub enum BuildCommand {
     Single(String),
     Multiple(Vec<String>)
@@ -605,7 +605,7 @@ fn process_dependencies<'a>(cx: &mut Context<'a>,
     Ok(())
 }
 
-#[deriving(RustcDecodable, Show, Clone)]
+#[derive(RustcDecodable, Show, Clone)]
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
@@ -618,14 +618,14 @@ struct TomlTarget {
     harness: Option<bool>,
 }
 
-#[deriving(RustcDecodable, Clone)]
+#[derive(RustcDecodable, Clone)]
 enum PathValue {
     String(String),
     Path(Path),
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
 }
@@ -675,7 +675,7 @@ fn normalize(libs: &[TomlLibTarget],
     log!(4, "normalizing toml targets; lib={}; bin={}; example={}; test={}, benches={}",
          libs, bins, examples, tests, benches);
 
-    #[deriving(Copy)]
+    #[derive(Copy)]
     enum TestDep { Needed, NotNeeded }
 
     fn merge(profile: Profile, toml: &Option<TomlProfile>) -> Profile {

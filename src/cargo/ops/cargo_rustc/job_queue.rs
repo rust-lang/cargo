@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::sync::TaskPool;
+use std::sync::mpsc::{channel, Sender, Receiver};
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
@@ -48,7 +49,7 @@ struct PendingBuild {
 ///
 /// Each build step for a package is registered with one of these stages, and
 /// each stage has a vector of work to perform in parallel.
-#[deriving(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show, Copy)]
 pub enum Stage {
     Start,
     BuildCustomBuild,
@@ -85,9 +86,9 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // Record the freshness state of this package as dirty if any job is
         // dirty or fresh otherwise
         let fresh = jobs.iter().fold(Fresh, |f1, &(_, f2)| f1.combine(f2));
-        match self.state.entry(pkg.get_package_id()) {
+        match self.state.entry(&pkg.get_package_id()) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(fresh); }
-            Vacant(entry) => { entry.set(fresh); }
+            Vacant(entry) => { entry.insert(fresh); }
         };
 
         // Add the package to the dependency graph
@@ -125,7 +126,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             // Now that all possible work has been scheduled, wait for a piece
             // of work to finish. If any package fails to build then we stop
             // scheduling work as quickly as possibly.
-            let (id, stage, fresh, result) = self.rx.recv();
+            let (id, stage, fresh, result) = self.rx.recv().unwrap();
             info!("  end: {} {}", id, stage);
             let id = *self.state.keys().find(|&k| *k == &id).unwrap();
             self.active -= 1;
@@ -184,10 +185,10 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             let id = id.clone();
             let (desc_tx, desc_rx) = channel();
             self.pool.execute(move|| {
-                my_tx.send((id, stage, fresh, job.run(fresh, desc_tx)));
+                my_tx.send((id, stage, fresh, job.run(fresh, desc_tx))).unwrap();
             });
             // only the first message of each job is processed
-            match desc_rx.recv_opt() {
+            match desc_rx.recv() {
                 Ok(msg) => running.push(msg),
                 Err(..) => {}
             }
@@ -196,7 +197,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // If no work was scheduled, make sure that a message is actually send
         // on this channel.
         if njobs == 0 {
-            self.tx.send((id, stage, fresh, Ok(())));
+            self.tx.send((id, stage, fresh, Ok(()))).unwrap();
         }
 
         // Print out some nice progress information

@@ -2,7 +2,7 @@ use std::io::{fs, File, USER_RWX};
 
 use support::{project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
-use support::paths::{mod, PathExt};
+use support::paths::{self, PathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};
@@ -71,7 +71,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
+        execs().with_status(0)
+               .with_stdout(format!("{} baz v0.5.0 ({})\n\
                                      {} bar v0.5.0 ({})\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
@@ -82,20 +83,22 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
     assert_that(
       cargo::util::process(p.bin("foo")).unwrap(),
-      execs().with_stdout("test passed\n"));
+      execs().with_stdout("test passed\n").with_status(0));
 
     println!("cleaning");
     assert_that(p.process(cargo_dir().join("cargo")).arg("clean"),
-                execs().with_stdout(""));
+                execs().with_stdout("").with_status(0));
     println!("building baz");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build")
                  .arg("-p").arg("baz"),
-                execs().with_stdout(format!("{} baz v0.5.0 ({})\n",
+                execs().with_status(0)
+                       .with_stdout(format!("{} baz v0.5.0 ({})\n",
                                             COMPILING, p.url())));
     println!("building foo");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build")
                  .arg("-p").arg("foo"),
-                execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
+                execs().with_status(0)
+                       .with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));

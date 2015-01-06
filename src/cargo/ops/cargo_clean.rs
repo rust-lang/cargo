@@ -1,11 +1,11 @@
 use std::default::Default;
-use std::io::fs::{mod, PathExtensions};
+use std::io::fs::{self, PathExtensions};
 
 use core::{MultiShell, PackageSet};
 use core::source::{Source, SourceMap};
 use sources::PathSource;
 use util::{CargoResult, human, ChainError, Config};
-use ops::{mod, Layout, Context};
+use ops::{self, Layout, Context};
 
 pub struct CleanOptions<'a> {
     pub spec: Option<&'a str>,

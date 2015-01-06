@@ -27,9 +27,9 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 
     pub fn link(&mut self, node: N, child: N) {
-        match self.nodes.entry(node) {
+        match self.nodes.entry(&node) {
             Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.set(HashSet::new()),
+            Vacant(entry) => entry.insert(HashSet::new()),
         }.insert(child);
     }
 

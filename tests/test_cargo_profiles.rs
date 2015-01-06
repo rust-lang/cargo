@@ -35,8 +35,8 @@ test!(profile_overrides {
         -C rpath \
         --out-dir {dir}{sep}target \
         --emit=dep-info,link \
-        -L {dir}{sep}target \
-        -L {dir}{sep}target{sep}deps`
+        -L dependency={dir}{sep}target \
+        -L dependency={dir}{sep}target{sep}deps`
 ",
 running = RUNNING, compiling = COMPILING, sep = path::SEP,
 dir = p.root().display(),
@@ -89,8 +89,8 @@ test!(top_level_overrides_deps {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
         --emit=dep-info,link \
-        -L {dir}{sep}target{sep}release{sep}deps \
-        -L {dir}{sep}target{sep}release{sep}deps`
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
+        -L dependency={dir}{sep}target{sep}release{sep}deps`
 {compiling} test v0.0.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
@@ -99,8 +99,8 @@ test!(top_level_overrides_deps {
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
         --emit=dep-info,link \
-        -L {dir}{sep}target{sep}release \
-        -L {dir}{sep}target{sep}release{sep}deps \
+        -L dependency={dir}{sep}target{sep}release \
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps/\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`

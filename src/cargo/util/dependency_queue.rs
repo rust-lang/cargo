@@ -40,7 +40,7 @@ pub struct DependencyQueue<K, V> {
 ///
 /// A fresh package does not necessarily need to be rebuilt (unless a dependency
 /// was also rebuilt), and a dirty package must always be rebuilt.
-#[deriving(PartialEq, Eq, Show, Copy)]
+#[derive(PartialEq, Eq, Show, Copy)]
 pub enum Freshness {
     Fresh,
     Dirty,
@@ -83,9 +83,9 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in key.dependencies(cx).into_iter() {
             assert!(my_dependencies.insert(dep.clone()));
-            let rev = match self.reverse_dep_map.entry(dep) {
+            let rev = match self.reverse_dep_map.entry(&dep) {
                 Occupied(entry) => entry.into_mut(),
-                Vacant(entry) => entry.set(HashSet::new()),
+                Vacant(entry) => entry.insert(HashSet::new()),
             };
             assert!(rev.insert(key.clone()));
         }

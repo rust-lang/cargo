@@ -1,4 +1,4 @@
-use std::io::{mod, fs, File};
+use std::io::{self, fs, File};
 
 use url::Url;
 

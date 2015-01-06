@@ -64,7 +64,7 @@ pub struct PackageRegistry<'a> {
     locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
 }
 
-#[deriving(PartialEq, Eq, Copy)]
+#[derive(PartialEq, Eq, Copy)]
 enum Kind {
     Override,
     Locked,
@@ -152,13 +152,15 @@ impl<'a> PackageRegistry<'a> {
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
-        let sub_map = match self.locked.entry(id.get_source_id().clone()) {
+        let source = id.get_source_id().clone();
+        let sub_map = match self.locked.entry(&source) {
             Occupied(e) => e.into_mut(),
-            Vacant(e) => e.set(HashMap::new()),
+            Vacant(e) => e.insert(HashMap::new()),
         };
-        let sub_vec = match sub_map.entry(id.get_name().to_string()) {
+        let name = id.get_name().to_string();
+        let sub_vec = match sub_map.entry(&name) {
             Occupied(e) => e.into_mut(),
-            Vacant(e) => e.set(Vec::new()),
+            Vacant(e) => e.insert(Vec::new()),
         };
         sub_vec.push((id, deps));
     }

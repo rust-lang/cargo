@@ -1,4 +1,4 @@
-use url::{mod, Url, UrlParser};
+use url::{self, Url, UrlParser};
 
 pub trait ToUrl {
     fn to_url(self) -> Result<Url, String>;

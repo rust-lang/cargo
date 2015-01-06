@@ -1,7 +1,7 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
 use std::hash::sip::SipHasher;
-use std::io::{mod, fs, File, BufferedReader};
+use std::io::{self, fs, File, BufferedReader};
 use std::io::fs::PathExtensions;
 
 use core::{Package, Target};
@@ -96,10 +96,10 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
-                let pkgid = pkg.get_package_id().clone();
+                let pkgid = pkg.get_package_id();
                 match cx.compilation.libraries.entry(pkgid) {
                     Occupied(entry) => entry.into_mut(),
-                    Vacant(entry) => entry.set(Vec::new()),
+                    Vacant(entry) => entry.insert(Vec::new()),
                 }.push(dst);
             }
         }

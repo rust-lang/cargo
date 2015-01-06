@@ -4,7 +4,7 @@ use cargo;
 use cargo::core::MultiShell;
 use cargo::util::CliResult;
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct Options;
 
 pub const USAGE: &'static str = "
