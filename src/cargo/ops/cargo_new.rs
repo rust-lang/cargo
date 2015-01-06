@@ -9,7 +9,7 @@ use git2::Config;
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, config, internal};
 use core::shell::MultiShell;
 
-#[deriving(Copy, Show, PartialEq)]
+#[derive(Copy, Show, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
 
 pub struct NewOptions<'a> {

@@ -261,6 +261,7 @@ pub struct TomlProject {
     build: Option<BuildCommand>,       // TODO: `String` instead
     links: Option<String>,
     exclude: Option<Vec<String>>,
+    include: Option<Vec<String>>,
 
     // package metadata
     description: Option<String>,
@@ -508,6 +509,7 @@ impl TomlManifest {
         }
 
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
+        let include = project.include.clone().unwrap_or(Vec::new());
 
         let has_old_build = old_build.len() >= 1;
 
@@ -531,6 +533,7 @@ impl TomlManifest {
                                          layout.root.join("doc"),
                                          old_build,
                                          exclude,
+                                         include,
                                          project.links.clone(),
                                          metadata);
         if used_deprecated_lib {

@@ -497,7 +497,7 @@ test!(bad_license_file {
         .file("src/main.rs", r#"
             fn main() {}
         "#);
-    assert_that(p.cargo_process("publish"),
+    assert_that(p.cargo_process("publish").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
 the license file `foo` does not exist"));
