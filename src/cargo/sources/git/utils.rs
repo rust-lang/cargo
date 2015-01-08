@@ -3,7 +3,7 @@ use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
-use git2;
+use git2::{mod, ObjectType};
 
 use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal};
@@ -185,8 +185,8 @@ impl GitDatabase {
                 try!((|:| {
                     let refname = format!("refs/tags/{}", s);
                     let id = try!(self.repo.refname_to_id(refname.as_slice()));
-                    let tag = try!(self.repo.find_tag(id));
-                    let obj = try!(tag.peel());
+                    let obj = try!(self.repo.find_object(id, None));
+                    let obj = try!(obj.peel(ObjectType::Commit));
                     Ok(obj.id())
                 }).chain_error(|| {
                     human(format!("failed to find tag `{}`", s))
