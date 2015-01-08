@@ -6,7 +6,7 @@ use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{CargoResult, internal, internal_error};
+use util::{CargoResult, internal, internal_error, human, ChainError};
 
 pub struct PathSource {
     id: SourceId,
@@ -71,34 +71,46 @@ impl PathSource {
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
         let root = pkg.get_manifest_path().dir_path();
 
-        // Check whether the package itself is a git repository.
-        let candidates = match git2::Repository::open(&root) {
-            Ok(repo) => try!(self.list_files_git(pkg, repo)),
-
-            // If not, check whether the package is in a sub-directory of the main repository.
-            Err(..) if self.path.is_ancestor_of(&root) => {
-                match git2::Repository::open(&self.path) {
-                    Ok(repo) => try!(self.list_files_git(pkg, repo)),
-                    _ => try!(self.list_files_walk(pkg))
-                }
-            }
-            // If neither is true, fall back to walking the filesystem.
-            _ => try!(self.list_files_walk(pkg))
-        };
-
-        let pats = pkg.get_manifest().get_exclude().iter().map(|p| {
+        let exclude = pkg.get_manifest().get_exclude().iter().map(|p| {
+            Pattern::new(p.as_slice())
+        }).collect::<Vec<Pattern>>();
+        let include = pkg.get_manifest().get_include().iter().map(|p| {
             Pattern::new(p.as_slice())
         }).collect::<Vec<Pattern>>();
 
-        Ok(candidates.into_iter().filter(|candidate| {
-            let relative_path = candidate.path_relative_from(&root).unwrap();
-            !pats.iter().any(|p| p.matches_path(&relative_path)) &&
-                candidate.is_file()
-        }).collect())
+        let mut filter = |&mut: p: &Path| {
+            let relative_path = p.path_relative_from(&root).unwrap();
+            include.iter().any(|p| p.matches_path(&relative_path)) || {
+                include.len() == 0 &&
+                 !exclude.iter().any(|p| p.matches_path(&relative_path))
+            }
+        };
+
+        // If this package is a git repository, then we really do want to query
+        // the git repository as it takes into account items such as .gitignore.
+        // We're not quite sure where the git repository is, however, so we do a
+        // bit of a probe.
+        //
+        // We check all packages in this source that are ancestors of the
+        // specified package (including the same package) to see if they're at
+        // the root of the git repository. This isn't always true, but it'll get
+        // us there most of the time!.
+        let repo = self.packages.iter()
+                       .map(|pkg| pkg.get_root())
+                       .filter(|path| path.is_ancestor_of(&root))
+                       .filter_map(|path| git2::Repository::open(&path).ok())
+                       .next();
+        match repo {
+            Some(repo) => self.list_files_git(pkg, repo, &mut filter),
+            None => self.list_files_walk(pkg, filter),
+        }
     }
 
-    fn list_files_git(&self, pkg: &Package, repo: git2::Repository)
-                      -> CargoResult<Vec<Path>> {
+    fn list_files_git<F>(&self, pkg: &Package, repo: git2::Repository,
+                         filter: &mut F)
+                         -> CargoResult<Vec<Path>>
+        where F: FnMut(&Path) -> bool
+    {
         warn!("list_files_git {}", pkg.get_package_id());
         let index = try!(repo.index());
         let root = match repo.workdir() {
@@ -108,8 +120,7 @@ impl PathSource {
         let pkg_path = pkg.get_manifest_path().dir_path();
 
         let mut ret = Vec::new();
-        'outer: for i in range(0, index.len()) {
-            let entry = match index.get(i) { Some(e) => e, None => continue };
+        'outer: for entry in index.iter() {
             let fname = entry.path.as_bytes_no_nul();
             let file_path = root.join(fname);
 
@@ -123,30 +134,52 @@ impl PathSource {
             // Filter out sub-packages of this package
             for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
                 let other_path = other_pkg.get_manifest_path().dir_path();
-                if pkg_path.is_ancestor_of(&other_path) && other_path.is_ancestor_of(&file_path) {
+                if pkg_path.is_ancestor_of(&other_path) &&
+                   other_path.is_ancestor_of(&file_path) {
                     continue 'outer;
                 }
             }
 
-            // We found a file!
-            warn!("  found {}", file_path.display());
-            ret.push(file_path);
+            // TODO: the `entry` has a mode we should be able to look at instead
+            //       of just calling stat() again
+            if file_path.is_dir() {
+                warn!("  found submodule {}", file_path.display());
+                let rel = file_path.path_relative_from(&root).unwrap();
+                let rel = try!(rel.as_str().chain_error(|| {
+                    human(format!("invalid utf-8 filename: {}", rel.display()))
+                }));
+                let submodule = try!(repo.find_submodule(rel));
+                let repo = try!(submodule.open());
+                let files = try!(self.list_files_git(pkg, repo, filter));
+                ret.extend(files.into_iter());
+            } else if (*filter)(&file_path) {
+                // We found a file!
+                warn!("  found {}", file_path.display());
+                ret.push(file_path);
+            }
         }
         Ok(ret)
     }
 
-    fn list_files_walk(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
+    fn list_files_walk<F>(&self, pkg: &Package, mut filter: F)
+                          -> CargoResult<Vec<Path>>
+        where F: FnMut(&Path) -> bool
+    {
         let mut ret = Vec::new();
         for pkg in self.packages.iter().filter(|p| *p == pkg) {
             let loc = pkg.get_manifest_path().dir_path();
-            try!(walk(&loc, &mut ret, true));
+            try!(walk(&loc, &mut ret, true, &mut filter));
         }
         return Ok(ret);
 
-        fn walk(path: &Path, ret: &mut Vec<Path>,
-                is_root: bool) -> CargoResult<()> {
+        fn walk<F>(path: &Path, ret: &mut Vec<Path>,
+                   is_root: bool, filter: &mut F) -> CargoResult<()>
+            where F: FnMut(&Path) -> bool
+        {
             if !path.is_dir() {
-                ret.push(path.clone());
+                if (*filter)(path) {
+                    ret.push(path.clone());
+                }
                 return Ok(())
             }
             // Don't recurse into any sub-packages that we have
@@ -158,7 +191,7 @@ impl PathSource {
                     (true, Some("Cargo.lock")) => continue,
                     _ => {}
                 }
-                try!(walk(dir, ret, false));
+                try!(walk(dir, ret, false, filter));
             }
             return Ok(())
         }

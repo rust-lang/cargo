@@ -144,7 +144,18 @@ exclude = [
 ```
 
 The syntax of each element in this array is what
-[rust-lang/glob](https://github.com/rust-lang/glob) accepts.
+[rust-lang/glob](https://github.com/rust-lang/glob) accepts. If you'd rather
+roll with a whitelist instead of a blacklist, Cargo also supports an `include`
+key:
+
+```toml
+[package]
+# ...
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
+```
 
 ## Uploading the crate
 

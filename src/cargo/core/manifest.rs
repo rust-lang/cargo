@@ -20,6 +20,7 @@ pub struct Manifest {
     links: Option<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
+    include: Vec<String>,
     metadata: ManifestMetadata,
 }
 
@@ -412,7 +413,10 @@ impl Show for Target {
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
                target_dir: Path, doc_dir: Path,
-               build: Vec<String>, exclude: Vec<String>, links: Option<String>,
+               build: Vec<String>,
+               exclude: Vec<String>,
+               include: Vec<String>,
+               links: Option<String>,
                metadata: ManifestMetadata) -> Manifest {
         Manifest {
             summary: summary,
@@ -422,6 +426,7 @@ impl Manifest {
             build: build,     // TODO: deprecated, remove
             warnings: Vec::new(),
             exclude: exclude,
+            include: include,
             links: links,
             metadata: metadata,
         }
@@ -477,6 +482,10 @@ impl Manifest {
 
     pub fn get_exclude(&self) -> &[String] {
         self.exclude.as_slice()
+    }
+
+    pub fn get_include(&self) -> &[String] {
+        self.include.as_slice()
     }
 
     pub fn get_metadata(&self) -> &ManifestMetadata { &self.metadata }

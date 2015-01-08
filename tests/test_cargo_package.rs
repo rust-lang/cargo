@@ -194,3 +194,51 @@ test!(package_verification {
         compiling = COMPILING,
         dir = p.url()).as_slice()));
 });
+
+test!(exclude {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            exclude = ["*.txt"]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#)
+        .file("bar.txt", "")
+        .file("src/bar.txt", "");
+
+    assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ([..])
+{archiving} [..]
+{archiving} [..]
+", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
+});
+
+test!(include {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            exclude = ["*.txt"]
+            include = ["foo.txt", "**/*.rs", "Cargo.toml"]
+        "#)
+        .file("foo.txt", "")
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#)
+        .file("src/bar.txt", ""); // should be ignored when packaging
+
+    assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ([..])
+{archiving} [..]
+{archiving} [..]
+{archiving} [..]
+", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
+});
