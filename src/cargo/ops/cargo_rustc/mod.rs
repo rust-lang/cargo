@@ -4,6 +4,7 @@ use std::dynamic_lib::DynamicLibrary;
 use std::io::USER_RWX;
 use std::io::fs::{self, PathExtensions};
 use std::sync::Arc;
+use std::path;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{self, CargoResult, human, caused_human};
@@ -783,7 +784,7 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');
             v.push_all(layout.root().as_vec());
-            v.push(b'/');
+            v.push(path::SEP_BYTE);
             v.push_all(filename.as_bytes());
             cmd = cmd.arg("--extern").arg(v.as_slice());
         }

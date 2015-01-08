@@ -220,6 +220,110 @@ hello main.rs
         sep = path::SEP).as_slice()));
 });
 
+test!(example_with_release_flag {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "*"
+            path = "bar"
+        "#)
+        .file("examples/a.rs", r#"
+            extern crate bar;
+
+            fn main() {
+                if cfg!(ndebug) {
+                    println!("fast1")
+                } else {
+                    println!("slow1")
+                }
+                bar::baz();
+            }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "bar"
+        "#)
+        .file("bar/src/bar.rs", r#"
+            pub fn baz() {
+                if cfg!(ndebug) {
+                    println!("fast2")
+                } else {
+                    println!("slow2")
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} bar v0.0.1 ({url})
+{running} `rustc src{sep}bar.rs --crate-name bar --crate-type lib \
+        -C opt-level=3 \
+        --cfg ndebug \
+        -C metadata=[..] \
+        -C extra-filename=[..] \
+        --out-dir {dir}{sep}target{sep}release{sep}deps \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
+        -L dependency={dir}{sep}target{sep}release{sep}deps`
+{compiling} foo v0.0.1 ({url})
+{running} `rustc {dir}{sep}examples{sep}a.rs --crate-name a --crate-type bin \
+        -C opt-level=3 \
+        --cfg ndebug \
+        --out-dir {dir}{sep}target{sep}release{sep}examples \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}release \
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
+         --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
+{running} `target{sep}release{sep}examples{sep}a`
+fast1
+fast2
+",
+        compiling = COMPILING,
+        running = RUNNING,
+        dir = p.root().display(),
+        url = path2url(p.root()),
+        sep = path::SEP).as_slice()));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("-v").arg("--example").arg("a"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} bar v0.0.1 ({url})
+{running} `rustc src{sep}bar.rs --crate-name bar --crate-type lib \
+        -g \
+        -C metadata=[..] \
+        -C extra-filename=[..] \
+        --out-dir {dir}{sep}target{sep}deps \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}deps \
+        -L dependency={dir}{sep}target{sep}deps`
+{compiling} foo v0.0.1 ({url})
+{running} `rustc {dir}{sep}examples{sep}a.rs --crate-name a --crate-type bin \
+        -g \
+        --out-dir {dir}{sep}target{sep}examples \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target \
+        -L dependency={dir}{sep}target{sep}deps \
+         --extern bar={dir}{sep}target{sep}deps{sep}libbar-[..].rlib`
+{running} `target{sep}examples{sep}a`
+slow1
+slow2
+",
+        compiling = COMPILING,
+        running = RUNNING,
+        dir = p.root().display(),
+        url = path2url(p.root()),
+        sep = path::SEP).as_slice()));
+});
+
 test!(run_dylib_dep {
     let p = project("foo")
         .file("Cargo.toml", r#"

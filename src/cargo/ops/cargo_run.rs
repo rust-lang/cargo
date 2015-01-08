@@ -39,11 +39,13 @@ pub fn run(manifest_path: &Path,
     let dst = manifest_path.dir_path().join("target");
     let dst = match options.target {
         Some(target) => dst.join(target),
-        None => if bin.is_example() { dst.join("examples") } else { dst },
+        None => dst,
     };
-    let exe = match bin.get_profile().get_dest() {
-        Some(s) => dst.join(s).join(bin.get_name()),
-        None => dst.join(bin.get_name()),
+    let exe = match (bin.get_profile().get_dest(), bin.is_example()) {
+        (Some(s), true) => dst.join(s).join("examples").join(bin.get_name()),
+        (Some(s), false) => dst.join(s).join(bin.get_name()),
+        (None, true) => dst.join("examples").join(bin.get_name()),
+        (None, false) => dst.join(bin.get_name()),
     };
     let exe = match exe.path_relative_from(&try!(os::getcwd())) {
         Some(path) => path,

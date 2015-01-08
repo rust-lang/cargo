@@ -873,9 +873,9 @@ test!(verbose_release_build_deps {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
-        --extern foo={dir}{sep}target{sep}release{sep}deps/\
+        --extern foo={dir}{sep}target{sep}release{sep}deps{sep}\
                      {prefix}foo-[..]{suffix} \
-        --extern foo={dir}{sep}target{sep}release{sep}deps/libfoo-[..].rlib`
+        --extern foo={dir}{sep}target{sep}release{sep}deps{sep}libfoo-[..].rlib`
 ",
                     running = RUNNING,
                     compiling = COMPILING,
