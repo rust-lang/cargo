@@ -3,7 +3,7 @@ use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
-use git2::{mod, ObjectType};
+use git2::{self, ObjectType};
 
 use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal};

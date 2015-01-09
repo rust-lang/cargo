@@ -1,7 +1,6 @@
 use cargo::ops;
 use cargo::core::MultiShell;
 use cargo::util::{CliResult, CliError};
-use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -38,8 +37,7 @@ crates to be locked to any yanked version.
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
-    let root = try!(find_root_manifest_for_cwd(None));
-    try!(ops::yank(&root, shell,
+    try!(ops::yank(shell,
                    options.arg_crate,
                    options.flag_vers,
                    options.flag_token,

@@ -304,8 +304,7 @@ pub fn modify_owners(shell: &mut MultiShell,
     Ok(())
 }
 
-pub fn yank(manifest_path: &Path,
-            shell: &mut MultiShell,
+pub fn yank(shell: &mut MultiShell,
             krate: Option<String>,
             version: Option<String>,
             token: Option<String>,
@@ -314,6 +313,7 @@ pub fn yank(manifest_path: &Path,
     let name = match krate {
         Some(name) => name,
         None => {
+            let manifest_path = try!(find_root_manifest_for_cwd(None));
             let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
             try!(src.update());
             let pkg = try!(src.get_root_package());
