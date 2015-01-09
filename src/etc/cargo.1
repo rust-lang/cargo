@@ -62,6 +62,12 @@ Generate a source tarball for the current package
 \fBcargo version\fR
 Print cargo's version and exit
 
+.SH FILES
+
+.TP
+~/.cargo
+Directory in which Cargo stores repository data. Cargo can be instructed to use a .cargo subdirectory in a different location by setting the CARGO_HOME environment variable.
+
 .SH "EXAMPLES"
 Build a local package and all of its dependencies
     $ cargo build
@@ -77,7 +83,7 @@ Learn about a command's options and usage
 
 .SH "SEE ALSO"
 
-rustc, rustdoc
+rustc(1), rustdoc(1)
 
 .SH "BUGS"
 See <\fBhttps://github.com/rust-lang/cargo/issues\fR> for issues.
