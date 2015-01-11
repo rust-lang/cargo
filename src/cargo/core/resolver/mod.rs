@@ -326,12 +326,49 @@ fn activate_deps<'a, R: Registry>(cx: Context,
             Err(human(msg))
         }
         None => {
-            Err(human(format!("no package named `{}` found (required by `{}`)\n\
+            // Once we're all the way down here, we're definitely lost in the
+            // weeds! We didn't actually use any candidates above, so we need to
+            // give an error message that nothing was found.
+            //
+            // Note that we re-query the registry with a new dependency that
+            // allows any version so we can give some nicer error reporting
+            // which indicates a few versions that were actually found.
+            let msg = format!("no matching package named `{}` found \
+                               (required by `{}`)\n\
                                location searched: {}\n\
                                version required: {}",
                               dep.get_name(), parent.get_name(),
                               dep.get_source_id(),
-                              dep.get_version_req())))
+                              dep.get_version_req());
+            let mut msg = msg;
+            let all_req = semver::VersionReq::parse("*").unwrap();
+            let new_dep = dep.clone().version_req(all_req);
+            let mut candidates = try!(registry.query(&new_dep));
+            candidates.sort_by(|a, b| {
+                b.get_version().cmp(a.get_version())
+            });
+            if candidates.len() > 0 {
+                msg.push_str("\nversions found: ");
+                for (i, c) in candidates.iter().take(3).enumerate() {
+                    if i != 0 { msg.push_str(", "); }
+                    msg.push_str(c.get_version().to_string().as_slice());
+                }
+                if candidates.len() > 3 {
+                    msg.push_str(", ...");
+                }
+            }
+
+            // If we have a path dependency with a locked version, then this may
+            // indicate that we updated a sub-package and forgot to run `cargo
+            // update`. In this case try to print a helpful error!
+            if dep.get_source_id().is_path() &&
+               dep.get_version_req().to_string().starts_with("=") &&
+               candidates.len() > 0 {
+                msg.push_str("\nconsider running `cargo update` to update \
+                              a path dependency's locked version");
+
+            }
+            Err(human(msg))
         }
     })
 }

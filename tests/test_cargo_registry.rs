@@ -100,9 +100,45 @@ test!(nonexistent {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-no package named `nonexistent` found (required by `foo`)
+no matching package named `nonexistent` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
+"));
+});
+
+test!(wrong_version {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = ">= 1.0.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    r::mock_pkg("foo", "0.0.1", &[]);
+    r::mock_pkg("foo", "0.0.2", &[]);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+no matching package named `foo` found (required by `foo`)
+location searched: registry file://[..]
+version required: >= 1.0.0
+versions found: 0.0.2, 0.0.1
+"));
+
+    r::mock_pkg("foo", "0.0.3", &[]);
+    r::mock_pkg("foo", "0.0.4", &[]);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+no matching package named `foo` found (required by `foo`)
+location searched: registry file://[..]
+version required: >= 1.0.0
+versions found: 0.0.4, 0.0.3, 0.0.2, ...
 "));
 });
 
@@ -149,7 +185,7 @@ test!(update_registry {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-no package named `notyet` found (required by `foo`)
+no matching package named `notyet` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
 "));
@@ -200,7 +236,7 @@ test!(package_with_path_deps {
 failed to verify package tarball
 
 Caused by:
-  no package named `notyet` found (required by `foo`)
+  no matching package named `notyet` found (required by `foo`)
 location searched: registry file://[..]
 version required: ^0.0.1
 "));
@@ -344,9 +380,10 @@ test!(relying_on_a_yank_is_bad {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(101).with_stderr("\
-no package named `baz` found (required by `bar`)
+no matching package named `baz` found (required by `bar`)
 location searched: registry file://[..]
 version required: = 0.0.2
+versions found: 0.0.1
 "));
 });
 
@@ -378,7 +415,7 @@ test!(yanks_in_lockfiles_are_ok {
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("update"),
                 execs().with_status(101).with_stderr("\
-no package named `bar` found (required by `foo`)
+no matching package named `bar` found (required by `foo`)
 location searched: registry file://[..]
 version required: *
 "));
