@@ -818,7 +818,7 @@ fn normalize(libs: &[TomlLibTarget],
             let path = ex.path.clone().unwrap_or_else(|| PathValue::String(default(ex)));
 
             let profile = merge(Profile::default_example(), &profiles.test);
-            let profile_release = merge(Profile::default_example_release(), &profiles.release);
+            let profile_release = merge(Profile::default_release(), &profiles.release);
             dst.push(Target::example_target(ex.name.as_slice(),
                                             &path.to_path(),
                                             &profile));

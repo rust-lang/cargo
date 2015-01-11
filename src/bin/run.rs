@@ -51,8 +51,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let env = match (options.flag_release, options.flag_example.is_some()) {
-        (true, true) => "bench",
-        (true, false) => "release",
+        (true, _) => "release",
         (false, true) => "test",
         (false, false) => "compile"
     };
