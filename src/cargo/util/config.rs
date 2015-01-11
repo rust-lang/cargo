@@ -52,23 +52,23 @@ impl<'a> Config<'a> {
     pub fn home(&self) -> &Path { &self.home_path }
 
     pub fn git_db_path(&self) -> Path {
-        self.home_path.join(".cargo").join("git").join("db")
+        self.home_path.join("git").join("db")
     }
 
     pub fn git_checkout_path(&self) -> Path {
-        self.home_path.join(".cargo").join("git").join("checkouts")
+        self.home_path.join("git").join("checkouts")
     }
 
     pub fn registry_index_path(&self) -> Path {
-        self.home_path.join(".cargo").join("registry").join("index")
+        self.home_path.join("registry").join("index")
     }
 
     pub fn registry_cache_path(&self) -> Path {
-        self.home_path.join(".cargo").join("registry").join("cache")
+        self.home_path.join("registry").join("cache")
     }
 
     pub fn registry_source_path(&self) -> Path {
-        self.home_path.join(".cargo").join("registry").join("src")
+        self.home_path.join("registry").join("src")
     }
 
     pub fn shell(&self) -> RefMut<&'a mut MultiShell> {
@@ -251,7 +251,7 @@ impl ConfigValue {
 
 fn homedir() -> Option<Path> {
     let cargo_home = os::getenv("CARGO_HOME").map(|p| Path::new(p));
-    let user_home = os::homedir();
+    let user_home = os::homedir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }
 
@@ -325,7 +325,7 @@ fn walk_tree(pwd: &Path,
               This probably means that $HOME was not set.")
     }));
     if !home.is_ancestor_of(pwd) {
-        let config = home.join(".cargo/config");
+        let config = home.join("config");
         if config.exists() {
             let file = try!(File::open(&config));
             try!(walk(file));
@@ -351,7 +351,7 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     // 2. This blows away all comments in a file
     // 3. This blows away the previous ordering of a file.
     let file = match loc {
-        Location::Global => cfg.home_path.join(".cargo").join("config"),
+        Location::Global => cfg.home_path.join("config"),
         Location::Project => unimplemented!(),
     };
     try!(fs::mkdir_recursive(&file.dir_path(), io::USER_DIR));

@@ -79,8 +79,7 @@ test!(override_cargo_home {
     let root = paths::root();
     let my_home = root.join("my_home");
     fs::mkdir(&my_home, USER_RWX).unwrap();
-    fs::mkdir(&my_home.join(".cargo"), USER_RWX).unwrap();
-    File::create(&my_home.join(".cargo/config")).write_str(r#"
+    File::create(&my_home.join("config")).write_str(r#"
         [cargo-new]
         name = "foo"
         email = "bar"
