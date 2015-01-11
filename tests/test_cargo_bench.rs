@@ -785,3 +785,82 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ",
                        running = RUNNING)));
 });
+
+test!(bench_with_examples {
+    let p = project("testbench")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "testbench"
+            version = "6.6.6"
+            authors = []
+
+            [[example]]
+            name = "teste1"
+
+            [[bench]]
+            name = "testb1"
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate test;
+            use test::Bencher;
+
+            pub fn f1() {
+                println!("f1");
+            }
+
+            pub fn f2() {}
+
+            #[bench]
+            fn bench_bench1(_b: &mut Bencher) {
+                f2();
+            }
+        "#)
+        .file("benches/testb1.rs", "
+            extern crate testbench;
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_bench2(_b: &mut Bencher) {
+                testbench::f2();
+            }
+        ")
+        .file("examples/teste1.rs", r#"
+            extern crate testbench;
+
+            fn main() {
+                println!("example1");
+                testbench::f1();
+            }
+        "#);
+
+    assert_that(p.cargo_process("bench").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} testbench v6.6.6 ({url})
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
+{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
+{running} `rustc benches{sep}testb1.rs --crate-name testb1 --crate-type bin \
+        [..] --test [..]`
+{running} `{dir}{sep}target{sep}release{sep}testb1-[..] --bench`
+
+running 1 test
+test bench_bench2 ... bench:         0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+{running} `{dir}{sep}target{sep}release{sep}testbench-[..] --bench`
+
+running 1 test
+test bench_bench1 ... bench:         0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+",
+                       compiling = COMPILING,
+                       running = RUNNING,
+                       dir = p.root().display(),
+                       url = p.url(),
+                       sep = path::SEP).as_slice()));
+});
