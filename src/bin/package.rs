@@ -13,7 +13,7 @@ struct Options {
 }
 
 pub const USAGE: &'static str = "
-Assemble a the local package into a distributable tarball
+Assemble the local package into a distributable tarball
 
 Usage:
     cargo package [options]
