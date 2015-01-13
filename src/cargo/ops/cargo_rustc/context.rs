@@ -3,6 +3,8 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::str;
 use std::sync::Arc;
 
+use regex::Regex;
+
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
 use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
@@ -98,7 +100,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         let error = str::from_utf8(output.error.as_slice()).unwrap();
         let output = str::from_utf8(output.output.as_slice()).unwrap();
         let mut lines = output.lines();
-        let dylib = if error.contains("dropping unsupported crate type `dylib`") {
+        let nodylib = Regex::new("unsupported crate type.*dylib").unwrap();
+        let nobin = Regex::new("unsupported crate type.*bin").unwrap();
+        let dylib = if nodylib.is_match(error) {
             None
         } else {
             let dylib_parts: Vec<&str> = lines.next().unwrap().trim()
@@ -108,7 +112,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Some((dylib_parts[0].to_string(), dylib_parts[1].to_string()))
         };
 
-        let exe_suffix = if error.contains("dropping unsupported crate type `bin`") {
+        let exe_suffix = if nobin.is_match(error) {
             String::new()
         } else {
             lines.next().unwrap().trim()
