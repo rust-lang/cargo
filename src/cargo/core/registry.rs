@@ -15,8 +15,8 @@ pub trait Registry {
 
 impl Registry for Vec<Summary> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        debug!("querying for {}, summaries={}", dep,
-            self.iter().map(|s| s.get_package_id().to_string()).collect::<Vec<String>>());
+        debug!("querying for {:?}, summaries={:?}", dep,
+               self.iter().map(|s| s.get_package_id()).collect::<Vec<_>>());
 
         Ok(self.iter().filter(|summary| dep.matches(*summary))
                .map(|summary| summary.clone()).collect())
@@ -83,7 +83,7 @@ impl<'a> PackageRegistry<'a> {
     }
 
     pub fn get(&mut self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packags; sources={}; ids={}", self.sources.len(),
+        log!(5, "getting packags; sources={}; ids={:?}", self.sources.len(),
              package_ids);
 
         // TODO: Only call source with package ID if the package came from the
@@ -99,7 +99,7 @@ impl<'a> PackageRegistry<'a> {
 
         // TODO: Return earlier if fail
         assert!(package_ids.len() == ret.len(),
-                "could not get packages from registry; ids={}; ret={}",
+                "could not get packages from registry; ids={:?}; ret={:?}",
                 package_ids, ret);
 
         Ok(ret)
@@ -152,13 +152,11 @@ impl<'a> PackageRegistry<'a> {
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
-        let source = id.get_source_id().clone();
-        let sub_map = match self.locked.entry(&source) {
+        let sub_map = match self.locked.entry(id.get_source_id().clone()) {
             Occupied(e) => e.into_mut(),
             Vacant(e) => e.insert(HashMap::new()),
         };
-        let name = id.get_name().to_string();
-        let sub_vec = match sub_map.entry(&name) {
+        let sub_vec = match sub_map.entry(id.get_name().to_string()) {
             Occupied(e) => e.into_mut(),
             Vacant(e) => e.insert(Vec::new()),
         };
@@ -347,7 +345,7 @@ pub mod test {
 
     impl Registry for RegistryBuilder {
         fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-            debug!("querying; dep={}", dep);
+            debug!("querying; dep={:?}", dep);
 
             let overrides = self.query_overrides(dep);
 

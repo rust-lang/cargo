@@ -33,7 +33,7 @@ pub fn execute(args: ConfigForKeyFlags,
     }));
 
     if args.flag_human {
-        println!("{}", value);
+        println!("{:?}", value);
         Ok(None)
     } else {
         let mut map = HashMap::new();

@@ -26,7 +26,8 @@ impl EncodableResolve {
         let packages = self.package.as_ref().unwrap_or(&packages);
 
         {
-            let register_pkg = |pkg: &EncodableDependency| -> CargoResult<()> {
+            let mut register_pkg = |&mut: pkg: &EncodableDependency|
+                                    -> CargoResult<()> {
                 let pkgid = try!(pkg.to_package_id(default));
                 let precise = pkgid.get_source_id().get_precise()
                                    .map(|s| s.to_string());
@@ -43,7 +44,8 @@ impl EncodableResolve {
         }
 
         {
-            let add_dependencies = |pkg: &EncodableDependency| -> CargoResult<()> {
+            let mut add_dependencies = |&mut: pkg: &EncodableDependency|
+                                        -> CargoResult<()> {
                 let package_id = try!(pkg.to_package_id(default));
 
                 let deps = match pkg.dependencies {
@@ -100,8 +102,8 @@ pub struct EncodablePackageId {
     source: Option<SourceId>
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for EncodablePackageId {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for EncodablePackageId {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let mut out = format!("{} {}", self.name, self.version);
         if let Some(ref s) = self.source {
             out.push_str(format!(" ({})", s.to_url()).as_slice());
@@ -110,8 +112,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for EncodablePackageId {
     }
 }
 
-impl<E, D: Decoder<E>> Decodable<D, E> for EncodablePackageId {
-    fn decode(d: &mut D) -> Result<EncodablePackageId, E> {
+impl Decodable for EncodablePackageId {
+    fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
         let captures = regex.captures(string.as_slice())
@@ -141,8 +143,8 @@ impl EncodablePackageId {
     }
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for Resolve {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for Resolve {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let mut ids: Vec<&PackageId> = self.graph.iter().collect();
         ids.sort();
 

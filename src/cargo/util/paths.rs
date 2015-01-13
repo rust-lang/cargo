@@ -5,7 +5,7 @@ use std::path::BytesContainer;
 use util::{human, CargoResult};
 
 pub fn realpath(original: &Path) -> io::IoResult<Path> {
-    static MAX_LINKS_FOLLOWED: uint = 256;
+    const MAX_LINKS_FOLLOWED: usize = 256;
     let original = try!(os::make_absolute(original));
 
     // Right now lstat on windows doesn't work quite well

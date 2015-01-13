@@ -1,6 +1,5 @@
 use std::io::MemWriter;
-use std::hash::{Hasher, Hash};
-use std::hash::sip::SipHasher;
+use std::hash::{Hasher, Hash, SipHasher};
 
 use rustc_serialize::hex::ToHex;
 
@@ -10,7 +9,8 @@ pub fn to_hex(num: u64) -> String {
     writer.get_ref().to_hex()
 }
 
-pub fn short_hash<H: Hash>(hashable: &H) -> String {
-    let hasher = SipHasher::new_with_keys(0, 0);
-    to_hex(hasher.hash(hashable))
+pub fn short_hash<H: Hash<SipHasher>>(hashable: &H) -> String {
+    let mut hasher = SipHasher::new_with_keys(0, 0);
+    hashable.hash(&mut hasher);
+    to_hex(hasher.finish())
 }

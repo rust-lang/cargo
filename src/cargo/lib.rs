@@ -1,9 +1,5 @@
-#![crate_name="cargo"]
-#![crate_type="rlib"]
-
-#![feature(macro_rules, phase, default_type_params, unboxed_closures)]
-#![feature(slicing_syntax, old_orphan_check, associated_types)]
 #![deny(unused)]
+#![allow(unstable)]
 #![cfg_attr(test, deny(warnings))]
 
 extern crate libc;
@@ -11,7 +7,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate regex;
 extern crate term;
 extern crate time;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 extern crate curl;
 extern crate docopt;
@@ -27,11 +23,10 @@ extern crate url;
 extern crate registry;
 
 use std::error::Error;
-use std::fmt;
 use std::io::stdio::{stdout_raw, stderr_raw};
 use std::io::{self, stdout, stderr};
 use std::os;
-use rustc_serialize::{Decoder, Encoder, Decodable, Encodable};
+use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json};
 use docopt::Docopt;
 
@@ -62,18 +57,15 @@ pub mod ops;
 pub mod sources;
 pub mod util;
 
-pub trait RepresentsJSON : Decodable<json::Decoder, json::DecoderError> {}
-impl<T: Decodable<json::Decoder, json::DecoderError>> RepresentsJSON for T {}
-
 pub fn execute_main<T, U, V>(
                         exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
                         options_first: bool,
                         usage: &str)
-    where V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>,
-          T: Decodable<docopt::Decoder, docopt::Error>,
-          U: RepresentsJSON
+    where V: Encodable, T: Decodable, U: Decodable
 {
-    process::<V>(|rest, shell| call_main(exec, shell, usage, rest, options_first));
+    process::<V, _>(|rest, shell| {
+        call_main(exec, shell, usage, rest, options_first)
+    });
 }
 
 pub fn call_main<T, U, V>(
@@ -82,9 +74,7 @@ pub fn call_main<T, U, V>(
             usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>>
-    where V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>,
-          T: Decodable<docopt::Decoder, docopt::Error>,
-          U: RepresentsJSON
+    where V: Encodable, T: Decodable, U: Decodable
 {
     let flags = try!(flags_from_args::<T>(usage, args, options_first));
     let json = try!(json_from_stdin::<U>());
@@ -96,11 +86,11 @@ pub fn execute_main_without_stdin<T, V>(
                                       exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
                                       options_first: bool,
                                       usage: &str)
-    where V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>,
-          T: Decodable<docopt::Decoder, docopt::Error>
+    where V: Encodable, T: Decodable
 {
-    process::<V>(|rest, shell| call_main_without_stdin(exec, shell, usage, rest,
-                                                       options_first));
+    process::<V, _>(|rest, shell| {
+        call_main_without_stdin(exec, shell, usage, rest, options_first)
+    });
 }
 
 pub fn execute_main_with_args_and_without_stdin<T, V>(
@@ -108,8 +98,7 @@ pub fn execute_main_with_args_and_without_stdin<T, V>(
                                       options_first: bool,
                                       usage: &str,
                                       args: &[String])
-    where V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>,
-          T: Decodable<docopt::Decoder, docopt::Error>
+    where V: Encodable, T: Decodable
 {
     let mut shell = shell(true);
 
@@ -124,15 +113,15 @@ pub fn call_main_without_stdin<T, V>(
             usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>>
-    where V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>,
-          T: Decodable<docopt::Decoder, docopt::Error>
+    where V: Encodable, T: Decodable
 {
     let flags = try!(flags_from_args::<T>(usage, args, options_first));
     exec(flags, shell)
 }
 
-fn process<V>(callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>)
-    where V: for<'a> Encodable<json::Encoder<'a>, fmt::Error>
+fn process<V, F>(mut callback: F)
+    where F: FnMut(&[String], &mut MultiShell) -> CliResult<Option<V>>,
+          V: Encodable
 {
     let mut shell = shell(true);
     process_executed(callback(os::args().as_slice(), &mut shell), &mut shell)
@@ -140,7 +129,7 @@ fn process<V>(callback: |&[String], &mut MultiShell| -> CliResult<Option<V>>)
 
 pub fn process_executed<T>(result: CliResult<Option<T>>,
                            shell: &mut MultiShell)
-    where T: for<'a> Encodable<json::Encoder<'a>, fmt::Error>
+    where T: Encodable
 {
     match result {
         Err(e) => handle_error(e, shell),
@@ -154,13 +143,13 @@ pub fn process_executed<T>(result: CliResult<Option<T>>,
 
 pub fn shell(verbose: bool) -> MultiShell {
     let tty = stderr_raw().isatty();
-    let stderr = box stderr() as Box<Writer + Send>;
+    let stderr = Box::new(stderr()) as Box<Writer + Send>;
 
     let config = ShellConfig { color: true, verbose: verbose, tty: tty };
     let err = Shell::create(stderr, config);
 
     let tty = stdout_raw().isatty();
-    let stdout = box stdout() as Box<Writer + Send>;
+    let stdout = Box::new(stdout()) as Box<Writer + Send>;
 
     let config = ShellConfig { color: true, verbose: verbose, tty: tty };
     let out = Shell::create(stdout, config);
@@ -185,7 +174,7 @@ fn output(caption: Option<String>, detail: Option<String>,
 }
 
 pub fn handle_error(err: CliError, shell: &mut MultiShell) {
-    log!(4, "handle_error; err={}", err);
+    log!(4, "handle_error; err={:?}", err);
 
     let CliError { error, exit_code, unknown } = err;
     let verbose = shell.get_verbose();
@@ -217,7 +206,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
         }
     }
 
-    std::os::set_exit_status(exit_code as int);
+    std::os::set_exit_status(exit_code as isize);
 }
 
 fn handle_cause(mut err: &Error, shell: &mut MultiShell) {
@@ -245,7 +234,8 @@ pub fn version() -> String {
 
 fn flags_from_args<'a, T>(usage: &str, args: &[String],
                           options_first: bool) -> CliResult<T>
-                          where T: Decodable<docopt::Decoder, docopt::Error> {
+    where T: Decodable
+{
     struct CargoDocoptError { err: docopt::Error }
     impl Error for CargoDocoptError {
         fn description(&self) -> &str {
@@ -281,7 +271,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
     })
 }
 
-fn json_from_stdin<T: RepresentsJSON>() -> CliResult<T> {
+fn json_from_stdin<T: Decodable>() -> CliResult<T> {
     let mut reader = io::stdin();
     let input = try!(reader.read_to_string().map_err(|_| {
         CliError::new("Standard in did not exist or was not UTF-8", 1)

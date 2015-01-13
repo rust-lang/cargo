@@ -22,15 +22,15 @@ test!(plugin_to_the_max {
             path = "../bar"
         "#)
         .file("src/main.rs", r#"
-            #![feature(phase)]
-            #[phase(plugin)] extern crate bar;
+            #![feature(plugin)]
+            #[plugin] #[no_link] extern crate bar;
             extern crate foo_lib;
 
             fn main() { foo_lib::foo(); }
         "#)
         .file("src/foo_lib.rs", r#"
-            #![feature(phase)]
-            #[phase(plugin)] extern crate bar;
+            #![feature(plugin)]
+            #[plugin] #[no_link] extern crate bar;
 
             pub fn foo() {}
         "#);
@@ -95,6 +95,7 @@ test!(plugin_with_dynamic_native_dependency {
             crate-type = ["dylib"]
         "#)
         .file("src/main.rs", r#"
+            #![allow(unstable)]
             use std::io::fs;
             use std::os;
 
@@ -132,8 +133,8 @@ test!(plugin_with_dynamic_native_dependency {
             path = "bar"
         "#)
         .file("src/main.rs", r#"
-            #![feature(phase)]
-            #[phase(plugin)] extern crate bar;
+            #![feature(plugin)]
+            #[plugin] #[no_link] extern crate bar;
 
             fn main() {}
         "#)

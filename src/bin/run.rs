@@ -10,7 +10,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 struct Options {
     flag_bin: Option<String>,
     flag_example: Option<String>,
-    flag_jobs: Option<uint>,
+    flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,
     flag_target: Option<String>,
@@ -88,7 +88,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         None => Ok(None),
         Some(err) => {
             Err(match err.exit {
-                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as uint),
+                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as u32),
                 _ => CliError::from_boxed(box err, 101),
             })
         }

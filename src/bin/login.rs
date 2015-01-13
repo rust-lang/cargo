@@ -30,7 +30,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let err = (|| {
+            let err = (|:| {
                 let config = try!(Config::new(shell, None, None));
                 let src = try!(SourceId::for_central());
                 let mut src = RegistrySource::new(&src, &config);

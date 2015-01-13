@@ -266,7 +266,7 @@ pub fn modify_owners(shell: &mut MultiShell,
     match opts.to_add {
         Some(ref v) => {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
-            try!(shell.status("Owner", format!("adding `{:#}` to `{}`", v, name)));
+            try!(shell.status("Owner", format!("adding `{:#?}` to `{}`", v, name)));
             try!(registry.add_owners(name.as_slice(), v.as_slice()).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
             }));
@@ -277,7 +277,7 @@ pub fn modify_owners(shell: &mut MultiShell,
     match opts.to_remove {
         Some(ref v) => {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
-            try!(shell.status("Owner", format!("removing `{:#}` from `{}`",
+            try!(shell.status("Owner", format!("removing `{:?}` from `{}`",
                                                v, name)));
             try!(registry.remove_owners(name.as_slice(), v.as_slice()).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
@@ -343,11 +343,11 @@ pub fn yank(shell: &mut MultiShell,
 }
 
 pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> CargoResult<()> {
-    fn truncate_with_ellipsis(s: &str, max_length: uint) -> String {
+    fn truncate_with_ellipsis(s: &str, max_length: usize) -> String {
         if s.len() < max_length {
             s.to_string()
         } else {
-            format!("{}…", s[..max_length - 1])
+            format!("{}…", &s[..max_length - 1])
         }
     }
 

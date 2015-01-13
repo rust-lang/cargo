@@ -1,6 +1,5 @@
-use std::c_str::ToCStr;
 use std::collections::HashMap;
-use std::fmt;
+use std::ffi::CString;
 use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
@@ -17,7 +16,7 @@ use super::CommandType;
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
-#[derive(Clone)]
+#[derive(Clone, Show)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
     pub library_paths: Vec<Path>,
@@ -52,20 +51,21 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // Start preparing the process to execute, starting out with some
     // environment variables.
     let profile = target.get_profile();
-    let mut p = try!(super::process(CommandType::Host(to_exec.to_c_str()), pkg, target, cx))
-                     .env("OUT_DIR", Some(&build_output))
-                     .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
-                                                        .dir_path()
-                                                        .display().to_string()))
-                     .env("NUM_JOBS", Some(cx.config.jobs().to_string()))
-                     .env("TARGET", Some(match kind {
-                         Kind::Host => cx.config.rustc_host(),
-                         Kind::Target => cx.target_triple(),
-                     }))
-                     .env("DEBUG", Some(profile.get_debug().to_string()))
-                     .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
-                     .env("PROFILE", Some(profile.get_env()))
-                     .env("HOST", Some(cx.config.rustc_host()));
+    let to_exec = CString::from_slice(to_exec.as_vec());
+    let p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
+    let mut p = p.env("OUT_DIR", Some(&build_output))
+                 .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
+                                                    .dir_path()
+                                                    .display().to_string()))
+                 .env("NUM_JOBS", Some(cx.config.jobs().to_string()))
+                 .env("TARGET", Some(match kind {
+                     Kind::Host => cx.config.rustc_host(),
+                     Kind::Target => cx.target_triple(),
+                 }))
+                 .env("DEBUG", Some(profile.get_debug().to_string()))
+                 .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
+                 .env("PROFILE", Some(profile.get_env()))
+                 .env("HOST", Some(cx.config.rustc_host()));
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
@@ -327,12 +327,5 @@ impl BuildOutput {
             };
         }
         Ok((library_paths, library_links))
-    }
-}
-
-impl fmt::Show for BuildOutput {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "BuildOutput {{ paths: [..], libs: {}, metadata: {} }}",
-               self.library_links, self.metadata)
     }
 }

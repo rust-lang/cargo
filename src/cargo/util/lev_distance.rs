@@ -10,7 +10,7 @@
 
 use std::cmp;
 
-pub fn lev_distance(me: &str, t: &str) -> uint {
+pub fn lev_distance(me: &str, t: &str) -> usize {
     if me.is_empty() { return t.chars().count(); }
     if t.is_empty() { return me.chars().count(); }
 
@@ -48,7 +48,7 @@ fn test_lev_distance() {
     for c in range(0u32, MAX as u32)
              .filter_map(|i| from_u32(i))
              .map(|i| i.to_string()) {
-        assert_eq!(lev_distance(c[], c[]), 0);
+        assert_eq!(lev_distance(&c[], &c[]), 0);
     }
 
     let a = "\nMäry häd ä little lämb\n\nLittle lämb\n";

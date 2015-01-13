@@ -55,7 +55,7 @@ src[..]main.rs
         let fname = f.filename_bytes();
         assert!(fname == b"foo-0.0.1/Cargo.toml" ||
                 fname == b"foo-0.0.1/src/main.rs",
-                "unexpected filename: {}", f.filename())
+                "unexpected filename: {:?}", f.filename())
     }
 });
 

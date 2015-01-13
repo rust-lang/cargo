@@ -19,8 +19,8 @@ pub struct NewOptions<'a> {
     pub path: &'a str,
 }
 
-impl<E, D: Decoder<E>> Decodable<D, E> for VersionControl {
-    fn decode(d: &mut D) -> Result<VersionControl, E> {
+impl Decodable for VersionControl {
+    fn decode<D: Decoder>(d: &mut D) -> Result<VersionControl, D::Error> {
         Ok(match try!(d.read_str()).as_slice() {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,

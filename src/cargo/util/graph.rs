@@ -1,7 +1,7 @@
 use std::fmt;
 use std::hash::Hash;
 use std::collections::hash_set::HashSet;
-use std::collections::hash_map::{HashMap, Keys};
+use std::collections::hash_map::{HashMap, Keys, Hasher};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_set::Iter;
 
@@ -17,7 +17,7 @@ enum Mark {
 pub type Nodes<'a, N> = Keys<'a, N, HashSet<N>>;
 pub type Edges<'a, N> = Iter<'a, N>;
 
-impl<N: Eq + Hash + Clone> Graph<N> {
+impl<N: Eq + Hash<Hasher> + Clone> Graph<N> {
     pub fn new() -> Graph<N> {
         Graph { nodes: HashMap::new() }
     }
@@ -27,7 +27,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 
     pub fn link(&mut self, node: N, child: N) {
-        match self.nodes.entry(&node) {
+        match self.nodes.entry(node) {
             Occupied(entry) => entry.into_mut(),
             Vacant(entry) => entry.insert(HashSet::new()),
         }.insert(child);
@@ -72,15 +72,15 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 }
 
-impl<N: fmt::Show + Eq + Hash> fmt::Show for Graph<N> {
+impl<N: fmt::Show + Eq + Hash<Hasher>> fmt::Show for Graph<N> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         try!(writeln!(fmt, "Graph {{"));
 
         for (n, e) in self.nodes.iter() {
-            try!(writeln!(fmt, "  - {}", n));
+            try!(writeln!(fmt, "  - {:?}", n));
 
             for n in e.iter() {
-                try!(writeln!(fmt, "    - {}", n));
+                try!(writeln!(fmt, "    - {:?}", n));
             }
         }
 
@@ -90,12 +90,12 @@ impl<N: fmt::Show + Eq + Hash> fmt::Show for Graph<N> {
     }
 }
 
-impl<N: Eq + Hash> PartialEq for Graph<N> {
+impl<N: Eq + Hash<Hasher>> PartialEq for Graph<N> {
     fn eq(&self, other: &Graph<N>) -> bool { self.nodes.eq(&other.nodes) }
 }
-impl<N: Eq + Hash> Eq for Graph<N> {}
+impl<N: Eq + Hash<Hasher>> Eq for Graph<N> {}
 
-impl<N: Eq + Hash + Clone> Clone for Graph<N> {
+impl<N: Eq + Hash<Hasher> + Clone> Clone for Graph<N> {
     fn clone(&self) -> Graph<N> {
         Graph { nodes: self.nodes.clone() }
     }

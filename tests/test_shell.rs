@@ -19,7 +19,7 @@ test!(non_tty {
     let config = ShellConfig { color: true, verbose: true, tty: false };
     let (tx, mut rx) = pair();
 
-    Shell::create(box tx, config).tap(|shell| {
+    Shell::create(Box::new(tx), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
 
@@ -31,7 +31,7 @@ test!(color_explicitly_disabled {
     let config = ShellConfig { color: false, verbose: true, tty: true };
     let (tx, mut rx) = pair();
 
-    Shell::create(box tx, config).tap(|shell| {
+    Shell::create(Box::new(tx), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = rx.read_to_end().unwrap();
@@ -45,7 +45,7 @@ test!(colored_shell {
     let config = ShellConfig { color: true, verbose: true, tty: true };
     let (tx, mut rx) = pair();
 
-    Shell::create(box tx, config).tap(|shell| {
+    Shell::create(Box::new(tx), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = rx.read_to_end().unwrap();

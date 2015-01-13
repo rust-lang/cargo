@@ -137,7 +137,7 @@ failures:
 ---- test_hello stdout ----
 <tab>thread 'test_hello' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
-    `hello`, right: `nope`)', src{sep}foo.rs:12
+    `\"hello\"`, right: `\"nope\"`)', src{sep}foo.rs:12
 
 
 
@@ -172,7 +172,7 @@ test!(test_with_lib_dep {
             /// ```rust
             /// extern crate foo;
             /// fn main() {
-            ///     println!("{}", foo::foo());
+            ///     println!("{:?}", foo::foo());
             /// }
             /// ```
             ///
@@ -468,7 +468,7 @@ test!(cargo_test_twice {
 
     p.cargo_process("build");
 
-    for _ in range(0u, 2) {
+    for _ in range(0, 2) {
         assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                     execs().with_status(0));
     }

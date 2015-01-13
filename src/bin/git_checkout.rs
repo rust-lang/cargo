@@ -39,7 +39,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let mut source = GitSource::new(&source_id, &mut config);
 
     try!(source.update().map_err(|e| {
-        CliError::new(format!("Couldn't update {}: {}", source, e), 1)
+        CliError::new(format!("Couldn't update {:?}: {:?}", source, e), 1)
     }));
 
     Ok(None)

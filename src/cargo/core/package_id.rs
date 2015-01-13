@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::error::{Error, FromError};
-use std::fmt::{self, Show, Formatter};
-use std::hash::Hash;
+use std::fmt::{self, Formatter};
+use std::hash::{Hash, SipHasher};
 use std::hash;
 use std::sync::Arc;
 
@@ -13,20 +13,20 @@ use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
-#[derive(Clone)]
+#[derive(Clone, Show)]
 pub struct PackageId {
     inner: Arc<PackageIdInner>,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Show)]
 struct PackageIdInner {
     name: String,
     version: semver::Version,
     source_id: SourceId,
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for PackageId {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for PackageId {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let source = self.inner.source_id.to_url();
         let encoded = format!("{} {} ({})", self.inner.name, self.inner.version,
                               source);
@@ -34,8 +34,8 @@ impl<E, S: Encoder<E>> Encodable<S, E> for PackageId {
     }
 }
 
-impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
-    fn decode(d: &mut D) -> Result<PackageId, E> {
+impl Decodable for PackageId {
+    fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
         let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
@@ -56,7 +56,7 @@ impl<E, D: Decoder<E>> Decodable<D, E> for PackageId {
     }
 }
 
-impl<S: hash::Writer> Hash<S> for PackageId {
+impl<S: hash::Writer + hash::Hasher> Hash<S> for PackageId {
     fn hash(&self, state: &mut S) {
         self.inner.name.hash(state);
         self.inner.version.to_string().hash(state);
@@ -106,10 +106,10 @@ impl CargoError for PackageIdError {
 }
 
 impl FromError<PackageIdError> for Box<CargoError> {
-    fn from_error(t: PackageIdError) -> Box<CargoError> { box t }
+    fn from_error(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
 }
 
-#[derive(PartialEq, Hash, Clone, RustcEncodable)]
+#[derive(PartialEq, Hash, Clone, RustcEncodable, Show)]
 pub struct Metadata {
     pub metadata: String,
     pub extra_filename: String
@@ -161,14 +161,14 @@ impl PackageId {
 }
 
 impl Metadata {
-    pub fn mix<T: Hash>(&mut self, t: &T) {
+    pub fn mix<T: Hash<SipHasher>>(&mut self, t: &T) {
         let new_metadata = short_hash(&(self.metadata.as_slice(), t));
         self.extra_filename = format!("-{}", new_metadata);
         self.metadata = new_metadata;
     }
 }
 
-impl Show for PackageId {
+impl fmt::String for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{} v{}", self.inner.name, self.inner.version));
 

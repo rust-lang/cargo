@@ -24,7 +24,7 @@ pub struct JobQueue<'a, 'b> {
     rx: Receiver<Message>,
     resolve: &'a Resolve,
     packages: &'a PackageSet,
-    active: uint,
+    active: u32,
     pending: HashMap<(&'a PackageId, Stage), PendingBuild>,
     state: HashMap<&'a PackageId, Freshness>,
     ignored: HashSet<&'a PackageId>,
@@ -34,7 +34,7 @@ pub struct JobQueue<'a, 'b> {
 /// A helper structure for metadata about the state of a building package.
 struct PendingBuild {
     /// Number of jobs currently active
-    amt: uint,
+    amt: u32,
     /// Current freshness state of this package. Any dirty target within a
     /// package will cause the entire package to become dirty.
     fresh: Freshness,
@@ -67,7 +67,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
                config: &Config) -> JobQueue<'a, 'b> {
         let (tx, rx) = channel();
         JobQueue {
-            pool: TaskPool::new(config.jobs()),
+            pool: TaskPool::new(config.jobs() as usize),
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,
@@ -86,7 +86,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // Record the freshness state of this package as dirty if any job is
         // dirty or fresh otherwise
         let fresh = jobs.iter().fold(Fresh, |f1, &(_, f2)| f1.combine(f2));
-        match self.state.entry(&pkg.get_package_id()) {
+        match self.state.entry(pkg.get_package_id()) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(fresh); }
             Vacant(entry) => { entry.insert(fresh); }
         };
@@ -116,7 +116,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             loop {
                 match self.queue.dequeue() {
                     Some((fresh, (_, stage), (pkg, jobs))) => {
-                        info!("start: {} {}", pkg, stage);
+                        info!("start: {} {:?}", pkg, stage);
                         try!(self.run(pkg, stage, fresh, jobs, config));
                     }
                     None => break,
@@ -127,7 +127,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             // of work to finish. If any package fails to build then we stop
             // scheduling work as quickly as possibly.
             let (id, stage, fresh, result) = self.rx.recv().unwrap();
-            info!("  end: {} {}", id, stage);
+            info!("  end: {} {:?}", id, stage);
             let id = *self.state.keys().find(|&k| *k == &id).unwrap();
             self.active -= 1;
             match result {
@@ -144,7 +144,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
                         try!(config.shell().say(
                                     "Build failed, waiting for other \
                                      jobs to finish...", YELLOW));
-                        for _ in self.rx.iter().take(self.active) {}
+                        for _ in self.rx.iter().take(self.active as usize) {}
                     }
                     return Err(e)
                 }
@@ -164,7 +164,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     fn run(&mut self, pkg: &'a Package, stage: Stage, fresh: Freshness,
            jobs: Vec<(Job, Freshness)>, config: &Config) -> CargoResult<()> {
         let njobs = jobs.len();
-        let amt = if njobs == 0 {1} else {njobs};
+        let amt = if njobs == 0 {1} else {njobs as u32};
         let id = pkg.get_package_id().clone();
 
         // While the jobs are all running, we maintain some metadata about how
@@ -230,9 +230,9 @@ impl<'a, 'b> JobQueue<'a, 'b> {
     }
 }
 
-impl<'a> Dependency<(&'a Resolve, &'a PackageSet)>
-    for (&'a PackageId, Stage)
-{
+impl<'a> Dependency for (&'a PackageId, Stage) {
+    type Context = (&'a Resolve, &'a PackageSet);
+
     fn dependencies(&self, &(resolve, packages): &(&'a Resolve, &'a PackageSet))
                     -> Vec<(&'a PackageId, Stage)> {
         // This implementation of `Dependency` is the driver for the structure

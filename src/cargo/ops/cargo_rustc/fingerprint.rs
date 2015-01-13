@@ -1,6 +1,5 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::hash::{Hash, Hasher};
-use std::hash::sip::SipHasher;
+use std::hash::{Hash, Hasher, SipHasher};
 use std::io::{self, fs, File, BufferedReader};
 use std::io::fs::PathExtensions;
 
@@ -42,7 +41,7 @@ pub type Preparation = (Freshness, Work, Work);
 /// from the old directories to their new locations.
 pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
                       kind: Kind) -> CargoResult<Preparation> {
-    let _p = profile::start(format!("fingerprint: {} / {}",
+    let _p = profile::start(format!("fingerprint: {} / {:?}",
                                     pkg.get_package_id(), target));
     let new = dir(cx, pkg, kind);
     let loc = new.join(filename(target));
@@ -96,7 +95,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
-                let pkgid = pkg.get_package_id();
+                let pkgid = pkg.get_package_id().clone();
                 match cx.compilation.libraries.entry(pkgid) {
                     Occupied(entry) => entry.into_mut(),
                     Vacant(entry) => entry.insert(Vec::new()),
@@ -221,9 +220,10 @@ fn is_fresh(loc: &Path, new_fingerprint: &str) -> CargoResult<bool> {
 
 /// Frob in the necessary data from the context to generate the real
 /// fingerprint.
-fn mk_fingerprint<T: Hash>(cx: &Context, data: &T) -> String {
-    let hasher = SipHasher::new_with_keys(0,0);
-    util::to_hex(hasher.hash(&(cx.config.rustc_version(), data)))
+fn mk_fingerprint<T: Hash<SipHasher>>(cx: &Context, data: &T) -> String {
+    let mut hasher = SipHasher::new_with_keys(0,0);
+    (cx.config.rustc_version(), data).hash(&mut hasher);
+    util::to_hex(hasher.finish())
 }
 
 fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {

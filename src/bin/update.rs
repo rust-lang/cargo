@@ -52,7 +52,7 @@ For more information about package id specifications, see `cargo help pkgid`.
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-update; args={}", os::args());
+    debug!("executing; cmd=cargo-update; args={:?}", os::args());
     shell.set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 

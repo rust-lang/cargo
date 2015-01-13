@@ -199,8 +199,8 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             name = "bar"
         "#)
         .file("bar/src/bar.rs", r#"
-            pub fn gimme() -> String {
-                "test passed".to_string()
+            pub fn gimme() -> &'static str {
+                "test passed"
             }
 
             fn dead() {}

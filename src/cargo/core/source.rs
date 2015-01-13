@@ -1,6 +1,6 @@
 use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::cmp::Ordering;
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Formatter};
 use std::hash;
 use std::mem;
 use std::sync::Arc;
@@ -63,12 +63,12 @@ pub enum GitReference {
 type Error = Box<CargoError + Send>;
 
 /// Unique identifier for a source of packages.
-#[derive(Clone, Eq)]
+#[derive(Clone, Eq, Show)]
 pub struct SourceId {
     inner: Arc<SourceIdInner>,
 }
 
-#[derive(Eq, Clone)]
+#[derive(Eq, Clone, Show)]
 struct SourceIdInner {
     url: Url,
     kind: Kind,
@@ -195,16 +195,16 @@ impl SourceId {
     pub fn load<'a>(&self, config: &'a Config) -> Box<Source+'a> {
         log!(5, "loading SourceId; {}", self);
         match self.inner.kind {
-            Kind::Git(..) => box GitSource::new(self, config) as Box<Source+'a>,
+            Kind::Git(..) => Box::new(GitSource::new(self, config)) as Box<Source>,
             Kind::Path => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };
-                box PathSource::new(&path, self) as Box<Source>
+                Box::new(PathSource::new(&path, self)) as Box<Source>
             },
             Kind::Registry => {
-                box RegistrySource::new(self, config) as Box<Source+'a>
+                Box::new(RegistrySource::new(self, config)) as Box<Source>
             }
         }
     }
@@ -256,8 +256,8 @@ impl Ord for SourceId {
     }
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for SourceId {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for SourceId {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         if self.is_path() {
             s.emit_option_none()
         } else {
@@ -266,17 +266,19 @@ impl<E, S: Encoder<E>> Encodable<S, E> for SourceId {
     }
 }
 
-impl<E, D: Decoder<E>> Decodable<D, E> for SourceId {
-    fn decode(d: &mut D) -> Result<SourceId, E> {
+impl Decodable for SourceId {
+    fn decode<D: Decoder>(d: &mut D) -> Result<SourceId, D::Error> {
         let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
         Ok(SourceId::from_url(string))
     }
 }
 
-impl Show for SourceId {
+impl fmt::String for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self.inner {
-            SourceIdInner { kind: Kind::Path, ref url, .. } => url.fmt(f),
+            SourceIdInner { kind: Kind::Path, ref url, .. } => {
+                fmt::String::fmt(url, f)
+            }
             SourceIdInner { kind: Kind::Git(ref reference), ref url,
                             ref precise, .. } => {
                 try!(write!(f, "{}{}", url, url_ref(reference)));
@@ -314,7 +316,7 @@ impl PartialEq for SourceIdInner {
     }
 }
 
-impl<S: hash::Writer> hash::Hash<S> for SourceId {
+impl<S: hash::Writer + hash::Hasher> hash::Hash<S> for SourceId {
     fn hash(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match *self.inner {
@@ -394,7 +396,7 @@ impl<'src> SourceMap<'src> {
         self.map.insert(id.clone(), source);
     }
 
-    pub fn len(&self) -> uint {
+    pub fn len(&self) -> usize {
         self.map.len()
     }
 

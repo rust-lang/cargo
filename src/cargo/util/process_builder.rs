@@ -1,12 +1,13 @@
-use std::fmt::{self, Show, Formatter};
-use std::os;
-use std::c_str::{CString, ToCStr};
-use std::io::process::{Command, ProcessOutput, InheritFd};
 use std::collections::HashMap;
+use std::ffi::CString;
+use std::fmt::{self, Formatter};
+use std::io::process::{Command, ProcessOutput, InheritFd};
+use std::os;
+use std::path::BytesContainer;
 
 use util::{CargoResult, ProcessError, process_error};
 
-#[derive(Clone,PartialEq)]
+#[derive(Clone, PartialEq, Show)]
 pub struct ProcessBuilder {
     program: CString,
     args: Vec<CString>,
@@ -14,12 +15,12 @@ pub struct ProcessBuilder {
     cwd: Path,
 }
 
-impl Show for ProcessBuilder {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", String::from_utf8_lossy(self.program.as_bytes_no_nul())));
+impl fmt::String for ProcessBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "`{}", String::from_utf8_lossy(self.program.as_bytes())));
 
         for arg in self.args.iter() {
-            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes_no_nul())));
+            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes())));
         }
 
         write!(f, "`")
@@ -27,13 +28,15 @@ impl Show for ProcessBuilder {
 }
 
 impl ProcessBuilder {
-    pub fn arg<T: ToCStr>(mut self, arg: T) -> ProcessBuilder {
-        self.args.push(arg.to_c_str());
+    pub fn arg<T: BytesContainer>(mut self, arg: T) -> ProcessBuilder {
+        self.args.push(CString::from_slice(arg.container_as_bytes()));
         self
     }
 
-    pub fn args<T: ToCStr>(mut self, arguments: &[T]) -> ProcessBuilder {
-        self.args.extend(arguments.iter().map(|t| t.to_c_str()));
+    pub fn args<T: BytesContainer>(mut self, arguments: &[T]) -> ProcessBuilder {
+        self.args.extend(arguments.iter().map(|t| {
+            CString::from_slice(t.container_as_bytes())
+        }));
         self
     }
 
@@ -46,8 +49,10 @@ impl ProcessBuilder {
         self
     }
 
-    pub fn env<T: ToCStr>(mut self, key: &str, val: Option<T>) -> ProcessBuilder {
-        self.env.insert(key.to_string(), val.map(|t| t.to_c_str()));
+    pub fn env<T: BytesContainer>(mut self, key: &str,
+                                  val: Option<T>) -> ProcessBuilder {
+        let val = val.map(|t| CString::from_slice(t.container_as_bytes()));
+        self.env.insert(key.to_string(), val);
         self
     }
 
@@ -92,15 +97,15 @@ impl ProcessBuilder {
     }
 
     pub fn build_command(&self) -> Command {
-        let mut command = Command::new(self.program.as_bytes_no_nul());
+        let mut command = Command::new(&self.program);
         command.cwd(&self.cwd);
         for arg in self.args.iter() {
-            command.arg(arg.as_bytes_no_nul());
+            command.arg(arg);
         }
         for (k, v) in self.env.iter() {
             let k = k.as_slice();
             match *v {
-                Some(ref v) => { command.env(k, v.as_bytes_no_nul()); }
+                Some(ref v) => { command.env(k, v); }
                 None => { command.env_remove(k); }
             }
         }
@@ -108,20 +113,18 @@ impl ProcessBuilder {
     }
 
     fn debug_string(&self) -> String {
-        let program = String::from_utf8_lossy(self.program.as_bytes_no_nul());
-        let mut program = program.to_string();
+        let mut program = format!("{}", String::from_utf8_lossy(self.program.as_bytes()));
         for arg in self.args.iter() {
             program.push(' ');
-            let s = String::from_utf8_lossy(arg.as_bytes_no_nul());
-            program.push_str(s.as_slice());
+            program.push_str(&format!("{}", String::from_utf8_lossy(arg.as_bytes()))[]);
         }
         program
     }
 }
 
-pub fn process<T: ToCStr>(cmd: T) -> CargoResult<ProcessBuilder> {
+pub fn process<T: BytesContainer>(cmd: T) -> CargoResult<ProcessBuilder> {
     Ok(ProcessBuilder {
-        program: cmd.to_c_str(),
+        program: CString::from_slice(cmd.container_as_bytes()),
         args: Vec::new(),
         cwd: try!(os::getcwd()),
         env: HashMap::new(),
