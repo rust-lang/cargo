@@ -151,6 +151,7 @@ test!(cargo_bench_failing_test {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
+            #![allow(unstable)]
             extern crate test;
             fn hello() -> &'static str {
                 "hello"
@@ -183,7 +184,7 @@ test bench_hello ... ",
               .with_stderr(format!("\
 thread '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
-    `hello`, right: `nope`)', src{sep}foo.rs:13
+    `\"hello\"`, right: `\"nope\"`)', src{sep}foo.rs:14
 ", sep = path::SEP))
               .with_status(101));
 });
@@ -469,7 +470,7 @@ test!(cargo_bench_twice {
 
     p.cargo_process("build");
 
-    for _ in range(0u, 2) {
+    for _ in range(0, 2) {
         assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
                     execs().with_status(0));
     }

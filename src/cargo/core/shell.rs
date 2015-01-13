@@ -1,8 +1,9 @@
-use term::{Terminal, TerminfoTerminal, color};
-use term::color::{Color, BLACK, RED, GREEN, YELLOW};
-use term::attr::{Attr, Bold};
+use std::fmt;
 use std::io::{IoResult, stderr};
-use std::fmt::Show;
+
+use term::Attr;
+use term::color::{Color, BLACK, RED, GREEN, YELLOW};
+use term::{Terminal, TerminfoTerminal, color};
 
 use self::AdequateTerminal::{NoColor, Colored};
 
@@ -29,8 +30,6 @@ pub struct MultiShell {
     verbose: bool
 }
 
-pub type Callback<'a> = |&mut MultiShell|:'a -> IoResult<()>;
-
 struct UghWhyIsThisNecessary {
     inner: Box<Writer + Send>,
 }
@@ -52,16 +51,22 @@ impl MultiShell {
         self.out().say(message, color)
     }
 
-    pub fn status<T: Show, U: Show>(&mut self, status: T, message: U) -> IoResult<()> {
+    pub fn status<T, U>(&mut self, status: T, message: U) -> IoResult<()>
+        where T: fmt::String, U: fmt::String
+    {
         self.out().say_status(status, message, GREEN)
     }
 
-    pub fn verbose(&mut self, callback: Callback) -> IoResult<()> {
+    pub fn verbose<F>(&mut self, mut callback: F) -> IoResult<()>
+        where F: FnMut(&mut MultiShell) -> IoResult<()>
+    {
         if self.verbose { return callback(self) }
         Ok(())
     }
 
-    pub fn concise(&mut self, callback: Callback) -> IoResult<()> {
+    pub fn concise<F>(&mut self, mut callback: F) -> IoResult<()>
+        where F: FnMut(&mut MultiShell) -> IoResult<()>
+    {
         if !self.verbose { return callback(self) }
         Ok(())
     }
@@ -83,8 +88,6 @@ impl MultiShell {
     }
 }
 
-pub type ShellCallback<'a> = |&mut Shell|:'a -> IoResult<()>;
-
 impl Shell {
     pub fn create(out: Box<Writer + Send>, config: ShellConfig) -> Shell {
         let out = UghWhyIsThisNecessary { inner: out };
@@ -94,19 +97,23 @@ impl Shell {
                 terminal: Colored(t),
                 config: config
             }).unwrap_or_else(|| {
-                Shell { terminal: NoColor(box stderr()), config: config }
+                Shell { terminal: NoColor(Box::new(stderr())), config: config }
             })
         } else {
             Shell { terminal: NoColor(out.inner), config: config }
         }
     }
 
-    pub fn verbose(&mut self, callback: ShellCallback) -> IoResult<()> {
+    pub fn verbose<F>(&mut self, mut callback: F) -> IoResult<()>
+        where F: FnMut(&mut Shell) -> IoResult<()>
+    {
         if self.config.verbose { return callback(self) }
         Ok(())
     }
 
-    pub fn concise(&mut self, callback: ShellCallback) -> IoResult<()> {
+    pub fn concise<F>(&mut self, mut callback: F) -> IoResult<()>
+        where F: FnMut(&mut Shell) -> IoResult<()>
+    {
         if !self.config.verbose { return callback(self) }
         Ok(())
     }
@@ -120,11 +127,13 @@ impl Shell {
         Ok(())
     }
 
-    pub fn say_status<T: Show, U: Show>(&mut self, status: T, message: U,
-                                        color: Color) -> IoResult<()> {
+    pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)
+                            -> IoResult<()>
+        where T: fmt::String, U: fmt::String
+    {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
-        if self.supports_attr(Bold) { try!(self.attr(Bold)); }
+        if self.supports_attr(Attr::Bold) { try!(self.attr(Attr::Bold)); }
         try!(self.write_str(format!("{:>12}", status).as_slice()));
         try!(self.reset());
         try!(self.write_line(format!(" {}", message).as_slice()));
@@ -155,7 +164,7 @@ impl Shell {
 
     fn reset(&mut self) -> IoResult<()> {
         match self.terminal {
-            Colored(ref mut c) => c.reset(),
+            Colored(ref mut c) => c.reset().map(|_| ()),
             NoColor(_) => Ok(())
         }
     }

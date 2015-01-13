@@ -34,7 +34,7 @@ and its format, see the `cargo help pkgid` command.
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
     shell.set_verbose(options.flag_verbose);
-    debug!("executing; cmd=cargo-clean; args={}", os::args());
+    debug!("executing; cmd=cargo-clean; args={:?}", os::args());
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let mut opts = ops::CleanOptions {

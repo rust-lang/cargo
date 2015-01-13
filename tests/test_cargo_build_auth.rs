@@ -38,7 +38,7 @@ test!(http_auth_offered {
            .collect()
     }
 
-    let t = Thread::spawn(move|| {
+    let t = Thread::scoped(move|| {
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
         s.write(b"\
@@ -130,7 +130,7 @@ test!(https_something_happens {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let t = Thread::spawn(move|| {
+    let t = Thread::scoped(move|| {
         drop(a.accept().unwrap());
     });
 
@@ -180,7 +180,7 @@ test!(ssh_something_happens {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let t = Thread::spawn(move|| {
+    let t = Thread::scoped(move|| {
         drop(a.accept().unwrap());
     });
 

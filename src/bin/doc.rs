@@ -6,7 +6,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 #[derive(RustcDecodable)]
 struct Options {
     flag_features: Vec<String>,
-    flag_jobs: Option<uint>,
+    flag_jobs: Option<u32>,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_no_deps: bool,

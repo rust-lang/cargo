@@ -1,4 +1,4 @@
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Formatter};
 use std::io::{USER_DIR};
 use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use rustc_serialize::{Encodable, Encoder};
@@ -8,13 +8,13 @@ use git2::{self, ObjectType};
 use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal};
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Show)]
 #[allow(missing_copy_implementations)]
 pub struct GitRevision(git2::Oid);
 
-impl Show for GitRevision {
+impl fmt::String for GitRevision {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        fmt::String::fmt(&self.0, f)
     }
 }
 
@@ -30,8 +30,8 @@ struct EncodableGitRemote {
     url: String,
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for GitRemote {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for GitRemote {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         EncodableGitRemote {
             url: self.url.to_string()
         }.encode(s)
@@ -52,8 +52,8 @@ pub struct EncodableGitDatabase {
     path: String,
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for GitDatabase {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for GitDatabase {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         EncodableGitDatabase {
             remote: self.remote.clone(),
             path: self.path.display().to_string()
@@ -78,8 +78,8 @@ pub struct EncodableGitCheckout {
     revision: String,
 }
 
-impl<'a, E, S: Encoder<E>> Encodable<S, E> for GitCheckout<'a> {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl<'a> Encodable for GitCheckout<'a> {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         EncodableGitCheckout {
             location: self.location.display().to_string(),
             revision: self.revision.to_string(),
@@ -341,10 +341,10 @@ impl<'a> GitCheckout<'a> {
     }
 }
 
-fn with_authentication<T>(url: &str,
-                          cfg: &git2::Config,
-                          f: |&mut git2::Credentials| -> CargoResult<T>)
-                          -> CargoResult<T> {
+fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
+                             -> CargoResult<T>
+    where F: FnMut(&mut git2::Credentials) -> CargoResult<T>
+{
     // Prepare the authentication callbacks.
     //
     // We check the `allowed` types of credentials, and we try to do as much as
@@ -397,7 +397,7 @@ pub fn fetch(repo: &git2::Repository, url: &str,
 
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new();
-        cb.credentials(|a, b, c| f.call_mut((a, b, c)));
+        cb.credentials(|a, b, c| f(a, b, c));
         let mut remote = try!(repo.remote_anonymous(url.as_slice(),
                                                     Some(refspec)));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));

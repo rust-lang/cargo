@@ -1,5 +1,4 @@
 use std::hash;
-use std::fmt::{self, Show, Formatter};
 
 use semver::Version;
 use rustc_serialize::{Encoder,Encodable};
@@ -10,7 +9,7 @@ use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
 /// Contains all the informations about a package, as loaded from a Cargo.toml.
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq,Clone, Show)]
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
@@ -24,15 +23,6 @@ pub struct Manifest {
     metadata: ManifestMetadata,
 }
 
-impl Show for Manifest {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "Manifest({}, targets={}, target_dir={}, \
-                   build={})",
-               self.summary, self.targets, self.target_dir.display(),
-               self.build)
-    }
-}
-
 /// General metadata about a package which is just blindly uploaded to the
 /// registry.
 ///
@@ -41,7 +31,7 @@ impl Show for Manifest {
 /// validated by cargo itself, but rather it is up to the registry when uploaded
 /// to validate these fields. Cargo will itself accept any valid TOML
 /// specification for these values.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Show)]
 pub struct ManifestMetadata {
     pub authors: Vec<String>,
     pub keywords: Vec<String>,
@@ -65,8 +55,8 @@ pub struct SerializedManifest {
     build: Option<Vec<String>>,     // TODO: deprecated, remove
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for Manifest {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for Manifest {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedManifest {
             name: self.summary.get_name().to_string(),
             version: self.summary.get_version().to_string(),
@@ -127,9 +117,9 @@ pub enum TargetKind {
 #[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Show)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
-    opt_level: uint,
+    opt_level: u32,
     lto: bool,
-    codegen_units: Option<uint>,    // None = use rustc default
+    codegen_units: Option<u32>,    // None = use rustc default
     debug: bool,
     rpath: bool,
     test: bool,
@@ -243,7 +233,7 @@ impl Profile {
         self.for_host
     }
 
-    pub fn get_opt_level(&self) -> uint {
+    pub fn get_opt_level(&self) -> u32 {
         self.opt_level
     }
 
@@ -251,7 +241,7 @@ impl Profile {
         self.lto
     }
 
-    pub fn get_codegen_units(&self) -> Option<uint> {
+    pub fn get_codegen_units(&self) -> Option<u32> {
         self.codegen_units
     }
 
@@ -271,7 +261,7 @@ impl Profile {
         self.dest.as_ref().map(|d| d.as_slice())
     }
 
-    pub fn opt_level(mut self, level: uint) -> Profile {
+    pub fn opt_level(mut self, level: u32) -> Profile {
         self.opt_level = level;
         self
     }
@@ -281,7 +271,7 @@ impl Profile {
         self
     }
 
-    pub fn codegen_units(mut self, units: Option<uint>) -> Profile {
+    pub fn codegen_units(mut self, units: Option<u32>) -> Profile {
         self.codegen_units = units;
         self
     }
@@ -329,7 +319,7 @@ impl Profile {
     }
 }
 
-impl<H: hash::Writer> hash::Hash<H> for Profile {
+impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Profile {
     fn hash(&self, into: &mut H) {
         // Be sure to match all fields explicitly, but ignore those not relevant
         // to the actual hash of a profile.
@@ -359,7 +349,7 @@ impl<H: hash::Writer> hash::Hash<H> for Profile {
 }
 
 /// Informations about a binary, a library, an example, etc. that is part of the package.
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Clone, Hash, PartialEq, Show)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -377,8 +367,8 @@ pub struct SerializedTarget {
     metadata: Option<Metadata>
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for Target {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for Target {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let kind = match self.kind {
             TargetKind::Lib(ref kinds) => kinds.iter().map(|k| k.crate_type()).collect(),
             TargetKind::Bin => vec!("bin"),
@@ -394,14 +384,6 @@ impl<E, S: Encoder<E>> Encodable<S, E> for Target {
         }.encode(s)
     }
 }
-
-impl Show for Target {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}(name={}, path={}, profile={})", self.kind, self.name,
-               self.src_path.display(), self.profile)
-    }
-}
-
 
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,

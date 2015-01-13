@@ -5,7 +5,7 @@ use url::{self, Url, UrlParser};
 use core::PackageId;
 use util::{CargoResult, ToUrl, human, ToSemver, ChainError};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Show)]
 pub struct PackageIdSpec {
     name: String,
     version: Option<Version>,
@@ -129,7 +129,7 @@ fn url(s: &str) -> url::ParseResult<Url> {
 
 }
 
-impl fmt::Show for PackageIdSpec {
+impl fmt::String for PackageIdSpec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut printed_name = false;
         match self.url {

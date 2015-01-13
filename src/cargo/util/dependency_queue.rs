@@ -5,7 +5,7 @@
 //! it to figure out when a dependency should be built.
 
 use std::collections::hash_set::HashSet;
-use std::collections::hash_map::HashMap;
+use std::collections::hash_map::{HashMap, Hasher};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::Hash;
 
@@ -47,8 +47,9 @@ pub enum Freshness {
 }
 
 /// A trait for discovering the dependencies of a piece of data.
-pub trait Dependency<C>: Hash + Eq + Clone {
-    fn dependencies(&self, cx: &C) -> Vec<Self>;
+pub trait Dependency: Hash<Hasher> + Eq + Clone {
+    type Context;
+    fn dependencies(&self, cx: &Self::Context) -> Vec<Self>;
 }
 
 impl Freshness {
@@ -57,7 +58,7 @@ impl Freshness {
     }
 }
 
-impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
+impl<K: Dependency, V> DependencyQueue<K, V> {
     /// Creates a new dependency queue with 0 packages.
     pub fn new() -> DependencyQueue<K, V> {
         DependencyQueue {
@@ -72,7 +73,8 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn enqueue(&mut self, cx: &C, fresh: Freshness, key: K, value: V) {
+    pub fn enqueue(&mut self, cx: &K::Context, fresh: Freshness, key: K,
+                   value: V) {
         // ignore self-deps
         if self.dep_map.contains_key(&key) { return }
 
@@ -83,7 +85,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in key.dependencies(cx).into_iter() {
             assert!(my_dependencies.insert(dep.clone()));
-            let rev = match self.reverse_dep_map.entry(&dep) {
+            let rev = match self.reverse_dep_map.entry(dep) {
                 Occupied(entry) => entry.into_mut(),
                 Vacant(entry) => entry.insert(HashSet::new()),
             };
@@ -110,7 +112,7 @@ impl<C, K: Dependency<C>, V> DependencyQueue<K, V> {
     }
 
     /// Returns the number of remaining packages to be built.
-    pub fn len(&self) -> uint {
+    pub fn len(&self) -> usize {
         self.dep_map.len() + self.pending.len()
     }
 

@@ -1,6 +1,5 @@
-#![feature(macro_rules, associated_types)]
-#![feature(phase)]
 #![deny(warnings)]
+#![allow(unstable)]
 
 extern crate cargo;
 extern crate flate2;
@@ -11,7 +10,7 @@ extern crate tar;
 extern crate term;
 extern crate url;
 
-#[phase(plugin, link)]
+#[macro_use]
 extern crate log;
 
 mod support;

@@ -92,9 +92,9 @@ impl Resolve {
                     spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
             for id in ids.iter() {
-                match version_cnt.entry(&id.get_version()) {
-                    Vacant(e) => { e.insert(1u); }
-                    Occupied(e) => *e.into_mut() += 1u,
+                match version_cnt.entry(id.get_version()) {
+                    Vacant(e) => { e.insert(1); }
+                    Occupied(e) => *e.into_mut() += 1,
                 }
             }
             for id in ids.iter() {
@@ -131,14 +131,14 @@ struct Context {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve<R: Registry>(summary: &Summary, method: Method,
                             registry: &mut R) -> CargoResult<Resolve> {
-    log!(5, "resolve; summary={}", summary);
+    log!(5, "resolve; summary={:?}", summary);
 
     let mut cx = Context {
         resolve: Resolve::new(summary.get_package_id().clone()),
         activations: HashMap::new(),
         visited: Rc::new(RefCell::new(HashSet::new())),
     };
-    let _p = profile::start(format!("resolving: {}", summary));
+    let _p = profile::start(format!("resolving: {:?}", summary));
     cx.activations.insert((summary.get_name().to_string(),
                            summary.get_source_id().clone()),
                           vec![Rc::new(summary.clone())]);
@@ -193,7 +193,7 @@ fn activate_deps<'a, R: Registry>(cx: Context,
                                   parent: &Summary,
                                   platform: Option<&'a str>,
                                   deps: &'a [(&Dependency, Vec<Rc<Summary>>, Vec<String>)],
-                                  cur: uint) -> CargoResult<CargoResult<Context>> {
+                                  cur: usize) -> CargoResult<CargoResult<Context>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
     let method = Method::Required(false, features.as_slice(),
@@ -240,7 +240,7 @@ fn activate_deps<'a, R: Registry>(cx: Context,
         let early_return = {
             my_cx.resolve.graph.link(parent.get_package_id().clone(),
                                      candidate.get_package_id().clone());
-            let prev = match my_cx.activations.entry(&key) {
+            let prev = match my_cx.activations.entry(key.clone()) {
                 Occupied(e) => e.into_mut(),
                 Vacant(e) => e.insert(Vec::new()),
             };
@@ -284,7 +284,8 @@ fn activate_deps<'a, R: Registry>(cx: Context,
             Err(e) => { last_err = Some(e); }
         }
     }
-    log!(5, "{}[{}]>{} -- {}", parent.get_name(), cur, dep.get_name(), last_err);
+    log!(5, "{}[{}]>{} -- {:?}", parent.get_name(), cur, dep.get_name(),
+         last_err);
 
     // Oh well, we couldn't activate any of the candidates, so we just can't
     // activate this dependency at all
@@ -315,9 +316,12 @@ fn activate_deps<'a, R: Registry>(cx: Context,
                                      v.get_version()).as_slice());
             }
 
-            msg.push_str(format!("\n  possible versions to select: {}",
-                                 candidates.iter().map(|v| v.get_version())
-                                           .collect::<Vec<_>>()).as_slice());
+            msg.push_str(&format!("\n  possible versions to select: {}",
+                                  candidates.iter()
+                                            .map(|v| v.get_version())
+                                            .map(|v| v.to_string())
+                                            .collect::<Vec<_>>()
+                                            .connect(", "))[]);
 
             Err(human(msg))
         }
@@ -408,7 +412,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // Record what list of features is active for this package.
     if used_features.len() > 0 {
         let pkgid = parent.get_package_id();
-        match cx.resolve.features.entry(pkgid) {
+        match cx.resolve.features.entry(pkgid.clone()) {
             Occupied(entry) => entry.into_mut(),
             Vacant(entry) => entry.insert(HashSet::new()),
         }.extend(used_features.into_iter());
@@ -477,7 +481,7 @@ fn build_features(s: &Summary, method: Method)
         match parts.next() {
             Some(feat) => {
                 let package = feat_or_package;
-                match deps.entry(package) {
+                match deps.entry(package.to_string()) {
                     Occupied(e) => e.into_mut(),
                     Vacant(e) => e.insert(Vec::new()),
                 }.push(feat.to_string());
@@ -498,7 +502,7 @@ fn build_features(s: &Summary, method: Method)
                         }
                     }
                     None => {
-                        match deps.entry(feat) {
+                        match deps.entry(feat.to_string()) {
                             Occupied(..) => {} // already activated
                             Vacant(e) => { e.insert(Vec::new()); }
                         }

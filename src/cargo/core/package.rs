@@ -1,4 +1,4 @@
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Formatter};
 use std::hash;
 use std::slice;
 use semver::Version;
@@ -20,7 +20,7 @@ use core::source::{SourceId, Source};
 ///
 /// A package is a `Cargo.toml` file, plus all the files that are part of it.
 // TODO: Is manifest_path a relic?
-#[derive(Clone)]
+#[derive(Clone, Show)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
@@ -39,8 +39,8 @@ struct SerializedPackage {
     manifest_path: String,
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for Package {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for Package {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let manifest = self.get_manifest();
         let summary = manifest.get_summary();
         let package_id = summary.get_package_id();
@@ -117,8 +117,8 @@ impl Package {
     }
 }
 
-impl Show for Package {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+impl fmt::String for Package {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.get_summary().get_package_id())
     }
 }
@@ -131,8 +131,8 @@ impl PartialEq for Package {
 
 impl Eq for Package {}
 
-impl hash::Hash for Package {
-    fn hash(&self, into: &mut hash::sip::SipState) {
+impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Package {
+    fn hash(&self, into: &mut H) {
         self.get_package_id().hash(into)
     }
 }
@@ -149,7 +149,7 @@ impl PackageSet {
         PackageSet { packages: packages.to_vec() }
     }
 
-    pub fn len(&self) -> uint {
+    pub fn len(&self) -> usize {
         self.packages.len()
     }
 

@@ -1,4 +1,4 @@
-#![feature(macro_rules)]
+#![allow(unstable)]
 
 extern crate hamcrest;
 extern crate cargo;
@@ -334,11 +334,11 @@ fn resolving_but_no_exists() {
     ], &mut reg);
     assert!(res.is_err());
 
-    assert_eq!(res.to_string().as_slice(), "Err(\
+    assert_eq!(res.unwrap_err().to_string(), "\
 no package named `foo` found (required by `root`)
 location searched: registry http://example.com/
 version required: ^1\
-)");
+");
 }
 
 #[test]

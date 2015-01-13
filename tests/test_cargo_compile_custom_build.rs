@@ -22,6 +22,7 @@ test!(custom_build_script_failed {
             fn main() {}
         "#)
         .file("build.rs", r#"
+            #![allow(unstable)]
             fn main() {
                 std::os::set_exit_status(101);
             }

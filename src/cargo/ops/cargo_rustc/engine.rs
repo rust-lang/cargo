@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::c_str::{CString, ToCStr};
+use std::ffi::CString;
+use std::fmt::{self, Formatter};
 use std::io::process::ProcessOutput;
-use std::fmt::{self, Show, Formatter};
+use std::path::BytesContainer;
 
 use util::{self, CargoResult, ProcessError, ProcessBuilder};
 
@@ -51,13 +52,15 @@ impl CommandPrototype {
         &self.ty
     }
 
-    pub fn arg<T: ToCStr>(mut self, arg: T) -> CommandPrototype {
-        self.args.push(arg.to_c_str());
+    pub fn arg<T: BytesContainer>(mut self, arg: T) -> CommandPrototype {
+        self.args.push(CString::from_slice(arg.container_as_bytes()));
         self
     }
 
-    pub fn args<T: ToCStr>(mut self, arguments: &[T]) -> CommandPrototype {
-        self.args.extend(arguments.iter().map(|t| t.to_c_str()));
+    pub fn args<T: BytesContainer>(mut self, arguments: &[T]) -> CommandPrototype {
+        self.args.extend(arguments.iter().map(|t| {
+            CString::from_slice(t.container_as_bytes())
+        }));
         self
     }
 
@@ -74,8 +77,10 @@ impl CommandPrototype {
         &self.cwd
     }
 
-    pub fn env<T: ToCStr>(mut self, key: &str, val: Option<T>) -> CommandPrototype {
-        self.env.insert(key.to_string(), val.map(|t| t.to_c_str()));
+    pub fn env<T: BytesContainer>(mut self, key: &str,
+                                  val: Option<T>) -> CommandPrototype {
+        let val = val.map(|t| CString::from_slice(t.container_as_bytes()));
+        self.env.insert(key.to_string(), val);
         self
     }
 
@@ -88,16 +93,15 @@ impl CommandPrototype {
             CommandType::Rustc => util::process("rustc"),
             CommandType::Rustdoc => util::process("rustdoc"),
             CommandType::Target(ref cmd) | CommandType::Host(ref cmd) => {
-                util::process(cmd.as_bytes_no_nul())
+                util::process(cmd)
             },
         });
 
         for arg in self.args.into_iter() {
-            builder = builder.arg(arg.as_bytes_no_nul());
+            builder = builder.arg(arg);
         }
-
         for (key, val) in self.env.into_iter() {
-            builder = builder.env(key.as_slice(), val.as_ref().map(|v| v.as_bytes_no_nul()));
+            builder = builder.env(key.as_slice(), val.as_ref());
         }
 
         builder = builder.cwd(self.cwd);
@@ -106,19 +110,18 @@ impl CommandPrototype {
     }
 }
 
-impl Show for CommandPrototype {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+impl fmt::String for CommandPrototype {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.ty {
             CommandType::Rustc => try!(write!(f, "`rustc")),
             CommandType::Rustdoc => try!(write!(f, "`rustdoc")),
             CommandType::Target(ref cmd) | CommandType::Host(ref cmd) => {
-                let cmd = String::from_utf8_lossy(cmd.as_bytes_no_nul());
-                try!(write!(f, "`{}", cmd));
+                try!(write!(f, "`{}", String::from_utf8_lossy(cmd.as_bytes())));
             },
         }
 
         for arg in self.args.iter() {
-            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes_no_nul())));
+            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes())));
         }
 
         write!(f, "`")

@@ -1,10 +1,10 @@
-use std::c_str::ToCStr;
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
+use std::ffi::CString;
 use std::io::USER_RWX;
 use std::io::fs::{self, PathExtensions};
-use std::sync::Arc;
 use std::path;
+use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{self, CargoResult, human, caused_human};
@@ -124,7 +124,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         return Ok(Compilation::new(pkg))
     }
 
-    debug!("compile_targets; targets={}; pkg={}; deps={}", targets, pkg, deps);
+    debug!("compile_targets; targets={:?}; pkg={}; deps={:?}", targets, pkg,
+           deps);
 
     try!(links::validate(deps));
 
@@ -204,7 +205,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                    compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
-    debug!("compile_pkg; pkg={}; targets={}", pkg, targets);
+    debug!("compile_pkg; pkg={}; targets={:?}", pkg, targets);
     let _p = profile::start(format!("preparing: {}", pkg));
 
     // Packages/targets which are actually getting compiled are constructed into
@@ -375,8 +376,8 @@ fn compile_custom_old(pkg: &Package, cmd: &str,
     //       may be building a C lib for a plugin
     let layout = cx.layout(pkg, Kind::Target);
     let output = layout.native(pkg);
-    let mut p = try!(process(CommandType::Host(cmd.next().unwrap().to_c_str()), pkg,
-                             target, cx))
+    let exe = CString::from_slice(cmd.next().unwrap().as_bytes());
+    let mut p = try!(process(CommandType::Host(exe), pkg, target, cx))
                      .env("OUT_DIR", Some(&output))
                      .env("DEPS_DIR", Some(&output))
                      .env("TARGET", Some(cx.target_triple()))
@@ -822,14 +823,17 @@ pub fn process(cmd: CommandType, pkg: &Package, target: &Target,
               .env(DynamicLibrary::envvar(), Some(search_path.as_slice())))
 }
 
-fn each_dep<'a>(pkg: &Package, cx: &'a Context, f: |&'a Package|) {
+fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)
+    where F: FnMut(&'a Package)
+{
     let mut visited = HashSet::new();
     let pkg = cx.get_package(pkg.get_package_id());
-    visit_deps(pkg, cx, &mut visited, f);
+    visit_deps(pkg, cx, &mut visited, &mut f);
 
-    fn visit_deps<'a>(pkg: &'a Package, cx: &'a Context,
-                      visited: &mut HashSet<&'a PackageId>,
-                      f: |&'a Package|) {
+    fn visit_deps<'a, F>(pkg: &'a Package, cx: &'a Context,
+                         visited: &mut HashSet<&'a PackageId>, f: &mut F)
+        where F: FnMut(&'a Package)
+    {
         if !visited.insert(pkg.get_package_id()) { return }
         f(pkg);
         let mut deps = match cx.resolve.deps(pkg.get_package_id()) {
@@ -837,7 +841,7 @@ fn each_dep<'a>(pkg: &Package, cx: &'a Context, f: |&'a Package|) {
             None => return,
         };
         for dep_id in deps {
-            visit_deps(cx.get_package(dep_id), cx, visited, |p| f(p))
+            visit_deps(cx.get_package(dep_id), cx, visited, f);
         }
     }
 }

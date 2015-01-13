@@ -1,5 +1,5 @@
 use std::error::{FromError, Error};
-use std::fmt::{self, Show};
+use std::fmt;
 use std::io::IoError;
 use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::str;
@@ -21,10 +21,15 @@ pub trait CargoError: Error {
     fn is_human(&self) -> bool { false }
 }
 
-impl Show for Box<CargoError> {
+impl fmt::String for Box<CargoError> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.description()));
         Ok(())
+    }
+}
+impl fmt::Show for Box<CargoError> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::String::fmt(self, f)
     }
 }
 
@@ -62,10 +67,10 @@ impl<T, E: Error> ChainError<T> for Result<T, E> {
     fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
                          where E2: CargoError, C: FnOnce() -> E2 {
         self.map_err(move |err| {
-            box ChainedError {
+            Box::new(ChainedError {
                 error: callback(),
-                cause: box err,
-            } as Box<CargoError>
+                cause: Box::new(err),
+            }) as Box<CargoError>
         })
     }
 }
@@ -75,7 +80,7 @@ impl<T> ChainError<T> for Option<T> {
                          where E: CargoError, C: FnOnce() -> E {
         match self {
             Some(t) => Ok(t),
-            None => Err(box callback() as Box<CargoError>),
+            None => Err(Box::new(callback()) as Box<CargoError>),
         }
     }
 }
@@ -108,9 +113,14 @@ impl Error for ProcessError {
     }
 }
 
+impl fmt::String for ProcessError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::String::fmt(&self.desc, f)
+    }
+}
 impl fmt::Show for ProcessError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.desc.fmt(f)
+        fmt::String::fmt(self, f)
     }
 }
 
@@ -124,9 +134,14 @@ struct ConcreteCargoError {
     is_human: bool,
 }
 
-impl fmt::Show for ConcreteCargoError {
+impl fmt::String for ConcreteCargoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.description)
+    }
+}
+impl fmt::Show for ConcreteCargoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::String::fmt(self, f)
     }
 }
 
@@ -168,7 +183,7 @@ pub type CliResult<T> = Result<T, CliError>;
 pub struct CliError {
     pub error: Box<CargoError>,
     pub unknown: bool,
-    pub exit_code: uint
+    pub exit_code: u32
 }
 
 impl Error for CliError {
@@ -178,17 +193,17 @@ impl Error for CliError {
 }
 
 impl CliError {
-    pub fn new<S: Str>(error: S, code: uint) -> CliError {
+    pub fn new<S: Str>(error: S, code: u32) -> CliError {
         let error = human(error.as_slice().to_string());
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_error<E: CargoError + 'static>(error: E, code: uint) -> CliError {
-        let error = box error as Box<CargoError>;
+    pub fn from_error<E: CargoError + 'static>(error: E, code: u32) -> CliError {
+        let error = Box::new(error) as Box<CargoError>;
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_boxed(error: Box<CargoError>, code: uint) -> CliError {
+    pub fn from_boxed(error: Box<CargoError>, code: u32) -> CliError {
         let human = error.is_human();
         CliError { error: error, exit_code: code, unknown: !human }
     }
@@ -200,7 +215,7 @@ impl CliError {
 macro_rules! from_error {
     ($($p:ty,)*) => (
         $(impl FromError<$p> for Box<CargoError> {
-            fn from_error(t: $p) -> Box<CargoError> { box t }
+            fn from_error(t: $p) -> Box<CargoError> { Box::new(t) }
         })*
     )
 }
@@ -218,7 +233,7 @@ from_error! {
 }
 
 impl<E: Error> FromError<Human<E>> for Box<CargoError> {
-    fn from_error(t: Human<E>) -> Box<CargoError> { box t }
+    fn from_error(t: Human<E>) -> Box<CargoError> { Box::new(t) }
 }
 
 impl CargoError for semver::ReqParseError {}
@@ -271,37 +286,37 @@ pub fn process_error<S: Str>(msg: S,
 
 pub fn internal_error<S1: Str, S2: Str>(error: S1,
                                         detail: S2) -> Box<CargoError> {
-    box ConcreteCargoError {
+    Box::new(ConcreteCargoError {
         description: error.as_slice().to_string(),
         detail: Some(detail.as_slice().to_string()),
         cause: None,
         is_human: false
-    }
+    })
 }
 
-pub fn internal<S: Show>(error: S) -> Box<CargoError> {
-    box ConcreteCargoError {
+pub fn internal<S: fmt::String>(error: S) -> Box<CargoError> {
+    Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,
         cause: None,
         is_human: false
-    }
+    })
 }
 
-pub fn human<S: Show>(error: S) -> Box<CargoError> {
-    box ConcreteCargoError {
+pub fn human<S: fmt::String>(error: S) -> Box<CargoError> {
+    Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,
         cause: None,
         is_human: true
-    }
+    })
 }
 
-pub fn caused_human<S: Show, E: Error>(error: S, cause: E) -> Box<CargoError> {
-    box ConcreteCargoError {
+pub fn caused_human<S: fmt::String, E: Error>(error: S, cause: E) -> Box<CargoError> {
+    Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,
-        cause: Some(box cause as Box<Error>),
+        cause: Some(Box::new(cause) as Box<Error>),
         is_human: true
-    }
+    })
 }

@@ -1,11 +1,10 @@
-use std::c_str::ToCStr;
 use std::error::Error;
-use std::fmt::{self, Show};
+use std::fmt;
 use std::io::fs::{self, PathExtensions};
 use std::io::process::{ProcessOutput};
 use std::io;
 use std::os;
-use std::path::{Path,BytesContainer};
+use std::path::{Path, BytesContainer};
 use std::str::{self, Str};
 
 use url::Url;
@@ -119,7 +118,7 @@ impl ProjectBuilder {
         self.root.join("target")
     }
 
-    pub fn process<T: ToCStr>(&self, program: T) -> ProcessBuilder {
+    pub fn process<T: BytesContainer>(&self, program: T) -> ProcessBuilder {
         process(program)
             .unwrap()
             .cwd(self.root())
@@ -216,7 +215,7 @@ trait ErrMsg<T> {
     fn with_err_msg(self, val: String) -> Result<T, String>;
 }
 
-impl<T, E: Show> ErrMsg<T> for Result<T, E> {
+impl<T, E: fmt::String> ErrMsg<T> for Result<T, E> {
     fn with_err_msg(self, val: String) -> Result<T, String> {
         match self {
             Ok(val) => Ok(val),
@@ -247,7 +246,7 @@ struct Execs {
     expect_stdout: Option<String>,
     expect_stdin: Option<String>,
     expect_stderr: Option<String>,
-    expect_exit_code: Option<int>
+    expect_exit_code: Option<i32>
 }
 
 impl Execs {
@@ -262,7 +261,7 @@ impl Execs {
         self
     }
 
-    pub fn with_status(mut self, expected: int) -> Execs {
+    pub fn with_status(mut self, expected: i32) -> Execs {
         self.expect_exit_code = Some(expected);
         self
     }
@@ -278,7 +277,7 @@ impl Execs {
             None => ham::success(),
             Some(code) => {
                 ham::expect(
-                    actual.status.matches_exit_status(code),
+                    actual.status.matches_exit_status(code as isize),
                     format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
                             actual.status,
                             String::from_utf8_lossy(actual.output.as_slice()),
@@ -384,7 +383,7 @@ fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAl
     }
 }
 
-impl fmt::Show for Execs {
+impl fmt::String for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
     }
@@ -426,7 +425,7 @@ struct ShellWrites {
     expected: String
 }
 
-impl fmt::Show for ShellWrites {
+impl fmt::String for ShellWrites {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}` written to the shell", self.expected)
     }
@@ -442,16 +441,16 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
     }
 }
 
-pub fn shell_writes<T: Show>(string: T) -> ShellWrites {
+pub fn shell_writes<T: fmt::String>(string: T) -> ShellWrites {
     ShellWrites { expected: string.to_string() }
 }
 
 pub trait Tap {
-    fn tap(mut self, callback: |&mut Self|) -> Self;
+    fn tap<F: FnOnce(&mut Self)>(mut self, callback: F) -> Self;
 }
 
 impl<T> Tap for T {
-    fn tap(mut self, callback: |&mut T|) -> T {
+    fn tap<F: FnOnce(&mut Self)>(mut self, callback: F) -> T {
         callback(&mut self);
         self
     }

@@ -23,7 +23,7 @@ impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
 impl Work {
     pub fn new<F>(f: F) -> Work
                   where F: FnOnce(Sender<String>) -> CargoResult<()> + Send {
-        Work { inner: box f }
+        Work { inner: Box::new(f) }
     }
 
     pub fn noop() -> Work {

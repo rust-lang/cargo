@@ -129,8 +129,8 @@ test!(plugin_deps {
             path = "../baz"
         "#)
         .file("src/main.rs", r#"
-            #![feature(phase)]
-            #[phase(plugin)]
+            #![feature(plugin)]
+            #[plugin] #[no_link]
             extern crate bar;
             extern crate baz;
             fn main() {
@@ -207,8 +207,8 @@ test!(plugin_to_the_max {
             path = "../baz"
         "#)
         .file("src/main.rs", r#"
-            #![feature(phase)]
-            #[phase(plugin)]
+            #![feature(plugin)]
+            #[plugin] #[no_link]
             extern crate bar;
             extern crate baz;
             fn main() {
@@ -329,8 +329,8 @@ test!(plugin_with_extra_dylib_dep {
             path = "../bar"
         "#)
         .file("src/main.rs", r#"
-            #![feature(phase)]
-            #[phase(plugin)] extern crate bar;
+            #![feature(plugin)]
+            #[plugin] #[no_link] extern crate bar;
 
             fn main() {}
         "#);
@@ -457,25 +457,6 @@ test!(simple_cargo_run {
     let target = alternate();
     assert_that(p.cargo_process("run").arg("--target").arg(target),
                 execs().with_status(0));
-});
-
-test!(cross_but_no_dylibs {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-
-            [lib]
-            name = "foo"
-            crate-type = ["dylib"]
-        "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build").arg("--target").arg("arm-apple-ios"),
-                execs().with_status(101)
-                       .with_stderr("dylib outputs are not supported for \
-                                     arm-apple-ios"));
 });
 
 test!(cross_with_a_build_script {
@@ -674,7 +655,7 @@ test!(build_script_only_host {
             fn main() {
                 assert!(os::getenv("OUT_DIR").unwrap()
                                              .contains("target/build/d1-"),
-                        "bad: {}", os::getenv("OUT_DIR"));
+                        "bad: {:?}", os::getenv("OUT_DIR"));
             }
         "#);
 

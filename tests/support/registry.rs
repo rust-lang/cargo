@@ -115,9 +115,9 @@ pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str, &str)], cksum: &str,
            yanked: bool) -> String {
     let deps = deps.iter().map(|&(a, b, c)| dep(a, b, c)).collect::<Vec<String>>();
     format!("{{\"name\":\"{}\",\"vers\":\"{}\",\
-               \"deps\":{},\"cksum\":\"{}\",\"features\":{{}},\
+               \"deps\":[{}],\"cksum\":\"{}\",\"features\":{{}},\
                \"yanked\":{}}}",
-            name, vers, deps, cksum, yanked)
+            name, vers, deps.connect(","), cksum, yanked)
 }
 
 pub fn dep(name: &str, req: &str, kind: &str) -> String {

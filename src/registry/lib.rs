@@ -1,4 +1,4 @@
-#![feature(old_orphan_check)]
+#![allow(unstable)]
 
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -76,7 +76,7 @@ pub struct NewCrateDependency {
 
 #[derive(RustcDecodable)]
 pub struct User {
-    pub id: uint,
+    pub id: u32,
     pub login: String,
     pub avatar: String,
     pub email: Option<String>,
@@ -142,9 +142,9 @@ impl Registry {
             MemReader::new(w.into_inner())
         };
         let tarball = try!(File::open(tarball).map_err(Error::Io));
-        let size = stat.size as uint + header.get_ref().len();
-        let mut body = ChainedReader::new(vec![box header as Box<Reader>,
-                                               box tarball as Box<Reader>].into_iter());
+        let size = stat.size as usize + header.get_ref().len();
+        let mut body = ChainedReader::new(vec![Box::new(header) as Box<Reader>,
+                                               Box::new(tarball) as Box<Reader>].into_iter());
 
         let url = format!("{}/api/v1/crates/new", self.host);
 
@@ -233,7 +233,7 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
     Ok(body)
 }
 
-impl fmt::Show for Error {
+impl fmt::String for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::NonUtf8Body => write!(f, "reponse body was not utf-8"),

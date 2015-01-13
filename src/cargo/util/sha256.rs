@@ -148,7 +148,7 @@ mod imp {
                 CryptGetHashParam(self.hcrypthash, HP_HASHVAL, ret.as_mut_ptr(),
                                   &mut len, 0)
             });
-            assert_eq!(len as uint, ret.len());
+            assert_eq!(len as usize, ret.len());
             return ret;
         }
     }

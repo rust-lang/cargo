@@ -32,7 +32,7 @@ pub fn execute(args: ConfigListFlags,
 
     if args.flag_human {
         for (key, value) in configs.iter() {
-            println!("{} = {}", key, value);
+            println!("{} = {:?}", key, value);
         }
         Ok(None)
     } else {

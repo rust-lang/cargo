@@ -9,7 +9,7 @@ use cargo::util::{CliResult, CliError};
 #[derive(RustcDecodable)]
 struct Options {
     flag_package: Option<String>,
-    flag_jobs: Option<uint>,
+    flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,
     flag_target: Option<String>,
@@ -44,7 +44,7 @@ current package is built. For more information on SPEC and its format, see the
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-build; args={}", os::args());
+    debug!("executing; cmd=cargo-build; args={:?}", os::args());
     shell.set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));

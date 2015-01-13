@@ -39,7 +39,7 @@ impl PathSource {
     }
 
     pub fn get_root_package(&self) -> CargoResult<Package> {
-        log!(5, "get_root_package; source={}", self);
+        log!(5, "get_root_package; source={:?}", self);
 
         if !self.updated {
             return Err(internal("source has not been updated"))
@@ -121,7 +121,7 @@ impl PathSource {
 
         let mut ret = Vec::new();
         'outer: for entry in index.iter() {
-            let fname = entry.path.as_bytes_no_nul();
+            let fname = entry.path.as_slice();
             let file_path = root.join(fname);
 
             // Filter out files outside this package.
@@ -230,7 +230,7 @@ impl Source for PathSource {
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages; ids={}", ids);
+        log!(5, "getting packages; ids={:?}", ids);
 
         Ok(self.packages.iter()
            .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))

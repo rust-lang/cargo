@@ -15,8 +15,8 @@ use cargo::util::{ProcessError, process};
 fn setup() {
 }
 
-fn git_repo(name: &str, callback: |ProjectBuilder| -> ProjectBuilder)
-    -> Result<ProjectBuilder, ProcessError>
+fn git_repo<F>(name: &str, callback: F) -> Result<ProjectBuilder, ProcessError>
+    where F: FnOnce(ProjectBuilder) -> ProjectBuilder
 {
     let mut git_project = project(name);
     git_project = callback(git_project);
@@ -41,9 +41,10 @@ fn add(repo: &git2::Repository) {
         submodule.add_to_index(false).unwrap();
     }
     let mut index = repo.index().unwrap();
-    index.add_all(&["*"], git2::ADD_DEFAULT, Some(|a: &[u8], _b: &[u8]| {
+    index.add_all(["*"].iter(), git2::ADD_DEFAULT,
+                  Some((&mut (|&: a: &[u8], _b: &[u8]| {
         if s.iter().any(|s| a.starts_with(s.path().as_vec())) {1} else {0}
-    })).unwrap();
+    })) as &mut git2::IndexMatchedPath)).unwrap();
     index.write().unwrap();
 }
 
@@ -553,7 +554,7 @@ test!(recompilation {
             name = "foo"
         "#, git_project.url()))
         .file("src/foo.rs",
-              main_file(r#""{}", bar::bar()"#, &["bar"]).as_slice());
+              main_file(r#""{:?}", bar::bar()"#, &["bar"]).as_slice());
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),

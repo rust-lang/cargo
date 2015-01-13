@@ -1,6 +1,5 @@
 use std::fmt::{self, Show, Formatter};
-use std::hash::Hasher;
-use std::hash::sip::SipHasher;
+use std::hash::{Hash, Hasher, SipHasher};
 use std::mem;
 use url::{self, Url};
 
@@ -72,7 +71,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
 }
 
 fn ident(url: &Url) -> String {
-    let hasher = SipHasher::new_with_keys(0,0);
+    let mut hasher = SipHasher::new_with_keys(0,0);
 
     // FIXME: this really should be able to not use to_str() everywhere, but the
     //        compiler seems to currently ask for static lifetimes spuriously.
@@ -87,7 +86,8 @@ fn ident(url: &Url) -> String {
         ident
     };
 
-    format!("{}-{}", ident, to_hex(hasher.hash(&url)))
+    url.hash(&mut hasher);
+    format!("{}-{}", ident, to_hex(hasher.finish()))
 }
 
 // Some hacks and heuristics for making equivalent URLs hash the same
@@ -172,7 +172,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
             try!(self.config.shell().status("Updating",
                 format!("git repository `{}`", self.remote.get_url())));
 
-            log!(5, "updating git source `{}`", self.remote);
+            log!(5, "updating git source `{:?}`", self.remote);
             let repo = try!(self.remote.checkout(&self.db_path));
             let rev = try!(repo.rev_for(&self.reference));
             (repo, rev)
@@ -196,8 +196,10 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages for package ids `{}` from `{}`", ids, self.remote);
-        self.path_source.as_ref().expect("BUG: update() must be called before get()").get(ids)
+        log!(5, "getting packages for package ids `{:?}` from `{:?}`", ids,
+             self.remote);
+        self.path_source.as_ref().expect("BUG: update() must be called \
+                                          before get()").get(ids)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {

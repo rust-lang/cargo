@@ -40,7 +40,7 @@ pub struct CompileOptions<'a> {
     pub env: &'a str,
     pub shell: &'a mut MultiShell,
     /// Number of concurrent jobs to use.
-    pub jobs: Option<uint>,
+    pub jobs: Option<u32>,
     /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
     pub target: Option<&'a str>,
     /// True if dev-dependencies must be compiled.
@@ -123,7 +123,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         (packages, resolved_with_overrides, registry.move_sources())
     };
 
-    debug!("packages={}", packages);
+    debug!("packages={:?}", packages);
 
     let to_build = match spec {
         Some(spec) => {
@@ -160,7 +160,7 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
 fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
                           cur_path: Path) -> CargoResult<Vec<SourceId>> {
-    debug!("loaded config; configs={}", configs);
+    debug!("loaded config; configs={:?}", configs);
 
     let config_paths = match configs.get("paths") {
         Some(cfg) => cfg,

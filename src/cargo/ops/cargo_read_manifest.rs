@@ -57,13 +57,20 @@ pub fn read_packages(path: &Path,
     if all_packages.is_empty() {
         Err(human(format!("Could not find Cargo.toml in `{}`", path.display())))
     } else {
-        log!(5, "all packages: {}", all_packages);
+        log!(5, "all packages: {:?}", all_packages);
         Ok(all_packages.into_iter().collect())
     }
 }
 
-fn walk(path: &Path,
-        callback: |&Path| -> CargoResult<bool>) -> CargoResult<()> {
+fn walk<F>(path: &Path, mut callback: F) -> CargoResult<()>
+    where F: FnMut(&Path) -> CargoResult<bool>
+{
+    walk_inner(path, &mut callback)
+}
+
+fn walk_inner<F>(path: &Path, callback: &mut F) -> CargoResult<()>
+    where F: FnMut(&Path) -> CargoResult<bool>
+{
     if path.is_dir() {
         let continues = try!(callback(path));
         if !continues {
@@ -79,7 +86,7 @@ fn walk(path: &Path,
             Err(e) => return Err(FromError::from_error(e)),
         };
         for dir in dirs.iter() {
-            try!(walk(dir, |x| callback(x)))
+            try!(walk_inner(dir, callback));
         }
     }
 

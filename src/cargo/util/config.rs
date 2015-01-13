@@ -19,7 +19,7 @@ use self::ConfigValue as CV;
 pub struct Config<'a> {
     home_path: Path,
     shell: RefCell<&'a mut MultiShell>,
-    jobs: uint,
+    jobs: u32,
     target: Option<string::String>,
     rustc_version: string::String,
     /// The current host and default target of rustc
@@ -28,7 +28,7 @@ pub struct Config<'a> {
 
 impl<'a> Config<'a> {
     pub fn new(shell: &'a mut MultiShell,
-               jobs: Option<uint>,
+               jobs: Option<u32>,
                target: Option<string::String>) -> CargoResult<Config<'a>> {
         if jobs == Some(0) {
             return Err(human("jobs must be at least 1"))
@@ -42,7 +42,7 @@ impl<'a> Config<'a> {
                       This probably means that $HOME was not set.")
             })),
             shell: RefCell::new(shell),
-            jobs: jobs.unwrap_or(os::num_cpus()),
+            jobs: jobs.unwrap_or(os::num_cpus() as u32),
             target: target,
             rustc_version: rustc_version,
             rustc_host: rustc_host,
@@ -75,7 +75,7 @@ impl<'a> Config<'a> {
         self.shell.borrow_mut()
     }
 
-    pub fn jobs(&self) -> uint {
+    pub fn jobs(&self) -> u32 {
         self.jobs
     }
 
@@ -122,7 +122,7 @@ impl fmt::Show for ConfigValue {
                 }
                 write!(f, "]")
             }
-            CV::Table(ref table) => write!(f, "{}", table),
+            CV::Table(ref table) => write!(f, "{:?}", table),
             CV::Boolean(b, ref path) => {
                 write!(f, "{} (from {})", b, path.display())
             }
@@ -130,8 +130,8 @@ impl fmt::Show for ConfigValue {
     }
 }
 
-impl<E, S: Encoder<E>> Encodable<S, E> for ConfigValue {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl Encodable for ConfigValue {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         match *self {
             CV::String(ref string, _) => string.encode(s),
             CV::List(ref list) => {
@@ -169,16 +169,16 @@ impl ConfigValue {
 
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
-            (&CV::String(..), CV::String(..)) |
-            (&CV::Boolean(..), CV::Boolean(..)) => {}
-            (&CV::List(ref mut old), CV::List(ref mut new)) => {
+            (&mut CV::String(..), CV::String(..)) |
+            (&mut CV::Boolean(..), CV::Boolean(..)) => {}
+            (&mut CV::List(ref mut old), CV::List(ref mut new)) => {
                 let new = mem::replace(new, Vec::new());
                 old.extend(new.into_iter());
             }
-            (&CV::Table(ref mut old), CV::Table(ref mut new)) => {
+            (&mut CV::Table(ref mut old), CV::Table(ref mut new)) => {
                 let new = mem::replace(new, HashMap::new());
                 for (key, value) in new.into_iter() {
-                    match old.entry(&key) {
+                    match old.entry(key) {
                         Occupied(mut entry) => { try!(entry.get_mut().merge(value)); }
                         Vacant(entry) => { entry.insert(value); }
                     };
@@ -282,8 +282,9 @@ pub fn all_configs(pwd: Path) -> CargoResult<HashMap<string::String, ConfigValue
     }
 }
 
-fn find_in_tree<T>(pwd: &Path,
-                   walk: |File| -> CargoResult<T>) -> CargoResult<T> {
+fn find_in_tree<T, F>(pwd: &Path, mut walk: F) -> CargoResult<T>
+    where F: FnMut(File) -> CargoResult<T>
+{
     let mut current = pwd.clone();
 
     loop {
@@ -303,8 +304,9 @@ fn find_in_tree<T>(pwd: &Path,
     Err(internal(""))
 }
 
-fn walk_tree(pwd: &Path,
-             walk: |File| -> CargoResult<()>) -> CargoResult<()> {
+fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
+    where F: FnMut(File) -> CargoResult<()>
+{
     let mut current = pwd.clone();
 
     loop {

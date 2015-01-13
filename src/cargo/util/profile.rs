@@ -1,6 +1,6 @@
 use std::os;
 use std::mem;
-use std::fmt::Show;
+use std::fmt;
 use time;
 use std::iter::repeat;
 use std::cell::RefCell;
@@ -8,7 +8,7 @@ use std::cell::RefCell;
 thread_local!(static PROFILE_STACK: RefCell<Vec<u64>> = RefCell::new(Vec::new()));
 thread_local!(static MESSAGES: RefCell<Vec<Message>> = RefCell::new(Vec::new()));
 
-type Message = (uint, u64, String);
+type Message = (usize, u64, String);
 
 pub struct Profiler {
     desc: String,
@@ -16,7 +16,7 @@ pub struct Profiler {
 
 fn enabled() -> bool { os::getenv("CARGO_PROFILE").is_some() }
 
-pub fn start<T: Show>(desc: T) -> Profiler {
+pub fn start<T: fmt::String>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }
 
     PROFILE_STACK.with(|stack| stack.borrow_mut().push(time::precise_time_ns()));
@@ -35,7 +35,7 @@ impl Drop for Profiler {
 
         let stack_len = PROFILE_STACK.with(|stack| stack.borrow().len());
         if stack_len == 0 {
-            fn print(lvl: uint, msgs: &[Message]) {
+            fn print(lvl: usize, msgs: &[Message]) {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }

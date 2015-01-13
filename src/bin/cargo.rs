@@ -1,8 +1,8 @@
-#![feature(phase, macro_rules, old_orphan_check)]
+#![allow(unstable)]
 
 extern crate "rustc-serialize" as rustc_serialize;
-#[phase(plugin, link)] extern crate log;
-#[phase(plugin, link)] extern crate cargo;
+extern crate cargo;
+#[macro_use] extern crate log;
 
 use std::collections::BTreeSet;
 use std::os;
@@ -52,32 +52,32 @@ fn main() {
     execute_main_without_stdin(execute, true, USAGE)
 }
 
-macro_rules! each_subcommand{ ($macro:ident) => ({
-    $macro!(bench);
-    $macro!(build);
-    $macro!(clean);
-    $macro!(config_for_key);
-    $macro!(config_list);
-    $macro!(doc);
-    $macro!(fetch);
-    $macro!(generate_lockfile);
-    $macro!(git_checkout);
-    $macro!(help);
-    $macro!(locate_project);
-    $macro!(login);
-    $macro!(new);
-    $macro!(owner);
-    $macro!(package);
-    $macro!(pkgid);
-    $macro!(publish);
-    $macro!(read_manifest);
-    $macro!(run);
-    $macro!(search);
-    $macro!(test);
-    $macro!(update);
-    $macro!(verify_project);
-    $macro!(version);
-    $macro!(yank);
+macro_rules! each_subcommand{ ($mac:ident) => ({
+    $mac!(bench);
+    $mac!(build);
+    $mac!(clean);
+    $mac!(config_for_key);
+    $mac!(config_list);
+    $mac!(doc);
+    $mac!(fetch);
+    $mac!(generate_lockfile);
+    $mac!(git_checkout);
+    $mac!(help);
+    $mac!(locate_project);
+    $mac!(login);
+    $mac!(new);
+    $mac!(owner);
+    $mac!(package);
+    $mac!(pkgid);
+    $mac!(publish);
+    $mac!(read_manifest);
+    $mac!(run);
+    $mac!(search);
+    $mac!(test);
+    $mac!(update);
+    $mac!(verify_project);
+    $mac!(version);
+    $mac!(yank);
 }) }
 
 /**
@@ -86,7 +86,7 @@ macro_rules! each_subcommand{ ($macro:ident) => ({
   on this top-level information.
 */
 fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo; args={}", os::args());
+    debug!("executing; cmd=cargo; args={:?}", os::args());
     shell.set_verbose(flags.flag_verbose);
 
     if flags.flag_list {
@@ -139,7 +139,7 @@ fn find_closest(cmd: &str) -> Option<String> {
                             // allows us to only make suggestions that have an edit distance of
                             // 3 or less
                             .map(|c| (lev_distance(c.as_slice(), cmd), c))
-                            .filter(|&(d, _): &(uint, &String)| d < 4u)
+                            .filter(|&(d, _): &(usize, &String)| d < 4)
                             .min_by(|&(d, _)| d) {
         Some((_, c)) => {
             Some(c.to_string())
@@ -169,11 +169,11 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
     match status {
         Ok(ExitStatus(0)) => (),
         Ok(ExitStatus(i)) => {
-            handle_error(CliError::new("", i as uint), shell)
+            handle_error(CliError::new("", i as u32), shell)
         }
         Ok(ExitSignal(i)) => {
             let msg = format!("subcommand failed with signal: {}", i);
-            handle_error(CliError::new(msg, i as uint), shell)
+            handle_error(CliError::new(msg, i as u32), shell)
         }
         Err(io::IoError{kind, ..}) if kind == io::FileNotFound =>
             handle_error(CliError::new("No such subcommand", 127), shell),
