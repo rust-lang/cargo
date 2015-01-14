@@ -43,8 +43,12 @@ test!(cargo_compile_with_invalid_manifest {
     assert_that(p.cargo_process("build"),
         execs()
         .with_status(101)
-        .with_stderr("Cargo.toml is not a valid manifest\n\n\
-                      No `package` or `project` section found.\n"))
+        .with_stderr("\
+failed to parse manifest at `[..]`
+Cargo.toml is not a valid manifest
+
+No `package` or `project` section found.
+"))
 });
 
 test!(cargo_compile_with_invalid_manifest2 {
@@ -57,8 +61,12 @@ test!(cargo_compile_with_invalid_manifest2 {
     assert_that(p.cargo_process("build"),
         execs()
         .with_status(101)
-        .with_stderr("could not parse input TOML\n\
-                      Cargo.toml:3:19-3:20 expected a value\n\n"))
+        .with_stderr("\
+failed to parse manifest at `[..]`
+could not parse input as TOML
+Cargo.toml:3:19-3:20 expected a value
+
+"))
 });
 
 test!(cargo_compile_with_invalid_manifest3 {
@@ -75,8 +83,10 @@ test!(cargo_compile_with_invalid_manifest3 {
                  .arg("src/Cargo.toml"),
         execs()
         .with_status(101)
-        .with_stderr("could not parse input TOML\n\
-                      src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
+        .with_stderr("\
+failed to parse manifest at `[..]`
+could not parse input as TOML\n\
+src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
 });
 
 test!(cargo_compile_with_invalid_version {
@@ -91,9 +101,12 @@ test!(cargo_compile_with_invalid_version {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr("Cargo.toml is not a valid manifest\n\n\
-                              cannot parse '1.0' as a semver for the key \
-                              `project.version`\n"))
+                .with_stderr("\
+failed to parse manifest at `[..]`
+Cargo.toml is not a valid manifest
+
+cannot parse '1.0' as a semver for the key `project.version`
+"))
 
 });
 
@@ -730,8 +743,9 @@ test!(missing_lib_and_bin {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr("either a [lib] or [[bin]] section \
-                                     must be present\n"));
+                       .with_stderr("\
+failed to parse manifest at `[..]Cargo.toml`
+either a [lib] or [[bin]] section must be present\n"));
 });
 
 test!(lto_build {
@@ -1351,7 +1365,7 @@ Caused by:
   could not parse Toml manifest; path=[..]
 
 Caused by:
-  could not parse input TOML
+  could not parse input as TOML
 [..].cargo[..]config:2:20-2:21 expected `=`, but found `i`
 
 "));

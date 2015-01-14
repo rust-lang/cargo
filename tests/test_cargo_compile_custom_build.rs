@@ -857,8 +857,9 @@ test!(build_script_only {
         .file("build.rs", r#"fn main() {}"#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("either a [lib] or [[bin]] section must \
-                                     be present"));
+                       .with_stderr("\
+failed to parse manifest at `[..]`
+either a [lib] or [[bin]] section must be present"));
 });
 
 test!(shared_dep_with_a_build_script {

@@ -23,6 +23,7 @@ test!(invalid1 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+failed to parse manifest at `[..]`
 Cargo.toml is not a valid manifest
 
 Feature `bar` includes `baz` which is neither a dependency nor another feature
@@ -47,6 +48,7 @@ test!(invalid2 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+failed to parse manifest at `[..]`
 Cargo.toml is not a valid manifest
 
 Features and dependencies cannot have the same name: `bar`
@@ -71,6 +73,7 @@ test!(invalid3 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+failed to parse manifest at `[..]`
 Cargo.toml is not a valid manifest
 
 Feature `bar` depends on `baz` which is not an optional dependency.
@@ -133,6 +136,7 @@ test!(invalid5 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!("\
+failed to parse manifest at `[..]`
 Cargo.toml is not a valid manifest
 
 Dev-dependencies are not allowed to be optional: `bar`
@@ -154,6 +158,7 @@ test!(invalid6 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(format!("\
+failed to parse manifest at `[..]`
 Cargo.toml is not a valid manifest
 
 Feature `foo` requires `bar` which is not an optional dependency
@@ -176,6 +181,7 @@ test!(invalid7 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(format!("\
+failed to parse manifest at `[..]`
 Cargo.toml is not a valid manifest
 
 Feature `foo` requires `bar` which is not an optional dependency

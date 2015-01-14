@@ -445,8 +445,12 @@ test!(cargo_compile_with_short_ssh_git {
     assert_that(project.cargo_process("build"),
         execs()
         .with_stdout("")
-        .with_stderr(format!("Cargo.toml is not a valid manifest\n\n\
-                              invalid url `{}`: relative URL without a base\n", url)));
+        .with_stderr(format!("\
+failed to parse manifest at `[..]`
+Cargo.toml is not a valid manifest
+
+invalid url `{}`: relative URL without a base
+", url)));
 });
 
 test!(two_revs_same_deps {
