@@ -125,7 +125,6 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--hg[initialize new mercurial repo]' \
                     '--no-git[no new git repo]' \
-                    '--travis[create new .travis.yml]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
