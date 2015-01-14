@@ -765,7 +765,7 @@ test!(lto_build {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}main.rs --crate-name test --crate-type bin \
+{running} `rustc src{sep}main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
         --cfg ndebug \
@@ -794,7 +794,7 @@ test!(verbose_build {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target \
@@ -822,7 +822,7 @@ test!(verbose_release_build {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         --cfg ndebug \
         -C metadata=[..] \
@@ -867,7 +867,7 @@ test!(verbose_release_build_deps {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.0 ({url})
-{running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
+{running} `rustc foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
         --cfg ndebug \
@@ -878,7 +878,7 @@ test!(verbose_release_build_deps {
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         --cfg ndebug \
         -C metadata=[..] \

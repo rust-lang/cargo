@@ -495,7 +495,7 @@ test!(cross_with_a_build_script {
 {compiling} foo v0.0.0 (file://[..])
 {running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..]`
 {running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
-{running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..]`
+{running} `rustc src{sep}main.rs [..] --target {target} [..]`
 ", compiling = COMPILING, running = RUNNING, target = target,
    dir = p.root().display(), sep = path::SEP).as_slice()));
 });
@@ -562,21 +562,21 @@ test!(build_script_needed_for_host_and_target {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} d1 v0.0.0 (file://{dir})
-{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}d1-[..]`
+{running} `rustc d1{sep}build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}d1-[..]`
 {running} `{dir}{sep}target{sep}build{sep}d1-[..]build-script-build`
 {running} `{dir}{sep}target{sep}build{sep}d1-[..]build-script-build`
-{running} `rustc {dir}{sep}d1{sep}src{sep}lib.rs [..] --target {target} [..] \
+{running} `rustc d1{sep}src{sep}lib.rs [..] --target {target} [..] \
            -L /path/to/{target}`
-{running} `rustc {dir}{sep}d1{sep}src{sep}lib.rs [..] \
+{running} `rustc d1{sep}src{sep}lib.rs [..] \
            -L /path/to/{host}`
 {compiling} d2 v0.0.0 (file://{dir})
-{running} `rustc {dir}{sep}d2{sep}src{sep}lib.rs [..] \
+{running} `rustc d2{sep}src{sep}lib.rs [..] \
            -L /path/to/{host}`
 {compiling} foo v0.0.0 (file://{dir})
 {running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..] \
            -L /path/to/{host}`
 {running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
-{running} `rustc {dir}{sep}src{sep}main.rs [..] --target {target} [..] \
+{running} `rustc src{sep}main.rs [..] --target {target} [..] \
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
    dir = p.root().display(), sep = path::SEP).as_slice()));

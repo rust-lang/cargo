@@ -489,6 +489,7 @@ fn rustc(package: &Package, target: &Target,
 
         let rustc_dep_info_loc = root.join(target.file_stem()).with_extension("d");
         let dep_info_loc = fingerprint::dep_info_loc(cx, package, target, kind);
+        let cwd = cx.cwd.clone();
 
         Ok((Work::new(move |desc_tx| {
             let mut rustc = rustc;
@@ -525,6 +526,7 @@ fn rustc(package: &Package, target: &Target,
             }));
 
             try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc));
+            try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
 
             Ok(())
 
@@ -559,11 +561,10 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
 fn rustdoc(package: &Package, target: &Target,
            cx: &mut Context) -> CargoResult<Work> {
     let kind = Kind::Target;
-    let pkg_root = package.get_root();
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
-    let rustdoc = try!(process(CommandType::Rustdoc, package, target, cx))
-                  .cwd(pkg_root.clone());
-    let mut rustdoc = rustdoc.arg(target.get_src_path())
+    let rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
+    let mut rustdoc = rustdoc.arg(root_path(cx, package, target))
+                         .cwd(cx.cwd.clone())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
 
@@ -614,6 +615,20 @@ fn rustdoc(package: &Package, target: &Target,
     }))
 }
 
+// The path that we pass to rustc is actually fairly important because it will
+// show up in error messages and the like. For this reason we take a few moments
+// to ensure that something shows up pretty reasonably.
+//
+// The heuristic here is fairly simple, but the key idea is that the path is
+// always "relative" to the current directory in order to be found easily. The
+// path is only actually relative if the current directory is an ancestor if it.
+// This means that non-path dependencies (git/registry) will likely be shown as
+// absolute paths instead of relative paths.
+fn root_path(cx: &Context, pkg: &Package, target: &Target) -> Path {
+    let absolute = pkg.get_root().join(target.get_src_path());
+    absolute.path_relative_from(&cx.cwd).unwrap_or(absolute)
+}
+
 fn build_base_args(cx: &Context,
                    mut cmd: CommandPrototype,
                    pkg: &Package,
@@ -621,8 +636,11 @@ fn build_base_args(cx: &Context,
                    crate_types: &[&str]) -> CommandPrototype {
     let metadata = target.get_metadata();
 
+    // Move to cwd so the root_path() passed below is actually correct
+    cmd = cmd.cwd(cx.cwd.clone());
+
     // TODO: Handle errors in converting paths into args
-    cmd = cmd.arg(target.get_src_path());
+    cmd = cmd.arg(root_path(cx, pkg, target));
 
     cmd = cmd.arg("--crate-name").arg(target.get_name());
 

@@ -180,7 +180,7 @@ test!(doc_only_bin {
             pub fn bar() {}
         "#);
 
-    assert_that(p.cargo_process("doc"),
+    assert_that(p.cargo_process("doc").arg("-v"),
                 execs().with_status(0));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
