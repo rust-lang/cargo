@@ -513,10 +513,49 @@ test!(cargo_compile_with_dep_name_mismatch {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(format!(
-r#"no package named `notquitebar` found (required by `foo`)
+r#"no matching package named `notquitebar` found (required by `foo`)
 location searched: {proj_dir}
 version required: *
 "#, proj_dir = p.url())));
+});
+
+test!(compile_path_dep_then_change_version {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+
+    File::create(&p.root().join("bar/Cargo.toml")).unwrap().write_str(r#"
+        [package]
+        name = "bar"
+        version = "0.0.2"
+        authors = []
+    "#).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(101).with_stderr("\
+no matching package named `bar` found (required by `foo`)
+location searched: [..]
+version required: = 0.0.1
+versions found: 0.0.2
+consider running `cargo update` to update a path dependency's locked version
+"));
 });
 
 // test!(compiling_project_with_invalid_manifest)
