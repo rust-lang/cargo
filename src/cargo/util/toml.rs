@@ -23,7 +23,7 @@ use util::{CargoResult, human, ToUrl, ToSemver, ChainError};
 
 #[derive(Clone)]
 pub struct Layout {
-    root: Path,
+    pub root: Path,
     lib: Option<Path>,
     bins: Vec<Path>,
     examples: Vec<Path>,
@@ -154,7 +154,7 @@ pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
         Some(toml) => return Ok(toml),
         None => {}
     }
-    let mut error_str = format!("could not parse input TOML\n");
+    let mut error_str = format!("could not parse input as TOML\n");
     for error in parser.errors.iter() {
         let (loline, locol) = parser.to_linecol(error.lo);
         let (hiline, hicol) = parser.to_linecol(error.hi);

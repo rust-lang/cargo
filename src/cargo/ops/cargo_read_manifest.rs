@@ -9,8 +9,12 @@ use util::toml::{Layout, project_layout};
 use std::error::FromError;
 
 pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId)
-    -> CargoResult<(Manifest, Vec<Path>)> {
-    util::toml::to_manifest(contents, source_id, layout).map_err(human)
+                     -> CargoResult<(Manifest, Vec<Path>)> {
+    let root = layout.root.clone();
+    util::toml::to_manifest(contents, source_id, layout).map_err(|e| {
+        human(format!("failed to parse manifest at `{:?}`\n{}",
+                      root.join("Cargo.toml"), e))
+    })
 }
 
 pub fn read_package(path: &Path, source_id: &SourceId)
