@@ -1401,7 +1401,7 @@ test!(bad_cargo_config {
 Couldn't load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration; path=[..]
+  could not parse TOML configuration in `[..]`
 
 Caused by:
   could not parse input as TOML

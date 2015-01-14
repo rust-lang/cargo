@@ -161,10 +161,16 @@ pub fn registry(config: &Config,
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
-    Ok(match try!(http_proxy(config)) {
-        Some(proxy) => http::handle().proxy(proxy),
-        None => http::handle(),
-    })
+    let handle = http::handle();
+    let handle = match try!(http_proxy(config)) {
+        Some(proxy) => handle.proxy(proxy),
+        None => handle,
+    };
+    let handle = match try!(http_timeout(config)) {
+        Some(timeout) => handle.timeout(timeout as usize),
+        None => handle,
+    };
+    Ok(handle)
 }
 
 /// Find a globally configured HTTP proxy if one is available.
@@ -186,6 +192,14 @@ pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
         Err(..) => {}
     }
     Ok(os::getenv("HTTP_PROXY"))
+}
+
+pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
+    match try!(config.get_i64("http.timeout")) {
+        Some((s, _)) => return Ok(Some(s)),
+        None => {}
+    }
+    Ok(os::getenv("HTTP_TIMEOUT").and_then(|s| s.parse()))
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {

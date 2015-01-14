@@ -108,6 +108,7 @@ impl<'a> Config<'a> {
                         None => return Ok(None),
                     }
                 }
+                CV::Integer(_, ref path) |
                 CV::String(_, ref path) |
                 CV::List(_, ref path) |
                 CV::Boolean(_, ref path) => {
@@ -136,6 +137,14 @@ impl<'a> Config<'a> {
         match try!(self.get(key)) {
             Some(CV::Table(i, path)) => Ok(Some((i, path))),
             Some(val) => self.expected("table", key, val),
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_i64(&self, key: &str) -> CargoResult<Option<(i64, Path)>> {
+        match try!(self.get(key)) {
+            Some(CV::Integer(i, path)) => Ok(Some((i, path))),
+            Some(val) => self.expected("integer", key, val),
             None => Ok(None),
         }
     }
@@ -183,6 +192,7 @@ pub enum Location {
 
 #[derive(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
+    Integer(i64, Path),
     String(String, Path),
     List(Vec<(String, Path)>, Path),
     Table(HashMap<String, ConfigValue>, Path),
@@ -192,9 +202,9 @@ pub enum ConfigValue {
 impl fmt::Show for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            CV::String(ref string, ref path) => {
-                write!(f, "{} (from {})", string, path.display())
-            }
+            CV::Integer(i, ref path) => write!(f, "{} (from {:?})", i, path),
+            CV::Boolean(b, ref path) => write!(f, "{} (from {:?})", b, path),
+            CV::String(ref s, ref path) => write!(f, "{} (from {:?})", s, path),
             CV::List(ref list, ref path) => {
                 try!(write!(f, "["));
                 for (i, &(ref s, ref path)) in list.iter().enumerate() {
@@ -204,9 +214,6 @@ impl fmt::Show for ConfigValue {
                 write!(f, "] (from {:?})", path)
             }
             CV::Table(ref table, _) => write!(f, "{:?}", table),
-            CV::Boolean(b, ref path) => {
-                write!(f, "{} (from {})", b, path.display())
-            }
         }
     }
 }
@@ -221,6 +228,7 @@ impl Encodable for ConfigValue {
             }
             CV::Table(ref table, _) => table.encode(s),
             CV::Boolean(b, _) => b.encode(s),
+            CV::Integer(i, _) => i.encode(s),
         }
     }
 }
@@ -230,6 +238,7 @@ impl ConfigValue {
         match toml {
             toml::Value::String(val) => Ok(CV::String(val, path.clone())),
             toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
+            toml::Value::Integer(i) => Ok(CV::Integer(i, path.clone())),
             toml::Value::Array(val) => {
                 Ok(CV::List(try!(val.into_iter().map(|toml| {
                     match toml {
@@ -255,6 +264,7 @@ impl ConfigValue {
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::String(..), CV::String(..)) |
+            (&mut CV::Integer(..), CV::Integer(..)) |
             (&mut CV::Boolean(..), CV::Boolean(..)) => {}
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
                 let new = mem::replace(new, Vec::new());
@@ -276,6 +286,13 @@ impl ConfigValue {
         }
 
         Ok(())
+    }
+
+    pub fn i64(&self) -> CargoResult<(i64, &Path)> {
+        match *self {
+            CV::Integer(i, ref p) => Ok((i, p)),
+            _ => self.expected("integer"),
+        }
     }
 
     pub fn string(&self) -> CargoResult<(&str, &Path)> {
@@ -312,12 +329,14 @@ impl ConfigValue {
             CV::List(..) => "array",
             CV::String(..) => "string",
             CV::Boolean(..) => "boolean",
+            CV::Integer(..) => "integer",
         }
     }
 
     pub fn definition_path(&self) -> &Path {
         match *self  {
             CV::Boolean(_, ref p) |
+            CV::Integer(_, ref p) |
             CV::String(_, ref p) |
             CV::List(_, ref p) |
             CV::Table(_, ref p) => p
@@ -333,6 +352,7 @@ impl ConfigValue {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
+            CV::Integer(i, _) => toml::Value::Integer(i),
             CV::List(l, _) => toml::Value::Array(l
                                           .into_iter()
                                           .map(|(s, _)| toml::Value::String(s))

@@ -32,7 +32,7 @@ test!(bad2 {
         .file("src/lib.rs", "")
         .file(".cargo/config", r#"
               [http]
-                proxy = 3
+                proxy = 3.0
         "#);
     assert_that(foo.cargo_process("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
@@ -48,7 +48,7 @@ Caused by:
   failed to parse key `proxy`
 
 Caused by:
-  found TOML configuration value of unknown type `integer`
+  found TOML configuration value of unknown type `float`
 "));
 });
 
