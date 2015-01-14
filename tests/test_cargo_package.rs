@@ -1,8 +1,9 @@
 use std::io::{File, MemReader};
 
-use tar::Archive;
-use flate2::reader::GzDecoder;
 use cargo::util::process;
+use flate2::reader::GzDecoder;
+use git2;
+use tar::Archive;
 
 use support::{project, execs, cargo_dir, paths, git};
 use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
@@ -238,6 +239,26 @@ test!(include {
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ([..])
 {archiving} [..]
+{archiving} [..]
+{archiving} [..]
+", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
+});
+
+test!(package_new_git_repo {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+    git2::Repository::init(&p.root()).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("package")
+                 .arg("--no-verify").arg("-v"),
+                execs().with_status(0).with_stdout(format!("\
+{packaging} foo v0.0.1 ([..])
 {archiving} [..]
 {archiving} [..]
 ", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
