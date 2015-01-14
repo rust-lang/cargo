@@ -90,7 +90,7 @@ style:
 	sh tests/check-style.sh
 
 no-exes:
-	find $$(git ls-files) -perm +111 -type f \
+	find $$(git ls-files) -perm +a+x -type f \
 		-not -name configure -not -name '*.sh' -not -name '*.rs' \
 		-not -wholename "*/rust-installer/*" | \
 		grep '.*' \
