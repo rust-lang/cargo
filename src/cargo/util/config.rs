@@ -1,10 +1,9 @@
 use std::{fmt, os, mem};
-use std::cell::{RefCell, RefMut};
+use std::cell::{RefCell, RefMut, Ref, Cell};
 use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::io;
 use std::io::fs::{self, PathExtensions, File};
-use std::string;
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
@@ -19,21 +18,19 @@ use self::ConfigValue as CV;
 pub struct Config<'a> {
     home_path: Path,
     shell: RefCell<&'a mut MultiShell>,
-    jobs: u32,
-    target: Option<string::String>,
-    rustc_version: string::String,
+    rustc_version: String,
     /// The current host and default target of rustc
-    rustc_host: string::String,
+    rustc_host: String,
+    values: RefCell<HashMap<String, ConfigValue>>,
+    values_loaded: Cell<bool>,
+    cwd: Path,
 }
 
 impl<'a> Config<'a> {
-    pub fn new(shell: &'a mut MultiShell,
-               jobs: Option<u32>,
-               target: Option<string::String>) -> CargoResult<Config<'a>> {
-        if jobs == Some(0) {
-            return Err(human("jobs must be at least 1"))
-        }
-
+    pub fn new(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
+        let cwd = try!(os::getcwd().chain_error(|| {
+            human("couldn't get the current directory of the process")
+        }));
         let (rustc_version, rustc_host) = try!(ops::rustc_version());
 
         Ok(Config {
@@ -42,10 +39,11 @@ impl<'a> Config<'a> {
                       This probably means that $HOME was not set.")
             })),
             shell: RefCell::new(shell),
-            jobs: jobs.unwrap_or(os::num_cpus() as u32),
-            target: target,
             rustc_version: rustc_version,
             rustc_host: rustc_host,
+            cwd: cwd,
+            values: RefCell::new(HashMap::new()),
+            values_loaded: Cell::new(false),
         })
     }
 
@@ -75,14 +73,6 @@ impl<'a> Config<'a> {
         self.shell.borrow_mut()
     }
 
-    pub fn jobs(&self) -> u32 {
-        self.jobs
-    }
-
-    pub fn target(&self) -> Option<&str> {
-        self.target.as_ref().map(|t| t.as_slice())
-    }
-
     /// Return the output of `rustc -v verbose`
     pub fn rustc_version(&self) -> &str {
         self.rustc_version.as_slice()
@@ -91,6 +81,21 @@ impl<'a> Config<'a> {
     /// Return the host platform and default target of rustc
     pub fn rustc_host(&self) -> &str {
         self.rustc_host.as_slice()
+    }
+
+    pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
+        if !self.values_loaded.get() {
+            try!(self.load_values());
+            self.values_loaded.set(true);
+        }
+        Ok(self.values.borrow())
+    }
+
+    pub fn cwd(&self) -> &Path { &self.cwd }
+
+    fn load_values(&self) -> CargoResult<()> {
+        *self.values.borrow_mut() = try!(all_configs(&self.cwd));
+        Ok(())
     }
 }
 
@@ -102,9 +107,9 @@ pub enum Location {
 
 #[derive(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
-    String(string::String, Path),
-    List(Vec<(string::String, Path)>),
-    Table(HashMap<string::String, ConfigValue>),
+    String(String, Path),
+    List(Vec<(String, Path)>),
+    Table(HashMap<String, ConfigValue>),
     Boolean(bool, Path),
 }
 
@@ -135,7 +140,7 @@ impl Encodable for ConfigValue {
         match *self {
             CV::String(ref string, _) => string.encode(s),
             CV::List(ref list) => {
-                let list: Vec<&string::String> = list.iter().map(|s| &s.0).collect();
+                let list: Vec<&String> = list.iter().map(|s| &s.0).collect();
                 list.encode(s)
             }
             CV::Table(ref table) => table.encode(s),
@@ -201,7 +206,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn table(&self) -> CargoResult<&HashMap<string::String, ConfigValue>> {
+    pub fn table(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         match *self {
             CV::Table(ref table) => Ok(table),
             _ => Err(internal(format!("expected a table, but found a {}",
@@ -209,7 +214,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn list(&self) -> CargoResult<&[(string::String, Path)]> {
+    pub fn list(&self) -> CargoResult<&[(String, Path)]> {
         match *self {
             CV::List(ref list) => Ok(list.as_slice()),
             _ => Err(internal(format!("expected a list, but found a {}",
@@ -260,10 +265,10 @@ pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
         human(format!("`{}` not found in your configuration", key)))
 }
 
-pub fn all_configs(pwd: Path) -> CargoResult<HashMap<string::String, ConfigValue>> {
+pub fn all_configs(pwd: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
     let mut cfg = CV::Table(HashMap::new());
 
-    try!(walk_tree(&pwd, |mut file| {
+    try!(walk_tree(pwd, |mut file| {
         let path = file.path().clone();
         let contents = try!(file.read_to_string());
         let table = try!(cargo_toml::parse(contents.as_slice(), &path).chain_error(|| {

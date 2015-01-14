@@ -33,7 +33,7 @@ use docopt::Docopt;
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK, RED};
 
-pub use util::{CargoError, CliError, CliResult, human};
+pub use util::{CargoError, CliError, CliResult, human, Config};
 
 macro_rules! some {
     ($e:expr) => (
@@ -58,7 +58,7 @@ pub mod sources;
 pub mod util;
 
 pub fn execute_main<T, U, V>(
-                        exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
+                        exec: fn(T, U, &Config) -> CliResult<Option<V>>,
                         options_first: bool,
                         usage: &str)
     where V: Encodable, T: Decodable, U: Decodable
@@ -69,8 +69,8 @@ pub fn execute_main<T, U, V>(
 }
 
 pub fn call_main<T, U, V>(
-            exec: fn(T, U, &mut MultiShell) -> CliResult<Option<V>>,
-            shell: &mut MultiShell,
+            exec: fn(T, U, &Config) -> CliResult<Option<V>>,
+            shell: &Config,
             usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>>
@@ -83,7 +83,7 @@ pub fn call_main<T, U, V>(
 }
 
 pub fn execute_main_without_stdin<T, V>(
-                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
+                                      exec: fn(T, &Config) -> CliResult<Option<V>>,
                                       options_first: bool,
                                       usage: &str)
     where V: Encodable, T: Decodable
@@ -93,23 +93,9 @@ pub fn execute_main_without_stdin<T, V>(
     });
 }
 
-pub fn execute_main_with_args_and_without_stdin<T, V>(
-                                      exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
-                                      options_first: bool,
-                                      usage: &str,
-                                      args: &[String])
-    where V: Encodable, T: Decodable
-{
-    let mut shell = shell(true);
-
-    process_executed(
-        call_main_without_stdin(exec, &mut shell, usage, args, options_first),
-        &mut shell)
-}
-
 pub fn call_main_without_stdin<T, V>(
-            exec: fn(T, &mut MultiShell) -> CliResult<Option<V>>,
-            shell: &mut MultiShell,
+            exec: fn(T, &Config) -> CliResult<Option<V>>,
+            shell: &Config,
             usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>>
@@ -120,15 +106,19 @@ pub fn call_main_without_stdin<T, V>(
 }
 
 fn process<V, F>(mut callback: F)
-    where F: FnMut(&[String], &mut MultiShell) -> CliResult<Option<V>>,
+    where F: FnMut(&[String], &Config) -> CliResult<Option<V>>,
           V: Encodable
 {
     let mut shell = shell(true);
-    process_executed(callback(os::args().as_slice(), &mut shell), &mut shell)
+    process_executed({
+        match Config::new(&mut shell) {
+            Ok(cfg) => callback(os::args().as_slice(), &cfg),
+            Err(e) => Err(CliError::from_boxed(e, 101)),
+        }
+    }, &mut shell)
 }
 
-pub fn process_executed<T>(result: CliResult<Option<T>>,
-                           shell: &mut MultiShell)
+pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
     where T: Encodable
 {
     match result {

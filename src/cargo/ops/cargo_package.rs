@@ -7,9 +7,9 @@ use flate2::{GzBuilder, BestCompression};
 use flate2::reader::GzDecoder;
 
 use core::source::{Source, SourceId};
-use core::{Package, MultiShell};
+use core::Package;
 use sources::PathSource;
-use util::{CargoResult, human, internal, ChainError};
+use util::{CargoResult, human, internal, ChainError, Config};
 use ops;
 
 struct Bomb { path: Option<Path> }
@@ -24,16 +24,17 @@ impl Drop for Bomb {
 }
 
 pub fn package(manifest_path: &Path,
-               shell: &mut MultiShell,
+               config: &Config,
                verify: bool,
                list: bool,
                metadata: bool) -> CargoResult<Option<Path>> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
+    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                            config));
     try!(src.update());
     let pkg = try!(src.get_root_package());
 
     if metadata {
-        try!(check_metadata(&pkg, shell));
+        try!(check_metadata(&pkg, config));
     }
 
     if list {
@@ -55,12 +56,12 @@ pub fn package(manifest_path: &Path,
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
 
-    try!(shell.status("Packaging", pkg.get_package_id().to_string()));
-    try!(tar(&pkg, &src, shell, &dst).chain_error(|| {
+    try!(config.shell().status("Packaging", pkg.get_package_id().to_string()));
+    try!(tar(&pkg, &src, config, &dst).chain_error(|| {
         human("failed to prepare local package for uploading")
     }));
     if verify {
-        try!(run_verify(&pkg, shell, &dst).chain_error(|| {
+        try!(run_verify(config, &pkg, &dst).chain_error(|| {
             human("failed to verify package tarball")
         }))
     }
@@ -69,7 +70,7 @@ pub fn package(manifest_path: &Path,
 
 // check that the package has some piece of metadata that a human can
 // use to tell what the package is about.
-fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
+fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
     let md = pkg.get_manifest().get_metadata();
 
     let mut missing = vec![];
@@ -93,7 +94,7 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
         }
         things.push_str(missing.last().unwrap().as_slice());
 
-        try!(shell.warn(
+        try!(config.shell().warn(
             format!("warning: manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
                     things = things).as_slice()))
@@ -101,7 +102,7 @@ fn check_metadata(pkg: &Package, shell: &mut MultiShell) -> CargoResult<()> {
     Ok(())
 }
 
-fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
+fn tar(pkg: &Package, src: &PathSource, config: &Config,
        dst: &Path) -> CargoResult<()> {
 
     if dst.exists() {
@@ -128,7 +129,7 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
                           relative.display()))
         }));
         let mut file = try!(File::open(file));
-        try!(shell.verbose(|shell| {
+        try!(config.shell().verbose(|shell| {
             shell.status("Archiving", relative.as_slice())
         }));
         let path = format!("{}-{}{}{}", pkg.get_name(),
@@ -141,9 +142,9 @@ fn tar(pkg: &Package, src: &PathSource, shell: &mut MultiShell,
     Ok(())
 }
 
-fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
+fn run_verify(config: &Config, pkg: &Package, tar: &Path)
               -> CargoResult<()> {
-    try!(shell.status("Verifying", pkg));
+    try!(config.shell().status("Verifying", pkg));
 
     let f = try!(GzDecoder::new(try!(File::open(tar))));
     let dst = pkg.get_root().join(format!("target/package/{}-{}",
@@ -158,7 +159,7 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
     // When packages are uploaded to the registry, all path dependencies are
     // implicitly converted to registry-based dependencies, so we rewrite those
     // dependencies here.
-    let registry = try!(SourceId::for_central());
+    let registry = try!(SourceId::for_central(config));
     let new_summary = pkg.get_summary().clone().map_dependencies(|d| {
         if !d.get_source_id().is_path() { return d }
         d.source_id(registry.clone())
@@ -170,9 +171,9 @@ fn run_verify(pkg: &Package, shell: &mut MultiShell, tar: &Path)
                                pkg.get_package_id().get_source_id());
 
     // Now that we've rewritten all our path dependencies, compile it!
-    try!(ops::compile_pkg(&new_pkg, &mut ops::CompileOptions {
+    try!(ops::compile_pkg(&new_pkg, &ops::CompileOptions {
         env: "compile",
-        shell: shell,
+        config: config,
         jobs: None,
         target: None,
         dev_deps: false,

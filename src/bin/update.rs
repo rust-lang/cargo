@@ -1,13 +1,11 @@
 use std::os;
 
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
 struct Options {
-    arg_spec: Option<String>,
     flag_package: Option<String>,
     flag_aggressive: bool,
     flag_precise: Option<String>,
@@ -20,7 +18,6 @@ Update dependencies as recorded in the local lock file.
 
 Usage:
     cargo update [options]
-    cargo update [options] <spec>
 
 Options:
     -h, --help               Print this message
@@ -51,28 +48,21 @@ updated.
 For more information about package id specifications, see `cargo help pkgid`.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-update; args={:?}", os::args());
-    shell.set_verbose(options.flag_verbose);
+    config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    let spec = if options.arg_spec.is_some() {
-        let _ = shell.warn("`cargo update foo` has been deprecated in favor \
-                            of `cargo update -p foo`. This functionality \
-                            will be removed in the future");
-        options.arg_spec.as_ref()
-    } else {
-        options.flag_package.as_ref()
-    };
+    let spec = options.flag_package.as_ref();
 
-    let mut update_opts = ops::UpdateOptions {
+    let update_opts = ops::UpdateOptions {
         aggressive: options.flag_aggressive,
         precise: options.flag_precise.as_ref().map(|s| s.as_slice()),
         to_update: spec.map(|s| s.as_slice()),
-        shell: shell,
+        config: config,
     };
 
-    ops::update_lockfile(&root, &mut update_opts)
+    ops::update_lockfile(&root, &update_opts)
         .map(|_| None).map_err(|err| CliError::from_boxed(err, 101))
 }
 

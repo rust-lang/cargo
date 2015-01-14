@@ -12,7 +12,7 @@ use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
-use cargo::util::{CliError, CliResult, lev_distance};
+use cargo::util::{CliError, CliResult, lev_distance, Config};
 
 #[derive(RustcDecodable)]
 struct Flags {
@@ -56,8 +56,6 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(bench);
     $mac!(build);
     $mac!(clean);
-    $mac!(config_for_key);
-    $mac!(config_list);
     $mac!(doc);
     $mac!(fetch);
     $mac!(generate_lockfile);
@@ -85,9 +83,9 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
   because they are fundamental (and intertwined). Other commands can rely
   on this top-level information.
 */
-fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
+fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo; args={:?}", os::args());
-    shell.set_verbose(flags.flag_verbose);
+    config.shell().set_verbose(flags.flag_verbose);
 
     if flags.flag_list {
         println!("Installed Commands:");
@@ -99,11 +97,11 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
 
     let (mut args, command) = match flags.arg_command.as_slice() {
         "" | "help" if flags.arg_args.len() == 0 => {
-            shell.set_verbose(true);
+            config.shell().set_verbose(true);
             let args = &[os::args()[0].clone(), "-h".to_string()];
-            let r = cargo::call_main_without_stdin(execute, shell, USAGE, args,
+            let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
-            cargo::process_executed(r, shell);
+            cargo::process_executed(r, &mut **config.shell());
             return Ok(None)
         }
         "help" if flags.arg_args[0].as_slice() == "-h" ||
@@ -118,18 +116,19 @@ fn execute(flags: Flags, shell: &mut MultiShell) -> CliResult<Option<()>> {
     macro_rules! cmd{ ($name:ident) => (
         if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {
             mod $name;
-            shell.set_verbose(true);
-            let r = cargo::call_main_without_stdin($name::execute, shell,
+            config.shell().set_verbose(true);
+            let r = cargo::call_main_without_stdin($name::execute, config,
                                                    $name::USAGE,
                                                    args.as_slice(),
                                                    false);
-            cargo::process_executed(r, shell);
+            cargo::process_executed(r, &mut **config.shell());
             return Ok(None)
         }
     ) }
     each_subcommand!(cmd);
 
-    execute_subcommand(command.as_slice(), args.as_slice(), shell);
+    execute_subcommand(command.as_slice(), args.as_slice(),
+                       &mut **config.shell());
     Ok(None)
 }
 
@@ -153,7 +152,8 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
         Some(command) => command,
         None => {
             let msg = match find_closest(cmd) {
-                Some(closest) => format!("No such subcommand\n\n\tDid you mean `{}`?\n", closest),
+                Some(closest) => format!("No such subcommand\n\n\t\
+                                          Did you mean `{}`?\n", closest),
                 None => "No such subcommand".to_string()
             };
             return handle_error(CliError::new(msg, 127), shell)

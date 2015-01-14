@@ -1,5 +1,4 @@
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError, human, ChainError};
+use cargo::util::{CliResult, CliError, human, ChainError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -22,7 +21,7 @@ struct ProjectLocation {
 }
 
 pub fn execute(flags: LocateProjectFlags,
-               _: &mut MultiShell) -> CliResult<Option<ProjectLocation>> {
+               _: &Config) -> CliResult<Option<ProjectLocation>> {
     let root = try!(find_root_manifest_for_cwd(flags.flag_manifest_path));
 
     let string = try!(root.as_str()

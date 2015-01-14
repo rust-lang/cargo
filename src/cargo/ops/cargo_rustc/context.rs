@@ -1,6 +1,5 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
-use std::os;
 use std::str;
 use std::sync::Arc;
 
@@ -24,13 +23,12 @@ pub enum Platform {
 }
 
 pub struct Context<'a, 'b: 'a> {
-    pub config: &'b Config<'b>,
+    pub config: &'a Config<'b>,
     pub resolve: &'a Resolve,
-    pub sources: &'a SourceMap<'b>,
+    pub sources: &'a SourceMap<'a>,
     pub compilation: Compilation,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
-    pub cwd: Path,
 
     env: &'a str,
     host: Layout,
@@ -46,30 +44,29 @@ pub struct Context<'a, 'b: 'a> {
 }
 
 impl<'a, 'b: 'a> Context<'a, 'b> {
-    pub fn new(env: &'a str, resolve: &'a Resolve, sources: &'a SourceMap<'b>,
-               deps: &'a PackageSet, config: &'b Config<'b>,
-               host: Layout, target: Option<Layout>,
+    pub fn new(env: &'a str,
+               resolve: &'a Resolve,
+               sources: &'a SourceMap<'a>,
+               deps: &'a PackageSet,
+               config: &'a Config<'b>,
+               host: Layout,
+               target_layout: Option<Layout>,
                root_pkg: &Package,
-               build_config: BuildConfig)
-               -> CargoResult<Context<'a, 'b>> {
-        let (target_dylib, target_exe) =
-                try!(Context::filename_parts(config.target()));
-        let (host_dylib, host_exe) = if config.target().is_none() {
-            (target_dylib.clone(),
-             target_exe.clone())
+               build_config: BuildConfig) -> CargoResult<Context<'a, 'b>> {
+        let target = build_config.requested_target.clone();
+        let target = target.as_ref().map(|s| &s[]);
+        let (target_dylib, target_exe) = try!(Context::filename_parts(target));
+        let (host_dylib, host_exe) = if build_config.requested_target.is_none() {
+            (target_dylib.clone(), target_exe.clone())
         } else {
             try!(Context::filename_parts(None))
         };
-        let target_triple = config.target().map(|s| s.to_string());
-        let target_triple = target_triple.unwrap_or(config.rustc_host().to_string());
-        let cwd = try!(os::getcwd().chain_error(|| {
-            human("failed to get the current directory")
-        }));
+        let target_triple = target.unwrap_or(config.rustc_host()).to_string();
         Ok(Context {
             target_triple: target_triple,
             env: env,
             host: host,
-            target: target,
+            target: target_layout,
             resolve: resolve,
             sources: sources,
             package_set: deps,
@@ -83,7 +80,6 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
             build_config: build_config,
             exec_engine: Arc::new(Box::new(ProcessEngine) as Box<ExecEngine>),
-            cwd: cwd,
         })
     }
 
@@ -151,8 +147,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             self.build_requirements(pkg, target, Platform::Target);
         }
 
+        let jobs = self.jobs();
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
-                                          Some(self.config.jobs().to_string()));
+                                          Some(jobs.to_string()));
         self.compilation.root_output =
                 self.layout(pkg, Kind::Target).proxy().dest().clone();
         self.compilation.deps_output =
@@ -351,6 +348,14 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Kind::Host => &self.build_config.host,
             Kind::Target => &self.build_config.target,
         }
+    }
+
+    /// Number of jobs specified for this build
+    pub fn jobs(&self) -> u32 { self.build_config.jobs }
+
+    /// Requested (not actual) target for the build
+    pub fn requested_target(&self) -> Option<&str> {
+        self.build_config.requested_target.as_ref().map(|s| &s[])
     }
 }
 

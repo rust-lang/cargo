@@ -1,37 +1,38 @@
 use std::collections::HashSet;
-use std::io::{self, File, fs};
+use std::error::FromError;
 use std::io::fs::PathExtensions;
+use std::io::{self, File, fs};
 
 use core::{Package,Manifest,SourceId};
-use util::{self, CargoResult, human};
+use util::{self, CargoResult, human, Config};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
-use std::error::FromError;
 
-pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId)
+pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
+                     config: &Config)
                      -> CargoResult<(Manifest, Vec<Path>)> {
     let root = layout.root.clone();
-    util::toml::to_manifest(contents, source_id, layout).map_err(|e| {
+    util::toml::to_manifest(contents, source_id, layout, config).map_err(|e| {
         human(format!("failed to parse manifest at `{:?}`\n{}",
                       root.join("Cargo.toml"), e))
     })
 }
 
-pub fn read_package(path: &Path, source_id: &SourceId)
-    -> CargoResult<(Package, Vec<Path>)> {
+pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
+                    -> CargoResult<(Package, Vec<Path>)> {
     log!(5, "read_package; path={}; source-id={}", path.display(), source_id);
     let mut file = try!(File::open(path));
     let data = try!(file.read_to_end());
 
     let layout = project_layout(&path.dir_path());
     let (manifest, nested) =
-        try!(read_manifest(data.as_slice(), layout, source_id));
+        try!(read_manifest(data.as_slice(), layout, source_id, config));
 
     Ok((Package::new(manifest, path, source_id), nested))
 }
 
-pub fn read_packages(path: &Path,
-                     source_id: &SourceId) -> CargoResult<Vec<Package>> {
+pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
+                     -> CargoResult<Vec<Package>> {
     let mut all_packages = HashSet::new();
     let mut visited = HashSet::<Path>::new();
 
@@ -52,7 +53,7 @@ pub fn read_packages(path: &Path,
         }
 
         if has_manifest(dir) {
-            try!(read_nested_packages(dir, &mut all_packages, source_id,
+            try!(read_nested_packages(dir, &mut all_packages, source_id, config,
                                       &mut visited));
         }
         Ok(true)
@@ -104,12 +105,13 @@ fn has_manifest(path: &Path) -> bool {
 fn read_nested_packages(path: &Path,
                         all_packages: &mut HashSet<Package>,
                         source_id: &SourceId,
+                        config: &Config,
                         visited: &mut HashSet<Path>) -> CargoResult<()> {
     if !visited.insert(path.clone()) { return Ok(()) }
 
     let manifest = try!(find_project_manifest_exact(path, "Cargo.toml"));
 
-    let (pkg, nested) = try!(read_package(&manifest, source_id));
+    let (pkg, nested) = try!(read_package(&manifest, source_id, config));
     all_packages.insert(pkg);
 
     // Registry sources are not allowed to have `path=` dependencies because
@@ -117,7 +119,7 @@ fn read_nested_packages(path: &Path,
     if !source_id.is_registry() {
         for p in nested.iter() {
             try!(read_nested_packages(&path.join(p), all_packages, source_id,
-                                      visited));
+                                      config, visited));
         }
     }
 

@@ -10,7 +10,7 @@ use registry::{Registry, NewCrate, NewCrateDependency};
 use term::color::BLACK;
 
 use core::source::Source;
-use core::{Package, MultiShell, SourceId};
+use core::{Package, SourceId};
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
@@ -26,23 +26,25 @@ pub struct RegistryConfig {
 }
 
 pub fn publish(manifest_path: &Path,
-               shell: &mut MultiShell,
+               config: &Config,
                token: Option<String>,
                index: Option<String>,
                verify: bool) -> CargoResult<()> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
+    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                            config));
     try!(src.update());
     let pkg = try!(src.get_root_package());
 
-    let (mut registry, reg_id) = try!(registry(shell, token, index));
+    let (mut registry, reg_id) = try!(registry(config, token, index));
     try!(verify_dependencies(&pkg, &reg_id));
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
-    let tarball = try!(ops::package(manifest_path, shell, verify, false, true)).unwrap();
+    let tarball = try!(ops::package(manifest_path, config, verify,
+                                    false, true)).unwrap();
 
     // Upload said tarball to the specified destination
-    try!(shell.status("Uploading", pkg.get_package_id().to_string()));
+    try!(config.shell().status("Uploading", pkg.get_package_id().to_string()));
     try!(transmit(&pkg, &tarball, &mut registry));
 
     Ok(())
@@ -128,8 +130,8 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     })
 }
 
-pub fn registry_configuration() -> CargoResult<RegistryConfig> {
-    let configs = try!(config::all_configs(try!(os::getcwd())));
+pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
+    let configs = try!(config.values());
     let registry = match configs.get("registry") {
         None => return Ok(RegistryConfig { index: None, token: None }),
         Some(registry) => try!(registry.table().chain_error(|| {
@@ -155,33 +157,32 @@ pub fn registry_configuration() -> CargoResult<RegistryConfig> {
     Ok(RegistryConfig { index: index, token: token })
 }
 
-pub fn registry(shell: &mut MultiShell,
+pub fn registry(config: &Config,
                 token: Option<String>,
                 index: Option<String>) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
         token: token_config,
         index: index_config,
-    } = try!(registry_configuration());
+    } = try!(registry_configuration(config));
     let token = token.or(token_config);
     let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
     let index = try!(index.as_slice().to_url().map_err(human));
     let sid = SourceId::for_registry(&index);
     let api_host = {
-        let mut config = try!(Config::new(shell, None, None));
-        let mut src = RegistrySource::new(&sid, &mut config);
+        let mut src = RegistrySource::new(&sid, config);
         try!(src.update().chain_error(|| {
             human(format!("Failed to update registry {}", index))
         }));
         (try!(src.config())).api
     };
-    let handle = try!(http_handle());
+    let handle = try!(http_handle(config));
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
-pub fn http_handle() -> CargoResult<http::Handle> {
-    Ok(match try!(http_proxy()) {
+pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
+    Ok(match try!(http_proxy(config)) {
         Some(proxy) => http::handle().proxy(proxy),
         None => http::handle(),
     })
@@ -191,8 +192,8 @@ pub fn http_handle() -> CargoResult<http::Handle> {
 ///
 /// Favor cargo's `http.proxy`, then git's `http.proxy`, then finally a
 /// HTTP_PROXY env var.
-pub fn http_proxy() -> CargoResult<Option<String>> {
-    let configs = try!(config::all_configs(try!(os::getcwd())));
+pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
+    let configs = try!(config.values());
     match configs.get("http") {
         Some(http) => {
             let http = try!(http.table().chain_error(|| {
@@ -221,9 +222,8 @@ pub fn http_proxy() -> CargoResult<Option<String>> {
     Ok(os::getenv("HTTP_PROXY"))
 }
 
-pub fn registry_login(shell: &mut MultiShell, token: String) -> CargoResult<()> {
-    let config = try!(Config::new(shell, None, None));
-    let RegistryConfig { index, token: _ } = try!(registry_configuration());
+pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
+    let RegistryConfig { index, token: _ } = try!(registry_configuration(config));
     let mut map = HashMap::new();
     let p = try!(os::getcwd());
     match index {
@@ -234,7 +234,7 @@ pub fn registry_login(shell: &mut MultiShell, token: String) -> CargoResult<()> 
     }
     map.insert("token".to_string(), ConfigValue::String(token, p));
 
-    config::set_config(&config, Location::Global, "registry",
+    config::set_config(config, Location::Global, "registry",
                        ConfigValue::Table(map))
 }
 
@@ -247,26 +247,27 @@ pub struct OwnersOptions {
     pub list: bool,
 }
 
-pub fn modify_owners(shell: &mut MultiShell,
-                     opts: &OwnersOptions) -> CargoResult<()> {
+pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let name = match opts.krate {
         Some(ref name) => name.clone(),
         None => {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
-            let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
+            let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                                    config));
             try!(src.update());
             let pkg = try!(src.get_root_package());
             pkg.get_name().to_string()
         }
     };
 
-    let (mut registry, _) = try!(registry(shell, opts.token.clone(),
+    let (mut registry, _) = try!(registry(config, opts.token.clone(),
                                           opts.index.clone()));
 
     match opts.to_add {
         Some(ref v) => {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
-            try!(shell.status("Owner", format!("adding `{:#?}` to `{}`", v, name)));
+            try!(config.shell().status("Owner", format!("adding `{:#?}` to `{}`",
+                                                        v, name)));
             try!(registry.add_owners(name.as_slice(), v.as_slice()).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
             }));
@@ -277,8 +278,8 @@ pub fn modify_owners(shell: &mut MultiShell,
     match opts.to_remove {
         Some(ref v) => {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
-            try!(shell.status("Owner", format!("removing `{:?}` from `{}`",
-                                               v, name)));
+            try!(config.shell().status("Owner", format!("removing `{:?}` from `{}`",
+                                                        v, name)));
             try!(registry.remove_owners(name.as_slice(), v.as_slice()).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
             }));
@@ -304,7 +305,7 @@ pub fn modify_owners(shell: &mut MultiShell,
     Ok(())
 }
 
-pub fn yank(shell: &mut MultiShell,
+pub fn yank(config: &Config,
             krate: Option<String>,
             version: Option<String>,
             token: Option<String>,
@@ -314,7 +315,8 @@ pub fn yank(shell: &mut MultiShell,
         Some(name) => name,
         None => {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
-            let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
+            let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                                    config));
             try!(src.update());
             let pkg = try!(src.get_root_package());
             pkg.get_name().to_string()
@@ -325,15 +327,15 @@ pub fn yank(shell: &mut MultiShell,
         None => return Err(human("a version must be specified to yank"))
     };
 
-    let (mut registry, _) = try!(registry(shell, token, index));
+    let (mut registry, _) = try!(registry(config, token, index));
 
     if undo {
-        try!(shell.status("Unyank", format!("{}:{}", name, version)));
+        try!(config.shell().status("Unyank", format!("{}:{}", name, version)));
         try!(registry.unyank(name.as_slice(), version.as_slice()).map_err(|e| {
             human(format!("failed to undo a yank: {}", e))
         }));
     } else {
-        try!(shell.status("Yank", format!("{}:{}", name, version)));
+        try!(config.shell().status("Yank", format!("{}:{}", name, version)));
         try!(registry.yank(name.as_slice(), version.as_slice()).map_err(|e| {
             human(format!("failed to yank: {}", e))
         }));
@@ -342,7 +344,7 @@ pub fn yank(shell: &mut MultiShell,
     Ok(())
 }
 
-pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> CargoResult<()> {
+pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResult<()> {
     fn truncate_with_ellipsis(s: &str, max_length: usize) -> String {
         if s.len() < max_length {
             s.to_string()
@@ -351,8 +353,7 @@ pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> Car
         }
     }
 
-    let (mut registry, _) = try!(registry(shell, None, index));
-
+    let (mut registry, _) = try!(registry(config, None, index));
     let crates = try!(registry.search(query).map_err(|e| {
         human(format!("failed to retrieve search results from the registry: {}", e))
     }));
@@ -378,7 +379,7 @@ pub fn search(query: &str, shell: &mut MultiShell, index: Option<String>) -> Car
             }
             None => name
         };
-        try!(shell.say(line, BLACK));
+        try!(config.shell().say(line, BLACK));
     }
 
     Ok(())

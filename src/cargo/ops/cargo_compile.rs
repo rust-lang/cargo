@@ -28,7 +28,7 @@ use std::default::Default;
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
@@ -36,9 +36,9 @@ use util::config::{Config, ConfigValue};
 use util::{CargoResult, config, internal, human, ChainError, profile};
 
 /// Contains informations about how a package should be compiled.
-pub struct CompileOptions<'a> {
+pub struct CompileOptions<'a, 'b: 'a> {
     pub env: &'a str,
-    pub shell: &'a mut MultiShell,
+    pub config: &'a Config<'b>,
     /// Number of concurrent jobs to use.
     pub jobs: Option<u32>,
     /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
@@ -53,11 +53,12 @@ pub struct CompileOptions<'a> {
 }
 
 pub fn compile(manifest_path: &Path,
-               options: &mut CompileOptions)
+               options: &CompileOptions)
                -> CargoResult<ops::Compilation> {
     log!(4, "compile; manifest-path={}", manifest_path.display());
 
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                               options.config));
     try!(source.update());
 
     // TODO: Move this into PathSource
@@ -65,16 +66,16 @@ pub fn compile(manifest_path: &Path,
     debug!("loaded package; package={}", package);
 
     for key in package.get_manifest().get_warnings().iter() {
-        try!(options.shell.warn(key))
+        try!(options.config.shell().warn(key))
     }
     compile_pkg(&package, options)
 }
 
-pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
+pub fn compile_pkg(package: &Package, options: &CompileOptions)
                    -> CargoResult<ops::Compilation> {
-    let CompileOptions { env, ref mut shell, jobs, target, spec,
+    let CompileOptions { env, config, jobs, target, spec,
                          dev_deps, features, no_default_features,
-                         lib_only, ref mut exec_engine } = *options;
+                         lib_only, ref exec_engine } = *options;
 
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
@@ -85,15 +86,16 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
         return Err(human("features cannot be modified when the main package \
                           is not being built"))
     }
+    if jobs == Some(0) {
+        return Err(human("jobs must be at least 1"))
+    }
 
-    let user_configs = try!(config::all_configs(try!(os::getcwd())));
-    let override_ids = try!(source_ids_from_config(&user_configs,
+    let override_ids = try!(source_ids_from_config(config,
                                                    package.get_root()));
-    let config = try!(Config::new(*shell, jobs, target.clone()));
 
     let (packages, resolve_with_overrides, sources) = {
         let rustc_host = config.rustc_host().to_string();
-        let mut registry = PackageRegistry::new(&config);
+        let mut registry = PackageRegistry::new(config);
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
@@ -147,21 +149,22 @@ pub fn compile_pkg(package: &Package, options: &mut CompileOptions)
 
     let ret = {
         let _p = profile::start("compiling");
-        let lib_overrides = try!(scrape_build_config(&config, &user_configs));
+        let lib_overrides = try!(scrape_build_config(config, jobs, target));
 
         try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
                                   &PackageSet::new(packages.as_slice()),
                                   &resolve_with_overrides, &sources,
-                                  &config, lib_overrides, exec_engine.clone()))
+                                  config, lib_overrides, exec_engine.clone()))
     };
 
     return Ok(ret);
 }
 
-fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
-                          cur_path: Path) -> CargoResult<Vec<SourceId>> {
-    debug!("loaded config; configs={:?}", configs);
+fn source_ids_from_config(config: &Config, cur_path: Path)
+                          -> CargoResult<Vec<SourceId>> {
 
+    let configs = try!(config.values());
+    debug!("loaded config; configs={:?}", configs);
     let config_paths = match configs.get("paths") {
         Some(cfg) => cfg,
         None => return Ok(Vec::new())
@@ -183,21 +186,27 @@ fn source_ids_from_config(configs: &HashMap<String, config::ConfigValue>,
 }
 
 fn scrape_build_config(config: &Config,
-                       configs: &HashMap<String, config::ConfigValue>)
-                       -> CargoResult<ops::BuildConfig> {
-    let target = match configs.get("target") {
-        None => return Ok(Default::default()),
+                       jobs: Option<u32>,
+                       target: Option<String>) -> CargoResult<ops::BuildConfig> {
+    let configs = try!(config.values());
+    let mut base = ops::BuildConfig {
+        jobs: jobs.unwrap_or(os::num_cpus() as u32),
+        requested_target: target.clone(),
+        ..Default::default()
+    };
+    let target_config = match configs.get("target") {
+        None => return Ok(base),
         Some(target) => try!(target.table().chain_error(|| {
             internal("invalid configuration for the key `target`")
         })),
     };
 
-    let host = try!(scrape_target_config(target, config.rustc_host()));
-    let target = match config.target() {
-        Some(triple) => try!(scrape_target_config(target, triple)),
-        None => host.clone(),
+    base.host = try!(scrape_target_config(target_config, config.rustc_host()));
+    base.target = match target.as_ref() {
+        Some(triple) => try!(scrape_target_config(target_config, &triple[])),
+        None => base.host.clone(),
     };
-    Ok(ops::BuildConfig { host: host, target: target })
+    Ok(base)
 }
 
 fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,

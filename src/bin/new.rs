@@ -1,8 +1,7 @@
 use std::os;
 
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -28,9 +27,9 @@ Options:
     -v, --verbose       Use verbose output
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={:?}", os::args());
-    shell.set_verbose(options.flag_verbose);
+    config.shell().set_verbose(options.flag_verbose);
 
     let Options { flag_bin, arg_path, flag_vcs, .. } = options;
 
@@ -40,7 +39,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         bin: flag_bin,
     };
 
-    ops::new(opts, shell).map(|_| None).map_err(|err| {
+    ops::new(opts, config).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

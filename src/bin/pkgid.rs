@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -43,12 +42,12 @@ Example Package IDs
 ";
 
 pub fn execute(options: Options,
-               shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+               config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path.clone()));
 
     let spec = options.arg_spec.as_ref().map(|s| s.as_slice());
-    let spec = try!(ops::pkgid(&root, spec, shell).map_err(|err| {
+    let spec = try!(ops::pkgid(&root, spec, config).map_err(|err| {
       CliError::from_boxed(err, 101)
     }));
     println!("{}", spec);

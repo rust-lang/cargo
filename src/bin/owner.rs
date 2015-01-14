@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -33,8 +32,8 @@ default). Note that owners of a package can upload new versions, yank old
 versions, and also modify the set of owners, so take caution!
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,
@@ -43,7 +42,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         to_remove: options.flag_remove,
         list: options.flag_list,
     };
-    try!(ops::modify_owners(shell, &opts).map_err(|e| {
+    try!(ops::modify_owners(config, &opts).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));
     Ok(None)

@@ -2,28 +2,27 @@ use std::collections::HashSet;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{MultiShell, Source, Resolve};
+use core::{Source, Resolve};
 use core::resolver::Method;
 use ops;
 use sources::{PathSource};
 use util::config::{Config};
 use util::{CargoResult, human};
 
-pub struct UpdateOptions<'a> {
-    pub shell: &'a mut MultiShell,
+pub struct UpdateOptions<'a, 'b: 'a> {
+    pub config: &'a Config<'b>,
     pub to_update: Option<&'a str>,
     pub precise: Option<&'a str>,
     pub aggressive: bool,
 }
 
-pub fn generate_lockfile(manifest_path: &Path,
-                         shell: &mut MultiShell)
+pub fn generate_lockfile(manifest_path: &Path, config: &Config)
                          -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                               config));
     try!(source.update());
     let package = try!(source.get_root_package());
-    let mut config = try!(Config::new(shell, None, None));
-    let mut registry = PackageRegistry::new(&mut config);
+    let mut registry = PackageRegistry::new(config);
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
                                                   None, None));
@@ -32,8 +31,9 @@ pub fn generate_lockfile(manifest_path: &Path,
 }
 
 pub fn update_lockfile(manifest_path: &Path,
-                       opts: &mut UpdateOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
+                       opts: &UpdateOptions) -> CargoResult<()> {
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                               opts.config));
     try!(source.update());
     let package = try!(source.get_root_package());
 
@@ -47,8 +47,7 @@ pub fn update_lockfile(manifest_path: &Path,
                           simultaneously"))
     }
 
-    let mut config = try!(Config::new(opts.shell, None, None));
-    let mut registry = PackageRegistry::new(&mut config);
+    let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
 
     match opts.to_update {

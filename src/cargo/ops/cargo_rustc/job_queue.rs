@@ -63,11 +63,11 @@ pub enum Stage {
 type Message = (PackageId, Stage, Freshness, CargoResult<()>);
 
 impl<'a, 'b> JobQueue<'a, 'b> {
-    pub fn new(resolve: &'a Resolve, packages: &'a PackageSet,
-               config: &Config) -> JobQueue<'a, 'b> {
+    pub fn new(resolve: &'a Resolve, packages: &'a PackageSet, jobs: u32)
+               -> JobQueue<'a, 'b> {
         let (tx, rx) = channel();
         JobQueue {
-            pool: TaskPool::new(config.jobs() as usize),
+            pool: TaskPool::new(jobs as usize),
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,

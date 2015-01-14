@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::{MultiShell};
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -41,8 +40,8 @@ current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
@@ -51,7 +50,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
             env: if options.flag_no_deps {"doc"} else {"doc-all"},
-            shell: shell,
+            config: config,
             jobs: options.flag_jobs,
             target: None,
             dev_deps: false,

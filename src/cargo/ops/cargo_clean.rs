@@ -1,21 +1,22 @@
 use std::default::Default;
 use std::io::fs::{self, PathExtensions};
 
-use core::{MultiShell, PackageSet};
+use core::PackageSet;
 use core::source::{Source, SourceMap};
 use sources::PathSource;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context};
 
-pub struct CleanOptions<'a> {
+pub struct CleanOptions<'a, 'b: 'a> {
     pub spec: Option<&'a str>,
     pub target: Option<&'a str>,
-    pub shell: &'a mut MultiShell,
+    pub config: &'a Config<'b>,
 }
 
 /// Cleans the project from build artifacts.
-pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
+pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
+    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                            opts.config));
     try!(src.update());
     let root = try!(src.get_root_package());
     let manifest = root.get_manifest();
@@ -37,9 +38,8 @@ pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
     let pkgid = try!(resolve.query(spec));
 
     // Translate the PackageId to a Package
-    let mut cfg = try!(Config::new(opts.shell, None, None));
     let pkg = {
-        let mut source = pkgid.get_source_id().load(&mut cfg);
+        let mut source = pkgid.get_source_id().load(opts.config);
         try!(source.update());
         (try!(source.get(&[pkgid.clone()]))).into_iter().next().unwrap()
     };
@@ -48,7 +48,7 @@ pub fn clean(manifest_path: &Path, opts: &mut CleanOptions) -> CargoResult<()> {
     // filenames and such
     let srcs = SourceMap::new();
     let pkgs = PackageSet::new(&[]);
-    let cx = try!(Context::new("compile", &resolve, &srcs, &pkgs, &mut cfg,
+    let cx = try!(Context::new("compile", &resolve, &srcs, &pkgs, opts.config,
                                Layout::at(root.get_absolute_target_dir()),
                                None, &pkg, Default::default()));
 

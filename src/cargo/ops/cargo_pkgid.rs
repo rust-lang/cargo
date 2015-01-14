@@ -1,12 +1,13 @@
 use ops;
-use core::{MultiShell, Source, PackageIdSpec};
+use core::{Source, PackageIdSpec};
 use sources::{PathSource};
-use util::{CargoResult, human};
+use util::{CargoResult, human, Config};
 
 pub fn pkgid(manifest_path: &Path,
              spec: Option<&str>,
-             _shell: &mut MultiShell) -> CargoResult<PackageIdSpec> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
+             config: &Config) -> CargoResult<PackageIdSpec> {
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                               config));
     try!(source.update());
     let package = try!(source.get_root_package());
 

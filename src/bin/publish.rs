@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::{MultiShell};
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
@@ -28,8 +27,8 @@ Options:
 
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     let Options {
         flag_token: token,
         flag_host: host,
@@ -39,7 +38,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     } = options;
 
     let root = try!(find_root_manifest_for_cwd(flag_manifest_path.clone()));
-    ops::publish(&root, shell, token, host, !no_verify).map(|_| None).map_err(|err| {
+    ops::publish(&root, config, token, host, !no_verify).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

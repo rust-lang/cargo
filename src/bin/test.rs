@@ -1,8 +1,7 @@
 use std::io::process::ExitStatus;
 
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError, Human};
+use cargo::util::{CliResult, CliError, Human, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -51,16 +50,16 @@ current package is tested. For more information on SPEC and its format, see the
 Compilation can be configured via the `test` profile in the manifest.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
-    shell.set_verbose(options.flag_verbose);
+    config.shell().set_verbose(options.flag_verbose);
 
-    let mut ops = ops::TestOptions {
+    let ops = ops::TestOptions {
         name: options.flag_test.as_ref().map(|s| s.as_slice()),
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
             env: "test",
-            shell: shell,
+            config: config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| s.as_slice()),
             dev_deps: true,
@@ -72,7 +71,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         },
     };
 
-    let err = try!(ops::run_tests(&root, &mut ops,
+    let err = try!(ops::run_tests(&root, &ops,
                                   options.arg_args.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));

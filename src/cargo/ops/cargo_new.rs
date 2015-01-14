@@ -4,10 +4,10 @@ use std::io::fs::PathExtensions;
 
 use rustc_serialize::{Decodable, Decoder};
 
-use git2::Config;
+use git2::Config as GitConfig;
 
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, config, internal};
-use core::shell::MultiShell;
+use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
+use util::Config;
 
 #[derive(Copy, Show, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
@@ -38,8 +38,8 @@ struct CargoNewConfig {
     version_control: Option<VersionControl>,
 }
 
-pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
-    let path = try!(os::getcwd()).join(opts.path);
+pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
+    let path = config.cwd().join(opts.path);
     if path.exists() {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
@@ -51,7 +51,7 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
         return Err(human(format!("Invalid character `{}` in crate name: `{}`",
                                  c, name).as_slice()));
     }
-    mk(&path, name, &opts).chain_error(|| {
+    mk(config, &path, name, &opts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
     })
@@ -61,8 +61,9 @@ fn existing_vcs_repo(path: &Path) -> bool {
     GitRepo::discover(path).is_ok() || HgRepo::discover(path).is_ok()
 }
 
-fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
-    let cfg = try!(global_config());
+fn mk(config: &Config, path: &Path, name: &str,
+      opts: &NewOptions) -> CargoResult<()> {
+    let cfg = try!(global_config(config));
     let mut ignore = "/target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(&path.dir_path());
     if !opts.bin {
@@ -129,7 +130,7 @@ fn it_works() {
 }
 
 fn discover_author() -> CargoResult<(String, Option<String>)> {
-    let git_config = Config::open_default().ok();
+    let git_config = GitConfig::open_default().ok();
     let git_config = git_config.as_ref();
     let name = git_config.and_then(|g| g.get_str("user.name").ok())
                          .map(|s| s.to_string())
@@ -151,8 +152,8 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     Ok((name, email))
 }
 
-fn global_config() -> CargoResult<CargoNewConfig> {
-    let user_configs = try!(config::all_configs(try!(os::getcwd())));
+fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
+    let user_configs = try!(config.values());
     let mut cfg = CargoNewConfig {
         name: None,
         email: None,

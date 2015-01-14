@@ -18,7 +18,7 @@ pub struct GitSource<'a, 'b:'a> {
     db_path: Path,
     checkout_path: Path,
     source_id: SourceId,
-    path_source: Option<PathSource>,
+    path_source: Option<PathSource<'a, 'b>>,
     rev: Option<GitRevision>,
     config: &'a Config<'b>,
 }
@@ -183,7 +183,8 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
         try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new(&self.checkout_path, &source_id);
+        let path_source = PathSource::new(&self.checkout_path, &source_id,
+                                          self.config);
 
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);

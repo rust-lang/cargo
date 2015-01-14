@@ -1,8 +1,7 @@
 use std::os;
 
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
@@ -23,11 +22,11 @@ Options:
     -v, --verbose           Use verbose output
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-generate-lockfile; args={:?}", os::args());
-    shell.set_verbose(options.flag_verbose);
+    config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    ops::generate_lockfile(&root, shell)
+    ops::generate_lockfile(&root, config)
         .map(|_| None).map_err(|err| CliError::from_boxed(err, 101))
 }

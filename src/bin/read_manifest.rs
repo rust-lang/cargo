@@ -1,5 +1,5 @@
-use cargo::core::{MultiShell, Package, Source};
-use cargo::util::{CliResult, CliError};
+use cargo::core::{Package, Source};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::sources::{PathSource};
 
 #[derive(RustcDecodable)]
@@ -17,9 +17,9 @@ Options:
     -v, --verbose           Use verbose output
 ";
 
-pub fn execute(options: Options, _: &mut MultiShell) -> CliResult<Option<Package>> {
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> {
     let path = Path::new(options.flag_manifest_path.as_slice());
-    let mut source = try!(PathSource::for_path(&path).map_err(|e| {
+    let mut source = try!(PathSource::for_path(&path, config).map_err(|e| {
         CliError::new(e.description(), 1)
     }));
 

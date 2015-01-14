@@ -57,7 +57,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                  .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
                                                     .dir_path()
                                                     .display().to_string()))
-                 .env("NUM_JOBS", Some(cx.config.jobs().to_string()))
+                 .env("NUM_JOBS", Some(cx.jobs().to_string()))
                  .env("TARGET", Some(match kind {
                      Kind::Host => cx.config.rustc_host(),
                      Kind::Target => cx.target_triple(),

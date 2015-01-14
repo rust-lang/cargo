@@ -161,6 +161,7 @@ impl fmt::String for PackageIdSpec {
 mod tests {
     use core::{PackageId, SourceId};
     use super::{PackageIdSpec, url};
+    use url::Url;
     use semver::Version;
 
     #[test]
@@ -223,7 +224,8 @@ mod tests {
 
     #[test]
     fn matching() {
-        let sid = SourceId::for_central().unwrap();
+        let url = Url::parse("http://example.com").unwrap();
+        let sid = SourceId::for_registry(&url);
         let foo = PackageId::new("foo", "1.2.3", &sid).unwrap();
         let bar = PackageId::new("bar", "1.2.3", &sid).unwrap();
 
