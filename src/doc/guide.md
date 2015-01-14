@@ -48,7 +48,9 @@ $ tree .
 1 directory, 2 files
 ```
 
-This is all we need to get started. First, let's check out `Cargo.toml`:
+If we had just used `cargo new hello_world` without the `--bin` flag, then the
+we would have a `lib.rs` instead of a `main.rs`. For now, however, this is all
+we need to get started. First, let's check out `Cargo.toml`:
 
 ```toml
 [package]
