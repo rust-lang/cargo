@@ -201,7 +201,8 @@ Cargo supports **features** to allow expression of:
   `postgres` package, the `postgres-macros` package, and possibly other packages
   (such as development-time mocking libraries, debugging tools, etc.)
 
-The format for specifying features is:
+A feature of a package is either an optional dependency, or a set of other
+features. The format for specifying features is:
 
 ```toml
 [package]
@@ -210,7 +211,9 @@ name = "awesome"
 [features]
 
 # The "default" set of optional packages. Most people will
-# want to use these packages, but they are strictly optional
+# want to use these packages, but they are strictly optional.
+# Note that `session` is not a package but rather another
+# feature listed in this manifest.
 default = ["jquery", "uglifier", "session"]
 
 # The "secure-password" feature depends on the bcrypt package.
