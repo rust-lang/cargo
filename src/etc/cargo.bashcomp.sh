@@ -69,7 +69,7 @@ _cargo() {
             return 0;;
         new)
             COMPREPLY=( $(compgen -W \
-                "--bin --git --help --hg --no-git --travis --verbose" \
+                "--bin --git --help --hg --no-git --verbose" \
                  -- "${cur}") )
             return 0;;
         run)
