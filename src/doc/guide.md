@@ -392,6 +392,34 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 Of course, if your project has tests, you'll see more output, with the
 correct number of tests.
 
+# Path Dependencies
+
+Over time our `hello_world` project has grown significantly in size! It's gotten
+to the point that we probably want to split out a separate crate for others to
+use. To do this Cargo supports **path dependencies** which are typically
+sub-crates that live within one repository. Let's start off by making a new
+crate inside of our `hello_world` project:
+
+```shell
+# inside of hello_world/
+$ cargo new hello_utils
+```
+
+This will create a new folder `hello_utils` inside of which a `Cargo.toml` and
+`src` folder are ready to be configured. In order to tell Cargo about this, open
+up `hello_world/Cargo.toml` and add these lines:
+
+```toml
+[dependencies.hello_utils]
+path = "hello_utils"
+```
+
+This tells Cargo that we depend on a crate called `hello_utils` which is found
+in the `hello_utils` folder (relative to the `Cargo.toml` it's written in).
+
+And that's it! The next `cargo build` will automatically build `hello_utils` and
+all of its own dependencies, and others can also start using the crate as well.
+
 ## Travis-CI
 
 To test your project on Travis-CI, here is a sample `.travis.yml` file:

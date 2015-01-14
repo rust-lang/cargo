@@ -43,8 +43,8 @@ current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 
 Compilation can be configured via the use of profiles which are configured in
-the manifest. The default profile for this command is `dev`, but passing the
---release flag will use the `release` profile instead.
+the manifest. The default profile for this command is `dev`, but passing
+the --release flag will use the `release` profile instead.
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
