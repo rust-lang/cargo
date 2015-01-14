@@ -45,11 +45,8 @@
 //!     .fingerprint/
 //! ```
 
-use std::cell::RefCell;
-use std::collections::HashSet;
 use std::old_io::fs::PathExtensions;
 use std::old_io::{self, fs, IoResult};
-use std::mem;
 
 use core::Package;
 use util::hex::short_hash;
@@ -61,7 +58,6 @@ pub struct Layout {
     build: Path,
     fingerprint: Path,
     examples: Path,
-    to_delete: RefCell<HashSet<Path>>,
 }
 
 pub struct LayoutProxy<'a> {
@@ -91,7 +87,6 @@ impl Layout {
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
             root: root,
-            to_delete: RefCell::new(HashSet::new()),
         }
     }
 
@@ -100,34 +95,16 @@ impl Layout {
             try!(fs::mkdir_recursive(&self.root, old_io::USER_RWX));
         }
 
-        try!(mkdir(self, &self.deps, false));
-        try!(mkdir(self, &self.native, false));
-        try!(mkdir(self, &self.fingerprint, true));
-        try!(mkdir(self, &self.examples, false));
-        try!(mkdir(self, &self.build, false));
-
-        for file in try!(fs::readdir(&self.root)).into_iter() {
-            if !file.is_file() { continue }
-
-            self.to_delete.borrow_mut().insert(file);
-        }
+        try!(mkdir(&self.deps));
+        try!(mkdir(&self.native));
+        try!(mkdir(&self.fingerprint));
+        try!(mkdir(&self.examples));
+        try!(mkdir(&self.build));
 
         return Ok(());
 
-        fn mkdir(layout: &Layout, dir: &Path, deep: bool) -> IoResult<()> {
-            if dir.exists() {
-                if deep {
-                    for file in try!(fs::walk_dir(dir)) {
-                        if !file.is_dir() {
-                            layout.to_delete.borrow_mut().insert(file);
-                        }
-                    }
-                } else {
-                    for file in try!(fs::readdir(dir)).into_iter() {
-                        layout.to_delete.borrow_mut().insert(file);
-                    }
-                }
-            } else {
+        fn mkdir(dir: &Path) -> IoResult<()> {
+            if !dir.exists() {
                 try!(fs::mkdir(dir, old_io::USER_DIR));
             }
             Ok(())
@@ -140,42 +117,18 @@ impl Layout {
 
     // TODO: deprecated, remove
     pub fn native(&self, package: &Package) -> Path {
-        let ret = self.native.join(self.pkg_dir(package));
-        self.whitelist(&ret);
-        ret
+        self.native.join(self.pkg_dir(package))
     }
     pub fn fingerprint(&self, package: &Package) -> Path {
-        let ret = self.fingerprint.join(self.pkg_dir(package));
-        self.whitelist(&ret);
-        ret
+        self.fingerprint.join(self.pkg_dir(package))
     }
 
     pub fn build(&self, package: &Package) -> Path {
-        let ret = self.build.join(self.pkg_dir(package));
-        self.whitelist(&ret);
-        ret
+        self.build.join(self.pkg_dir(package))
     }
 
     pub fn build_out(&self, package: &Package) -> Path {
         self.build(package).join("out")
-    }
-
-    pub fn clean(&self) -> IoResult<()> {
-        let set = mem::replace(&mut *self.to_delete.borrow_mut(),
-                               HashSet::new());
-        for file in set.iter() {
-            info!("dirty: {}", file.display());
-            if file.is_dir() {
-                try!(fs::rmdir_recursive(file));
-            } else {
-                try!(fs::unlink(file));
-            }
-        }
-        Ok(())
-    }
-
-    pub fn whitelist(&self, p: &Path) {
-        self.to_delete.borrow_mut().remove(p);
     }
 
     fn pkg_dir(&self, pkg: &Package) -> String {

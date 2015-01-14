@@ -46,7 +46,6 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
                                     pkg.get_package_id(), target));
     let new = dir(cx, pkg, kind);
     let loc = new.join(filename(target));
-    cx.layout(pkg, kind).proxy().whitelist(&loc);
 
     info!("fingerprint at: {}", loc.display());
 
@@ -58,7 +57,6 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
     if !target.get_profile().is_doc() {
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
-            cx.layout(pkg, kind).proxy().whitelist(&dst);
             missing_outputs |= !dst.exists();
 
             if target.get_profile().is_test() {
@@ -236,7 +234,6 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
                                     pkg.get_package_id()));
     let new = dir(cx, pkg, kind);
     let loc = new.join("build");
-    cx.layout(pkg, kind).proxy().whitelist(&loc);
 
     info!("fingerprint at: {}", loc.display());
 
@@ -305,9 +302,7 @@ pub fn dir(cx: &Context, pkg: &Package, kind: Kind) -> Path {
 /// Returns the (old, new) location for the dep info file of a target.
 pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
                     kind: Kind) -> Path {
-    let ret = dir(cx, pkg, kind).join(format!("dep-{}", filename(target)));
-    cx.layout(pkg, kind).proxy().whitelist(&ret);
-    return ret;
+    dir(cx, pkg, kind).join(format!("dep-{}", filename(target)))
 }
 
 fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
