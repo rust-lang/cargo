@@ -93,8 +93,84 @@ impl<'a> Config<'a> {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
+    pub fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
+        let vals = try!(self.values());
+        let mut parts = key.split('.').enumerate();
+        let mut val = match vals.get(parts.next().unwrap().1) {
+            Some(val) => val,
+            None => return Ok(None),
+        };
+        for (i, part) in parts {
+            match *val {
+                CV::Table(ref map, _) => {
+                    val = match map.get(part) {
+                        Some(val) => val,
+                        None => return Ok(None),
+                    }
+                }
+                CV::String(_, ref path) |
+                CV::List(_, ref path) |
+                CV::Boolean(_, ref path) => {
+                    let idx = key.split('.').take(i)
+                                 .fold(0, |n, s| n + s.len()) + i - 1;
+                    let key_so_far = key.slice_to(idx);
+                    return Err(human(format!("expected table for configuration \
+                                              key `{}`, but found {} in {:?}",
+                                             key_so_far, val.desc(), path)));
+                }
+            }
+        }
+        Ok(Some(val.clone()))
+    }
+
+    pub fn get_string(&self, key: &str) -> CargoResult<Option<(String, Path)>> {
+        match try!(self.get(key)) {
+            Some(CV::String(i, path)) => Ok(Some((i, path))),
+            Some(val) => self.expected("string", key, val),
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_table(&self, key: &str)
+                    -> CargoResult<Option<(HashMap<String, CV>, Path)>> {
+        match try!(self.get(key)) {
+            Some(CV::Table(i, path)) => Ok(Some((i, path))),
+            Some(val) => self.expected("table", key, val),
+            None => Ok(None),
+        }
+    }
+
+    pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
+        val.expected(ty).map_err(|e| {
+            human(format!("invalid configuration for key `{}`\n{}", key, e))
+        })
+    }
+
     fn load_values(&self) -> CargoResult<()> {
-        *self.values.borrow_mut() = try!(all_configs(&self.cwd));
+        let mut cfg = CV::Table(HashMap::new(), Path::new("."));
+
+        try!(walk_tree(&self.cwd, |mut file| {
+            let path = file.path().clone();
+            let contents = try!(file.read_to_string());
+            let table = try!(cargo_toml::parse(contents.as_slice(),
+                                               &path).chain_error(|| {
+                human(format!("could not parse TOML configuration in `{:?}`",
+                              path))
+            }));
+            let toml = toml::Value::Table(table);
+            let value = try!(CV::from_toml(&path, toml).chain_error(|| {
+                human(format!("failed to load TOML configuration from `{:?}`",
+                              path))
+            }));
+            try!(cfg.merge(value));
+            Ok(())
+        }).chain_error(|| human("Couldn't load Cargo configuration")));
+
+
+        *self.values.borrow_mut() = match cfg {
+            CV::Table(map, _) => map,
+            _ => unreachable!(),
+        };
         Ok(())
     }
 }
@@ -108,8 +184,8 @@ pub enum Location {
 #[derive(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
     String(String, Path),
-    List(Vec<(String, Path)>),
-    Table(HashMap<String, ConfigValue>),
+    List(Vec<(String, Path)>, Path),
+    Table(HashMap<String, ConfigValue>, Path),
     Boolean(bool, Path),
 }
 
@@ -119,15 +195,15 @@ impl fmt::Show for ConfigValue {
             CV::String(ref string, ref path) => {
                 write!(f, "{} (from {})", string, path.display())
             }
-            CV::List(ref list) => {
+            CV::List(ref list, ref path) => {
                 try!(write!(f, "["));
                 for (i, &(ref s, ref path)) in list.iter().enumerate() {
                     if i > 0 { try!(write!(f, ", ")); }
                     try!(write!(f, "{} (from {})", s, path.display()));
                 }
-                write!(f, "]")
+                write!(f, "] (from {:?})", path)
             }
-            CV::Table(ref table) => write!(f, "{:?}", table),
+            CV::Table(ref table, _) => write!(f, "{:?}", table),
             CV::Boolean(b, ref path) => {
                 write!(f, "{} (from {})", b, path.display())
             }
@@ -139,11 +215,11 @@ impl Encodable for ConfigValue {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         match *self {
             CV::String(ref string, _) => string.encode(s),
-            CV::List(ref list) => {
+            CV::List(ref list, _) => {
                 let list: Vec<&String> = list.iter().map(|s| &s.0).collect();
                 list.encode(s)
             }
-            CV::Table(ref table) => table.encode(s),
+            CV::Table(ref table, _) => table.encode(s),
             CV::Boolean(b, _) => b.encode(s),
         }
     }
@@ -158,17 +234,21 @@ impl ConfigValue {
                 Ok(CV::List(try!(val.into_iter().map(|toml| {
                     match toml {
                         toml::Value::String(val) => Ok((val, path.clone())),
-                        _ => Err(internal("")),
+                        v => Err(human(format!("expected string but found {} \
+                                                in list", v.type_str()))),
                     }
-                }).collect::<CargoResult<_>>())))
+                }).collect::<CargoResult<_>>()), path.clone()))
             }
             toml::Value::Table(val) => {
                 Ok(CV::Table(try!(val.into_iter().map(|(key, value)| {
-                    let value = try!(CV::from_toml(path, value));
+                    let value = try!(CV::from_toml(path, value).chain_error(|| {
+                        human(format!("failed to parse key `{}`", key))
+                    }));
                     Ok((key, value))
-                }).collect::<CargoResult<_>>())))
+                }).collect::<CargoResult<_>>()), path.clone()))
             }
-            _ => return Err(internal(""))
+            v => return Err(human(format!("found TOML configuration value of \
+                                           unknown type `{}`", v.type_str())))
         }
     }
 
@@ -176,11 +256,11 @@ impl ConfigValue {
         match (self, from) {
             (&mut CV::String(..), CV::String(..)) |
             (&mut CV::Boolean(..), CV::Boolean(..)) => {}
-            (&mut CV::List(ref mut old), CV::List(ref mut new)) => {
+            (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
                 let new = mem::replace(new, Vec::new());
                 old.extend(new.into_iter());
             }
-            (&mut CV::Table(ref mut old), CV::Table(ref mut new)) => {
+            (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
                 let new = mem::replace(new, HashMap::new());
                 for (key, value) in new.into_iter() {
                     match old.entry(key) {
@@ -201,32 +281,28 @@ impl ConfigValue {
     pub fn string(&self) -> CargoResult<(&str, &Path)> {
         match *self {
             CV::String(ref s, ref p) => Ok((s.as_slice(), p)),
-            _ => Err(internal(format!("expected a string, but found a {}",
-                                      self.desc()))),
+            _ => self.expected("string"),
         }
     }
 
-    pub fn table(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+    pub fn table(&self) -> CargoResult<(&HashMap<String, ConfigValue>, &Path)> {
         match *self {
-            CV::Table(ref table) => Ok(table),
-            _ => Err(internal(format!("expected a table, but found a {}",
-                                      self.desc()))),
+            CV::Table(ref table, ref p) => Ok((table, p)),
+            _ => self.expected("table"),
         }
     }
 
     pub fn list(&self) -> CargoResult<&[(String, Path)]> {
         match *self {
-            CV::List(ref list) => Ok(list.as_slice()),
-            _ => Err(internal(format!("expected a list, but found a {}",
-                                      self.desc()))),
+            CV::List(ref list, _) => Ok(list.as_slice()),
+            _ => self.expected("list"),
         }
     }
 
     pub fn boolean(&self) -> CargoResult<(bool, &Path)> {
         match *self {
             CV::Boolean(b, ref p) => Ok((b, p)),
-            _ => Err(internal(format!("expected a bool, but found a {}",
-                                      self.desc()))),
+            _ => self.expected("bool"),
         }
     }
 
@@ -239,17 +315,31 @@ impl ConfigValue {
         }
     }
 
+    pub fn definition_path(&self) -> &Path {
+        match *self  {
+            CV::Boolean(_, ref p) |
+            CV::String(_, ref p) |
+            CV::List(_, ref p) |
+            CV::Table(_, ref p) => p
+        }
+    }
+
+    fn expected<T>(&self, wanted: &str) -> CargoResult<T> {
+        Err(internal(format!("expected a {}, but found a {} in {:?}",
+                             wanted, self.desc(), self.definition_path())))
+    }
+
     fn into_toml(self) -> toml::Value {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
-            CV::List(l) => toml::Value::Array(l
-                                        .into_iter()
-                                        .map(|(s, _)| toml::Value::String(s))
-                                        .collect()),
-            CV::Table(l) => toml::Value::Table(l.into_iter()
-                                        .map(|(k, v)| (k, v.into_toml()))
-                                        .collect()),
+            CV::List(l, _) => toml::Value::Array(l
+                                          .into_iter()
+                                          .map(|(s, _)| toml::Value::String(s))
+                                          .collect()),
+            CV::Table(l, _) => toml::Value::Table(l.into_iter()
+                                          .map(|(k, v)| (k, v.into_toml()))
+                                          .collect()),
         }
     }
 }
@@ -258,55 +348,6 @@ fn homedir() -> Option<Path> {
     let cargo_home = os::getenv("CARGO_HOME").map(|p| Path::new(p));
     let user_home = os::homedir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
-}
-
-pub fn get_config(pwd: Path, key: &str) -> CargoResult<ConfigValue> {
-    find_in_tree(&pwd, |file| extract_config(file, key)).map_err(|_|
-        human(format!("`{}` not found in your configuration", key)))
-}
-
-pub fn all_configs(pwd: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
-    let mut cfg = CV::Table(HashMap::new());
-
-    try!(walk_tree(pwd, |mut file| {
-        let path = file.path().clone();
-        let contents = try!(file.read_to_string());
-        let table = try!(cargo_toml::parse(contents.as_slice(), &path).chain_error(|| {
-            internal(format!("could not parse Toml manifest; path={}",
-                             path.display()))
-        }));
-        let value = try!(CV::from_toml(&path, toml::Value::Table(table)));
-        try!(cfg.merge(value));
-        Ok(())
-    }).chain_error(|| human("Couldn't load Cargo configuration")));
-
-
-    match cfg {
-        CV::Table(map) => Ok(map),
-        _ => unreachable!(),
-    }
-}
-
-fn find_in_tree<T, F>(pwd: &Path, mut walk: F) -> CargoResult<T>
-    where F: FnMut(File) -> CargoResult<T>
-{
-    let mut current = pwd.clone();
-
-    loop {
-        let possible = current.join(".cargo").join("config");
-        if possible.exists() {
-            let file = try!(File::open(&possible));
-
-            match walk(file) {
-                Ok(res) => return Ok(res),
-                _ => ()
-            }
-        }
-
-        if !current.pop() { break; }
-    }
-
-    Err(internal(""))
 }
 
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
@@ -340,14 +381,6 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     }
 
     Ok(())
-}
-
-fn extract_config(mut file: File, key: &str) -> CargoResult<ConfigValue> {
-    let contents = try!(file.read_to_string());
-    let mut toml = try!(cargo_toml::parse(contents.as_slice(), file.path()));
-    let val = try!(toml.remove(&key.to_string()).chain_error(|| internal("")));
-
-    CV::from_toml(file.path(), val)
 }
 
 pub fn set_config(cfg: &Config, loc: Location, key: &str,

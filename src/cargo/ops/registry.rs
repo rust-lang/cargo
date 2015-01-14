@@ -16,7 +16,7 @@ use core::manifest::ManifestMetadata;
 use ops;
 use sources::{PathSource, RegistrySource};
 use util::config;
-use util::{CargoResult, human, internal, ChainError, ToUrl};
+use util::{CargoResult, human, ChainError, ToUrl};
 use util::config::{Config, ConfigValue, Location};
 use util::important_paths::find_root_manifest_for_cwd;
 
@@ -131,29 +131,8 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
 }
 
 pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
-    let configs = try!(config.values());
-    let registry = match configs.get("registry") {
-        None => return Ok(RegistryConfig { index: None, token: None }),
-        Some(registry) => try!(registry.table().chain_error(|| {
-            internal("invalid configuration for the key `registry`")
-        })),
-    };
-    let index = match registry.get("index") {
-        None => None,
-        Some(index) => {
-            Some(try!(index.string().chain_error(|| {
-                internal("invalid configuration for key `index`")
-            })).0.to_string())
-        }
-    };
-    let token = match registry.get("token") {
-        None => None,
-        Some(token) => {
-            Some(try!(token.string().chain_error(|| {
-                internal("invalid configuration for key `token`")
-            })).0.to_string())
-        }
-    };
+    let index = try!(config.get_string("registry.index")).map(|p| p.0);
+    let token = try!(config.get_string("registry.token")).map(|p| p.0);
     Ok(RegistryConfig { index: index, token: token })
 }
 
@@ -193,21 +172,8 @@ pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
 /// Favor cargo's `http.proxy`, then git's `http.proxy`, then finally a
 /// HTTP_PROXY env var.
 pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
-    let configs = try!(config.values());
-    match configs.get("http") {
-        Some(http) => {
-            let http = try!(http.table().chain_error(|| {
-                internal("invalid configuration for the key `http`")
-            }));
-            match http.get("proxy") {
-                Some(proxy) => {
-                    return Ok(Some(try!(proxy.string().chain_error(|| {
-                        internal("invalid configuration for key `http.proxy`")
-                    })).0.to_string()))
-                }
-                None => {},
-            }
-        }
+    match try!(config.get_string("http.proxy")) {
+        Some((s, _)) => return Ok(Some(s)),
         None => {}
     }
     match git2::Config::open_default() {
@@ -235,7 +201,7 @@ pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     map.insert("token".to_string(), ConfigValue::String(token, p));
 
     config::set_config(config, Location::Global, "registry",
-                       ConfigValue::Table(map))
+                       ConfigValue::Table(map, Path::new(".")))
 }
 
 pub struct OwnersOptions {

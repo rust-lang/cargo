@@ -153,50 +153,24 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
 }
 
 fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
-    let user_configs = try!(config.values());
-    let mut cfg = CargoNewConfig {
-        name: None,
-        email: None,
-        version_control: None,
-    };
-    let cargo_new = match user_configs.get("cargo-new") {
-        None => return Ok(cfg),
-        Some(target) => try!(target.table().chain_error(|| {
-            internal("invalid configuration for the key `cargo-new`")
-        })),
-    };
-    cfg.name = match cargo_new.get("name") {
-        None => None,
-        Some(name) => {
-            Some(try!(name.string().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.name`")
-            })).0.to_string())
-        }
-    };
-    cfg.email = match cargo_new.get("email") {
-        None => None,
-        Some(email) => {
-            Some(try!(email.string().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.email`")
-            })).0.to_string())
-        }
-    };
-    cfg.version_control = match cargo_new.get("vcs") {
-        None => None,
-        Some(vcs) => {
-            let vcs_str = try!(vcs.string().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.vcs`")
-            })).0;
-            let version_control = match vcs_str.as_slice() {
-                "git" => VersionControl::Git,
-                "hg"  => VersionControl::Hg,
-                "none"=> VersionControl::NoVcs,
-                _  => return Err(internal("invalid configuration for key `cargo-new.vcs`")),
-            };
+    let name = try!(config.get_string("cargo-new.name")).map(|s| s.0);
+    let email = try!(config.get_string("cargo-new.email")).map(|s| s.0);
+    let vcs = try!(config.get_string("cargo-new.vcs"));
 
-            Some(version_control)
+    let vcs = match vcs.as_ref().map(|p| (&p.0[], &p.1)) {
+        Some(("git", _)) => Some(VersionControl::Git),
+        Some(("hg", _)) => Some(VersionControl::Hg),
+        Some(("none", _)) => Some(VersionControl::NoVcs),
+        Some((s, p)) => {
+            return Err(internal(format!("invalid configuration for key \
+                                         `cargo-new.vcs`, unknown vcs `{}` \
+                                         (found in {:?})", s, p)))
         }
+        None => None
     };
-
-    Ok(cfg)
+    Ok(CargoNewConfig {
+        name: name,
+        email: email,
+        version_control: vcs,
+    })
 }

@@ -1401,7 +1401,7 @@ test!(bad_cargo_config {
 Couldn't load Cargo configuration
 
 Caused by:
-  could not parse Toml manifest; path=[..]
+  could not parse TOML configuration; path=[..]
 
 Caused by:
   could not parse input as TOML

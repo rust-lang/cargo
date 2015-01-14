@@ -32,8 +32,8 @@ use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
-use util::config::{Config, ConfigValue};
-use util::{CargoResult, config, internal, human, ChainError, profile};
+use util::config::Config;
+use util::{CargoResult, internal, human, ChainError, profile};
 
 /// Contains informations about how a package should be compiled.
 pub struct CompileOptions<'a, 'b: 'a> {
@@ -188,87 +188,59 @@ fn source_ids_from_config(config: &Config, cur_path: Path)
 fn scrape_build_config(config: &Config,
                        jobs: Option<u32>,
                        target: Option<String>) -> CargoResult<ops::BuildConfig> {
-    let configs = try!(config.values());
     let mut base = ops::BuildConfig {
         jobs: jobs.unwrap_or(os::num_cpus() as u32),
         requested_target: target.clone(),
         ..Default::default()
     };
-    let target_config = match configs.get("target") {
-        None => return Ok(base),
-        Some(target) => try!(target.table().chain_error(|| {
-            internal("invalid configuration for the key `target`")
-        })),
-    };
-
-    base.host = try!(scrape_target_config(target_config, config.rustc_host()));
+    base.host = try!(scrape_target_config(config, config.rustc_host()));
     base.target = match target.as_ref() {
-        Some(triple) => try!(scrape_target_config(target_config, &triple[])),
+        Some(triple) => try!(scrape_target_config(config, &triple[])),
         None => base.host.clone(),
     };
     Ok(base)
 }
 
-fn scrape_target_config(target: &HashMap<String, config::ConfigValue>,
-                        triple: &str)
+fn scrape_target_config(config: &Config, triple: &str)
                         -> CargoResult<ops::TargetConfig> {
-    let target = match target.get(&triple.to_string()) {
-        None => return Ok(Default::default()),
-        Some(target) => try!(target.table().chain_error(|| {
-            internal(format!("invalid configuration for the key \
-                              `target.{}`", triple))
-        })),
-    };
+    let key = format!("target.{}", triple);
+    let ar = try!(config.get_string(&format!("{}.ar", key)[]));
+    let linker = try!(config.get_string(&format!("{}.linker", key)[]));
 
     let mut ret = ops::TargetConfig {
-        ar: None,
-        linker: None,
+        ar: ar.map(|p| p.0),
+        linker: linker.map(|p| p.0),
         overrides: HashMap::new(),
     };
-    for (k, v) in target.iter() {
-        match k.as_slice() {
-            "ar" | "linker" => {
-                let v = try!(v.string().chain_error(|| {
-                    internal(format!("invalid configuration for key `{}`", k))
-                })).0.to_string();
-                if k.as_slice() == "linker" {
-                    ret.linker = Some(v);
-                } else {
-                    ret.ar = Some(v);
-                }
-            }
-            lib_name => {
-                let table = try!(v.table().chain_error(|| {
-                    internal(format!("invalid configuration for the key \
-                                      `target.{}.{}`", triple, lib_name))
-                }));
-                let mut output = BuildOutput {
-                    library_paths: Vec::new(),
-                    library_links: Vec::new(),
-                    metadata: Vec::new(),
-                };
-                for (k, v) in table.iter() {
-                    let v = try!(v.string().chain_error(|| {
-                        internal(format!("invalid configuration for the key \
-                                          `target.{}.{}.{}`", triple, lib_name,
-                                          k))
-                    })).0;
-                    if k.as_slice() == "rustc-flags" {
-                        let whence = format!("in `target.{}.{}.rustc-flags`",
-                                             triple, lib_name);
-                        let whence = whence.as_slice();
-                        let (paths, links) = try!(
-                            BuildOutput::parse_rustc_flags(v.as_slice(), whence)
-                        );
-                        output.library_paths.extend(paths.into_iter());
-                        output.library_links.extend(links.into_iter());
-                    } else {
-                        output.metadata.push((k.to_string(), v.to_string()));
-                    }
-                }
-                ret.overrides.insert(lib_name.to_string(), output);
+    let table = match try!(config.get_table(&key[])) {
+        Some((table, _)) => table,
+        None => return Ok(ret),
+    };
+    for (lib_name, _) in table.into_iter() {
+        if lib_name == "ar" || lib_name == "linker" { continue }
+
+        let mut output = BuildOutput {
+            library_paths: Vec::new(),
+            library_links: Vec::new(),
+            metadata: Vec::new(),
+        };
+        let key = format!("{}.{}", key, lib_name);
+        let table = try!(config.get_table(&key[])).unwrap().0;
+        for (k, _) in table.into_iter() {
+            let key = format!("{}.{}", key, k);
+            let (v, path) = try!(config.get_string(&key[])).unwrap();
+            if k == "rustc-flags" {
+                let whence = format!("in `{}` (in {:?})", key, path);
+                let (paths, links) = try!(
+                    BuildOutput::parse_rustc_flags(v.as_slice(), &whence[])
+                );
+                output.library_paths.extend(paths.into_iter());
+                output.library_links.extend(links.into_iter());
+            } else {
+                output.metadata.push((k, v));
             }
         }
+        ret.overrides.insert(lib_name, output);
     }
 
     Ok(ret)
