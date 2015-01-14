@@ -27,7 +27,7 @@ test!(profile_overrides {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         --cfg ndebug \
         -C metadata=[..] \
@@ -81,7 +81,7 @@ test!(top_level_overrides_deps {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.0 ({url})
-{running} `rustc {dir}{sep}foo{sep}src{sep}lib.rs --crate-name foo \
+{running} `rustc foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
@@ -92,7 +92,7 @@ test!(top_level_overrides_deps {
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 {compiling} test v0.0.0 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib \
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
         -C metadata=[..] \

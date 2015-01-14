@@ -840,8 +840,8 @@ test!(bench_with_examples {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} testbench v6.6.6 ({url})
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
-{running} `rustc {dir}{sep}src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
+{running} `rustc src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
+{running} `rustc src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
 {running} `rustc benches{sep}testb1.rs --crate-name testb1 --crate-type bin \
         [..] --test [..]`
 {running} `{dir}{sep}target{sep}release{sep}testb1-[..] --bench`

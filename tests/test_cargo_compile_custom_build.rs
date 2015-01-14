@@ -364,9 +364,9 @@ test!(links_passes_env_vars {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} [..] v0.5.0 (file://[..])
-{running} `rustc build.rs [..]`
+{running} `rustc [..]build.rs [..]`
 {compiling} [..] v0.5.0 (file://[..])
-{running} `rustc build.rs [..]`
+{running} `rustc [..]build.rs [..]`
 {running} `[..]`
 {running} `[..]`
 {running} `[..]`
@@ -563,7 +563,7 @@ test!(propagation_of_l_flags {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} a v0.5.0 (file://[..])
-{running} `rustc build.rs [..]`
+{running} `rustc a[..]build.rs [..]`
 {compiling} b v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name b [..]-L foo[..]`
 {running} `[..]a-[..]build-script-build[..]`
@@ -691,7 +691,7 @@ test!(build_cmd_with_a_build_cmd {
 {compiling} b v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name b [..]`
 {compiling} a v0.5.0 (file://[..])
-{running} `rustc build.rs [..] --extern b=[..]`
+{running} `rustc a[..]build.rs [..] --extern b=[..]`
 {running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name a --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \

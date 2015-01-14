@@ -1,5 +1,6 @@
-use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::collections::hash_map::HashMap;
+use std::os;
 use std::str;
 use std::sync::Arc;
 
@@ -29,6 +30,7 @@ pub struct Context<'a, 'b: 'a> {
     pub compilation: Compilation,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
+    pub cwd: Path,
 
     env: &'a str,
     host: Layout,
@@ -60,6 +62,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         };
         let target_triple = config.target().map(|s| s.to_string());
         let target_triple = target_triple.unwrap_or(config.rustc_host().to_string());
+        let cwd = try!(os::getcwd().chain_error(|| {
+            human("failed to get the current directory")
+        }));
         Ok(Context {
             target_triple: target_triple,
             env: env,
@@ -78,6 +83,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
             build_config: build_config,
             exec_engine: Arc::new(Box::new(ProcessEngine) as Box<ExecEngine>),
+            cwd: cwd,
         })
     }
 

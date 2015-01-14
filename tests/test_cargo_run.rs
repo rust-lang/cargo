@@ -266,7 +266,7 @@ test!(example_with_release_flag {
     assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} bar v0.0.1 ({url})
-{running} `rustc src{sep}bar.rs --crate-name bar --crate-type lib \
+{running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
         --cfg ndebug \
         -C metadata=[..] \
@@ -276,7 +276,7 @@ test!(example_with_release_flag {
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 {compiling} foo v0.0.1 ({url})
-{running} `rustc {dir}{sep}examples{sep}a.rs --crate-name a --crate-type bin \
+{running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
         --cfg ndebug \
         --out-dir {dir}{sep}target{sep}release{sep}examples \
@@ -297,7 +297,7 @@ fast2
     assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} bar v0.0.1 ({url})
-{running} `rustc src{sep}bar.rs --crate-name bar --crate-type lib \
+{running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
@@ -306,7 +306,7 @@ fast2
         -L dependency={dir}{sep}target{sep}deps \
         -L dependency={dir}{sep}target{sep}deps`
 {compiling} foo v0.0.1 ({url})
-{running} `rustc {dir}{sep}examples{sep}a.rs --crate-name a --crate-type bin \
+{running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -g \
         --out-dir {dir}{sep}target{sep}examples \
         --emit=dep-info,link \

@@ -63,7 +63,7 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
     // indicates that the target is fresh.
     let dep_info = dep_info_loc(cx, pkg, target, kind);
     let mut are_files_fresh = use_pkg ||
-                              try!(calculate_target_fresh(pkg, &dep_info));
+                              try!(calculate_target_fresh(&dep_info));
 
     // Second bit of the freshness calculation, whether rustc itself, the
     // target are fresh, and the enabled set of features are all fresh.
@@ -226,8 +226,15 @@ fn mk_fingerprint<T: Hash<SipHasher>>(cx: &Context, data: &T) -> String {
     util::to_hex(hasher.finish())
 }
 
-fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
-    let line = match BufferedReader::new(File::open(dep_info)).lines().next() {
+fn calculate_target_fresh(dep_info: &Path) -> CargoResult<bool> {
+    macro_rules! fs_try {
+        ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(false) })
+    }
+    let mut f = BufferedReader::new(fs_try!(File::open(dep_info)));
+    // see comments in append_current_dir for where this cwd is manifested from.
+    let cwd = fs_try!(f.read_until(0));
+    let cwd = Path::new(&cwd[..cwd.len()-1]);
+    let line = match f.lines().next() {
         Some(Ok(line)) => line,
         _ => return Ok(false),
     };
@@ -250,7 +257,7 @@ fn calculate_target_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<bool> {
             file.push(' ');
             file.push_str(deps.next().unwrap())
         }
-        match fs::stat(&pkg.get_root().join(file.as_slice())) {
+        match fs::stat(&cwd.join(file.as_slice())) {
             Ok(stat) if stat.modified <= mtime => {}
             Ok(stat) => {
                 info!("stale: {} -- {} vs {}", file, stat.modified, mtime);
@@ -288,4 +295,19 @@ fn filename(target: &Target) -> String {
         ""
     };
     format!("{}{}-{}", flavor, kind, target.get_name())
+}
+
+// The dep-info files emitted by the compiler all have their listed paths
+// relative to whatever the current directory was at the time that the compiler
+// was invoked. As the current directory may change over time, we need to record
+// what that directory was at the beginning of the file so we can know about it
+// next time.
+pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
+    let mut f = try!(File::open_mode(path, io::Open, io::ReadWrite));
+    let contents = try!(f.read_to_end());
+    try!(f.seek(0, io::SeekSet));
+    try!(f.write(cwd.as_vec()));
+    try!(f.write(&[0]));
+    try!(f.write(&contents[]));
+    Ok(())
 }
