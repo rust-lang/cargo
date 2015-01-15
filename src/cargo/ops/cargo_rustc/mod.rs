@@ -631,7 +631,12 @@ fn rustdoc(package: &Package, target: &Target,
 // absolute paths instead of relative paths.
 fn root_path(cx: &Context, pkg: &Package, target: &Target) -> Path {
     let absolute = pkg.get_root().join(target.get_src_path());
-    absolute.path_relative_from(cx.config.cwd()).unwrap_or(absolute)
+    let cwd = cx.config.cwd();
+    if cwd.is_ancestor_of(&absolute) {
+        absolute.path_relative_from(cwd).unwrap_or(absolute)
+    } else {
+        absolute
+    }
 }
 
 fn build_base_args(cx: &Context,
