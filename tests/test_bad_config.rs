@@ -141,3 +141,34 @@ test!(good_cargo_config_jobs {
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(invalid_global_config {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies]
+        foo = "0.1.0"
+    "#)
+    .file(".cargo/config", "4")
+    .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+failed to parse manifest at `[..]Cargo.toml`
+
+Caused by:
+  Couldn't load Cargo configuration
+
+Caused by:
+  could not parse TOML configuration in `[..]config`
+
+Caused by:
+  could not parse input as TOML
+[..]config:2:1 expected `=`, but found eof
+
+"));
+});

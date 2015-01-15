@@ -4,7 +4,7 @@ use std::io::fs::PathExtensions;
 use std::io::{self, File, fs};
 
 use core::{Package,Manifest,SourceId};
-use util::{self, CargoResult, human, Config};
+use util::{self, CargoResult, human, Config, ChainError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 
@@ -12,9 +12,9 @@ pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
                      config: &Config)
                      -> CargoResult<(Manifest, Vec<Path>)> {
     let root = layout.root.clone();
-    util::toml::to_manifest(contents, source_id, layout, config).map_err(|e| {
-        human(format!("failed to parse manifest at `{:?}`\n{}",
-                      root.join("Cargo.toml"), e))
+    util::toml::to_manifest(contents, source_id, layout, config).chain_error(|| {
+        human(format!("failed to parse manifest at `{:?}`",
+                      root.join("Cargo.toml")))
     })
 }
 

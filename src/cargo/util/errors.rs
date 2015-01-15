@@ -8,9 +8,9 @@ use semver;
 use rustc_serialize::json;
 
 use curl;
-use toml::Error as TomlError;
-use url;
 use git2;
+use toml;
+use url;
 
 pub type CargoResult<T> = Result<T, Box<CargoError>>;
 
@@ -228,8 +228,9 @@ from_error! {
     json::DecoderError,
     curl::ErrCode,
     CliError,
-    TomlError,
+    toml::Error,
     url::ParseError,
+    toml::DecodeError,
 }
 
 impl<E: Error> FromError<Human<E>> for Box<CargoError> {
@@ -243,7 +244,8 @@ impl CargoError for json::DecoderError {}
 impl CargoError for curl::ErrCode {}
 impl CargoError for ProcessError {}
 impl CargoError for CliError {}
-impl CargoError for TomlError {}
+impl CargoError for toml::Error {}
+impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
 
 // =============================================================================
