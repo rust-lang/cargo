@@ -87,3 +87,57 @@ Caused by:
 expected a string, but found a boolean in [..]config
 "));
 });
+
+
+test!(bad_cargo_config_jobs {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+    "#)
+    .file("src/lib.rs", "")
+    .file(".cargo/config", r#"
+        [build]
+        jobs = -1
+    "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+build.jobs must be positive, but found -1 in [..]
+"));
+});
+
+test!(default_cargo_config_jobs {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+    "#)
+    .file("src/lib.rs", "")
+    .file(".cargo/config", r#"
+        [build]
+        jobs = 1
+    "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});
+
+test!(good_cargo_config_jobs {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+    "#)
+    .file("src/lib.rs", "")
+    .file(".cargo/config", r#"
+        [build]
+        jobs = 4
+    "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});

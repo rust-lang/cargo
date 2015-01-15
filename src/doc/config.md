@@ -74,4 +74,7 @@ token = "..."   # Access token (found on the central repo's website)
 [http]
 proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 30000   # Timeout for each HTTP request, in milliseconds
+
+[build]
+jobs = 1        # number of jobs to run by default (default to # cpus)
 ```
