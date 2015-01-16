@@ -151,7 +151,7 @@ pub fn shell(verbose: bool) -> MultiShell {
 // `output` print variant error strings to either stderr or stdout.
 // For fatal errors, print to stderr;
 // and for others, e.g. docopt version info, print to stdout.
-fn output(caption: Option<String>, detail: Option<String>,
+fn output(caption: Option<&str>, detail: Option<String>,
           shell: &mut MultiShell, fatal: bool) {
     let std_shell = if fatal {shell.err()} else {shell.out()};
     if let Some(caption) = caption {
@@ -167,46 +167,51 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     log!(4, "handle_error; err={:?}", err);
 
     let CliError { error, exit_code, unknown } = err;
-    let verbose = shell.get_verbose();
     let fatal = exit_code != 0; // exit_code == 0 is non-fatal error
 
+
+    let desc = error.description();
     if unknown {
-        output(Some("An unknown error occurred".to_string()), None, shell, fatal);
-    } else if error.to_string().len() > 0 {
-        output(Some(error.to_string()), None, shell, fatal);
+        output(Some("An unknown error occurred"), None, shell, fatal);
+    } else if desc.len() > 0 {
+        output(Some(desc), None, shell, fatal);
     }
-
-    if error.cause().is_some() || unknown {
-        if !verbose {
-            output(None,
-                   Some("\nTo learn more, run the command again with --verbose.".to_string()),
-                   shell, fatal);
-        }
+    if shell.get_verbose() {
+        output(None, error.detail(), shell, fatal);
     }
-
-    if verbose {
-        if unknown {
-            output(Some(error.to_string()), None, shell, fatal);
-        }
-        if let Some(detail) = error.detail() {
-            output(None, Some(detail), shell, fatal);
-        }
-        if let Some(err) = error.cause() {
-            let _ = handle_cause(err, shell);
-        }
+    if !handle_cause(&*error, shell) {
+        let _ = shell.err().say("\nTo learn more, run the command again \
+                                 with --verbose.".to_string(), BLACK);
     }
 
     std::os::set_exit_status(exit_code as isize);
 }
 
-fn handle_cause(mut err: &Error, shell: &mut MultiShell) {
+fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
+    let verbose = shell.get_verbose();
+    let mut err;
     loop {
-        let _ = shell.err().say("\nCaused by:", BLACK);
-        let _ = shell.err().say(format!("  {}", err.description()), BLACK);
+        cargo_err = match cargo_err.cargo_cause() {
+            Some(cause) => cause,
+            None => { err = cargo_err.cause(); break }
+        };
+        if !verbose && !cargo_err.is_human() { return false }
+        print(cargo_err.description(), cargo_err.detail(), shell);
+    }
+    loop {
+        let cause = match err { Some(err) => err, None => return true };
+        if !verbose { return false }
+        print(cause.description(), cause.detail(), shell);
+        err = cause.cause();
+    }
 
-        match err.cause() {
-            Some(e) => err = e,
-            None => break,
+    fn print(desc: &str, detail: Option<String>, shell: &mut MultiShell) {
+        let _ = shell.err().say("\nCaused by:", BLACK);
+        let _ = shell.err().say(format!("  {}", desc), BLACK);
+        if shell.get_verbose() {
+            if let Some(detail) = detail {
+                let _ = shell.err().say(detail, BLACK);
+            }
         }
     }
 }

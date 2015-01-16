@@ -447,9 +447,9 @@ test!(cargo_compile_with_short_ssh_git {
         .with_stdout("")
         .with_stderr(format!("\
 failed to parse manifest at `[..]`
-Cargo.toml is not a valid manifest
 
-invalid url `{}`: relative URL without a base
+Caused by:
+  invalid url `{}`: relative URL without a base
 ", url)));
 });
 

@@ -104,9 +104,11 @@ pub fn to_manifest(contents: &[u8],
     }));
     let root = try!(parse(contents, &manifest));
     let mut d = toml::Decoder::new(toml::Value::Table(root));
-    let toml_manifest: TomlManifest = try!(Decodable::decode(&mut d));
+    let manifest: TomlManifest = try!(Decodable::decode(&mut d).map_err(|e| {
+        human(e.to_string())
+    }));
 
-    let pair = try!(toml_manifest.to_manifest(source_id, &layout, config));
+    let pair = try!(manifest.to_manifest(source_id, &layout, config));
     let (mut manifest, paths) = pair;
     match d.toml {
         Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
