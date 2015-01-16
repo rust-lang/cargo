@@ -42,6 +42,12 @@ pub fn find_root_manifest_for_cwd(manifest_path: Option<String>) -> CliResult<Pa
     )
         .and_then(|path| os::make_absolute(&path).map_err(|_|
             CliError::new("Could not determine the absolute path of the manifest", 104)))
+        .and_then(|path|
+                  match path.filename_str() {
+                      Some("Cargo.toml") => Ok(path),
+                      _ => Err(CliError::new("The manifest path must be a path \
+                                             to a Cargo.toml file", 105))
+                  })
 }
 
 /// Return the path to the `file` in `pwd`, if it exists.
