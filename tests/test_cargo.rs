@@ -1,4 +1,4 @@
-use std::io::fs::{self, PathExtensions};
+use std::io::fs;
 use std::io;
 use std::io::{USER_RWX, File};
 use std::os;
@@ -23,14 +23,9 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
     proj
 }
 
-// We can't entirely obliterate PATH because windows needs it for paths to
-// things like libgcc, but we want to filter out everything which has a `cargo`
-// installation as we don't want it to muck with the --list tests
-fn new_path() -> Vec<Path> {
+fn path() -> Vec<Path> {
     let path = os::getenv_as_bytes("PATH").unwrap_or(Vec::new());
-    os::split_paths(path).into_iter().filter(|p| {
-        !p.join(format!("cargo{}", os::consts::EXE_SUFFIX)).exists()
-    }).collect()
+    os::split_paths(path)
 }
 test!(list_commands_looks_at_path {
     let proj = project("list-non-overlapping");
@@ -40,7 +35,7 @@ test!(list_commands_looks_at_path {
         .cwd(proj.root())
         .env("HOME", Some(paths::home()));
 
-    let mut path = new_path();
+    let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = os::join_paths(path.as_slice()).unwrap();
     let output = pr.arg("-v").arg("--list").env("PATH", Some(path.as_slice()));

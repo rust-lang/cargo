@@ -8,15 +8,16 @@ use sources::PathSource;
 use std::io::process::Command;
 use util::{CargoResult, human};
 
-pub struct DocOptions<'a> {
+pub struct DocOptions<'a, 'b: 'a> {
     pub all: bool,
     pub open_result: bool,
-    pub compile_opts: ops::CompileOptions<'a>,
+    pub compile_opts: ops::CompileOptions<'a, 'b>,
 }
 
 pub fn doc(manifest_path: &Path,
-           options: &mut DocOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
+           options: &DocOptions) -> CargoResult<()> {
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                               options.compile_opts.config));
     try!(source.update());
     let package = try!(source.get_root_package());
 
@@ -40,7 +41,7 @@ pub fn doc(manifest_path: &Path,
         }
     }
 
-    try!(ops::compile(manifest_path, &mut options.compile_opts));
+    try!(ops::compile(manifest_path, &options.compile_opts));
 
     if options.open_result {
         let name = match options.compile_opts.spec {

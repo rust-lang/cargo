@@ -15,7 +15,7 @@ use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
-use util::{CargoResult, human, ToUrl, ToSemver, ChainError};
+use util::{CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
 /// Representation of the projects file layout.
 ///
@@ -91,7 +91,8 @@ pub fn project_layout(root_path: &Path) -> Layout {
 
 pub fn to_manifest(contents: &[u8],
                    source_id: &SourceId,
-                   layout: Layout)
+                   layout: Layout,
+                   config: &Config)
                    -> CargoResult<(Manifest, Vec<Path>)> {
     let manifest = layout.root.join("Cargo.toml");
     let manifest = match manifest.path_relative_from(&try!(os::getcwd())) {
@@ -103,17 +104,11 @@ pub fn to_manifest(contents: &[u8],
     }));
     let root = try!(parse(contents, &manifest));
     let mut d = toml::Decoder::new(toml::Value::Table(root));
-    let toml_manifest: TomlManifest = match Decodable::decode(&mut d) {
-        Ok(t) => t,
-        Err(e) => return Err(human(format!("{} is not a valid \
-                                            manifest\n\n{}",
-                                           manifest.display(), e)))
-    };
-
-    let pair = try!(toml_manifest.to_manifest(source_id, &layout).map_err(|err| {
-        human(format!("{} is not a valid manifest\n\n{}",
-                      manifest.display(), err))
+    let manifest: TomlManifest = try!(Decodable::decode(&mut d).map_err(|e| {
+        human(e.to_string())
     }));
+
+    let pair = try!(manifest.to_manifest(source_id, &layout, config));
     let (mut manifest, paths) = pair;
     match d.toml {
         Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
@@ -302,10 +297,11 @@ impl TomlProject {
     }
 }
 
-struct Context<'a> {
+struct Context<'a, 'b, 'c: 'b> {
     deps: &'a mut Vec<Dependency>,
     source_id: &'a SourceId,
-    nested_paths: &'a mut Vec<Path>
+    nested_paths: &'a mut Vec<Path>,
+    config: &'b Config<'c>,
 }
 
 // These functions produce the equivalent of specific manifest entries. One
@@ -380,7 +376,8 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
 }
 
 impl TomlManifest {
-    pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout)
+    pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout,
+                       config: &Config)
         -> CargoResult<(Manifest, Vec<Path>)> {
         let mut nested_paths = vec!();
 
@@ -486,7 +483,8 @@ impl TomlManifest {
             let mut cx = Context {
                 deps: &mut deps,
                 source_id: source_id,
-                nested_paths: &mut nested_paths
+                nested_paths: &mut nested_paths,
+                config: config,
             };
 
             // Collect the deps
@@ -593,7 +591,7 @@ fn process_dependencies<F>(cx: &mut Context,
                     cx.source_id.clone()
                 })
             }
-        }.unwrap_or(try!(SourceId::for_central()));
+        }.unwrap_or(try!(SourceId::for_central(cx.config)));
 
         let dep = try!(Dependency::parse(n.as_slice(),
                                          details.version.as_ref()

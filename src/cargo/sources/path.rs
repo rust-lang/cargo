@@ -6,35 +6,38 @@ use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{CargoResult, internal, internal_error, human, ChainError};
+use util::{CargoResult, internal, internal_error, human, ChainError, Config};
 
-pub struct PathSource {
+pub struct PathSource<'a, 'b: 'a> {
     id: SourceId,
     path: Path,
     updated: bool,
-    packages: Vec<Package>
+    packages: Vec<Package>,
+    config: &'a Config<'b>,
 }
 
 // TODO: Figure out if packages should be discovered in new or self should be
 // mut and packages are discovered in update
-impl PathSource {
-
-    pub fn for_path(path: &Path) -> CargoResult<PathSource> {
+impl<'a, 'b> PathSource<'a, 'b> {
+    pub fn for_path(path: &Path, config: &'a Config<'b>)
+                    -> CargoResult<PathSource<'a, 'b>> {
         log!(5, "PathSource::for_path; path={}", path.display());
-        Ok(PathSource::new(path, &try!(SourceId::for_path(path))))
+        Ok(PathSource::new(path, &try!(SourceId::for_path(path)), config))
     }
 
     /// Invoked with an absolute path to a directory that contains a Cargo.toml.
     /// The source will read the manifest and find any other packages contained
     /// in the directory structure reachable by the root manifest.
-    pub fn new(path: &Path, id: &SourceId) -> PathSource {
+    pub fn new(path: &Path, id: &SourceId, config: &'a Config<'b>)
+               -> PathSource<'a, 'b> {
         log!(5, "new; id={}", id);
 
         PathSource {
             id: id.clone(),
             path: path.clone(),
             updated: false,
-            packages: Vec::new()
+            packages: Vec::new(),
+            config: config,
         }
     }
 
@@ -55,7 +58,7 @@ impl PathSource {
         if self.updated {
             Ok(self.packages.clone())
         } else {
-            ops::read_packages(&self.path, &self.id)
+            ops::read_packages(&self.path, &self.id, self.config)
         }
     }
 
@@ -198,13 +201,13 @@ impl PathSource {
     }
 }
 
-impl Show for PathSource {
+impl<'a, 'b> Show for PathSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "the paths source")
     }
 }
 
-impl Registry for PathSource {
+impl<'a, 'b> Registry for PathSource<'a, 'b> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut summaries: Vec<Summary> = self.packages.iter()
                                               .map(|p| p.get_summary().clone())
@@ -213,7 +216,7 @@ impl Registry for PathSource {
     }
 }
 
-impl Source for PathSource {
+impl<'a, 'b> Source for PathSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
             let packages = try!(self.read_packages());

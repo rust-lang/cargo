@@ -36,9 +36,9 @@ impl Registry for Vec<Summary> {
 /// `SourceMap` structure contained within which is a mapping of a `SourceId` to
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
-pub struct PackageRegistry<'a> {
+pub struct PackageRegistry<'a, 'b: 'a> {
     sources: SourceMap<'a>,
-    config: &'a Config<'a>,
+    config: &'a Config<'b>,
 
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
@@ -71,8 +71,8 @@ enum Kind {
     Normal,
 }
 
-impl<'a> PackageRegistry<'a> {
-    pub fn new(config: &'a Config<'a>) -> PackageRegistry<'a> {
+impl<'a, 'b> PackageRegistry<'a, 'b> {
+    pub fn new(config: &'a Config<'b>) -> PackageRegistry<'a, 'b> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
@@ -276,7 +276,7 @@ impl<'a> PackageRegistry<'a> {
     }
 }
 
-impl<'a> Registry for PackageRegistry<'a> {
+impl<'a, 'b> Registry for PackageRegistry<'a, 'b> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let overrides = try!(self.query_overrides(dep));
 

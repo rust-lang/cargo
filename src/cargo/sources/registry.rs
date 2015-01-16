@@ -186,7 +186,7 @@ pub struct RegistrySource<'a, 'b:'a> {
     src_path: Path,
     config: &'a Config<'b>,
     handle: Option<http::Handle>,
-    sources: Vec<PathSource>,
+    sources: Vec<PathSource<'a, 'b>>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     cache: HashMap<String, Vec<(Summary, bool)>>,
     updated: bool,
@@ -249,8 +249,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     ///
     /// This is the main cargo registry by default, but it can be overridden in
     /// a .cargo/config
-    pub fn url() -> CargoResult<Url> {
-        let config = try!(ops::registry_configuration());
+    pub fn url(config: &Config) -> CargoResult<Url> {
+        let config = try!(ops::registry_configuration(config));
         let url = config.index.unwrap_or(DEFAULT.to_string());
         url.as_slice().to_url().map_err(human)
     }
@@ -306,7 +306,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
-                self.handle = Some(try!(ops::http_handle()));
+                self.handle = Some(try!(ops::http_handle(self.config)));
                 self.handle.as_mut().unwrap()
             }
         };
@@ -511,7 +511,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
             let path = try!(self.unpack_package(package, path).chain_error(|| {
                 internal(format!("Failed to unpack package `{}`", package))
             }));
-            let mut src = PathSource::new(&path, &self.source_id);
+            let mut src = PathSource::new(&path, &self.source_id, self.config);
             try!(src.update());
             self.sources.push(src);
         }

@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::{MultiShell};
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
@@ -30,10 +29,10 @@ If the lockfile is not available, then this is the equivalent of
 all updated.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
-    try!(ops::fetch(&root, shell).map_err(|e| {
+    try!(ops::fetch(&root, config).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));
     Ok(None)

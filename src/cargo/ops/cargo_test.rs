@@ -5,19 +5,21 @@ use sources::PathSource;
 use ops::{self, ExecEngine, ProcessEngine};
 use util::{CargoResult, ProcessError};
 
-pub struct TestOptions<'a> {
-    pub compile_opts: ops::CompileOptions<'a>,
+pub struct TestOptions<'a, 'b: 'a> {
+    pub compile_opts: ops::CompileOptions<'a, 'b>,
     pub no_run: bool,
     pub name: Option<&'a str>,
 }
 
 pub fn run_tests(manifest_path: &Path,
-                 options: &mut TestOptions,
+                 options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<ProcessError>> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path()));
+    let config = options.compile_opts.config;
+    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+                                               config));
     try!(source.update());
 
-    let mut compile = try!(ops::compile(manifest_path, &mut options.compile_opts));
+    let mut compile = try!(ops::compile(manifest_path, &options.compile_opts));
     if options.no_run { return Ok(None) }
     compile.tests.sort();
 
@@ -34,10 +36,10 @@ pub fn run_tests(manifest_path: &Path,
         };
         let cmd = try!(compile.target_process(exe, &compile.package))
                   .args(test_args);
-        try!(options.compile_opts.shell.concise(|shell| {
+        try!(config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));
-        try!(options.compile_opts.shell.verbose(|shell| {
+        try!(config.shell().verbose(|shell| {
             shell.status("Running", cmd.to_string())
         }));
         match ExecEngine::exec(&mut ProcessEngine, cmd) {
@@ -58,7 +60,7 @@ pub fn run_tests(manifest_path: &Path,
     });
 
     for (lib, name) in libs {
-        try!(options.compile_opts.shell.status("Doc-tests", name));
+        try!(config.shell().status("Doc-tests", name));
         let mut p = try!(compile.rustdoc_process(&compile.package))
                            .arg("--test").arg(lib)
                            .arg("--crate-name").arg(name)
@@ -80,7 +82,7 @@ pub fn run_tests(manifest_path: &Path,
             }
         }
 
-        try!(options.compile_opts.shell.verbose(|shell| {
+        try!(config.shell().verbose(|shell| {
             shell.status("Running", p.to_string())
         }));
         match ExecEngine::exec(&mut ProcessEngine, p) {
@@ -93,7 +95,7 @@ pub fn run_tests(manifest_path: &Path,
 }
 
 pub fn run_benches(manifest_path: &Path,
-                   options: &mut TestOptions,
+                   options: &TestOptions,
                    args: &[String]) -> CargoResult<Option<ProcessError>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());

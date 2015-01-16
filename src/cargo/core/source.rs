@@ -176,8 +176,8 @@ impl SourceId {
     ///
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
-    pub fn for_central() -> CargoResult<SourceId> {
-        Ok(SourceId::for_registry(&try!(RegistrySource::url())))
+    pub fn for_central(config: &Config) -> CargoResult<SourceId> {
+        Ok(SourceId::for_registry(&try!(RegistrySource::url(config))))
     }
 
     pub fn get_url(&self) -> &Url { &self.inner.url }
@@ -201,7 +201,7 @@ impl SourceId {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };
-                Box::new(PathSource::new(&path, self)) as Box<Source>
+                Box::new(PathSource::new(&path, self, config)) as Box<Source>
             },
             Kind::Registry => {
                 Box::new(RegistrySource::new(self, config)) as Box<Source>

@@ -8,9 +8,9 @@ use semver;
 use rustc_serialize::json;
 
 use curl;
-use toml::Error as TomlError;
-use url;
 use git2;
+use toml;
+use url;
 
 pub type CargoResult<T> = Result<T, Box<CargoError>>;
 
@@ -19,6 +19,7 @@ pub type CargoResult<T> = Result<T, Box<CargoError>>;
 
 pub trait CargoError: Error {
     fn is_human(&self) -> bool { false }
+    fn cargo_cause(&self) -> Option<&CargoError>{ None }
 }
 
 impl fmt::String for Box<CargoError> {
@@ -41,6 +42,7 @@ impl Error for Box<CargoError> {
 
 impl CargoError for Box<CargoError> {
     fn is_human(&self) -> bool { (**self).is_human() }
+    fn cargo_cause(&self) -> Option<&CargoError> { (**self).cargo_cause() }
 }
 
 // =============================================================================
@@ -53,7 +55,7 @@ pub trait ChainError<T> {
 
 struct ChainedError<E> {
     error: E,
-    cause: Box<Error>,
+    cause: Box<CargoError>,
 }
 
 impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
@@ -63,7 +65,7 @@ impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
     }
 }
 
-impl<T, E: Error> ChainError<T> for Result<T, E> {
+impl<T, E: CargoError> ChainError<T> for Result<T, E> {
     fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
                          where E2: CargoError, C: FnOnce() -> E2 {
         self.map_err(move |err| {
@@ -88,11 +90,11 @@ impl<T> ChainError<T> for Option<T> {
 impl<E: Error> Error for ChainedError<E> {
     fn description(&self) -> &str { self.error.description() }
     fn detail(&self) -> Option<String> { self.error.detail() }
-    fn cause(&self) -> Option<&Error> { Some(&*self.cause) }
 }
 
 impl<E: CargoError> CargoError for ChainedError<E> {
     fn is_human(&self) -> bool { self.error.is_human() }
+    fn cargo_cause(&self) -> Option<&CargoError> { Some(&*self.cause) }
 }
 
 // =============================================================================
@@ -170,8 +172,9 @@ impl<E: Error> Error for Human<E> {
     fn cause(&self) -> Option<&Error> { self.0.cause() }
 }
 
-impl<E: Error> CargoError for Human<E> {
+impl<E: CargoError> CargoError for Human<E> {
     fn is_human(&self) -> bool { true }
+    fn cargo_cause(&self) -> Option<&CargoError> { self.0.cargo_cause() }
 }
 
 // =============================================================================
@@ -228,11 +231,12 @@ from_error! {
     json::DecoderError,
     curl::ErrCode,
     CliError,
-    TomlError,
+    toml::Error,
     url::ParseError,
+    toml::DecodeError,
 }
 
-impl<E: Error> FromError<Human<E>> for Box<CargoError> {
+impl<E: CargoError> FromError<Human<E>> for Box<CargoError> {
     fn from_error(t: Human<E>) -> Box<CargoError> { Box::new(t) }
 }
 
@@ -243,8 +247,10 @@ impl CargoError for json::DecoderError {}
 impl CargoError for curl::ErrCode {}
 impl CargoError for ProcessError {}
 impl CargoError for CliError {}
-impl CargoError for TomlError {}
+impl CargoError for toml::Error {}
+impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
+impl CargoError for str::Utf8Error {}
 
 // =============================================================================
 // Construction helpers

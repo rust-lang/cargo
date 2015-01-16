@@ -859,7 +859,9 @@ test!(build_script_only {
                 execs().with_status(101)
                        .with_stderr("\
 failed to parse manifest at `[..]`
-either a [lib] or [[bin]] section must be present"));
+
+Caused by:
+  either a [lib] or [[bin]] section must be present"));
 });
 
 test!(shared_dep_with_a_build_script {

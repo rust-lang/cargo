@@ -1,10 +1,9 @@
 use std::os;
 
-use cargo::core::MultiShell;
 use cargo::ops::CompileOptions;
 use cargo::ops;
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -47,9 +46,9 @@ the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-build; args={:?}", os::args());
-    shell.set_verbose(options.flag_verbose);
+    config.shell().set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
@@ -59,9 +58,9 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         "compile"
     };
 
-    let mut opts = CompileOptions {
+    let opts = CompileOptions {
         env: env,
-        shell: shell,
+        config: config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
         dev_deps: false,
@@ -72,7 +71,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         exec_engine: None,
     };
 
-    ops::compile(&root, &mut opts).map(|_| None).map_err(|err| {
+    ops::compile(&root, &opts).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }

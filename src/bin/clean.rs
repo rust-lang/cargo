@@ -1,8 +1,7 @@
 use std::os;
 
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -32,17 +31,17 @@ given, then all packages' artifacts are removed. For more information on SPEC
 and its format, see the `cargo help pkgid` command.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     debug!("executing; cmd=cargo-clean; args={:?}", os::args());
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
-    let mut opts = ops::CleanOptions {
-        shell: shell,
+    let opts = ops::CleanOptions {
+        config: config,
         spec: options.flag_package.as_ref().map(|s| s.as_slice()),
         target: options.flag_target.as_ref().map(|s| s.as_slice()),
     };
-    ops::clean(&root, &mut opts).map(|_| None).map_err(|err| {
+    ops::clean(&root, &opts).map(|_| None).map_err(|err| {
       CliError::from_boxed(err, 101)
     })
 }

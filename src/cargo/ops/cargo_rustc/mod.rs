@@ -37,6 +37,8 @@ pub enum Kind { Host, Target }
 pub struct BuildConfig {
     pub host: TargetConfig,
     pub target: TargetConfig,
+    pub jobs: u32,
+    pub requested_target: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -113,13 +115,16 @@ fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
-                           deps: &PackageSet, resolve: &'a Resolve,
-                           sources: &'a SourceMap,
-                           config: &'a Config<'a>,
-                           build_config: BuildConfig,
-                           exec_engine: Option<Arc<Box<ExecEngine>>>)
-                           -> CargoResult<Compilation> {
+pub fn compile_targets<'a, 'b>(env: &str,
+                               targets: &[&'a Target],
+                               pkg: &'a Package,
+                               deps: &PackageSet,
+                               resolve: &'a Resolve,
+                               sources: &'a SourceMap<'a>,
+                               config: &'a Config<'b>,
+                               build_config: BuildConfig,
+                               exec_engine: Option<Arc<Box<ExecEngine>>>)
+                               -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
     }
@@ -136,8 +141,8 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap()
     };
     let host_layout = Layout::new(root, None, dest);
-    let target_layout = config.target().map(|target| {
-        layout::Layout::new(root, Some(target), dest)
+    let target_layout = build_config.requested_target.as_ref().map(|target| {
+        layout::Layout::new(root, Some(&target[]), dest)
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
@@ -147,7 +152,7 @@ pub fn compile_targets<'a>(env: &str, targets: &[&'a Target], pkg: &'a Package,
         cx.exec_engine = exec_engine.clone();
     }
 
-    let mut queue = JobQueue::new(cx.resolve, deps, cx.config);
+    let mut queue = JobQueue::new(cx.resolve, deps, cx.jobs());
 
     // First ensure that the destination directory exists
     try!(cx.prepare(pkg));
@@ -227,7 +232,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
     // Prepare the fingerprint directory as the first step of building a package
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, Kind::Target);
     let mut init = vec![(Job::new(target1, target2), Fresh)];
-    if cx.config.target().is_some() {
+    if cx.requested_target().is_some() {
         let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, Kind::Host);
         init.push((Job::new(plugin1, plugin2), Fresh));
     }
@@ -288,7 +293,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             Platform::Target => reqs.push(Platform::Target),
             Platform::Plugin => reqs.push(Platform::Plugin),
             Platform::PluginAndTarget => {
-                if cx.config.target().is_some() {
+                if cx.requested_target().is_some() {
                     reqs.push(Platform::Plugin);
                     reqs.push(Platform::Target);
                 } else {
@@ -489,7 +494,7 @@ fn rustc(package: &Package, target: &Target,
 
         let rustc_dep_info_loc = root.join(target.file_stem()).with_extension("d");
         let dep_info_loc = fingerprint::dep_info_loc(cx, package, target, kind);
-        let cwd = cx.cwd.clone();
+        let cwd = cx.config.cwd().clone();
 
         Ok((Work::new(move |desc_tx| {
             let mut rustc = rustc;
@@ -550,7 +555,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
     Ok(match req {
         Platform::Target => vec![(target_cmd, Kind::Target)],
         Platform::Plugin => vec![(plugin_cmd, Kind::Host)],
-        Platform::PluginAndTarget if cx.config.target().is_none() =>
+        Platform::PluginAndTarget if cx.requested_target().is_none() =>
             vec![(target_cmd, Kind::Target)],
         Platform::PluginAndTarget => vec![(target_cmd, Kind::Target),
                                           (plugin_cmd, Kind::Host)],
@@ -564,7 +569,7 @@ fn rustdoc(package: &Package, target: &Target,
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
     let rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
     let mut rustdoc = rustdoc.arg(root_path(cx, package, target))
-                         .cwd(cx.cwd.clone())
+                         .cwd(cx.config.cwd().clone())
                          .arg("-o").arg(cx_root)
                          .arg("--crate-name").arg(target.get_name());
 
@@ -626,7 +631,7 @@ fn rustdoc(package: &Package, target: &Target,
 // absolute paths instead of relative paths.
 fn root_path(cx: &Context, pkg: &Package, target: &Target) -> Path {
     let absolute = pkg.get_root().join(target.get_src_path());
-    absolute.path_relative_from(&cx.cwd).unwrap_or(absolute)
+    absolute.path_relative_from(cx.config.cwd()).unwrap_or(absolute)
 }
 
 fn build_base_args(cx: &Context,
@@ -637,7 +642,7 @@ fn build_base_args(cx: &Context,
     let metadata = target.get_metadata();
 
     // Move to cwd so the root_path() passed below is actually correct
-    cmd = cmd.cwd(cx.cwd.clone());
+    cmd = cmd.cwd(cx.config.cwd().clone());
 
     // TODO: Handle errors in converting paths into args
     cmd = cmd.arg(root_path(cx, pkg, target));
@@ -735,7 +740,7 @@ fn build_plugin_args(mut cmd: CommandPrototype, cx: &Context, pkg: &Package,
             }
         }
 
-        cmd = opt(cmd, "--target", "", cx.config.target());
+        cmd = opt(cmd, "--target", "", cx.requested_target());
         cmd = opt(cmd, "-C", "ar=", cx.ar(kind));
         cmd = opt(cmd, "-C", "linker=", cx.linker(kind));
     }

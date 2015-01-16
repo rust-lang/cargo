@@ -9,9 +9,10 @@ use sources::PathSource;
 pub fn run(manifest_path: &Path,
            target_kind: TargetKind,
            name: Option<String>,
-           options: &mut ops::CompileOptions,
+           options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path()));
+    let config = options.config;
+    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(), config));
     try!(src.update());
     let root = try!(src.get_root_package());
     let env = options.env;
@@ -56,6 +57,6 @@ pub fn run(manifest_path: &Path,
                               .args(args)
                               .cwd(try!(os::getcwd()));
 
-    try!(options.shell.status("Running", process.to_string()));
+    try!(config.shell().status("Running", process.to_string()));
     Ok(process.exec().err())
 }

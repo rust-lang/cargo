@@ -45,9 +45,9 @@ test!(cargo_compile_with_invalid_manifest {
         .with_status(101)
         .with_stderr("\
 failed to parse manifest at `[..]`
-Cargo.toml is not a valid manifest
 
-No `package` or `project` section found.
+Caused by:
+  No `package` or `project` section found.
 "))
 });
 
@@ -63,7 +63,9 @@ test!(cargo_compile_with_invalid_manifest2 {
         .with_status(101)
         .with_stderr("\
 failed to parse manifest at `[..]`
-could not parse input as TOML
+
+Caused by:
+  could not parse input as TOML
 Cargo.toml:3:19-3:20 expected a value
 
 "))
@@ -85,7 +87,9 @@ test!(cargo_compile_with_invalid_manifest3 {
         .with_status(101)
         .with_stderr("\
 failed to parse manifest at `[..]`
-could not parse input as TOML\n\
+
+Caused by:
+  could not parse input as TOML\n\
 src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
 });
 
@@ -103,9 +107,9 @@ test!(cargo_compile_with_invalid_version {
                 .with_status(101)
                 .with_stderr("\
 failed to parse manifest at `[..]`
-Cargo.toml is not a valid manifest
 
-cannot parse '1.0' as a semver for the key `project.version`
+Caused by:
+  cannot parse '1.0' as a semver for the key `project.version`
 "))
 
 });
@@ -784,7 +788,9 @@ test!(missing_lib_and_bin {
                 execs().with_status(101)
                        .with_stderr("\
 failed to parse manifest at `[..]Cargo.toml`
-either a [lib] or [[bin]] section must be present\n"));
+
+Caused by:
+  either a [lib] or [[bin]] section must be present\n"));
 });
 
 test!(lto_build {
@@ -1401,7 +1407,7 @@ test!(bad_cargo_config {
 Couldn't load Cargo configuration
 
 Caused by:
-  could not parse Toml manifest; path=[..]
+  could not parse TOML configuration in `[..]`
 
 Caused by:
   could not parse input as TOML

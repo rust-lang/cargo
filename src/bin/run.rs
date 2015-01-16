@@ -1,9 +1,8 @@
 use std::io::process::ExitStatus;
 
 use cargo::ops;
-use cargo::core::{MultiShell};
 use cargo::core::manifest::TargetKind;
-use cargo::util::{CliResult, CliError, human};
+use cargo::util::{CliResult, CliError, human, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -46,8 +45,8 @@ and `--example` specifies the example target to run. At most one of `--bin` or
 All of the trailing arguments are passed as to the binary to run.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let env = match (options.flag_release, options.flag_example.is_some()) {
@@ -56,9 +55,9 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
         (false, false) => "compile"
     };
 
-    let mut compile_opts = ops::CompileOptions {
+    let compile_opts = ops::CompileOptions {
         env: env,
-        shell: shell,
+        config: config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
         dev_deps: true,
@@ -80,7 +79,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     let err = try!(ops::run(&root,
                             target_kind,
                             name,
-                            &mut compile_opts,
+                            &compile_opts,
                             options.arg_args.as_slice()).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));

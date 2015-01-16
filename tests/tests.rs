@@ -25,6 +25,7 @@ macro_rules! test {
     )
 }
 
+mod test_bad_config;
 mod test_cargo;
 mod test_cargo_bench;
 mod test_cargo_build_auth;

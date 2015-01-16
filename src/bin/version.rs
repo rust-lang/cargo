@@ -1,8 +1,7 @@
 use std::os;
 
 use cargo;
-use cargo::core::MultiShell;
-use cargo::util::CliResult;
+use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 struct Options;
@@ -16,7 +15,7 @@ Options:
     -v, --verbose           Use verbose output
 ";
 
-pub fn execute(_: Options, _: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(_: Options, _: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-version; args={:?}", os::args());
 
     println!("{}", cargo::version());

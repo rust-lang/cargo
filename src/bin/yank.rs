@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -35,9 +34,9 @@ download the yanked version to use it. Cargo will, however, not allow any new
 crates to be locked to any yanked version.
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
-    try!(ops::yank(shell,
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
+    try!(ops::yank(config,
                    options.arg_crate,
                    options.flag_vers,
                    options.flag_token,

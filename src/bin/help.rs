@@ -1,5 +1,4 @@
-use cargo::core::MultiShell;
-use cargo::util::{CliResult, CliError};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options;
@@ -15,7 +14,7 @@ Options:
     -h, --help          Print this message
 ";
 
-pub fn execute(_: Options, _: &mut MultiShell) -> CliResult<Option<()>> {
+pub fn execute(_: Options, _: &Config) -> CliResult<Option<()>> {
     // This is a dummy command just so that `cargo help help` works.
     // The actual delegation of help flag to subcommands is handled by the
     // cargo command.

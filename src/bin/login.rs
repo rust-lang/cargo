@@ -1,7 +1,7 @@
 use std::io;
 
 use cargo::ops;
-use cargo::core::{MultiShell, SourceId, Source};
+use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
 use cargo::util::{CliResult, CliError, Config};
 
@@ -25,15 +25,14 @@ Options:
 
 ";
 
-pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
-    shell.set_verbose(options.flag_verbose);
+pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    config.shell().set_verbose(options.flag_verbose);
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
             let err = (|:| {
-                let config = try!(Config::new(shell, None, None));
-                let src = try!(SourceId::for_central());
-                let mut src = RegistrySource::new(&src, &config);
+                let src = try!(SourceId::for_central(config));
+                let mut src = RegistrySource::new(&src, config);
                 try!(src.update());
                 let config = try!(src.config());
                 let host = options.flag_host.clone().unwrap_or(config.api);
@@ -48,7 +47,7 @@ pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>
     };
 
     let token = token.as_slice().trim().to_string();
-    try!(ops::registry_login(shell, token).map_err(|e| {
+    try!(ops::registry_login(config, token).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));
     Ok(None)

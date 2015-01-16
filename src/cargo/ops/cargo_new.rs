@@ -4,10 +4,10 @@ use std::io::fs::PathExtensions;
 
 use rustc_serialize::{Decodable, Decoder};
 
-use git2::Config;
+use git2::Config as GitConfig;
 
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, config, internal};
-use core::shell::MultiShell;
+use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
+use util::Config;
 
 #[derive(Copy, Show, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
@@ -38,8 +38,8 @@ struct CargoNewConfig {
     version_control: Option<VersionControl>,
 }
 
-pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
-    let path = try!(os::getcwd()).join(opts.path);
+pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
+    let path = config.cwd().join(opts.path);
     if path.exists() {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
@@ -51,7 +51,7 @@ pub fn new(opts: NewOptions, _shell: &mut MultiShell) -> CargoResult<()> {
         return Err(human(format!("Invalid character `{}` in crate name: `{}`",
                                  c, name).as_slice()));
     }
-    mk(&path, name, &opts).chain_error(|| {
+    mk(config, &path, name, &opts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
     })
@@ -61,8 +61,9 @@ fn existing_vcs_repo(path: &Path) -> bool {
     GitRepo::discover(path).is_ok() || HgRepo::discover(path).is_ok()
 }
 
-fn mk(path: &Path, name: &str, opts: &NewOptions) -> CargoResult<()> {
-    let cfg = try!(global_config());
+fn mk(config: &Config, path: &Path, name: &str,
+      opts: &NewOptions) -> CargoResult<()> {
+    let cfg = try!(global_config(config));
     let mut ignore = "/target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(&path.dir_path());
     if !opts.bin {
@@ -129,7 +130,7 @@ fn it_works() {
 }
 
 fn discover_author() -> CargoResult<(String, Option<String>)> {
-    let git_config = Config::open_default().ok();
+    let git_config = GitConfig::open_default().ok();
     let git_config = git_config.as_ref();
     let name = git_config.and_then(|g| g.get_str("user.name").ok())
                          .map(|s| s.to_string())
@@ -151,51 +152,25 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     Ok((name, email))
 }
 
-fn global_config() -> CargoResult<CargoNewConfig> {
-    let user_configs = try!(config::all_configs(try!(os::getcwd())));
-    let mut cfg = CargoNewConfig {
-        name: None,
-        email: None,
-        version_control: None,
-    };
-    let cargo_new = match user_configs.get("cargo-new") {
-        None => return Ok(cfg),
-        Some(target) => try!(target.table().chain_error(|| {
-            internal("invalid configuration for the key `cargo-new`")
-        })),
-    };
-    cfg.name = match cargo_new.get("name") {
-        None => None,
-        Some(name) => {
-            Some(try!(name.string().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.name`")
-            })).0.to_string())
-        }
-    };
-    cfg.email = match cargo_new.get("email") {
-        None => None,
-        Some(email) => {
-            Some(try!(email.string().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.email`")
-            })).0.to_string())
-        }
-    };
-    cfg.version_control = match cargo_new.get("vcs") {
-        None => None,
-        Some(vcs) => {
-            let vcs_str = try!(vcs.string().chain_error(|| {
-                internal("invalid configuration for key `cargo-new.vcs`")
-            })).0;
-            let version_control = match vcs_str.as_slice() {
-                "git" => VersionControl::Git,
-                "hg"  => VersionControl::Hg,
-                "none"=> VersionControl::NoVcs,
-                _  => return Err(internal("invalid configuration for key `cargo-new.vcs`")),
-            };
+fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
+    let name = try!(config.get_string("cargo-new.name")).map(|s| s.0);
+    let email = try!(config.get_string("cargo-new.email")).map(|s| s.0);
+    let vcs = try!(config.get_string("cargo-new.vcs"));
 
-            Some(version_control)
+    let vcs = match vcs.as_ref().map(|p| (&p.0[], &p.1)) {
+        Some(("git", _)) => Some(VersionControl::Git),
+        Some(("hg", _)) => Some(VersionControl::Hg),
+        Some(("none", _)) => Some(VersionControl::NoVcs),
+        Some((s, p)) => {
+            return Err(internal(format!("invalid configuration for key \
+                                         `cargo-new.vcs`, unknown vcs `{}` \
+                                         (found in {:?})", s, p)))
         }
+        None => None
     };
-
-    Ok(cfg)
+    Ok(CargoNewConfig {
+        name: name,
+        email: email,
+        version_control: vcs,
+    })
 }

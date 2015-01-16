@@ -447,9 +447,9 @@ test!(cargo_compile_with_short_ssh_git {
         .with_stdout("")
         .with_stderr(format!("\
 failed to parse manifest at `[..]`
-Cargo.toml is not a valid manifest
 
-invalid url `{}`: relative URL without a base
+Caused by:
+  invalid url `{}`: relative URL without a base
 ", url)));
 });
 
@@ -703,19 +703,22 @@ test!(update_with_shared_deps {
 
     // By default, not transitive updates
     println!("dep1 update");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("dep1"),
                 execs().with_stdout(""));
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
     println!("bar precise update");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar")
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("bar")
                  .arg("--precise").arg(old_head.to_string()),
                 execs().with_stdout(""));
 
     // Updating aggressively should, however, update the repo.
     println!("dep1 aggressive update");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("dep1")
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("dep1")
                  .arg("--aggressive"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
@@ -733,7 +736,8 @@ test!(update_with_shared_deps {
                     compiling = COMPILING, dir = p.url())));
 
     // We should be able to update transitive deps
-    assert_that(p.process(cargo_dir().join("cargo")).arg("update").arg("bar"),
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("bar"),
                 execs().with_stdout(format!("{} git repository `{}`",
                                             UPDATING,
                                             git_project.url())));

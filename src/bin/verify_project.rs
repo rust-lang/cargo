@@ -4,8 +4,7 @@ use std::collections::HashMap;
 use std::io::File;
 use std::os;
 
-use cargo::core::MultiShell;
-use cargo::util::CliResult;
+use cargo::util::{CliResult, Config};
 
 pub type Error = HashMap<String, String>;
 
@@ -26,9 +25,8 @@ Options:
     -v, --verbose           Use verbose output
 ";
 
-pub fn execute(args: Flags,
-               shell: &mut MultiShell) -> CliResult<Option<Error>> {
-    shell.set_verbose(args.flag_verbose);
+pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
+    config.shell().set_verbose(args.flag_verbose);
 
     let file = Path::new(args.flag_manifest_path);
     let contents = match File::open(&file).read_to_string() {
