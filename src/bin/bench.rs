@@ -45,6 +45,8 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be benchmarked. If it is not given, then
 the current package is benchmarked. For more information on SPEC and its format,
 see the `cargo help pkgid` command.
+
+Compilation can be customized with the `bench` profile in the manifest.
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {

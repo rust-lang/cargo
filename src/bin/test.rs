@@ -47,6 +47,8 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be tested. If it is not given, then the
 current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
+
+Compilation can be configured via the `test` profile in the manifest.
 ";
 
 pub fn execute(options: Options, shell: &mut MultiShell) -> CliResult<Option<()>> {
