@@ -1,7 +1,7 @@
 use std::io::process::ExitStatus;
 
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Human, Config};
+use cargo::util::{CliResult, Human, Config, CliError};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -72,9 +72,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     };
 
     let err = try!(ops::run_tests(&root, &ops,
-                                  options.arg_args.as_slice()).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    }));
+                                  options.arg_args.as_slice()));
     match err {
         None => Ok(None),
         Some(err) => {

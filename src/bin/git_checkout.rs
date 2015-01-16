@@ -1,6 +1,6 @@
 use cargo::core::source::{Source, SourceId, GitReference};
 use cargo::sources::git::{GitSource};
-use cargo::util::{Config, CliResult, CliError, human, ToUrl};
+use cargo::util::{Config, CliResult, human, ToUrl, ChainError};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -26,16 +26,15 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let url = try!(url.as_slice().to_url().map_err(|e| {
                        human(format!("The URL `{}` you passed was \
                                       not a valid URL: {}", url, e))
-                   })
-                   .map_err(|e| CliError::from_boxed(e, 1)));
+                   }));
 
     let reference = GitReference::Branch(reference.to_string());
     let source_id = SourceId::for_git(&url, reference);
 
     let mut source = GitSource::new(&source_id, config);
 
-    try!(source.update().map_err(|e| {
-        CliError::new(format!("Couldn't update {:?}: {:?}", source, e), 1)
+    try!(source.update().chain_error(|| {
+        human(format!("Couldn't update {:?}", source))
     }));
 
     Ok(None)

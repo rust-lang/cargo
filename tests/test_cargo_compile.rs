@@ -103,9 +103,7 @@ test!(cargo_compile_with_invalid_version {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs()
-                .with_status(101)
-                .with_stderr("\
+                execs().with_status(101).with_stderr("\
 failed to parse manifest at `[..]`
 
 Caused by:
@@ -119,10 +117,9 @@ test!(cargo_compile_without_manifest {
     let p = ProjectBuilder::new("foo", tmpdir.path().clone());
 
     assert_that(p.cargo_process("build"),
-        execs()
-        .with_status(102)
-        .with_stderr("Could not find Cargo.toml in this directory or any \
-                      parent directory\n"));
+                execs().with_status(101).with_stderr("\
+Could not find `Cargo.toml` in `[..]` or any parent directory
+"));
 });
 
 test!(cargo_compile_with_invalid_code {

@@ -69,10 +69,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    let err = try!(ops::run_benches(&root, &ops,
-                                    options.arg_args.as_slice()).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    }));
+    let err = try!(ops::run_benches(&root, &ops, &options.arg_args[]));
     match err {
         None => Ok(None),
         Some(err) => {

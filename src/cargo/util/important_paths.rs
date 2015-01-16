@@ -1,6 +1,6 @@
 use std::os;
 use std::io::fs::PathExtensions;
-use util::{CargoResult, CliError, CliResult, human};
+use util::{CargoResult, human, ChainError};
 
 /// Iteratively search for `file` in `pwd` and its parents, returning
 /// the path of the directory.
@@ -27,27 +27,30 @@ pub fn find_project_manifest(pwd: &Path, file: &str) -> CargoResult<Path> {
         if !current.pop() { break; }
     }
 
-    Err(human(format!("Could not find `{}` in `{}` or any parent directory",
+    Err(human(format!("could not find `{}` in `{}` or any parent directory",
                       file, pwd.display())))
 }
 
 /// Find the root Cargo.toml
-pub fn find_root_manifest_for_cwd(manifest_path: Option<String>) -> CliResult<Path> {
-    manifest_path.map(|path| Ok(Path::new(path))).unwrap_or_else(|| os::getcwd()
-        .map_err(|_| CliError::new("Couldn't determine the current working directory", 103))
-        .and_then(|cwd| find_project_manifest(&cwd, "Cargo.toml")
-            .map_err(|_| CliError::new("Could not find Cargo.toml in this \
-                    directory or any parent directory", 102))
-        )
-    )
-        .and_then(|path| os::make_absolute(&path).map_err(|_|
-            CliError::new("Could not determine the absolute path of the manifest", 104)))
-        .and_then(|path|
-                  match path.filename_str() {
-                      Some("Cargo.toml") => Ok(path),
-                      _ => Err(CliError::new("The manifest path must be a path \
-                                             to a Cargo.toml file", 105))
-                  })
+pub fn find_root_manifest_for_cwd(manifest_path: Option<String>)
+                                  -> CargoResult<Path> {
+    let path = match manifest_path {
+        Some(s) => Path::new(s),
+        None => {
+            try!(os::getcwd().chain_error(|| {
+                human("couldn't determine the current working directory")
+            }).and_then(|cwd| {
+                find_project_manifest(&cwd, "Cargo.toml")
+            }))
+        }
+    };
+    if path.filename() != Some(b"Cargo.toml") {
+        return Err(human("the manifest-path must be a path to a Cargo.toml \
+                          file"))
+    }
+    os::make_absolute(&path).chain_error(|| {
+        human("could not determine the absolute path of the manifest")
+    })
 }
 
 /// Return the path to the `file` in `pwd`, if it exists.
@@ -57,7 +60,6 @@ pub fn find_project_manifest_exact(pwd: &Path, file: &str) -> CargoResult<Path> 
     if manifest.exists() {
         Ok(manifest)
     } else {
-        Err(human(format!("Could not find `{}` in `{}`",
-                          file, pwd.display())))
+        Err(human(format!("could not find `{}` in `{}`", file, pwd.display())))
     }
 }

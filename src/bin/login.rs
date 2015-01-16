@@ -3,7 +3,7 @@ use std::io;
 use cargo::ops;
 use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config, human, ChainError};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -30,26 +30,21 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let err = (|:| {
-                let src = try!(SourceId::for_central(config));
-                let mut src = RegistrySource::new(&src, config);
-                try!(src.update());
-                let config = try!(src.config());
-                let host = options.flag_host.clone().unwrap_or(config.api);
-                println!("please visit {}me and paste the API Token below",
-                         host);
-                let line = try!(io::stdin().read_line());
-                Ok(line)
-            })();
-
-            try!(err.map_err(|e| CliError::from_boxed(e, 101)))
+            let src = try!(SourceId::for_central(config));
+            let mut src = RegistrySource::new(&src, config);
+            try!(src.update());
+            let config = try!(src.config());
+            let host = options.flag_host.clone().unwrap_or(config.api);
+            println!("please visit {}me and paste the API Token below",
+                     host);
+            try!(io::stdin().read_line().chain_error(|| {
+                human("failed to read API token from stdin")
+            }))
         }
     };
 
     let token = token.as_slice().trim().to_string();
-    try!(ops::registry_login(config, token).map_err(|e| {
-        CliError::from_boxed(e, 101)
-    }));
+    try!(ops::registry_login(config, token));
     Ok(None)
 }
 

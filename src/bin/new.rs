@@ -1,7 +1,7 @@
 use std::os;
 
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -39,9 +39,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         bin: flag_bin,
     };
 
-    ops::new(opts, config).map(|_| None).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    })
+    try!(ops::new(opts, config));
+    Ok(None)
 }
 
 

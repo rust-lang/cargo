@@ -1,7 +1,7 @@
 use std::os;
 
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
@@ -62,7 +62,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         config: config,
     };
 
-    ops::update_lockfile(&root, &update_opts)
-        .map(|_| None).map_err(|err| CliError::from_boxed(err, 101))
+    try!(ops::update_lockfile(&root, &update_opts));
+    Ok(None)
 }
 

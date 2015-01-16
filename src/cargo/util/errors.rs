@@ -212,6 +212,12 @@ impl CliError {
     }
 }
 
+impl FromError<Box<CargoError>> for CliError {
+    fn from_error(e: Box<CargoError>) -> CliError {
+        CliError::from_boxed(e, 101)
+    }
+}
+
 // =============================================================================
 // various impls
 
