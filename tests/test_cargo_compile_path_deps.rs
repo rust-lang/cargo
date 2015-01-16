@@ -514,7 +514,7 @@ test!(error_message_for_missing_manifest {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(format!("Could not find `Cargo.toml` in `{}`\n",
+                .with_stderr(format!("could not find `Cargo.toml` in `{}`\n",
                                      p.root().join_many(&["src", "bar"]).display())));
 
 });

@@ -118,7 +118,7 @@ test!(cargo_compile_without_manifest {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-Could not find `Cargo.toml` in `[..]` or any parent directory
+could not find `Cargo.toml` in `[..]` or any parent directory
 "));
 });
 
@@ -1621,5 +1621,38 @@ Could not compile `foo`.
 
 Caused by:
   [..]
+"));
+});
+
+test!(bad_manifest_path {
+    let tmpdir = TempDir::new("cargo").unwrap();
+    let p = ProjectBuilder::new("foo", tmpdir.path().clone());
+
+    assert_that(p.cargo_process("build").arg("--manifest-path").arg("/"),
+                execs().with_status(101).with_stderr("\
+the manifest-path must be a path to a Cargo.toml file
+"));
+
+    assert_that(p.cargo_process("build")
+                 .arg("--manifest-path").arg("/Cargo.toml"),
+                execs().with_status(101).with_stderr("\
+manifest path `[..]` does not exist
+"));
+
+    assert_that(p.cargo_process("build")
+                 .arg("--manifest-path").arg(tmpdir.path().join("Cargo.toml")),
+                execs().with_status(101).with_stderr("\
+manifest path `[..]` does not exist
+"));
+
+    let p = p.file("Cargo.toml", "");
+    p.build();
+    assert_that(p.cargo_process("build")
+                 .arg("--manifest-path").arg(tmpdir.path().join("Cargo.toml")),
+                execs().with_status(101).with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  No `package` or `project` section found.
 "));
 });
