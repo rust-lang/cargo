@@ -96,6 +96,17 @@ Hello, world!</code></pre>
 You'll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don't have any yet, it's not very interesting.
 
+## Adding a dependency
+
+It's quite simple to add a dependency. Simply add it to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+time = "0.1.12"
+```
+
+Re-run `cargo build` to download the dependencies and build your source with the new dependencies.
+
 # Working on an existing Cargo project
 
 If you download an existing project that uses Cargo, it's really easy
