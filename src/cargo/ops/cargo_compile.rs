@@ -28,7 +28,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Source, PackageSet, Package, Target, PackageId};
 use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
