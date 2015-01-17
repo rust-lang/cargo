@@ -30,6 +30,7 @@ mod cargo_doc;
 mod cargo_fetch;
 mod cargo_generate_lockfile;
 mod cargo_new;
+mod cargo_output_dependencies;
 mod cargo_package;
 mod cargo_pkgid;
 mod cargo_read_manifest;
