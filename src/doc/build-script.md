@@ -77,7 +77,7 @@ are interpreted by Cargo and must be of the form `key=value`.
 Example output:
 
 ```notrust
-cargo:rustc-flags=-l foo:static -L /path/to/foo
+cargo:rustc-flags=-l static=foo -L native=/path/to/foo
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
@@ -309,7 +309,7 @@ fn main() {
                       .cwd(&Path::new(&out_dir))
                       .status().unwrap();
 
-    println!("cargo:rustc-flags=-L {} -l hello:static", out_dir);
+    println!("cargo:rustc-flags=-L native={} -l static=hello", out_dir);
 }
 ```
 
@@ -317,7 +317,7 @@ This build script starts out by compiling out C file into an object file (by
 invoking `gcc`) and then converting this object file into a static library (by
 invoking `ar`). The final step is feedback to Cargo itself to say that our
 output was in `out_dir` and the compiler should link the crate to `libhello.a`
-statically via the `-l hello:static` flag.
+statically via the `-l static=hello` flag.
 
 Note that there are a number of drawbacks to this hardcoded approach:
 
