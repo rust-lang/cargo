@@ -1,14 +1,12 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
-use std::ffi::CString;
-use std::io::USER_RWX;
 use std::io::fs::{self, PathExtensions};
 use std::path;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{self, CargoResult, human, caused_human};
-use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
+use util::{Config, internal, ChainError, Fresh, profile, join_paths};
 
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, Stage};
@@ -320,119 +318,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         }
     }
 
-    if targets.iter().any(|t| t.get_profile().is_custom_build()) {
-        // New custom build system
-        jobs.enqueue(pkg, Stage::BuildCustomBuild, build_custom);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, run_custom);
-
-    } else {
-        // Old custom build system
-        // OLD-BUILD: to-remove
-        let mut build_cmds = Vec::new();
-        for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
-            let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
-            build_cmds.push(work);
-        }
-        let (freshness, dirty, fresh) =
-            try!(fingerprint::prepare_build_cmd(cx, pkg, None));
-        let desc = match build_cmds.len() {
-            0 => String::new(),
-            1 => pkg.get_manifest().get_build()[0].to_string(),
-            _ => format!("custom build commands"),
-        };
-        let dirty = Work::new(move |desc_tx| {
-            if desc.len() > 0 {
-                desc_tx.send(desc).ok();
-            }
-            for cmd in build_cmds.into_iter() {
-                try!(cmd.call(desc_tx.clone()))
-            }
-            dirty.call(desc_tx)
-        });
-        jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh), freshness)]);
-    }
-
+    jobs.enqueue(pkg, Stage::BuildCustomBuild, build_custom);
+    jobs.enqueue(pkg, Stage::RunCustomBuild, run_custom);
     jobs.enqueue(pkg, Stage::Libraries, libs);
     jobs.enqueue(pkg, Stage::Binaries, bins);
     jobs.enqueue(pkg, Stage::BinaryTests, bin_tests);
     jobs.enqueue(pkg, Stage::LibraryTests, lib_tests);
     Ok(())
-}
-
-// OLD-BUILD: to-remove
-fn compile_custom_old(pkg: &Package, cmd: &str,
-                      cx: &Context, first: bool) -> CargoResult<Work> {
-    let root = cx.get_package(cx.resolve.root());
-    let profile = root.get_manifest().get_targets().iter()
-                      .find(|target| target.get_profile().get_env() == cx.env())
-                      .map(|target| target.get_profile());
-    let profile = match profile {
-        Some(profile) => profile,
-        None => return Err(internal(format!("no profile for {}", cx.env())))
-    };
-    // Just need a target which isn't a custom build command
-    let target = &pkg.get_targets()[0];
-    assert!(!target.get_profile().is_custom_build());
-
-    // TODO: this needs to be smarter about splitting
-    let mut cmd = cmd.split(' ');
-    // TODO: this shouldn't explicitly pass `Kind::Target` for dest/deps_dir, we
-    //       may be building a C lib for a plugin
-    let layout = cx.layout(pkg, Kind::Target);
-    let output = layout.native(pkg);
-    let exe = CString::from_slice(cmd.next().unwrap().as_bytes());
-    let mut p = try!(process(CommandType::Host(exe), pkg, target, cx))
-                     .env("OUT_DIR", Some(&output))
-                     .env("DEPS_DIR", Some(&output))
-                     .env("TARGET", Some(cx.target_triple()))
-                     .env("DEBUG", Some(profile.get_debug().to_string()))
-                     .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
-                     .env("LTO", Some(profile.get_lto().to_string()))
-                     .env("PROFILE", Some(profile.get_env()));
-    for arg in cmd {
-        p = p.arg(arg);
-    }
-    match cx.resolve.features(pkg.get_package_id()) {
-        Some(features) => {
-            for feat in features.iter() {
-                p = p.env(format!("CARGO_FEATURE_{}",
-                                  envify(feat.as_slice())).as_slice(),
-                          Some("1"));
-            }
-        }
-        None => {}
-    }
-
-
-    for &(pkg, _) in cx.dep_targets(pkg, target).iter() {
-        let name: String = pkg.get_name().chars().map(|c| {
-            match c {
-                '-' => '_',
-                c => c.to_uppercase(),
-            }
-        }).collect();
-        p = p.env(format!("DEP_{}_OUT_DIR", name).as_slice(),
-                  Some(&layout.native(pkg)));
-    }
-    let pkg = pkg.to_string();
-
-    let exec_engine = cx.exec_engine.clone();
-
-    Ok(Work::new(move |desc_tx| {
-        desc_tx.send(p.to_string()).ok();
-        if first && !output.exists() {
-            try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
-                internal("failed to create output directory for build command")
-            }))
-        }
-        try!(exec_engine.exec_with_output(p).map(|_| ()).map_err(|mut e| {
-            e.desc = format!("Failed to run custom build command for `{}`\n{}",
-                             pkg, e.desc);
-            Human(e)
-        }));
-        Ok(())
-    }))
 }
 
 fn rustc(package: &Package, target: &Target,
@@ -766,19 +658,6 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         None
     });
 
-    // Traverse the entire dependency graph looking for -L paths to pass for
-    // native dependencies.
-    // OLD-BUILD: to-remove
-    let mut dirs = Vec::new();
-    each_dep(package, cx, |pkg| {
-        if pkg.get_manifest().get_build().len() > 0 {
-            dirs.push(layout.native(pkg));
-        }
-    });
-    for dir in dirs.into_iter() {
-        cmd = cmd.arg("-L").arg(format!("native={}", dir.display()));
-    }
-
     for &(pkg, target) in cx.dep_targets(package, target).iter() {
         cmd = try!(link_to(cmd, pkg, target, cx, kind));
     }
@@ -821,27 +700,13 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
     }
 }
 
-pub fn process(cmd: CommandType, pkg: &Package, target: &Target,
+pub fn process(cmd: CommandType, pkg: &Package, _target: &Target,
                cx: &Context) -> CargoResult<CommandPrototype> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let layout = cx.layout(pkg, Kind::Host);
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
-
-    // OLD-BUILD: to-remove
-    // Also be sure to pick up any native build directories required by plugins
-    // or their dependencies
-    let mut native_search_paths = HashSet::new();
-    for &(dep, target) in cx.dep_targets(pkg, target).iter() {
-        if !target.get_profile().is_for_host() { continue }
-        each_dep(dep, cx, |dep| {
-            if dep.get_manifest().get_build().len() > 0 {
-                native_search_paths.insert(layout.native(dep));
-            }
-        });
-    }
-    search_path.extend(native_search_paths.into_iter());
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.

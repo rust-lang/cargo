@@ -1252,9 +1252,10 @@ test!(freshness_ignores_excluded {
             name = "foo"
             version = "0.0.0"
             authors = []
-            build = "true"
+            build = "build.rs"
             exclude = ["src/b*.rs"]
         "#)
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn bar() -> int { 1 }");
     foo.build();
     foo.root().move_into_the_past().unwrap();
@@ -1280,37 +1281,27 @@ test!(freshness_ignores_excluded {
 });
 
 test!(rebuild_preserves_out_dir {
-    let mut build = project("builder");
-    build = build
+    let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
-            name = "builder"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = 'build.rs'
         "#)
-        .file("src/main.rs", r#"
+        .file("build.rs", r#"
             use std::os;
             use std::io::File;
 
-            fn main() {{
+            fn main() {
                 let path = Path::new(os::getenv("OUT_DIR").unwrap()).join("foo");
                 if os::getenv("FIRST").is_some() {
                     File::create(&path).unwrap();
                 } else {
                     File::create(&path).unwrap();
                 }
-            }}
-        "#);
-    assert_that(build.cargo_process("build"), execs().with_status(0));
-
-    let foo = project("foo")
-        .file("Cargo.toml", format!(r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-            build = '{}'
-        "#, build.bin("builder").display()).as_slice())
+            }
+        "#)
         .file("src/lib.rs", "pub fn bar() -> int { 1 }");
     foo.build();
     foo.root().move_into_the_past().unwrap();

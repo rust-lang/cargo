@@ -179,7 +179,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     //
     // Also note that a fresh build command needs to
     let (freshness, dirty, fresh) =
-            try!(fingerprint::prepare_build_cmd(cx, pkg, Some(target)));
+            try!(fingerprint::prepare_build_cmd(cx, pkg, kind, Some(target)));
     let dirty = Work::new(move |tx| {
         try!(work(tx.clone()));
         dirty.call(tx)

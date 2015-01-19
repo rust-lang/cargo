@@ -124,17 +124,14 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
 ///
 /// The currently implemented solution is option (1), although it is planned to
 /// migrate to option (2) in the near future.
-pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package,
+pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
                          target: Option<&Target>) -> CargoResult<Preparation> {
-    let _p = profile::start(format!("fingerprint build cmd: {}",
-                                    pkg.get_package_id()));
-
-    // TODO: this should not explicitly pass Kind::Target
-    let kind = Kind::Target;
-
-    if pkg.get_manifest().get_build().len() == 0 && target.is_none() {
+    if target.is_none() {
         return Ok((Fresh, Work::noop(), Work::noop()));
     }
+
+    let _p = profile::start(format!("fingerprint build cmd: {}",
+                                    pkg.get_package_id()));
     let new = dir(cx, pkg, kind);
     let loc = new.join("build");
     cx.layout(pkg, kind).proxy().whitelist(&loc);

@@ -253,7 +253,7 @@ pub struct TomlProject {
     name: String,
     version: TomlVersion,
     authors: Vec<String>,
-    build: Option<BuildCommand>,       // TODO: `String` instead
+    build: Option<String>,
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
@@ -267,13 +267,6 @@ pub struct TomlProject {
     license: Option<String>,
     license_file: Option<String>,
     repository: Option<String>,
-}
-
-// TODO: deprecated, remove
-#[derive(RustcDecodable)]
-pub enum BuildCommand {
-    Single(String),
-    Multiple(Vec<String>)
 }
 
 pub struct TomlVersion {
@@ -449,17 +442,7 @@ impl TomlManifest {
         };
 
         // processing the custom build script
-        let (new_build, old_build) = match project.build {
-            Some(BuildCommand::Single(ref cmd)) => {
-                if cmd.as_slice().ends_with(".rs") && layout.root.join(cmd.as_slice()).exists() {
-                    (Some(Path::new(cmd.as_slice())), Vec::new())
-                } else {
-                    (None, vec!(cmd.clone()))
-                }
-            },
-            Some(BuildCommand::Multiple(ref cmd)) => (None, cmd.clone()),
-            None => (None, Vec::new())
-        };
+        let new_build = project.build.clone().map(Path::new);
 
         // Get targets
         let profiles = self.profile.clone().unwrap_or(Default::default());
@@ -509,8 +492,6 @@ impl TomlManifest {
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 
-        let has_old_build = old_build.len() >= 1;
-
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
                                             .unwrap_or(HashMap::new())));
@@ -529,7 +510,6 @@ impl TomlManifest {
                                          targets,
                                          layout.root.join("target"),
                                          layout.root.join("doc"),
-                                         old_build,
                                          exclude,
                                          include,
                                          project.links.clone(),
@@ -537,14 +517,6 @@ impl TomlManifest {
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));
-        }
-        if has_old_build {
-            manifest.add_warning(format!("warning: an arbitrary build command \
-                                          has now been deprecated."));
-            manifest.add_warning(format!("         It has been replaced by custom \
-                                                   build scripts."));
-            manifest.add_warning(format!("         For more information, see \
-                                          http://doc.crates.io/build-script.html"));
         }
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("warning: only one of `license` or \

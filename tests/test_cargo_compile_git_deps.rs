@@ -1087,8 +1087,9 @@ test!(git_build_cmd_freshness {
             name = "foo"
             version = "0.0.0"
             authors = []
-            build = "true"
+            build = "build.rs"
         "#)
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn bar() -> int { 1 }")
         .file(".gitignore", "
             src/bar.rs
@@ -1175,11 +1176,12 @@ test!(git_repo_changing_no_rebuild {
             name = "p1"
             version = "0.5.0"
             authors = []
-            build = 'true'
+            build = 'build.rs'
             [dependencies.bar]
             git = '{}'
         "#, bar.url()).as_slice())
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}");
     p1.build();
     p1.root().move_into_the_past().unwrap();
     assert_that(p1.process(cargo_dir().join("cargo")).arg("build"),
@@ -1247,7 +1249,7 @@ test!(git_dep_build_cmd {
             name = "bar"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "cp src/bar.rs.in src/bar.rs"
+            build = "build.rs"
 
             [lib]
 
@@ -1255,6 +1257,13 @@ test!(git_dep_build_cmd {
         "#)
         .file("bar/src/bar.rs.in", r#"
             pub fn gimme() -> int { 0 }
+        "#)
+        .file("bar/build.rs", r#"
+            use std::io::fs;
+            fn main() {
+                fs::copy(&Path::new("src/bar.rs.in"),
+                         &Path::new("src/bar.rs")).unwrap();
+            }
         "#)
     }).unwrap();
 
