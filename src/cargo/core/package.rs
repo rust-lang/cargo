@@ -184,7 +184,11 @@ impl PackageSet {
             graph.add(pkg.get_name(), deps.as_slice());
         }
 
-        let pkgs = some!(graph.sort()).iter().map(|name| {
+        let pkgs = match graph.sort() {
+            Some(pkgs) => pkgs,
+            None => return None,
+        };
+        let pkgs = pkgs.iter().map(|name| {
             self.get(*name).clone()
         }).collect();
 

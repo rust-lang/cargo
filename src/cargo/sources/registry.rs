@@ -451,7 +451,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let oid = try!(repo.refname_to_id(reference));
         log!(5, "[{}] updating to rev {}", self.source_id, oid);
         let object = try!(repo.find_object(oid, None));
-        try!(repo.reset(&object, git2::ResetType::Hard, None, None));
+        try!(repo.reset(&object, git2::ResetType::Hard, None, None, None));
         self.updated = true;
         self.cache.clear();
         Ok(())

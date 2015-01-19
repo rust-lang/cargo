@@ -35,23 +35,6 @@ use term::color::{BLACK, RED};
 
 pub use util::{CargoError, CliError, CliResult, human, Config};
 
-macro_rules! some {
-    ($e:expr) => (
-        match $e {
-            Some(e) => e,
-            None => return None
-        }
-    )
-}
-
-// Added so that the try! macro below can refer to cargo::util, while
-// other external importers of this macro can use it as well.
-//
-// "Hygiene strikes again" - @acrichton
-mod cargo {
-    pub use super::util;
-}
-
 pub mod core;
 pub mod ops;
 pub mod sources;

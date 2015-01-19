@@ -282,7 +282,7 @@ impl<'a> GitCheckout<'a> {
     fn reset(&self) -> CargoResult<()> {
         info!("reset {} to {}", self.repo.path().display(), self.revision);
         let object = try!(self.repo.find_object(self.revision.0, None));
-        try!(self.repo.reset(&object, git2::ResetType::Hard, None, None));
+        try!(self.repo.reset(&object, git2::ResetType::Hard, None, None, None));
         Ok(())
     }
 
@@ -333,7 +333,7 @@ impl<'a> GitCheckout<'a> {
                 }));
 
                 let obj = try!(repo.find_object(head, None));
-                try!(repo.reset(&obj, git2::ResetType::Hard, None, None));
+                try!(repo.reset(&obj, git2::ResetType::Hard, None, None, None));
                 try!(update_submodules(&repo));
             }
             Ok(())
@@ -365,8 +365,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
     let mut cred_error = false;
-    let ret = f(&mut |&mut: url, username, allowed| {
-        let username = if username.is_empty() {None} else {Some(username)};
+    let ret = f(&mut |url, username, allowed| {
         let creds = if allowed.contains(git2::SSH_KEY) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())

@@ -993,7 +993,7 @@ test!(dep_with_changed_submodule {
         origin.save().unwrap();
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();
-        subrepo.reset(&obj, git2::ResetType::Hard, None, None).unwrap();
+        subrepo.reset(&obj, git2::ResetType::Hard, None, None, None).unwrap();
     }
     sub.add_to_index(true).unwrap();
     add(&repo);
