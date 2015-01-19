@@ -163,7 +163,7 @@ fn main() {
 
 Let's tell Cargo to fetch this new dependency and update the `Cargo.lock`:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo update color
+<pre><code class="language-shell"><span class="gp">$</span> cargo update -p color
 <span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`</code></pre>
 
 Compile it:
@@ -303,8 +303,8 @@ When we're ready to opt in to a new version of the library, Cargo can
 re-calculate the dependencies, and update things for us:
 
 ```shell
-$ cargo update       # updates all dependencies
-$ cargo update color # updates just 'color'
+$ cargo update           # updates all dependencies
+$ cargo update -p color  # updates just 'color'
 ```
 
 This will write out a new `Cargo.lock` with the new version information. Note
