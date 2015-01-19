@@ -273,8 +273,21 @@ impl ConfigValue {
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
                 let new = mem::replace(new, HashMap::new());
                 for (key, value) in new.into_iter() {
-                    match old.entry(key) {
-                        Occupied(mut entry) => { try!(entry.get_mut().merge(value)); }
+                    match old.entry(key.clone()) {
+                        Occupied(mut entry) => {
+                            let path = value.definition_path().clone();
+                            let entry = entry.get_mut();
+                            try!(entry.merge(value).chain_error(|| {
+                                human(format!("failed to merge key `{}` between \
+                                               files:\n  \
+                                               file 1: {}\n  \
+                                               file 2: {}",
+                                              key,
+                                              entry.definition_path().display(),
+                                              path.display()))
+
+                            }));
+                        }
                         Vacant(entry) => { entry.insert(value); }
                     };
                 }

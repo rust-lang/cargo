@@ -1,4 +1,4 @@
-use support::{project, execs};
+use support::{project, execs, cargo_dir};
 use hamcrest::assert_that;
 
 fn setup() {}
@@ -13,11 +13,13 @@ test!(bad1 {
         "#)
         .file("src/lib.rs", "")
         .file(".cargo/config", r#"
-              target = "foo"
+              [target]
+              nonexistent-target = "foo"
         "#);
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(foo.cargo_process("build").arg("-v")
+                   .arg("--target=nonexistent-target"),
                 execs().with_status(101).with_stderr("\
-expected table for configuration key `target`, but found string in [..]config
+expected table for configuration key `target.nonexistent-target`, but found string in [..]config
 "));
 });
 
@@ -88,6 +90,32 @@ expected a string, but found a boolean in [..]config
 "));
 });
 
+test!(bad5 {
+    let foo = project("foo")
+        .file(".cargo/config", r#"
+            foo = ""
+        "#)
+        .file("foo/.cargo/config", r#"
+            foo = 2
+        "#);
+    foo.build();
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("new")
+                   .arg("-v").arg("foo").cwd(foo.root().join("foo")),
+                execs().with_status(101).with_stderr("\
+Failed to create project `foo` at `[..]`
+
+Caused by:
+  Couldn't load Cargo configuration
+
+Caused by:
+  failed to merge key `foo` between files:
+  file 1: [..]foo[..]foo[..]config
+  file 2: [..]foo[..]config
+
+Caused by:
+  expected integer, but found string
+"));
+});
 
 test!(bad_cargo_config_jobs {
     let foo = project("foo")
