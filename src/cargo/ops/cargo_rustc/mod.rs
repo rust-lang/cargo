@@ -1,6 +1,8 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
+use std::ffi::CString;
 use std::io::fs::{self, PathExtensions};
+use std::os;
 use std::path;
 use std::sync::Arc;
 
@@ -16,7 +18,7 @@ pub use self::context::Context;
 pub use self::context::Platform;
 pub use self::engine::{CommandPrototype, CommandType, ExecEngine, ProcessEngine};
 pub use self::layout::{Layout, LayoutProxy};
-pub use self::custom_build::BuildOutput;
+pub use self::custom_build::{BuildOutput, BuildMap};
 
 mod context;
 mod compilation;
@@ -333,7 +335,9 @@ fn rustc(package: &Package, target: &Target,
     let crate_types = target.rustc_crate_types();
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
-    rustcs.into_iter().map(|(rustc, kind)| {
+    let plugin_deps = crawl_build_deps(cx, package, target, Kind::Host);
+
+    return rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
         let is_path_source = package.get_package_id().get_source_id().is_path();
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
@@ -346,37 +350,12 @@ fn rustc(package: &Package, target: &Target,
 
         // Prepare the native lib state (extra -L and -l flags)
         let build_state = cx.build_state.clone();
-        let mut native_lib_deps = HashSet::new();
         let current_id = package.get_package_id().clone();
-
+        let plugin_deps = plugin_deps.clone();
+        let mut native_lib_deps = crawl_build_deps(cx, package, target, kind);
         if package.has_custom_build() && !target.get_profile().is_custom_build() {
-            native_lib_deps.insert(current_id.clone());
+            native_lib_deps.insert(0, current_id.clone());
         }
-        // Visit dependencies transitively to figure out what our native
-        // dependencies are (for -L and -l flags).
-        //
-        // Be sure to only look at targets of the same Kind, however, as we
-        // don't want to include native libs of plugins for targets for example.
-        fn visit<'a>(cx: &'a Context, pkg: &'a Package, target: &Target,
-                     kind: Kind,
-                     visiting: &mut HashSet<&'a PackageId>,
-                     libs: &mut HashSet<PackageId>) {
-            for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
-                let req = cx.get_requirement(pkg, target);
-                if !req.includes(kind) { continue }
-                if !visiting.insert(pkg.get_package_id()) { continue }
-
-                if pkg.has_custom_build() {
-                    libs.insert(pkg.get_package_id().clone());
-                }
-                visit(cx, pkg, target, kind, visiting, libs);
-                visiting.remove(&pkg.get_package_id());
-            }
-        }
-        visit(cx, package, target, kind,
-              &mut HashSet::new(), &mut native_lib_deps);
-        let mut native_lib_deps = native_lib_deps.into_iter().collect::<Vec<_>>();
-        native_lib_deps.sort();
 
         // If we are a binary and the package also contains a library, then we
         // don't pass the `-l` flags.
@@ -392,21 +371,15 @@ fn rustc(package: &Package, target: &Target,
             let mut rustc = rustc;
 
             // Only at runtime have we discovered what the extra -L and -l
-            // arguments are for native libraries, so we process those here.
-            {
-                let build_state = build_state.outputs.lock().unwrap();
-                for id in native_lib_deps.into_iter() {
-                    let output = &build_state[(id.clone(), kind)];
-                    for path in output.library_paths.iter() {
-                        rustc = rustc.arg("-L").arg(path);
-                    }
-                    if pass_l_flag && id == current_id {
-                        for name in output.library_links.iter() {
-                            rustc = rustc.arg("-l").arg(name.as_slice());
-                        }
-                    }
-                }
-            }
+            // arguments are for native libraries, so we process those here. We
+            // also need to be sure to add any -L paths for our plugins to the
+            // dynamic library load path as a plugin's dynamic library may be
+            // located somewhere in there.
+            let build_state = build_state.outputs.lock().unwrap();
+            rustc = add_native_deps(rustc, &*build_state, native_lib_deps,
+                                    kind, pass_l_flag, &current_id);
+            rustc = try!(add_plugin_deps(rustc, &*build_state, plugin_deps));
+            drop(build_state);
 
             // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
             //                              this manually
@@ -428,7 +401,76 @@ fn rustc(package: &Package, target: &Target,
             Ok(())
 
         }), kind))
-    }).collect()
+    }).collect();
+
+    // Add all relevant -L and -l flags from dependencies (now calculated and
+    // present in `state`) to the command provided
+    fn add_native_deps(mut rustc: CommandPrototype,
+                       build_state: &BuildMap,
+                       native_lib_deps: Vec<PackageId>,
+                       kind: Kind,
+                       pass_l_flag: bool,
+                       current_id: &PackageId) -> CommandPrototype {
+        for id in native_lib_deps.into_iter() {
+            let output = &build_state[(id.clone(), kind)];
+            for path in output.library_paths.iter() {
+                rustc = rustc.arg("-L").arg(path);
+            }
+            if pass_l_flag && id == *current_id {
+                for name in output.library_links.iter() {
+                    rustc = rustc.arg("-l").arg(name.as_slice());
+                }
+            }
+        }
+        return rustc;
+    }
+}
+
+fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
+                        target: &Target, kind: Kind) -> Vec<PackageId> {
+    let mut deps = HashSet::new();
+    visit(cx, pkg, target, kind, &mut HashSet::new(), &mut deps);
+    let mut ret: Vec<_> = deps.into_iter().collect();
+    ret.sort();
+    return ret;
+
+    fn visit<'a>(cx: &'a Context, pkg: &'a Package, target: &Target,
+                 kind: Kind,
+                 visiting: &mut HashSet<&'a PackageId>,
+                 libs: &mut HashSet<PackageId>) {
+        for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
+            let req = cx.get_requirement(pkg, target);
+            if !req.includes(kind) { continue }
+            if !visiting.insert(pkg.get_package_id()) { continue }
+
+            if pkg.has_custom_build() {
+                libs.insert(pkg.get_package_id().clone());
+            }
+            visit(cx, pkg, target, kind, visiting, libs);
+            visiting.remove(&pkg.get_package_id());
+        }
+    }
+}
+
+// For all plugin dependencies, add their -L paths (now calculated and
+// present in `state`) to the dynamic library load path for the command to
+// execute.
+fn add_plugin_deps(rustc: CommandPrototype,
+                   build_state: &BuildMap,
+                   plugin_deps: Vec<PackageId>)
+                   -> CargoResult<CommandPrototype> {
+    let var = DynamicLibrary::envvar();
+    let search_path = rustc.get_env(var)
+                           .unwrap_or(CString::from_slice(b""));
+    let mut search_path = os::split_paths(search_path);
+    for id in plugin_deps.into_iter() {
+        let output = &build_state[(id, Kind::Host)];
+        for path in output.library_paths.iter() {
+            search_path.push(path.clone());
+        }
+    }
+    let search_path = try!(join_paths(&search_path[], var));
+    Ok(rustc.env(var, Some(search_path)))
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,

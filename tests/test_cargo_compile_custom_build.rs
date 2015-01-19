@@ -1,4 +1,5 @@
-use std::io::File;
+use std::io::{File, fs};
+use std::os;
 
 use support::{project, execs, cargo_dir};
 use support::{COMPILING, RUNNING, DOCTEST};
@@ -1003,4 +1004,75 @@ test!(test_dev_dep_build_script {
         .file("a/src/lib.rs", "");
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
+});
+
+test!(build_script_with_dynamic_native_dependency {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "builder"
+            crate-type = ["dylib"]
+        "#)
+        .file("src/lib.rs", r#"
+            #[no_mangle]
+            pub extern fn foo() {}
+        "#);
+    assert_that(build.cargo_process("build"),
+                execs().with_status(0).with_stderr(""));
+    let src = build.root().join("target");
+    let lib = fs::readdir(&src).unwrap().into_iter().find(|lib| {
+        let lib = lib.filename_str().unwrap();
+        lib.starts_with(os::consts::DLL_PREFIX) &&
+            lib.ends_with(os::consts::DLL_SUFFIX)
+    }).unwrap();
+    let libname = lib.filename_str().unwrap();
+    let libname = libname.slice(os::consts::DLL_PREFIX.len(),
+                                libname.len() - os::consts::DLL_SUFFIX.len());
+
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies.bar]
+            path = "bar"
+        "#)
+        .file("build.rs", r#"
+            extern crate bar;
+            fn main() { bar::bar() }
+        "#)
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("bar/build.rs", r#"
+            use std::os;
+
+            fn main() {
+                let src = Path::new(os::getenv("SRC").unwrap());
+                println!("cargo:rustc-flags=-L {}", src.dir_path().display());
+            }
+        "#)
+        .file("bar/src/lib.rs", format!(r#"
+            pub fn bar() {{
+                #[link(name = "{}")]
+                extern {{ fn foo(); }}
+                unsafe {{ foo() }}
+            }}
+        "#, libname));
+
+    assert_that(foo.cargo_process("build").env("SRC", Some(lib.as_vec())),
+                execs().with_status(0));
 });

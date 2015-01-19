@@ -4,7 +4,6 @@ use std::io::fs::PathExtensions;
 use std::io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
-use std::sync::mpsc::Sender;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, human, Human};
@@ -26,8 +25,10 @@ pub struct BuildOutput {
     pub metadata: Vec<(String, String)>,
 }
 
+pub type BuildMap = HashMap<(PackageId, Kind), BuildOutput>;
+
 pub struct BuildState {
-    pub outputs: Mutex<HashMap<(PackageId, Kind), BuildOutput>>,
+    pub outputs: Mutex<BuildMap>,
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
@@ -100,6 +101,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let id = pkg.get_package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                build_output.clone());
+    let plugin_deps = super::crawl_build_deps(cx, pkg, target, Kind::Host);
 
     try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Target).build(pkg), USER_RWX));
     try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Host).build(pkg), USER_RWX));
@@ -111,7 +113,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     //
     // Note that this has to do some extra work just before running the command
     // to determine extra environment variables and such.
-    let work = move |: desc_tx: Sender<String>| -> CargoResult<()> {
+    let work = Work::new(move |desc_tx| {
         // Make sure that OUT_DIR exists.
         //
         // If we have an old build directory, then just move it into place,
@@ -124,7 +126,9 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         }
 
         // For all our native lib dependencies, pick up their metadata to pass
-        // along to this custom build command.
+        // along to this custom build command. We're also careful to augment our
+        // dynamic library search path in case the build script depended on any
+        // native dynamic libraries.
         let mut p = p;
         {
             let build_state = build_state.outputs.lock().unwrap();
@@ -137,6 +141,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                               Some(value.as_slice()));
                 }
             }
+            p = try!(super::add_plugin_deps(p, &*build_state, plugin_deps));
         }
 
         // And now finally, run the build command itself!
@@ -167,7 +172,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         }));
 
         Ok(())
-    };
+    });
 
     // Now that we've prepared our work-to-do, we need to prepare the fresh work
     // itself to run when we actually end up just discarding what we calculated
@@ -181,7 +186,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let (freshness, dirty, fresh) =
             try!(fingerprint::prepare_build_cmd(cx, pkg, kind, Some(target)));
     let dirty = Work::new(move |tx| {
-        try!(work(tx.clone()));
+        try!(work.call((tx.clone())));
         dirty.call(tx)
     });
     let fresh = Work::new(move |tx| {
