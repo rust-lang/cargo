@@ -154,7 +154,8 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
 
 
     let desc = error.description();
-    if unknown {
+    let hide_desc = unknown && !shell.get_verbose();
+    if hide_desc {
         output(Some("An unknown error occurred"), None, shell, fatal);
     } else if desc.len() > 0 {
         output(Some(desc), None, shell, fatal);
@@ -162,7 +163,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     if shell.get_verbose() {
         output(None, error.detail(), shell, fatal);
     }
-    if !handle_cause(&*error, shell) {
+    if !handle_cause(&*error, shell) || (hide_desc && !desc.is_empty()) {
         let _ = shell.err().say("\nTo learn more, run the command again \
                                  with --verbose.".to_string(), BLACK);
     }
@@ -214,30 +215,6 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                           options_first: bool) -> CliResult<T>
     where T: Decodable
 {
-    struct CargoDocoptError { err: docopt::Error }
-    impl Error for CargoDocoptError {
-        fn description(&self) -> &str {
-            match self.err {
-                docopt::Error::WithProgramUsage(..) => "",
-                ref e if e.fatal() => self.err.description(),
-                _ => "",
-            }
-        }
-
-        fn detail(&self) -> Option<String> {
-            match self.err {
-                docopt::Error::WithProgramUsage(_, ref usage) => {
-                    Some(usage.clone())
-                }
-                ref e if e.fatal() => None,
-                ref e => Some(e.to_string())
-            }
-        }
-    }
-    impl CargoError for CargoDocoptError {
-        fn is_human(&self) -> bool { true }
-    }
-
     let docopt = Docopt::new(usage).unwrap()
                                    .options_first(options_first)
                                    .argv(args.iter().map(|s| s.as_slice()))
@@ -245,7 +222,12 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                                    .version(Some(version()));
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::from_error(CargoDocoptError { err: e }, code)
+        let desc = match e {
+            docopt::Error::WithProgramUsage(_, s) => s,
+            ref e if e.fatal() => e.description().to_string(),
+            e => e.to_string(),
+        };
+        CliError::from_error(human(desc), code)
     })
 }
 
