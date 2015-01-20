@@ -24,6 +24,14 @@ url = "0.2"
 rustc-serialize = "0.2"
 term = "0.1"
 
+[target.i686-pc-windows-gnu.dependencies]
+winapi = "0.1"
+advapi32-sys = "*"
+
+[target.x86_64-pc-windows-gnu.dependencies]
+winapi = "0.1"
+advapi32-sys = "*"
+
 [dev-dependencies.hamcrest]
 git = "https://github.com/carllerche/hamcrest-rust.git"
 

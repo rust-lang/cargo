@@ -70,42 +70,15 @@ mod imp {
 // Leverage the crypto APIs that windows has built in.
 #[cfg(windows)]
 mod imp {
+    extern crate winapi;
+    extern crate "advapi32-sys" as advapi32;
     use std::os;
+    use std::ptr;
 
-    use libc;
-    use libc::{DWORD, BYTE, LPCSTR, BOOL};
-    use libc::types::os::arch::extra::{LONG_PTR};
-
-    type HCRYPTPROV = LONG_PTR;
-    type HCRYPTHASH = LONG_PTR;
-    type HCRYPTKEY = LONG_PTR;
-    type ALG_ID = libc::c_uint;
-
-    static PROV_RSA_AES: DWORD = 24;
-    static CRYPT_SILENT: DWORD = 64;
-    static CRYPT_VERIFYCONTEXT: DWORD = 0xF0000000;
-    static CALG_SHA_256: ALG_ID = 0x800c;
-    static HP_HASHVAL: DWORD = 0x00000002;
-
-    #[allow(non_snake_case)]
-    extern "system" {
-        fn CryptAcquireContextA(phProv: *mut HCRYPTPROV,
-                                pszContainer: LPCSTR,
-                                pszProvider: LPCSTR,
-                                dwProvType: DWORD,
-                                dwFlags: DWORD) -> BOOL;
-        fn CryptReleaseContext(hProv: HCRYPTPROV, dwFlags: DWORD) -> BOOL;
-
-
-        fn CryptCreateHash(hProv: HCRYPTPROV, Algid: ALG_ID, hKey: HCRYPTKEY,
-                           dwFlag: DWORD, phHash: *mut HCRYPTHASH) -> BOOL;
-        fn CryptHashData(hHash: HCRYPTHASH, pbData: *mut BYTE, dwDataLen: DWORD,
-                         dwFlags: DWORD) -> BOOL;
-        fn CryptGetHashParam(hHash: HCRYPTHASH, dwParam: DWORD, pbData: *mut BYTE,
-                             pdwDataLen: *mut DWORD, dwFlags: DWORD) -> BOOL;
-
-        fn CryptDestroyHash(hHash: HCRYPTHASH) -> BOOL;
-    }
+    use self::winapi::{DWORD, HCRYPTPROV, HCRYPTHASH};
+    use self::winapi::{PROV_RSA_AES, CRYPT_SILENT, CRYPT_VERIFYCONTEXT, CALG_SHA_256, HP_HASHVAL};
+    use self::advapi32::{CryptAcquireContextW, CryptCreateHash, CryptDestroyHash};
+    use self::advapi32::{CryptGetHashParam, CryptHashData, CryptReleaseContext};
 
     macro_rules! call{ ($e:expr) => ({
         if $e == 0 {
@@ -122,7 +95,7 @@ mod imp {
         pub fn new() -> Sha256 {
             let mut hcp = 0;
             call!(unsafe {
-                CryptAcquireContextA(&mut hcp, 0 as LPCSTR, 0 as LPCSTR,
+                CryptAcquireContextW(&mut hcp, ptr::null(), ptr::null(),
                                      PROV_RSA_AES,
                                      CRYPT_VERIFYCONTEXT | CRYPT_SILENT)
             });
@@ -143,7 +116,7 @@ mod imp {
 
         pub fn finish(&mut self) -> [u8; 32] {
             let mut ret = [0u8; 32];
-            let mut len = ret.len() as libc::DWORD;
+            let mut len = ret.len() as DWORD;
             call!(unsafe {
                 CryptGetHashParam(self.hcrypthash, HP_HASHVAL, ret.as_mut_ptr(),
                                   &mut len, 0)
