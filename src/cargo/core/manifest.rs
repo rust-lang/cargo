@@ -15,7 +15,6 @@ pub struct Manifest {
     targets: Vec<Target>,
     target_dir: Path,
     doc_dir: Path,
-    build: Vec<String>,         // TODO: deprecated, remove
     links: Option<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
@@ -52,7 +51,6 @@ pub struct SerializedManifest {
     targets: Vec<Target>,
     target_dir: String,
     doc_dir: String,
-    build: Option<Vec<String>>,     // TODO: deprecated, remove
 }
 
 impl Encodable for Manifest {
@@ -66,8 +64,6 @@ impl Encodable for Manifest {
             targets: self.targets.clone(),
             target_dir: self.target_dir.display().to_string(),
             doc_dir: self.doc_dir.display().to_string(),
-            // TODO: deprecated, remove
-            build: if self.build.len() == 0 { None } else { Some(self.build.clone()) },
         }.encode(s)
     }
 }
@@ -388,7 +384,6 @@ impl Encodable for Target {
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
                target_dir: Path, doc_dir: Path,
-               build: Vec<String>,
                exclude: Vec<String>,
                include: Vec<String>,
                links: Option<String>,
@@ -398,7 +393,6 @@ impl Manifest {
             targets: targets,
             target_dir: target_dir,
             doc_dir: doc_dir,
-            build: build,     // TODO: deprecated, remove
             warnings: Vec::new(),
             exclude: exclude,
             include: include,
@@ -437,10 +431,6 @@ impl Manifest {
 
     pub fn get_doc_dir(&self) -> &Path {
         &self.doc_dir
-    }
-
-    pub fn get_build(&self) -> &[String] {
-        self.build.as_slice()
     }
 
     pub fn get_links(&self) -> Option<&str> {

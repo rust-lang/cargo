@@ -94,18 +94,6 @@ test!(plugin_with_dynamic_native_dependency {
             name = "builder"
             crate-type = ["dylib"]
         "#)
-        .file("src/main.rs", r#"
-            #![allow(unstable)]
-            use std::io::fs;
-            use std::os;
-
-            fn main() {
-                let src = Path::new(os::getenv("SRC").unwrap());
-                let dst = Path::new(os::getenv("OUT_DIR").unwrap());
-                let dst = dst.join(src.filename().unwrap());
-                fs::rename(&src, &dst).unwrap();
-            }
-        "#)
         .file("src/lib.rs", r#"
             #[no_mangle]
             pub extern fn foo() {}
@@ -138,17 +126,26 @@ test!(plugin_with_dynamic_native_dependency {
 
             fn main() {}
         "#)
-        .file("bar/Cargo.toml", format!(r#"
+        .file("bar/Cargo.toml", r#"
             [package]
             name = "bar"
             version = "0.0.1"
             authors = []
-            build = '{}'
+            build = 'build.rs'
 
             [lib]
             name = "bar"
             plugin = true
-        "#, build.bin("builder").display()))
+        "#)
+        .file("bar/build.rs", r#"
+            use std::io::fs;
+            use std::os;
+
+            fn main() {
+                let src = Path::new(os::getenv("SRC").unwrap());
+                println!("cargo:rustc-flags=-L {}", src.dir_path().display());
+            }
+        "#)
         .file("bar/src/lib.rs", format!(r#"
             #![feature(plugin_registrar)]
 

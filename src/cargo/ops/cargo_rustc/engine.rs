@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::io::process::ProcessOutput;
+use std::os;
 use std::path::BytesContainer;
 
 use util::{self, CargoResult, ProcessError, ProcessBuilder};
@@ -82,6 +83,12 @@ impl CommandPrototype {
         let val = val.map(|t| CString::from_slice(t.container_as_bytes()));
         self.env.insert(key.to_string(), val);
         self
+    }
+
+    pub fn get_env(&self, var: &str) -> Option<CString> {
+        self.env.get(var).cloned().or_else(|| {
+            Some(os::getenv(var).map(|s| CString::from_vec(s.into_bytes())))
+        }).and_then(|val| val)
     }
 
     pub fn get_envs(&self) -> &HashMap<String, Option<CString>> {

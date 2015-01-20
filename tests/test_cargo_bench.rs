@@ -750,8 +750,9 @@ test!(bench_twice_with_build_cmd {
             name = "foo"
             version = "0.0.1"
             authors = []
-            build = 'true'
+            build = "build.rs"
         "#)
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "
             extern crate test;
             #[bench]

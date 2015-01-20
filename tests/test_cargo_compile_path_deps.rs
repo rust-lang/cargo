@@ -658,11 +658,18 @@ test!(path_dep_build_cmd {
             name = "bar"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "cp src/bar.rs.in src/bar.rs"
+            build = "build.rs"
 
             [lib]
 
             name = "bar"
+        "#)
+        .file("bar/build.rs", r#"
+            use std::io::fs;
+            fn main() {
+                fs::copy(&Path::new("src/bar.rs.in"),
+                         &Path::new("src/bar.rs")).unwrap();
+            }
         "#)
         .file("bar/src/bar.rs.in", r#"
             pub fn gimme() -> int { 0 }

@@ -1,14 +1,14 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
-use std::io::USER_RWX;
 use std::io::fs::{self, PathExtensions};
+use std::os;
 use std::path;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use util::{self, CargoResult, human, caused_human};
-use util::{Config, internal, ChainError, Fresh, profile, join_paths, Human};
+use util::{Config, internal, ChainError, Fresh, profile, join_paths};
 
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, Stage};
@@ -18,7 +18,7 @@ pub use self::context::Context;
 pub use self::context::Platform;
 pub use self::engine::{CommandPrototype, CommandType, ExecEngine, ProcessEngine};
 pub use self::layout::{Layout, LayoutProxy};
-pub use self::custom_build::BuildOutput;
+pub use self::custom_build::{BuildOutput, BuildMap};
 
 mod context;
 mod compilation;
@@ -320,119 +320,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         }
     }
 
-    if targets.iter().any(|t| t.get_profile().is_custom_build()) {
-        // New custom build system
-        jobs.enqueue(pkg, Stage::BuildCustomBuild, build_custom);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, run_custom);
-
-    } else {
-        // Old custom build system
-        // OLD-BUILD: to-remove
-        let mut build_cmds = Vec::new();
-        for (i, build_cmd) in pkg.get_manifest().get_build().iter().enumerate() {
-            let work = try!(compile_custom_old(pkg, build_cmd.as_slice(), cx, i == 0));
-            build_cmds.push(work);
-        }
-        let (freshness, dirty, fresh) =
-            try!(fingerprint::prepare_build_cmd(cx, pkg, None));
-        let desc = match build_cmds.len() {
-            0 => String::new(),
-            1 => pkg.get_manifest().get_build()[0].to_string(),
-            _ => format!("custom build commands"),
-        };
-        let dirty = Work::new(move |desc_tx| {
-            if desc.len() > 0 {
-                desc_tx.send(desc).ok();
-            }
-            for cmd in build_cmds.into_iter() {
-                try!(cmd.call(desc_tx.clone()))
-            }
-            dirty.call(desc_tx)
-        });
-        jobs.enqueue(pkg, Stage::BuildCustomBuild, vec![]);
-        jobs.enqueue(pkg, Stage::RunCustomBuild, vec![(job(dirty, fresh), freshness)]);
-    }
-
+    jobs.enqueue(pkg, Stage::BuildCustomBuild, build_custom);
+    jobs.enqueue(pkg, Stage::RunCustomBuild, run_custom);
     jobs.enqueue(pkg, Stage::Libraries, libs);
     jobs.enqueue(pkg, Stage::Binaries, bins);
     jobs.enqueue(pkg, Stage::BinaryTests, bin_tests);
     jobs.enqueue(pkg, Stage::LibraryTests, lib_tests);
     Ok(())
-}
-
-// OLD-BUILD: to-remove
-fn compile_custom_old(pkg: &Package, cmd: &str,
-                      cx: &Context, first: bool) -> CargoResult<Work> {
-    let root = cx.get_package(cx.resolve.root());
-    let profile = root.get_manifest().get_targets().iter()
-                      .find(|target| target.get_profile().get_env() == cx.env())
-                      .map(|target| target.get_profile());
-    let profile = match profile {
-        Some(profile) => profile,
-        None => return Err(internal(format!("no profile for {}", cx.env())))
-    };
-    // Just need a target which isn't a custom build command
-    let target = &pkg.get_targets()[0];
-    assert!(!target.get_profile().is_custom_build());
-
-    // TODO: this needs to be smarter about splitting
-    let mut cmd = cmd.split(' ');
-    // TODO: this shouldn't explicitly pass `Kind::Target` for dest/deps_dir, we
-    //       may be building a C lib for a plugin
-    let layout = cx.layout(pkg, Kind::Target);
-    let output = layout.native(pkg);
-    let exe = CString::from_slice(cmd.next().unwrap().as_bytes());
-    let mut p = try!(process(CommandType::Host(exe), pkg, target, cx))
-                     .env("OUT_DIR", Some(&output))
-                     .env("DEPS_DIR", Some(&output))
-                     .env("TARGET", Some(cx.target_triple()))
-                     .env("DEBUG", Some(profile.get_debug().to_string()))
-                     .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
-                     .env("LTO", Some(profile.get_lto().to_string()))
-                     .env("PROFILE", Some(profile.get_env()));
-    for arg in cmd {
-        p = p.arg(arg);
-    }
-    match cx.resolve.features(pkg.get_package_id()) {
-        Some(features) => {
-            for feat in features.iter() {
-                p = p.env(format!("CARGO_FEATURE_{}",
-                                  envify(feat.as_slice())).as_slice(),
-                          Some("1"));
-            }
-        }
-        None => {}
-    }
-
-
-    for &(pkg, _) in cx.dep_targets(pkg, target).iter() {
-        let name: String = pkg.get_name().chars().map(|c| {
-            match c {
-                '-' => '_',
-                c => c.to_uppercase(),
-            }
-        }).collect();
-        p = p.env(format!("DEP_{}_OUT_DIR", name).as_slice(),
-                  Some(&layout.native(pkg)));
-    }
-    let pkg = pkg.to_string();
-
-    let exec_engine = cx.exec_engine.clone();
-
-    Ok(Work::new(move |desc_tx| {
-        desc_tx.send(p.to_string()).ok();
-        if first && !output.exists() {
-            try!(fs::mkdir(&output, USER_RWX).chain_error(|| {
-                internal("failed to create output directory for build command")
-            }))
-        }
-        try!(exec_engine.exec_with_output(p).map(|_| ()).map_err(|mut e| {
-            e.desc = format!("Failed to run custom build command for `{}`\n{}",
-                             pkg, e.desc);
-            Human(e)
-        }));
-        Ok(())
-    }))
 }
 
 fn rustc(package: &Package, target: &Target,
@@ -441,7 +335,9 @@ fn rustc(package: &Package, target: &Target,
     let crate_types = target.rustc_crate_types();
     let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
 
-    rustcs.into_iter().map(|(rustc, kind)| {
+    let plugin_deps = crawl_build_deps(cx, package, target, Kind::Host);
+
+    return rustcs.into_iter().map(|(rustc, kind)| {
         let name = package.get_name().to_string();
         let is_path_source = package.get_package_id().get_source_id().is_path();
         let show_warnings = package.get_package_id() == cx.resolve.root() ||
@@ -454,37 +350,12 @@ fn rustc(package: &Package, target: &Target,
 
         // Prepare the native lib state (extra -L and -l flags)
         let build_state = cx.build_state.clone();
-        let mut native_lib_deps = HashSet::new();
         let current_id = package.get_package_id().clone();
-
+        let plugin_deps = plugin_deps.clone();
+        let mut native_lib_deps = crawl_build_deps(cx, package, target, kind);
         if package.has_custom_build() && !target.get_profile().is_custom_build() {
-            native_lib_deps.insert(current_id.clone());
+            native_lib_deps.insert(0, current_id.clone());
         }
-        // Visit dependencies transitively to figure out what our native
-        // dependencies are (for -L and -l flags).
-        //
-        // Be sure to only look at targets of the same Kind, however, as we
-        // don't want to include native libs of plugins for targets for example.
-        fn visit<'a>(cx: &'a Context, pkg: &'a Package, target: &Target,
-                     kind: Kind,
-                     visiting: &mut HashSet<&'a PackageId>,
-                     libs: &mut HashSet<PackageId>) {
-            for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
-                let req = cx.get_requirement(pkg, target);
-                if !req.includes(kind) { continue }
-                if !visiting.insert(pkg.get_package_id()) { continue }
-
-                if pkg.has_custom_build() {
-                    libs.insert(pkg.get_package_id().clone());
-                }
-                visit(cx, pkg, target, kind, visiting, libs);
-                visiting.remove(&pkg.get_package_id());
-            }
-        }
-        visit(cx, package, target, kind,
-              &mut HashSet::new(), &mut native_lib_deps);
-        let mut native_lib_deps = native_lib_deps.into_iter().collect::<Vec<_>>();
-        native_lib_deps.sort();
 
         // If we are a binary and the package also contains a library, then we
         // don't pass the `-l` flags.
@@ -500,21 +371,15 @@ fn rustc(package: &Package, target: &Target,
             let mut rustc = rustc;
 
             // Only at runtime have we discovered what the extra -L and -l
-            // arguments are for native libraries, so we process those here.
-            {
-                let build_state = build_state.outputs.lock().unwrap();
-                for id in native_lib_deps.into_iter() {
-                    let output = &build_state[(id.clone(), kind)];
-                    for path in output.library_paths.iter() {
-                        rustc = rustc.arg("-L").arg(path);
-                    }
-                    if pass_l_flag && id == current_id {
-                        for name in output.library_links.iter() {
-                            rustc = rustc.arg("-l").arg(name.as_slice());
-                        }
-                    }
-                }
-            }
+            // arguments are for native libraries, so we process those here. We
+            // also need to be sure to add any -L paths for our plugins to the
+            // dynamic library load path as a plugin's dynamic library may be
+            // located somewhere in there.
+            let build_state = build_state.outputs.lock().unwrap();
+            rustc = add_native_deps(rustc, &*build_state, native_lib_deps,
+                                    kind, pass_l_flag, &current_id);
+            rustc = try!(add_plugin_deps(rustc, &*build_state, plugin_deps));
+            drop(build_state);
 
             // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
             //                              this manually
@@ -536,7 +401,76 @@ fn rustc(package: &Package, target: &Target,
             Ok(())
 
         }), kind))
-    }).collect()
+    }).collect();
+
+    // Add all relevant -L and -l flags from dependencies (now calculated and
+    // present in `state`) to the command provided
+    fn add_native_deps(mut rustc: CommandPrototype,
+                       build_state: &BuildMap,
+                       native_lib_deps: Vec<PackageId>,
+                       kind: Kind,
+                       pass_l_flag: bool,
+                       current_id: &PackageId) -> CommandPrototype {
+        for id in native_lib_deps.into_iter() {
+            let output = &build_state[(id.clone(), kind)];
+            for path in output.library_paths.iter() {
+                rustc = rustc.arg("-L").arg(path);
+            }
+            if pass_l_flag && id == *current_id {
+                for name in output.library_links.iter() {
+                    rustc = rustc.arg("-l").arg(name.as_slice());
+                }
+            }
+        }
+        return rustc;
+    }
+}
+
+fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
+                        target: &Target, kind: Kind) -> Vec<PackageId> {
+    let mut deps = HashSet::new();
+    visit(cx, pkg, target, kind, &mut HashSet::new(), &mut deps);
+    let mut ret: Vec<_> = deps.into_iter().collect();
+    ret.sort();
+    return ret;
+
+    fn visit<'a>(cx: &'a Context, pkg: &'a Package, target: &Target,
+                 kind: Kind,
+                 visiting: &mut HashSet<&'a PackageId>,
+                 libs: &mut HashSet<PackageId>) {
+        for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
+            let req = cx.get_requirement(pkg, target);
+            if !req.includes(kind) { continue }
+            if !visiting.insert(pkg.get_package_id()) { continue }
+
+            if pkg.has_custom_build() {
+                libs.insert(pkg.get_package_id().clone());
+            }
+            visit(cx, pkg, target, kind, visiting, libs);
+            visiting.remove(&pkg.get_package_id());
+        }
+    }
+}
+
+// For all plugin dependencies, add their -L paths (now calculated and
+// present in `state`) to the dynamic library load path for the command to
+// execute.
+fn add_plugin_deps(rustc: CommandPrototype,
+                   build_state: &BuildMap,
+                   plugin_deps: Vec<PackageId>)
+                   -> CargoResult<CommandPrototype> {
+    let var = DynamicLibrary::envvar();
+    let search_path = rustc.get_env(var)
+                           .unwrap_or(CString::from_slice(b""));
+    let mut search_path = os::split_paths(search_path);
+    for id in plugin_deps.into_iter() {
+        let output = &build_state[(id, Kind::Host)];
+        for path in output.library_paths.iter() {
+            search_path.push(path.clone());
+        }
+    }
+    let search_path = try!(join_paths(&search_path[], var));
+    Ok(rustc.env(var, Some(search_path)))
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
@@ -766,19 +700,6 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         None
     });
 
-    // Traverse the entire dependency graph looking for -L paths to pass for
-    // native dependencies.
-    // OLD-BUILD: to-remove
-    let mut dirs = Vec::new();
-    each_dep(package, cx, |pkg| {
-        if pkg.get_manifest().get_build().len() > 0 {
-            dirs.push(layout.native(pkg));
-        }
-    });
-    for dir in dirs.into_iter() {
-        cmd = cmd.arg("-L").arg(format!("native={}", dir.display()));
-    }
-
     for &(pkg, target) in cx.dep_targets(package, target).iter() {
         cmd = try!(link_to(cmd, pkg, target, cx, kind));
     }
@@ -821,27 +742,13 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
     }
 }
 
-pub fn process(cmd: CommandType, pkg: &Package, target: &Target,
+pub fn process(cmd: CommandType, pkg: &Package, _target: &Target,
                cx: &Context) -> CargoResult<CommandPrototype> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let layout = cx.layout(pkg, Kind::Host);
     let mut search_path = DynamicLibrary::search_path();
     search_path.push(layout.deps().clone());
-
-    // OLD-BUILD: to-remove
-    // Also be sure to pick up any native build directories required by plugins
-    // or their dependencies
-    let mut native_search_paths = HashSet::new();
-    for &(dep, target) in cx.dep_targets(pkg, target).iter() {
-        if !target.get_profile().is_for_host() { continue }
-        each_dep(dep, cx, |dep| {
-            if dep.get_manifest().get_build().len() > 0 {
-                native_search_paths.insert(layout.native(dep));
-            }
-        });
-    }
-    search_path.extend(native_search_paths.into_iter());
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.

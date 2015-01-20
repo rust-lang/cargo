@@ -5,11 +5,6 @@ authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
 
-[profile.test]
-debug = false
-[profile.dev]
-debug = false
-
 [lib]
 name = "cargo"
 path = "src/cargo/lib.rs"
