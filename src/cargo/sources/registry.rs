@@ -363,13 +363,14 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         }
         // see module comment for why this is structured the way it is
         let path = self.checkout_path.clone();
-        let path = match name.len() {
-            1 => path.join("1").join(name),
-            2 => path.join("2").join(name),
-            3 => path.join("3").join(name.slice_to(1)).join(name),
-            _ => path.join(name.slice(0, 2))
-                     .join(name.slice(2, 4))
-                     .join(name),
+        let fs_name = name.chars().map(|c| c.to_lowercase()).collect::<String>();
+        let path = match fs_name.len() {
+            1 => path.join("1").join(fs_name),
+            2 => path.join("2").join(fs_name),
+            3 => path.join("3").join(fs_name.slice_to(1)).join(fs_name),
+            _ => path.join(fs_name.slice(0, 2))
+                     .join(fs_name.slice(2, 4))
+                     .join(fs_name),
         };
         let summaries = match File::open(&path) {
             Ok(mut f) => {
@@ -385,6 +386,9 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             }
             Err(..) => Vec::new(),
         };
+        let summaries = summaries.into_iter().filter(|summary| {
+            summary.0.get_package_id().get_name() == name
+        }).collect();
         self.cache.insert(name.to_string(), summaries);
         Ok(self.cache.get(name).unwrap())
     }
