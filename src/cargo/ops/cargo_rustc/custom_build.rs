@@ -15,7 +15,7 @@ use super::CommandType;
 use util::Freshness;
 
 /// Contains the parsed output of a custom build script.
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
     pub library_paths: Vec<Path>,

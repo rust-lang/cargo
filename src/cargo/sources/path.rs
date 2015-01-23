@@ -1,5 +1,5 @@
 use std::cmp;
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Debug, Formatter};
 use std::io::fs::{self, PathExtensions};
 use glob::Pattern;
 use git2;
@@ -201,7 +201,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Show for PathSource<'a, 'b> {
+impl<'a, 'b> Debug for PathSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "the paths source")
     }

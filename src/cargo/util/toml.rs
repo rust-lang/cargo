@@ -579,7 +579,7 @@ fn process_dependencies<F>(cx: &mut Context,
     Ok(())
 }
 
-#[derive(RustcDecodable, Show, Clone)]
+#[derive(RustcDecodable, Debug, Clone)]
 struct TomlTarget {
     name: String,
     crate_type: Option<Vec<String>>,
@@ -629,7 +629,7 @@ impl PathValue {
     }
 }
 
-impl fmt::Show for PathValue {
+impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             PathValue::String(ref s) => s.fmt(f),

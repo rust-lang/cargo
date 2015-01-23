@@ -215,7 +215,7 @@ trait ErrMsg<T> {
     fn with_err_msg(self, val: String) -> Result<T, String>;
 }
 
-impl<T, E: fmt::String> ErrMsg<T> for Result<T, E> {
+impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
     fn with_err_msg(self, val: String) -> Result<T, String> {
         match self {
             Ok(val) => Ok(val),
@@ -383,7 +383,7 @@ fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAl
     }
 }
 
-impl fmt::String for Execs {
+impl fmt::Display for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
     }
@@ -425,7 +425,7 @@ struct ShellWrites {
     expected: String
 }
 
-impl fmt::String for ShellWrites {
+impl fmt::Display for ShellWrites {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}` written to the shell", self.expected)
     }
@@ -441,7 +441,7 @@ impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
     }
 }
 
-pub fn shell_writes<T: fmt::String>(string: T) -> ShellWrites {
+pub fn shell_writes<T: fmt::Display>(string: T) -> ShellWrites {
     ShellWrites { expected: string.to_string() }
 }
 

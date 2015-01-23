@@ -8,19 +8,19 @@ use git2::{self, ObjectType};
 use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal};
 
-#[derive(PartialEq, Clone, Show)]
+#[derive(PartialEq, Clone, Debug)]
 #[allow(missing_copy_implementations)]
 pub struct GitRevision(git2::Oid);
 
-impl fmt::String for GitRevision {
+impl fmt::Display for GitRevision {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        fmt::String::fmt(&self.0, f)
+        fmt::Display::fmt(&self.0, f)
     }
 }
 
 /// GitRemote represents a remote repository. It gets cloned into a local
 /// GitDatabase.
-#[derive(PartialEq,Clone,Show)]
+#[derive(PartialEq,Clone,Debug)]
 pub struct GitRemote {
     url: Url,
 }

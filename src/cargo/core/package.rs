@@ -20,7 +20,7 @@ use core::source::{SourceId, Source};
 ///
 /// A package is a `Cargo.toml` file, plus all the files that are part of it.
 // TODO: Is manifest_path a relic?
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
@@ -117,7 +117,7 @@ impl Package {
     }
 }
 
-impl fmt::String for Package {
+impl fmt::Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.get_summary().get_package_id())
     }
@@ -137,7 +137,7 @@ impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Package {
     }
 }
 
-#[derive(PartialEq,Clone,Show)]
+#[derive(PartialEq,Clone,Debug)]
 pub struct PackageSet {
     packages: Vec<Package>,
 }

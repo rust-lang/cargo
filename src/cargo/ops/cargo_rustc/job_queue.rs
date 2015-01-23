@@ -49,7 +49,7 @@ struct PendingBuild {
 ///
 /// Each build step for a package is registered with one of these stages, and
 /// each stage has a vector of work to perform in parallel.
-#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Show, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord, Debug, Copy)]
 pub enum Stage {
     Start,
     BuildCustomBuild,

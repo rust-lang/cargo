@@ -199,7 +199,7 @@ pub enum ConfigValue {
     Boolean(bool, Path),
 }
 
-impl fmt::Show for ConfigValue {
+impl fmt::Debug for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             CV::Integer(i, ref path) => write!(f, "{} (from {:?})", i, path),

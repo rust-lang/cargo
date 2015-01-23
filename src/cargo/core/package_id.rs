@@ -13,12 +13,12 @@ use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct PackageId {
     inner: Arc<PackageIdInner>,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord, Show)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Debug)]
 struct PackageIdInner {
     name: String,
     version: semver::Version,
@@ -81,7 +81,7 @@ impl Ord for PackageId {
     }
 }
 
-#[derive(Clone, Show, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PackageIdError {
     InvalidVersion(String),
     InvalidNamespace(String)
@@ -109,7 +109,7 @@ impl FromError<PackageIdError> for Box<CargoError> {
     fn from_error(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
 }
 
-#[derive(PartialEq, Hash, Clone, RustcEncodable, Show)]
+#[derive(PartialEq, Hash, Clone, RustcEncodable, Debug)]
 pub struct Metadata {
     pub metadata: String,
     pub extra_filename: String
@@ -168,7 +168,7 @@ impl Metadata {
     }
 }
 
-impl fmt::String for PackageId {
+impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "{} v{}", self.inner.name, self.inner.version));
 
