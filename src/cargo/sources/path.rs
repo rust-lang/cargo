@@ -116,23 +116,36 @@ impl<'a, 'b> PathSource<'a, 'b> {
     {
         warn!("list_files_git {}", pkg.get_package_id());
         let index = try!(repo.index());
-        let root = match repo.workdir() {
-            Some(dir) => dir,
-            None => return Err(internal_error("Can't list files on a bare repository.", "")),
-        };
+        let root = try!(repo.workdir().chain_error(|| {
+            internal_error("Can't list files on a bare repository.", "")
+        }));
         let pkg_path = pkg.get_manifest_path().dir_path();
 
         let mut ret = Vec::new();
-        'outer: for entry in index.iter() {
-            let fname = entry.path.as_slice();
-            let file_path = root.join(fname);
 
+        // We use information from the git repository to guide use in traversing
+        // its tree. The primary purpose of this is to take advantage of the
+        // .gitignore and auto-ignore files that don't matter.
+        //
+        // If the repository has no commits, then we check the status of all
+        // files (tracked and untracked) and use all those. If the repository
+        // has at least one commit, however, we assume that all relevant files
+        // are in the index so we filter out all the statuses.
+        let index_files = index.iter().map(|entry| root.join(&entry.path[]));
+        let mut opts = git2::StatusOptions::new();
+        let unborn = repo.head().is_err();
+        opts.include_untracked(true);
+        let statuses = try!(repo.statuses(Some(&mut opts)));
+        let untracked = statuses.iter().map(|entry| root.join(entry.path_bytes()))
+                                .filter(|_| unborn);
+
+        'outer: for file_path in index_files.chain(untracked) {
             // Filter out files outside this package.
             if !pkg_path.is_ancestor_of(&file_path) { continue }
 
             // Filter out Cargo.lock and target always
-            if fname == b"Cargo.lock" { continue }
-            if fname == b"target" { continue }
+            if file_path.filename() == Some(b"Cargo.lock") { continue }
+            if file_path.filename() == Some(b"target") { continue }
 
             // Filter out sub-packages of this package
             for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
@@ -151,10 +164,16 @@ impl<'a, 'b> PathSource<'a, 'b> {
                 let rel = try!(rel.as_str().chain_error(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 }));
-                let submodule = try!(repo.find_submodule(rel));
-                let repo = try!(submodule.open());
-                let files = try!(self.list_files_git(pkg, repo, filter));
-                ret.extend(files.into_iter());
+                match repo.find_submodule(rel) {
+                    Ok(submodule) => {
+                        let repo = try!(submodule.open());
+                        let files = try!(self.list_files_git(pkg, repo, filter));
+                        ret.extend(files.into_iter());
+                    }
+                    Err(..) => {
+                        try!(self.walk(&file_path, &mut ret, false, filter));
+                    }
+                }
             } else if (*filter)(&file_path) {
                 // We found a file!
                 warn!("  found {}", file_path.display());
@@ -171,33 +190,34 @@ impl<'a, 'b> PathSource<'a, 'b> {
         let mut ret = Vec::new();
         for pkg in self.packages.iter().filter(|p| *p == pkg) {
             let loc = pkg.get_manifest_path().dir_path();
-            try!(walk(&loc, &mut ret, true, &mut filter));
+            try!(self.walk(&loc, &mut ret, true, &mut filter));
         }
         return Ok(ret);
 
-        fn walk<F>(path: &Path, ret: &mut Vec<Path>,
-                   is_root: bool, filter: &mut F) -> CargoResult<()>
-            where F: FnMut(&Path) -> bool
-        {
-            if !path.is_dir() {
-                if (*filter)(path) {
-                    ret.push(path.clone());
-                }
-                return Ok(())
-            }
-            // Don't recurse into any sub-packages that we have
-            if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
-            for dir in try!(fs::readdir(path)).iter() {
-                match (is_root, dir.filename_str()) {
-                    (_,    Some(".git")) |
-                    (true, Some("target")) |
-                    (true, Some("Cargo.lock")) => continue,
-                    _ => {}
-                }
-                try!(walk(dir, ret, false, filter));
+    }
+
+    fn walk<F>(&self, path: &Path, ret: &mut Vec<Path>,
+               is_root: bool, filter: &mut F) -> CargoResult<()>
+        where F: FnMut(&Path) -> bool
+    {
+        if !path.is_dir() {
+            if (*filter)(path) {
+                ret.push(path.clone());
             }
             return Ok(())
         }
+        // Don't recurse into any sub-packages that we have
+        if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
+        for dir in try!(fs::readdir(path)).iter() {
+            match (is_root, dir.filename_str()) {
+                (_,    Some(".git")) |
+                (true, Some("target")) |
+                (true, Some("Cargo.lock")) => continue,
+                _ => {}
+            }
+            try!(self.walk(dir, ret, false, filter));
+        }
+        return Ok(())
     }
 }
 
