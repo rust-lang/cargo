@@ -36,7 +36,6 @@ impl fmt::Debug for Box<CargoError> {
 
 impl Error for Box<CargoError> {
     fn description(&self) -> &str { (**self).description() }
-    fn detail(&self) -> Option<String> { (**self).detail() }
     fn cause(&self) -> Option<&Error> { (**self).cause() }
 }
 
@@ -89,7 +88,12 @@ impl<T> ChainError<T> for Option<T> {
 
 impl<E: Error> Error for ChainedError<E> {
     fn description(&self) -> &str { self.error.description() }
-    fn detail(&self) -> Option<String> { self.error.detail() }
+}
+
+impl<E: fmt::Display> fmt::Display for ChainedError<E> {
+    fn fmt(&self, f: fmt::Formatter) {
+        fmt::Display::fmt(self.error, f)
+    }
 }
 
 impl<E: CargoError> CargoError for ChainedError<E> {
@@ -109,7 +113,6 @@ pub struct ProcessError {
 
 impl Error for ProcessError {
     fn description(&self) -> &str { self.desc.as_slice() }
-    fn detail(&self) -> Option<String> { None }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|s| s as &Error)
     }
@@ -149,7 +152,6 @@ impl fmt::Debug for ConcreteCargoError {
 
 impl Error for ConcreteCargoError {
     fn description(&self) -> &str { self.description.as_slice() }
-    fn detail(&self) -> Option<String> { self.detail.clone() }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|c| &**c)
     }
@@ -168,8 +170,13 @@ pub struct Human<E>(pub E);
 
 impl<E: Error> Error for Human<E> {
     fn description(&self) -> &str { self.0.description() }
-    fn detail(&self) -> Option<String> { self.0.detail() }
     fn cause(&self) -> Option<&Error> { self.0.cause() }
+}
+
+impl<E: fmt::Display> fmt::Display for Human<E> {
+    fn fmt(self, f: fmt::Formatter) {
+        fmt::Display::fmt(self.0, f)
+    }
 }
 
 impl<E: CargoError> CargoError for Human<E> {
@@ -191,8 +198,13 @@ pub struct CliError {
 
 impl Error for CliError {
     fn description(&self) -> &str { self.error.description() }
-    fn detail(&self) -> Option<String> { self.error.detail() }
     fn cause(&self) -> Option<&Error> { self.error.cause() }
+}
+
+impl fmt::Display for CliError {
+    fn fmt(self, f: fmt::Formatter) {
+        fmt::Display::fmt(self.error, f)
+    }
 }
 
 impl CliError {

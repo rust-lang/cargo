@@ -89,15 +89,18 @@ pub enum PackageIdError {
 
 impl Error for PackageIdError {
     fn description(&self) -> &str { "failed to parse package id" }
-    fn detail(&self) -> Option<String> {
-        Some(match *self {
+}
+
+impl fmt::Display for PackageIdError {
+    fn fmt(self, f: fmt::Formatter) {
+        match self {
             PackageIdError::InvalidVersion(ref v) => {
-                format!("invalid version: {}", *v)
+                write!(f, "invalid version: {}", *v)
             }
             PackageIdError::InvalidNamespace(ref ns) => {
-                format!("invalid namespace: {}", *ns)
+                write!(f, "invalid namespace: {}", *ns)
             }
-        })
+        }
     }
 }
 
