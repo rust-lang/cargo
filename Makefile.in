@@ -34,6 +34,12 @@ else
 OPT_FLAG=
 endif
 
+ifdef VERBOSE
+VERBOSE_FLAG=--verbose
+else
+VERBOSE_FLAG=
+endif
+
 export CFG_VERSION
 export CFG_DISABLE_CROSS_TESTS
 
@@ -70,10 +76,11 @@ all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 define CARGO_TARGET
 cargo-$(1): $$(CARGO)
 	"$$(CFG_RUSTC)" -V
-	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(ARGS)
+	"$$(CARGO)" --version
+	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(VERBOSE_FLAG) $$(ARGS)
 
 test-unit-$(1): $$(CARGO)
-	$$(CARGO) test --target $(1) $$(only)
+	$$(CARGO) test --target $(1) $$(VERBOSE_FLAG) $$(only)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
