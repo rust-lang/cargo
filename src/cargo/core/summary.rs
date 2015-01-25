@@ -10,7 +10,7 @@ use util::{CargoResult, human};
 /// a package.
 ///
 /// Summaries are cloned, and should not be mutated after creation
-#[derive(Show,Clone)]
+#[derive(Debug,Clone)]
 pub struct Summary {
     package_id: PackageId,
     dependencies: Vec<Dependency>,

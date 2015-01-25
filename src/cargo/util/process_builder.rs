@@ -7,7 +7,7 @@ use std::path::BytesContainer;
 
 use util::{CargoResult, ProcessError, process_error};
 
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ProcessBuilder {
     program: CString,
     args: Vec<CString>,
@@ -15,7 +15,7 @@ pub struct ProcessBuilder {
     cwd: Path,
 }
 
-impl fmt::String for ProcessBuilder {
+impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "`{}", String::from_utf8_lossy(self.program.as_bytes())));
 

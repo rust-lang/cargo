@@ -9,7 +9,7 @@ use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
 /// Contains all the informations about a package, as loaded from a Cargo.toml.
-#[derive(PartialEq,Clone, Show)]
+#[derive(PartialEq,Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
@@ -30,7 +30,7 @@ pub struct Manifest {
 /// validated by cargo itself, but rather it is up to the registry when uploaded
 /// to validate these fields. Cargo will itself accept any valid TOML
 /// specification for these values.
-#[derive(PartialEq, Clone, Show)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct ManifestMetadata {
     pub authors: Vec<String>,
     pub keywords: Vec<String>,
@@ -68,7 +68,7 @@ impl Encodable for Manifest {
     }
 }
 
-#[derive(Show, Clone, PartialEq, Hash, RustcEncodable, Copy)]
+#[derive(Debug, Clone, PartialEq, Hash, RustcEncodable, Copy)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -103,14 +103,14 @@ impl LibKind {
     }
 }
 
-#[derive(Show, Clone, Hash, PartialEq, RustcEncodable)]
+#[derive(Debug, Clone, Hash, PartialEq, RustcEncodable)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
     Example,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Show)]
+#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Debug)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: u32,
@@ -345,7 +345,7 @@ impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Profile {
 }
 
 /// Informations about a binary, a library, an example, etc. that is part of the package.
-#[derive(Clone, Hash, PartialEq, Show)]
+#[derive(Clone, Hash, PartialEq, Debug)]
 pub struct Target {
     kind: TargetKind,
     name: String,

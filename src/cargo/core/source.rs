@@ -43,7 +43,7 @@ pub trait Source: Registry {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
-#[derive(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
     /// Kind::Git(<git reference>) represents a git repository
     Git(GitReference),
@@ -53,7 +53,7 @@ enum Kind {
     Registry,
 }
 
-#[derive(Show, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum GitReference {
     Tag(String),
     Branch(String),
@@ -63,12 +63,12 @@ pub enum GitReference {
 type Error = Box<CargoError + Send>;
 
 /// Unique identifier for a source of packages.
-#[derive(Clone, Eq, Show)]
+#[derive(Clone, Eq, Debug)]
 pub struct SourceId {
     inner: Arc<SourceIdInner>,
 }
 
-#[derive(Eq, Clone, Show)]
+#[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
     url: Url,
     kind: Kind,
@@ -273,11 +273,11 @@ impl Decodable for SourceId {
     }
 }
 
-impl fmt::String for SourceId {
+impl fmt::Display for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self.inner {
             SourceIdInner { kind: Kind::Path, ref url, .. } => {
-                fmt::String::fmt(url, f)
+                fmt::Display::fmt(url, f)
             }
             SourceIdInner { kind: Kind::Git(ref reference), ref url,
                             ref precise, .. } => {

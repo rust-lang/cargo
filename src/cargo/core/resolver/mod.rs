@@ -115,7 +115,7 @@ impl Resolve {
     }
 }
 
-impl fmt::Show for Resolve {
+impl fmt::Debug for Resolve {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.graph.fmt(fmt)
     }

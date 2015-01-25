@@ -4,7 +4,7 @@ use core::{SourceId, Summary, PackageId};
 use util::CargoResult;
 
 /// Informations about a dependency requested by a Cargo manifest.
-#[derive(PartialEq,Clone,Show)]
+#[derive(PartialEq,Clone,Debug)]
 pub struct Dependency {
     name: String,
     source_id: SourceId,
@@ -22,7 +22,7 @@ pub struct Dependency {
     only_for_platform: Option<String>,
 }
 
-#[derive(PartialEq, Clone, Show, Copy)]
+#[derive(PartialEq, Clone, Debug, Copy)]
 pub enum Kind {
     Normal,
     Development,

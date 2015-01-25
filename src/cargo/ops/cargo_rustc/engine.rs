@@ -117,7 +117,7 @@ impl CommandPrototype {
     }
 }
 
-impl fmt::String for CommandPrototype {
+impl fmt::Display for CommandPrototype {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.ty {
             CommandType::Rustc => try!(write!(f, "`rustc")),
@@ -135,7 +135,7 @@ impl fmt::String for CommandPrototype {
     }
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub enum CommandType {
     Rustc,
     Rustdoc,

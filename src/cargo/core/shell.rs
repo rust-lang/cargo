@@ -52,7 +52,7 @@ impl MultiShell {
     }
 
     pub fn status<T, U>(&mut self, status: T, message: U) -> IoResult<()>
-        where T: fmt::String, U: fmt::String
+        where T: fmt::Display, U: fmt::Display
     {
         self.out().say_status(status, message, GREEN)
     }
@@ -129,7 +129,7 @@ impl Shell {
 
     pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)
                             -> IoResult<()>
-        where T: fmt::String, U: fmt::String
+        where T: fmt::Display, U: fmt::Display
     {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
