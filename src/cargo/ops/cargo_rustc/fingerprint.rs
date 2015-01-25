@@ -241,7 +241,7 @@ fn calculate_target_fresh(dep_info: &Path) -> CargoResult<bool> {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
     }));
-    let deps = line.slice_from(pos + 2);
+    let deps = &line[pos + 2..];
 
     let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
     loop {

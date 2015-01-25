@@ -30,7 +30,7 @@ mod job_queue;
 mod layout;
 mod links;
 
-#[derive(PartialEq, Eq, Hash, Show, Copy)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy)]
 pub enum Kind { Host, Target }
 
 #[derive(Default, Clone)]
@@ -67,7 +67,7 @@ pub fn rustc_old_version() -> CargoResult<(String, String)> {
     let triple = {
         let triple = output.as_slice().lines().filter(|l| {
             l.starts_with("host: ")
-        }).map(|l| l.slice_from(6)).next();
+        }).map(|l| &l[6..]).next();
         let triple = try!(triple.chain_error(|| {
             internal("rustc -v didn't have a line for `host:`")
         }));
@@ -86,7 +86,7 @@ pub fn rustc_new_version() -> CargoResult<(String, String)> {
     let triple = {
         let triple = output.as_slice().lines().filter(|l| {
             l.starts_with("host: ")
-        }).map(|l| l.slice_from(6)).next();
+        }).map(|l| &l[6..]).next();
         let triple = try!(triple.chain_error(|| {
             internal("rustc -v didn't have a line for `host:`")
         }));

@@ -87,7 +87,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
     lacking!(description, license || license_file, documentation || homepage || repository);
 
     if !missing.is_empty() {
-        let mut things = missing.slice_to(missing.len() - 1).connect(", ");
+        let mut things = missing[..missing.len() - 1].connect(", ");
         // things will be empty if and only if length == 1 (i.e. the only case to have no `or`).
         if !things.is_empty() {
             things.push_str(" or ");

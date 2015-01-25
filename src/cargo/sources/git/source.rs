@@ -1,4 +1,4 @@
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::mem;
 use url::{self, Url};
@@ -134,7 +134,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
             if needs_chopping {
                 let last = rel.path.pop().unwrap();
                 let last = last.as_slice();
-                rel.path.push(last.slice_to(last.len() - 4).to_string())
+                rel.path.push(last[..last.len() - 4].to_string())
             }
         }
         _ => {}
@@ -143,7 +143,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
     return url;
 }
 
-impl<'a, 'b> Show for GitSource<'a, 'b> {
+impl<'a, 'b> Debug for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "git repo at {}", self.remote.get_url()));
 

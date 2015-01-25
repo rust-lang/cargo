@@ -72,7 +72,7 @@ impl<N: Eq + Hash<Hasher> + Clone> Graph<N> {
     }
 }
 
-impl<N: fmt::Show + Eq + Hash<Hasher>> fmt::Show for Graph<N> {
+impl<N: fmt::Debug + Eq + Hash<Hasher>> fmt::Debug for Graph<N> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         try!(writeln!(fmt, "Graph {{"));
 

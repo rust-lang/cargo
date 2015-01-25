@@ -105,7 +105,7 @@ impl Registry {
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners });
+        let body = json::encode(&OwnersReq { users: owners }).unwrap();
         let body = try!(self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes()));
         assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
@@ -113,7 +113,7 @@ impl Registry {
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners });
+        let body = json::encode(&OwnersReq { users: owners }).unwrap();
         let body = try!(self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes())));
         assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
@@ -126,7 +126,7 @@ impl Registry {
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
-        let json = json::encode(krate);
+        let json = json::encode(krate).unwrap();
         // Prepare the body. The format of the upload request is:
         //
         //      <le u32 of json>
@@ -233,7 +233,7 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
     Ok(body)
 }
 
-impl fmt::String for Error {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::NonUtf8Body => write!(f, "reponse body was not utf-8"),

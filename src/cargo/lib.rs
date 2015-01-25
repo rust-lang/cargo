@@ -107,7 +107,7 @@ pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
     match result {
         Err(e) => handle_error(e, shell),
         Ok(Some(encodable)) => {
-            let encoded = json::encode(&encodable);
+            let encoded = json::encode(&encodable).unwrap();
             println!("{}", encoded);
         }
         _ => {}
@@ -134,16 +134,10 @@ pub fn shell(verbose: bool) -> MultiShell {
 // `output` print variant error strings to either stderr or stdout.
 // For fatal errors, print to stderr;
 // and for others, e.g. docopt version info, print to stdout.
-fn output(caption: Option<&str>, detail: Option<String>,
-          shell: &mut MultiShell, fatal: bool) {
+fn output(err: String, shell: &mut MultiShell, fatal: bool) {
     let std_shell = if fatal {shell.err()} else {shell.out()};
-    if let Some(caption) = caption {
-        let color = if fatal {RED} else {BLACK};
-        let _ = std_shell.say(caption, color);
-    }
-    if let Some(detail) = detail {
-        let _ = std_shell.say(detail, BLACK); // always black
-    }
+    let color = if fatal {RED} else {BLACK};
+    let _ = std_shell.say(err, color);
 }
 
 pub fn handle_error(err: CliError, shell: &mut MultiShell) {
@@ -153,17 +147,13 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     let fatal = exit_code != 0; // exit_code == 0 is non-fatal error
 
 
-    let desc = error.description();
-    let hide_desc = unknown && !shell.get_verbose();
-    if hide_desc {
-        output(Some("An unknown error occurred"), None, shell, fatal);
-    } else if desc.len() > 0 {
-        output(Some(desc), None, shell, fatal);
+    let hide = unknown && !shell.get_verbose();
+    if hide {
+        let _ = shell.err().say("An unknown error occurred", RED);
+    } else {
+        output(error.to_string(), shell, fatal);
     }
-    if shell.get_verbose() {
-        output(None, error.detail(), shell, fatal);
-    }
-    if !handle_cause(&*error, shell) || (hide_desc && !desc.is_empty()) {
+    if !handle_cause(&*error, shell) || hide {
         let _ = shell.err().say("\nTo learn more, run the command again \
                                  with --verbose.".to_string(), BLACK);
     }
@@ -180,23 +170,18 @@ fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
             None => { err = cargo_err.cause(); break }
         };
         if !verbose && !cargo_err.is_human() { return false }
-        print(cargo_err.description(), cargo_err.detail(), shell);
+        print(cargo_err.to_string(), shell);
     }
     loop {
         let cause = match err { Some(err) => err, None => return true };
         if !verbose { return false }
-        print(cause.description(), cause.detail(), shell);
+        print(cause.to_string(), shell);
         err = cause.cause();
     }
 
-    fn print(desc: &str, detail: Option<String>, shell: &mut MultiShell) {
+    fn print(error: String, shell: &mut MultiShell) {
         let _ = shell.err().say("\nCaused by:", BLACK);
-        let _ = shell.err().say(format!("  {}", desc), BLACK);
-        if shell.get_verbose() {
-            if let Some(detail) = detail {
-                let _ = shell.err().say(detail, BLACK);
-            }
-        }
+        let _ = shell.err().say(format!("  {}", error), BLACK);
     }
 }
 

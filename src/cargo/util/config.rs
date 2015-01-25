@@ -114,10 +114,11 @@ impl<'a> Config<'a> {
                 CV::Boolean(_, ref path) => {
                     let idx = key.split('.').take(i)
                                  .fold(0, |n, s| n + s.len()) + i - 1;
-                    let key_so_far = key.slice_to(idx);
+                    let key_so_far = &key[..idx];
                     return Err(human(format!("expected table for configuration \
-                                              key `{}`, but found {} in {:?}",
-                                             key_so_far, val.desc(), path)));
+                                              key `{}`, but found {} in {}",
+                                             key_so_far, val.desc(),
+                                             path.display())));
                 }
             }
         }
@@ -163,13 +164,13 @@ impl<'a> Config<'a> {
             let contents = try!(file.read_to_string());
             let table = try!(cargo_toml::parse(contents.as_slice(),
                                                &path).chain_error(|| {
-                human(format!("could not parse TOML configuration in `{:?}`",
-                              path))
+                human(format!("could not parse TOML configuration in `{}`",
+                              path.display()))
             }));
             let toml = toml::Value::Table(table);
             let value = try!(CV::from_toml(&path, toml).chain_error(|| {
-                human(format!("failed to load TOML configuration from `{:?}`",
-                              path))
+                human(format!("failed to load TOML configuration from `{}`",
+                              path.display()))
             }));
             try!(cfg.merge(value));
             Ok(())
@@ -199,19 +200,22 @@ pub enum ConfigValue {
     Boolean(bool, Path),
 }
 
-impl fmt::Show for ConfigValue {
+impl fmt::Debug for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            CV::Integer(i, ref path) => write!(f, "{} (from {:?})", i, path),
-            CV::Boolean(b, ref path) => write!(f, "{} (from {:?})", b, path),
-            CV::String(ref s, ref path) => write!(f, "{} (from {:?})", s, path),
+            CV::Integer(i, ref path) => write!(f, "{} (from {})", i,
+                                               path.display()),
+            CV::Boolean(b, ref path) => write!(f, "{} (from {})", b,
+                                               path.display()),
+            CV::String(ref s, ref path) => write!(f, "{} (from {})", s,
+                                                  path.display()),
             CV::List(ref list, ref path) => {
                 try!(write!(f, "["));
                 for (i, &(ref s, ref path)) in list.iter().enumerate() {
                     if i > 0 { try!(write!(f, ", ")); }
                     try!(write!(f, "{} (from {})", s, path.display()));
                 }
-                write!(f, "] (from {:?})", path)
+                write!(f, "] (from {})", path.display())
             }
             CV::Table(ref table, _) => write!(f, "{:?}", table),
         }
@@ -357,8 +361,9 @@ impl ConfigValue {
     }
 
     fn expected<T>(&self, wanted: &str) -> CargoResult<T> {
-        Err(internal(format!("expected a {}, but found a {} in {:?}",
-                             wanted, self.desc(), self.definition_path())))
+        Err(internal(format!("expected a {}, but found a {} in {}",
+                             wanted, self.desc(),
+                             self.definition_path().display())))
     }
 
     fn into_toml(self) -> toml::Value {

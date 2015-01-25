@@ -334,7 +334,7 @@ fn resolving_but_no_exists() {
     ], &mut reg);
     assert!(res.is_err());
 
-    assert_eq!(res.unwrap_err().to_string(), "\
+    assert_eq!(res.err().unwrap().to_string(), "\
 no matching package named `foo` found (required by `root`)
 location searched: registry http://example.com/
 version required: ^1\

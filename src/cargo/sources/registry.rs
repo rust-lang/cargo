@@ -367,9 +367,9 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let path = match fs_name.len() {
             1 => path.join("1").join(fs_name),
             2 => path.join("2").join(fs_name),
-            3 => path.join("3").join(fs_name.slice_to(1)).join(fs_name),
-            _ => path.join(fs_name.slice(0, 2))
-                     .join(fs_name.slice(2, 4))
+            3 => path.join("3").join(&fs_name[..1]).join(fs_name),
+            _ => path.join(&fs_name[0..2])
+                     .join(&fs_name[2..4])
                      .join(fs_name),
         };
         let summaries = match File::open(&path) {

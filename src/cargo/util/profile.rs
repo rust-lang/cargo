@@ -16,7 +16,7 @@ pub struct Profiler {
 
 fn enabled() -> bool { os::getenv("CARGO_PROFILE").is_some() }
 
-pub fn start<T: fmt::String>(desc: T) -> Profiler {
+pub fn start<T: fmt::Display>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }
 
     PROFILE_STACK.with(|stack| stack.borrow_mut().push(time::precise_time_ns()));
@@ -42,7 +42,7 @@ impl Drop for Profiler {
                     println!("{} {:6}ms - {}", repeat("    ").take(lvl + 1).collect::<String>(),
                         time / 1000000, msg);
 
-                    print(lvl + 1, msgs.slice(last, i));
+                    print(lvl + 1, &msgs[last..i]);
                     last = i;
                 }
 
