@@ -202,9 +202,9 @@ fn list_commands() -> BTreeSet<String> {
             if filename.starts_with(command_prefix) &&
                     filename.ends_with(os::consts::EXE_SUFFIX) &&
                     is_executable(entry) {
-                let command = filename.slice(
-                    command_prefix.len(),
-                    filename.len() - os::consts::EXE_SUFFIX.len());
+                let command = &filename[
+                    command_prefix.len()..
+                    filename.len() - os::consts::EXE_SUFFIX.len()];
                 commands.insert(String::from_str(command));
             }
         }

@@ -1031,8 +1031,8 @@ test!(build_script_with_dynamic_native_dependency {
             lib.ends_with(os::consts::DLL_SUFFIX)
     }).unwrap();
     let libname = lib.filename_str().unwrap();
-    let libname = libname.slice(os::consts::DLL_PREFIX.len(),
-                                libname.len() - os::consts::DLL_SUFFIX.len());
+    let libname = &libname[os::consts::DLL_PREFIX.len()..
+                           libname.len() - os::consts::DLL_SUFFIX.len()];
 
     let foo = project("foo")
         .file("Cargo.toml", r#"

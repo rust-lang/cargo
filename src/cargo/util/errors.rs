@@ -17,17 +17,11 @@ pub type CargoResult<T> = Result<T, Box<CargoError>>;
 // =============================================================================
 // CargoError trait
 
-pub trait CargoError: Error {
+pub trait CargoError: Error + Send {
     fn is_human(&self) -> bool { false }
     fn cargo_cause(&self) -> Option<&CargoError>{ None }
 }
 
-impl fmt::Display for Box<CargoError> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}", self.description()));
-        Ok(())
-    }
-}
 impl fmt::Debug for Box<CargoError> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
@@ -91,8 +85,8 @@ impl<E: Error> Error for ChainedError<E> {
 }
 
 impl<E: fmt::Display> fmt::Display for ChainedError<E> {
-    fn fmt(&self, f: fmt::Formatter) {
-        fmt::Display::fmt(self.error, f)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.error, f)
     }
 }
 
@@ -135,13 +129,17 @@ impl fmt::Debug for ProcessError {
 struct ConcreteCargoError {
     description: String,
     detail: Option<String>,
-    cause: Option<Box<Error>>,
+    cause: Option<Box<Error+Send>>,
     is_human: bool,
 }
 
 impl fmt::Display for ConcreteCargoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.description)
+        try!(write!(f, "{}", self.description));
+        if let Some(ref s) = self.detail {
+            try!(write!(f, " ({})", s));
+        }
+        Ok(())
     }
 }
 impl fmt::Debug for ConcreteCargoError {
@@ -153,7 +151,9 @@ impl fmt::Debug for ConcreteCargoError {
 impl Error for ConcreteCargoError {
     fn description(&self) -> &str { self.description.as_slice() }
     fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|c| &**c)
+        self.cause.as_ref().map(|c| {
+            let e: &Error = &**c; e
+        })
     }
 }
 
@@ -174,8 +174,8 @@ impl<E: Error> Error for Human<E> {
 }
 
 impl<E: fmt::Display> fmt::Display for Human<E> {
-    fn fmt(self, f: fmt::Formatter) {
-        fmt::Display::fmt(self.0, f)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
     }
 }
 
@@ -202,8 +202,8 @@ impl Error for CliError {
 }
 
 impl fmt::Display for CliError {
-    fn fmt(self, f: fmt::Formatter) {
-        fmt::Display::fmt(self.error, f)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.error, f)
     }
 }
 
@@ -330,11 +330,11 @@ pub fn human<S: fmt::Display>(error: S) -> Box<CargoError> {
     })
 }
 
-pub fn caused_human<S: fmt::Display, E: Error>(error: S, cause: E) -> Box<CargoError> {
+pub fn caused_human<S: fmt::Display, E: Error + Send>(error: S, cause: E) -> Box<CargoError> {
     Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,
-        cause: Some(Box::new(cause) as Box<Error>),
+        cause: Some(Box::new(cause) as Box<Error + Send>),
         is_human: true
     })
 }

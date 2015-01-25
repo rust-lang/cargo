@@ -349,7 +349,7 @@ impl Execs {
 fn lines_match(expected: &str, mut actual: &str) -> bool {
     for part in expected.split_str("[..]") {
         match actual.find_str(part) {
-            Some(i) => actual = actual.slice_from(i + part.len()),
+            Some(i) => actual = &actual[i + part.len()..],
             None => {
                 return false
             }
@@ -485,7 +485,7 @@ pub fn basic_lib_manifest(name: &str) -> String {
 }
 
 pub fn path2url(p: Path) -> Url {
-    Url::from_file_path(&p).unwrap()
+    Url::from_file_path(&p).ok().unwrap()
 }
 
 pub static RUNNING:     &'static str = "     Running";

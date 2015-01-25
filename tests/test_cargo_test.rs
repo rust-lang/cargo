@@ -151,6 +151,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
         sep = path::SEP))
               .with_stderr(format!("\
 thread '<main>' panicked at 'Some tests failed', [..]
+
 "))
               .with_status(101));
 });

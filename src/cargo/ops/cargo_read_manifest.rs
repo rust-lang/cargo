@@ -13,8 +13,8 @@ pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
                      -> CargoResult<(Manifest, Vec<Path>)> {
     let root = layout.root.clone();
     util::toml::to_manifest(contents, source_id, layout, config).chain_error(|| {
-        human(format!("failed to parse manifest at `{:?}`",
-                      root.join("Cargo.toml")))
+        human(format!("failed to parse manifest at `{}`",
+                      root.join("Cargo.toml").display()))
     })
 }
 

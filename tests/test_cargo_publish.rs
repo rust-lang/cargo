@@ -12,9 +12,9 @@ use support::git::repo;
 use hamcrest::assert_that;
 
 fn registry_path() -> Path { paths::root().join("registry") }
-fn registry() -> Url { Url::from_file_path(&registry_path()).unwrap() }
+fn registry() -> Url { Url::from_file_path(&registry_path()).ok().unwrap() }
 fn upload_path() -> Path { paths::root().join("upload") }
-fn upload() -> Url { Url::from_file_path(&upload_path()).unwrap() }
+fn upload() -> Url { Url::from_file_path(&upload_path()).ok().unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");

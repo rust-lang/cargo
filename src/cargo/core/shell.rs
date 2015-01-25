@@ -94,7 +94,7 @@ impl Shell {
         if config.tty && config.color {
             let term = TerminfoTerminal::new(out);
             term.map(|t| Shell {
-                terminal: Colored(t),
+                terminal: Colored(Box::new(t)),
                 config: config
             }).unwrap_or_else(|| {
                 Shell { terminal: NoColor(Box::new(stderr())), config: config }

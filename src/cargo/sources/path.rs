@@ -74,12 +74,15 @@ impl<'a, 'b> PathSource<'a, 'b> {
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
         let root = pkg.get_manifest_path().dir_path();
 
-        let exclude = pkg.get_manifest().get_exclude().iter().map(|p| {
-            Pattern::new(p.as_slice())
-        }).collect::<Vec<Pattern>>();
-        let include = pkg.get_manifest().get_include().iter().map(|p| {
-            Pattern::new(p.as_slice())
-        }).collect::<Vec<Pattern>>();
+        let parse = |&: p: &String| {
+            Pattern::new(p.as_slice()).map_err(|e| {
+                human(format!("could not parse pattern `{}`: {}", p, e))
+            })
+        };
+        let exclude = try!(pkg.get_manifest().get_exclude().iter()
+                              .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
+        let include = try!(pkg.get_manifest().get_include().iter()
+                              .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
 
         let mut filter = |&mut: p: &Path| {
             let relative_path = p.path_relative_from(&root).unwrap();

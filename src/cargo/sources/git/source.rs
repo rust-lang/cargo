@@ -134,7 +134,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
             if needs_chopping {
                 let last = rel.path.pop().unwrap();
                 let last = last.as_slice();
-                rel.path.push(last.slice_to(last.len() - 4).to_string())
+                rel.path.push(last[..last.len() - 4].to_string())
             }
         }
         _ => {}

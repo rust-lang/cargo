@@ -185,6 +185,7 @@ test bench_hello ... ",
 thread '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src{sep}foo.rs:14
+
 ", sep = path::SEP))
               .with_status(101));
 });

@@ -42,7 +42,7 @@ impl Drop for Profiler {
                     println!("{} {:6}ms - {}", repeat("    ").take(lvl + 1).collect::<String>(),
                         time / 1000000, msg);
 
-                    print(lvl + 1, msgs.slice(last, i));
+                    print(lvl + 1, &msgs[last..i]);
                     last = i;
                 }
 

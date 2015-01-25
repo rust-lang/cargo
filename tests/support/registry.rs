@@ -13,9 +13,9 @@ use support::git::repo;
 use cargo::util::Sha256;
 
 pub fn registry_path() -> Path { paths::root().join("registry") }
-pub fn registry() -> Url { Url::from_file_path(&registry_path()).unwrap() }
+pub fn registry() -> Url { Url::from_file_path(&registry_path()).ok().unwrap() }
 pub fn dl_path() -> Path { paths::root().join("dl") }
-pub fn dl_url() -> Url { Url::from_file_path(&dl_path()).unwrap() }
+pub fn dl_url() -> Url { Url::from_file_path(&dl_path()).ok().unwrap() }
 
 pub fn init() {
     let config = paths::home().join(".cargo/config");

@@ -92,8 +92,8 @@ impl Error for PackageIdError {
 }
 
 impl fmt::Display for PackageIdError {
-    fn fmt(self, f: fmt::Formatter) {
-        match self {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
             PackageIdError::InvalidVersion(ref v) => {
                 write!(f, "invalid version: {}", *v)
             }

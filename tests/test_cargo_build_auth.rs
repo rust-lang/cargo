@@ -164,10 +164,10 @@ Caused by:
 ",
         addr = addr,
         errmsg = if cfg!(windows) {
-            "failed to send request: The connection with the server \
+            "[[..]] failed to send request: The connection with the server \
              was terminated abnormally\n"
         } else {
-            "SSL error: [..]"
+            "[[..]] SSL error: [..]"
         })));
 
     t.join().ok().unwrap();
@@ -210,7 +210,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  Failed to start SSH session: Failed getting banner
+  [[..]] Failed to start SSH session: Failed getting banner
 ",
         addr = addr)));
     t.join().ok().unwrap();

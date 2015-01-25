@@ -128,7 +128,7 @@ impl SourceId {
                 SourceId::new(Kind::Registry, url)
                          .with_precise(Some("locked".to_string()))
             }
-            "path" => SourceId::for_path(&Path::new(url.slice_from(5))).unwrap(),
+            "path" => SourceId::for_path(&Path::new(&url[5..])).unwrap(),
             _ => panic!("Unsupported serialized SourceId")
         }
     }
@@ -285,7 +285,7 @@ impl fmt::Display for SourceId {
 
                 match *precise {
                     Some(ref s) => {
-                        try!(write!(f, "#{}", s.as_slice().slice_to(8)));
+                        try!(write!(f, "#{}", &s[..8]));
                     }
                     None => {}
                 }
