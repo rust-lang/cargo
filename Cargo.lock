@@ -10,6 +10,7 @@ dependencies = [
  "glob 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git)",
  "log 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "registry 0.1.0",
  "rustc-serialize 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -23,6 +23,7 @@ docopt = "0.6"
 url = "0.2"
 rustc-serialize = "0.2"
 term = "0.1"
+regex = "0.1"
 
 [target.i686-pc-windows-gnu.dependencies]
 winapi = "0.1"
