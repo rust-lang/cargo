@@ -239,7 +239,7 @@ Next, let's peek at the library itself:
 ```rust,ignore
 // src/main.rs
 
-include!(concat!(env!("OUT_DIR"), "/hello.rs"))
+include!(concat!(env!("OUT_DIR"), "/hello.rs"));
 
 fn main() {
     println!("{}", message());
