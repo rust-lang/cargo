@@ -15,9 +15,6 @@ pub trait Registry {
 
 impl Registry for Vec<Summary> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        debug!("querying for {:?}, summaries={:?}", dep,
-               self.iter().map(|s| s.get_package_id()).collect::<Vec<_>>());
-
         Ok(self.iter().filter(|summary| dep.matches(*summary))
                .map(|summary| summary.clone()).collect())
     }
@@ -83,8 +80,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
     }
 
     pub fn get(&mut self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packags; sources={}; ids={:?}", self.sources.len(),
-             package_ids);
+        log!(5, "getting packages; sources={}", self.sources.len());
 
         // TODO: Only call source with package ID if the package came from the
         // source

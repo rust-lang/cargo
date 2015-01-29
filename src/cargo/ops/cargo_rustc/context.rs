@@ -5,14 +5,15 @@ use std::sync::Arc;
 
 use regex::Regex;
 
-use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target};
+use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
 use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
-use super::{Kind, Compilation, BuildConfig};
 use super::TargetConfig;
-use super::layout::{Layout, LayoutProxy};
 use super::custom_build::BuildState;
+use super::fingerprint::Fingerprint;
+use super::layout::{Layout, LayoutProxy};
+use super::{Kind, Compilation, BuildConfig};
 use super::{ProcessEngine, ExecEngine};
 
 #[derive(Debug, Copy)]
@@ -29,6 +30,7 @@ pub struct Context<'a, 'b: 'a> {
     pub compilation: Compilation,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
+    pub fingerprints: HashMap<(&'a PackageId, &'a Target, Kind), Fingerprint>,
 
     env: &'a str,
     host: Layout,
@@ -80,6 +82,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
             build_config: build_config,
             exec_engine: Arc::new(Box::new(ProcessEngine) as Box<ExecEngine>),
+            fingerprints: HashMap::new(),
         })
     }
 
@@ -356,6 +359,23 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// Requested (not actual) target for the build
     pub fn requested_target(&self) -> Option<&str> {
         self.build_config.requested_target.as_ref().map(|s| &s[])
+    }
+
+    /// Calculate the actual profile to use for a target's compliation.
+    ///
+    /// This may involve overriding some options such as debug information,
+    /// rpath, opt level, etc.
+    pub fn profile(&self, target: &Target) -> Profile {
+        let mut profile = target.get_profile().clone();
+        let root_package = self.get_package(self.resolve.root());
+        for target in root_package.get_manifest().get_targets().iter() {
+            let root_profile = target.get_profile();
+            if root_profile.get_env() != profile.get_env() { continue }
+            profile = profile.opt_level(root_profile.get_opt_level())
+                             .debug(root_profile.get_debug())
+                             .rpath(root_profile.get_rpath())
+        }
+        profile
     }
 }
 

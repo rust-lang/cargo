@@ -61,7 +61,9 @@ impl PathExt for Path {
         if self.is_file() {
             try!(time_travel(self));
         } else {
+            let target = self.join("target");
             for f in try!(fs::walk_dir(self)) {
+                if target.is_ancestor_of(&f) { continue }
                 if !f.is_file() { continue }
                 try!(time_travel(&f));
             }
