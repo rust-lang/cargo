@@ -360,7 +360,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 }
 
 impl Platform {
-    fn combine(self, other: Platform) -> Platform {
+    pub fn combine(self, other: Platform) -> Platform {
         match (self, other) {
             (Platform::Target, Platform::Target) => Platform::Target,
             (Platform::Plugin, Platform::Plugin) => Platform::Plugin,

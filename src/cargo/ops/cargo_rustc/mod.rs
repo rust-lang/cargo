@@ -284,10 +284,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         // it once per context.
         if !target.get_profile().is_custom_build() { continue }
         let mut reqs = Vec::new();
-        let requirement = targets.iter().find(|t| {
-            !t.get_profile().is_custom_build() && !t.get_profile().is_doc()
-        }).map(|&other_target| {
-            cx.get_requirement(pkg, other_target)
+        let requirement = targets.iter().fold(None::<Platform>, |req, t| {
+            if !t.get_profile().is_custom_build() && !t.get_profile().is_doc() {
+                let r2 = cx.get_requirement(pkg, *t);
+                req.map(|r| r.combine(r2)).or(Some(r2))
+            } else {
+                req
+            }
         }).unwrap_or(Platform::Target);
         match requirement {
             Platform::Target => reqs.push(Platform::Target),
@@ -369,6 +372,7 @@ fn rustc(package: &Package, target: &Target,
 
         Ok((Work::new(move |desc_tx| {
             let mut rustc = rustc;
+            debug!("about to run: {}", rustc);
 
             // Only at runtime have we discovered what the extra -L and -l
             // arguments are for native libraries, so we process those here. We
@@ -412,6 +416,7 @@ fn rustc(package: &Package, target: &Target,
                        pass_l_flag: bool,
                        current_id: &PackageId) -> CommandPrototype {
         for id in native_lib_deps.into_iter() {
+            debug!("looking up {} {:?}", id, kind);
             let output = &build_state[(id.clone(), kind)];
             for path in output.library_paths.iter() {
                 rustc = rustc.arg("-L").arg(path);
