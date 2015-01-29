@@ -8,7 +8,7 @@ use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use util::{CargoResult, Graph, human, ChainError};
+use util::{CargoResult, Graph, human, ChainError, CargoError};
 use util::profile;
 use util::graph::{Nodes, Edges};
 
@@ -129,15 +129,15 @@ struct Context {
 }
 
 /// Builds the list of all packages required to build the first argument.
-pub fn resolve<R: Registry>(summary: &Summary, method: Method,
-                            registry: &mut R) -> CargoResult<Resolve> {
+pub fn resolve(summary: &Summary, method: Method,
+               registry: &mut Registry) -> CargoResult<Resolve> {
     log!(5, "resolve; summary={:?}", summary);
 
-    let mut cx = Context {
+    let mut cx = Box::new(Context {
         resolve: Resolve::new(summary.get_package_id().clone()),
         activations: HashMap::new(),
         visited: Rc::new(RefCell::new(HashSet::new())),
-    };
+    });
     let _p = profile::start(format!("resolving: {:?}", summary));
     cx.activations.insert((summary.get_name().to_string(),
                            summary.get_source_id().clone()),
@@ -148,11 +148,11 @@ pub fn resolve<R: Registry>(summary: &Summary, method: Method,
     }
 }
 
-fn activate<R: Registry>(mut cx: Context,
-                         registry: &mut R,
-                         parent: &Summary,
-                         method: Method)
-                         -> CargoResult<CargoResult<Context>> {
+fn activate(mut cx: Box<Context>,
+            registry: &mut Registry,
+            parent: &Summary,
+            method: Method)
+            -> CargoResult<CargoResult<Box<Context>>> {
     // Extracting the platform request.
     let platform = match method {
         Method::Required(_, _, _, platform) => platform,
@@ -162,7 +162,7 @@ fn activate<R: Registry>(mut cx: Context,
     // First, figure out our set of dependencies based on the requsted set of
     // features. This also calculates what features we're going to enable for
     // our own dependencies.
-    let deps = try!(resolve_features(&mut cx, parent, method));
+    let deps = try!(resolve_features(&mut *cx, parent, method));
 
     // Next, transform all dependencies into a list of possible candidates which
     // can satisfy that dependency.
@@ -188,12 +188,12 @@ fn activate<R: Registry>(mut cx: Context,
     activate_deps(cx, registry, parent, platform, deps.as_slice(), 0)
 }
 
-fn activate_deps<'a, R: Registry>(cx: Context,
-                                  registry: &mut R,
-                                  parent: &Summary,
-                                  platform: Option<&'a str>,
-                                  deps: &'a [(&Dependency, Vec<Rc<Summary>>, Vec<String>)],
-                                  cur: usize) -> CargoResult<CargoResult<Context>> {
+fn activate_deps<'a>(cx: Box<Context>,
+                     registry: &mut Registry,
+                     parent: &Summary,
+                     platform: Option<&'a str>,
+                     deps: &'a [(&Dependency, Vec<Rc<Summary>>, Vec<String>)],
+                     cur: usize) -> CargoResult<CargoResult<Box<Context>>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
     let method = Method::Required(false, features.as_slice(),
@@ -238,6 +238,7 @@ fn activate_deps<'a, R: Registry>(cx: Context,
              candidate.get_version());
         let mut my_cx = cx.clone();
         let early_return = {
+            let my_cx = &mut *my_cx;
             my_cx.resolve.graph.link(parent.get_package_id().clone(),
                                      candidate.get_package_id().clone());
             let prev = match my_cx.activations.entry(key.clone()) {
@@ -262,8 +263,8 @@ fn activate_deps<'a, R: Registry>(cx: Context,
             my_cx
         } else {
             // Dependency graphs are required to be a DAG. Non-transitive
-            // dependencies (dev-deps), however, can never introduce a cycle, so we
-            // skip them.
+            // dependencies (dev-deps), however, can never introduce a cycle, so
+            // we skip them.
             if dep.is_transitive() &&
                !cx.visited.borrow_mut().insert(candidate.get_package_id().clone()) {
                 return Err(human(format!("cyclic package dependency: package `{}` \
@@ -289,88 +290,98 @@ fn activate_deps<'a, R: Registry>(cx: Context,
 
     // Oh well, we couldn't activate any of the candidates, so we just can't
     // activate this dependency at all
-    Ok(match last_err {
-        Some(e) => Err(e),
-        None if candidates.len() > 0 => {
-            let mut msg = format!("failed to select a version for `{}` \
-                                   (required by `{}`):\n\
-                                   all possible versions conflict with \
-                                   previously selected versions of `{}`",
-                                  dep.get_name(), parent.get_name(),
-                                  dep.get_name());
-            'outer: for v in prev_active.iter() {
-                for node in cx.resolve.graph.iter() {
-                    let mut edges = match cx.resolve.graph.edges(node) {
-                        Some(edges) => edges,
-                        None => continue,
-                    };
-                    for edge in edges {
-                        if edge != v.get_package_id() { continue }
+    Ok(activation_error(&*cx, registry, last_err, parent, dep, prev_active,
+                        &candidates[]))
+}
 
-                        msg.push_str(format!("\n  version {} in use by {}",
-                                             v.get_version(), edge).as_slice());
-                        continue 'outer;
-                    }
-                }
-                msg.push_str(format!("\n  version {} in use by ??",
-                                     v.get_version()).as_slice());
-            }
-
-            msg.push_str(&format!("\n  possible versions to select: {}",
-                                  candidates.iter()
-                                            .map(|v| v.get_version())
-                                            .map(|v| v.to_string())
-                                            .collect::<Vec<_>>()
-                                            .connect(", "))[]);
-
-            Err(human(msg))
-        }
-        None => {
-            // Once we're all the way down here, we're definitely lost in the
-            // weeds! We didn't actually use any candidates above, so we need to
-            // give an error message that nothing was found.
-            //
-            // Note that we re-query the registry with a new dependency that
-            // allows any version so we can give some nicer error reporting
-            // which indicates a few versions that were actually found.
-            let msg = format!("no matching package named `{}` found \
-                               (required by `{}`)\n\
-                               location searched: {}\n\
-                               version required: {}",
+fn activation_error(cx: &Context,
+                    registry: &mut Registry,
+                    err: Option<Box<CargoError>>,
+                    parent: &Summary,
+                    dep: &Dependency,
+                    prev_active: &[Rc<Summary>],
+                    candidates: &[Rc<Summary>]) -> CargoResult<Box<Context>> {
+    match err {
+        Some(e) => return Err(e),
+        None => {}
+    }
+    if candidates.len() > 0 {
+        let mut msg = format!("failed to select a version for `{}` \
+                               (required by `{}`):\n\
+                               all possible versions conflict with \
+                               previously selected versions of `{}`",
                               dep.get_name(), parent.get_name(),
-                              dep.get_source_id(),
-                              dep.get_version_req());
-            let mut msg = msg;
-            let all_req = semver::VersionReq::parse("*").unwrap();
-            let new_dep = dep.clone().version_req(all_req);
-            let mut candidates = try!(registry.query(&new_dep));
-            candidates.sort_by(|a, b| {
-                b.get_version().cmp(a.get_version())
-            });
-            if candidates.len() > 0 {
-                msg.push_str("\nversions found: ");
-                for (i, c) in candidates.iter().take(3).enumerate() {
-                    if i != 0 { msg.push_str(", "); }
-                    msg.push_str(c.get_version().to_string().as_slice());
-                }
-                if candidates.len() > 3 {
-                    msg.push_str(", ...");
+                              dep.get_name());
+        'outer: for v in prev_active.iter() {
+            for node in cx.resolve.graph.iter() {
+                let mut edges = match cx.resolve.graph.edges(node) {
+                    Some(edges) => edges,
+                    None => continue,
+                };
+                for edge in edges {
+                    if edge != v.get_package_id() { continue }
+
+                    msg.push_str(format!("\n  version {} in use by {}",
+                                         v.get_version(), edge).as_slice());
+                    continue 'outer;
                 }
             }
-
-            // If we have a path dependency with a locked version, then this may
-            // indicate that we updated a sub-package and forgot to run `cargo
-            // update`. In this case try to print a helpful error!
-            if dep.get_source_id().is_path() &&
-               dep.get_version_req().to_string().starts_with("=") &&
-               candidates.len() > 0 {
-                msg.push_str("\nconsider running `cargo update` to update \
-                              a path dependency's locked version");
-
-            }
-            Err(human(msg))
+            msg.push_str(format!("\n  version {} in use by ??",
+                                 v.get_version()).as_slice());
         }
-    })
+
+        msg.push_str(&format!("\n  possible versions to select: {}",
+                              candidates.iter()
+                                        .map(|v| v.get_version())
+                                        .map(|v| v.to_string())
+                                        .collect::<Vec<_>>()
+                                        .connect(", "))[]);
+
+        return Err(human(msg))
+    }
+    // Once we're all the way down here, we're definitely lost in the
+    // weeds! We didn't actually use any candidates above, so we need to
+    // give an error message that nothing was found.
+    //
+    // Note that we re-query the registry with a new dependency that
+    // allows any version so we can give some nicer error reporting
+    // which indicates a few versions that were actually found.
+    let msg = format!("no matching package named `{}` found \
+                       (required by `{}`)\n\
+                       location searched: {}\n\
+                       version required: {}",
+                      dep.get_name(), parent.get_name(),
+                      dep.get_source_id(),
+                      dep.get_version_req());
+    let mut msg = msg;
+    let all_req = semver::VersionReq::parse("*").unwrap();
+    let new_dep = dep.clone().version_req(all_req);
+    let mut candidates = try!(registry.query(&new_dep));
+    candidates.sort_by(|a, b| {
+        b.get_version().cmp(a.get_version())
+    });
+    if candidates.len() > 0 {
+        msg.push_str("\nversions found: ");
+        for (i, c) in candidates.iter().take(3).enumerate() {
+            if i != 0 { msg.push_str(", "); }
+            msg.push_str(c.get_version().to_string().as_slice());
+        }
+        if candidates.len() > 3 {
+            msg.push_str(", ...");
+        }
+    }
+
+    // If we have a path dependency with a locked version, then this may
+    // indicate that we updated a sub-package and forgot to run `cargo
+    // update`. In this case try to print a helpful error!
+    if dep.get_source_id().is_path() &&
+       dep.get_version_req().to_string().starts_with("=") &&
+       candidates.len() > 0 {
+        msg.push_str("\nconsider running `cargo update` to update \
+                      a path dependency's locked version");
+
+    }
+    Err(human(msg))
 }
 
 // Returns if `a` and `b` are compatible in the semver sense. This is a
