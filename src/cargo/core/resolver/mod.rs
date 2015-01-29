@@ -131,28 +131,44 @@ struct Context {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summary: &Summary, method: Method,
                registry: &mut Registry) -> CargoResult<Resolve> {
-    log!(5, "resolve; summary={:?}", summary);
+    log!(5, "resolve; summary={}", summary.get_package_id());
+    let summary = Rc::new(summary.clone());
 
-    let mut cx = Box::new(Context {
+    let cx = Box::new(Context {
         resolve: Resolve::new(summary.get_package_id().clone()),
         activations: HashMap::new(),
         visited: Rc::new(RefCell::new(HashSet::new())),
     });
     let _p = profile::start(format!("resolving: {:?}", summary));
-    cx.activations.insert((summary.get_name().to_string(),
-                           summary.get_source_id().clone()),
-                          vec![Rc::new(summary.clone())]);
-    match try!(activate(cx, registry, summary, method)) {
-        Ok(cx) => Ok(cx.resolve),
+    match try!(activate(cx, registry, &summary, method)) {
+        Ok(cx) => {
+            debug!("resolved: {:?}", cx.resolve);
+            Ok(cx.resolve)
+        }
         Err(e) => Err(e),
     }
 }
 
 fn activate(mut cx: Box<Context>,
             registry: &mut Registry,
-            parent: &Summary,
+            parent: &Rc<Summary>,
             method: Method)
             -> CargoResult<CargoResult<Box<Context>>> {
+    // Dependency graphs are required to be a DAG, so we keep a set of
+    // packages we're visiting and bail if we hit a dupe.
+    let id = parent.get_package_id();
+    if !cx.visited.borrow_mut().insert(id.clone()) {
+        return Err(human(format!("cyclic package dependency: package `{}` \
+                                  depends on itself", id)))
+    }
+
+    // If we're already activated, then that was easy!
+    if flag_activated(&mut *cx, parent, &method) {
+        cx.visited.borrow_mut().remove(id);
+        return Ok(Ok(cx))
+    }
+    debug!("activating {}", parent.get_package_id());
+
     // Extracting the platform request.
     let platform = match method {
         Method::Required(_, _, _, platform) => platform,
@@ -162,7 +178,7 @@ fn activate(mut cx: Box<Context>,
     // First, figure out our set of dependencies based on the requsted set of
     // features. This also calculates what features we're going to enable for
     // our own dependencies.
-    let deps = try!(resolve_features(&mut *cx, parent, method));
+    let deps = try!(resolve_features(&mut *cx, &**parent, method));
 
     // Next, transform all dependencies into a list of possible candidates which
     // can satisfy that dependency.
@@ -185,7 +201,40 @@ fn activate(mut cx: Box<Context>,
         a.len().cmp(&b.len())
     });
 
-    activate_deps(cx, registry, parent, platform, deps.as_slice(), 0)
+    Ok(match try!(activate_deps(cx, registry, &**parent, platform, &*deps, 0)) {
+        Ok(cx) => {
+            cx.visited.borrow_mut().remove(parent.get_package_id());
+            Ok(cx)
+        }
+        Err(e) => Err(e),
+    })
+}
+
+// Activate this summary by inserting it into our list of known activations.
+//
+// Returns if this summary with the given method is already activated.
+fn flag_activated(cx: &mut Context,
+                  summary: &Rc<Summary>,
+                  method: &Method) -> bool {
+    let id = summary.get_package_id();
+    let key = (id.get_name().to_string(), id.get_source_id().clone());
+    let prev = cx.activations.entry(key).get().unwrap_or_else(|e| {
+        e.insert(Vec::new())
+    });
+    if !prev.iter().any(|c| c == summary) {
+        cx.resolve.graph.add(id.clone(), &[]);
+        prev.push(summary.clone());
+        return false
+    }
+    debug!("checking if {} is already activated", summary.get_package_id());
+    let features = match *method {
+        Method::Required(_, features, _, _) => features,
+        Method::Everything => return false,
+    };
+    match cx.resolve.features(id) {
+        Some(prev) => features.iter().all(|f| prev.contains(f)),
+        None => features.len() == 0,
+    }
 }
 
 fn activate_deps<'a>(cx: Box<Context>,
@@ -237,50 +286,20 @@ fn activate_deps<'a>(cx: Box<Context>,
         log!(5, "{}[{}]>{} trying {}", parent.get_name(), cur, dep.get_name(),
              candidate.get_version());
         let mut my_cx = cx.clone();
-        let early_return = {
-            let my_cx = &mut *my_cx;
-            my_cx.resolve.graph.link(parent.get_package_id().clone(),
-                                     candidate.get_package_id().clone());
-            let prev = match my_cx.activations.entry(key.clone()) {
-                Occupied(e) => e.into_mut(),
-                Vacant(e) => e.insert(Vec::new()),
-            };
-            if prev.iter().any(|c| c == candidate) {
-                match cx.resolve.features(candidate.get_package_id()) {
-                    Some(prev_features) => {
-                        features.iter().all(|f| prev_features.contains(f))
-                    }
-                    None => features.len() == 0,
-                }
-            } else {
-                my_cx.resolve.graph.add(candidate.get_package_id().clone(), &[]);
-                prev.push(candidate.clone());
-                false
-            }
-        };
+        my_cx.resolve.graph.link(parent.get_package_id().clone(),
+                                 candidate.get_package_id().clone());
 
-        let my_cx = if early_return {
-            my_cx
-        } else {
-            // Dependency graphs are required to be a DAG. Non-transitive
-            // dependencies (dev-deps), however, can never introduce a cycle, so
-            // we skip them.
-            if dep.is_transitive() &&
-               !cx.visited.borrow_mut().insert(candidate.get_package_id().clone()) {
-                return Err(human(format!("cyclic package dependency: package `{}` \
-                                          depends on itself",
-                                         candidate.get_package_id())))
-            }
-            let my_cx = try!(activate(my_cx, registry, &**candidate, method));
-            if dep.is_transitive() {
-                cx.visited.borrow_mut().remove(candidate.get_package_id());
-            }
-            match my_cx {
-                Ok(cx) => cx,
-                Err(e) => { last_err = Some(e); continue }
-            }
+        // If we hit an intransitive dependency then clear out the visitation
+        // list as we can't induce a cycle through transitive dependencies.
+        if !dep.is_transitive() {
+            my_cx.visited.borrow_mut().clear();
+        }
+        let my_cx = match try!(activate(my_cx, registry, candidate, method)) {
+            Ok(cx) => cx,
+            Err(e) => { last_err = Some(e); continue }
         };
-        match try!(activate_deps(my_cx, registry, parent, platform, deps, cur + 1)) {
+        match try!(activate_deps(my_cx, registry, parent, platform, deps,
+                                 cur + 1)) {
             Ok(cx) => return Ok(Ok(cx)),
             Err(e) => { last_err = Some(e); }
         }

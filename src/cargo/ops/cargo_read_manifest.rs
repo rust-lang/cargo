@@ -62,7 +62,6 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     if all_packages.is_empty() {
         Err(human(format!("Could not find Cargo.toml in `{}`", path.display())))
     } else {
-        log!(5, "all packages: {:?}", all_packages);
         Ok(all_packages.into_iter().collect())
     }
 }

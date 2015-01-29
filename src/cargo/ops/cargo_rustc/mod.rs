@@ -129,8 +129,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
         return Ok(Compilation::new(pkg))
     }
 
-    debug!("compile_targets; targets={:?}; pkg={}; deps={:?}", targets, pkg,
-           deps);
+    debug!("compile_targets: {}", pkg);
 
     try!(links::validate(deps));
 
@@ -210,7 +209,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                    compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
-    debug!("compile_pkg; pkg={}; targets={:?}", pkg, targets);
+    debug!("compile_pkg; pkg={}", pkg);
     let _p = profile::start(format!("preparing: {}", pkg));
 
     // Packages/targets which are actually getting compiled are constructed into

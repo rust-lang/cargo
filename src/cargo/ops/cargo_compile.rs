@@ -126,8 +126,6 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         (packages, resolved_with_overrides, registry.move_sources())
     };
 
-    debug!("packages={:?}", packages);
-
     let to_build = match spec {
         Some(spec) => {
             let pkgid = try!(resolve_with_overrides.query(spec));

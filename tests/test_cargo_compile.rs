@@ -754,7 +754,10 @@ test!(self_dependency {
         "#)
         .file("src/test.rs", "fn main() {}");
     assert_that(p.cargo_process("build"),
-                execs().with_status(0));
+                execs().with_status(101)
+                       .with_stderr("\
+cyclic package dependency: package `test v0.0.0 ([..])` depends on itself
+"));
 });
 
 test!(ignore_broken_symlinks {
@@ -1615,5 +1618,35 @@ Could not compile `foo`.
 
 Caused by:
   [..]
+"));
+});
+
+test!(cyclic_deps_rejected {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.foo]
+            path = ".."
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(101)
+                       .with_stderr("\
+cyclic package dependency: package `foo v0.0.1 ([..])` depends on itself
 "));
 });

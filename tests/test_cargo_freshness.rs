@@ -28,6 +28,7 @@ test!(modifying_and_moving {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(""));
     p.root().move_into_the_past().unwrap();
+    p.root().join("target").move_into_the_past().unwrap();
 
     File::create(&p.root().join("src/a.rs")).write_str("fn main() {}").unwrap();
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
