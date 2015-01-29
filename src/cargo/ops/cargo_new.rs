@@ -64,10 +64,10 @@ fn existing_vcs_repo(path: &Path) -> bool {
 fn mk(config: &Config, path: &Path, name: &str,
       opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
-    let mut ignore = "/target\n".to_string();
+    let mut ignore = "target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(&path.dir_path());
     if !opts.bin {
-        ignore.push_str("/Cargo.lock\n");
+        ignore.push_str("Cargo.lock\n");
     }
 
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
