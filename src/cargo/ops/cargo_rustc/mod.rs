@@ -594,15 +594,7 @@ fn build_base_args(cx: &Context,
 
     // Despite whatever this target's profile says, we need to configure it
     // based off the profile found in the root package's targets.
-    let mut profile = target.get_profile().clone();
-    let root_package = cx.get_package(cx.resolve.root());
-    for target in root_package.get_manifest().get_targets().iter() {
-        let root_profile = target.get_profile();
-        if root_profile.get_env() != profile.get_env() { continue }
-        profile = profile.opt_level(root_profile.get_opt_level())
-                         .debug(root_profile.get_debug())
-                         .rpath(root_profile.get_rpath())
-    }
+    let profile = cx.profile(target);
 
     let prefer_dynamic = profile.is_for_host() ||
                          (crate_types.contains(&"dylib") &&

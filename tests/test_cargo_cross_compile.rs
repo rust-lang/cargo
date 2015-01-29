@@ -247,14 +247,15 @@ test!(plugin_to_the_max {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
     bar.build();
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(target),
+    assert_that(foo.cargo_process("build").arg("--target").arg(target).arg("-v"),
                 execs().with_status(0));
-    assert_that(foo.process(cargo_dir().join("cargo")).arg("build")
+    println!("second");
+    assert_that(foo.process(cargo_dir().join("cargo")).arg("build").arg("-v")
                    .arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(target, "foo"), existing_file());

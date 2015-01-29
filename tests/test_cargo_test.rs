@@ -1020,7 +1020,6 @@ test!(selective_testing {
     assert_that(p.process(cargo_dir().join("cargo")).arg("test")
                  .arg("-p").arg("d1"),
                 execs().with_status(0)
-                       .with_stderr("")
                        .with_stdout(format!("\
 {compiling} d1 v0.0.1 ({dir})
 {running} target[..]d1-[..]
@@ -1035,7 +1034,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
     assert_that(p.process(cargo_dir().join("cargo")).arg("test")
                  .arg("-p").arg("d2"),
                 execs().with_status(0)
-                       .with_stderr("")
                        .with_stdout(format!("\
 {compiling} d2 v0.0.1 ({dir})
 {running} target[..]d2-[..]
@@ -1049,7 +1047,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
     println!("whole");
     assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
                 execs().with_status(0)
-                       .with_stderr("")
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]

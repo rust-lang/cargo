@@ -68,7 +68,7 @@ impl Encodable for Manifest {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, RustcEncodable, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, RustcEncodable, Copy)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -103,14 +103,14 @@ impl LibKind {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, RustcEncodable)]
+#[derive(Debug, Clone, Hash, PartialEq, RustcEncodable, Eq)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
     Example,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Debug)]
+#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug)]
 pub struct Profile {
     env: String, // compile, test, dev, bench, etc.
     opt_level: u32,
@@ -345,7 +345,7 @@ impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Profile {
 }
 
 /// Informations about a binary, a library, an example, etc. that is part of the package.
-#[derive(Clone, Hash, PartialEq, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -467,7 +467,8 @@ impl Manifest {
 impl Target {
     pub fn file_stem(&self) -> String {
         match self.metadata {
-            Some(ref metadata) => format!("{}{}", self.name, metadata.extra_filename),
+            Some(ref metadata) => format!("{}{}", self.name,
+                                          metadata.extra_filename),
             None => self.name.clone()
         }
     }

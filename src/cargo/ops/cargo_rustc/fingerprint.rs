@@ -1,5 +1,4 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::hash::{Hash, Hasher, SipHasher};
 use std::io::{self, fs, File, BufferedReader};
 use std::io::fs::PathExtensions;
 
@@ -39,56 +38,28 @@ pub type Preparation = (Freshness, Work, Work);
 /// This function will calculate the fingerprint for a target and prepare the
 /// work necessary to either write the fingerprint or copy over all fresh files
 /// from the old directories to their new locations.
-pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
-                      kind: Kind) -> CargoResult<Preparation> {
+pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
+                              pkg: &'a Package,
+                              target: &'a Target,
+                              kind: Kind) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {:?}",
                                     pkg.get_package_id(), target));
     let new = dir(cx, pkg, kind);
     let loc = new.join(filename(target));
     cx.layout(pkg, kind).proxy().whitelist(&loc);
 
-    // We want to use the package fingerprint if we're either a doc target or a
-    // path source. If we're a git/registry source, then the mtime of files may
-    // fluctuate, but they won't change so long as the source itself remains
-    // constant (which is the responsibility of the source)
-    let use_pkg = {
-        let doc = target.get_profile().is_doc();
-        let path = pkg.get_summary().get_source_id().is_path();
-        doc || !path
-    };
-
     info!("fingerprint at: {}", loc.display());
 
-    // First bit of the freshness calculation, whether the dep-info file
-    // indicates that the target is fresh.
-    let dep_info = dep_info_loc(cx, pkg, target, kind);
-    let mut are_files_fresh = use_pkg ||
-                              try!(calculate_target_fresh(&dep_info));
-
-    // Second bit of the freshness calculation, whether rustc itself, the
-    // target are fresh, and the enabled set of features are all fresh.
-    let features = cx.resolve.features(pkg.get_package_id());
-    let features = features.map(|s| {
-        let mut v = s.iter().collect::<Vec<&String>>();
-        v.sort();
-        v
-    });
-    let rustc_fingerprint = if use_pkg {
-        mk_fingerprint(cx, &(target, try!(calculate_pkg_fingerprint(cx, pkg)),
-                             features))
-    } else {
-        mk_fingerprint(cx, &(target, features))
-    };
-    let is_rustc_fresh = try!(is_fresh(&loc, rustc_fingerprint.as_slice()));
+    let fingerprint = try!(calculate(cx, pkg, target, kind));
+    let is_fresh = try!(is_fresh(&loc, &fingerprint));
 
     let root = cx.out_dir(pkg, kind, target);
+    let mut missing_outputs = false;
     if !target.get_profile().is_doc() {
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
             cx.layout(pkg, kind).proxy().whitelist(&dst);
-            if are_files_fresh && !dst.exists() {
-                are_files_fresh = false;
-            }
+            missing_outputs |= !dst.exists();
 
             if target.get_profile().is_test() {
                 cx.compilation.tests.push((target.get_name().to_string(), dst));
@@ -104,7 +75,138 @@ pub fn prepare_target(cx: &mut Context, pkg: &Package, target: &Target,
         }
     }
 
-    Ok(prepare(is_rustc_fresh && are_files_fresh, loc, rustc_fingerprint))
+    Ok(prepare(is_fresh && !missing_outputs, loc, fingerprint))
+}
+
+/// A fingerprint can be considered to be a "short string" representing the
+/// state of a world for a package.
+///
+/// If a fingerprint ever changes, then the package itself needs to be
+/// recompiled. Inputs to the fingerprint include source code modifications,
+/// compiler flags, compiler version, etc. This structure is not simply a
+/// `String` due to the fact that some fingerprints cannot be calculated lazily.
+///
+/// Path sources, for example, use the mtime of the corresponding dep-info file
+/// as a fingerprint (all source files must be modified *before* this mtime).
+/// This dep-info file is not generated, however, until after the crate is
+/// compiled. As a result, this structure can be thought of as a fingerprint
+/// to-be. The actual value can be calculated via `resolve()`, but the operation
+/// may fail as some files may not have been generated.
+///
+/// Note that dependencies are taken into account for fingerprints because rustc
+/// requires that whenever an upstream crate is recompiled that all downstream
+/// dependants are also recompiled. This is typically tracked through
+/// `DependencyQueue`, but it also needs to be retained here because Cargo can
+/// be interrupted while executing, losing the state of the `DependencyQueue`
+/// graph.
+#[derive(Clone)]
+pub struct Fingerprint {
+    extra: String,
+    deps: Vec<Fingerprint>,
+    personal: Personal,
+}
+
+#[derive(Clone)]
+enum Personal {
+    Known(String),
+    Unknown(Path),
+}
+
+impl Fingerprint {
+    fn resolve(&self) -> CargoResult<String> {
+        let mut deps: Vec<_> = try!(self.deps.iter().map(|s| s.resolve()).collect());
+        deps.sort();
+        let known = match self.personal {
+            Personal::Known(ref s) => s.clone(),
+            Personal::Unknown(ref p) => {
+                debug!("resolving: {}", p.display());
+                try!(fs::stat(p)).modified.to_string()
+            }
+        };
+        debug!("inputs: {} {} {:?}", known, self.extra, deps);
+        Ok(util::short_hash(&(known, &self.extra, &deps)))
+    }
+}
+
+/// Calculates the fingerprint for a package/target pair.
+///
+/// This fingerprint is used by Cargo to learn about when information such as:
+///
+/// * A non-path package changes (changes version, changes revision, etc).
+/// * Any dependency changes
+/// * The compiler changes
+/// * The set of features a package is built with changes
+/// * The profile a target is compiled with changes (e.g. opt-level changes)
+///
+/// Information like file modification time is only calculated for path
+/// dependencies and is calculated in `calculate_target_fresh`.
+fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
+                     pkg: &'a Package,
+                     target: &'a Target,
+                     kind: Kind)
+                     -> CargoResult<Fingerprint> {
+    let key = (pkg.get_package_id(), target, kind);
+    match cx.fingerprints.get(&key) {
+        Some(s) => return Ok(s.clone()),
+        None => {}
+    }
+
+    // First, calculate all statically known "salt data" such as the profile
+    // information (compiler flags), the compiler version, activated features,
+    // and target configuration.
+    let features = cx.resolve.features(pkg.get_package_id());
+    let features = features.map(|s| {
+        let mut v = s.iter().collect::<Vec<&String>>();
+        v.sort();
+        v
+    });
+    let extra = util::short_hash(&(cx.config.rustc_version(), target, &features,
+                                   cx.profile(target)));
+
+    // Next, recursively calculate the fingerprint for all of our dependencies.
+    let deps = try!(cx.dep_targets(pkg, target).into_iter().map(|(p, t)| {
+        let kind = match kind {
+            Kind::Host => Kind::Host,
+            Kind::Target if t.get_profile().is_for_host() => Kind::Host,
+            Kind::Target => Kind::Target,
+        };
+        calculate(cx, p, t, kind)
+    }).collect::<CargoResult<Vec<_>>>());
+
+    // And finally, calculate what our own personal fingerprint is
+    let personal = if use_dep_info(pkg, target) {
+        let dep_info = dep_info_loc(cx, pkg, target, kind);
+        match try!(calculate_target_mtime(&dep_info)) {
+            Some(i) => Personal::Known(i.to_string()),
+            None => {
+                // If the dep-info file does exist (but some other sources are
+                // newer than it), make sure to delete it so we don't pick up
+                // the old copy in resolve()
+                let _ = fs::unlink(&dep_info);
+                Personal::Unknown(dep_info)
+            }
+        }
+    } else {
+        Personal::Known(try!(calculate_pkg_fingerprint(cx, pkg)))
+    };
+    let fingerprint = Fingerprint {
+        extra: extra,
+        deps: deps,
+        personal: personal,
+    };
+    cx.fingerprints.insert(key, fingerprint.clone());
+    Ok(fingerprint)
+}
+
+
+// We want to use the mtime for files if we're a path source, but if we're a
+// git/registry source, then the mtime of files may fluctuate, but they won't
+// change so long as the source itself remains constant (which is the
+// responsibility of the source)
+fn use_dep_info(pkg: &Package, target: &Target) -> bool {
+    let doc = target.get_profile().is_doc();
+    let path = pkg.get_summary().get_source_id().is_path();
+    !doc && path
 }
 
 /// Prepare the necessary work for the fingerprint of a build command.
@@ -139,9 +241,13 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
     info!("fingerprint at: {}", loc.display());
 
     let new_fingerprint = try!(calculate_build_cmd_fingerprint(cx, pkg));
-    let new_fingerprint = mk_fingerprint(cx, &new_fingerprint);
+    let new_fingerprint = Fingerprint {
+        extra: String::new(),
+        deps: Vec::new(),
+        personal: Personal::Known(new_fingerprint),
+    };
 
-    let is_fresh = try!(is_fresh(&loc, new_fingerprint.as_slice()));
+    let is_fresh = try!(is_fresh(&loc, &new_fingerprint));
 
     // The new custom build command infrastructure handles its own output
     // directory as part of freshness.
@@ -178,9 +284,12 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
-fn prepare(is_fresh: bool, loc: Path, fingerprint: String) -> Preparation {
-    let write_fingerprint = Work::new(move |desc_tx| {
-        drop(desc_tx);
+fn prepare(is_fresh: bool, loc: Path, fingerprint: Fingerprint) -> Preparation {
+    let write_fingerprint = Work::new(move |_| {
+        debug!("write fingerprint: {}", loc.display());
+        let fingerprint = try!(fingerprint.resolve().chain_error(|| {
+            internal("failed to resolve a pending fingerprint")
+        }));
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
         Ok(())
     });
@@ -201,13 +310,17 @@ pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
     return ret;
 }
 
-fn is_fresh(loc: &Path, new_fingerprint: &str) -> CargoResult<bool> {
+fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
     let mut file = match File::open(loc) {
         Ok(file) => file,
         Err(..) => return Ok(false),
     };
 
     let old_fingerprint = try!(file.read_to_string());
+    let new_fingerprint = match new_fingerprint.resolve() {
+        Ok(s) => s,
+        Err(..) => return Ok(false),
+    };
 
     log!(5, "old fingerprint: {}", old_fingerprint);
     log!(5, "new fingerprint: {}", new_fingerprint);
@@ -215,17 +328,9 @@ fn is_fresh(loc: &Path, new_fingerprint: &str) -> CargoResult<bool> {
     Ok(old_fingerprint.as_slice() == new_fingerprint)
 }
 
-/// Frob in the necessary data from the context to generate the real
-/// fingerprint.
-fn mk_fingerprint<T: Hash<SipHasher>>(cx: &Context, data: &T) -> String {
-    let mut hasher = SipHasher::new_with_keys(0,0);
-    (cx.config.rustc_version(), data).hash(&mut hasher);
-    util::to_hex(hasher.finish())
-}
-
-fn calculate_target_fresh(dep_info: &Path) -> CargoResult<bool> {
+fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
     macro_rules! fs_try {
-        ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(false) })
+        ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
     }
     let mut f = BufferedReader::new(fs_try!(File::open(dep_info)));
     // see comments in append_current_dir for where this cwd is manifested from.
@@ -233,7 +338,7 @@ fn calculate_target_fresh(dep_info: &Path) -> CargoResult<bool> {
     let cwd = Path::new(&cwd[..cwd.len()-1]);
     let line = match f.lines().next() {
         Some(Ok(line)) => line,
-        _ => return Ok(false),
+        _ => return Ok(None),
     };
     let line = line.as_slice();
     let mtime = try!(fs::stat(dep_info)).modified;
@@ -258,13 +363,13 @@ fn calculate_target_fresh(dep_info: &Path) -> CargoResult<bool> {
             Ok(stat) if stat.modified <= mtime => {}
             Ok(stat) => {
                 info!("stale: {} -- {} vs {}", file, stat.modified, mtime);
-                return Ok(false)
+                return Ok(None)
             }
-            _ => { info!("stale: {} -- missing", file); return Ok(false) }
+            _ => { info!("stale: {} -- missing", file); return Ok(None) }
         }
     }
 
-    Ok(true)
+    Ok(Some(mtime))
 }
 
 fn calculate_build_cmd_fingerprint(cx: &Context, pkg: &Package)
@@ -300,6 +405,7 @@ fn filename(target: &Target) -> String {
 // what that directory was at the beginning of the file so we can know about it
 // next time.
 pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
+    debug!("appending {} <- {}", path.display(), cwd.display());
     let mut f = try!(File::open_mode(path, io::Open, io::ReadWrite));
     let contents = try!(f.read_to_end());
     try!(f.seek(0, io::SeekSet));

@@ -112,7 +112,7 @@ impl FromError<PackageIdError> for Box<CargoError> {
     fn from_error(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
 }
 
-#[derive(PartialEq, Hash, Clone, RustcEncodable, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, RustcEncodable, Debug)]
 pub struct Metadata {
     pub metadata: String,
     pub extra_filename: String

@@ -83,3 +83,54 @@ test!(modify_only_some_files {
 ", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 });
+
+test!(rebuild_sub_package_then_while_package {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies.a]
+            path = "a"
+            [dependencies.b]
+            path = "b"
+        "#)
+        .file("src/lib.rs", "extern crate a; extern crate b;")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            authors = []
+            version = "0.0.1"
+            [dependencies.b]
+            path = "../b"
+        "#)
+        .file("a/src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+
+    File::create(&p.root().join("b/src/lib.rs")).unwrap().write_str(r#"
+        pub fn b() {}
+    "#).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-pb"),
+                execs().with_status(0));
+
+    File::create(&p.root().join("src/lib.rs")).unwrap().write_str(r#"
+        extern crate a;
+        extern crate b;
+        pub fn toplevel() {}
+    "#).unwrap();
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0));
+});
