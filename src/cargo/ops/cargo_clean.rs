@@ -1,5 +1,5 @@
 use std::default::Default;
-use std::io::fs::{self, PathExtensions};
+use std::old_io::fs::{self, PathExtensions};
 
 use core::PackageSet;
 use core::source::{Source, SourceMap};

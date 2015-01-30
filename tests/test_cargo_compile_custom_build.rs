@@ -1,4 +1,4 @@
-use std::io::{File, fs};
+use std::old_io::{File, fs};
 use std::os;
 
 use support::{project, execs, cargo_dir};
@@ -77,7 +77,7 @@ test!(custom_build_env_vars {
 
     let file_content = format!(r#"
             use std::os;
-            use std::io::fs::PathExtensions;
+            use std::old_io::fs::PathExtensions;
             fn main() {{
                 let _target = os::getenv("TARGET").unwrap();
 
@@ -724,7 +724,7 @@ test!(out_dir_is_preserved {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             use std::os;
-            use std::io::File;
+            use std::old_io::File;
             fn main() {
                 let out = os::getenv("OUT_DIR").unwrap();
                 File::create(&Path::new(out).join("foo")).unwrap();
@@ -739,7 +739,7 @@ test!(out_dir_is_preserved {
     // Change to asserting that it's there
     File::create(&p.root().join("build.rs")).write_str(r#"
         use std::os;
-        use std::io::File;
+        use std::old_io::File;
         fn main() {
             let out = os::getenv("OUT_DIR").unwrap();
             File::open(&Path::new(out).join("foo")).unwrap();
@@ -804,7 +804,7 @@ test!(code_generation {
         "#)
         .file("build.rs", r#"
             use std::os;
-            use std::io::File;
+            use std::old_io::File;
 
             fn main() {
                 let dst = Path::new(os::getenv("OUT_DIR").unwrap());
@@ -968,7 +968,7 @@ test!(test_a_lib_with_a_build_command {
         "#)
         .file("build.rs", r#"
             use std::os;
-            use std::io::File;
+            use std::old_io::File;
 
             fn main() {
                 let out = Path::new(os::getenv("OUT_DIR").unwrap());

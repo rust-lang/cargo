@@ -1,4 +1,4 @@
-use std::io::{self, fs, TempDir, File};
+use std::old_io::{self, fs, TempDir, File};
 use std::os;
 use std::path;
 
@@ -1294,7 +1294,7 @@ test!(rebuild_preserves_out_dir {
         "#)
         .file("build.rs", r#"
             use std::os;
-            use std::io::File;
+            use std::old_io::File;
 
             fn main() {
                 let path = Path::new(os::getenv("OUT_DIR").unwrap()).join("foo");
@@ -1378,10 +1378,10 @@ test!(ignore_bad_directories {
         "#)
         .file("src/lib.rs", "");
     foo.build();
-    fs::mkdir(&foo.root().join("tmp"), io::USER_EXEC ^ io::USER_EXEC).unwrap();
+    fs::mkdir(&foo.root().join("tmp"), old_io::USER_EXEC ^ old_io::USER_EXEC).unwrap();
     assert_that(foo.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
-    fs::chmod(&foo.root().join("tmp"), io::USER_DIR).unwrap();
+    fs::chmod(&foo.root().join("tmp"), old_io::USER_DIR).unwrap();
 });
 
 test!(bad_cargo_config {
@@ -1568,7 +1568,7 @@ test!(compile_then_delete {
     assert_that(&p.bin("foo"), existing_file());
     if cfg!(windows) {
         // HACKHACK: On windows unlinking immediately after running often fails, so sleep
-        use std::io::timer::sleep;
+        use std::old_io::timer::sleep;
         use std::time::duration::Duration;
         sleep(Duration::milliseconds(100));
     }

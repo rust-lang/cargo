@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::error::FromError;
-use std::io::fs::PathExtensions;
-use std::io::{self, File, fs};
+use std::old_io::fs::PathExtensions;
+use std::old_io::{self, File, fs};
 
 use core::{Package,Manifest,SourceId};
 use util::{self, CargoResult, human, Config, ChainError};
@@ -86,7 +86,7 @@ fn walk_inner<F>(path: &Path, callback: &mut F) -> CargoResult<()>
         // can often have some weird permissions on them.
         let dirs = match fs::readdir(path) {
             Ok(dirs) => dirs,
-            Err(ref e) if e.kind == io::PermissionDenied => return Ok(()),
+            Err(ref e) if e.kind == old_io::PermissionDenied => return Ok(()),
             Err(e) => return Err(FromError::from_error(e)),
         };
         for dir in dirs.iter() {

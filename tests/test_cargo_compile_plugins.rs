@@ -1,4 +1,4 @@
-use std::io::fs;
+use std::old_io::fs;
 use std::os;
 
 use support::{project, execs, cargo_dir};
@@ -138,7 +138,7 @@ test!(plugin_with_dynamic_native_dependency {
             plugin = true
         "#)
         .file("bar/build.rs", r#"
-            use std::io::fs;
+            use std::old_io::fs;
             use std::os;
 
             fn main() {

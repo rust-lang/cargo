@@ -1,6 +1,6 @@
 use std::os;
-use std::io::{self, fs, File};
-use std::io::fs::PathExtensions;
+use std::old_io::{self, fs, File};
+use std::old_io::fs::PathExtensions;
 
 use rustc_serialize::{Decodable, Decoder};
 
@@ -87,7 +87,7 @@ fn mk(config: &Config, path: &Path, name: &str,
             try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
         },
         VersionControl::NoVcs => {
-            try!(fs::mkdir(path, io::USER_RWX));
+            try!(fs::mkdir(path, old_io::USER_RWX));
         },
     };
 
@@ -110,7 +110,7 @@ version = "0.0.1"
 authors = ["{}"]
 "#, name, author).as_slice()));
 
-    try!(fs::mkdir(&path.join("src"), io::USER_RWX));
+    try!(fs::mkdir(&path.join("src"), old_io::USER_RWX));
 
     if opts.bin {
         try!(File::create(&path.join("src/main.rs")).write_str("\

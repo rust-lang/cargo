@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::{IoResult, stderr};
+use std::old_io::{IoResult, stderr};
 
 use term::Attr;
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::fmt::{self, Formatter};
-use std::io::process::ProcessOutput;
+use std::old_io::process::ProcessOutput;
 use std::os;
 use std::path::BytesContainer;
 

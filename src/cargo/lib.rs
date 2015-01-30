@@ -23,8 +23,8 @@ extern crate url;
 extern crate registry;
 
 use std::error::Error;
-use std::io::stdio::{stdout_raw, stderr_raw};
-use std::io::{self, stdout, stderr};
+use std::old_io::stdio::{stdout_raw, stderr_raw};
+use std::old_io::{self, stdout, stderr};
 use std::os;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json};
@@ -217,7 +217,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
 }
 
 fn json_from_stdin<T: Decodable>() -> CliResult<T> {
-    let mut reader = io::stdin();
+    let mut reader = old_io::stdin();
     let input = try!(reader.read_to_string().map_err(|_| {
         CliError::new("Standard in did not exist or was not UTF-8", 1)
     }));

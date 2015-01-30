@@ -1,6 +1,6 @@
 use std::cmp;
 use std::fmt::{self, Debug, Formatter};
-use std::io::fs::{self, PathExtensions};
+use std::old_io::fs::{self, PathExtensions};
 use glob::Pattern;
 use git2;
 

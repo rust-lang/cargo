@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::fmt;
-use std::io::fs::{self, PathExtensions};
-use std::io::process::{ProcessOutput};
-use std::io;
+use std::old_io::fs::{self, PathExtensions};
+use std::old_io::process::{ProcessOutput};
+use std::old_io;
 use std::os;
 use std::path::{Path, BytesContainer};
 use std::str::{self, Str};
@@ -186,7 +186,7 @@ pub fn project(name: &str) -> ProjectBuilder {
 // === Helpers ===
 
 pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
-    fs::mkdir_recursive(path, io::USER_DIR)
+    fs::mkdir_recursive(path, old_io::USER_DIR)
         .with_err_msg(format!("could not create directory; path={}",
                               path.display()))
 }

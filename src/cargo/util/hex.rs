@@ -1,4 +1,4 @@
-use std::io::MemWriter;
+use std::old_io::MemWriter;
 use std::hash::{Hasher, Hash, SipHasher};
 
 use rustc_serialize::hex::ToHex;

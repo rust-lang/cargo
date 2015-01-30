@@ -1,4 +1,4 @@
-use std::io::{File, MemReader};
+use std::old_io::{File, MemReader};
 
 use tar::Archive;
 use flate2::reader::GzDecoder;

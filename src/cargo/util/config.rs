@@ -2,8 +2,8 @@ use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut, Ref, Cell};
 use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::io;
-use std::io::fs::{self, PathExtensions, File};
+use std::old_io;
+use std::old_io::fs::{self, PathExtensions, File};
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
@@ -432,7 +432,7 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
         Location::Global => cfg.home_path.join("config"),
         Location::Project => unimplemented!(),
     };
-    try!(fs::mkdir_recursive(&file.dir_path(), io::USER_DIR));
+    try!(fs::mkdir_recursive(&file.dir_path(), old_io::USER_DIR));
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
     toml.insert(key.to_string(), value.into_toml());

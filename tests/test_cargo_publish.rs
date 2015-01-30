@@ -1,4 +1,4 @@
-use std::io::{self, fs, File, MemReader};
+use std::old_io::{self, fs, File, MemReader};
 
 use flate2::reader::GzDecoder;
 use tar::Archive;
@@ -18,13 +18,13 @@ fn upload() -> Url { Url::from_file_path(&upload_path()).ok().unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&config.dir_path(), old_io::USER_DIR).unwrap();
     File::create(&config).write_str(format!(r#"
         [registry]
             index = "{reg}"
             token = "api-token"
     "#, reg = registry()).as_slice()).unwrap();
-    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), old_io::USER_DIR).unwrap();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{
@@ -61,7 +61,7 @@ test!(simple {
     let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let sz = f.read_le_u32().unwrap();
-    f.seek(sz as i64 + 4, io::SeekCur).unwrap();
+    f.seek(sz as i64 + 4, old_io::SeekCur).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f).unwrap();

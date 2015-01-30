@@ -1,4 +1,4 @@
-use std::io::{fs, File};
+use std::old_io::{fs, File};
 
 use support::{project, execs, path2url};
 use support::{COMPILING, cargo_dir};

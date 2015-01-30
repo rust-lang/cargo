@@ -1,7 +1,7 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
-use std::io::fs::{self, PathExtensions};
+use std::old_io::fs::{self, PathExtensions};
 use std::os;
 use std::path;
 use std::sync::Arc;

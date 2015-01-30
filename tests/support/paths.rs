@@ -1,7 +1,7 @@
-use std::io::IoResult;
-use std::io::fs::{self, PathExtensions};
+use std::old_io::IoResult;
+use std::old_io::fs::{self, PathExtensions};
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
-use std::{io, os};
+use std::{old_io, os};
 
 use cargo::util::realpath;
 
@@ -41,11 +41,11 @@ impl PathExt for Path {
             // and change everything to have write permissions, then remove
             // everything.
             match fs::rmdir_recursive(self) {
-                Err(io::IoError { kind: io::PermissionDenied, .. }) => {}
+                Err(old_io::IoError { kind: old_io::PermissionDenied, .. }) => {}
                 e => return e,
             }
             for path in try!(fs::walk_dir(self)) {
-                try!(fs::chmod(&path, io::USER_RWX));
+                try!(fs::chmod(&path, old_io::USER_RWX));
             }
             fs::rmdir_recursive(self)
         } else {
@@ -54,7 +54,7 @@ impl PathExt for Path {
     }
 
     fn mkdir_p(&self) -> IoResult<()> {
-        fs::mkdir_recursive(self, io::USER_DIR)
+        fs::mkdir_recursive(self, old_io::USER_DIR)
     }
 
     fn move_into_the_past(&self) -> IoResult<()> {
@@ -79,10 +79,10 @@ impl PathExt for Path {
             // Sadly change_file_times has the same failure mode as the above
             // rmdir_recursive :(
             match fs::change_file_times(path, newtime, newtime) {
-                Err(io::IoError { kind: io::PermissionDenied, .. }) => {}
+                Err(old_io::IoError { kind: old_io::PermissionDenied, .. }) => {}
                 e => return e,
             }
-            try!(fs::chmod(path, stat.perm | io::USER_WRITE));
+            try!(fs::chmod(path, stat.perm | old_io::USER_WRITE));
             fs::change_file_times(path, newtime, newtime)
         }
     }

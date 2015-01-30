@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use std::io::net::tcp::TcpAcceptor;
-use std::io::{TcpListener, Listener, Acceptor, BufferedStream};
+use std::old_io::net::tcp::TcpAcceptor;
+use std::old_io::{TcpListener, Listener, Acceptor, BufferedStream};
 use std::thread::Thread;
 use git2;
 
