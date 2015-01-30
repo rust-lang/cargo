@@ -333,7 +333,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                                      pkg)))
         }
 
-        try!(File::create(&dst).write(resp.get_body()));
+        try!(File::create(&dst).write_all(resp.get_body()));
         Ok(dst)
     }
 

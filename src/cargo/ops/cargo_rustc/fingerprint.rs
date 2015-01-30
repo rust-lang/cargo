@@ -409,8 +409,8 @@ pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
     let mut f = try!(File::open_mode(path, old_io::Open, old_io::ReadWrite));
     let contents = try!(f.read_to_end());
     try!(f.seek(0, old_io::SeekSet));
-    try!(f.write(cwd.as_vec()));
-    try!(f.write(&[0]));
-    try!(f.write(&contents[]));
+    try!(f.write_all(cwd.as_vec()));
+    try!(f.write_all(&[0]));
+    try!(f.write_all(&contents[]));
     Ok(())
 }

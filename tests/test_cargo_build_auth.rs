@@ -41,7 +41,7 @@ test!(http_auth_offered {
     let t = Thread::scoped(move|| {
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
-        s.write(b"\
+        s.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
@@ -55,7 +55,7 @@ test!(http_auth_offered {
 
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
-        s.write(b"\
+        s.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\

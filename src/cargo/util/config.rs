@@ -436,6 +436,6 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
     let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
     toml.insert(key.to_string(), value.into_toml());
-    try!(File::create(&file).write(toml::Value::Table(toml).to_string().as_bytes()));
+    try!(File::create(&file).write_all(toml::Value::Table(toml).to_string().as_bytes()));
     Ok(())
 }

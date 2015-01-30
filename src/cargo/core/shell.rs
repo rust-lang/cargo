@@ -171,10 +171,10 @@ impl Shell {
 }
 
 impl Writer for Shell {
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
         match self.terminal {
-            Colored(ref mut c) => c.write(buf),
-            NoColor(ref mut n) => n.write(buf)
+            Colored(ref mut c) => c.write_all(buf),
+            NoColor(ref mut n) => n.write_all(buf)
         }
     }
 
@@ -187,7 +187,7 @@ impl Writer for Shell {
 }
 
 impl Writer for UghWhyIsThisNecessary {
-    fn write(&mut self, bytes: &[u8]) -> IoResult<()> {
-        self.inner.write(bytes)
+    fn write_all(&mut self, bytes: &[u8]) -> IoResult<()> {
+        self.inner.write_all(bytes)
     }
 }

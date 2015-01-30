@@ -80,11 +80,11 @@ fn mk(config: &Config, path: &Path, name: &str,
     match vcs {
         VersionControl::Git => {
             try!(GitRepo::init(path));
-            try!(File::create(&path.join(".gitignore")).write(ignore.as_bytes()));
+            try!(File::create(&path.join(".gitignore")).write_all(ignore.as_bytes()));
         },
         VersionControl::Hg => {
             try!(HgRepo::init(path));
-            try!(File::create(&path.join(".hgignore")).write(ignore.as_bytes()));
+            try!(File::create(&path.join(".hgignore")).write_all(ignore.as_bytes()));
         },
         VersionControl::NoVcs => {
             try!(fs::mkdir(path, old_io::USER_RWX));
