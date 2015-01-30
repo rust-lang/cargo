@@ -155,7 +155,10 @@ impl<'a, 'b> PathSource<'a, 'b> {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 }));
                 let submodule = try!(repo.find_submodule(rel));
-                let repo = try!(submodule.open());
+                let repo = match submodule.open() {
+                    Ok(repo) => repo,
+                    Err(..) => continue,
+                };
                 let files = try!(self.list_files_git(pkg, repo, filter));
                 ret.extend(files.into_iter());
             } else if (*filter)(&file_path) {

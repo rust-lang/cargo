@@ -6,7 +6,7 @@ use git2;
 use support::{ProjectBuilder, project, execs, main_file};
 use support::{cargo_dir, path2url};
 use support::{COMPILING, UPDATING, RUNNING};
-use support::paths::PathExt;
+use support::paths::{self, PathExt};
 use hamcrest::{assert_that,existing_file};
 use cargo;
 use cargo::util::{ProcessError, process};
@@ -1650,4 +1650,34 @@ test!(switch_sources {
 {compiling} b v0.5.0 ([..])
 {compiling} project v0.5.0 ([..])
 ", updating = UPDATING, compiling = COMPILING).as_slice()));
+});
+
+test!(dont_require_submodules_are_checked_out {
+    let project = project("foo");
+    let git1 = git_repo("dep1", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+    }).unwrap();
+    let git2 = git_repo("dep2", |p| p).unwrap();
+
+    let repo = git2::Repository::open(&git1.root()).unwrap();
+    let url = path2url(git2.root()).to_string();
+    add_submodule(&repo, url.as_slice(), &Path::new("submodule"));
+    commit(&repo);
+
+    git2::Repository::init(&project.root()).unwrap();
+    let url = path2url(git1.root()).to_string();
+    let dst = paths::home().join("foo");
+    git2::Repository::clone(&url[], &dst).unwrap();
+
+    assert_that(git1.process(cargo_dir().join("cargo")).arg("build").arg("-v")
+                    .cwd(dst),
+                execs().with_status(0));
 });
