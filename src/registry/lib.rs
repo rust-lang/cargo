@@ -1,4 +1,4 @@
-#![allow(unstable)]
+#![feature(core, io)]
 
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;

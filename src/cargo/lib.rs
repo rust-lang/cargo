@@ -1,5 +1,5 @@
 #![deny(unused)]
-#![allow(unstable)]
+#![feature(collections, core, hash, io, libc, os, path, std_misc, unicode)]
 #![cfg_attr(test, deny(warnings))]
 
 extern crate libc;

@@ -1,4 +1,4 @@
-#![allow(unstable)]
+#![feature(collections, core, io, os, path)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;

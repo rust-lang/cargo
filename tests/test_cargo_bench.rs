@@ -151,7 +151,7 @@ test!(cargo_bench_failing_test {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
-            #![allow(unstable)]
+            #![feature(test)]
             extern crate test;
             fn hello() -> &'static str {
                 "hello"

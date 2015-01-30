@@ -1,4 +1,4 @@
-#![allow(unstable)]
+#![feature(collections)]
 
 extern crate hamcrest;
 extern crate cargo;
