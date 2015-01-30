@@ -165,3 +165,25 @@ test!(plugin_with_dynamic_native_dependency {
     assert_that(foo.cargo_process("build").env("SRC", Some(lib.as_vec())),
                 execs().with_status(0));
 });
+
+test!(plugin_integration {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+
+            [lib]
+            name = "foo"
+            plugin = true
+            doctest = false
+        "#)
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .file("tests/it_works.rs", "");
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+});

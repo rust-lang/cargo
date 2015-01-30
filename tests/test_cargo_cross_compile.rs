@@ -653,3 +653,30 @@ test!(build_script_only_host {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
 });
+
+test!(plugin_build_script_right_arch {
+    if disabled() { return }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+
+            [lib]
+            name = "foo"
+            plugin = true
+        "#)
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{running} `rustc build.rs [..]`
+{running} `[..]build-script-build[..]`
+{running} `rustc src[..]lib.rs [..]`
+", compiling = COMPILING, running = RUNNING)));
+});
