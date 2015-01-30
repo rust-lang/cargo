@@ -1,5 +1,4 @@
 #![deny(warnings)]
-#![allow(unstable)]
 
 extern crate cargo;
 extern crate flate2;
