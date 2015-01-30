@@ -322,8 +322,8 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
         Err(..) => return Ok(false),
     };
 
-    log!(5, "old fingerprint: {}", old_fingerprint);
-    log!(5, "new fingerprint: {}", new_fingerprint);
+    trace!("old fingerprint: {}", old_fingerprint);
+    trace!("new fingerprint: {}", new_fingerprint);
 
     Ok(old_fingerprint.as_slice() == new_fingerprint)
 }

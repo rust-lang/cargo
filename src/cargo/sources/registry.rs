@@ -453,7 +453,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         // git reset --hard origin/master
         let reference = "refs/remotes/origin/master";
         let oid = try!(repo.refname_to_id(reference));
-        log!(5, "[{}] updating to rev {}", self.source_id, oid);
+        trace!("[{}] updating to rev {}", self.source_id, oid);
         let object = try!(repo.find_object(oid, None));
         try!(repo.reset(&object, git2::ResetType::Hard, None, None, None));
         self.updated = true;

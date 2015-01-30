@@ -56,7 +56,7 @@ pub struct CompileOptions<'a, 'b: 'a> {
 pub fn compile(manifest_path: &Path,
                options: &CompileOptions)
                -> CargoResult<ops::Compilation> {
-    log!(4, "compile; manifest-path={}", manifest_path.display());
+    debug!("compile; manifest-path={}", manifest_path.display());
 
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
                                                options.config));

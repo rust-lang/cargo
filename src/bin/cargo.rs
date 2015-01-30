@@ -3,6 +3,7 @@
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;
 #[macro_use] extern crate log;
+extern crate env_logger;
 
 use std::collections::BTreeSet;
 use std::os;
@@ -49,6 +50,7 @@ See 'cargo help <command>' for more information on a specific command.
 ";
 
 fn main() {
+    env_logger::init().unwrap();
     execute_main_without_stdin(execute, true, USAGE)
 }
 

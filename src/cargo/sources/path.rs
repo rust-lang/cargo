@@ -21,7 +21,7 @@ pub struct PathSource<'a, 'b: 'a> {
 impl<'a, 'b> PathSource<'a, 'b> {
     pub fn for_path(path: &Path, config: &'a Config<'b>)
                     -> CargoResult<PathSource<'a, 'b>> {
-        log!(5, "PathSource::for_path; path={}", path.display());
+        trace!("PathSource::for_path; path={}", path.display());
         Ok(PathSource::new(path, &try!(SourceId::for_path(path)), config))
     }
 
@@ -30,7 +30,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
     /// in the directory structure reachable by the root manifest.
     pub fn new(path: &Path, id: &SourceId, config: &'a Config<'b>)
                -> PathSource<'a, 'b> {
-        log!(5, "new; id={}", id);
+        trace!("new; id={}", id);
 
         PathSource {
             id: id.clone(),
@@ -42,7 +42,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
     }
 
     pub fn get_root_package(&self) -> CargoResult<Package> {
-        log!(5, "get_root_package; source={:?}", self);
+        trace!("get_root_package; source={:?}", self);
 
         if !self.updated {
             return Err(internal("source has not been updated"))
@@ -239,7 +239,7 @@ impl<'a, 'b> Source for PathSource<'a, 'b> {
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages; ids={:?}", ids);
+        trace!("getting packages; ids={:?}", ids);
 
         Ok(self.packages.iter()
            .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
@@ -262,7 +262,7 @@ impl<'a, 'b> Source for PathSource<'a, 'b> {
             warn!("{} {}", file.stat().map(|s| s.modified).unwrap_or(0), file.display());
             max = cmp::max(max, file.stat().map(|s| s.modified).unwrap_or(0));
         }
-        log!(5, "fingerprint {}: {}", self.path.display(), max);
+        trace!("fingerprint {}: {}", self.path.display(), max);
         Ok(max.to_string())
     }
 }

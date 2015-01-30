@@ -151,7 +151,7 @@ impl<'a, 'b> JobQueue<'a, 'b> {
             }
         }
 
-        log!(5, "rustc jobs completed");
+        trace!("rustc jobs completed");
 
         Ok(())
     }

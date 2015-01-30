@@ -141,7 +141,7 @@ fn output(err: String, shell: &mut MultiShell, fatal: bool) {
 }
 
 pub fn handle_error(err: CliError, shell: &mut MultiShell) {
-    log!(4, "handle_error; err={:?}", err);
+    debug!("handle_error; err={:?}", err);
 
     let CliError { error, exit_code, unknown } = err;
     let fatal = exit_code != 0; // exit_code == 0 is non-fatal error

@@ -20,7 +20,7 @@ pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
 
 pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
                     -> CargoResult<(Package, Vec<Path>)> {
-    log!(5, "read_package; path={}; source-id={}", path.display(), source_id);
+    trace!("read_package; path={}; source-id={}", path.display(), source_id);
     let mut file = try!(File::open(path));
     let data = try!(file.read_to_end());
 
@@ -36,10 +36,10 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     let mut all_packages = HashSet::new();
     let mut visited = HashSet::<Path>::new();
 
-    log!(5, "looking for root package: {}, source_id={}", path.display(), source_id);
+    trace!("looking for root package: {}, source_id={}", path.display(), source_id);
 
     try!(walk(path, |dir| {
-        log!(5, "looking for child package: {}", dir.display());
+        trace!("looking for child package: {}", dir.display());
 
         // Don't recurse into git databases
         if dir.filename_str() == Some(".git") { return Ok(false); }
@@ -78,7 +78,7 @@ fn walk_inner<F>(path: &Path, callback: &mut F) -> CargoResult<()>
     if path.is_dir() {
         let continues = try!(callback(path));
         if !continues {
-            log!(5, "not processing {}", path.display());
+            trace!("not processing {}", path.display());
             return Ok(());
         }
 

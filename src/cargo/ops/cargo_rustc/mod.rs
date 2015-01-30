@@ -528,7 +528,7 @@ fn rustdoc(package: &Package, target: &Target,
         None
     });
 
-    log!(5, "commands={}", rustdoc);
+    trace!("commands={}", rustdoc);
 
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();

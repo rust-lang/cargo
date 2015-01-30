@@ -131,7 +131,7 @@ struct Context {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summary: &Summary, method: Method,
                registry: &mut Registry) -> CargoResult<Resolve> {
-    log!(5, "resolve; summary={}", summary.get_package_id());
+    trace!("resolve; summary={}", summary.get_package_id());
     let summary = Rc::new(summary.clone());
 
     let cx = Box::new(Context {
@@ -251,9 +251,9 @@ fn activate_deps<'a>(cx: Box<Context>,
     let key = (dep.get_name().to_string(), dep.get_source_id().clone());
     let prev_active = cx.activations.get(&key)
                                     .map(|v| v.as_slice()).unwrap_or(&[]);
-    log!(5, "{}[{}]>{} {} candidates", parent.get_name(), cur, dep.get_name(),
+    trace!("{}[{}]>{} {} candidates", parent.get_name(), cur, dep.get_name(),
          candidates.len());
-    log!(5, "{}[{}]>{} {} prev activations", parent.get_name(), cur,
+    trace!("{}[{}]>{} {} prev activations", parent.get_name(), cur,
          dep.get_name(), prev_active.len());
 
     // Filter the set of candidates based on the previously activated
@@ -283,7 +283,7 @@ fn activate_deps<'a>(cx: Box<Context>,
     // each one in turn.
     let mut last_err = None;
     for candidate in my_candidates {
-        log!(5, "{}[{}]>{} trying {}", parent.get_name(), cur, dep.get_name(),
+        trace!("{}[{}]>{} trying {}", parent.get_name(), cur, dep.get_name(),
              candidate.get_version());
         let mut my_cx = cx.clone();
         my_cx.resolve.graph.link(parent.get_package_id().clone(),
@@ -304,7 +304,7 @@ fn activate_deps<'a>(cx: Box<Context>,
             Err(e) => { last_err = Some(e); }
         }
     }
-    log!(5, "{}[{}]>{} -- {:?}", parent.get_name(), cur, dep.get_name(),
+    trace!("{}[{}]>{} -- {:?}", parent.get_name(), cur, dep.get_name(),
          last_err);
 
     // Oh well, we couldn't activate any of the candidates, so we just can't

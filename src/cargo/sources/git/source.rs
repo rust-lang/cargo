@@ -172,7 +172,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
             try!(self.config.shell().status("Updating",
                 format!("git repository `{}`", self.remote.get_url())));
 
-            log!(5, "updating git source `{:?}`", self.remote);
+            trace!("updating git source `{:?}`", self.remote);
             let repo = try!(self.remote.checkout(&self.db_path));
             let rev = try!(repo.rev_for(&self.reference));
             (repo, rev)
@@ -197,7 +197,7 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     }
 
     fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages for package ids `{:?}` from `{:?}`", ids,
+        trace!("getting packages for package ids `{:?}` from `{:?}`", ids,
              self.remote);
         self.path_source.as_ref().expect("BUG: update() must be called \
                                           before get()").get(ids)
