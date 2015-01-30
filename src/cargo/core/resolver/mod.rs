@@ -201,6 +201,9 @@ fn activate(mut cx: Box<Context>,
         a.len().cmp(&b.len())
     });
 
+    // Workaround compilation error: `deps` does not live long enough
+    let platform = platform.map(|s| &*s);
+
     Ok(match try!(activate_deps(cx, registry, &**parent, platform, &*deps, 0)) {
         Ok(cx) => {
             cx.visited.borrow_mut().remove(parent.get_package_id());
