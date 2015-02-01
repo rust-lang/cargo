@@ -1,4 +1,5 @@
-use std::old_io::{fs, File, USER_RWX};
+use std::old_io::{fs, File, USER_RWX, timer};
+use std::time::Duration;
 
 use support::{project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
@@ -353,7 +354,7 @@ test!(deep_dependencies_trigger_rebuild {
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
-    p.root().move_into_the_past().unwrap();
+    timer::sleep(Duration::seconds(1));
     File::create(&p.root().join("baz/src/baz.rs")).write_str(r#"
         pub fn baz() { println!("hello!"); }
     "#).unwrap();
@@ -366,7 +367,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, p.url())));
 
     // Make sure an update to bar doesn't trigger baz
-    p.root().move_into_the_past().unwrap();
+    timer::sleep(Duration::seconds(1));
     File::create(&p.root().join("bar/src/bar.rs")).write_str(r#"
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
