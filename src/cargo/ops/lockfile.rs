@@ -4,13 +4,15 @@ use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
 
 use core::{Resolve, resolver, Package, SourceId};
-use util::CargoResult;
+use util::{CargoResult, ChainError, human};
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
     let lockfile = pkg.get_manifest_path().dir_path().join("Cargo.lock");
     let source_id = pkg.get_package_id().get_source_id();
-    load_lockfile(&lockfile, source_id)
+    load_lockfile(&lockfile, source_id).chain_error(|| {
+        human(format!("failed to parse lock file at: {}", lockfile.display()))
+    })
 }
 
 pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>> {
@@ -24,7 +26,7 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
 
     let table = toml::Value::Table(try!(cargo_toml::parse(s.as_slice(), path)));
     let mut d = toml::Decoder::new(table);
-    let v: resolver::EncodableResolve = Decodable::decode(&mut d).unwrap();
+    let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
     Ok(Some(try!(v.to_resolve(sid))))
 }
 
