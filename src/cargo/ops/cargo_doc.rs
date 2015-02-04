@@ -1,11 +1,11 @@
-use std::io::fs::PathExtensions;
+use std::old_io::fs::PathExtensions;
 use std::collections::HashSet;
 
 use core::PackageIdSpec;
 use core::source::Source;
 use ops;
 use sources::PathSource;
-use std::io::process::Command;
+use std::old_io::process::Command;
 use util::{CargoResult, human};
 
 pub struct DocOptions<'a, 'b: 'a> {

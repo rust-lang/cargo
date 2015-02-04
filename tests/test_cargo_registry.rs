@@ -1,4 +1,4 @@
-use std::io::{self, fs, File};
+use std::old_io::{self, fs, File};
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir};
@@ -512,7 +512,7 @@ test!(dev_dependency_not_used {
 
 test!(login_with_no_cargo_dir {
     let home = paths::home().join("new-home");
-    fs::mkdir(&home, io::USER_DIR).unwrap();
+    fs::mkdir(&home, old_io::USER_DIR).unwrap();
     assert_that(process(cargo_dir().join("cargo")).unwrap()
                        .arg("login").arg("foo").arg("-v")
                        .cwd(paths::root())

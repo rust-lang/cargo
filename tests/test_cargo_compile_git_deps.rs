@@ -1,5 +1,5 @@
-use std::io::fs;
-use std::io::{timer, File};
+use std::old_io::fs;
+use std::old_io::{timer, File};
 use std::time::Duration;
 use git2;
 
@@ -1259,7 +1259,7 @@ test!(git_dep_build_cmd {
             pub fn gimme() -> int { 0 }
         "#)
         .file("bar/build.rs", r#"
-            use std::io::fs;
+            use std::old_io::fs;
             fn main() {
                 fs::copy(&Path::new("src/bar.rs.in"),
                          &Path::new("src/bar.rs")).unwrap();

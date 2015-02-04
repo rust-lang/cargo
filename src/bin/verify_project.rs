@@ -1,7 +1,7 @@
 extern crate toml;
 
 use std::collections::HashMap;
-use std::io::File;
+use std::old_io::File;
 use std::os;
 
 use cargo::util::{CliResult, Config};

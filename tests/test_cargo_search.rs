@@ -1,4 +1,4 @@
-use std::io::{self, fs, File};
+use std::old_io::{self, fs, File};
 
 use url::Url;
 
@@ -17,12 +17,12 @@ fn api() -> Url { Url::from_file_path(&api_path()).ok().unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&config.dir_path(), old_io::USER_DIR).unwrap();
     File::create(&config).write_str(format!(r#"
         [registry]
             index = "{reg}"
     "#, reg = registry()).as_slice()).unwrap();
-    fs::mkdir_recursive(&api_path().join("api/v1"), io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&api_path().join("api/v1"), old_io::USER_DIR).unwrap();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{

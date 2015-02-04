@@ -1,7 +1,7 @@
 use std::error::{FromError, Error};
 use std::fmt;
-use std::io::IoError;
-use std::io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
+use std::old_io::IoError;
+use std::old_io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
 use std::str;
 
 use semver;

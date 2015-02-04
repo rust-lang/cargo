@@ -1,14 +1,15 @@
-#![allow(unstable)]
+#![feature(collections, core, io, os, path)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;
 #[macro_use] extern crate log;
+extern crate env_logger;
 
 use std::collections::BTreeSet;
 use std::os;
-use std::io;
-use std::io::fs::{self, PathExtensions};
-use std::io::process::{Command,InheritFd,ExitStatus,ExitSignal};
+use std::old_io;
+use std::old_io::fs::{self, PathExtensions};
+use std::old_io::process::{Command,InheritFd,ExitStatus,ExitSignal};
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
@@ -49,6 +50,7 @@ See 'cargo help <command>' for more information on a specific command.
 ";
 
 fn main() {
+    env_logger::init().unwrap();
     execute_main_without_stdin(execute, true, USAGE)
 }
 
@@ -175,7 +177,7 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
             let msg = format!("subcommand failed with signal: {}", i);
             handle_error(CliError::new(msg, i as u32), shell)
         }
-        Err(io::IoError{kind, ..}) if kind == io::FileNotFound =>
+        Err(old_io::IoError{kind, ..}) if kind == old_io::FileNotFound =>
             handle_error(CliError::new("No such subcommand", 127), shell),
         Err(err) => handle_error(
             CliError::new(
@@ -219,8 +221,8 @@ fn list_commands() -> BTreeSet<String> {
 
 fn is_executable(path: &Path) -> bool {
     match fs::stat(path) {
-        Ok(io::FileStat{ kind: io::FileType::RegularFile, perm, ..}) =>
-            perm.contains(io::OTHER_EXECUTE),
+        Ok(old_io::FileStat{ kind: old_io::FileType::RegularFile, perm, ..}) =>
+            perm.contains(old_io::OTHER_EXECUTE),
         _ => false
     }
 }

@@ -85,7 +85,7 @@ pub fn update_lockfile(manifest_path: &Path,
         if !visited.insert(dep) { return }
         set.insert(dep);
         match resolve.deps(dep) {
-            Some(mut deps) => {
+            Some(deps) => {
                 for dep in deps {
                     fill_with_deps(resolve, dep, set, visited);
                 }

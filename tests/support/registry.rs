@@ -1,4 +1,4 @@
-use std::io::{self, fs, File};
+use std::old_io::{self, fs, File};
 
 use flate2::CompressionLevel::Default;
 use flate2::writer::GzEncoder;
@@ -19,7 +19,7 @@ pub fn dl_url() -> Url { Url::from_file_path(&dl_path()).ok().unwrap() }
 
 pub fn init() {
     let config = paths::home().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&config.dir_path(), old_io::USER_DIR).unwrap();
     File::create(&config).write_str(format!(r#"
         [registry]
             index = "{reg}"
@@ -57,7 +57,7 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     p.build();
 
     let dst = mock_archive_dst(name, version);
-    fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR).unwrap();
     let f = File::create(&dst).unwrap();
     let a = Archive::new(GzEncoder::new(f, Default));
     a.append(format!("{}-{}/Cargo.toml", name, version).as_slice(),
@@ -96,7 +96,7 @@ pub fn publish(file: &str, line: &str) {
     {
         let dst = registry_path().join(file);
         let prev = File::open(&dst).read_to_string().unwrap_or(String::new());
-        fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR).unwrap();
+        fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR).unwrap();
         File::create(&dst).write_str((prev + line + "\n").as_slice()).unwrap();
     }
     index.add_path(&Path::new(file)).unwrap();

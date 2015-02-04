@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::io::fs::PathExtensions;
-use std::io::{fs, USER_RWX, File};
+use std::old_io::fs::PathExtensions;
+use std::old_io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
 
@@ -141,7 +141,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                               Some(value.as_slice()));
                 }
             }
-            p = try!(super::add_plugin_deps(p, &*build_state, plugin_deps));
+            p = try!(super::add_plugin_deps(p, &build_state, plugin_deps));
         }
 
         // And now finally, run the build command itself!

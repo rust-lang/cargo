@@ -1,5 +1,3 @@
-#![allow(unstable)]
-
 extern crate hamcrest;
 extern crate cargo;
 

@@ -151,7 +151,7 @@ test!(cargo_bench_failing_test {
     let p = project("foo")
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
-            #![allow(unstable)]
+            #![feature(test)]
             extern crate test;
             fn hello() -> &'static str {
                 "hello"
@@ -630,7 +630,7 @@ test!(bin_there_for_integration {
         ")
         .file("benches/foo.rs", r#"
             extern crate test;
-            use std::io::Command;
+            use std::old_io::Command;
             #[bench]
             fn bench_bench(_b: &mut test::Bencher) {
                 let status = Command::new("target/release/foo").status().unwrap();

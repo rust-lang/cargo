@@ -1,6 +1,6 @@
 use std::fmt::{self, Formatter};
-use std::io::{USER_DIR};
-use std::io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
+use std::old_io::{USER_DIR};
+use std::old_io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
 use git2::{self, ObjectType};

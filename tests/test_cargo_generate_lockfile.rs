@@ -1,4 +1,4 @@
-use std::io::File;
+use std::old_io::File;
 
 use support::{project, execs, cargo_dir};
 use hamcrest::assert_that;

@@ -1,5 +1,5 @@
-use std::io::{fs, USER_RWX, File, TempDir};
-use std::io::fs::PathExtensions;
+use std::old_io::{fs, USER_RWX, File, TempDir};
+use std::old_io::fs::PathExtensions;
 use std::os;
 
 use support::{execs, paths, cargo_dir};

@@ -1,4 +1,4 @@
-use std::io::File;
+use std::old_io::File;
 
 use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
