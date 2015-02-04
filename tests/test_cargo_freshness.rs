@@ -135,3 +135,40 @@ test!(rebuild_sub_package_then_while_package {
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 });
+
+test!(changing_features_is_ok {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+
+            [features]
+            foo = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stdout("\
+[..]Compiling foo v0.0.1 ([..])
+"));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
+                 .arg("--features").arg("foo"),
+                execs().with_status(0)
+                       .with_stdout("\
+[..]Compiling foo v0.0.1 ([..])
+"));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout("\
+[..]Compiling foo v0.0.1 ([..])
+"));
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0)
+                       .with_stdout(""));
+});

@@ -103,22 +103,25 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
 pub struct Fingerprint {
     extra: String,
     deps: Vec<Fingerprint>,
-    personal: Personal,
+    local: LocalFingerprint,
 }
 
 #[derive(Clone)]
-enum Personal {
-    Known(String),
-    Unknown(Path),
+enum LocalFingerprint {
+    Precalculated(String),
+    MtimeBased(Option<u64>, Path),
 }
 
 impl Fingerprint {
-    fn resolve(&self) -> CargoResult<String> {
-        let mut deps: Vec<_> = try!(self.deps.iter().map(|s| s.resolve()).collect());
+    fn resolve(&self, force: bool) -> CargoResult<String> {
+        let mut deps: Vec<_> = try!(self.deps.iter().map(|s| {
+            s.resolve(force)
+        }).collect());
         deps.sort();
-        let known = match self.personal {
-            Personal::Known(ref s) => s.clone(),
-            Personal::Unknown(ref p) => {
+        let known = match self.local {
+            LocalFingerprint::Precalculated(ref s) => s.clone(),
+            LocalFingerprint::MtimeBased(Some(n), _) if !force => n.to_string(),
+            LocalFingerprint::MtimeBased(_, ref p) => {
                 debug!("resolving: {}", p.display());
                 try!(fs::stat(p)).modified.to_string()
             }
@@ -173,26 +176,24 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
         calculate(cx, p, t, kind)
     }).collect::<CargoResult<Vec<_>>>());
 
-    // And finally, calculate what our own personal fingerprint is
-    let personal = if use_dep_info(pkg, target) {
+    // And finally, calculate what our own local fingerprint is
+    let local = if use_dep_info(pkg, target) {
         let dep_info = dep_info_loc(cx, pkg, target, kind);
-        match try!(calculate_target_mtime(&dep_info)) {
-            Some(i) => Personal::Known(i.to_string()),
-            None => {
-                // If the dep-info file does exist (but some other sources are
-                // newer than it), make sure to delete it so we don't pick up
-                // the old copy in resolve()
-                let _ = fs::unlink(&dep_info);
-                Personal::Unknown(dep_info)
-            }
+        let mtime = try!(calculate_target_mtime(&dep_info));
+
+        // if the mtime listed is not fresh, then remove the `dep_info` file to
+        // ensure that future calls to `resolve()` won't work.
+        if mtime.is_none() {
+            let _ = fs::unlink(&dep_info);
         }
+        LocalFingerprint::MtimeBased(mtime, dep_info)
     } else {
-        Personal::Known(try!(calculate_pkg_fingerprint(cx, pkg)))
+        LocalFingerprint::Precalculated(try!(calculate_pkg_fingerprint(cx, pkg)))
     };
     let fingerprint = Fingerprint {
         extra: extra,
         deps: deps,
-        personal: personal,
+        local: local,
     };
     cx.fingerprints.insert(key, fingerprint.clone());
     Ok(fingerprint)
@@ -244,7 +245,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
     let new_fingerprint = Fingerprint {
         extra: String::new(),
         deps: Vec::new(),
-        personal: Personal::Known(new_fingerprint),
+        local: LocalFingerprint::Precalculated(new_fingerprint),
     };
 
     let is_fresh = try!(is_fresh(&loc, &new_fingerprint));
@@ -287,7 +288,7 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 fn prepare(is_fresh: bool, loc: Path, fingerprint: Fingerprint) -> Preparation {
     let write_fingerprint = Work::new(move |_| {
         debug!("write fingerprint: {}", loc.display());
-        let fingerprint = try!(fingerprint.resolve().chain_error(|| {
+        let fingerprint = try!(fingerprint.resolve(true).chain_error(|| {
             internal("failed to resolve a pending fingerprint")
         }));
         try!(File::create(&loc).write_str(fingerprint.as_slice()));
@@ -317,7 +318,7 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
     };
 
     let old_fingerprint = try!(file.read_to_string());
-    let new_fingerprint = match new_fingerprint.resolve() {
+    let new_fingerprint = match new_fingerprint.resolve(false) {
         Ok(s) => s,
         Err(..) => return Ok(false),
     };
