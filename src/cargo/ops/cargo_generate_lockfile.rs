@@ -60,8 +60,16 @@ pub fn update_lockfile(manifest_path: &Path,
                 to_avoid.insert(dep);
                 match opts.precise {
                     Some(precise) => {
+                        // TODO: see comment in `resolve.rs` as well, but this
+                        //       seems like a pretty hokey reason to single out
+                        //       the registry as well.
+                        let precise = if dep.get_source_id().is_registry() {
+                            format!("{}={}", dep.get_name(), precise)
+                        } else {
+                            precise.to_string()
+                        };
                         let precise = dep.get_source_id().clone()
-                                         .with_precise(Some(precise.to_string()));
+                                         .with_precise(Some(precise));
                         try!(registry.add_sources(&[precise]));
                     }
                     None => {}
