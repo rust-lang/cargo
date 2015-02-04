@@ -141,7 +141,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                               Some(value.as_slice()));
                 }
             }
-            p = try!(super::add_plugin_deps(p, &*build_state, plugin_deps));
+            p = try!(super::add_plugin_deps(p, &build_state, plugin_deps));
         }
 
         // And now finally, run the build command itself!

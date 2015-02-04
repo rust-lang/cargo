@@ -153,7 +153,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     } else {
         output(error.to_string(), shell, fatal);
     }
-    if !handle_cause(&*error, shell) || hide {
+    if !handle_cause(&error, shell) || hide {
         let _ = shell.err().say("\nTo learn more, run the command again \
                                  with --verbose.".to_string(), BLACK);
     }

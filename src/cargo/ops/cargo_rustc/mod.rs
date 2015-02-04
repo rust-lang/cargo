@@ -767,7 +767,7 @@ fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)
     {
         if !visited.insert(pkg.get_package_id()) { return }
         f(pkg);
-        let mut deps = match cx.resolve.deps(pkg.get_package_id()) {
+        let deps = match cx.resolve.deps(pkg.get_package_id()) {
             Some(deps) => deps,
             None => return,
         };

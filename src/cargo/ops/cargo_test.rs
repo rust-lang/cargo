@@ -24,7 +24,7 @@ pub fn run_tests(manifest_path: &Path,
     compile.tests.sort();
 
     let target_name = options.name;
-    let mut tests_to_run = compile.tests.iter().filter(|&&(ref test_name, _)| {
+    let tests_to_run = compile.tests.iter().filter(|&&(ref test_name, _)| {
         target_name.map_or(true, |target_name| target_name == test_name.as_slice())
     });
 
@@ -52,7 +52,7 @@ pub fn run_tests(manifest_path: &Path,
 
     if options.compile_opts.env == "bench" { return Ok(None) }
 
-    let mut libs = compile.package.get_targets().iter().filter_map(|target| {
+    let libs = compile.package.get_targets().iter().filter_map(|target| {
         if !target.get_profile().is_doctest() || !target.is_lib() {
             return None
         }

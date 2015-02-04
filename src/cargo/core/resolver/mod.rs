@@ -178,7 +178,7 @@ fn activate(mut cx: Box<Context>,
     // First, figure out our set of dependencies based on the requsted set of
     // features. This also calculates what features we're going to enable for
     // our own dependencies.
-    let deps = try!(resolve_features(&mut *cx, &**parent, method));
+    let deps = try!(resolve_features(&mut cx, parent, method));
 
     // Next, transform all dependencies into a list of possible candidates which
     // can satisfy that dependency.
@@ -204,7 +204,7 @@ fn activate(mut cx: Box<Context>,
     // Workaround compilation error: `deps` does not live long enough
     let platform = platform.map(|s| &*s);
 
-    Ok(match try!(activate_deps(cx, registry, &**parent, platform, &*deps, 0)) {
+    Ok(match try!(activate_deps(cx, registry, parent, platform, &deps, 0)) {
         Ok(cx) => {
             cx.visited.borrow_mut().remove(parent.get_package_id());
             Ok(cx)
@@ -265,7 +265,7 @@ fn activate_deps<'a>(cx: Box<Context>,
     // incompatible with all other activated versions. Note that we define
     // "compatible" here in terms of the semver sense where if the left-most
     // nonzero digit is the same they're considered compatible.
-    let mut my_candidates = candidates.iter().filter(|&b| {
+    let my_candidates = candidates.iter().filter(|&b| {
         prev_active.iter().any(|a| a == b) ||
             prev_active.iter().all(|a| {
                 !compatible(a.get_version(), b.get_version())
@@ -312,7 +312,7 @@ fn activate_deps<'a>(cx: Box<Context>,
 
     // Oh well, we couldn't activate any of the candidates, so we just can't
     // activate this dependency at all
-    Ok(activation_error(&*cx, registry, last_err, parent, dep, prev_active,
+    Ok(activation_error(&cx, registry, last_err, parent, dep, prev_active,
                         &candidates[]))
 }
 
@@ -336,7 +336,7 @@ fn activation_error(cx: &Context,
                               dep.get_name());
         'outer: for v in prev_active.iter() {
             for node in cx.resolve.graph.iter() {
-                let mut edges = match cx.resolve.graph.edges(node) {
+                let edges = match cx.resolve.graph.edges(node) {
                     Some(edges) => edges,
                     None => continue,
                 };
@@ -433,7 +433,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
     // Second, ignoring dependencies that should not be compiled for this platform
-    let mut deps = deps.filter(|d| {
+    let deps = deps.filter(|d| {
         match method {
             Method::Required(_, _, _, Some(ref platform)) => {
                 d.is_active_for_platform(platform.as_slice())

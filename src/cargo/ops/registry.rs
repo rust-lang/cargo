@@ -199,7 +199,7 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
         Some((s, _)) => return Ok(Some(s)),
         None => {}
     }
-    Ok(os::getenv("HTTP_TIMEOUT").and_then(|s| s.parse()))
+    Ok(os::getenv("HTTP_TIMEOUT").and_then(|s| s.parse().ok()))
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
