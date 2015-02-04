@@ -633,7 +633,7 @@ test!(bin_there_for_integration {
             #[test] fn main_test() {}
         ")
         .file("tests/foo.rs", r#"
-            use std::io::Command;
+            use std::old_io::Command;
             #[test]
             fn test_test() {
                 let status = Command::new("target/foo").status().unwrap();

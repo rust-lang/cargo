@@ -80,7 +80,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
     }
 
     pub fn get(&mut self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        log!(5, "getting packages; sources={}", self.sources.len());
+        trace!("getting packages; sources={}", self.sources.len());
 
         // TODO: Only call source with package ID if the package came from the
         // source

@@ -1,12 +1,12 @@
-#![allow(unstable)]
+#![feature(core, io)]
 
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;
 
 use std::fmt;
-use std::io::{self, fs, MemReader, MemWriter, File};
+use std::old_io::{self, fs, MemReader, MemWriter, File};
 use std::collections::HashMap;
-use std::io::util::ChainedReader;
+use std::old_io::util::ChainedReader;
 use std::result;
 
 use curl::http;
@@ -36,7 +36,7 @@ pub enum Error {
     Api(Vec<String>),
     Unauthorized,
     TokenMissing,
-    Io(io::IoError),
+    Io(old_io::IoError),
 }
 
 #[derive(RustcDecodable)]

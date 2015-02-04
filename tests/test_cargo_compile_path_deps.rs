@@ -1,4 +1,4 @@
-use std::io::{fs, File, USER_RWX};
+use std::old_io::{fs, File, USER_RWX};
 
 use support::{project, execs, main_file, cargo_dir};
 use support::{COMPILING, RUNNING};
@@ -665,7 +665,7 @@ test!(path_dep_build_cmd {
             name = "bar"
         "#)
         .file("bar/build.rs", r#"
-            use std::io::fs;
+            use std::old_io::fs;
             fn main() {
                 fs::copy(&Path::new("src/bar.rs.in"),
                          &Path::new("src/bar.rs")).unwrap();

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use std::fmt;
-use std::io::fs::{self, PathExtensions};
+use std::old_io::fs::{self, PathExtensions};
 use std::os;
 use std::slice;
 use std::str;

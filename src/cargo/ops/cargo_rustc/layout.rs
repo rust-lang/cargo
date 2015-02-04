@@ -47,8 +47,8 @@
 
 use std::cell::RefCell;
 use std::collections::HashSet;
-use std::io::fs::PathExtensions;
-use std::io::{self, fs, IoResult};
+use std::old_io::fs::PathExtensions;
+use std::old_io::{self, fs, IoResult};
 use std::mem;
 
 use core::Package;
@@ -97,7 +97,7 @@ impl Layout {
 
     pub fn prepare(&mut self) -> IoResult<()> {
         if !self.root.exists() {
-            try!(fs::mkdir_recursive(&self.root, io::USER_RWX));
+            try!(fs::mkdir_recursive(&self.root, old_io::USER_RWX));
         }
 
         try!(mkdir(self, &self.deps, false));
@@ -128,7 +128,7 @@ impl Layout {
                     }
                 }
             } else {
-                try!(fs::mkdir(dir, io::USER_DIR));
+                try!(fs::mkdir(dir, old_io::USER_DIR));
             }
             Ok(())
         }

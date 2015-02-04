@@ -1,5 +1,5 @@
-use std::io::{fs, File, USER_DIR};
-use std::io::fs::PathExtensions;
+use std::old_io::{fs, File, USER_DIR};
+use std::old_io::fs::PathExtensions;
 use std::path;
 
 use tar::Archive;

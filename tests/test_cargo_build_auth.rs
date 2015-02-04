@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use std::io::net::tcp::TcpAcceptor;
-use std::io::{TcpListener, Listener, Acceptor, BufferedStream};
+use std::old_io::net::tcp::TcpAcceptor;
+use std::old_io::{TcpListener, Listener, Acceptor, BufferedStream};
 use std::thread::Thread;
 use git2;
 
@@ -41,7 +41,7 @@ test!(http_auth_offered {
     let t = Thread::scoped(move|| {
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
-        s.write(b"\
+        s.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
@@ -49,13 +49,13 @@ test!(http_auth_offered {
         assert_eq!(req, vec![
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.21.0)",
+            "User-Agent: git/1.0 (libgit2 0.22.0)",
         ].into_iter().map(|s| s.to_string()).collect());
         drop(s);
 
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
-        s.write(b"\
+        s.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
@@ -64,7 +64,7 @@ test!(http_auth_offered {
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Authorization: Basic Zm9vOmJhcg==",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.21.0)",
+            "User-Agent: git/1.0 (libgit2 0.22.0)",
         ].into_iter().map(|s| s.to_string()).collect());
     });
 

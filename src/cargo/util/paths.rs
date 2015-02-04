@@ -1,10 +1,10 @@
-use std::{io,os};
-use std::io::fs;
+use std::{old_io,os};
+use std::old_io::fs;
 use std::path::BytesContainer;
 
 use util::{human, CargoResult};
 
-pub fn realpath(original: &Path) -> io::IoResult<Path> {
+pub fn realpath(original: &Path) -> old_io::IoResult<Path> {
     const MAX_LINKS_FOLLOWED: usize = 256;
     let original = try!(os::make_absolute(original));
 
@@ -22,12 +22,12 @@ pub fn realpath(original: &Path) -> io::IoResult<Path> {
 
         loop {
             if followed == MAX_LINKS_FOLLOWED {
-                return Err(io::standard_error(io::InvalidInput))
+                return Err(old_io::standard_error(old_io::InvalidInput))
             }
 
             match fs::lstat(&result) {
                 Err(..) => break,
-                Ok(ref stat) if stat.kind != io::FileType::Symlink => break,
+                Ok(ref stat) if stat.kind != old_io::FileType::Symlink => break,
                 Ok(..) => {
                     followed += 1;
                     let path = try!(fs::readlink(&result));

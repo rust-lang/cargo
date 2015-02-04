@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::io::File;
-use std::io::fs::PathExtensions;
+use std::old_io::File;
+use std::old_io::fs::PathExtensions;
 use std::iter::repeat;
 use std::os;
 

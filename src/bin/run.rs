@@ -1,4 +1,4 @@
-use std::io::process::ExitStatus;
+use std::old_io::process::ExitStatus;
 
 use cargo::ops;
 use cargo::core::manifest::TargetKind;

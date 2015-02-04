@@ -1,6 +1,6 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::io::{self, fs, File, BufferedReader};
-use std::io::fs::PathExtensions;
+use std::old_io::{self, fs, File, BufferedReader};
+use std::old_io::fs::PathExtensions;
 
 use core::{Package, Target};
 use util;
@@ -268,13 +268,13 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 
     let work1 = Work::new(move |_| {
         if !new1.exists() {
-            try!(fs::mkdir(&new1, io::USER_DIR));
+            try!(fs::mkdir(&new1, old_io::USER_DIR));
         }
         Ok(())
     });
     let work2 = Work::new(move |_| {
         if !new2.exists() {
-            try!(fs::mkdir(&new2, io::USER_DIR));
+            try!(fs::mkdir(&new2, old_io::USER_DIR));
         }
         Ok(())
     });
@@ -322,8 +322,8 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
         Err(..) => return Ok(false),
     };
 
-    log!(5, "old fingerprint: {}", old_fingerprint);
-    log!(5, "new fingerprint: {}", new_fingerprint);
+    trace!("old fingerprint: {}", old_fingerprint);
+    trace!("new fingerprint: {}", new_fingerprint);
 
     Ok(old_fingerprint.as_slice() == new_fingerprint)
 }
@@ -406,11 +406,11 @@ fn filename(target: &Target) -> String {
 // next time.
 pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
     debug!("appending {} <- {}", path.display(), cwd.display());
-    let mut f = try!(File::open_mode(path, io::Open, io::ReadWrite));
+    let mut f = try!(File::open_mode(path, old_io::Open, old_io::ReadWrite));
     let contents = try!(f.read_to_end());
-    try!(f.seek(0, io::SeekSet));
-    try!(f.write(cwd.as_vec()));
-    try!(f.write(&[0]));
-    try!(f.write(&contents[]));
+    try!(f.seek(0, old_io::SeekSet));
+    try!(f.write_all(cwd.as_vec()));
+    try!(f.write_all(&[0]));
+    try!(f.write_all(&contents[]));
     Ok(())
 }

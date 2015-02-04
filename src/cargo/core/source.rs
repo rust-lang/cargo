@@ -193,7 +193,7 @@ impl SourceId {
 
     /// Creates an implementation of `Source` corresponding to this ID.
     pub fn load<'a>(&self, config: &'a Config) -> Box<Source+'a> {
-        log!(5, "loading SourceId; {}", self);
+        trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Box::new(GitSource::new(self, config)) as Box<Source>,
             Kind::Path => {

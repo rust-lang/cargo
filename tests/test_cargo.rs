@@ -1,6 +1,6 @@
-use std::io::fs;
-use std::io;
-use std::io::{USER_RWX, File};
+use std::old_io::fs;
+use std::old_io;
+use std::old_io::{USER_RWX, File};
 use std::os;
 use std::str;
 use cargo::util::process;
@@ -18,8 +18,8 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
     let path = proj.root().join(dir).join(format!("{}{}", name, os::consts::EXE_SUFFIX));
     mkdir_recursive(&Path::new(path.dirname())).unwrap();
     fs::File::create(&path).unwrap();
-    let io::FileStat{perm, ..} = fs::stat(&path).unwrap();
-    fs::chmod(&path, io::OTHER_EXECUTE | perm).unwrap();
+    let old_io::FileStat{perm, ..} = fs::stat(&path).unwrap();
+    fs::chmod(&path, old_io::OTHER_EXECUTE | perm).unwrap();
     proj
 }
 

@@ -158,8 +158,8 @@
 //!         ...
 //! ```
 
-use std::io::{self, fs, File};
-use std::io::fs::PathExtensions;
+use std::old_io::{self, fs, File};
+use std::old_io::fs::PathExtensions;
 use std::collections::HashMap;
 
 use curl::http;
@@ -281,7 +281,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             Err(..) => {}
         }
 
-        try!(fs::mkdir_recursive(&self.checkout_path, io::USER_DIR));
+        try!(fs::mkdir_recursive(&self.checkout_path, old_io::USER_DIR));
         let _ = fs::rmdir_recursive(&self.checkout_path);
         let repo = try!(git2::Repository::init(&self.checkout_path));
         Ok(repo)
@@ -302,7 +302,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         if dst.exists() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
 
-        try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
+        try!(fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR));
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
@@ -333,7 +333,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                                      pkg)))
         }
 
-        try!(File::create(&dst).write(resp.get_body()));
+        try!(File::create(&dst).write_all(resp.get_body()));
         Ok(dst)
     }
 
@@ -347,7 +347,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                                              pkg.get_version()));
         if dst.join(".cargo-ok").exists() { return Ok(dst) }
 
-        try!(fs::mkdir_recursive(&dst.dir_path(), io::USER_DIR));
+        try!(fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR));
         let f = try!(File::open(&tarball));
         let gz = try!(GzDecoder::new(f));
         let mut tar = Archive::new(gz);
@@ -453,7 +453,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         // git reset --hard origin/master
         let reference = "refs/remotes/origin/master";
         let oid = try!(repo.refname_to_id(reference));
-        log!(5, "[{}] updating to rev {}", self.source_id, oid);
+        trace!("[{}] updating to rev {}", self.source_id, oid);
         let object = try!(repo.find_object(oid, None));
         try!(repo.reset(&object, git2::ResetType::Hard, None, None, None));
         self.updated = true;

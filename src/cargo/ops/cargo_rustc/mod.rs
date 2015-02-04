@@ -1,7 +1,7 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
-use std::io::fs::{self, PathExtensions};
+use std::old_io::fs::{self, PathExtensions};
 use std::os;
 use std::path;
 use std::sync::Arc;
@@ -528,7 +528,7 @@ fn rustdoc(package: &Package, target: &Target,
         None
     });
 
-    log!(5, "commands={}", rustdoc);
+    trace!("commands={}", rustdoc);
 
     let primary = package.get_package_id() == cx.resolve.root();
     let name = package.get_name().to_string();

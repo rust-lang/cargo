@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::io::fs::PathExtensions;
-use std::io::{fs, USER_RWX, File};
+use std::old_io::fs::PathExtensions;
+use std::old_io::{fs, USER_RWX, File};
 use std::str;
 use std::sync::Mutex;
 

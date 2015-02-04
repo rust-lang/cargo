@@ -1,5 +1,5 @@
 #![deny(warnings)]
-#![allow(unstable)]
+#![feature(collections, core, io, os, path, rustc_private, std_misc)]
 
 extern crate cargo;
 extern crate flate2;
