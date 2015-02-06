@@ -1,5 +1,6 @@
 #![feature(collections, core, io, path, env)]
 
+extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;
 extern crate env_logger;
@@ -87,6 +88,8 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     config.shell().set_verbose(flags.flag_verbose);
+
+    init_git_transports(config);
 
     if flags.flag_list {
         println!("Installed Commands:");
@@ -246,4 +249,33 @@ fn list_command_directory() -> Vec<Path> {
         dirs.extend(env::split_paths(&val));
     }
     dirs
+}
+
+fn init_git_transports(config: &Config) {
+    // Only use a custom transport if a proxy is configured, right now libgit2
+    // doesn't support proxies and we have to use a custom transport in this
+    // case. The custom transport, however, is not as well battle-tested.
+    match cargo::ops::http_proxy(config) {
+        Ok(Some(..)) => {}
+        _ => return
+    }
+
+    let handle = match cargo::ops::http_handle(config) {
+        Ok(handle) => handle,
+        Err(..) => return,
+    };
+
+    // The unsafety of the registration function derives from two aspects:
+    //
+    // 1. This call must be synchronized with all other registration calls as
+    //    well as construction of new transports.
+    // 2. The argument is leaked.
+    //
+    // We're clear on point (1) because this is only called at the start of this
+    // binary (we know what the state of the world looks like) and we're mostly
+    // clear on point (2) because we'd only free it after everything is done
+    // anyway
+    unsafe {
+        git2_curl::register(handle);
+    }
 }
