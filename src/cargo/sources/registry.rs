@@ -163,10 +163,10 @@ use std::old_io::fs::PathExtensions;
 use std::collections::HashMap;
 
 use curl::http;
-use git2;
 use flate2::reader::GzDecoder;
-use rustc_serialize::json;
+use git2;
 use rustc_serialize::hex::ToHex;
+use rustc_serialize::json;
 use tar::Archive;
 use url::Url;
 
@@ -477,10 +477,26 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
             }
         }
 
-        let summaries = try!(self.summaries(dep.get_name()));
-        let mut summaries = summaries.iter().filter(|&&(_, yanked)| {
-            dep.get_source_id().get_precise().is_some() || !yanked
-        }).map(|&(ref s, _)| s.clone()).collect::<Vec<_>>();
+        let mut summaries = {
+            let summaries = try!(self.summaries(dep.get_name()));
+            summaries.iter().filter(|&&(_, yanked)| {
+                dep.get_source_id().get_precise().is_some() || !yanked
+            }).map(|s| s.0.clone()).collect::<Vec<_>>()
+        };
+
+        // Handle `cargo update --precise` here. If specified, our own source
+        // will have a precise version listed of the form `<pkg>=<req>` where
+        // `<pkg>` is the name of a crate on this source and `<req>` is the
+        // version requested (agument to `--precise`).
+        summaries.retain(|s| {
+            match self.source_id.get_precise() {
+                Some(p) if p.starts_with(dep.get_name()) => {
+                    let vers = &p[dep.get_name().len() + 1..];
+                    s.get_version().to_string() == vers
+                }
+                _ => true,
+            }
+        });
         summaries.query(dep)
     }
 }
@@ -491,8 +507,10 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
         // to look for, so we always atempt to perform an update here.
         //
         // If we have a precise version, then we'll update lazily during the
-        // querying phase.
-        if self.source_id.get_precise().is_none() {
+        // querying phase. Note that precise in this case is only
+        // `Some("locked")` as other `Some` values indicate a `cargo update
+        // --precise` request
+        if self.source_id.get_precise() != Some("locked") {
             try!(self.do_update());
         }
         Ok(())

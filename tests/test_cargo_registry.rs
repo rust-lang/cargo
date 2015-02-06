@@ -462,22 +462,42 @@ test!(update_lockfile {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
+    println!("0.0.1");
     r::mock_pkg("bar", "0.0.1", &[]);
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0));
 
     r::mock_pkg("bar", "0.0.2", &[]);
+    r::mock_pkg("bar", "0.0.3", &[]);
     fs::rmdir_recursive(&paths::home().join(".cargo/registry")).unwrap();
+    println!("0.0.2 update");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("update")
+                 .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+", updating = UPDATING).as_slice()));
+
+    println!("0.0.2 build");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+                execs().with_status(0).with_stdout(format!("\
+{downloading} [..] v0.0.2 (registry file://[..])
+{compiling} bar v0.0.2 (registry file://[..])
+{compiling} foo v0.0.1 ({dir})
+", downloading = DOWNLOADING, compiling = COMPILING,
+   dir = p.url()).as_slice()));
+
+    println!("0.0.3 update");
     assert_that(p.process(cargo_dir().join("cargo")).arg("update")
                  .arg("-p").arg("bar"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 ", updating = UPDATING).as_slice()));
 
+    println!("0.0.3 build");
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
                 execs().with_status(0).with_stdout(format!("\
-{downloading} [..] v0.0.2 (registry file://[..])
-{compiling} bar v0.0.2 (registry file://[..])
+{downloading} [..] v0.0.3 (registry file://[..])
+{compiling} bar v0.0.3 (registry file://[..])
 {compiling} foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
