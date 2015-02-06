@@ -21,7 +21,7 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
                                                config));
     try!(source.update());
-    let package = try!(source.get_root_package());
+    let package = try!(source.root_package());
     let mut registry = PackageRegistry::new(config);
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
@@ -35,7 +35,7 @@ pub fn update_lockfile(manifest_path: &Path,
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
                                                opts.config));
     try!(source.update());
-    let package = try!(source.get_root_package());
+    let package = try!(source.root_package());
 
     let previous_resolve = match try!(ops::load_pkg_lockfile(&package)) {
         Some(resolve) => resolve,
@@ -63,12 +63,12 @@ pub fn update_lockfile(manifest_path: &Path,
                         // TODO: see comment in `resolve.rs` as well, but this
                         //       seems like a pretty hokey reason to single out
                         //       the registry as well.
-                        let precise = if dep.get_source_id().is_registry() {
-                            format!("{}={}", dep.get_name(), precise)
+                        let precise = if dep.source_id().is_registry() {
+                            format!("{}={}", dep.name(), precise)
                         } else {
                             precise.to_string()
                         };
-                        let precise = dep.get_source_id().clone()
+                        let precise = dep.source_id().clone()
                                          .with_precise(Some(precise));
                         try!(registry.add_sources(&[precise]));
                     }

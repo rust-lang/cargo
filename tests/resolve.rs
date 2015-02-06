@@ -192,14 +192,14 @@ fn test_resolving_with_same_name() {
 #[test]
 fn test_resolving_with_dev_deps() {
     let mut reg = registry(vec!(
-        pkg!("foo" => ["bar", dep("baz").kind(Development)]),
-        pkg!("baz" => ["bat", dep("bam").kind(Development)]),
+        pkg!("foo" => ["bar", dep("baz").set_kind(Development)]),
+        pkg!("baz" => ["bat", dep("bam").set_kind(Development)]),
         pkg!("bar"),
         pkg!("bat")
     ));
 
     let res = resolve(pkg_id("root"),
-                      vec![dep("foo"), dep("baz").kind(Development)],
+                      vec![dep("foo"), dep("baz").set_kind(Development)],
                       &mut reg).unwrap();
 
     assert_that(&res, contains(names(&["root", "foo", "bar", "baz"])));

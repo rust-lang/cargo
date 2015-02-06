@@ -101,8 +101,8 @@ pub fn rustc_new_version() -> CargoResult<(String, String)> {
 fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
     let mut curr: Option<Option<&str>> = None;
 
-    for t in targets.iter().filter(|t| !t.get_profile().is_custom_build()) {
-        let dest = t.get_profile().get_dest();
+    for t in targets.iter().filter(|t| !t.profile().is_custom_build()) {
+        let dest = t.profile().dest();
 
         match curr {
             Some(curr) => assert!(curr == dest),
@@ -134,10 +134,10 @@ pub fn compile_targets<'a, 'b>(env: &str,
     try!(links::validate(deps));
 
     let dest = uniq_target_dest(targets);
-    let root = if resolve.root() == pkg.get_package_id() {
+    let root = if resolve.root() == pkg.package_id() {
         pkg
     } else {
-        deps.iter().find(|p| p.get_package_id() == resolve.root()).unwrap()
+        deps.iter().find(|p| p.package_id() == resolve.root()).unwrap()
     };
     let host_layout = Layout::new(root, None, dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
@@ -162,22 +162,22 @@ pub fn compile_targets<'a, 'b>(env: &str,
     // everything in order with proper parallelism.
     let mut compiled = HashSet::new();
     each_dep(pkg, &cx, |dep| {
-        compiled.insert(dep.get_package_id().clone());
+        compiled.insert(dep.package_id().clone());
     });
     for dep in deps.iter() {
         if dep == pkg { continue }
 
         // Only compile lib targets for dependencies
-        let targets = dep.get_targets().iter().filter(|target| {
-            target.get_profile().is_custom_build() ||
+        let targets = dep.targets().iter().filter(|target| {
+            target.profile().is_custom_build() ||
                 cx.is_relevant_target(*target)
         }).collect::<Vec<&Target>>();
 
-        if targets.len() == 0 && dep.get_package_id() != resolve.root() {
+        if targets.len() == 0 && dep.package_id() != resolve.root() {
             return Err(human(format!("Package `{}` has no library targets", dep)))
         }
 
-        let compiled = compiled.contains(dep.get_package_id());
+        let compiled = compiled.contains(dep.package_id());
         try!(compile(&targets, dep, compiled, &mut cx, &mut queue));
     }
 
@@ -242,7 +242,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
             (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     let (mut build_custom, mut run_custom) = (Vec::new(), Vec::new());
     for &target in targets.iter() {
-        let work = if target.get_profile().is_doc() {
+        let work = if target.profile().is_doc() {
             let rustdoc = try!(rustdoc(pkg, target, cx));
             vec![(rustdoc, Kind::Target)]
         } else {
@@ -252,13 +252,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
 
         // Figure out what stage this work will go into
         let dst = match (target.is_lib(),
-                         target.get_profile().is_test(),
-                         target.get_profile().is_custom_build()) {
+                         target.profile().is_test(),
+                         target.profile().is_custom_build()) {
             (_, _, true) => &mut build_custom,
             (true, true, _) => &mut lib_tests,
             (false, true, _) => &mut bin_tests,
             (true, false, _) => &mut libs,
-            (false, false, _) if target.get_profile().get_env() == "test" => &mut bin_tests,
+            (false, false, _) if target.profile().env() == "test" => &mut bin_tests,
             (false, false, _) => &mut bins,
         };
         for (work, kind) in work.into_iter() {
@@ -277,10 +277,10 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         // because we may need to run the build script multiple times. If the
         // package is needed in both a host and target context, we need to run
         // it once per context.
-        if !target.get_profile().is_custom_build() { continue }
+        if !target.profile().is_custom_build() { continue }
         let mut reqs = Vec::new();
         let requirement = targets.iter().fold(None::<Platform>, |req, t| {
-            if !t.get_profile().is_custom_build() && !t.get_profile().is_doc() {
+            if !t.profile().is_custom_build() && !t.profile().is_doc() {
                 let r2 = cx.get_requirement(pkg, *t);
                 req.map(|r| r.combine(r2)).or(Some(r2))
             } else {
@@ -302,8 +302,8 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         let before = run_custom.len();
         for &req in reqs.iter() {
             let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
-            let key = (pkg.get_package_id().clone(), kind);
-            if pkg.get_manifest().get_links().is_some() &&
+            let key = (pkg.package_id().clone(), kind);
+            if pkg.manifest().links().is_some() &&
                 cx.build_state.outputs.lock().unwrap().contains_key(&key) {
                     continue
                 }
@@ -336,9 +336,9 @@ fn rustc(package: &Package, target: &Target,
     let plugin_deps = crawl_build_deps(cx, package, target, Kind::Host);
 
     return rustcs.into_iter().map(|(rustc, kind)| {
-        let name = package.get_name().to_string();
-        let is_path_source = package.get_package_id().get_source_id().is_path();
-        let show_warnings = package.get_package_id() == cx.resolve.root() ||
+        let name = package.name().to_string();
+        let is_path_source = package.package_id().source_id().is_path();
+        let show_warnings = package.package_id() == cx.resolve.root() ||
                             is_path_source;
         let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
         let exec_engine = cx.exec_engine.clone();
@@ -348,16 +348,16 @@ fn rustc(package: &Package, target: &Target,
 
         // Prepare the native lib state (extra -L and -l flags)
         let build_state = cx.build_state.clone();
-        let current_id = package.get_package_id().clone();
+        let current_id = package.package_id().clone();
         let plugin_deps = plugin_deps.clone();
         let mut native_lib_deps = crawl_build_deps(cx, package, target, kind);
-        if package.has_custom_build() && !target.get_profile().is_custom_build() {
+        if package.has_custom_build() && !target.profile().is_custom_build() {
             native_lib_deps.insert(0, current_id.clone());
         }
 
         // If we are a binary and the package also contains a library, then we
         // don't pass the `-l` flags.
-        let pass_l_flag = target.is_lib() || !package.get_targets().iter().any(|t| {
+        let pass_l_flag = target.is_lib() || !package.targets().iter().any(|t| {
             t.is_lib()
         });
 
@@ -441,13 +441,13 @@ fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
         for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
             let req = cx.get_requirement(pkg, target);
             if !req.includes(kind) { continue }
-            if !visiting.insert(pkg.get_package_id()) { continue }
+            if !visiting.insert(pkg.package_id()) { continue }
 
             if pkg.has_custom_build() {
-                libs.insert(pkg.get_package_id().clone());
+                libs.insert(pkg.package_id().clone());
             }
             visit(cx, pkg, target, kind, visiting, libs);
-            visiting.remove(&pkg.get_package_id());
+            visiting.remove(&pkg.package_id());
         }
     }
 }
@@ -506,9 +506,9 @@ fn rustdoc(package: &Package, target: &Target,
     let mut rustdoc = rustdoc.arg(root_path(cx, package, target))
                          .cwd(cx.config.cwd().clone())
                          .arg("-o").arg(cx_root)
-                         .arg("--crate-name").arg(target.get_name());
+                         .arg("--crate-name").arg(target.name());
 
-    match cx.resolve.features(package.get_package_id()) {
+    match cx.resolve.features(package.package_id()) {
         Some(features) => {
             for feat in features.iter() {
                 rustdoc = rustdoc.arg("--cfg").arg(format!("feature=\"{}\"", feat));
@@ -527,8 +527,8 @@ fn rustdoc(package: &Package, target: &Target,
 
     trace!("commands={}", rustdoc);
 
-    let primary = package.get_package_id() == cx.resolve.root();
-    let name = package.get_name().to_string();
+    let primary = package.package_id() == cx.resolve.root();
+    let name = package.name().to_string();
     let desc = rustdoc.to_string();
     let exec_engine = cx.exec_engine.clone();
 
@@ -565,7 +565,7 @@ fn rustdoc(package: &Package, target: &Target,
 // This means that non-path dependencies (git/registry) will likely be shown as
 // absolute paths instead of relative paths.
 fn root_path(cx: &Context, pkg: &Package, target: &Target) -> Path {
-    let absolute = pkg.get_root().join(target.get_src_path());
+    let absolute = pkg.root().join(target.src_path());
     let cwd = cx.config.cwd();
     if cwd.is_ancestor_of(&absolute) {
         absolute.path_relative_from(cwd).unwrap_or(absolute)
@@ -579,7 +579,7 @@ fn build_base_args(cx: &Context,
                    pkg: &Package,
                    target: &Target,
                    crate_types: &[&str]) -> CommandPrototype {
-    let metadata = target.get_metadata();
+    let metadata = target.metadata();
 
     // Move to cwd so the root_path() passed below is actually correct
     cmd = cmd.cwd(cx.config.cwd().clone());
@@ -587,7 +587,7 @@ fn build_base_args(cx: &Context,
     // TODO: Handle errors in converting paths into args
     cmd = cmd.arg(root_path(cx, pkg, target));
 
-    cmd = cmd.arg("--crate-name").arg(target.get_name());
+    cmd = cmd.arg("--crate-name").arg(target.name());
 
     for crate_type in crate_types.iter() {
         cmd = cmd.arg("--crate-type").arg(*crate_type);
@@ -599,26 +599,26 @@ fn build_base_args(cx: &Context,
 
     let prefer_dynamic = profile.is_for_host() ||
                          (crate_types.contains(&"dylib") &&
-                          pkg.get_package_id() != cx.resolve.root());
+                          pkg.package_id() != cx.resolve.root());
     if prefer_dynamic {
         cmd = cmd.arg("-C").arg("prefer-dynamic");
     }
 
-    if profile.get_opt_level() != 0 {
-        cmd = cmd.arg("-C").arg(format!("opt-level={}", profile.get_opt_level()));
+    if profile.opt_level() != 0 {
+        cmd = cmd.arg("-C").arg(format!("opt-level={}", profile.opt_level()));
     }
-    if (target.is_bin() || target.is_staticlib()) && profile.get_lto() {
+    if (target.is_bin() || target.is_staticlib()) && profile.lto() {
         cmd = cmd.args(&["-C", "lto"]);
     } else {
         // There are some restrictions with LTO and codegen-units, so we
         // only add codegen units when LTO is not used.
-        match profile.get_codegen_units() {
+        match profile.codegen_units() {
             Some(n) => cmd = cmd.arg("-C").arg(format!("codegen-units={}", n)),
             None => {},
         }
     }
 
-    if profile.get_debug() {
+    if profile.debug() {
         cmd = cmd.arg("-g");
     } else {
         cmd = cmd.args(&["--cfg", "ndebug"]);
@@ -628,7 +628,7 @@ fn build_base_args(cx: &Context,
         cmd = cmd.arg("--test");
     }
 
-    match cx.resolve.features(pkg.get_package_id()) {
+    match cx.resolve.features(pkg.package_id()) {
         Some(features) => {
             for feat in features.iter() {
                 cmd = cmd.arg("--cfg").arg(format!("feature=\"{}\"", feat));
@@ -645,7 +645,7 @@ fn build_base_args(cx: &Context,
         None => {}
     }
 
-    if profile.get_rpath() {
+    if profile.rpath() {
         cmd = cmd.arg("-C").arg("rpath");
     }
 
@@ -697,12 +697,12 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         cmd = try!(link_to(cmd, pkg, target, cx, kind));
     }
 
-    let targets = package.get_targets().iter().filter(|target| {
-        target.is_lib() && target.get_profile().is_compile()
+    let targets = package.targets().iter().filter(|target| {
+        target.is_lib() && target.profile().is_compile()
     });
 
     if (target.is_bin() || target.is_example()) &&
-       !target.get_profile().is_custom_build() {
+       !target.profile().is_custom_build() {
         for target in targets.filter(|f| f.is_rlib() || f.is_dylib()) {
             cmd = try!(link_to(cmd, package, target, cx, kind));
         }
@@ -717,14 +717,14 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         // target directory (hence the || here).
         let layout = cx.layout(pkg, match kind {
             Kind::Host => Kind::Host,
-            Kind::Target if target.get_profile().is_for_host() => Kind::Host,
+            Kind::Target if target.profile().is_for_host() => Kind::Host,
             Kind::Target => Kind::Target,
         });
 
         for filename in try!(cx.target_filenames(target)).iter() {
             if filename.as_bytes().ends_with(b".a") { continue }
             let mut v = Vec::new();
-            v.push_all(target.get_name().as_bytes());
+            v.push_all(target.name().as_bytes());
             v.push(b'=');
             v.push_all(layout.root().as_vec());
             v.push(old_path::SEP_BYTE);
@@ -754,16 +754,16 @@ fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)
     where F: FnMut(&'a Package)
 {
     let mut visited = HashSet::new();
-    let pkg = cx.get_package(pkg.get_package_id());
+    let pkg = cx.get_package(pkg.package_id());
     visit_deps(pkg, cx, &mut visited, &mut f);
 
     fn visit_deps<'a, F>(pkg: &'a Package, cx: &'a Context,
                          visited: &mut HashSet<&'a PackageId>, f: &mut F)
         where F: FnMut(&'a Package)
     {
-        if !visited.insert(pkg.get_package_id()) { return }
+        if !visited.insert(pkg.package_id()) { return }
         f(pkg);
-        let deps = match cx.resolve.deps(pkg.get_package_id()) {
+        let deps = match cx.resolve.deps(pkg.package_id()) {
             Some(deps) => deps,
             None => return,
         };

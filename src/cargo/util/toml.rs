@@ -113,9 +113,9 @@ pub fn to_manifest(contents: &[u8],
         Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
         None => {}
     }
-    if manifest.get_targets().iter()
-                           .filter(|t| !t.get_profile().is_custom_build() )
-                           .next().is_none() {
+    if manifest.targets().iter()
+               .filter(|t| !t.profile().is_custom_build() )
+               .next().is_none() {
         return Err(human(format!("either a [lib] or [[bin]] section must \
                                   be present")))
     }
@@ -473,16 +473,16 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
                                       |dep| dep));
             try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
-                                      |dep| dep.kind(Kind::Development)));
+                                      |dep| dep.set_kind(Kind::Development)));
             try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
-                                      |dep| dep.kind(Kind::Build)));
+                                      |dep| dep.set_kind(Kind::Build)));
 
             if let Some(targets) = self.target.as_ref() {
                 for (name, platform) in targets.iter() {
                     try!(process_dependencies(&mut cx,
                                               platform.dependencies.as_ref(),
                                               |dep| {
-                        dep.only_for_platform(Some(name.clone()))
+                        dep.set_only_for_platform(Some(name.clone()))
                     }));
                 }
             }
@@ -569,9 +569,9 @@ fn process_dependencies<F>(cx: &mut Context,
                                                 .map(|v| v.as_slice()),
                                          &new_source_id));
         let dep = f(dep)
-                     .features(details.features.unwrap_or(Vec::new()))
-                     .default_features(details.default_features.unwrap_or(true))
-                     .optional(details.optional.unwrap_or(false));
+                     .set_features(details.features.unwrap_or(Vec::new()))
+                     .set_default_features(details.default_features.unwrap_or(true))
+                     .set_optional(details.optional.unwrap_or(false));
         cx.deps.push(dep);
     }
 
@@ -653,13 +653,14 @@ fn normalize(libs: &[TomlLibTarget],
             Some(ref toml) => toml,
             None => return profile,
         };
-        let opt_level = toml.opt_level.unwrap_or(profile.get_opt_level());
-        let lto = toml.lto.unwrap_or(profile.get_lto());
+        let opt_level = toml.opt_level.unwrap_or(profile.opt_level());
+        let lto = toml.lto.unwrap_or(profile.lto());
         let codegen_units = toml.codegen_units;
-        let debug = toml.debug.unwrap_or(profile.get_debug());
-        let rpath = toml.rpath.unwrap_or(profile.get_rpath());
-        profile.opt_level(opt_level).lto(lto).codegen_units(codegen_units)
-               .debug(debug).rpath(rpath)
+        let debug = toml.debug.unwrap_or(profile.debug());
+        let rpath = toml.rpath.unwrap_or(profile.rpath());
+        profile.set_opt_level(opt_level).set_lto(lto)
+               .set_codegen_units(codegen_units)
+               .set_debug(debug).set_rpath(rpath)
     }
 
     fn target_profiles(target: &TomlTarget, profiles: &TomlProfiles,
@@ -679,7 +680,7 @@ fn normalize(libs: &[TomlLibTarget],
         let doctest = target.doctest.unwrap_or(true);
         match target.doc {
             Some(true) | None => {
-                ret.push(merge(Profile::default_doc().doctest(doctest),
+                ret.push(merge(Profile::default_doc().set_doctest(doctest),
                                &profiles.doc));
             }
             Some(false) => {}
@@ -694,18 +695,18 @@ fn normalize(libs: &[TomlLibTarget],
 
         match dep {
             TestDep::Needed => {
-                ret.push(merge(Profile::default_test().test(false),
+                ret.push(merge(Profile::default_test().set_test(false),
                                &profiles.test));
-                ret.push(merge(Profile::default_doc().doc(false),
+                ret.push(merge(Profile::default_doc().set_doc(false),
                                &profiles.doc));
-                ret.push(merge(Profile::default_bench().test(false),
+                ret.push(merge(Profile::default_bench().set_test(false),
                                &profiles.bench));
             }
             _ => {}
         }
 
         if target.plugin == Some(true) {
-            ret = ret.into_iter().map(|p| p.for_host(true)).collect();
+            ret = ret.into_iter().map(|p| p.set_for_host(true)).collect();
         }
 
         ret
@@ -770,7 +771,7 @@ fn normalize(libs: &[TomlLibTarget],
     fn custom_build_target(dst: &mut Vec<Target>, cmd: &Path,
                            profiles: &TomlProfiles) {
         let profiles = [
-            merge(Profile::default_dev().for_host(true).custom_build(true),
+            merge(Profile::default_dev().set_for_host(true).set_custom_build(true),
                   &profiles.dev),
         ];
 
@@ -815,7 +816,7 @@ fn normalize(libs: &[TomlLibTarget],
             let mut metadata = metadata.clone();
             metadata.mix(&format!("test-{}", test.name));
 
-            let profile = Profile::default_test().harness(harness);
+            let profile = Profile::default_test().set_harness(harness);
             let profile = merge(profile, &profiles.test);
             dst.push(Target::test_target(&test.name,
                                          &path.to_path(),
@@ -839,7 +840,7 @@ fn normalize(libs: &[TomlLibTarget],
             let mut metadata = metadata.clone();
             metadata.mix(&format!("bench-{}", bench.name));
 
-            let profile = Profile::default_bench().harness(harness);
+            let profile = Profile::default_bench().set_harness(harness);
             let profile = merge(profile, &profiles.bench);
             dst.push(Target::bench_target(&bench.name,
                                           &path.to_path(),

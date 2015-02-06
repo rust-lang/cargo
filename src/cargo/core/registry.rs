@@ -114,7 +114,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
-            Some(&(ref previous, _)) if previous.get_precise().is_none() => {
+            Some(&(ref previous, _)) if previous.precise().is_none() => {
                 return Ok(())
             }
 
@@ -122,7 +122,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
             // then we're done, otherwise we need to need to move forward
             // updating this source.
             Some(&(ref previous, _)) => {
-                if previous.get_precise() == namespace.get_precise() {
+                if previous.precise() == namespace.precise() {
                     return Ok(())
                 }
             }
@@ -148,11 +148,11 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
-        let sub_map = match self.locked.entry(id.get_source_id().clone()) {
+        let sub_map = match self.locked.entry(id.source_id().clone()) {
             Occupied(e) => e.into_mut(),
             Vacant(e) => e.insert(HashMap::new()),
         };
-        let sub_vec = match sub_map.entry(id.get_name().to_string()) {
+        let sub_vec = match sub_map.entry(id.name().to_string()) {
             Occupied(e) => e.into_mut(),
             Vacant(e) => e.insert(Vec::new()),
         };
@@ -186,9 +186,9 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
         let mut ret = Vec::new();
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
-            let dep = Dependency::new_override(dep.get_name(), s);
+            let dep = Dependency::new_override(dep.name(), s);
             ret.extend(try!(src.query(&dep)).into_iter().filter(|s| {
-                seen.insert(s.get_name().to_string())
+                seen.insert(s.name().to_string())
             }));
         }
         Ok(ret)
@@ -210,10 +210,10 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
     // to be rewritten to a locked version wherever possible. If we're unable to
     // map a dependency though, we just pass it on through.
     fn lock(&self, summary: Summary) -> Summary {
-        let pair = self.locked.get(summary.get_source_id()).and_then(|map| {
-            map.get(summary.get_name())
+        let pair = self.locked.get(summary.source_id()).and_then(|map| {
+            map.get(summary.name())
         }).and_then(|vec| {
-            vec.iter().find(|&&(ref id, _)| id == summary.get_package_id())
+            vec.iter().find(|&&(ref id, _)| id == summary.package_id())
         });
 
         // Lock the summary's id if possible
@@ -240,7 +240,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
                 //    case it was likely an optional dependency which wasn't
                 //    included previously so we just pass it through anyway.
                 Some(&(_, ref deps)) => {
-                    match deps.iter().find(|d| d.get_name() == dep.get_name()) {
+                    match deps.iter().find(|d| d.name() == dep.name()) {
                         Some(lock) => {
                             if dep.matches_id(lock) {
                                 dep.lock_to(lock)
@@ -257,8 +257,8 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
                 // dependency. If anything does then we lock it to that and move
                 // on.
                 None => {
-                    let v = self.locked.get(dep.get_source_id()).and_then(|map| {
-                        map.get(dep.get_name())
+                    let v = self.locked.get(dep.source_id()).and_then(|map| {
+                        map.get(dep.name())
                     }).and_then(|vec| {
                         vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
                     });
@@ -278,10 +278,10 @@ impl<'a, 'b> Registry for PackageRegistry<'a, 'b> {
 
         let ret = if overrides.len() == 0 {
             // Ensure the requested source_id is loaded
-            try!(self.ensure_loaded(dep.get_source_id()));
+            try!(self.ensure_loaded(dep.source_id()));
             let mut ret = Vec::new();
             for (id, src) in self.sources.sources_mut() {
-                if id == dep.get_source_id() {
+                if id == dep.source_id() {
                     ret.extend(try!(src.query(dep)).into_iter());
                 }
             }
@@ -333,7 +333,7 @@ pub mod test {
 
         fn query_overrides(&self, dep: &Dependency) -> Vec<Summary> {
             self.overrides.iter()
-                .filter(|s| s.get_name() == dep.get_name())
+                .filter(|s| s.name() == dep.name())
                 .map(|s| s.clone())
                 .collect()
         }

@@ -25,8 +25,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> 
 
     try!(source.update().map_err(|err| CliError::new(err.description(), 1)));
 
-    source
-        .get_root_package()
-        .map(|pkg| Some(pkg))
-        .map_err(|err| CliError::from_boxed(err, 1))
+    source.root_package()
+          .map(|pkg| Some(pkg))
+          .map_err(|err| CliError::from_boxed(err, 1))
 }

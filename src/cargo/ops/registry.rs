@@ -33,7 +33,7 @@ pub fn publish(manifest_path: &Path,
     let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
                                             config));
     try!(src.update());
-    let pkg = try!(src.get_root_package());
+    let pkg = try!(src.root_package());
 
     let (mut registry, reg_id) = try!(registry(config, token, index));
     try!(verify_dependencies(&pkg, &reg_id));
@@ -44,7 +44,7 @@ pub fn publish(manifest_path: &Path,
                                     false, true)).unwrap();
 
     // Upload said tarball to the specified destination
-    try!(config.shell().status("Uploading", pkg.get_package_id().to_string()));
+    try!(config.shell().status("Uploading", pkg.package_id().to_string()));
     try!(transmit(&pkg, &tarball, &mut registry));
 
     Ok(())
@@ -52,20 +52,20 @@ pub fn publish(manifest_path: &Path,
 
 fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                        -> CargoResult<()> {
-    for dep in pkg.get_dependencies().iter() {
-        if dep.get_source_id().is_path() {
-            if dep.get_specified_req().is_none() {
+    for dep in pkg.dependencies().iter() {
+        if dep.source_id().is_path() {
+            if dep.specified_req().is_none() {
                 return Err(human(format!("all path dependencies must have \
                                           a version specified when \
                                           publishing.\n\
                                           dependency `{}` does not specify \
-                                          a version", dep.get_name())))
+                                          a version", dep.name())))
             }
-        } else if dep.get_source_id() != registry_src {
+        } else if dep.source_id() != registry_src {
             return Err(human(format!("all dependencies must come from the \
                                       same source.\ndependency `{}` comes \
-                                      from {} instead", dep.get_name(),
-                                     dep.get_source_id())))
+                                      from {} instead", dep.name(),
+                                     dep.source_id())))
         }
     }
     Ok(())
@@ -73,29 +73,29 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
 
 fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
             -> CargoResult<()> {
-    let deps = pkg.get_dependencies().iter().map(|dep| {
+    let deps = pkg.dependencies().iter().map(|dep| {
         NewCrateDependency {
             optional: dep.is_optional(),
             default_features: dep.uses_default_features(),
-            name: dep.get_name().to_string(),
-            features: dep.get_features().to_vec(),
-            version_req: dep.get_version_req().to_string(),
-            target: dep.get_only_for_platform().map(|s| s.to_string()),
-            kind: match dep.get_kind() {
+            name: dep.name().to_string(),
+            features: dep.features().to_vec(),
+            version_req: dep.version_req().to_string(),
+            target: dep.only_for_platform().map(|s| s.to_string()),
+            kind: match dep.kind() {
                 Kind::Normal => "normal",
                 Kind::Build => "build",
                 Kind::Development => "dev",
             }.to_string(),
         }
     }).collect::<Vec<NewCrateDependency>>();
-    let manifest = pkg.get_manifest();
+    let manifest = pkg.manifest();
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
-    } = *manifest.get_metadata();
+    } = *manifest.metadata();
     let readme = match *readme {
         Some(ref readme) => {
-            let path = pkg.get_root().join(readme);
+            let path = pkg.root().join(readme);
             Some(try!(File::open(&path).read_to_string().chain_error(|| {
                 human("failed to read the specified README")
             })))
@@ -104,7 +104,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     };
     match *license_file {
         Some(ref file) => {
-            if !pkg.get_root().join(file).exists() {
+            if !pkg.root().join(file).exists() {
                 return Err(human(format!("the license file `{}` does not exist",
                                          file)))
             }
@@ -112,10 +112,10 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         None => {}
     }
     registry.publish(&NewCrate {
-        name: pkg.get_name().to_string(),
-        vers: pkg.get_version().to_string(),
+        name: pkg.name().to_string(),
+        vers: pkg.version().to_string(),
         deps: deps,
-        features: pkg.get_summary().get_features().clone(),
+        features: pkg.summary().features().clone(),
         authors: authors.clone(),
         description: description.clone(),
         homepage: homepage.clone(),
@@ -235,8 +235,8 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
                                                     config));
             try!(src.update());
-            let pkg = try!(src.get_root_package());
-            pkg.get_name().to_string()
+            let pkg = try!(src.root_package());
+            pkg.name().to_string()
         }
     };
 
@@ -298,8 +298,8 @@ pub fn yank(config: &Config,
             let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
                                                     config));
             try!(src.update());
-            let pkg = try!(src.get_root_package());
-            pkg.get_name().to_string()
+            let pkg = try!(src.root_package());
+            pkg.name().to_string()
         }
     };
     let version = match version {

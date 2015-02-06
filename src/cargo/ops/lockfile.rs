@@ -8,8 +8,8 @@ use util::{CargoResult, ChainError, human};
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
-    let lockfile = pkg.get_manifest_path().dir_path().join("Cargo.lock");
-    let source_id = pkg.get_package_id().get_source_id();
+    let lockfile = pkg.manifest_path().dir_path().join("Cargo.lock");
+    let source_id = pkg.package_id().source_id();
     load_lockfile(&lockfile, source_id).chain_error(|| {
         human(format!("failed to parse lock file at: {}", lockfile.display()))
     })
@@ -31,7 +31,7 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
 }
 
 pub fn write_pkg_lockfile(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
-    let loc = pkg.get_root().join("Cargo.lock");
+    let loc = pkg.root().join("Cargo.lock");
     write_lockfile(&loc, resolve)
 }
 

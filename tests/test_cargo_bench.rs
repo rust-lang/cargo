@@ -50,7 +50,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
         RUNNING)));
 });
 
-test!(bench_target_name {
+test!(bench_tarname {
     let prj = project("foo")
         .file("Cargo.toml" , r#"
             [package]

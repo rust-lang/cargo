@@ -86,19 +86,19 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // Record the freshness state of this package as dirty if any job is
         // dirty or fresh otherwise
         let fresh = jobs.iter().fold(Fresh, |f1, &(_, f2)| f1.combine(f2));
-        match self.state.entry(pkg.get_package_id()) {
+        match self.state.entry(pkg.package_id()) {
             Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(fresh); }
             Vacant(entry) => { entry.insert(fresh); }
         };
 
         // Add the package to the dependency graph
         self.queue.enqueue(&(self.resolve, self.packages), Fresh,
-                           (pkg.get_package_id(), stage),
+                           (pkg.package_id(), stage),
                            (pkg, jobs));
     }
 
     pub fn ignore(&mut self, pkg: &'a Package) {
-        self.ignored.insert(pkg.get_package_id());
+        self.ignored.insert(pkg.package_id());
     }
 
     /// Execute all jobs necessary to build the dependency graph.
@@ -165,18 +165,18 @@ impl<'a, 'b> JobQueue<'a, 'b> {
            jobs: Vec<(Job, Freshness)>, config: &Config) -> CargoResult<()> {
         let njobs = jobs.len();
         let amt = if njobs == 0 {1} else {njobs as u32};
-        let id = pkg.get_package_id().clone();
+        let id = pkg.package_id().clone();
 
         // While the jobs are all running, we maintain some metadata about how
         // many are running, the current state of freshness (of all the combined
         // jobs), and the stage to pass to finish() later on.
         self.active += amt;
-        self.pending.insert((pkg.get_package_id(), stage), PendingBuild {
+        self.pending.insert((pkg.package_id(), stage), PendingBuild {
             amt: amt,
             fresh: fresh,
         });
 
-        let mut total_fresh = fresh.combine(self.state[pkg.get_package_id()]);
+        let mut total_fresh = fresh.combine(self.state[pkg.package_id()]);
         let mut running = Vec::new();
         for (job, job_freshness) in jobs.into_iter() {
             let fresh = job_freshness.combine(fresh);
@@ -211,11 +211,11 @@ impl<'a, 'b> JobQueue<'a, 'b> {
         // In general, we try to print "Compiling" for the first nontrivial task
         // run for a package, regardless of when that is. We then don't print
         // out any more information for a package after we've printed it once.
-        let print = !self.ignored.contains(&pkg.get_package_id());
-        let print = print && !self.printed.contains(&pkg.get_package_id());
+        let print = !self.ignored.contains(&pkg.package_id());
+        let print = print && !self.printed.contains(&pkg.package_id());
         if print && (stage == Stage::Libraries ||
                      (total_fresh == Dirty && running.len() > 0)) {
-            self.printed.insert(pkg.get_package_id());
+            self.printed.insert(pkg.package_id());
             match total_fresh {
                 Fresh => try!(config.shell().verbose(|c| {
                     c.status("Fresh", pkg)
@@ -243,12 +243,12 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
         // the start state which depends on the ending state of all dependent
         // packages (as determined by the resolve context).
         let (id, stage) = *self;
-        let pkg = packages.iter().find(|p| p.get_package_id() == id).unwrap();
+        let pkg = packages.iter().find(|p| p.package_id() == id).unwrap();
         let deps = resolve.deps(id).into_iter().flat_map(|a| a)
                           .filter(|dep| *dep != id)
                           .map(|dep| {
-                              (dep, pkg.get_dependencies().iter().find(|d| {
-                                  d.get_name() == dep.get_name()
+                              (dep, pkg.dependencies().iter().find(|d| {
+                                  d.name() == dep.name()
                               }).unwrap())
                           });
         match stage {

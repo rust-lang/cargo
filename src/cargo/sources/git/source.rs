@@ -33,8 +33,8 @@ impl<'a, 'b> GitSource<'a, 'b> {
             None => panic!("Not a git source; id={}", source_id),
         };
 
-        let remote = GitRemote::new(source_id.get_url());
-        let ident = ident(source_id.get_url());
+        let remote = GitRemote::new(source_id.url());
+        let ident = ident(source_id.url());
 
         let db_path = config.git_db_path().join(&ident);
 
@@ -47,7 +47,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
                                   .join(ident)
                                   .join(reference_path);
 
-        let reference = match source_id.get_precise() {
+        let reference = match source_id.precise() {
             Some(s) => GitReference::Rev(s.to_string()),
             None => source_id.git_reference().unwrap().clone(),
         };
@@ -64,9 +64,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
         }
     }
 
-    pub fn get_url(&self) -> &Url {
-        self.remote.get_url()
-    }
+    pub fn url(&self) -> &Url { self.remote.url() }
 }
 
 fn ident(url: &Url) -> String {
@@ -143,7 +141,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
 
 impl<'a, 'b> Debug for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.get_url()));
+        try!(write!(f, "git repo at {}", self.remote.url()));
 
         match self.reference.to_ref_string() {
             Some(s) => write!(f, " ({})", s),
@@ -164,11 +162,11 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
         let actual_rev = self.remote.rev_for(&self.db_path, &self.reference);
         let should_update = actual_rev.is_err() ||
-                            self.source_id.get_precise().is_none();
+                            self.source_id.precise().is_none();
 
         let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",
-                format!("git repository `{}`", self.remote.get_url())));
+                format!("git repository `{}`", self.remote.url())));
 
             trace!("updating git source `{:?}`", self.remote);
             let repo = try!(self.remote.checkout(&self.db_path));

@@ -22,14 +22,14 @@ impl Summary {
                dependencies: Vec<Dependency>,
                features: HashMap<String, Vec<String>>) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
-            if features.get(dep.get_name()).is_some() {
+            if features.get(dep.name()).is_some() {
                 return Err(human(format!("Features and dependencies cannot have \
-                                          the same name: `{}`", dep.get_name())))
+                                          the same name: `{}`", dep.name())))
             }
             if dep.is_optional() && !dep.is_transitive() {
                 return Err(human(format!("Dev-dependencies are not allowed \
                                           to be optional: `{}`",
-                                          dep.get_name())))
+                                          dep.name())))
             }
         }
         for (feature, list) in features.iter() {
@@ -38,7 +38,7 @@ impl Summary {
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
                 if !is_reexport && features.get(dep).is_some() { continue }
-                match dependencies.iter().find(|d| d.get_name() == dep) {
+                match dependencies.iter().find(|d| d.name() == dep) {
                     Some(d) => {
                         if d.is_optional() || is_reexport { continue }
                         return Err(human(format!("Feature `{}` depends on `{}` \
@@ -68,29 +68,12 @@ impl Summary {
         })
     }
 
-    pub fn get_package_id(&self) -> &PackageId {
-        &self.package_id
-    }
-
-    pub fn get_name(&self) -> &str {
-        self.get_package_id().get_name()
-    }
-
-    pub fn get_version(&self) -> &Version {
-        self.get_package_id().get_version()
-    }
-
-    pub fn get_source_id(&self) -> &SourceId {
-        self.package_id.get_source_id()
-    }
-
-    pub fn get_dependencies(&self) -> &[Dependency] {
-        &self.dependencies
-    }
-
-    pub fn get_features(&self) -> &HashMap<String, Vec<String>> {
-        &self.features
-    }
+    pub fn package_id(&self) -> &PackageId { &self.package_id }
+    pub fn name(&self) -> &str { self.package_id().name() }
+    pub fn version(&self) -> &Version { self.package_id().version() }
+    pub fn source_id(&self) -> &SourceId { self.package_id.source_id() }
+    pub fn dependencies(&self) -> &[Dependency] { &self.dependencies }
+    pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.features }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
         self.package_id = id;
@@ -118,7 +101,7 @@ pub trait SummaryVec {
 impl SummaryVec for Vec<Summary> {
     // TODO: Move to Registry
     fn names(&self) -> Vec<String> {
-        self.iter().map(|summary| summary.get_name().to_string()).collect()
+        self.iter().map(|summary| summary.name().to_string()).collect()
     }
 
 }

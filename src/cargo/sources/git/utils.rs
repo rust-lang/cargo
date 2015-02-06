@@ -98,7 +98,7 @@ impl GitRemote {
         GitRemote { url: url.clone() }
     }
 
-    pub fn get_url(&self) -> &Url {
+    pub fn url(&self) -> &Url {
         &self.url
     }
 
@@ -155,7 +155,7 @@ impl GitRemote {
 }
 
 impl GitDatabase {
-    fn get_path<'a>(&'a self) -> &'a Path {
+    fn path<'a>(&'a self) -> &'a Path {
         &self.path
     }
 
@@ -233,7 +233,7 @@ impl<'a> GitCheckout<'a> {
                   revision: GitRevision)
                   -> CargoResult<GitCheckout<'a>>
     {
-        let repo = try!(GitCheckout::clone_repo(database.get_path(), into));
+        let repo = try!(GitCheckout::clone_repo(database.path(), into));
         let checkout = GitCheckout::new(into, database, revision, repo);
         try!(checkout.reset());
         Ok(checkout)

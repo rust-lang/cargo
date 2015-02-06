@@ -56,9 +56,9 @@ pub struct SerializedManifest {
 impl Encodable for Manifest {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedManifest {
-            name: self.summary.get_name().to_string(),
-            version: self.summary.get_version().to_string(),
-            dependencies: self.summary.get_dependencies().iter().map(|d| {
+            name: self.summary.name().to_string(),
+            version: self.summary.version().to_string(),
+            dependencies: self.summary.dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
             targets: self.targets.clone(),
@@ -196,116 +196,78 @@ impl Profile {
         }
     }
 
-    pub fn is_compile(&self) -> bool {
-        self.env == "compile"
-    }
+    pub fn codegen_units(&self) -> Option<u32> { self.codegen_units }
+    pub fn debug(&self) -> bool { self.debug }
+    pub fn env(&self) -> &str { &self.env }
+    pub fn is_compile(&self) -> bool { self.env == "compile" }
+    pub fn is_custom_build(&self) -> bool { self.custom_build }
+    pub fn is_doc(&self) -> bool { self.doc }
+    pub fn is_doctest(&self) -> bool { self.doctest }
+    pub fn is_for_host(&self) -> bool { self.for_host }
+    pub fn is_test(&self) -> bool { self.test }
+    pub fn lto(&self) -> bool { self.lto }
+    pub fn opt_level(&self) -> u32 { self.opt_level }
+    pub fn rpath(&self) -> bool { self.rpath }
+    pub fn uses_test_harness(&self) -> bool { self.harness }
 
-    pub fn is_doc(&self) -> bool {
-        self.doc
-    }
-
-    pub fn is_test(&self) -> bool {
-        self.test
-    }
-
-    pub fn uses_test_harness(&self) -> bool {
-        self.harness
-    }
-
-    pub fn is_doctest(&self) -> bool {
-        self.doctest
-    }
-
-    pub fn is_custom_build(&self) -> bool {
-        self.custom_build
-    }
-
-    /// Returns true if the target must be built for the host instead of the target.
-    pub fn is_for_host(&self) -> bool {
-        self.for_host
-    }
-
-    pub fn get_opt_level(&self) -> u32 {
-        self.opt_level
-    }
-
-    pub fn get_lto(&self) -> bool {
-        self.lto
-    }
-
-    pub fn get_codegen_units(&self) -> Option<u32> {
-        self.codegen_units
-    }
-
-    pub fn get_debug(&self) -> bool {
-        self.debug
-    }
-
-    pub fn get_rpath(&self) -> bool {
-        self.rpath
-    }
-
-    pub fn get_env(&self) -> &str {
-        &self.env
-    }
-
-    pub fn get_dest(&self) -> Option<&str> {
+    pub fn dest(&self) -> Option<&str> {
         self.dest.as_ref().map(|d| d.as_slice())
     }
 
-    pub fn opt_level(mut self, level: u32) -> Profile {
+    pub fn set_opt_level(mut self, level: u32) -> Profile {
         self.opt_level = level;
         self
     }
 
-    pub fn lto(mut self, lto: bool) -> Profile {
+    pub fn set_lto(mut self, lto: bool) -> Profile {
         self.lto = lto;
         self
     }
 
-    pub fn codegen_units(mut self, units: Option<u32>) -> Profile {
+    pub fn set_codegen_units(mut self, units: Option<u32>) -> Profile {
         self.codegen_units = units;
         self
     }
 
-    pub fn debug(mut self, debug: bool) -> Profile {
+    pub fn set_debug(mut self, debug: bool) -> Profile {
         self.debug = debug;
         self
     }
 
-    pub fn rpath(mut self, rpath: bool) -> Profile {
+    pub fn set_rpath(mut self, rpath: bool) -> Profile {
         self.rpath = rpath;
         self
     }
 
-    pub fn test(mut self, test: bool) -> Profile {
+    pub fn set_test(mut self, test: bool) -> Profile {
         self.test = test;
         self
     }
 
-    pub fn doctest(mut self, doctest: bool) -> Profile {
+    pub fn set_doctest(mut self, doctest: bool) -> Profile {
         self.doctest = doctest;
         self
     }
 
-    pub fn doc(mut self, doc: bool) -> Profile {
+    pub fn set_doc(mut self, doc: bool) -> Profile {
         self.doc = doc;
         self
     }
 
-    /// Sets whether the `Target` must be compiled for the host instead of the target platform.
-    pub fn for_host(mut self, for_host: bool) -> Profile {
+    /// Sets whether the `Target` must be compiled for the host instead of the
+    /// target platform.
+    pub fn set_for_host(mut self, for_host: bool) -> Profile {
         self.for_host = for_host;
         self
     }
 
-    pub fn harness(mut self, harness: bool) -> Profile {
+    pub fn set_harness(mut self, harness: bool) -> Profile {
         self.harness = harness;
         self
     }
 
     /// Sets whether the `Target` is a custom build script.
-    pub fn custom_build(mut self, custom_build: bool) -> Profile {
+    pub fn set_custom_build(mut self, custom_build: bool) -> Profile {
         self.custom_build = custom_build;
         self
     }
@@ -340,7 +302,8 @@ impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Profile {
     }
 }
 
-/// Informations about a binary, a library, an example, etc. that is part of the package.
+/// Informations about a binary, a library, an example, etc. that is part of the
+/// package.
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Target {
     kind: TargetKind,
@@ -362,7 +325,9 @@ pub struct SerializedTarget {
 impl Encodable for Target {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let kind = match self.kind {
-            TargetKind::Lib(ref kinds) => kinds.iter().map(|k| k.crate_type()).collect(),
+            TargetKind::Lib(ref kinds) => {
+                kinds.iter().map(|k| k.crate_type()).collect()
+            }
             TargetKind::Bin => vec!("bin"),
             TargetKind::Example => vec!["example"],
         };
@@ -397,59 +362,25 @@ impl Manifest {
         }
     }
 
-    pub fn get_summary(&self) -> &Summary {
-        &self.summary
-    }
-
-    pub fn get_package_id(&self) -> &PackageId {
-        self.get_summary().get_package_id()
-    }
-
-    pub fn get_name(&self) -> &str {
-        self.get_package_id().get_name()
-    }
-
-    pub fn get_version(&self) -> &Version {
-        self.get_summary().get_package_id().get_version()
-    }
-
-    pub fn get_dependencies(&self) -> &[Dependency] {
-        self.get_summary().get_dependencies()
-    }
-
-    pub fn get_targets(&self) -> &[Target] {
-        &self.targets
-    }
-
-    pub fn get_target_dir(&self) -> &Path {
-        &self.target_dir
-    }
-
-    pub fn get_doc_dir(&self) -> &Path {
-        &self.doc_dir
-    }
-
-    pub fn get_links(&self) -> Option<&str> {
+    pub fn dependencies(&self) -> &[Dependency] { self.summary.dependencies() }
+    pub fn doc_dir(&self) -> &Path { &self.doc_dir }
+    pub fn exclude(&self) -> &[String] { &self.exclude }
+    pub fn include(&self) -> &[String] { &self.include }
+    pub fn metadata(&self) -> &ManifestMetadata { &self.metadata }
+    pub fn name(&self) -> &str { self.package_id().name() }
+    pub fn package_id(&self) -> &PackageId { self.summary.package_id() }
+    pub fn summary(&self) -> &Summary { &self.summary }
+    pub fn target_dir(&self) -> &Path { &self.target_dir }
+    pub fn targets(&self) -> &[Target] { &self.targets }
+    pub fn version(&self) -> &Version { self.package_id().version() }
+    pub fn warnings(&self) -> &[String] { &self.warnings }
+    pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| s.as_slice())
     }
 
     pub fn add_warning(&mut self, s: String) {
         self.warnings.push(s)
     }
-
-    pub fn get_warnings(&self) -> &[String] {
-        &self.warnings
-    }
-
-    pub fn get_exclude(&self) -> &[String] {
-        &self.exclude
-    }
-
-    pub fn get_include(&self) -> &[String] {
-        &self.include
-    }
-
-    pub fn get_metadata(&self) -> &ManifestMetadata { &self.metadata }
 
     pub fn set_summary(&mut self, summary: Summary) {
         self.summary = summary;
@@ -536,13 +467,10 @@ impl Target {
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn get_src_path(&self) -> &Path {
-        &self.src_path
-    }
+    pub fn name(&self) -> &str { &self.name }
+    pub fn src_path(&self) -> &Path { &self.src_path }
+    pub fn profile(&self) -> &Profile { &self.profile }
+    pub fn metadata(&self) -> Option<&Metadata> { self.metadata.as_ref() }
 
     pub fn is_lib(&self) -> bool {
         match self.kind {
@@ -587,14 +515,6 @@ impl Target {
             TargetKind::Example => true,
             _ => false
         }
-    }
-
-    pub fn get_profile(&self) -> &Profile {
-        &self.profile
-    }
-
-    pub fn get_metadata(&self) -> Option<&Metadata> {
-        self.metadata.as_ref()
     }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.

@@ -180,7 +180,7 @@ impl SourceId {
         Ok(SourceId::for_registry(&try!(RegistrySource::url(config))))
     }
 
-    pub fn get_url(&self) -> &Url { &self.inner.url }
+    pub fn url(&self) -> &Url { &self.inner.url }
     pub fn is_path(&self) -> bool { self.inner.kind == Kind::Path }
     pub fn is_registry(&self) -> bool { self.inner.kind == Kind::Registry }
 
@@ -209,7 +209,7 @@ impl SourceId {
         }
     }
 
-    pub fn get_precise(&self) -> Option<&str> {
+    pub fn precise(&self) -> Option<&str> {
         self.inner.precise.as_ref().map(|s| s.as_slice())
     }
 
@@ -389,7 +389,7 @@ impl<'src> SourceMap<'src> {
     }
 
     pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source+'src)> {
-        self.get(pkg_id.get_source_id())
+        self.get(pkg_id.source_id())
     }
 
     pub fn insert(&mut self, id: &SourceId, source: Box<Source+'src>) {

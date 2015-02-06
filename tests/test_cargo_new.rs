@@ -180,7 +180,8 @@ test!(subpackage_no_git {
 
     let subpackage = paths::root().join("foo").join("components");
     fs::mkdir(&subpackage, USER_RWX).unwrap();
-    assert_that(cargo_process("new").arg("foo/components/subcomponent"),
+    assert_that(cargo_process("new").arg("foo/components/subcomponent")
+                                    .env("USER", Some("foo")),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo/components/subcomponent/.git"),

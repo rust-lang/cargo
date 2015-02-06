@@ -63,10 +63,10 @@ pub fn compile(manifest_path: &Path,
     try!(source.update());
 
     // TODO: Move this into PathSource
-    let package = try!(source.get_root_package());
+    let package = try!(source.root_package());
     debug!("loaded package; package={}", package);
 
-    for key in package.get_manifest().get_warnings().iter() {
+    for key in package.manifest().warnings().iter() {
         try!(options.config.shell().warn(key))
     }
     compile_pkg(&package, options)
@@ -91,8 +91,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         return Err(human("jobs must be at least 1"))
     }
 
-    let override_ids = try!(source_ids_from_config(config,
-                                                   package.get_root()));
+    let override_ids = try!(source_ids_from_config(config, package.root()));
 
     let (packages, resolve_with_overrides, sources) = {
         let rustc_host = config.rustc_host().to_string();
@@ -129,16 +128,16 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
     let to_build = match spec {
         Some(spec) => {
             let pkgid = try!(resolve_with_overrides.query(spec));
-            packages.iter().find(|p| p.get_package_id() == pkgid).unwrap()
+            packages.iter().find(|p| p.package_id() == pkgid).unwrap()
         }
         None => package,
     };
 
-    let targets = to_build.get_targets().iter().filter(|target| {
-        target.get_profile().is_custom_build() || match env {
+    let targets = to_build.targets().iter().filter(|target| {
+        target.profile().is_custom_build() || match env {
             // doc-all == document everything, so look for doc targets
-            "doc" | "doc-all" => target.get_profile().get_env() == "doc",
-            env => target.get_profile().get_env() == env,
+            "doc" | "doc-all" => target.profile().env() == "doc",
+            env => target.profile().env() == env,
         }
     }).filter(|target| !lib_only || target.is_lib()).collect::<Vec<&Target>>();
 

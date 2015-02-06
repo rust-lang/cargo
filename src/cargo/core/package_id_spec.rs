@@ -47,9 +47,9 @@ impl PackageIdSpec {
 
     pub fn from_package_id(package_id: &PackageId) -> PackageIdSpec {
         PackageIdSpec {
-            name: package_id.get_name().to_string(),
-            version: Some(package_id.get_version().clone()),
-            url: Some(package_id.get_source_id().get_url().clone()),
+            name: package_id.name().to_string(),
+            version: Some(package_id.version().clone()),
+            url: Some(package_id.source_id().url().clone()),
         }
     }
 
@@ -97,20 +97,20 @@ impl PackageIdSpec {
         })
     }
 
-    pub fn get_name(&self) -> &str { &self.name }
-    pub fn get_version(&self) -> Option<&Version> { self.version.as_ref() }
-    pub fn get_url(&self) -> Option<&Url> { self.url.as_ref() }
+    pub fn name(&self) -> &str { &self.name }
+    pub fn version(&self) -> Option<&Version> { self.version.as_ref() }
+    pub fn url(&self) -> Option<&Url> { self.url.as_ref() }
 
     pub fn matches(&self, package_id: &PackageId) -> bool {
-        if self.get_name() != package_id.get_name() { return false }
+        if self.name() != package_id.name() { return false }
 
         match self.version {
-            Some(ref v) => if v != package_id.get_version() { return false },
+            Some(ref v) => if v != package_id.version() { return false },
             None => {}
         }
 
         match self.url {
-            Some(ref u) => u == package_id.get_source_id().get_url(),
+            Some(ref u) => u == package_id.source_id().url(),
             None => true
         }
     }

@@ -29,7 +29,7 @@ impl EncodableResolve {
             let mut register_pkg = |&mut: pkg: &EncodableDependency|
                                     -> CargoResult<()> {
                 let pkgid = try!(pkg.to_package_id(default));
-                let precise = pkgid.get_source_id().get_precise()
+                let precise = pkgid.source_id().precise()
                                    .map(|s| s.to_string());
                 assert!(tmp.insert(pkgid.clone(), precise).is_none(),
                         "a package was referenced twice in the lockfile");
@@ -172,29 +172,29 @@ fn encodable_resolve_node(id: &PackageId, root: &PackageId,
         deps
     });
 
-    let source = if id.get_source_id() == root.get_source_id() {
+    let source = if id.source_id() == root.source_id() {
         None
     } else {
-        Some(id.get_source_id().clone())
+        Some(id.source_id().clone())
     };
 
     EncodableDependency {
-        name: id.get_name().to_string(),
-        version: id.get_version().to_string(),
+        name: id.name().to_string(),
+        version: id.version().to_string(),
         source: source,
         dependencies: deps,
     }
 }
 
 fn encodable_package_id(id: &PackageId, root: &PackageId) -> EncodablePackageId {
-    let source = if id.get_source_id() == root.get_source_id() {
+    let source = if id.source_id() == root.source_id() {
         None
     } else {
-        Some(id.get_source_id().with_precise(None))
+        Some(id.source_id().with_precise(None))
     };
     EncodablePackageId {
-        name: id.get_name().to_string(),
-        version: id.get_version().to_string(),
+        name: id.name().to_string(),
+        version: id.version().to_string(),
         source: source,
     }
 }

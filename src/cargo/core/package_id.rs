@@ -131,17 +131,9 @@ impl PackageId {
         })
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.inner.name
-    }
-
-    pub fn get_version(&self) -> &semver::Version {
-        &self.inner.version
-    }
-
-    pub fn get_source_id(&self) -> &SourceId {
-        &self.inner.source_id
-    }
+    pub fn name(&self) -> &str { &self.inner.name }
+    pub fn version(&self) -> &semver::Version { &self.inner.version }
+    pub fn source_id(&self) -> &SourceId { &self.inner.source_id }
 
     pub fn generate_metadata(&self) -> Metadata {
         let metadata = short_hash(

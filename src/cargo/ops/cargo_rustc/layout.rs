@@ -67,7 +67,7 @@ pub struct LayoutProxy<'a> {
 
 impl Layout {
     pub fn new(pkg: &Package, triple: Option<&str>, dest: Option<&str>) -> Layout {
-        let mut path = pkg.get_absolute_target_dir();
+        let mut path = pkg.absolute_target_dir();
         match triple {
             Some(s) => path.push(s),
             None => {}
@@ -132,7 +132,7 @@ impl Layout {
     }
 
     fn pkg_dir(&self, pkg: &Package) -> String {
-        format!("{}-{}", pkg.get_name(), short_hash(pkg.get_package_id()))
+        format!("{}-{}", pkg.name(), short_hash(pkg.package_id()))
     }
 }
 

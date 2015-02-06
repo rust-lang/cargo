@@ -229,7 +229,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     pub fn new(source_id: &SourceId,
                config: &'a Config<'b>) -> RegistrySource<'a, 'b> {
         let hash = hex::short_hash(source_id);
-        let ident = source_id.get_url().host().unwrap().to_string();
+        let ident = source_id.url().host().unwrap().to_string();
         let part = format!("{}-{}", ident, hash);
         RegistrySource {
             checkout_path: config.registry_index_path().join(&part),
@@ -297,7 +297,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     fn download_package(&mut self, pkg: &PackageId, url: &Url)
                         -> CargoResult<Path> {
         // TODO: should discover from the S3 redirect
-        let filename = format!("{}-{}.crate", pkg.get_name(), pkg.get_version());
+        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let dst = self.cache_path.join(filename);
         if dst.exists() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
@@ -318,8 +318,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         }
 
         // Verify what we just downloaded
-        let expected = self.hashes.get(&(pkg.get_name().to_string(),
-                                         pkg.get_version().to_string()));
+        let expected = self.hashes.get(&(pkg.name().to_string(),
+                                         pkg.version().to_string()));
         let expected = try!(expected.chain_error(|| {
             internal(format!("no hash listed for {}", pkg))
         }));
@@ -343,8 +343,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// No action is taken if the source looks like it's already unpacked.
     fn unpack_package(&self, pkg: &PackageId, tarball: Path)
                       -> CargoResult<Path> {
-        let dst = self.src_path.join(format!("{}-{}", pkg.get_name(),
-                                             pkg.get_version()));
+        let dst = self.src_path.join(format!("{}-{}", pkg.name(),
+                                             pkg.version()));
         if dst.join(".cargo-ok").exists() { return Ok(dst) }
 
         try!(fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR));
@@ -387,7 +387,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             Err(..) => Vec::new(),
         };
         let summaries = summaries.into_iter().filter(|summary| {
-            summary.0.get_package_id().get_name() == name
+            summary.0.package_id().name() == name
         }).collect();
         self.cache.insert(name.to_string(), summaries);
         Ok(self.cache.get(name).unwrap())
@@ -426,11 +426,11 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             _ => Kind::Normal,
         };
 
-        Ok(dep.optional(optional)
-              .default_features(default_features)
-              .features(features)
-              .only_for_platform(target)
-              .kind(kind))
+        Ok(dep.set_optional(optional)
+              .set_default_features(default_features)
+              .set_features(features)
+              .set_only_for_platform(target)
+              .set_kind(kind))
     }
 
     /// Actually perform network operations to update the registry
@@ -438,11 +438,11 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         if self.updated { return Ok(()) }
 
         try!(self.config.shell().status("Updating",
-             format!("registry `{}`", self.source_id.get_url())));
+             format!("registry `{}`", self.source_id.url())));
         let repo = try!(self.open());
 
         // git fetch origin
-        let url = self.source_id.get_url().to_string();
+        let url = self.source_id.url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
         try!(git::fetch(&repo, &url, refspec).chain_error(|| {
             internal(format!("failed to fetch `{}`", url))
@@ -466,8 +466,8 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.get_source_id().get_precise().is_some() {
-            let mut summaries = try!(self.summaries(dep.get_name())).iter().map(|s| {
+        if dep.source_id().precise().is_some() {
+            let mut summaries = try!(self.summaries(dep.name())).iter().map(|s| {
                 s.0.clone()
             }).collect::<Vec<_>>();
             if try!(summaries.query(dep)).len() == 0 {
@@ -476,9 +476,9 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
         }
 
         let mut summaries = {
-            let summaries = try!(self.summaries(dep.get_name()));
+            let summaries = try!(self.summaries(dep.name()));
             summaries.iter().filter(|&&(_, yanked)| {
-                dep.get_source_id().get_precise().is_some() || !yanked
+                dep.source_id().precise().is_some() || !yanked
             }).map(|s| s.0.clone()).collect::<Vec<_>>()
         };
 
@@ -487,10 +487,10 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
         // `<pkg>` is the name of a crate on this source and `<req>` is the
         // version requested (agument to `--precise`).
         summaries.retain(|s| {
-            match self.source_id.get_precise() {
-                Some(p) if p.starts_with(dep.get_name()) => {
-                    let vers = &p[dep.get_name().len() + 1..];
-                    s.get_version().to_string() == vers
+            match self.source_id.precise() {
+                Some(p) if p.starts_with(dep.name()) => {
+                    let vers = &p[dep.name().len() + 1..];
+                    s.version().to_string() == vers
                 }
                 _ => true,
             }
@@ -508,7 +508,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
         // querying phase. Note that precise in this case is only
         // `Some("locked")` as other `Some` values indicate a `cargo update
         // --precise` request
-        if self.source_id.get_precise() != Some("locked") {
+        if self.source_id.precise() != Some("locked") {
             try!(self.do_update());
         }
         Ok(())
@@ -518,11 +518,11 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
         let config = try!(self.config());
         let url = try!(config.dl.to_url().map_err(internal));
         for package in packages.iter() {
-            if self.source_id != *package.get_source_id() { continue }
+            if self.source_id != *package.source_id() { continue }
 
             let mut url = url.clone();
-            url.path_mut().unwrap().push(package.get_name().to_string());
-            url.path_mut().unwrap().push(package.get_version().to_string());
+            url.path_mut().unwrap().push(package.name().to_string());
+            url.path_mut().unwrap().push(package.version().to_string());
             url.path_mut().unwrap().push("download".to_string());
             let path = try!(self.download_package(package, &url).chain_error(|| {
                 internal(format!("Failed to download package `{}` from {}",
@@ -547,6 +547,6 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
-        Ok(pkg.get_package_id().get_version().to_string())
+        Ok(pkg.package_id().version().to_string())
     }
 }

@@ -103,18 +103,18 @@ impl Compilation {
             cmd = cmd.env(k, v.as_ref());
         }
 
-        Ok(cmd.env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path().dir_path()))
+        Ok(cmd.env("CARGO_MANIFEST_DIR", Some(pkg.manifest_path().dir_path()))
               .env("CARGO_PKG_VERSION_MAJOR",
-                   Some(pkg.get_version().major.to_string()))
+                   Some(pkg.version().major.to_string()))
               .env("CARGO_PKG_VERSION_MINOR",
-                  Some(pkg.get_version().minor.to_string()))
+                  Some(pkg.version().minor.to_string()))
               .env("CARGO_PKG_VERSION_PATCH",
-                   Some(pkg.get_version().patch.to_string()))
+                   Some(pkg.version().patch.to_string()))
               .env("CARGO_PKG_VERSION_PRE",
-                   pre_version_component(pkg.get_version()))
+                   pre_version_component(pkg.version()))
               .env("CARGO_PKG_VERSION",
-                   Some(pkg.get_version().to_string()))
-              .cwd(pkg.get_root()))
+                   Some(pkg.version().to_string()))
+              .cwd(pkg.root()))
     }
 }
 
