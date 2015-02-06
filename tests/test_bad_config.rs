@@ -200,3 +200,23 @@ Caused by:
 
 "));
 });
+
+test!(bad_cargo_lock {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+    "#)
+    .file("Cargo.lock", "")
+    .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+failed to parse lock file at: [..]Cargo.lock
+
+Caused by:
+  expected a section for the key `root`
+"));
+});
