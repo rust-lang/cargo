@@ -183,10 +183,6 @@ pub fn compile_targets<'a, 'b>(env: &str,
 
     try!(compile(targets, pkg, true, &mut cx, &mut queue));
 
-    // Clean out any old files sticking around in directories.
-    try!(cx.layout(pkg, Kind::Host).proxy().clean());
-    try!(cx.layout(pkg, Kind::Target).proxy().clean());
-
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
 

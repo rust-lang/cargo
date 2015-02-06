@@ -1311,3 +1311,24 @@ test!(example_with_dev_dep {
 {running} `rustc [..] --crate-name ex [..] --extern a=[..]`
 ", running = RUNNING).as_slice()));
 });
+
+test!(bin_is_preserved {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+
+    println!("testing");
+    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+});
