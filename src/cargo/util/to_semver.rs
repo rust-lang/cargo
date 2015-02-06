@@ -16,3 +16,9 @@ impl<'a> ToSemver for &'a str {
         }
     }
 }
+
+impl<'a> ToSemver for &'a String {
+    fn to_semver(self) -> Result<Version, String> {
+        (**self).to_semver()
+    }
+}

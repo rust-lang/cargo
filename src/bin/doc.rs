@@ -54,7 +54,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             jobs: options.flag_jobs,
             target: None,
             dev_deps: false,
-            features: options.flag_features.as_slice(),
+            features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| s.as_slice()),
             lib_only: false,

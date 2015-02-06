@@ -98,7 +98,7 @@ impl SourceId {
     ///                     656c58fb7c5ef5f12bc747f".to_string());
     /// ```
     pub fn from_url(string: String) -> SourceId {
-        let mut parts = string.as_slice().splitn(1, '+');
+        let mut parts = string.splitn(1, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
 
@@ -339,7 +339,7 @@ impl GitReference {
     pub fn to_ref_string(&self) -> Option<String> {
         match *self {
             GitReference::Branch(ref s) => {
-                if s.as_slice() == "master" {
+                if *s == "master" {
                     None
                 } else {
                     Some(format!("branch={}", s))
@@ -460,7 +460,7 @@ impl<'src> Source for SourceSet<'src> {
         let mut ret = Vec::new();
 
         for source in self.sources.iter() {
-            ret.push_all(try!(source.get(packages)).as_slice());
+            ret.extend(try!(source.get(packages)).into_iter());
         }
 
         Ok(ret)

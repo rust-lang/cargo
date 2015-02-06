@@ -232,9 +232,9 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let ident = source_id.get_url().host().unwrap().to_string();
         let part = format!("{}-{}", ident, hash);
         RegistrySource {
-            checkout_path: config.registry_index_path().join(part.as_slice()),
-            cache_path: config.registry_cache_path().join(part.as_slice()),
-            src_path: config.registry_source_path().join(part.as_slice()),
+            checkout_path: config.registry_index_path().join(&part),
+            cache_path: config.registry_cache_path().join(&part),
+            src_path: config.registry_source_path().join(&part),
             config: config,
             source_id: source_id.clone(),
             handle: None,
@@ -252,7 +252,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     pub fn url(config: &Config) -> CargoResult<Url> {
         let config = try!(ops::registry_configuration(config));
         let url = config.index.unwrap_or(DEFAULT.to_string());
-        url.as_slice().to_url().map_err(human)
+        url.to_url().map_err(human)
     }
 
     /// Get the default url for the registry
@@ -266,7 +266,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     pub fn config(&self) -> CargoResult<RegistryConfig> {
         let mut f = try!(File::open(&self.checkout_path.join("config.json")));
         let contents = try!(f.read_to_string());
-        let config = try!(json::decode(contents.as_slice()));
+        let config = try!(json::decode(&contents));
         Ok(config)
     }
 
@@ -328,7 +328,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             state.update(resp.get_body());
             state.finish()
         };
-        if actual.as_slice().to_hex() != *expected {
+        if actual.to_hex() != *expected {
             return Err(human(format!("Failed to verify the checksum of `{}`",
                                      pkg)))
         }
@@ -376,7 +376,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             Ok(mut f) => {
                 let contents = try!(f.read_to_string());
                 let ret: CargoResult<Vec<(Summary, bool)>>;
-                ret = contents.as_slice().lines().filter(|l| l.trim().len() > 0)
+                ret = contents.lines().filter(|l| l.trim().len() > 0)
                               .map(|l| self.parse_registry_package(l))
                               .collect();
                 try!(ret.chain_error(|| {
@@ -402,9 +402,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let RegistryPackage {
             name, vers, cksum, deps, features, yanked
         } = try!(json::decode::<RegistryPackage>(line));
-        let pkgid = try!(PackageId::new(name.as_slice(),
-                                        vers.as_slice(),
-                                        &self.source_id));
+        let pkgid = try!(PackageId::new(&name, &vers, &self.source_id));
         let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
             self.parse_registry_dependency(dep)
         }).collect();
@@ -420,7 +418,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             name, req, features, optional, default_features, target, kind
         } = dep;
 
-        let dep = try!(Dependency::parse(name.as_slice(), Some(req.as_slice()),
+        let dep = try!(Dependency::parse(&name, Some(&req),
                                          &self.source_id));
         let kind = match kind.as_ref().map(|s| s.as_slice()).unwrap_or("") {
             "dev" => Kind::Development,
@@ -446,7 +444,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         // git fetch origin
         let url = self.source_id.get_url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
-        try!(git::fetch(&repo, url.as_slice(), refspec).chain_error(|| {
+        try!(git::fetch(&repo, &url, refspec).chain_error(|| {
             internal(format!("failed to fetch `{}`", url))
         }));
 
@@ -518,7 +516,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
 
     fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
         let config = try!(self.config());
-        let url = try!(config.dl.as_slice().to_url().map_err(internal));
+        let url = try!(config.dl.to_url().map_err(internal));
         for package in packages.iter() {
             if self.source_id != *package.get_source_id() { continue }
 

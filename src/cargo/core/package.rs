@@ -168,7 +168,7 @@ impl PackageSet {
     }
 
     pub fn get_packages(&self) -> &[Package] {
-        self.packages.as_slice()
+        &self.packages
     }
 
     // For now, assume that the package set contains only one package with a
@@ -181,7 +181,7 @@ impl PackageSet {
                 .map(|dep| dep.get_name())
                 .collect();
 
-            graph.add(pkg.get_name(), deps.as_slice());
+            graph.add(pkg.get_name(), &deps);
         }
 
         let pkgs = match graph.sort() {

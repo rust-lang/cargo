@@ -108,7 +108,7 @@ impl Registry {
         let body = json::encode(&OwnersReq { users: owners }).unwrap();
         let body = try!(self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes()));
-        assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
+        assert!(json::decode::<R>(&body).unwrap().ok);
         Ok(())
     }
 
@@ -116,13 +116,13 @@ impl Registry {
         let body = json::encode(&OwnersReq { users: owners }).unwrap();
         let body = try!(self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes())));
-        assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
+        assert!(json::decode::<R>(&body).unwrap().ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
         let body = try!(self.get(format!("/crates/{}/owners", krate)));
-        Ok(json::decode::<Users>(body.as_slice()).unwrap().users)
+        Ok(json::decode::<Users>(&body).unwrap().users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
@@ -137,7 +137,7 @@ impl Registry {
         let header = {
             let mut w = MemWriter::new();
             w.write_le_u32(json.len() as u32).unwrap();
-            w.write_str(json.as_slice()).unwrap();
+            w.write_str(&json).unwrap();
             w.write_le_u32(stat.size as u32).unwrap();
             MemReader::new(w.into_inner())
         };
@@ -148,33 +148,34 @@ impl Registry {
 
         let url = format!("{}/api/v1/crates/new", self.host);
 
-        let token = try!(self.token.as_ref().ok_or(Error::TokenMissing)).as_slice();
+        let token = try!(self.token.as_ref().ok_or(Error::TokenMissing));
         let request = self.handle.put(url, &mut body)
             .content_length(size)
             .header("Accept", "application/json")
-            .header("Authorization", token);
+            .header("Authorization", &token);
         let response = handle(request.exec());
         let _body = try!(response);
         Ok(())
     }
 
     pub fn search(&mut self, query: &str) -> Result<Vec<Crate>> {
-        let body = try!(self.req(format!("/crates?q={}", query), None, Get, Auth::Unauthorized));
+        let body = try!(self.req(format!("/crates?q={}", query), None, Get,
+                                 Auth::Unauthorized));
 
-        Ok(json::decode::<Crates>(body.as_slice()).unwrap().crates)
+        Ok(json::decode::<Crates>(&body).unwrap().crates)
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.delete(format!("/crates/{}/{}/yank", krate, version),
                                     None));
-        assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
+        assert!(json::decode::<R>(&body).unwrap().ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.put(format!("/crates/{}/{}/unyank", krate, version),
                                  &[]));
-        assert!(json::decode::<R>(body.as_slice()).unwrap().ok);
+        assert!(json::decode::<R>(&body).unwrap().ok);
         Ok(())
     }
 
@@ -198,8 +199,8 @@ impl Registry {
                               .content_type("application/json");
 
         if authorized == Auth::Authorized {
-            let token = try!(self.token.as_ref().ok_or(Error::TokenMissing)).as_slice();
-            req = req.header("Authorization", token);
+            let token = try!(self.token.as_ref().ok_or(Error::TokenMissing));
+            req = req.header("Authorization", &token);
         }
         match body {
             Some(b) => req = req.body(b),
@@ -223,7 +224,7 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
         Ok(body) => body,
         Err(..) => return Err(Error::NonUtf8Body),
     };
-    match json::decode::<ApiErrorList>(body.as_slice()) {
+    match json::decode::<ApiErrorList>(&body) {
         Ok(errors) => {
             return Err(Error::Api(errors.errors.into_iter().map(|s| s.detail)
                                         .collect()))

@@ -139,7 +139,7 @@ impl GitRemote {
         // Create a local anonymous remote in the repository to fetch the url
         let url = self.url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, url.as_slice(), refspec)
+        fetch(dst, &url, refspec)
     }
 
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
@@ -149,7 +149,7 @@ impl GitRemote {
         }
         try!(mkdir_recursive(dst, USER_DIR));
         let repo = try!(git2::Repository::init_bare(dst));
-        try!(fetch(&repo, url.as_slice(), "refs/heads/*:refs/heads/*"));
+        try!(fetch(&repo, &url, "refs/heads/*:refs/heads/*"));
         Ok(repo)
     }
 }
@@ -184,7 +184,7 @@ impl GitDatabase {
             GitReference::Tag(ref s) => {
                 try!((|:| {
                     let refname = format!("refs/tags/{}", s);
-                    let id = try!(self.repo.refname_to_id(refname.as_slice()));
+                    let id = try!(self.repo.refname_to_id(&refname));
                     let obj = try!(self.repo.find_object(id, None));
                     let obj = try!(obj.peel(ObjectType::Commit));
                     Ok(obj.id())
@@ -194,8 +194,7 @@ impl GitDatabase {
             }
             GitReference::Branch(ref s) => {
                 try!((|:| {
-                    let b = try!(self.repo.find_branch(s.as_slice(),
-                                                       git2::BranchType::Local));
+                    let b = try!(self.repo.find_branch(s, git2::BranchType::Local));
                     b.get().target().chain_error(|| {
                         human(format!("branch `{}` did not have a target", s))
                     })
@@ -204,15 +203,15 @@ impl GitDatabase {
                 }))
             }
             GitReference::Rev(ref s) => {
-                let obj = try!(self.repo.revparse_single(s.as_slice()));
+                let obj = try!(self.repo.revparse_single(s));
                 obj.id()
             }
         };
         Ok(GitRevision(id))
     }
 
-    pub fn has_ref<S: Str>(&self, reference: S) -> CargoResult<()> {
-        try!(self.repo.revparse_single(reference.as_slice()));
+    pub fn has_ref(&self, reference: &str) -> CargoResult<()> {
+        try!(self.repo.revparse_single(reference));
         Ok(())
     }
 }
@@ -255,8 +254,7 @@ impl<'a> GitCheckout<'a> {
 
         let url = try!(source.to_url().map_err(human));
         let url = url.to_string();
-        let repo = try!(git2::Repository::clone(url.as_slice(),
-                                                into).chain_error(|| {
+        let repo = try!(git2::Repository::clone(&url, into).chain_error(|| {
             internal(format!("failed to clone {} into {}", source.display(),
                              into.display()))
         }));
@@ -275,7 +273,7 @@ impl<'a> GitCheckout<'a> {
         let url = try!(self.database.path.to_url().map_err(human));
         let url = url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        try!(fetch(&self.repo, url.as_slice(), refspec));
+        try!(fetch(&self.repo, &url, refspec));
         Ok(())
     }
 
@@ -370,7 +368,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())
                                .unwrap_or("git".to_string());
-            git2::Cred::ssh_key_from_agent(user.as_slice())
+            git2::Cred::ssh_key_from_agent(&user)
         } else if allowed.contains(git2::USER_PASS_PLAINTEXT) {
             git2::Cred::credential_helper(cfg, url, username)
         } else if allowed.contains(git2::DEFAULT) {
@@ -397,8 +395,7 @@ pub fn fetch(repo: &git2::Repository, url: &str,
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new();
         cb.credentials(|a, b, c| f(a, b, c));
-        let mut remote = try!(repo.remote_anonymous(url.as_slice(),
-                                                    Some(refspec)));
+        let mut remote = try!(repo.remote_anonymous(&url, Some(refspec)));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
         remote.set_callbacks(&mut cb);
         try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None, None));

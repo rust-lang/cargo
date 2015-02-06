@@ -75,7 +75,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
         let root = pkg.get_manifest_path().dir_path();
 
         let parse = |&: p: &String| {
-            Pattern::new(p.as_slice()).map_err(|e| {
+            Pattern::new(p).map_err(|e| {
                 human(format!("could not parse pattern `{}`: {}", p, e))
             })
         };
@@ -127,7 +127,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
         let mut ret = Vec::new();
         'outer: for entry in index.iter() {
-            let fname = entry.path.as_slice();
+            let fname = &entry.path[];
             let file_path = root.join(fname);
 
             // Filter out files outside this package.

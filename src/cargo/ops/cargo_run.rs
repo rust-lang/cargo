@@ -21,7 +21,7 @@ pub fn run(manifest_path: &Path,
             TargetKind::Example => a.is_example(),
             TargetKind::Lib(_) => false,
         };
-        let matches_name = name.as_ref().map_or(true, |n| n.as_slice() == a.get_name());
+        let matches_name = name.as_ref().map_or(true, |n| *n == a.get_name());
         matches_kind && matches_name && a.get_profile().get_env() == env &&
             !a.get_profile().is_custom_build()
     });

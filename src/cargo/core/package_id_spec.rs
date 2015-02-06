@@ -20,13 +20,13 @@ impl PackageIdSpec {
                 Err(..) => {}
             }
             if !spec.contains("://") {
-                match url(format!("cargo://{}", spec).as_slice()) {
+                match url(&format!("cargo://{}", spec)) {
                     Ok(url) => return PackageIdSpec::from_url(url),
                     Err(..) => {}
                 }
             }
         }
-        let mut parts = spec.as_slice().splitn(1, ':');
+        let mut parts = spec.splitn(1, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
             Some(version) => Some(try!(Version::parse(version).map_err(human))),
@@ -69,7 +69,7 @@ impl PackageIdSpec {
             }));
             match frag {
                 Some(fragment) => {
-                    let mut parts = fragment.as_slice().splitn(1, ':');
+                    let mut parts = fragment.splitn(1, ':');
                     let name_or_version = parts.next().unwrap();
                     match parts.next() {
                         Some(part) => {
@@ -97,7 +97,7 @@ impl PackageIdSpec {
         })
     }
 
-    pub fn get_name(&self) -> &str { self.name.as_slice() }
+    pub fn get_name(&self) -> &str { &self.name }
     pub fn get_version(&self) -> Option<&Version> { self.version.as_ref() }
     pub fn get_url(&self) -> Option<&Url> { self.url.as_ref() }
 
@@ -134,7 +134,7 @@ impl fmt::Display for PackageIdSpec {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
-                if url.scheme.as_slice() == "cargo" {
+                if url.scheme == "cargo" {
                     try!(write!(f, "{}/{}", url.host().unwrap(),
                                 url.path().unwrap().connect("/")));
                 } else {
@@ -169,7 +169,7 @@ mod tests {
         fn ok(spec: &str, expected: PackageIdSpec) {
             let parsed = PackageIdSpec::parse(spec).unwrap();
             assert_eq!(parsed, expected);
-            assert_eq!(parsed.to_string().as_slice(), spec);
+            assert_eq!(parsed.to_string(), spec);
         }
 
         ok("http://crates.io/foo#1.2.3", PackageIdSpec {

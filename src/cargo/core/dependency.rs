@@ -71,9 +71,7 @@ impl Dependency {
         self.specified_req.as_ref().map(|s| s.as_slice())
     }
 
-    pub fn get_name(&self) -> &str {
-        self.name.as_slice()
-    }
+    pub fn get_name(&self) -> &str { &self.name }
 
     /// Returns the place where this dependency must be searched for.
     pub fn get_source_id(&self) -> &SourceId {
@@ -144,7 +142,7 @@ impl Dependency {
     /// Returns true if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool { self.default_features }
     /// Returns the list of features that are requested by the dependency.
-    pub fn get_features(&self) -> &[String] { self.features.as_slice() }
+    pub fn get_features(&self) -> &[String] { &self.features }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
@@ -153,7 +151,7 @@ impl Dependency {
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
-        self.name.as_slice() == id.get_name() &&
+        self.name == id.get_name() &&
             (self.only_match_name || (self.req.matches(id.get_version()) &&
                                       &self.source_id == id.get_source_id()))
     }
@@ -168,7 +166,7 @@ impl Dependency {
     pub fn is_active_for_platform(&self, platform: &str) -> bool {
         match self.only_for_platform {
             None => true,
-            Some(ref p) if p.as_slice() == platform => true,
+            Some(ref p) if *p == platform => true,
             _ => false
         }
     }

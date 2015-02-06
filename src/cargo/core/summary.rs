@@ -34,7 +34,7 @@ impl Summary {
         }
         for (feature, list) in features.iter() {
             for dep in list.iter() {
-                let mut parts = dep.as_slice().splitn(1, '/');
+                let mut parts = dep.splitn(1, '/');
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
                 if !is_reexport && features.get(dep).is_some() { continue }
@@ -85,7 +85,7 @@ impl Summary {
     }
 
     pub fn get_dependencies(&self) -> &[Dependency] {
-        self.dependencies.as_slice()
+        &self.dependencies
     }
 
     pub fn get_features(&self) -> &HashMap<String, Vec<String>> {

@@ -36,8 +36,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
         let remote = GitRemote::new(source_id.get_url());
         let ident = ident(source_id.get_url());
 
-        let db_path = config.git_db_path()
-            .join(ident.as_slice());
+        let db_path = config.git_db_path().join(&ident);
 
         let reference_path = match *reference {
             GitReference::Branch(ref s) |
@@ -80,7 +79,7 @@ fn ident(url: &Url) -> String {
     let ident = url.path().unwrap_or(&[])
                    .last().map(|a| a.clone()).unwrap_or(String::new());
 
-    let ident = if ident.as_slice() == "" {
+    let ident = if ident == "" {
         "_empty".to_string()
     } else {
         ident
@@ -117,7 +116,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
                 rel.default_port = Some(443);
                 let path = mem::replace(&mut rel.path, Vec::new());
                 rel.path = path.into_iter().map(|s| {
-                    s.as_slice().chars().map(|c| c.to_lowercase()).collect()
+                    s.chars().map(|c| c.to_lowercase()).collect()
                 }).collect();
             }
             _ => {}
@@ -133,7 +132,6 @@ pub fn canonicalize_url(url: &Url) -> Url {
             };
             if needs_chopping {
                 let last = rel.path.pop().unwrap();
-                let last = last.as_slice();
                 rel.path.push(last[..last.len() - 4].to_string())
             }
         }
@@ -217,13 +215,13 @@ mod test {
     #[test]
     pub fn test_url_to_path_ident_with_path() {
         let ident = ident(&url("https://github.com/carlhuda/cargo"));
-        assert_eq!(ident.as_slice(), "cargo-51d6ede913e3e1d5");
+        assert_eq!(ident, "cargo-51d6ede913e3e1d5");
     }
 
     #[test]
     pub fn test_url_to_path_ident_without_path() {
         let ident = ident(&url("https://github.com"));
-        assert_eq!(ident.as_slice(), "_empty-eba8a1ec0f6907fb");
+        assert_eq!(ident, "_empty-eba8a1ec0f6907fb");
     }
 
     #[test]

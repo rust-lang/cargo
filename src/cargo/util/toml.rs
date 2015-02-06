@@ -128,7 +128,7 @@ pub fn to_manifest(contents: &[u8],
                     add_unused_keys(m, v, if key.len() == 0 {
                         k.clone()
                     } else {
-                        key.clone() + "." + k.as_slice()
+                        key.clone() + "." + k
                     })
                 }
             }
@@ -143,7 +143,7 @@ pub fn to_manifest(contents: &[u8],
 }
 
 pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
-    let mut parser = toml::Parser::new(toml.as_slice());
+    let mut parser = toml::Parser::new(&toml);
     match parser.parse() {
         Some(toml) => return Ok(toml),
         None => {}
@@ -152,16 +152,16 @@ pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
     for error in parser.errors.iter() {
         let (loline, locol) = parser.to_linecol(error.lo);
         let (hiline, hicol) = parser.to_linecol(error.hi);
-        error_str.push_str(format!("{}:{}:{}{} {}\n",
-                                   file.display(),
-                                   loline + 1, locol + 1,
-                                   if loline != hiline || locol != hicol {
-                                       format!("-{}:{}", hiline + 1,
-                                               hicol + 1)
-                                   } else {
-                                       "".to_string()
-                                   },
-                                   error.desc).as_slice());
+        error_str.push_str(&format!("{}:{}:{}{} {}\n",
+                                    file.display(),
+                                    loline + 1, locol + 1,
+                                    if loline != hiline || locol != hicol {
+                                        format!("-{}:{}", hiline + 1,
+                                                hicol + 1)
+                                    } else {
+                                        "".to_string()
+                                    },
+                                    error.desc));
     }
     Err(human(error_str))
 }
@@ -241,7 +241,7 @@ pub enum ManyOrOne<T> {
 impl<T> ManyOrOne<T> {
     fn as_slice(&self) -> &[T] {
         match *self {
-            ManyOrOne::Many(ref v) => v.as_slice(),
+            ManyOrOne::Many(ref v) => v,
             ManyOrOne::One(ref t) => slice::ref_slice(t),
         }
     }
@@ -275,16 +275,16 @@ pub struct TomlVersion {
 impl Decodable for TomlVersion {
     fn decode<D: Decoder>(d: &mut D) -> Result<TomlVersion, D::Error> {
         let s = try!(d.read_str());
-        match s.as_slice().to_semver() {
+        match s.to_semver() {
             Ok(s) => Ok(TomlVersion { version: s }),
-            Err(e) => Err(d.error(e.as_slice())),
+            Err(e) => Err(d.error(&e)),
         }
     }
 }
 
 impl TomlProject {
     pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
-        PackageId::new(self.name.as_slice(), self.version.version.clone(),
+        PackageId::new(&self.name, self.version.version.clone(),
                        source_id)
     }
 }
@@ -403,7 +403,7 @@ impl TomlManifest {
                     }
                 }).collect()
             }
-            None => inferred_lib_target(project.name.as_slice(), layout),
+            None => inferred_lib_target(&project.name, layout),
         };
 
         let bins = match self.bin {
@@ -421,7 +421,7 @@ impl TomlManifest {
                     }
                 }).collect()
             }
-            None => inferred_bin_targets(project.name.as_slice(), layout)
+            None => inferred_bin_targets(&project.name, layout)
         };
 
         let examples = match self.example {
@@ -445,12 +445,12 @@ impl TomlManifest {
 
         // Get targets
         let profiles = self.profile.clone().unwrap_or(Default::default());
-        let targets = normalize(lib.as_slice(),
-                                bins.as_slice(),
+        let targets = normalize(&lib,
+                                &bins,
                                 new_build,
-                                examples.as_slice(),
-                                tests.as_slice(),
-                                benches.as_slice(),
+                                &examples,
+                                &tests,
+                                &benches,
                                 &metadata,
                                 &profiles);
 
@@ -551,20 +551,20 @@ fn process_dependencies<F>(cx: &mut Context,
 
         let new_source_id = match details.git {
             Some(ref git) => {
-                let loc = try!(git.as_slice().to_url().map_err(|e| {
+                let loc = try!(git.to_url().map_err(|e| {
                     human(e)
                 }));
                 Some(SourceId::for_git(&loc, reference))
             }
             None => {
                 details.path.as_ref().map(|path| {
-                    cx.nested_paths.push(Path::new(path.as_slice()));
+                    cx.nested_paths.push(Path::new(path));
                     cx.source_id.clone()
                 })
             }
         }.unwrap_or(try!(SourceId::for_central(cx.config)));
 
-        let dep = try!(Dependency::parse(n.as_slice(),
+        let dep = try!(Dependency::parse(&n,
                                          details.version.as_ref()
                                                 .map(|v| v.as_slice()),
                                          &new_source_id));
@@ -622,7 +622,7 @@ impl TomlTarget {
 impl PathValue {
     fn to_path(&self) -> Path {
         match *self {
-            PathValue::String(ref s) => Path::new(s.as_slice()),
+            PathValue::String(ref s) => Path::new(s),
             PathValue::Path(ref p) => p.clone(),
         }
     }
@@ -718,7 +718,8 @@ fn normalize(libs: &[TomlLibTarget],
             PathValue::String(format!("src/{}.rs", l.name))
         });
         let crate_types = l.crate_type.clone().and_then(|kinds| {
-            LibKind::from_strs(kinds).ok()
+            kinds.iter().map(|s| LibKind::from_str(s))
+                 .collect::<CargoResult<_>>().ok()
         }).unwrap_or_else(|| {
             vec![if l.plugin == Some(true) {LibKind::Dylib} else {LibKind::Lib}]
         });
@@ -730,7 +731,7 @@ fn normalize(libs: &[TomlLibTarget],
             if profile.is_test() {
                 metadata.mix(&"test");
             }
-            dst.push(Target::lib_target(l.name.as_slice(), crate_types.clone(),
+            dst.push(Target::lib_target(&l.name, crate_types.clone(),
                                         &path.to_path(), profile,
                                         metadata));
         }
@@ -758,7 +759,7 @@ fn normalize(libs: &[TomlLibTarget],
                 } else {
                     None
                 };
-                dst.push(Target::bin_target(bin.name.as_slice(),
+                dst.push(Target::bin_target(&bin.name,
                                             &path.to_path(),
                                             profile,
                                             metadata));
@@ -776,8 +777,7 @@ fn normalize(libs: &[TomlLibTarget],
         let name = format!("build-script-{}", cmd.filestem_str().unwrap_or(""));
 
         for profile in profiles.iter() {
-            dst.push(Target::custom_build_target(name.as_slice(),
-                                                 cmd, profile, None));
+            dst.push(Target::custom_build_target(&name, cmd, profile, None));
         }
     }
 
@@ -791,10 +791,10 @@ fn normalize(libs: &[TomlLibTarget],
 
             let profile = merge(Profile::default_example(), &profiles.test);
             let profile_release = merge(Profile::default_release(), &profiles.release);
-            dst.push(Target::example_target(ex.name.as_slice(),
+            dst.push(Target::example_target(&ex.name,
                                             &path.to_path(),
                                             &profile));
-            dst.push(Target::example_target(ex.name.as_slice(),
+            dst.push(Target::example_target(&ex.name,
                                             &path.to_path(),
                                             &profile_release));
         }
@@ -817,7 +817,7 @@ fn normalize(libs: &[TomlLibTarget],
 
             let profile = Profile::default_test().harness(harness);
             let profile = merge(profile, &profiles.test);
-            dst.push(Target::test_target(test.name.as_slice(),
+            dst.push(Target::test_target(&test.name,
                                          &path.to_path(),
                                          &profile,
                                          metadata));
@@ -841,7 +841,7 @@ fn normalize(libs: &[TomlLibTarget],
 
             let profile = Profile::default_bench().harness(harness);
             let profile = merge(profile, &profiles.bench);
-            dst.push(Target::bench_target(bench.name.as_slice(),
+            dst.push(Target::bench_target(&bench.name,
                                           &path.to_path(),
                                           &profile,
                                           metadata));
@@ -881,7 +881,7 @@ fn normalize(libs: &[TomlLibTarget],
 
     test_targets(&mut ret, tests, metadata, profiles,
                 |test| {
-                    if test.name.as_slice() == "test" {
+                    if test.name == "test" {
                         "src/test.rs".to_string()
                     } else {
                         format!("tests/{}.rs", test.name)
@@ -889,7 +889,7 @@ fn normalize(libs: &[TomlLibTarget],
 
     bench_targets(&mut ret, benches, metadata, profiles,
                  |bench| {
-                     if bench.name.as_slice() == "bench" {
+                     if bench.name == "bench" {
                          "src/bench.rs".to_string()
                      } else {
                          format!("benches/{}.rs", bench.name)

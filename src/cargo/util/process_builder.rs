@@ -41,7 +41,7 @@ impl ProcessBuilder {
     }
 
     pub fn get_args(&self) -> &[CString] {
-        self.args.as_slice()
+        &self.args
     }
 
     pub fn cwd(mut self, path: Path) -> ProcessBuilder {
@@ -64,16 +64,16 @@ impl ProcessBuilder {
                .stdin(InheritFd(0));
 
         let exit = try!(command.status().map_err(|e| {
-            process_error(format!("Could not execute process `{}`",
-                                  self.debug_string()),
+            process_error(&format!("Could not execute process `{}`",
+                                   self.debug_string()),
                           Some(e), None, None)
         }));
 
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(format!("Process didn't exit successfully: `{}`",
-                                      self.debug_string()),
+            Err(process_error(&format!("Process didn't exit successfully: `{}`",
+                                       self.debug_string()),
                               None, Some(&exit), None))
         }
     }
@@ -82,16 +82,16 @@ impl ProcessBuilder {
         let command = self.build_command();
 
         let output = try!(command.output().map_err(|e| {
-            process_error(format!("Could not execute process `{}`",
-                              self.debug_string()),
+            process_error(&format!("Could not execute process `{}`",
+                               self.debug_string()),
                           Some(e), None, None)
         }));
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(format!("Process didn't exit successfully: `{}`",
-                                      self.debug_string()),
+            Err(process_error(&format!("Process didn't exit successfully: `{}`",
+                                       self.debug_string()),
                               None, Some(&output.status), Some(&output)))
         }
     }
@@ -103,7 +103,6 @@ impl ProcessBuilder {
             command.arg(arg);
         }
         for (k, v) in self.env.iter() {
-            let k = k.as_slice();
             match *v {
                 Some(ref v) => { command.env(k, v); }
                 None => { command.env_remove(k); }

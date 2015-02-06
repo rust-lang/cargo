@@ -102,8 +102,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         };
         let output = try!(process.exec_with_output());
 
-        let error = str::from_utf8(output.error.as_slice()).unwrap();
-        let output = str::from_utf8(output.output.as_slice()).unwrap();
+        let error = str::from_utf8(&output.error).unwrap();
+        let output = str::from_utf8(&output.output).unwrap();
         let mut lines = output.lines();
         let nodylib = Regex::new("unsupported crate type.*dylib").unwrap();
         let nobin = Regex::new("unsupported crate type.*bin").unwrap();
@@ -236,13 +236,13 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         match *pair {
             None => return Err(human(format!("dylib outputs are not supported \
                                               for {}", triple))),
-            Some((ref s1, ref s2)) => Ok((s1.as_slice(), s2.as_slice())),
+            Some((ref s1, ref s2)) => Ok((s1, s2)),
         }
     }
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.target_triple.as_slice()
+        &self.target_triple
     }
 
     /// Return the exact filename of the target.
@@ -254,9 +254,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
            target.get_profile().is_test() {
             ret.push(format!("{}{}", stem,
                              if target.get_profile().is_for_host() {
-                                 self.host_exe.as_slice()
+                                 &self.host_exe
                              } else {
-                                 self.target_exe.as_slice()
+                                 &self.target_exe
                              }));
         } else {
             if target.is_dylib() {

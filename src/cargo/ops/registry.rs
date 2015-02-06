@@ -95,7 +95,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     } = *manifest.get_metadata();
     let readme = match *readme {
         Some(ref readme) => {
-            let path = pkg.get_root().join(readme.as_slice());
+            let path = pkg.get_root().join(readme);
             Some(try!(File::open(&path).read_to_string().chain_error(|| {
                 human("failed to read the specified README")
             })))
@@ -146,7 +146,7 @@ pub fn registry(config: &Config,
     } = try!(registry_configuration(config));
     let token = token.or(token_config);
     let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
-    let index = try!(index.as_slice().to_url().map_err(human));
+    let index = try!(index.to_url().map_err(human));
     let sid = SourceId::for_registry(&index);
     let api_host = {
         let mut src = RegistrySource::new(&sid, config);
@@ -248,7 +248,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
             try!(config.shell().status("Owner", format!("adding `{:#?}` to `{}`",
                                                         v, name)));
-            try!(registry.add_owners(name.as_slice(), v.as_slice()).map_err(|e| {
+            try!(registry.add_owners(&name, &v).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
             }));
         }
@@ -260,7 +260,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
             try!(config.shell().status("Owner", format!("removing `{:?}` from `{}`",
                                                         v, name)));
-            try!(registry.remove_owners(name.as_slice(), v.as_slice()).map_err(|e| {
+            try!(registry.remove_owners(&name, &v).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
             }));
         }
@@ -268,7 +268,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     }
 
     if opts.list {
-        let owners = try!(registry.list_owners(name.as_slice()).map_err(|e| {
+        let owners = try!(registry.list_owners(&name).map_err(|e| {
             human(format!("failed to list owners: {}", e))
         }));
         for owner in owners.iter() {
@@ -311,12 +311,12 @@ pub fn yank(config: &Config,
 
     if undo {
         try!(config.shell().status("Unyank", format!("{}:{}", name, version)));
-        try!(registry.unyank(name.as_slice(), version.as_slice()).map_err(|e| {
+        try!(registry.unyank(&name, &version).map_err(|e| {
             human(format!("failed to undo a yank: {}", e))
         }));
     } else {
         try!(config.shell().status("Yank", format!("{}:{}", name, version)));
-        try!(registry.yank(name.as_slice(), version.as_slice()).map_err(|e| {
+        try!(registry.yank(&name, &version).map_err(|e| {
             human(format!("failed to yank: {}", e))
         }));
     }
@@ -342,7 +342,7 @@ pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResul
         .map(|krate| (
             format!("{} ({})", krate.name, krate.max_version),
             krate.description.as_ref().map(|desc|
-                truncate_with_ellipsis(desc.replace("\n", " ").as_slice(), 128))
+                truncate_with_ellipsis(&desc.replace("\n", " "), 128))
         ))
         .collect::<Vec<_>>();
     let description_margin = list_items.iter()
@@ -355,7 +355,7 @@ pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResul
             Some(desc) => {
                 let space = repeat(' ').take(description_margin - name.len())
                                        .collect::<String>();
-                name.to_string() + space.as_slice() + desc.as_slice()
+                name.to_string() + &space + &desc
             }
             None => name
         };

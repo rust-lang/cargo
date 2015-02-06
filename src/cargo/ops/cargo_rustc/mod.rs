@@ -65,7 +65,7 @@ pub fn rustc_old_version() -> CargoResult<(String, String)> {
         internal("rustc -v didn't return utf8 output")
     }));
     let triple = {
-        let triple = output.as_slice().lines().filter(|l| {
+        let triple = output.lines().filter(|l| {
             l.starts_with("host: ")
         }).map(|l| &l[6..]).next();
         let triple = try!(triple.chain_error(|| {
@@ -84,7 +84,7 @@ pub fn rustc_new_version() -> CargoResult<(String, String)> {
         internal("rustc -v didn't return utf8 output")
     }));
     let triple = {
-        let triple = output.as_slice().lines().filter(|l| {
+        let triple = output.lines().filter(|l| {
             l.starts_with("host: ")
         }).map(|l| &l[6..]).next();
         let triple = try!(triple.chain_error(|| {
@@ -178,7 +178,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
         }
 
         let compiled = compiled.contains(dep.get_package_id());
-        try!(compile(targets.as_slice(), dep, compiled, &mut cx, &mut queue));
+        try!(compile(&targets, dep, compiled, &mut cx, &mut queue));
     }
 
     try!(compile(targets, pkg, true, &mut cx, &mut queue));
@@ -418,7 +418,7 @@ fn rustc(package: &Package, target: &Target,
             }
             if pass_l_flag && id == *current_id {
                 for name in output.library_links.iter() {
-                    rustc = rustc.arg("-l").arg(name.as_slice());
+                    rustc = rustc.arg("-l").arg(name);
                 }
             }
         }
@@ -478,7 +478,7 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: Platform)
                  -> CargoResult<Vec<(CommandPrototype, Kind)>> {
     let base = try!(process(CommandType::Rustc, package, target, cx));
-    let base = build_base_args(cx, base, package, target, crate_types.as_slice());
+    let base = build_base_args(cx, base, package, target, &crate_types);
 
     let target_cmd = build_plugin_args(base.clone(), cx, package, target, Kind::Target);
     let plugin_cmd = build_plugin_args(base, cx, package, target, Kind::Host);
@@ -729,7 +729,7 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
             v.push_all(layout.root().as_vec());
             v.push(old_path::SEP_BYTE);
             v.push_all(filename.as_bytes());
-            cmd = cmd.arg("--extern").arg(v.as_slice());
+            cmd = cmd.arg("--extern").arg(&v);
         }
         return Ok(cmd);
     }
@@ -745,10 +745,9 @@ pub fn process(cmd: CommandType, pkg: &Package, _target: &Target,
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.
-    let search_path = try!(join_paths(search_path.as_slice(),
-                                      DynamicLibrary::envvar()));
+    let search_path = try!(join_paths(&search_path, DynamicLibrary::envvar()));
     Ok(try!(cx.compilation.process(cmd, pkg))
-              .env(DynamicLibrary::envvar(), Some(search_path.as_slice())))
+              .env(DynamicLibrary::envvar(), Some(&search_path)))
 }
 
 fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)

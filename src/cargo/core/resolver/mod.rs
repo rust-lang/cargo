@@ -99,12 +99,11 @@ impl Resolve {
             }
             for id in ids.iter() {
                 if version_cnt[id.get_version()] == 1 {
-                    msg.push_str(format!("\n  {}:{}", spec.get_name(),
-                                 id.get_version()).as_slice());
+                    msg.push_str(&format!("\n  {}:{}", spec.get_name(),
+                                          id.get_version()));
                 } else {
-                    msg.push_str(format!("\n  {}",
-                                         PackageIdSpec::from_package_id(*id))
-                                        .as_slice());
+                    msg.push_str(&format!("\n  {}",
+                                          PackageIdSpec::from_package_id(*id)));
                 }
             }
         }
@@ -248,7 +247,7 @@ fn activate_deps<'a>(cx: Box<Context>,
                      cur: usize) -> CargoResult<CargoResult<Box<Context>>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
-    let method = Method::Required(false, features.as_slice(),
+    let method = Method::Required(false, &features,
                                   dep.uses_default_features(), platform);
 
     let key = (dep.get_name().to_string(), dep.get_source_id().clone());
@@ -343,13 +342,13 @@ fn activation_error(cx: &Context,
                 for edge in edges {
                     if edge != v.get_package_id() { continue }
 
-                    msg.push_str(format!("\n  version {} in use by {}",
-                                         v.get_version(), edge).as_slice());
+                    msg.push_str(&format!("\n  version {} in use by {}",
+                                          v.get_version(), edge));
                     continue 'outer;
                 }
             }
-            msg.push_str(format!("\n  version {} in use by ??",
-                                 v.get_version()).as_slice());
+            msg.push_str(&format!("\n  version {} in use by ??",
+                                  v.get_version()));
         }
 
         msg.push_str(&format!("\n  possible versions to select: {}",
@@ -386,7 +385,7 @@ fn activation_error(cx: &Context,
         msg.push_str("\nversions found: ");
         for (i, c) in candidates.iter().take(3).enumerate() {
             if i != 0 { msg.push_str(", "); }
-            msg.push_str(c.get_version().to_string().as_slice());
+            msg.push_str(&c.get_version().to_string());
         }
         if candidates.len() > 3 {
             msg.push_str(", ...");
@@ -436,7 +435,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     let deps = deps.filter(|d| {
         match method {
             Method::Required(_, _, _, Some(ref platform)) => {
-                d.is_active_for_platform(platform.as_slice())
+                d.is_active_for_platform(platform)
             },
             _ => true
         }
@@ -455,7 +454,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
         let mut base = feature_deps.remove(dep.get_name()).unwrap_or(vec![]);
         for feature in dep.get_features().iter() {
             base.push(feature.clone());
-            if feature.as_slice().contains("/") {
+            if feature.contains("/") {
                 return Err(human(format!("features in dependencies \
                                           cannot enable features in \
                                           other dependencies: `{}`",
@@ -508,8 +507,7 @@ fn build_features(s: &Summary, method: Method)
     match method {
         Method::Everything => {
             for key in s.get_features().keys() {
-                try!(add_feature(s, key.as_slice(), &mut deps, &mut used,
-                                 &mut visited));
+                try!(add_feature(s, key, &mut deps, &mut used, &mut visited));
             }
             for dep in s.get_dependencies().iter().filter(|d| d.is_optional()) {
                 try!(add_feature(s, dep.get_name(), &mut deps, &mut used,
@@ -518,8 +516,7 @@ fn build_features(s: &Summary, method: Method)
         }
         Method::Required(_, requested_features, _, _) =>  {
             for feat in requested_features.iter() {
-                try!(add_feature(s, feat.as_slice(), &mut deps, &mut used,
-                                 &mut visited));
+                try!(add_feature(s, feat, &mut deps, &mut used, &mut visited));
             }
         }
     }
@@ -567,7 +564,7 @@ fn build_features(s: &Summary, method: Method)
                 match s.get_features().get(feat) {
                     Some(recursive) => {
                         for f in recursive.iter() {
-                            try!(add_feature(s, f.as_slice(), deps, used,
+                            try!(add_feature(s, f, deps, used,
                                              visited));
                         }
                     }

@@ -95,12 +95,12 @@ impl Compilation {
         }
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
-        let search_path = try!(util::join_paths(search_path.as_slice(),
+        let search_path = try!(util::join_paths(&search_path,
                                                 DynamicLibrary::envvar()));
         let mut cmd = try!(CommandPrototype::new(cmd)).env(
-            DynamicLibrary::envvar(), Some(search_path.as_slice()));
+            DynamicLibrary::envvar(), Some(&search_path));
         for (k, v) in self.extra_env.iter() {
-            cmd = cmd.env(k.as_slice(), v.as_ref().map(|s| s.as_slice()));
+            cmd = cmd.env(k, v.as_ref());
         }
 
         Ok(cmd.env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path().dir_path()))
@@ -127,7 +127,7 @@ fn pre_version_component(v: &Version) -> Option<String> {
 
     for (i, x) in v.pre.iter().enumerate() {
         if i != 0 { ret.push('.') };
-        ret.push_str(x.to_string().as_slice());
+        ret.push_str(&x.to_string());
     }
 
     Some(ret)

@@ -76,14 +76,10 @@ impl<'a> Config<'a> {
     }
 
     /// Return the output of `rustc -v verbose`
-    pub fn rustc_version(&self) -> &str {
-        self.rustc_version.as_slice()
-    }
+    pub fn rustc_version(&self) -> &str { &self.rustc_version }
 
     /// Return the host platform and default target of rustc
-    pub fn rustc_host(&self) -> &str {
-        self.rustc_host.as_slice()
-    }
+    pub fn rustc_host(&self) -> &str { &self.rustc_host }
 
     pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
         if !self.values_loaded.get() {
@@ -164,8 +160,7 @@ impl<'a> Config<'a> {
         try!(walk_tree(&self.cwd, |mut file| {
             let path = file.path().clone();
             let contents = try!(file.read_to_string());
-            let table = try!(cargo_toml::parse(contents.as_slice(),
-                                               &path).chain_error(|| {
+            let table = try!(cargo_toml::parse(&contents, &path).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
             }));
@@ -316,7 +311,7 @@ impl ConfigValue {
 
     pub fn string(&self) -> CargoResult<(&str, &Path)> {
         match *self {
-            CV::String(ref s, ref p) => Ok((s.as_slice(), p)),
+            CV::String(ref s, ref p) => Ok((s, p)),
             _ => self.expected("string"),
         }
     }
@@ -330,7 +325,7 @@ impl ConfigValue {
 
     pub fn list(&self) -> CargoResult<&[(String, Path)]> {
         match *self {
-            CV::List(ref list, _) => Ok(list.as_slice()),
+            CV::List(ref list, _) => Ok(list),
             _ => self.expected("list"),
         }
     }
@@ -436,8 +431,9 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     };
     try!(fs::mkdir_recursive(&file.dir_path(), old_io::USER_DIR));
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
-    let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
+    let mut toml = try!(cargo_toml::parse(&contents, &file));
     toml.insert(key.to_string(), value.into_toml());
-    try!(File::create(&file).write_all(toml::Value::Table(toml).to_string().as_bytes()));
+    let mut out = try!(File::create(&file));
+    try!(out.write_all(toml::Value::Table(toml).to_string().as_bytes()));
     Ok(())
 }

@@ -39,8 +39,9 @@ impl Drop for Profiler {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }
-                    println!("{} {:6}ms - {}", repeat("    ").take(lvl + 1).collect::<String>(),
-                        time / 1000000, msg);
+                    println!("{} {:6}ms - {}",
+                             repeat("    ").take(lvl + 1).collect::<String>(),
+                             time / 1000000, msg);
 
                     print(lvl + 1, &msgs[last..i]);
                     last = i;
@@ -49,8 +50,9 @@ impl Drop for Profiler {
             }
             MESSAGES.with(|msgs_rc| {
                 let mut msgs = msgs_rc.borrow_mut();
-                msgs.push((0, end - start, mem::replace(&mut self.desc, String::new())));
-                print(0, msgs.as_slice());
+                msgs.push((0, end - start,
+                           mem::replace(&mut self.desc, String::new())));
+                print(0, &msgs);
             });
         } else {
             MESSAGES.with(|msgs| {

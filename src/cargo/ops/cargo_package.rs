@@ -88,16 +88,17 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 
     if !missing.is_empty() {
         let mut things = missing[..missing.len() - 1].connect(", ");
-        // things will be empty if and only if length == 1 (i.e. the only case to have no `or`).
+        // things will be empty if and only if length == 1 (i.e. the only case
+        // to have no `or`).
         if !things.is_empty() {
             things.push_str(" or ");
         }
-        things.push_str(missing.last().unwrap().as_slice());
+        things.push_str(&missing.last().unwrap());
 
         try!(config.shell().warn(
-            format!("warning: manifest has no {things}. \
+            &format!("warning: manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
-                    things = things).as_slice()))
+                    things = things)))
     }
     Ok(())
 }
@@ -130,11 +131,11 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
         }));
         let mut file = try!(File::open(file));
         try!(config.shell().verbose(|shell| {
-            shell.status("Archiving", relative.as_slice())
+            shell.status("Archiving", &relative)
         }));
         let path = format!("{}-{}{}{}", pkg.get_name(),
                            pkg.get_version(), old_path::SEP, relative);
-        try!(ar.append(path.as_slice(), &mut file).chain_error(|| {
+        try!(ar.append(&path, &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));
     }

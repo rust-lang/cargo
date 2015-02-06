@@ -24,7 +24,7 @@ pub fn run_tests(manifest_path: &Path,
 
     let target_name = options.name;
     let tests_to_run = compile.tests.iter().filter(|&&(ref test_name, _)| {
-        target_name.map_or(true, |target_name| target_name == test_name.as_slice())
+        target_name.map_or(true, |target_name| target_name == *test_name)
     });
 
     let cwd = config.cwd();
@@ -77,7 +77,7 @@ pub fn run_tests(manifest_path: &Path,
                 let mut arg = pkg.get_name().as_bytes().to_vec();
                 arg.push(b'=');
                 arg.push_all(lib.as_vec());
-                p = p.arg("--extern").arg(arg.as_slice());
+                p = p.arg("--extern").arg(arg);
             }
         }
 
@@ -99,5 +99,5 @@ pub fn run_benches(manifest_path: &Path,
     let mut args = args.to_vec();
     args.push("--bench".to_string());
 
-    run_tests(manifest_path, options, args.as_slice())
+    run_tests(manifest_path, options, &args)
 }

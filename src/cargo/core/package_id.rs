@@ -38,7 +38,7 @@ impl Decodable for PackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
-        let captures = regex.captures(string.as_slice()).expect("invalid serialized PackageId");
+        let captures = regex.captures(&string).expect("invalid serialized PackageId");
 
         let name = captures.at(1).unwrap();
         let version = captures.at(2).unwrap();
@@ -132,7 +132,7 @@ impl PackageId {
     }
 
     pub fn get_name(&self) -> &str {
-        self.inner.name.as_slice()
+        &self.inner.name
     }
 
     pub fn get_version(&self) -> &semver::Version {
@@ -145,7 +145,7 @@ impl PackageId {
 
     pub fn generate_metadata(&self) -> Metadata {
         let metadata = short_hash(
-            &(self.inner.name.as_slice(), self.inner.version.to_string(),
+            &(&self.inner.name, self.inner.version.to_string(),
               &self.inner.source_id));
         let extra_filename = format!("-{}", metadata);
 
@@ -165,7 +165,7 @@ impl PackageId {
 
 impl Metadata {
     pub fn mix<T: Hash<SipHasher>>(&mut self, t: &T) {
-        let new_metadata = short_hash(&(self.metadata.as_slice(), t));
+        let new_metadata = short_hash(&(&self.metadata, t));
         self.extra_filename = format!("-{}", new_metadata);
         self.metadata = new_metadata;
     }

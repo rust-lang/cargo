@@ -46,7 +46,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         }
     };
 
-    let token = token.as_slice().trim().to_string();
+    let token = token.trim().to_string();
     try!(ops::registry_login(config, token).map_err(|e| {
         CliError::from_boxed(e, 101)
     }));

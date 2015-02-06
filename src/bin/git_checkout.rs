@@ -23,7 +23,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.shell().set_verbose(options.flag_verbose);
     let Options { flag_url: url, flag_reference: reference, .. } = options;
 
-    let url = try!(url.as_slice().to_url().map_err(|e| {
+    let url = try!(url.to_url().map_err(|e| {
                        human(format!("The URL `{}` you passed was \
                                       not a valid URL: {}", url, e))
                    })
@@ -35,7 +35,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let mut source = GitSource::new(&source_id, config);
 
     try!(source.update().map_err(|e| {
-        CliError::new(format!("Couldn't update {:?}: {:?}", source, e), 1)
+        CliError::new(&format!("Couldn't update {:?}: {:?}", source, e), 1)
     }));
 
     Ok(None)

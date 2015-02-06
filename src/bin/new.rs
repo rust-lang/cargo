@@ -35,7 +35,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let opts = ops::NewOptions {
         version_control: flag_vcs,
-        path: arg_path.as_slice(),
+        path: &arg_path,
         bin: flag_bin,
     };
 

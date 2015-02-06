@@ -288,7 +288,7 @@ fn prepare(is_fresh: bool, loc: Path, fingerprint: Fingerprint) -> Preparation {
         let fingerprint = try!(fingerprint.resolve(true).chain_error(|| {
             internal("failed to resolve a pending fingerprint")
         }));
-        try!(File::create(&loc).write_str(fingerprint.as_slice()));
+        try!(File::create(&loc).write_str(&fingerprint));
         Ok(())
     });
 
@@ -321,7 +321,7 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
     trace!("old fingerprint: {}", old_fingerprint);
     trace!("new fingerprint: {}", new_fingerprint);
 
-    Ok(old_fingerprint.as_slice() == new_fingerprint)
+    Ok(old_fingerprint == new_fingerprint)
 }
 
 fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
@@ -336,7 +336,6 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let line = line.as_slice();
     let mtime = try!(fs::stat(dep_info)).modified;
     let pos = try!(line.find_str(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
@@ -350,12 +349,12 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
             Some(s) => s.to_string(),
             None => break,
         };
-        while file.as_slice().ends_with("\\") {
+        while file.ends_with("\\") {
             file.pop();
             file.push(' ');
             file.push_str(deps.next().unwrap())
         }
-        match fs::stat(&cwd.join(file.as_slice())) {
+        match fs::stat(&cwd.join(&file)) {
             Ok(stat) if stat.modified <= mtime => {}
             Ok(stat) => {
                 info!("stale: {} -- {} vs {}", file, stat.modified, mtime);

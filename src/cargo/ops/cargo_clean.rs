@@ -59,7 +59,6 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         try!(rm_rf(&layout.native(&pkg)));
         try!(rm_rf(&layout.fingerprint(&pkg)));
         for filename in try!(cx.target_filenames(target)).iter() {
-            let filename = filename.as_slice();
             try!(rm_rf(&layout.dest().join(filename)));
             try!(rm_rf(&layout.deps().join(filename)));
         }

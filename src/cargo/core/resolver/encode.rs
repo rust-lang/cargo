@@ -89,8 +89,8 @@ pub struct EncodableDependency {
 impl EncodableDependency {
     fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
         PackageId::new(
-            self.name.as_slice(),
-            self.version.as_slice(),
+            &self.name,
+            &self.version,
             self.source.as_ref().unwrap_or(default_source))
     }
 }
@@ -106,7 +106,7 @@ impl Encodable for EncodablePackageId {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let mut out = format!("{} {}", self.name, self.version);
         if let Some(ref s) = self.source {
-            out.push_str(format!(" ({})", s.to_url()).as_slice());
+            out.push_str(&format!(" ({})", s.to_url()));
         }
         out.encode(s)
     }
@@ -116,7 +116,7 @@ impl Decodable for EncodablePackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
-        let captures = regex.captures(string.as_slice())
+        let captures = regex.captures(&string)
                             .expect("invalid serialized PackageId");
 
         let name = captures.at(1).unwrap();
@@ -137,8 +137,8 @@ impl Decodable for EncodablePackageId {
 impl EncodablePackageId {
     fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
         PackageId::new(
-            self.name.as_slice(),
-            self.version.as_slice(),
+            &self.name,
+            &self.version,
             self.source.as_ref().unwrap_or(default_source))
     }
 }

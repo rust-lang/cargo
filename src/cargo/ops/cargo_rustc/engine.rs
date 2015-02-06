@@ -64,7 +64,7 @@ impl CommandPrototype {
     }
 
     pub fn get_args(&self) -> &[CString] {
-        self.args.as_slice()
+        &self.args
     }
 
     pub fn cwd(mut self, path: Path) -> CommandPrototype {
@@ -106,7 +106,7 @@ impl CommandPrototype {
             builder = builder.arg(arg);
         }
         for (key, val) in self.env.into_iter() {
-            builder = builder.env(key.as_slice(), val.as_ref());
+            builder = builder.env(&key, val.as_ref());
         }
 
         builder = builder.cwd(self.cwd);

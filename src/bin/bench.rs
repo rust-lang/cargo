@@ -61,7 +61,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| s.as_slice()),
             dev_deps: true,
-            features: options.flag_features.as_slice(),
+            features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| s.as_slice()),
             lib_only: false,
@@ -70,7 +70,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     };
 
     let err = try!(ops::run_benches(&root, &ops,
-                                    options.arg_args.as_slice()).map_err(|err| {
+                                    &options.arg_args).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
     match err {

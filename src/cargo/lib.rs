@@ -225,7 +225,7 @@ fn json_from_stdin<T: Decodable>() -> CliResult<T> {
         CliError::new("Standard in did not exist or was not UTF-8", 1)
     }));
 
-    let json = try!(Json::from_str(input.as_slice()).map_err(|_| {
+    let json = try!(Json::from_str(&input).map_err(|_| {
         CliError::new("Could not parse standard in as JSON", 1)
     }));
     let mut decoder = json::Decoder::new(json);

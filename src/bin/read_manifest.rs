@@ -18,7 +18,7 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> {
-    let path = Path::new(options.flag_manifest_path.as_slice());
+    let path = Path::new(&options.flag_manifest_path);
     let mut source = try!(PathSource::for_path(&path, config).map_err(|e| {
         CliError::new(e.description(), 1)
     }));

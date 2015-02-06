@@ -73,8 +73,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     match cx.resolve.features(pkg.get_package_id()) {
         Some(features) => {
             for feat in features.iter() {
-                p = p.env(format!("CARGO_FEATURE_{}",
-                                  super::envify(feat.as_slice())).as_slice(),
+                p = p.env(&format!("CARGO_FEATURE_{}", super::envify(feat)),
                           Some("1"));
             }
         }
@@ -135,10 +134,9 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
             for &(ref name, ref id) in lib_deps.iter() {
                 let data = &build_state[(id.clone(), kind)].metadata;
                 for &(ref key, ref value) in data.iter() {
-                    p = p.env(format!("DEP_{}_{}",
-                                      super::envify(name.as_slice()),
-                                      super::envify(key.as_slice())).as_slice(),
-                              Some(value.as_slice()));
+                    p = p.env(&format!("DEP_{}_{}", super::envify(name),
+                                       super::envify(key)),
+                              Some(value));
                 }
             }
             p = try!(super::add_plugin_deps(p, &build_state, plugin_deps));
@@ -159,10 +157,10 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(output.output.as_slice()).chain_error(|| {
+        let output = try!(str::from_utf8(&output.output).chain_error(|| {
             human("build script output was not valid utf-8")
         }));
-        let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
+        let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
         build_state.insert(id, req, parsed_output);
 
         try!(File::create(&build_output.dir_path().join("output"))
@@ -196,8 +194,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
             human(format!("failed to read cached build command output: {}", e))
         }));
         let contents = try!(f.read_to_string());
-        let output = try!(BuildOutput::parse(contents.as_slice(),
-                                             pkg_name.as_slice()));
+        let output = try!(BuildOutput::parse(&contents, &pkg_name));
         build_state.insert(id, req, output);
 
         fresh.call(tx)
@@ -283,9 +280,8 @@ impl BuildOutput {
             };
 
             if key == "rustc-flags" {
-                let whence = whence.as_slice();
                 let (libs, links) = try!(
-                    BuildOutput::parse_rustc_flags(value, whence)
+                    BuildOutput::parse_rustc_flags(value, &whence)
                 );
                 library_links.extend(links.into_iter());
                 library_paths.extend(libs.into_iter());

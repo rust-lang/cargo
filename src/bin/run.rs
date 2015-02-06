@@ -61,7 +61,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| t.as_slice()),
         dev_deps: true,
-        features: options.flag_features.as_slice(),
+        features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
         spec: None,
         lib_only: false,
@@ -80,7 +80,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                             target_kind,
                             name,
                             &compile_opts,
-                            options.arg_args.as_slice()).map_err(|err| {
+                            &options.arg_args).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));
     match err {

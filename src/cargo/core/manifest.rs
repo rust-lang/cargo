@@ -88,10 +88,6 @@ impl LibKind {
         }
     }
 
-    pub fn from_strs<S: Str>(strings: Vec<S>) -> CargoResult<Vec<LibKind>> {
-        strings.iter().map(|s| LibKind::from_str(s.as_slice())).collect()
-    }
-
     /// Returns the argument suitable for `--crate-type` to pass to rustc.
     pub fn crate_type(&self) -> &'static str {
         match *self {
@@ -201,7 +197,7 @@ impl Profile {
     }
 
     pub fn is_compile(&self) -> bool {
-        self.env.as_slice() == "compile"
+        self.env == "compile"
     }
 
     pub fn is_doc(&self) -> bool {
@@ -250,7 +246,7 @@ impl Profile {
     }
 
     pub fn get_env(&self) -> &str {
-        self.env.as_slice()
+        &self.env
     }
 
     pub fn get_dest(&self) -> Option<&str> {
@@ -422,7 +418,7 @@ impl Manifest {
     }
 
     pub fn get_targets(&self) -> &[Target] {
-        self.targets.as_slice()
+        &self.targets
     }
 
     pub fn get_target_dir(&self) -> &Path {
@@ -442,15 +438,15 @@ impl Manifest {
     }
 
     pub fn get_warnings(&self) -> &[String] {
-        self.warnings.as_slice()
+        &self.warnings
     }
 
     pub fn get_exclude(&self) -> &[String] {
-        self.exclude.as_slice()
+        &self.exclude
     }
 
     pub fn get_include(&self) -> &[String] {
-        self.include.as_slice()
+        &self.include
     }
 
     pub fn get_metadata(&self) -> &ManifestMetadata { &self.metadata }
@@ -541,7 +537,7 @@ impl Target {
     }
 
     pub fn get_name(&self) -> &str {
-        self.name.as_slice()
+        &self.name
     }
 
     pub fn get_src_path(&self) -> &Path {

@@ -96,7 +96,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let (mut args, command) = match flags.arg_command.as_slice() {
+    let (mut args, command) = match &flags.arg_command[] {
         "" | "help" if flags.arg_args.len() == 0 => {
             config.shell().set_verbose(true);
             let args = &["foo".to_string(), "-h".to_string()];
@@ -105,22 +105,22 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
             cargo::process_executed(r, &mut **config.shell());
             return Ok(None)
         }
-        "help" if flags.arg_args[0].as_slice() == "-h" ||
-                  flags.arg_args[0].as_slice() == "--help" =>
+        "help" if flags.arg_args[0] == "-h" ||
+                  flags.arg_args[0] == "--help" =>
             (flags.arg_args, "help"),
-        "help" => (vec!["-h".to_string()], flags.arg_args[0].as_slice()),
+        "help" => (vec!["-h".to_string()], &flags.arg_args[0][]),
         s => (flags.arg_args.clone(), s),
     };
     args.insert(0, command.to_string());
     args.insert(0, "foo".to_string());
 
     macro_rules! cmd{ ($name:ident) => (
-        if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {
+        if command == stringify!($name).replace("_", "-") {
             mod $name;
             config.shell().set_verbose(true);
             let r = cargo::call_main_without_stdin($name::execute, config,
                                                    $name::USAGE,
-                                                   args.as_slice(),
+                                                   &args,
                                                    false);
             cargo::process_executed(r, &mut **config.shell());
             return Ok(None)
@@ -128,8 +128,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     ) }
     each_subcommand!(cmd);
 
-    execute_subcommand(command.as_slice(), args.as_slice(),
-                       &mut **config.shell());
+    execute_subcommand(&command, &args, &mut config.shell());
     Ok(None)
 }
 
@@ -139,7 +138,7 @@ fn find_closest(cmd: &str) -> Option<String> {
                             // c.lev_distance(cmd))) allows us to only make
                             // suggestions that have an edit distance of
                             // 3 or less
-                            .map(|c| (lev_distance(c.as_slice(), cmd), c))
+                            .map(|c| (lev_distance(&c, cmd), c))
                             .filter(|&(d, _): &(usize, &String)| d < 4)
                             .min_by(|&(d, _)| d) {
         Some((_, c)) => {
@@ -158,7 +157,7 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
                                           Did you mean `{}`?\n", closest),
                 None => "No such subcommand".to_string()
             };
-            return handle_error(CliError::new(msg, 127), shell)
+            return handle_error(CliError::new(&msg, 127), shell)
         }
     };
     let status = Command::new(command)
@@ -175,13 +174,13 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
         }
         Ok(ExitSignal(i)) => {
             let msg = format!("subcommand failed with signal: {}", i);
-            handle_error(CliError::new(msg, i as i32), shell)
+            handle_error(CliError::new(&msg, i as i32), shell)
         }
         Err(old_io::IoError{kind, ..}) if kind == old_io::FileNotFound =>
             handle_error(CliError::new("No such subcommand", 127), shell),
         Err(err) => handle_error(
             CliError::new(
-                format!("Subcommand failed to run: {}", err), 127),
+                &format!("Subcommand failed to run: {}", err), 127),
             shell)
     }
 }
@@ -231,7 +230,7 @@ fn is_executable(path: &Path) -> bool {
 fn find_command(cmd: &str) -> Option<Path> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let dirs = list_command_directory();
-    let mut command_paths = dirs.iter().map(|dir| dir.join(command_exe.as_slice()));
+    let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe));
     command_paths.find(|path| path.exists())
 }
 

@@ -80,7 +80,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
 
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
-        s.as_slice().split(' ')
+        s.split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     if spec.is_some() && (no_default_features || features.len() > 0) {
@@ -110,7 +110,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         try!(registry.add_overrides(override_ids));
 
         let platform = target.as_ref().map(|e| e.as_slice()).or(Some(rustc_host.as_slice()));
-        let method = Method::Required(dev_deps, features.as_slice(),
+        let method = Method::Required(dev_deps, &features,
                                       !no_default_features, platform);
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, package, method,
@@ -119,7 +119,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
             r.clone()
         }).collect();
-        let packages = try!(registry.get(req.as_slice()).chain_error(|| {
+        let packages = try!(registry.get(&req).chain_error(|| {
             human("Unable to get packages from source")
         }));
 
@@ -150,8 +150,8 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         let _p = profile::start("compiling");
         let lib_overrides = try!(scrape_build_config(config, jobs, target));
 
-        try!(ops::compile_targets(env.as_slice(), targets.as_slice(), to_build,
-                                  &PackageSet::new(packages.as_slice()),
+        try!(ops::compile_targets(&env, &targets, to_build,
+                                  &PackageSet::new(&packages),
                                   &resolve_with_overrides, &sources,
                                   config, lib_overrides, exec_engine.clone()))
     };
@@ -176,7 +176,7 @@ fn source_ids_from_config(config: &Config, cur_path: Path)
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
-        p.dir_path().dir_path().join(s.as_slice())
+        p.dir_path().dir_path().join(s)
     }).filter(|p| {
         // Make sure we don't override the local package, even if it's in the
         // list of override paths.
@@ -248,7 +248,7 @@ fn scrape_target_config(config: &Config, triple: &str)
             if k == "rustc-flags" {
                 let whence = format!("in `{}` (in {:?})", key, path);
                 let (paths, links) = try!(
-                    BuildOutput::parse_rustc_flags(v.as_slice(), &whence[])
+                    BuildOutput::parse_rustc_flags(&v, &whence[])
                 );
                 output.library_paths.extend(paths.into_iter());
                 output.library_links.extend(links.into_iter());
