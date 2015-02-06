@@ -1,10 +1,10 @@
 use std::error::Error;
+use std::env;
 use std::fmt;
 use std::old_io::fs::{self, PathExtensions};
 use std::old_io::process::{ProcessOutput};
 use std::old_io;
-use std::os;
-use std::path::{Path, BytesContainer};
+use std::old_path::{Path, BytesContainer};
 use std::str::{self, Str};
 
 use url::Url;
@@ -102,16 +102,17 @@ impl ProjectBuilder {
     pub fn url(&self) -> Url { path2url(self.root()) }
 
     pub fn bin(&self, b: &str) -> Path {
-        self.build_dir().join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+        self.build_dir().join(format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
     pub fn release_bin(&self, b: &str) -> Path {
-        self.build_dir().join("release").join(format!("{}{}", b, os::consts::EXE_SUFFIX))
+        self.build_dir().join("release").join(format!("{}{}", b,
+                                                      env::consts::EXE_SUFFIX))
     }
 
     pub fn target_bin(&self, target: &str, b: &str) -> Path {
         self.build_dir().join(target).join(format!("{}{}", b,
-                                                   os::consts::EXE_SUFFIX))
+                                                   env::consts::EXE_SUFFIX))
     }
 
     pub fn build_dir(&self) -> Path {
@@ -226,8 +227,8 @@ impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
 
 // Path to cargo executables
 pub fn cargo_dir() -> Path {
-    os::getenv("CARGO_BIN_PATH").map(Path::new)
-        .or_else(|| os::self_exe_path())
+    env::var_string("CARGO_BIN_PATH").map(Path::new).ok()
+        .or_else(|| env::current_exe().ok().map(|s| s.dir_path()))
         .unwrap_or_else(|| {
             panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
         })

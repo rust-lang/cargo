@@ -193,7 +193,7 @@ pub type CliResult<T> = Result<T, CliError>;
 pub struct CliError {
     pub error: Box<CargoError>,
     pub unknown: bool,
-    pub exit_code: u32
+    pub exit_code: i32
 }
 
 impl Error for CliError {
@@ -208,19 +208,25 @@ impl fmt::Display for CliError {
 }
 
 impl CliError {
-    pub fn new<S: Str>(error: S, code: u32) -> CliError {
+    pub fn new<S: Str>(error: S, code: i32) -> CliError {
         let error = human(error.as_slice().to_string());
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_error<E: CargoError + 'static>(error: E, code: u32) -> CliError {
+    pub fn from_error<E: CargoError + 'static>(error: E, code: i32) -> CliError {
         let error = Box::new(error) as Box<CargoError>;
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_boxed(error: Box<CargoError>, code: u32) -> CliError {
+    pub fn from_boxed(error: Box<CargoError>, code: i32) -> CliError {
         let human = error.is_human();
         CliError { error: error, exit_code: code, unknown: !human }
+    }
+}
+
+impl FromError<Box<CargoError>> for CliError {
+    fn from_error(err: Box<CargoError>) -> CliError {
+        CliError::from_boxed(err, 101)
     }
 }
 

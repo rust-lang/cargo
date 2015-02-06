@@ -87,7 +87,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         None => Ok(None),
         Some(err) => {
             Err(match err.exit {
-                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as u32),
+                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as i32),
                 _ => CliError::from_boxed(box err, 101),
             })
         }

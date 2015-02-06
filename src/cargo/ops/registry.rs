@@ -1,8 +1,8 @@
 use std::collections::HashMap;
+use std::env;
+use std::iter::repeat;
 use std::old_io::File;
 use std::old_io::fs::PathExtensions;
-use std::iter::repeat;
-use std::os;
 
 use curl::http;
 use git2;
@@ -191,7 +191,7 @@ pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
         }
         Err(..) => {}
     }
-    Ok(os::getenv("HTTP_PROXY"))
+    Ok(env::var_string("HTTP_PROXY").ok())
 }
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
@@ -199,13 +199,13 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
         Some((s, _)) => return Ok(Some(s)),
         None => {}
     }
-    Ok(os::getenv("HTTP_TIMEOUT").and_then(|s| s.parse().ok()))
+    Ok(env::var_string("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     let RegistryConfig { index, token: _ } = try!(registry_configuration(config));
     let mut map = HashMap::new();
-    let p = try!(os::getcwd());
+    let p = config.cwd().clone();
     match index {
         Some(index) => {
             map.insert("index".to_string(), ConfigValue::String(index, p.clone()));

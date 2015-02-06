@@ -1,9 +1,11 @@
-use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut, Ref, Cell};
-use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::old_io;
+use std::collections::hash_map::{HashMap};
+use std::env;
+use std::fmt;
+use std::mem;
 use std::old_io::fs::{self, PathExtensions, File};
+use std::old_io;
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
@@ -28,7 +30,7 @@ pub struct Config<'a> {
 
 impl<'a> Config<'a> {
     pub fn new(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
-        let cwd = try!(os::getcwd().chain_error(|| {
+        let cwd = try!(env::current_dir().chain_error(|| {
             human("couldn't get the current directory of the process")
         }));
         let (rustc_version, rustc_host) = try!(ops::rustc_version());
@@ -383,8 +385,8 @@ impl ConfigValue {
 }
 
 fn homedir() -> Option<Path> {
-    let cargo_home = os::getenv("CARGO_HOME").map(|p| Path::new(p));
-    let user_home = os::homedir().map(|p| p.join(".cargo"));
+    let cargo_home = env::var_string("CARGO_HOME").map(|p| Path::new(p)).ok();
+    let user_home = env::home_dir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }
 

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use std::fmt;
 use std::old_io::fs::{self, PathExtensions};
-use std::os;
 use std::slice;
 use std::str;
 use std::default::Default;
@@ -95,7 +94,7 @@ pub fn to_manifest(contents: &[u8],
                    config: &Config)
                    -> CargoResult<(Manifest, Vec<Path>)> {
     let manifest = layout.root.join("Cargo.toml");
-    let manifest = match manifest.path_relative_from(&try!(os::getcwd())) {
+    let manifest = match manifest.path_relative_from(config.cwd()) {
         Some(path) => path,
         None => manifest,
     };

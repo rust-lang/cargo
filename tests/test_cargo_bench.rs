@@ -1,4 +1,4 @@
-use std::path;
+use std::old_path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
@@ -186,7 +186,7 @@ thread '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src{sep}foo.rs:14
 
-", sep = path::SEP))
+", sep = old_path::SEP))
               .with_status(101));
 });
 
@@ -865,5 +865,5 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        running = RUNNING,
                        dir = p.root().display(),
                        url = p.url(),
-                       sep = path::SEP).as_slice()));
+                       sep = old_path::SEP).as_slice()));
 });

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
+use std::env;
 use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::old_io::process::{Command, ProcessOutput, InheritFd};
-use std::os;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 
 use util::{CargoResult, ProcessError, process_error};
 
@@ -126,7 +126,7 @@ pub fn process<T: BytesContainer>(cmd: T) -> CargoResult<ProcessBuilder> {
     Ok(ProcessBuilder {
         program: CString::from_slice(cmd.container_as_bytes()),
         args: Vec::new(),
-        cwd: try!(os::getcwd()),
+        cwd: try!(env::current_dir()),
         env: HashMap::new(),
     })
 }

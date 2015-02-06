@@ -1,4 +1,4 @@
-use std::path;
+use std::old_path;
 
 use support::{project, cargo_dir, execs, path2url};
 use support::{COMPILING, RUNNING};
@@ -28,7 +28,7 @@ hello
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
     assert_that(&p.bin("foo"), existing_file());
 });
 
@@ -129,7 +129,7 @@ hello a.rs
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("--bin").arg("b"),
                 execs().with_status(0).with_stdout(format!("\
@@ -137,7 +137,7 @@ hello a.rs
 hello b.rs
 ",
         running = RUNNING,
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
 });
 
 test!(run_example {
@@ -165,7 +165,7 @@ example
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
 });
 
 test!(either_name_or_example {
@@ -217,7 +217,7 @@ hello main.rs
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
 });
 
 test!(example_with_release_flag {
@@ -292,7 +292,7 @@ fast2
         running = RUNNING,
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
@@ -321,7 +321,7 @@ slow2
         running = RUNNING,
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
 });
 
 test!(run_dylib_dep {
@@ -375,7 +375,7 @@ test!(release_works {
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = path::SEP).as_slice()));
+        sep = old_path::SEP).as_slice()));
     assert_that(&p.release_bin("foo"), existing_file());
 });
 

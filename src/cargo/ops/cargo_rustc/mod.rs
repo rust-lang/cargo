@@ -3,7 +3,7 @@ use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
 use std::old_io::fs::{self, PathExtensions};
 use std::os;
-use std::path;
+use std::old_path;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
@@ -455,6 +455,7 @@ fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
 // For all plugin dependencies, add their -L paths (now calculated and
 // present in `state`) to the dynamic library load path for the command to
 // execute.
+#[allow(deprecated)] // need an OsStr based Command
 fn add_plugin_deps(rustc: CommandPrototype,
                    build_state: &BuildMap,
                    plugin_deps: Vec<PackageId>)
@@ -726,7 +727,7 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
             v.push_all(target.get_name().as_bytes());
             v.push(b'=');
             v.push_all(layout.root().as_vec());
-            v.push(path::SEP_BYTE);
+            v.push(old_path::SEP_BYTE);
             v.push_all(filename.as_bytes());
             cmd = cmd.arg("--extern").arg(v.as_slice());
         }

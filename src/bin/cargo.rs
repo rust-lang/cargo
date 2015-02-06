@@ -1,15 +1,15 @@
-#![feature(collections, core, io, os, path)]
+#![feature(collections, core, io, path, env)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;
-#[macro_use] extern crate log;
 extern crate env_logger;
+#[macro_use] extern crate log;
 
 use std::collections::BTreeSet;
-use std::os;
-use std::old_io;
+use std::env;
 use std::old_io::fs::{self, PathExtensions};
 use std::old_io::process::{Command,InheritFd,ExitStatus,ExitSignal};
+use std::old_io;
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
@@ -86,7 +86,6 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo; args={:?}", os::args());
     config.shell().set_verbose(flags.flag_verbose);
 
     if flags.flag_list {
@@ -100,7 +99,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     let (mut args, command) = match flags.arg_command.as_slice() {
         "" | "help" if flags.arg_args.len() == 0 => {
             config.shell().set_verbose(true);
-            let args = &[os::args()[0].clone(), "-h".to_string()];
+            let args = &["foo".to_string(), "-h".to_string()];
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
             cargo::process_executed(r, &mut **config.shell());
@@ -113,7 +112,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         s => (flags.arg_args.clone(), s),
     };
     args.insert(0, command.to_string());
-    args.insert(0, os::args()[0].clone());
+    args.insert(0, "foo".to_string());
 
     macro_rules! cmd{ ($name:ident) => (
         if command.as_slice() == stringify!($name).replace("_", "-").as_slice() {
@@ -136,8 +135,9 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
 fn find_closest(cmd: &str) -> Option<String> {
     match list_commands().iter()
-                            // doing it this way (instead of just .min_by(|c| c.lev_distance(cmd)))
-                            // allows us to only make suggestions that have an edit distance of
+                            // doing it this way (instead of just .min_by(|c|
+                            // c.lev_distance(cmd))) allows us to only make
+                            // suggestions that have an edit distance of
                             // 3 or less
                             .map(|c| (lev_distance(c.as_slice(), cmd), c))
                             .filter(|&(d, _): &(usize, &String)| d < 4)
@@ -171,11 +171,11 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
     match status {
         Ok(ExitStatus(0)) => (),
         Ok(ExitStatus(i)) => {
-            handle_error(CliError::new("", i as u32), shell)
+            handle_error(CliError::new("", i as i32), shell)
         }
         Ok(ExitSignal(i)) => {
             let msg = format!("subcommand failed with signal: {}", i);
-            handle_error(CliError::new(msg, i as u32), shell)
+            handle_error(CliError::new(msg, i as i32), shell)
         }
         Err(old_io::IoError{kind, ..}) if kind == old_io::FileNotFound =>
             handle_error(CliError::new("No such subcommand", 127), shell),
@@ -202,11 +202,11 @@ fn list_commands() -> BTreeSet<String> {
                 _ => continue
             };
             if filename.starts_with(command_prefix) &&
-                    filename.ends_with(os::consts::EXE_SUFFIX) &&
+                    filename.ends_with(env::consts::EXE_SUFFIX) &&
                     is_executable(entry) {
                 let command = &filename[
                     command_prefix.len()..
-                    filename.len() - os::consts::EXE_SUFFIX.len()];
+                    filename.len() - env::consts::EXE_SUFFIX.len()];
                 commands.insert(String::from_str(command));
             }
         }
@@ -229,7 +229,7 @@ fn is_executable(path: &Path) -> bool {
 
 /// Get `Command` to run given command.
 fn find_command(cmd: &str) -> Option<Path> {
-    let command_exe = format!("cargo-{}{}", cmd, os::consts::EXE_SUFFIX);
+    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let dirs = list_command_directory();
     let mut command_paths = dirs.iter().map(|dir| dir.join(command_exe.as_slice()));
     command_paths.find(|path| path.exists())
@@ -238,20 +238,13 @@ fn find_command(cmd: &str) -> Option<Path> {
 /// List candidate locations where subcommands might be installed.
 fn list_command_directory() -> Vec<Path> {
     let mut dirs = vec![];
-    match os::self_exe_path() {
-        Some(path) => {
-            dirs.push(path.join("../lib/cargo"));
-            dirs.push(path);
-        },
-        None => {}
-    };
-    match std::os::getenv("PATH") {
-        Some(val) => {
-            for dir in os::split_paths(val).iter() {
-                dirs.push(Path::new(dir))
-            }
-        },
-        None => {}
-    };
+    if let Ok(mut path) = env::current_exe() {
+        path.pop();
+        dirs.push(path.join("../lib/cargo"));
+        dirs.push(path);
+    }
+    if let Some(val) = env::var("PATH") {
+        dirs.extend(env::split_paths(&val));
+    }
     dirs
 }

@@ -1,6 +1,6 @@
 use std::old_io::{fs, USER_RWX, File, TempDir};
 use std::old_io::fs::PathExtensions;
-use std::os;
+use std::env;
 
 use support::{execs, paths, cargo_dir};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
@@ -23,8 +23,8 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 }
 
 test!(simple_lib {
-    os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("none"),
+    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("none")
+                                    .env("USER", Some("foo")),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -37,8 +37,8 @@ test!(simple_lib {
 });
 
 test!(simple_bin {
-    os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo").arg("--bin"),
+    assert_that(cargo_process("new").arg("foo").arg("--bin")
+                                    .env("USER", Some("foo")),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -48,14 +48,14 @@ test!(simple_bin {
     assert_that(cargo_process("build").cwd(paths::root().join("foo")),
                 execs().with_status(0));
     assert_that(&paths::root().join(format!("foo/target/foo{}",
-                                            os::consts::EXE_SUFFIX)),
+                                            env::consts::EXE_SUFFIX)),
                 existing_file());
 });
 
 test!(simple_git {
     let td = TempDir::new("cargo").unwrap();
-    os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo").cwd(td.path().clone()),
+    assert_that(cargo_process("new").arg("foo").cwd(td.path().clone())
+                                    .env("USER", Some("foo")),
                 execs().with_status(0));
 
     assert_that(td.path(), existing_dir());
@@ -175,8 +175,8 @@ test!(git_prefers_command_line {
 });
 
 test!(subpackage_no_git {
-    os::setenv("USER", "foo");
-    assert_that(cargo_process("new").arg("foo"), execs().with_status(0));
+    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
+                execs().with_status(0));
 
     let subpackage = paths::root().join("foo").join("components");
     fs::mkdir(&subpackage, USER_RWX).unwrap();

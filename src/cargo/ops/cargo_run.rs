@@ -1,4 +1,3 @@
-use std::os;
 
 use ops::{self, ExecEngine};
 use util::{CargoResult, human, process, ProcessError, ChainError};
@@ -48,14 +47,14 @@ pub fn run(manifest_path: &Path,
         (None, true) => dst.join("examples").join(bin.get_name()),
         (None, false) => dst.join(bin.get_name()),
     };
-    let exe = match exe.path_relative_from(&try!(os::getcwd())) {
+    let exe = match exe.path_relative_from(config.cwd()) {
         Some(path) => path,
         None => exe,
     };
     let process = try!(try!(compile.target_process(exe, &root))
                               .into_process_builder())
                               .args(args)
-                              .cwd(try!(os::getcwd()));
+                              .cwd(config.cwd().clone());
 
     try!(config.shell().status("Running", process.to_string()));
     Ok(process.exec().err())

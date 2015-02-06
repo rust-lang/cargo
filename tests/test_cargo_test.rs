@@ -1,4 +1,4 @@
-use std::path;
+use std::old_path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
@@ -148,7 +148,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
 
 ",
         COMPILING, p.url(), RUNNING,
-        sep = path::SEP))
+        sep = old_path::SEP))
               .with_stderr(format!("\
 thread '<main>' panicked at 'Some tests failed', [..]
 

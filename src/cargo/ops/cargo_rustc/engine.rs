@@ -1,9 +1,9 @@
 use std::collections::HashMap;
+use std::env;
 use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::old_io::process::ProcessOutput;
-use std::os;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 
 use util::{self, CargoResult, ProcessError, ProcessBuilder};
 
@@ -39,13 +39,11 @@ pub struct CommandPrototype {
 
 impl CommandPrototype {
     pub fn new(ty: CommandType) -> CargoResult<CommandPrototype> {
-        use std::os;
-
         Ok(CommandPrototype {
             ty: ty,
             args: Vec::new(),
             env: HashMap::new(),
-            cwd: try!(os::getcwd()),
+            cwd: try!(env::current_dir()),
         })
     }
 
@@ -87,7 +85,7 @@ impl CommandPrototype {
 
     pub fn get_env(&self, var: &str) -> Option<CString> {
         self.env.get(var).cloned().or_else(|| {
-            Some(os::getenv(var).map(|s| CString::from_vec(s.into_bytes())))
+            Some(env::var_string(var).ok().map(|s| CString::from_vec(s.into_bytes())))
         }).and_then(|val| val)
     }
 

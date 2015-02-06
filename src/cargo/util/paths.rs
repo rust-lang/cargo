@@ -1,12 +1,15 @@
-use std::{old_io,os};
+use std::env;
 use std::old_io::fs;
-use std::path::BytesContainer;
+use std::old_io;
+use std::old_path::BytesContainer;
+use std::os;
 
 use util::{human, CargoResult};
 
 pub fn realpath(original: &Path) -> old_io::IoResult<Path> {
     const MAX_LINKS_FOLLOWED: usize = 256;
-    let original = try!(os::make_absolute(original));
+    let cwd = try!(env::current_dir());
+    let original = cwd.join(original);
 
     // Right now lstat on windows doesn't work quite well
     if cfg!(windows) {
@@ -41,6 +44,7 @@ pub fn realpath(original: &Path) -> old_io::IoResult<Path> {
     return Ok(result);
 }
 
+#[allow(deprecated)] // need an OsStr-based Command first
 pub fn join_paths<T: BytesContainer>(paths: &[T], env: &str)
                                      -> CargoResult<Vec<u8>> {
     os::join_paths(paths).map_err(|e| {

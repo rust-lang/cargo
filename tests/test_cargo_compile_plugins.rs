@@ -1,5 +1,5 @@
 use std::old_io::fs;
-use std::os;
+use std::env;
 
 use support::{project, execs, cargo_dir};
 use hamcrest::assert_that;
@@ -103,12 +103,12 @@ test!(plugin_with_dynamic_native_dependency {
     let src = build.root().join("target");
     let lib = fs::readdir(&src).unwrap().into_iter().find(|lib| {
         let lib = lib.filename_str().unwrap();
-        lib.starts_with(os::consts::DLL_PREFIX) &&
-            lib.ends_with(os::consts::DLL_SUFFIX)
+        lib.starts_with(env::consts::DLL_PREFIX) &&
+            lib.ends_with(env::consts::DLL_SUFFIX)
     }).unwrap();
     let libname = lib.filename_str().unwrap();
-    let libname = &libname[os::consts::DLL_PREFIX.len()..
-                           libname.len() - os::consts::DLL_SUFFIX.len()];
+    let libname = &libname[env::consts::DLL_PREFIX.len()..
+                           libname.len() - env::consts::DLL_SUFFIX.len()];
 
     let foo = project("foo")
         .file("Cargo.toml", r#"

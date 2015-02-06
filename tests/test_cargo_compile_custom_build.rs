@@ -1,5 +1,5 @@
+use std::env;
 use std::old_io::{File, fs};
-use std::os;
 
 use support::{project, execs, cargo_dir};
 use support::{COMPILING, RUNNING, DOCTEST};
@@ -23,9 +23,9 @@ test!(custom_build_script_failed {
             fn main() {}
         "#)
         .file("build.rs", r#"
-            #![feature(os)]
+            #![feature(env)]
             fn main() {
-                std::os::set_exit_status(101);
+                std::env::set_exit_status(101);
             }
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
@@ -76,34 +76,35 @@ test!(custom_build_env_vars {
         "#);
 
     let file_content = format!(r#"
-            use std::os;
+            use std::env;
             use std::old_io::fs::PathExtensions;
             fn main() {{
-                let _target = os::getenv("TARGET").unwrap();
+                let _target = env::var_string("TARGET").unwrap();
 
-                let _ncpus = os::getenv("NUM_JOBS").unwrap();
+                let _ncpus = env::var_string("NUM_JOBS").unwrap();
 
-                let out = os::getenv("CARGO_MANIFEST_DIR").unwrap();
+                let out = env::var_string("CARGO_MANIFEST_DIR").unwrap();
                 let p1 = Path::new(out);
-                let p2 = os::make_absolute(&Path::new(file!()).dir_path().dir_path()).unwrap();
+                let cwd = env::current_dir().unwrap();
+                let p2 = cwd.join(Path::new(file!()).dir_path().dir_path());
                 assert!(p1 == p2, "{{}} != {{}}", p1.display(), p2.display());
 
-                let opt = os::getenv("OPT_LEVEL").unwrap();
+                let opt = env::var_string("OPT_LEVEL").unwrap();
                 assert_eq!(opt.as_slice(), "0");
 
-                let opt = os::getenv("PROFILE").unwrap();
+                let opt = env::var_string("PROFILE").unwrap();
                 assert_eq!(opt.as_slice(), "compile");
 
-                let debug = os::getenv("DEBUG").unwrap();
+                let debug = env::var_string("DEBUG").unwrap();
                 assert_eq!(debug.as_slice(), "true");
 
-                let out = os::getenv("OUT_DIR").unwrap();
+                let out = env::var_string("OUT_DIR").unwrap();
                 assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());
 
-                let _host = os::getenv("HOST").unwrap();
+                let _host = env::var_string("HOST").unwrap();
 
-                let _feat = os::getenv("CARGO_FEATURE_FOO").unwrap();
+                let _feat = env::var_string("CARGO_FEATURE_FOO").unwrap();
             }}
         "#,
         p.root().join("target").join("build").display());
@@ -266,10 +267,10 @@ test!(overrides_and_links {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::getenv("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(os::getenv("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var_string("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(env::var_string("DEP_FOO_BAR").unwrap().as_slice(), "baz");
             }
         "#)
         .file(".cargo/config", format!(r#"
@@ -339,10 +340,10 @@ test!(links_passes_env_vars {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::getenv("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(os::getenv("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var_string("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(env::var_string("DEP_FOO_BAR").unwrap().as_slice(), "baz");
             }
         "#)
         .file("a/Cargo.toml", r#"
@@ -438,10 +439,10 @@ test!(rebuild_continues_to_pass_env_vars {
         "#, a.root().display()))
         .file("src/lib.rs", "")
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::getenv("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(os::getenv("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var_string("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(env::var_string("DEP_FOO_BAR").unwrap().as_slice(), "baz");
             }
         "#);
 
@@ -723,10 +724,10 @@ test!(out_dir_is_preserved {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             use std::old_io::File;
             fn main() {
-                let out = os::getenv("OUT_DIR").unwrap();
+                let out = env::var_string("OUT_DIR").unwrap();
                 File::create(&Path::new(out).join("foo")).unwrap();
             }
         "#);
@@ -738,10 +739,10 @@ test!(out_dir_is_preserved {
 
     // Change to asserting that it's there
     File::create(&p.root().join("build.rs")).write_str(r#"
-        use std::os;
+        use std::env;
         use std::old_io::File;
         fn main() {
-            let out = os::getenv("OUT_DIR").unwrap();
+            let out = env::var_string("OUT_DIR").unwrap();
             File::open(&Path::new(out).join("foo")).unwrap();
         }
     "#).unwrap();
@@ -803,11 +804,11 @@ test!(code_generation {
             }
         "#)
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             use std::old_io::File;
 
             fn main() {
-                let dst = Path::new(os::getenv("OUT_DIR").unwrap());
+                let dst = Path::new(env::var_string("OUT_DIR").unwrap());
                 let mut f = File::create(&dst.join("hello.rs")).unwrap();
                 f.write_str("
                     pub fn message() -> &'static str {
@@ -967,11 +968,11 @@ test!(test_a_lib_with_a_build_command {
             }
         "#)
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             use std::old_io::File;
 
             fn main() {
-                let out = Path::new(os::getenv("OUT_DIR").unwrap());
+                let out = Path::new(env::var_string("OUT_DIR").unwrap());
                 File::create(&out.join("foo.rs")).write_str("
                     fn foo() -> int { 1 }
                 ").unwrap();
@@ -1027,12 +1028,12 @@ test!(build_script_with_dynamic_native_dependency {
     let src = build.root().join("target");
     let lib = fs::readdir(&src).unwrap().into_iter().find(|lib| {
         let lib = lib.filename_str().unwrap();
-        lib.starts_with(os::consts::DLL_PREFIX) &&
-            lib.ends_with(os::consts::DLL_SUFFIX)
+        lib.starts_with(env::consts::DLL_PREFIX) &&
+            lib.ends_with(env::consts::DLL_SUFFIX)
     }).unwrap();
     let libname = lib.filename_str().unwrap();
-    let libname = &libname[os::consts::DLL_PREFIX.len()..
-                           libname.len() - os::consts::DLL_SUFFIX.len()];
+    let libname = &libname[env::consts::DLL_PREFIX.len()..
+                           libname.len() - env::consts::DLL_SUFFIX.len()];
 
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -1058,10 +1059,10 @@ test!(build_script_with_dynamic_native_dependency {
             build = "build.rs"
         "#)
         .file("bar/build.rs", r#"
-            use std::os;
+            use std::env;
 
             fn main() {
-                let src = Path::new(os::getenv("SRC").unwrap());
+                let src = Path::new(env::var_string("SRC").unwrap());
                 println!("cargo:rustc-flags=-L {}", src.dir_path().display());
             }
         "#)

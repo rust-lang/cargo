@@ -1,6 +1,6 @@
-use std::os;
-use std::mem;
+use std::env;
 use std::fmt;
+use std::mem;
 use time;
 use std::iter::repeat;
 use std::cell::RefCell;
@@ -14,7 +14,7 @@ pub struct Profiler {
     desc: String,
 }
 
-fn enabled() -> bool { os::getenv("CARGO_PROFILE").is_some() }
+fn enabled() -> bool { env::var("CARGO_PROFILE").is_some() }
 
 pub fn start<T: fmt::Display>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }
