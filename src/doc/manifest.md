@@ -132,6 +132,8 @@ hammer = "0.5.0"
 color = "0.6.0"
 ```
 
+The syntax of the requirement strings is described in the [crates.io guide](crates-io.html#using-crates.io-based-crates).
+
 Platform-specific dependencies take the same format, but are listed under the
 `target.$triple` section:
 
