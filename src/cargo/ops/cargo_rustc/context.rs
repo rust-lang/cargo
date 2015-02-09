@@ -102,8 +102,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         };
         let output = try!(process.exec_with_output());
 
-        let error = str::from_utf8(output.error.as_slice()).unwrap();
-        let output = str::from_utf8(output.output.as_slice()).unwrap();
+        let error = str::from_utf8(&output.error).unwrap();
+        let output = str::from_utf8(&output.output).unwrap();
         let mut lines = output.lines();
         let nodylib = Regex::new("unsupported crate type.*dylib").unwrap();
         let nobin = Regex::new("unsupported crate type.*bin").unwrap();
@@ -133,20 +133,20 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         try!(self.host.prepare().chain_error(|| {
             internal(format!("couldn't prepare build directories for `{}`",
-                             pkg.get_name()))
+                             pkg.name()))
         }));
         match self.target {
             Some(ref mut target) => {
                 try!(target.prepare().chain_error(|| {
                     internal(format!("couldn't prepare build directories \
-                                      for `{}`", pkg.get_name()))
+                                      for `{}`", pkg.name()))
                 }));
             }
             None => {}
         }
 
-        let targets = pkg.get_targets().iter();
-        for target in targets.filter(|t| t.get_profile().is_compile()) {
+        let targets = pkg.targets().iter();
+        for target in targets.filter(|t| t.profile().is_compile()) {
             self.build_requirements(pkg, target, Platform::Target);
         }
 
@@ -163,8 +163,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
                           req: Platform) {
-        let req = if target.get_profile().is_for_host() {Platform::Plugin} else {req};
-        match self.requirements.entry((pkg.get_package_id(), target.get_name())) {
+        let req = if target.profile().is_for_host() {Platform::Plugin} else {req};
+        match self.requirements.entry((pkg.package_id(), target.name())) {
             Occupied(mut entry) => match (*entry.get(), req) {
                 (Platform::Plugin, Platform::Plugin) |
                 (Platform::PluginAndTarget, Platform::Plugin) |
@@ -180,7 +180,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             self.build_requirements(pkg, dep, req);
         }
 
-        match pkg.get_targets().iter().find(|t| t.get_profile().is_custom_build()) {
+        match pkg.targets().iter().find(|t| t.profile().is_custom_build()) {
             Some(custom_build) => {
                 self.build_requirements(pkg, custom_build, Platform::Plugin);
             }
@@ -190,18 +190,18 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     pub fn get_requirement(&self, pkg: &'a Package,
                            target: &'a Target) -> Platform {
-        let default = if target.get_profile().is_for_host() {
+        let default = if target.profile().is_for_host() {
             Platform::Plugin
         } else {
             Platform::Target
         };
-        self.requirements.get(&(pkg.get_package_id(), target.get_name()))
+        self.requirements.get(&(pkg.package_id(), target.name()))
             .map(|a| *a).unwrap_or(default)
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
     pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
-        let primary = pkg.get_package_id() == self.resolve.root();
+        let primary = pkg.package_id() == self.resolve.root();
         match kind {
             Kind::Host => LayoutProxy::new(&self.host, primary),
             Kind::Target =>  LayoutProxy::new(self.target.as_ref()
@@ -214,7 +214,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// target.
     pub fn out_dir(&self, pkg: &Package, kind: Kind, target: &Target) -> Path {
         let out_dir = self.layout(pkg, kind);
-        if target.get_profile().is_custom_build() {
+        if target.profile().is_custom_build() {
             out_dir.build(pkg)
         } else if target.is_example() {
             out_dir.examples().clone()
@@ -236,13 +236,13 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         match *pair {
             None => return Err(human(format!("dylib outputs are not supported \
                                               for {}", triple))),
-            Some((ref s1, ref s2)) => Ok((s1.as_slice(), s2.as_slice())),
+            Some((ref s1, ref s2)) => Ok((s1, s2)),
         }
     }
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.target_triple.as_slice()
+        &self.target_triple
     }
 
     /// Return the exact filename of the target.
@@ -251,16 +251,16 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         let mut ret = Vec::new();
         if target.is_example() || target.is_bin() ||
-           target.get_profile().is_test() {
+           target.profile().is_test() {
             ret.push(format!("{}{}", stem,
-                             if target.get_profile().is_for_host() {
-                                 self.host_exe.as_slice()
+                             if target.profile().is_for_host() {
+                                 &self.host_exe
                              } else {
-                                 self.target_exe.as_slice()
+                                 &self.target_exe
                              }));
         } else {
             if target.is_dylib() {
-                let plugin = target.get_profile().is_for_host();
+                let plugin = target.profile().is_for_host();
                 let kind = if plugin {Kind::Host} else {Kind::Target};
                 let (prefix, suffix) = try!(self.dylib(kind));
                 ret.push(format!("{}{}{}", prefix, stem, suffix));
@@ -280,30 +280,30 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// for that package.
     pub fn dep_targets(&self, pkg: &Package, target: &Target)
                        -> Vec<(&'a Package, &'a Target)> {
-        let deps = match self.resolve.deps(pkg.get_package_id()) {
+        let deps = match self.resolve.deps(pkg.package_id()) {
             None => return vec!(),
             Some(deps) => deps,
         };
         deps.map(|id| self.get_package(id)).filter(|dep| {
-            let pkg_dep = pkg.get_dependencies().iter().find(|d| {
-                d.get_name() == dep.get_name()
+            let pkg_dep = pkg.dependencies().iter().find(|d| {
+                d.name() == dep.name()
             }).unwrap();
 
             // If this target is a build command, then we only want build
             // dependencies, otherwise we want everything *other than* build
             // dependencies.
             let is_correct_dep =
-                target.get_profile().is_custom_build() == pkg_dep.is_build();
+                target.profile().is_custom_build() == pkg_dep.is_build();
 
             // If this dependency is *not* a transitive dependency, then it
             // only applies to test/example targets
             let is_actual_dep = pkg_dep.is_transitive() ||
-                                target.get_profile().is_test() ||
+                                target.profile().is_test() ||
                                 target.is_example();
 
             is_correct_dep && is_actual_dep
         }).filter_map(|pkg| {
-            pkg.get_targets().iter().find(|&t| self.is_relevant_target(t))
+            pkg.targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
         }).collect()
     }
@@ -311,7 +311,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// Gets a package for the given package id.
     pub fn get_package(&self, id: &PackageId) -> &'a Package {
         self.package_set.iter()
-            .find(|pkg| id == pkg.get_package_id())
+            .find(|pkg| id == pkg.package_id())
             .expect("Should have found package")
     }
 
@@ -324,14 +324,14 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     pub fn is_relevant_target(&self, target: &Target) -> bool {
         target.is_lib() && match self.env {
-            "doc" | "test" => target.get_profile().is_compile(),
+            "doc" | "test" => target.profile().is_compile(),
             // doc-all == document everything, so look for doc targets and
             //            compile targets in dependencies
-            "doc-all" => target.get_profile().is_compile() ||
-                         (target.get_profile().get_env() == "doc" &&
-                          target.get_profile().is_doc()),
-            _ => target.get_profile().get_env() == self.env &&
-                 !target.get_profile().is_test(),
+            "doc-all" => target.profile().is_compile() ||
+                         (target.profile().env() == "doc" &&
+                          target.profile().is_doc()),
+            _ => target.profile().env() == self.env &&
+                 !target.profile().is_test(),
         }
     }
 
@@ -366,14 +366,14 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// This may involve overriding some options such as debug information,
     /// rpath, opt level, etc.
     pub fn profile(&self, target: &Target) -> Profile {
-        let mut profile = target.get_profile().clone();
+        let mut profile = target.profile().clone();
         let root_package = self.get_package(self.resolve.root());
-        for target in root_package.get_manifest().get_targets().iter() {
-            let root_profile = target.get_profile();
-            if root_profile.get_env() != profile.get_env() { continue }
-            profile = profile.opt_level(root_profile.get_opt_level())
-                             .debug(root_profile.get_debug())
-                             .rpath(root_profile.get_rpath())
+        for target in root_package.manifest().targets().iter() {
+            let root_profile = target.profile();
+            if root_profile.env() != profile.env() { continue }
+            profile = profile.set_opt_level(root_profile.opt_level())
+                             .set_debug(root_profile.debug())
+                             .set_rpath(root_profile.rpath())
         }
         profile
     }

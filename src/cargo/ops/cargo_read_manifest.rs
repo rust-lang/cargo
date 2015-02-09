@@ -26,7 +26,7 @@ pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
 
     let layout = project_layout(&path.dir_path());
     let (manifest, nested) =
-        try!(read_manifest(data.as_slice(), layout, source_id, config));
+        try!(read_manifest(&data, layout, source_id, config));
 
     Ok((Package::new(manifest, path, source_id), nested))
 }

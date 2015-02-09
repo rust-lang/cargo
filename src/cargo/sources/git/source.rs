@@ -33,11 +33,10 @@ impl<'a, 'b> GitSource<'a, 'b> {
             None => panic!("Not a git source; id={}", source_id),
         };
 
-        let remote = GitRemote::new(source_id.get_url());
-        let ident = ident(source_id.get_url());
+        let remote = GitRemote::new(source_id.url());
+        let ident = ident(source_id.url());
 
-        let db_path = config.git_db_path()
-            .join(ident.as_slice());
+        let db_path = config.git_db_path().join(&ident);
 
         let reference_path = match *reference {
             GitReference::Branch(ref s) |
@@ -48,7 +47,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
                                   .join(ident)
                                   .join(reference_path);
 
-        let reference = match source_id.get_precise() {
+        let reference = match source_id.precise() {
             Some(s) => GitReference::Rev(s.to_string()),
             None => source_id.git_reference().unwrap().clone(),
         };
@@ -65,9 +64,7 @@ impl<'a, 'b> GitSource<'a, 'b> {
         }
     }
 
-    pub fn get_url(&self) -> &Url {
-        self.remote.get_url()
-    }
+    pub fn url(&self) -> &Url { self.remote.url() }
 }
 
 fn ident(url: &Url) -> String {
@@ -80,7 +77,7 @@ fn ident(url: &Url) -> String {
     let ident = url.path().unwrap_or(&[])
                    .last().map(|a| a.clone()).unwrap_or(String::new());
 
-    let ident = if ident.as_slice() == "" {
+    let ident = if ident == "" {
         "_empty".to_string()
     } else {
         ident
@@ -117,7 +114,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
                 rel.default_port = Some(443);
                 let path = mem::replace(&mut rel.path, Vec::new());
                 rel.path = path.into_iter().map(|s| {
-                    s.as_slice().chars().map(|c| c.to_lowercase()).collect()
+                    s.chars().map(|c| c.to_lowercase()).collect()
                 }).collect();
             }
             _ => {}
@@ -133,7 +130,6 @@ pub fn canonicalize_url(url: &Url) -> Url {
             };
             if needs_chopping {
                 let last = rel.path.pop().unwrap();
-                let last = last.as_slice();
                 rel.path.push(last[..last.len() - 4].to_string())
             }
         }
@@ -145,7 +141,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
 
 impl<'a, 'b> Debug for GitSource<'a, 'b> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.get_url()));
+        try!(write!(f, "git repo at {}", self.remote.url()));
 
         match self.reference.to_ref_string() {
             Some(s) => write!(f, " ({})", s),
@@ -166,11 +162,11 @@ impl<'a, 'b> Source for GitSource<'a, 'b> {
     fn update(&mut self) -> CargoResult<()> {
         let actual_rev = self.remote.rev_for(&self.db_path, &self.reference);
         let should_update = actual_rev.is_err() ||
-                            self.source_id.get_precise().is_none();
+                            self.source_id.precise().is_none();
 
         let (repo, actual_rev) = if should_update {
             try!(self.config.shell().status("Updating",
-                format!("git repository `{}`", self.remote.get_url())));
+                format!("git repository `{}`", self.remote.url())));
 
             trace!("updating git source `{:?}`", self.remote);
             let repo = try!(self.remote.checkout(&self.db_path));
@@ -217,13 +213,13 @@ mod test {
     #[test]
     pub fn test_url_to_path_ident_with_path() {
         let ident = ident(&url("https://github.com/carlhuda/cargo"));
-        assert_eq!(ident.as_slice(), "cargo-51d6ede913e3e1d5");
+        assert_eq!(ident, "cargo-51d6ede913e3e1d5");
     }
 
     #[test]
     pub fn test_url_to_path_ident_without_path() {
         let ident = ident(&url("https://github.com"));
-        assert_eq!(ident.as_slice(), "_empty-eba8a1ec0f6907fb");
+        assert_eq!(ident, "_empty-eba8a1ec0f6907fb");
     }
 
     #[test]

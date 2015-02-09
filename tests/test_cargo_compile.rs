@@ -1,6 +1,6 @@
 use std::old_io::{self, fs, TempDir, File};
-use std::os;
-use std::path;
+use std::env;
+use std::old_path;
 
 use support::{project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, cargo_dir, ProjectBuilder};
@@ -119,10 +119,10 @@ test!(cargo_compile_without_manifest {
     let p = ProjectBuilder::new("foo", tmpdir.path().clone());
 
     assert_that(p.cargo_process("build"),
-        execs()
-        .with_status(102)
-        .with_stderr("Could not find Cargo.toml in this directory or any \
-                      parent directory\n"));
+                execs().with_status(101)
+                       .with_stderr("\
+Could not find `Cargo.toml` in `[..]` or any parent directory
+"));
 });
 
 test!(cargo_compile_with_invalid_code {
@@ -140,7 +140,7 @@ test!(cargo_compile_with_invalid_code {
 Could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n",
-            filename = format!("src{}foo.rs", path::SEP)).as_slice()));
+            filename = format!("src{}foo.rs", old_path::SEP)).as_slice()));
     assert_that(&p.root().join("Cargo.lock"), existing_file());
 });
 
@@ -181,7 +181,7 @@ test!(cargo_compile_with_warnings_in_the_root_package {
 on by default
 {filename}:1 fn main() {{}} fn dead() {{}}
                           ^~~~~~~~~~~~
-", filename = format!("src{}foo.rs", path::SEP).as_slice())));
+", filename = format!("src{}foo.rs", old_path::SEP).as_slice())));
 });
 
 test!(cargo_compile_with_warnings_in_a_dep_package {
@@ -648,8 +648,8 @@ test!(many_crate_types_old_style_lib_location {
     let file1 = files[1].as_slice();
     println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
-    assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
-            file1.ends_with(os::consts::DLL_SUFFIX));
+    assert!(file0.ends_with(env::consts::DLL_SUFFIX) ||
+            file1.ends_with(env::consts::DLL_SUFFIX));
 });
 
 test!(many_crate_types_correct {
@@ -686,8 +686,8 @@ test!(many_crate_types_correct {
     let file1 = files[1].as_slice();
     println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
-    assert!(file0.ends_with(os::consts::DLL_SUFFIX) ||
-            file1.ends_with(os::consts::DLL_SUFFIX));
+    assert!(file0.ends_with(env::consts::DLL_SUFFIX) ||
+            file1.ends_with(env::consts::DLL_SUFFIX));
 });
 
 test!(unused_keys {
@@ -822,7 +822,7 @@ test!(lto_build {
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 ",
-running = RUNNING, compiling = COMPILING, sep = path::SEP,
+running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -850,7 +850,7 @@ test!(verbose_build {
         -L dependency={dir}{sep}target \
         -L dependency={dir}{sep}target{sep}deps`
 ",
-running = RUNNING, compiling = COMPILING, sep = path::SEP,
+running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -880,7 +880,7 @@ test!(verbose_release_build {
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 ",
-running = RUNNING, compiling = COMPILING, sep = path::SEP,
+running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -943,9 +943,9 @@ test!(verbose_release_build_deps {
                     compiling = COMPILING,
                     dir = p.root().display(),
                     url = p.url(),
-                    sep = path::SEP,
-                    prefix = os::consts::DLL_PREFIX,
-                    suffix = os::consts::DLL_SUFFIX).as_slice()));
+                    sep = old_path::SEP,
+                    prefix = env::consts::DLL_PREFIX,
+                    suffix = env::consts::DLL_SUFFIX).as_slice()));
 });
 
 test!(explicit_examples {
@@ -1293,12 +1293,12 @@ test!(rebuild_preserves_out_dir {
             build = 'build.rs'
         "#)
         .file("build.rs", r#"
-            use std::os;
+            use std::env;
             use std::old_io::File;
 
             fn main() {
-                let path = Path::new(os::getenv("OUT_DIR").unwrap()).join("foo");
-                if os::getenv("FIRST").is_some() {
+                let path = Path::new(env::var_string("OUT_DIR").unwrap()).join("foo");
+                if env::var("FIRST").is_some() {
                     File::create(&path).unwrap();
                 } else {
                     File::create(&path).unwrap();
@@ -1585,23 +1585,23 @@ test!(transitive_dependencies_not_available {
             version = "0.0.1"
             authors = []
 
-            [dependencies.a]
+            [dependencies.aaaaa]
             path = "a"
         "#)
-        .file("src/main.rs", "extern crate b; extern crate a; fn main() {}")
+        .file("src/main.rs", "extern crate bbbbb; extern crate aaaaa; fn main() {}")
         .file("a/Cargo.toml", r#"
             [package]
-            name = "a"
+            name = "aaaaa"
             version = "0.0.1"
             authors = []
 
-            [dependencies.b]
+            [dependencies.bbbbb]
             path = "../b"
         "#)
-        .file("a/src/lib.rs", "extern crate b;")
+        .file("a/src/lib.rs", "extern crate bbbbb;")
         .file("b/Cargo.toml", r#"
             [package]
-            name = "b"
+            name = "bbbbb"
             version = "0.0.1"
             authors = []
         "#)
@@ -1610,8 +1610,8 @@ test!(transitive_dependencies_not_available {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
-[..] can't find crate for `b`
-[..] extern crate b; [..]
+[..] can't find crate for `bbbbb`
+[..] extern crate bbbbb; [..]
 [..]
 error: aborting due to previous error
 Could not compile `foo`.

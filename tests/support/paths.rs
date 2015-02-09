@@ -1,7 +1,8 @@
 use std::old_io::IoResult;
+use std::env;
 use std::old_io::fs::{self, PathExtensions};
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
-use std::{old_io, os};
+use std::old_io;
 
 use cargo::util::realpath;
 
@@ -10,7 +11,8 @@ static NEXT_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 thread_local!(static TASK_ID: usize = NEXT_ID.fetch_add(1, Ordering::SeqCst));
 
 pub fn root() -> Path {
-    let path = os::self_exe_path().unwrap()
+    let path = env::current_exe().unwrap()
+                  .dir_path()
                   .join(CARGO_INTEGRATION_TEST_DIR)
                   .join(TASK_ID.with(|my_id| format!("test-{}", my_id)));
     realpath(&path).unwrap()

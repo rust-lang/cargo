@@ -1,5 +1,5 @@
-use std::os;
-use std::path;
+use std::env;
+use std::old_path;
 
 use support::{project, execs, basic_bin_manifest};
 use support::{RUNNING, COMPILING, DOCTEST, cargo_dir};
@@ -12,8 +12,8 @@ fn setup() {
 
 fn disabled() -> bool {
     // First, disable if ./configure requested so
-    match os::getenv("CFG_DISABLE_CROSS_TESTS") {
-        Some(ref s) if s.as_slice() == "1" => return true,
+    match env::var_string("CFG_DISABLE_CROSS_TESTS") {
+        Ok(ref s) if s.as_slice() == "1" => return true,
         _ => {}
     }
 
@@ -24,7 +24,7 @@ fn disabled() -> bool {
 }
 
 fn alternate() -> &'static str {
-    match os::consts::SYSNAME {
+    match env::consts::OS {
         "linux" => "i686-unknown-linux-gnu",
         "macos" => "i686-apple-darwin",
         _ => unreachable!(),
@@ -44,13 +44,13 @@ test!(simple_cross {
         "#)
         .file("build.rs", format!(r#"
             fn main() {{
-                assert_eq!(std::os::getenv("TARGET").unwrap().as_slice(), "{}");
+                assert_eq!(std::env::var_string("TARGET").unwrap().as_slice(), "{}");
             }}
         "#, alternate()).as_slice())
         .file("src/main.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::consts::ARCH, "x86");
+                assert_eq!(env::consts::ARCH, "x86");
             }
         "#);
 
@@ -277,9 +277,9 @@ test!(linker_and_ar {
         "#, target).as_slice())
         .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::consts::ARCH, "x86");
+                assert_eq!(env::consts::ARCH, "x86");
             }
         "#);
 
@@ -301,7 +301,7 @@ test!(linker_and_ar {
                             dir = p.root().display(),
                             url = p.url(),
                             target = target,
-                            sep = path::SEP,
+                            sep = old_path::SEP,
                             ).as_slice()));
 });
 
@@ -386,15 +386,15 @@ test!(cross_tests {
         "#)
         .file("src/main.rs", r#"
             extern crate foo;
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::consts::ARCH, "x86");
+                assert_eq!(env::consts::ARCH, "x86");
             }
             #[test] fn test() { main() }
         "#)
         .file("src/lib.rs", r#"
-            use std::os;
-            pub fn foo() { assert_eq!(os::consts::ARCH, "x86"); }
+            use std::env;
+            pub fn foo() { assert_eq!(env::consts::ARCH, "x86"); }
             #[test] fn test_foo() { foo() }
         "#);
 
@@ -438,9 +438,9 @@ test!(simple_cargo_run {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                assert_eq!(os::consts::ARCH, "x86");
+                assert_eq!(env::consts::ARCH, "x86");
             }
         "#);
 
@@ -462,10 +462,10 @@ test!(cross_with_a_build_script {
             build = 'build.rs'
         "#)
         .file("build.rs", format!(r#"
-            use std::os;
+            use std::env;
             fn main() {{
-                assert_eq!(os::getenv("TARGET").unwrap().as_slice(), "{0}");
-                let mut path = Path::new(os::getenv("OUT_DIR").unwrap());
+                assert_eq!(env::var_string("TARGET").unwrap().as_slice(), "{0}");
+                let mut path = Path::new(env::var_string("OUT_DIR").unwrap());
                 assert_eq!(path.filename().unwrap(), b"out");
                 path.pop();
                 assert!(path.filename().unwrap().starts_with(b"foo-"));
@@ -487,7 +487,7 @@ test!(cross_with_a_build_script {
 {running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
 {running} `rustc src{sep}main.rs [..] --target {target} [..]`
 ", compiling = COMPILING, running = RUNNING, target = target,
-   dir = p.root().display(), sep = path::SEP).as_slice()));
+   dir = p.root().display(), sep = old_path::SEP).as_slice()));
 });
 
 test!(build_script_needed_for_host_and_target {
@@ -528,9 +528,9 @@ test!(build_script_needed_for_host_and_target {
             pub fn d1() {}
         ")
         .file("d1/build.rs", r#"
-            use std::os;
+            use std::env;
             fn main() {
-                let target = os::getenv("TARGET").unwrap();
+                let target = env::var_string("TARGET").unwrap();
                 println!("cargo:rustc-flags=-L /path/to/{}", target);
             }
         "#)
@@ -569,7 +569,7 @@ test!(build_script_needed_for_host_and_target {
 {running} `rustc src{sep}main.rs [..] --target {target} [..] \
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
-   dir = p.root().display(), sep = path::SEP).as_slice()));
+   dir = p.root().display(), sep = old_path::SEP).as_slice()));
 });
 
 test!(build_deps_for_the_right_arch {
@@ -640,12 +640,12 @@ test!(build_script_only_host {
             pub fn d1() {}
         ")
         .file("d1/build.rs", r#"
-            use std::os;
+            use std::env;
 
             fn main() {
-                assert!(os::getenv("OUT_DIR").unwrap()
+                assert!(env::var_string("OUT_DIR").unwrap()
                                              .contains("target/build/d1-"),
-                        "bad: {:?}", os::getenv("OUT_DIR"));
+                        "bad: {:?}", env::var_string("OUT_DIR"));
             }
         "#);
 

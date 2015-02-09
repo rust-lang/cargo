@@ -1,6 +1,6 @@
-use std::os;
-use std::mem;
+use std::env;
 use std::fmt;
+use std::mem;
 use time;
 use std::iter::repeat;
 use std::cell::RefCell;
@@ -14,7 +14,7 @@ pub struct Profiler {
     desc: String,
 }
 
-fn enabled() -> bool { os::getenv("CARGO_PROFILE").is_some() }
+fn enabled() -> bool { env::var("CARGO_PROFILE").is_some() }
 
 pub fn start<T: fmt::Display>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }
@@ -39,8 +39,9 @@ impl Drop for Profiler {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }
-                    println!("{} {:6}ms - {}", repeat("    ").take(lvl + 1).collect::<String>(),
-                        time / 1000000, msg);
+                    println!("{} {:6}ms - {}",
+                             repeat("    ").take(lvl + 1).collect::<String>(),
+                             time / 1000000, msg);
 
                     print(lvl + 1, &msgs[last..i]);
                     last = i;
@@ -49,8 +50,9 @@ impl Drop for Profiler {
             }
             MESSAGES.with(|msgs_rc| {
                 let mut msgs = msgs_rc.borrow_mut();
-                msgs.push((0, end - start, mem::replace(&mut self.desc, String::new())));
-                print(0, msgs.as_slice());
+                msgs.push((0, end - start,
+                           mem::replace(&mut self.desc, String::new())));
+                print(0, &msgs);
             });
         } else {
             MESSAGES.with(|msgs| {

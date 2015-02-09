@@ -1,4 +1,3 @@
-use std::os;
 
 use ops::{self, ExecEngine};
 use util::{CargoResult, human, process, ProcessError, ChainError};
@@ -14,17 +13,17 @@ pub fn run(manifest_path: &Path,
     let config = options.config;
     let mut src = try!(PathSource::for_path(&manifest_path.dir_path(), config));
     try!(src.update());
-    let root = try!(src.get_root_package());
+    let root = try!(src.root_package());
     let env = options.env;
-    let mut bins = root.get_manifest().get_targets().iter().filter(|a| {
+    let mut bins = root.manifest().targets().iter().filter(|a| {
         let matches_kind = match target_kind {
             TargetKind::Bin => a.is_bin(),
             TargetKind::Example => a.is_example(),
             TargetKind::Lib(_) => false,
         };
-        let matches_name = name.as_ref().map_or(true, |n| n.as_slice() == a.get_name());
-        matches_kind && matches_name && a.get_profile().get_env() == env &&
-            !a.get_profile().is_custom_build()
+        let matches_name = name.as_ref().map_or(true, |n| *n == a.name());
+        matches_kind && matches_name && a.profile().env() == env &&
+            !a.profile().is_custom_build()
     });
     let bin = try!(bins.next().chain_error(|| {
         human("a bin target must be available for `cargo run`")
@@ -42,20 +41,20 @@ pub fn run(manifest_path: &Path,
         Some(target) => dst.join(target),
         None => dst,
     };
-    let exe = match (bin.get_profile().get_dest(), bin.is_example()) {
-        (Some(s), true) => dst.join(s).join("examples").join(bin.get_name()),
-        (Some(s), false) => dst.join(s).join(bin.get_name()),
-        (None, true) => dst.join("examples").join(bin.get_name()),
-        (None, false) => dst.join(bin.get_name()),
+    let exe = match (bin.profile().dest(), bin.is_example()) {
+        (Some(s), true) => dst.join(s).join("examples").join(bin.name()),
+        (Some(s), false) => dst.join(s).join(bin.name()),
+        (None, true) => dst.join("examples").join(bin.name()),
+        (None, false) => dst.join(bin.name()),
     };
-    let exe = match exe.path_relative_from(&try!(os::getcwd())) {
+    let exe = match exe.path_relative_from(config.cwd()) {
         Some(path) => path,
         None => exe,
     };
     let process = try!(try!(compile.target_process(exe, &root))
                               .into_process_builder())
                               .args(args)
-                              .cwd(try!(os::getcwd()));
+                              .cwd(config.cwd().clone());
 
     try!(config.shell().status("Running", process.to_string()));
     Ok(process.exec().err())

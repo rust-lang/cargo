@@ -1,7 +1,8 @@
+use std::env;
+use std::ffi::OsString;
 use std::old_io::fs;
-use std::old_io;
 use std::old_io::{USER_RWX, File};
-use std::os;
+use std::old_io;
 use std::str;
 use cargo::util::process;
 
@@ -15,7 +16,7 @@ fn setup() {
 /// Add an empty file with executable flags (and platform-dependent suffix).
 /// TODO: move this to `ProjectBuilder` if other cases using this emerge.
 fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuilder {
-    let path = proj.root().join(dir).join(format!("{}{}", name, os::consts::EXE_SUFFIX));
+    let path = proj.root().join(dir).join(format!("{}{}", name, env::consts::EXE_SUFFIX));
     mkdir_recursive(&Path::new(path.dirname())).unwrap();
     fs::File::create(&path).unwrap();
     let old_io::FileStat{perm, ..} = fs::stat(&path).unwrap();
@@ -24,9 +25,9 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
 }
 
 fn path() -> Vec<Path> {
-    let path = os::getenv_as_bytes("PATH").unwrap_or(Vec::new());
-    os::split_paths(path)
+    env::split_paths(&env::var("PATH").unwrap_or(OsString::new())).collect()
 }
+
 test!(list_commands_looks_at_path {
     let proj = project("list-non-overlapping");
     let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
@@ -37,8 +38,9 @@ test!(list_commands_looks_at_path {
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
-    let path = os::join_paths(path.as_slice()).unwrap();
-    let output = pr.arg("-v").arg("--list").env("PATH", Some(path.as_slice()));
+    let path = env::join_paths(path.iter()).unwrap();
+    let output = pr.arg("-v").arg("--list")
+                   .env("PATH", Some(path.to_str().unwrap()));
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(output.output.as_slice()).unwrap();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);

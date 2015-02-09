@@ -41,14 +41,14 @@ impl<'a, 'b> PathSource<'a, 'b> {
         }
     }
 
-    pub fn get_root_package(&self) -> CargoResult<Package> {
-        trace!("get_root_package; source={:?}", self);
+    pub fn root_package(&self) -> CargoResult<Package> {
+        trace!("root_package; source={:?}", self);
 
         if !self.updated {
             return Err(internal("source has not been updated"))
         }
 
-        match self.packages.iter().find(|p| p.get_root() == self.path) {
+        match self.packages.iter().find(|p| p.root() == self.path) {
             Some(pkg) => Ok(pkg.clone()),
             None => Err(internal("no package found in source"))
         }
@@ -72,19 +72,19 @@ impl<'a, 'b> PathSource<'a, 'b> {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-        let root = pkg.get_manifest_path().dir_path();
+        let root = pkg.manifest_path().dir_path();
 
         let parse = |&: p: &String| {
-            Pattern::new(p.as_slice()).map_err(|e| {
+            Pattern::new(p).map_err(|e| {
                 human(format!("could not parse pattern `{}`: {}", p, e))
             })
         };
-        let exclude = try!(pkg.get_manifest().get_exclude().iter()
+        let exclude = try!(pkg.manifest().exclude().iter()
                               .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
-        let include = try!(pkg.get_manifest().get_include().iter()
+        let include = try!(pkg.manifest().include().iter()
                               .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
 
-        let mut filter = |&mut: p: &Path| {
+        let mut filter = |p: &Path| {
             let relative_path = p.path_relative_from(&root).unwrap();
             include.iter().any(|p| p.matches_path(&relative_path)) || {
                 include.len() == 0 &&
@@ -102,7 +102,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
         // the root of the git repository. This isn't always true, but it'll get
         // us there most of the time!.
         let repo = self.packages.iter()
-                       .map(|pkg| pkg.get_root())
+                       .map(|pkg| pkg.root())
                        .filter(|path| path.is_ancestor_of(&root))
                        .filter_map(|path| git2::Repository::open(&path).ok())
                        .next();
@@ -117,17 +117,17 @@ impl<'a, 'b> PathSource<'a, 'b> {
                          -> CargoResult<Vec<Path>>
         where F: FnMut(&Path) -> bool
     {
-        warn!("list_files_git {}", pkg.get_package_id());
+        warn!("list_files_git {}", pkg.package_id());
         let index = try!(repo.index());
         let root = match repo.workdir() {
             Some(dir) => dir,
             None => return Err(internal_error("Can't list files on a bare repository.", "")),
         };
-        let pkg_path = pkg.get_manifest_path().dir_path();
+        let pkg_path = pkg.manifest_path().dir_path();
 
         let mut ret = Vec::new();
         'outer: for entry in index.iter() {
-            let fname = entry.path.as_slice();
+            let fname = &entry.path[];
             let file_path = root.join(fname);
 
             // Filter out files outside this package.
@@ -139,7 +139,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
             // Filter out sub-packages of this package
             for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
-                let other_path = other_pkg.get_manifest_path().dir_path();
+                let other_path = other_pkg.manifest_path().dir_path();
                 if pkg_path.is_ancestor_of(&other_path) &&
                    other_path.is_ancestor_of(&file_path) {
                     continue 'outer;
@@ -176,7 +176,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
     {
         let mut ret = Vec::new();
         for pkg in self.packages.iter().filter(|p| *p == pkg) {
-            let loc = pkg.get_manifest_path().dir_path();
+            let loc = pkg.manifest_path().dir_path();
             try!(walk(&loc, &mut ret, true, &mut filter));
         }
         return Ok(ret);
@@ -216,7 +216,7 @@ impl<'a, 'b> Debug for PathSource<'a, 'b> {
 impl<'a, 'b> Registry for PathSource<'a, 'b> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut summaries: Vec<Summary> = self.packages.iter()
-                                              .map(|p| p.get_summary().clone())
+                                              .map(|p| p.summary().clone())
                                               .collect();
         summaries.query(dep)
     }
@@ -242,7 +242,7 @@ impl<'a, 'b> Source for PathSource<'a, 'b> {
         trace!("getting packages; ids={:?}", ids);
 
         Ok(self.packages.iter()
-           .filter(|pkg| ids.iter().any(|id| pkg.get_package_id() == id))
+           .filter(|pkg| ids.iter().any(|id| pkg.package_id() == id))
            .map(|pkg| pkg.clone())
            .collect())
     }

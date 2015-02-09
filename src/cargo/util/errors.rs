@@ -106,7 +106,7 @@ pub struct ProcessError {
 }
 
 impl Error for ProcessError {
-    fn description(&self) -> &str { self.desc.as_slice() }
+    fn description(&self) -> &str { &self.desc }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|s| s as &Error)
     }
@@ -149,7 +149,7 @@ impl fmt::Debug for ConcreteCargoError {
 }
 
 impl Error for ConcreteCargoError {
-    fn description(&self) -> &str { self.description.as_slice() }
+    fn description(&self) -> &str { &self.description }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|c| {
             let e: &Error = &**c; e
@@ -193,7 +193,7 @@ pub type CliResult<T> = Result<T, CliError>;
 pub struct CliError {
     pub error: Box<CargoError>,
     pub unknown: bool,
-    pub exit_code: u32
+    pub exit_code: i32
 }
 
 impl Error for CliError {
@@ -208,19 +208,25 @@ impl fmt::Display for CliError {
 }
 
 impl CliError {
-    pub fn new<S: Str>(error: S, code: u32) -> CliError {
-        let error = human(error.as_slice().to_string());
+    pub fn new(error: &str, code: i32) -> CliError {
+        let error = human(error.to_string());
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_error<E: CargoError + 'static>(error: E, code: u32) -> CliError {
+    pub fn from_error<E: CargoError + 'static>(error: E, code: i32) -> CliError {
         let error = Box::new(error) as Box<CargoError>;
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_boxed(error: Box<CargoError>, code: u32) -> CliError {
+    pub fn from_boxed(error: Box<CargoError>, code: i32) -> CliError {
         let human = error.is_human();
         CliError { error: error, exit_code: code, unknown: !human }
+    }
+}
+
+impl FromError<Box<CargoError>> for CliError {
+    fn from_error(err: Box<CargoError>) -> CliError {
+        CliError::from_boxed(err, 101)
     }
 }
 
@@ -267,25 +273,25 @@ impl CargoError for str::Utf8Error {}
 // =============================================================================
 // Construction helpers
 
-pub fn process_error<S: Str>(msg: S,
-                             cause: Option<IoError>,
-                             status: Option<&ProcessExit>,
-                             output: Option<&ProcessOutput>) -> ProcessError {
+pub fn process_error(msg: &str,
+                     cause: Option<IoError>,
+                     status: Option<&ProcessExit>,
+                     output: Option<&ProcessOutput>) -> ProcessError {
     let exit = match status {
         Some(&ExitStatus(i)) | Some(&ExitSignal(i)) => i.to_string(),
         None => "never executed".to_string(),
     };
-    let mut desc = format!("{} (status={})", msg.as_slice(), exit);
+    let mut desc = format!("{} (status={})", &msg, exit);
 
     if let Some(out) = output {
-        match str::from_utf8(out.output.as_slice()) {
+        match str::from_utf8(&out.output) {
             Ok(s) if s.trim().len() > 0 => {
                 desc.push_str("\n--- stdout\n");
                 desc.push_str(s);
             }
             Ok(..) | Err(..) => {}
         }
-        match str::from_utf8(out.error.as_slice()) {
+        match str::from_utf8(&out.error) {
             Ok(s) if s.trim().len() > 0 => {
                 desc.push_str("\n--- stderr\n");
                 desc.push_str(s);
@@ -302,11 +308,10 @@ pub fn process_error<S: Str>(msg: S,
     }
 }
 
-pub fn internal_error<S1: Str, S2: Str>(error: S1,
-                                        detail: S2) -> Box<CargoError> {
+pub fn internal_error(error: &str, detail: &str) -> Box<CargoError> {
     Box::new(ConcreteCargoError {
-        description: error.as_slice().to_string(),
-        detail: Some(detail.as_slice().to_string()),
+        description: error.to_string(),
+        detail: Some(detail.to_string()),
         cause: None,
         is_human: false
     })

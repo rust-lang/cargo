@@ -1,9 +1,11 @@
-use std::{fmt, os, mem};
 use std::cell::{RefCell, RefMut, Ref, Cell};
-use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::old_io;
+use std::collections::hash_map::{HashMap};
+use std::env;
+use std::fmt;
+use std::mem;
 use std::old_io::fs::{self, PathExtensions, File};
+use std::old_io;
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
@@ -28,7 +30,7 @@ pub struct Config<'a> {
 
 impl<'a> Config<'a> {
     pub fn new(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
-        let cwd = try!(os::getcwd().chain_error(|| {
+        let cwd = try!(env::current_dir().chain_error(|| {
             human("couldn't get the current directory of the process")
         }));
         let (rustc_version, rustc_host) = try!(ops::rustc_version());
@@ -74,14 +76,10 @@ impl<'a> Config<'a> {
     }
 
     /// Return the output of `rustc -v verbose`
-    pub fn rustc_version(&self) -> &str {
-        self.rustc_version.as_slice()
-    }
+    pub fn rustc_version(&self) -> &str { &self.rustc_version }
 
     /// Return the host platform and default target of rustc
-    pub fn rustc_host(&self) -> &str {
-        self.rustc_host.as_slice()
-    }
+    pub fn rustc_host(&self) -> &str { &self.rustc_host }
 
     pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
         if !self.values_loaded.get() {
@@ -162,8 +160,7 @@ impl<'a> Config<'a> {
         try!(walk_tree(&self.cwd, |mut file| {
             let path = file.path().clone();
             let contents = try!(file.read_to_string());
-            let table = try!(cargo_toml::parse(contents.as_slice(),
-                                               &path).chain_error(|| {
+            let table = try!(cargo_toml::parse(&contents, &path).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
             }));
@@ -314,7 +311,7 @@ impl ConfigValue {
 
     pub fn string(&self) -> CargoResult<(&str, &Path)> {
         match *self {
-            CV::String(ref s, ref p) => Ok((s.as_slice(), p)),
+            CV::String(ref s, ref p) => Ok((s, p)),
             _ => self.expected("string"),
         }
     }
@@ -328,7 +325,7 @@ impl ConfigValue {
 
     pub fn list(&self) -> CargoResult<&[(String, Path)]> {
         match *self {
-            CV::List(ref list, _) => Ok(list.as_slice()),
+            CV::List(ref list, _) => Ok(list),
             _ => self.expected("list"),
         }
     }
@@ -383,8 +380,8 @@ impl ConfigValue {
 }
 
 fn homedir() -> Option<Path> {
-    let cargo_home = os::getenv("CARGO_HOME").map(|p| Path::new(p));
-    let user_home = os::homedir().map(|p| p.join(".cargo"));
+    let cargo_home = env::var_string("CARGO_HOME").map(|p| Path::new(p)).ok();
+    let user_home = env::home_dir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }
 
@@ -434,8 +431,9 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     };
     try!(fs::mkdir_recursive(&file.dir_path(), old_io::USER_DIR));
     let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
-    let mut toml = try!(cargo_toml::parse(contents.as_slice(), &file));
+    let mut toml = try!(cargo_toml::parse(&contents, &file));
     toml.insert(key.to_string(), value.into_toml());
-    try!(File::create(&file).write_all(toml::Value::Table(toml).to_string().as_bytes()));
+    let mut out = try!(File::create(&file));
+    try!(out.write_all(toml::Value::Table(toml).to_string().as_bytes()));
     Ok(())
 }

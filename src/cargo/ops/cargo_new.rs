@@ -1,6 +1,6 @@
-use std::os;
-use std::old_io::{self, fs, File};
+use std::env;
 use std::old_io::fs::PathExtensions;
+use std::old_io::{self, fs, File};
 
 use rustc_serialize::{Decodable, Decoder};
 
@@ -26,7 +26,7 @@ impl Decodable for VersionControl {
             "none" => VersionControl::NoVcs,
             n => {
                 let err = format!("could not decode '{}' as version control", n);
-                return Err(d.error(err.as_slice()));
+                return Err(d.error(&err));
             }
         })
     }
@@ -48,8 +48,8 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
-        return Err(human(format!("Invalid character `{}` in crate name: `{}`",
-                                 c, name).as_slice()));
+        return Err(human(&format!("Invalid character `{}` in crate name: `{}`",
+                                  c, name)));
     }
     mk(config, &path, name, &opts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
@@ -102,13 +102,13 @@ fn mk(config: &Config, path: &Path, name: &str,
         (None, None, name, None) => name,
     };
 
-    try!(File::create(&path.join("Cargo.toml")).write_str(format!(
+    try!(File::create(&path.join("Cargo.toml")).write_str(&format!(
 r#"[package]
 
 name = "{}"
 version = "0.0.1"
 authors = ["{}"]
-"#, name, author).as_slice()));
+"#, name, author)));
 
     try!(fs::mkdir(&path.join("src"), old_io::USER_RWX));
 
@@ -134,8 +134,8 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     let git_config = git_config.as_ref();
     let name = git_config.and_then(|g| g.get_str("user.name").ok())
                          .map(|s| s.to_string())
-                         .or_else(|| os::getenv("USER"))      // unix
-                         .or_else(|| os::getenv("USERNAME")); // windows
+                         .or_else(|| env::var_string("USER").ok())      // unix
+                         .or_else(|| env::var_string("USERNAME").ok()); // windows
     let name = match name {
         Some(name) => name,
         None => {
@@ -146,8 +146,8 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     };
     let email = git_config.and_then(|g| g.get_str("user.email").ok());
 
-    let name = name.as_slice().trim().to_string();
-    let email = email.map(|s| s.as_slice().trim().to_string());
+    let name = name.trim().to_string();
+    let email = email.map(|s| s.trim().to_string());
 
     Ok((name, email))
 }

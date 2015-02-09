@@ -1,5 +1,5 @@
 use std::os;
-use std::path;
+use std::old_path;
 
 use support::{project, execs};
 use support::{COMPILING, RUNNING};
@@ -38,7 +38,7 @@ test!(profile_overrides {
         -L dependency={dir}{sep}target \
         -L dependency={dir}{sep}target{sep}deps`
 ",
-running = RUNNING, compiling = COMPILING, sep = path::SEP,
+running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -109,7 +109,7 @@ test!(top_level_overrides_deps {
                     compiling = COMPILING,
                     dir = p.root().display(),
                     url = p.url(),
-                    sep = path::SEP,
+                    sep = old_path::SEP,
                     prefix = os::consts::DLL_PREFIX,
                     suffix = os::consts::DLL_SUFFIX).as_slice()));
 });

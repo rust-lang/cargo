@@ -43,7 +43,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
                               target: &'a Target,
                               kind: Kind) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {:?}",
-                                    pkg.get_package_id(), target));
+                                    pkg.package_id(), target));
     let new = dir(cx, pkg, kind);
     let loc = new.join(filename(target));
 
@@ -54,17 +54,17 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
 
     let root = cx.out_dir(pkg, kind, target);
     let mut missing_outputs = false;
-    if !target.get_profile().is_doc() {
+    if !target.profile().is_doc() {
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
             missing_outputs |= !dst.exists();
 
-            if target.get_profile().is_test() {
-                cx.compilation.tests.push((target.get_name().to_string(), dst));
+            if target.profile().is_test() {
+                cx.compilation.tests.push((target.name().to_string(), dst));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
-                let pkgid = pkg.get_package_id().clone();
+                let pkgid = pkg.package_id().clone();
                 match cx.compilation.libraries.entry(pkgid) {
                     Occupied(entry) => entry.into_mut(),
                     Vacant(entry) => entry.insert(Vec::new()),
@@ -146,7 +146,7 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
                      target: &'a Target,
                      kind: Kind)
                      -> CargoResult<Fingerprint> {
-    let key = (pkg.get_package_id(), target, kind);
+    let key = (pkg.package_id(), target, kind);
     match cx.fingerprints.get(&key) {
         Some(s) => return Ok(s.clone()),
         None => {}
@@ -155,7 +155,7 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
     // First, calculate all statically known "salt data" such as the profile
     // information (compiler flags), the compiler version, activated features,
     // and target configuration.
-    let features = cx.resolve.features(pkg.get_package_id());
+    let features = cx.resolve.features(pkg.package_id());
     let features = features.map(|s| {
         let mut v = s.iter().collect::<Vec<&String>>();
         v.sort();
@@ -168,7 +168,7 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
     let deps = try!(cx.dep_targets(pkg, target).into_iter().map(|(p, t)| {
         let kind = match kind {
             Kind::Host => Kind::Host,
-            Kind::Target if t.get_profile().is_for_host() => Kind::Host,
+            Kind::Target if t.profile().is_for_host() => Kind::Host,
             Kind::Target => Kind::Target,
         };
         calculate(cx, p, t, kind)
@@ -203,8 +203,8 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
 // change so long as the source itself remains constant (which is the
 // responsibility of the source)
 fn use_dep_info(pkg: &Package, target: &Target) -> bool {
-    let doc = target.get_profile().is_doc();
-    let path = pkg.get_summary().get_source_id().is_path();
+    let doc = target.profile().is_doc();
+    let path = pkg.summary().source_id().is_path();
     !doc && path
 }
 
@@ -232,7 +232,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
     }
 
     let _p = profile::start(format!("fingerprint build cmd: {}",
-                                    pkg.get_package_id()));
+                                    pkg.package_id()));
     let new = dir(cx, pkg, kind);
     let loc = new.join("build");
 
@@ -251,7 +251,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
     // directory as part of freshness.
     if target.is_none() {
         let native_dir = cx.layout(pkg, kind).native(pkg);
-        cx.compilation.native_dirs.insert(pkg.get_package_id().clone(),
+        cx.compilation.native_dirs.insert(pkg.package_id().clone(),
                                           native_dir);
     }
 
@@ -288,7 +288,7 @@ fn prepare(is_fresh: bool, loc: Path, fingerprint: Fingerprint) -> Preparation {
         let fingerprint = try!(fingerprint.resolve(true).chain_error(|| {
             internal("failed to resolve a pending fingerprint")
         }));
-        try!(File::create(&loc).write_str(fingerprint.as_slice()));
+        try!(File::create(&loc).write_str(&fingerprint));
         Ok(())
     });
 
@@ -321,7 +321,7 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
     trace!("old fingerprint: {}", old_fingerprint);
     trace!("new fingerprint: {}", new_fingerprint);
 
-    Ok(old_fingerprint.as_slice() == new_fingerprint)
+    Ok(old_fingerprint == new_fingerprint)
 }
 
 fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
@@ -336,7 +336,6 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let line = line.as_slice();
     let mtime = try!(fs::stat(dep_info)).modified;
     let pos = try!(line.find_str(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
@@ -350,12 +349,12 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
             Some(s) => s.to_string(),
             None => break,
         };
-        while file.as_slice().ends_with("\\") {
+        while file.ends_with("\\") {
             file.pop();
             file.push(' ');
             file.push_str(deps.next().unwrap())
         }
-        match fs::stat(&cwd.join(file.as_slice())) {
+        match fs::stat(&cwd.join(&file)) {
             Ok(stat) if stat.modified <= mtime => {}
             Ok(stat) => {
                 info!("stale: {} -- {} vs {}", file, stat.modified, mtime);
@@ -377,7 +376,7 @@ fn calculate_build_cmd_fingerprint(cx: &Context, pkg: &Package)
 
 fn calculate_pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source = cx.sources
-        .get(pkg.get_package_id().get_source_id())
+        .get(pkg.package_id().source_id())
         .expect("BUG: Missing package source");
 
     source.fingerprint(pkg)
@@ -385,14 +384,14 @@ fn calculate_pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String>
 
 fn filename(target: &Target) -> String {
     let kind = if target.is_lib() {"lib"} else {"bin"};
-    let flavor = if target.get_profile().is_test() {
+    let flavor = if target.profile().is_test() {
         "test-"
-    } else if target.get_profile().is_doc() {
+    } else if target.profile().is_doc() {
         "doc-"
     } else {
         ""
     };
-    format!("{}{}-{}", flavor, kind, target.get_name())
+    format!("{}{}-{}", flavor, kind, target.name())
 }
 
 // The dep-info files emitted by the compiler all have their listed paths

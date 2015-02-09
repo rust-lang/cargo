@@ -18,15 +18,14 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> {
-    let path = Path::new(options.flag_manifest_path.as_slice());
+    let path = Path::new(&options.flag_manifest_path);
     let mut source = try!(PathSource::for_path(&path, config).map_err(|e| {
         CliError::new(e.description(), 1)
     }));
 
     try!(source.update().map_err(|err| CliError::new(err.description(), 1)));
 
-    source
-        .get_root_package()
-        .map(|pkg| Some(pkg))
-        .map_err(|err| CliError::from_boxed(err, 1))
+    source.root_package()
+          .map(|pkg| Some(pkg))
+          .map_err(|err| CliError::from_boxed(err, 1))
 }

@@ -78,7 +78,7 @@ impl Resolve {
                                        Please re-run this command \
                                        with `-p <spec>` where `<spec>` is one \
                                        of the following:",
-                                      spec.get_name(), spec);
+                                      spec.name(), spec);
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
                 minimize(&mut msg, vec, &spec);
@@ -92,19 +92,18 @@ impl Resolve {
                     spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
             for id in ids.iter() {
-                match version_cnt.entry(id.get_version()) {
+                match version_cnt.entry(id.version()) {
                     Vacant(e) => { e.insert(1); }
                     Occupied(e) => *e.into_mut() += 1,
                 }
             }
             for id in ids.iter() {
-                if version_cnt[id.get_version()] == 1 {
-                    msg.push_str(format!("\n  {}:{}", spec.get_name(),
-                                 id.get_version()).as_slice());
+                if version_cnt[id.version()] == 1 {
+                    msg.push_str(&format!("\n  {}:{}", spec.name(),
+                                          id.version()));
                 } else {
-                    msg.push_str(format!("\n  {}",
-                                         PackageIdSpec::from_package_id(*id))
-                                        .as_slice());
+                    msg.push_str(&format!("\n  {}",
+                                          PackageIdSpec::from_package_id(*id)));
                 }
             }
         }
@@ -131,11 +130,11 @@ struct Context {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summary: &Summary, method: Method,
                registry: &mut Registry) -> CargoResult<Resolve> {
-    trace!("resolve; summary={}", summary.get_package_id());
+    trace!("resolve; summary={}", summary.package_id());
     let summary = Rc::new(summary.clone());
 
     let cx = Box::new(Context {
-        resolve: Resolve::new(summary.get_package_id().clone()),
+        resolve: Resolve::new(summary.package_id().clone()),
         activations: HashMap::new(),
         visited: Rc::new(RefCell::new(HashSet::new())),
     });
@@ -156,7 +155,7 @@ fn activate(mut cx: Box<Context>,
             -> CargoResult<CargoResult<Box<Context>>> {
     // Dependency graphs are required to be a DAG, so we keep a set of
     // packages we're visiting and bail if we hit a dupe.
-    let id = parent.get_package_id();
+    let id = parent.package_id();
     if !cx.visited.borrow_mut().insert(id.clone()) {
         return Err(human(format!("cyclic package dependency: package `{}` \
                                   depends on itself", id)))
@@ -167,7 +166,7 @@ fn activate(mut cx: Box<Context>,
         cx.visited.borrow_mut().remove(id);
         return Ok(Ok(cx))
     }
-    debug!("activating {}", parent.get_package_id());
+    debug!("activating {}", parent.package_id());
 
     // Extracting the platform request.
     let platform = match method {
@@ -187,7 +186,7 @@ fn activate(mut cx: Box<Context>,
         // When we attempt versions for a package, we'll want to start at the
         // maximum version and work our way down.
         candidates.as_mut_slice().sort_by(|a, b| {
-            b.get_version().cmp(a.get_version())
+            b.version().cmp(a.version())
         });
         let candidates = candidates.into_iter().map(Rc::new).collect::<Vec<_>>();
         Ok((dep, candidates, features))
@@ -206,7 +205,7 @@ fn activate(mut cx: Box<Context>,
 
     Ok(match try!(activate_deps(cx, registry, parent, platform, &deps, 0)) {
         Ok(cx) => {
-            cx.visited.borrow_mut().remove(parent.get_package_id());
+            cx.visited.borrow_mut().remove(parent.package_id());
             Ok(cx)
         }
         Err(e) => Err(e),
@@ -219,8 +218,8 @@ fn activate(mut cx: Box<Context>,
 fn flag_activated(cx: &mut Context,
                   summary: &Rc<Summary>,
                   method: &Method) -> bool {
-    let id = summary.get_package_id();
-    let key = (id.get_name().to_string(), id.get_source_id().clone());
+    let id = summary.package_id();
+    let key = (id.name().to_string(), id.source_id().clone());
     let prev = cx.activations.entry(key).get().unwrap_or_else(|e| {
         e.insert(Vec::new())
     });
@@ -229,7 +228,7 @@ fn flag_activated(cx: &mut Context,
         prev.push(summary.clone());
         return false
     }
-    debug!("checking if {} is already activated", summary.get_package_id());
+    debug!("checking if {} is already activated", summary.package_id());
     let features = match *method {
         Method::Required(_, features, _, _) => features,
         Method::Everything => return false,
@@ -248,16 +247,16 @@ fn activate_deps<'a>(cx: Box<Context>,
                      cur: usize) -> CargoResult<CargoResult<Box<Context>>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
-    let method = Method::Required(false, features.as_slice(),
+    let method = Method::Required(false, &features,
                                   dep.uses_default_features(), platform);
 
-    let key = (dep.get_name().to_string(), dep.get_source_id().clone());
+    let key = (dep.name().to_string(), dep.source_id().clone());
     let prev_active = cx.activations.get(&key)
                                     .map(|v| v.as_slice()).unwrap_or(&[]);
-    trace!("{}[{}]>{} {} candidates", parent.get_name(), cur, dep.get_name(),
+    trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
          candidates.len());
-    trace!("{}[{}]>{} {} prev activations", parent.get_name(), cur,
-         dep.get_name(), prev_active.len());
+    trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
+         dep.name(), prev_active.len());
 
     // Filter the set of candidates based on the previously activated
     // versions for this dependency. We can actually use a version if it
@@ -268,7 +267,7 @@ fn activate_deps<'a>(cx: Box<Context>,
     let my_candidates = candidates.iter().filter(|&b| {
         prev_active.iter().any(|a| a == b) ||
             prev_active.iter().all(|a| {
-                !compatible(a.get_version(), b.get_version())
+                !compatible(a.version(), b.version())
             })
     });
 
@@ -286,11 +285,11 @@ fn activate_deps<'a>(cx: Box<Context>,
     // each one in turn.
     let mut last_err = None;
     for candidate in my_candidates {
-        trace!("{}[{}]>{} trying {}", parent.get_name(), cur, dep.get_name(),
-             candidate.get_version());
+        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
+             candidate.version());
         let mut my_cx = cx.clone();
-        my_cx.resolve.graph.link(parent.get_package_id().clone(),
-                                 candidate.get_package_id().clone());
+        my_cx.resolve.graph.link(parent.package_id().clone(),
+                                 candidate.package_id().clone());
 
         // If we hit an intransitive dependency then clear out the visitation
         // list as we can't induce a cycle through transitive dependencies.
@@ -307,7 +306,7 @@ fn activate_deps<'a>(cx: Box<Context>,
             Err(e) => { last_err = Some(e); }
         }
     }
-    trace!("{}[{}]>{} -- {:?}", parent.get_name(), cur, dep.get_name(),
+    trace!("{}[{}]>{} -- {:?}", parent.name(), cur, dep.name(),
          last_err);
 
     // Oh well, we couldn't activate any of the candidates, so we just can't
@@ -332,8 +331,8 @@ fn activation_error(cx: &Context,
                                (required by `{}`):\n\
                                all possible versions conflict with \
                                previously selected versions of `{}`",
-                              dep.get_name(), parent.get_name(),
-                              dep.get_name());
+                              dep.name(), parent.name(),
+                              dep.name());
         'outer: for v in prev_active.iter() {
             for node in cx.resolve.graph.iter() {
                 let edges = match cx.resolve.graph.edges(node) {
@@ -341,20 +340,20 @@ fn activation_error(cx: &Context,
                     None => continue,
                 };
                 for edge in edges {
-                    if edge != v.get_package_id() { continue }
+                    if edge != v.package_id() { continue }
 
-                    msg.push_str(format!("\n  version {} in use by {}",
-                                         v.get_version(), edge).as_slice());
+                    msg.push_str(&format!("\n  version {} in use by {}",
+                                          v.version(), edge));
                     continue 'outer;
                 }
             }
-            msg.push_str(format!("\n  version {} in use by ??",
-                                 v.get_version()).as_slice());
+            msg.push_str(&format!("\n  version {} in use by ??",
+                                  v.version()));
         }
 
         msg.push_str(&format!("\n  possible versions to select: {}",
                               candidates.iter()
-                                        .map(|v| v.get_version())
+                                        .map(|v| v.version())
                                         .map(|v| v.to_string())
                                         .collect::<Vec<_>>()
                                         .connect(", "))[]);
@@ -372,21 +371,21 @@ fn activation_error(cx: &Context,
                        (required by `{}`)\n\
                        location searched: {}\n\
                        version required: {}",
-                      dep.get_name(), parent.get_name(),
-                      dep.get_source_id(),
-                      dep.get_version_req());
+                      dep.name(), parent.name(),
+                      dep.source_id(),
+                      dep.version_req());
     let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
-    let new_dep = dep.clone().version_req(all_req);
+    let new_dep = dep.clone().set_version_req(all_req);
     let mut candidates = try!(registry.query(&new_dep));
     candidates.sort_by(|a, b| {
-        b.get_version().cmp(a.get_version())
+        b.version().cmp(a.version())
     });
     if candidates.len() > 0 {
         msg.push_str("\nversions found: ");
         for (i, c) in candidates.iter().take(3).enumerate() {
             if i != 0 { msg.push_str(", "); }
-            msg.push_str(c.get_version().to_string().as_slice());
+            msg.push_str(&c.version().to_string());
         }
         if candidates.len() > 3 {
             msg.push_str(", ...");
@@ -396,8 +395,8 @@ fn activation_error(cx: &Context,
     // If we have a path dependency with a locked version, then this may
     // indicate that we updated a sub-package and forgot to run `cargo
     // update`. In this case try to print a helpful error!
-    if dep.get_source_id().is_path() &&
-       dep.get_version_req().to_string().starts_with("=") &&
+    if dep.source_id().is_path() &&
+       dep.version_req().to_string().starts_with("=") &&
        candidates.len() > 0 {
         msg.push_str("\nconsider running `cargo update` to update \
                       a path dependency's locked version");
@@ -429,14 +428,14 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     };
 
     // First, filter by dev-dependencies
-    let deps = parent.get_dependencies();
+    let deps = parent.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
     // Second, ignoring dependencies that should not be compiled for this platform
     let deps = deps.filter(|d| {
         match method {
             Method::Required(_, _, _, Some(ref platform)) => {
-                d.is_active_for_platform(platform.as_slice())
+                d.is_active_for_platform(platform)
             },
             _ => true
         }
@@ -449,20 +448,20 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // features that correspond to optional dependencies
     for dep in deps {
         // weed out optional dependencies, but not those required
-        if dep.is_optional() && !feature_deps.contains_key(dep.get_name()) {
+        if dep.is_optional() && !feature_deps.contains_key(dep.name()) {
             continue
         }
-        let mut base = feature_deps.remove(dep.get_name()).unwrap_or(vec![]);
-        for feature in dep.get_features().iter() {
+        let mut base = feature_deps.remove(dep.name()).unwrap_or(vec![]);
+        for feature in dep.features().iter() {
             base.push(feature.clone());
-            if feature.as_slice().contains("/") {
+            if feature.contains("/") {
                 return Err(human(format!("features in dependencies \
                                           cannot enable features in \
                                           other dependencies: `{}`",
                                          feature)));
             }
         }
-        ret.insert(dep.get_name(), (dep, base));
+        ret.insert(dep.name(), (dep, base));
     }
 
     // All features can only point to optional dependencies, in which case they
@@ -475,13 +474,13 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
         if unknown.len() > 0 {
             let features = unknown.connect(", ");
             return Err(human(format!("Package `{}` does not have these features: \
-                                      `{}`", parent.get_package_id(), features)))
+                                      `{}`", parent.package_id(), features)))
         }
     }
 
     // Record what list of features is active for this package.
     if used_features.len() > 0 {
-        let pkgid = parent.get_package_id();
+        let pkgid = parent.package_id();
         match cx.resolve.features.entry(pkgid.clone()) {
             Occupied(entry) => entry.into_mut(),
             Vacant(entry) => entry.insert(HashSet::new()),
@@ -507,25 +506,23 @@ fn build_features(s: &Summary, method: Method)
     let mut visited = HashSet::new();
     match method {
         Method::Everything => {
-            for key in s.get_features().keys() {
-                try!(add_feature(s, key.as_slice(), &mut deps, &mut used,
-                                 &mut visited));
+            for key in s.features().keys() {
+                try!(add_feature(s, key, &mut deps, &mut used, &mut visited));
             }
-            for dep in s.get_dependencies().iter().filter(|d| d.is_optional()) {
-                try!(add_feature(s, dep.get_name(), &mut deps, &mut used,
+            for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
+                try!(add_feature(s, dep.name(), &mut deps, &mut used,
                                  &mut visited));
             }
         }
         Method::Required(_, requested_features, _, _) =>  {
             for feat in requested_features.iter() {
-                try!(add_feature(s, feat.as_slice(), &mut deps, &mut used,
-                                 &mut visited));
+                try!(add_feature(s, feat, &mut deps, &mut used, &mut visited));
             }
         }
     }
     match method {
         Method::Everything | Method::Required(_, _, true, _) => {
-            if s.get_features().get("default").is_some() &&
+            if s.features().get("default").is_some() &&
                !visited.contains("default") {
                 try!(add_feature(s, "default", &mut deps, &mut used,
                                  &mut visited));
@@ -564,10 +561,10 @@ fn build_features(s: &Summary, method: Method)
                                               feat)))
                 }
                 used.insert(feat.to_string());
-                match s.get_features().get(feat) {
+                match s.features().get(feat) {
                     Some(recursive) => {
                         for f in recursive.iter() {
-                            try!(add_feature(s, f.as_slice(), deps, used,
+                            try!(add_feature(s, f, deps, used,
                                              visited));
                         }
                     }

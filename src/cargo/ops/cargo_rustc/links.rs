@@ -9,7 +9,7 @@ pub fn validate(deps: &PackageSet) -> CargoResult<()> {
     let mut map = HashMap::new();
 
     for dep in deps.iter() {
-        let lib = match dep.get_manifest().get_links() {
+        let lib = match dep.manifest().links() {
             Some(lib) => lib,
             None => continue,
         };
@@ -19,18 +19,18 @@ pub fn validate(deps: &PackageSet) -> CargoResult<()> {
                                           to by more than one package, and \
                                           can only be linked to by one \
                                           package\n\n  {}\n  {}",
-                                         lib, previous, dep.get_package_id())))
+                                         lib, previous, dep.package_id())))
             }
             None => {}
         }
-        if !dep.get_manifest().get_targets().iter().any(|t| {
-            t.get_profile().is_custom_build()
+        if !dep.manifest().targets().iter().any(|t| {
+            t.profile().is_custom_build()
         }) {
             return Err(human(format!("package `{}` specifies that it links to \
                                       `{}` but does not have a custom build \
-                                      script", dep.get_package_id(), lib)))
+                                      script", dep.package_id(), lib)))
         }
-        map.insert(lib, dep.get_package_id());
+        map.insert(lib, dep.package_id());
     }
 
     Ok(())

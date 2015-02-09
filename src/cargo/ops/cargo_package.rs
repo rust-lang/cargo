@@ -1,6 +1,6 @@
 use std::old_io::{fs, File, USER_DIR};
 use std::old_io::fs::PathExtensions;
-use std::path;
+use std::old_path;
 
 use tar::Archive;
 use flate2::{GzBuilder, BestCompression};
@@ -31,14 +31,14 @@ pub fn package(manifest_path: &Path,
     let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
                                             config));
     try!(src.update());
-    let pkg = try!(src.get_root_package());
+    let pkg = try!(src.root_package());
 
     if metadata {
         try!(check_metadata(&pkg, config));
     }
 
     if list {
-        let root = pkg.get_manifest_path().dir_path();
+        let root = pkg.manifest_path().dir_path();
         let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
             file.path_relative_from(&root).unwrap()
         }).collect();
@@ -49,14 +49,13 @@ pub fn package(manifest_path: &Path,
         return Ok(None)
     }
 
-    let filename = format!("package/{}-{}.crate", pkg.get_name(),
-                           pkg.get_version());
-    let dst = pkg.get_absolute_target_dir().join(filename);
+    let filename = format!("package/{}-{}.crate", pkg.name(), pkg.version());
+    let dst = pkg.absolute_target_dir().join(filename);
     if dst.exists() { return Ok(Some(dst)) }
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
 
-    try!(config.shell().status("Packaging", pkg.get_package_id().to_string()));
+    try!(config.shell().status("Packaging", pkg.package_id().to_string()));
     try!(tar(&pkg, &src, config, &dst).chain_error(|| {
         human("failed to prepare local package for uploading")
     }));
@@ -71,7 +70,7 @@ pub fn package(manifest_path: &Path,
 // check that the package has some piece of metadata that a human can
 // use to tell what the package is about.
 fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
-    let md = pkg.get_manifest().get_metadata();
+    let md = pkg.manifest().metadata();
 
     let mut missing = vec![];
 
@@ -88,16 +87,17 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 
     if !missing.is_empty() {
         let mut things = missing[..missing.len() - 1].connect(", ");
-        // things will be empty if and only if length == 1 (i.e. the only case to have no `or`).
+        // things will be empty if and only if length == 1 (i.e. the only case
+        // to have no `or`).
         if !things.is_empty() {
             things.push_str(" or ");
         }
-        things.push_str(missing.last().unwrap().as_slice());
+        things.push_str(&missing.last().unwrap());
 
         try!(config.shell().warn(
-            format!("warning: manifest has no {things}. \
+            &format!("warning: manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
-                    things = things).as_slice()))
+                    things = things)))
     }
     Ok(())
 }
@@ -120,7 +120,7 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
 
     // Put all package files into a compressed archive
     let ar = Archive::new(encoder);
-    let root = pkg.get_manifest_path().dir_path();
+    let root = pkg.manifest_path().dir_path();
     for file in try!(src.list_files(pkg)).iter() {
         if file == dst { continue }
         let relative = file.path_relative_from(&root).unwrap();
@@ -130,11 +130,11 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
         }));
         let mut file = try!(File::open(file));
         try!(config.shell().verbose(|shell| {
-            shell.status("Archiving", relative.as_slice())
+            shell.status("Archiving", &relative)
         }));
-        let path = format!("{}-{}{}{}", pkg.get_name(),
-                           pkg.get_version(), path::SEP, relative);
-        try!(ar.append(path.as_slice(), &mut file).chain_error(|| {
+        let path = format!("{}-{}{}{}", pkg.name(), pkg.version(),
+                           old_path::SEP, relative);
+        try!(ar.append(&path, &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
@@ -147,8 +147,8 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     try!(config.shell().status("Verifying", pkg));
 
     let f = try!(GzDecoder::new(try!(File::open(tar))));
-    let dst = pkg.get_root().join(format!("target/package/{}-{}",
-                                          pkg.get_name(), pkg.get_version()));
+    let dst = pkg.root().join(format!("target/package/{}-{}",
+                                      pkg.name(), pkg.version()));
     if dst.exists() {
         try!(fs::rmdir_recursive(&dst));
     }
@@ -160,15 +160,15 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     // implicitly converted to registry-based dependencies, so we rewrite those
     // dependencies here.
     let registry = try!(SourceId::for_central(config));
-    let new_summary = pkg.get_summary().clone().map_dependencies(|d| {
-        if !d.get_source_id().is_path() { return d }
-        d.source_id(registry.clone())
+    let new_summary = pkg.summary().clone().map_dependencies(|d| {
+        if !d.source_id().is_path() { return d }
+        d.set_source_id(registry.clone())
     });
-    let mut new_manifest = pkg.get_manifest().clone();
+    let mut new_manifest = pkg.manifest().clone();
     new_manifest.set_summary(new_summary);
     new_manifest.set_target_dir(dst.join("target"));
     let new_pkg = Package::new(new_manifest, &manifest_path,
-                               pkg.get_package_id().get_source_id());
+                               pkg.package_id().source_id());
 
     // Now that we've rewritten all our path dependencies, compile it!
     try!(ops::compile_pkg(&new_pkg, &ops::CompileOptions {

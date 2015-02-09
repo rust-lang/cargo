@@ -36,7 +36,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>)
                                  -> CargoResult<Resolve> {
-    let root = package.get_package_id().get_source_id().clone();
+    let root = package.package_id().source_id().clone();
     try!(registry.add_sources(&[root]));
 
     // Here we place an artificial limitation that all non-registry sources
@@ -50,7 +50,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     match to_avoid {
         Some(set) => {
             for package_id in set.iter() {
-                let source = package_id.get_source_id();
+                let source = package_id.source_id();
                 if !source.is_registry() {
                     to_avoid_sources.insert(source);
                 }
@@ -59,7 +59,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => {}
     }
 
-    let summary = package.get_summary().clone();
+    let summary = package.summary().clone();
     let summary = match previous {
         Some(r) => {
             // In the case where a previous instance of resolve is available, we
@@ -93,10 +93,10 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             let map = r.deps(r.root()).into_iter().flat_map(|i| i).filter(|p| {
                 keep(p, to_avoid, &to_avoid_sources)
             }).map(|d| {
-                (d.get_name(), d)
+                (d.name(), d)
             }).collect::<HashMap<_, _>>();
             summary.map_dependencies(|d| {
-                match map.get(d.get_name()) {
+                match map.get(d.name()) {
                     Some(&lock) if d.matches_id(lock) => d.lock_to(lock),
                     _ => d,
                 }
@@ -116,7 +116,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                 to_avoid_packages: Option<&HashSet<&'a PackageId>>,
                 to_avoid_sources: &HashSet<&'a SourceId>)
                 -> bool {
-        !to_avoid_sources.contains(&p.get_source_id()) && match to_avoid_packages {
+        !to_avoid_sources.contains(&p.source_id()) && match to_avoid_packages {
             Some(set) => !set.contains(p),
             None => true,
         }

@@ -1,5 +1,5 @@
 #![deny(unused)]
-#![feature(collections, core, hash, io, libc, os, path, std_misc, unicode)]
+#![feature(collections, hash, io, libc, os, path, std_misc, unicode, env, core)]
 #![cfg_attr(test, deny(warnings))]
 
 extern crate libc;
@@ -22,10 +22,10 @@ extern crate url;
 
 extern crate registry;
 
+use std::env;
 use std::error::Error;
 use std::old_io::stdio::{stdout_raw, stderr_raw};
 use std::old_io::{self, stdout, stderr};
-use std::os;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json};
 use docopt::Docopt;
@@ -33,7 +33,7 @@ use docopt::Docopt;
 use core::{Shell, MultiShell, ShellConfig};
 use term::color::{BLACK, RED};
 
-pub use util::{CargoError, CliError, CliResult, human, Config};
+pub use util::{CargoError, CliError, CliResult, human, Config, ChainError};
 
 pub mod core;
 pub mod ops;
@@ -93,12 +93,15 @@ fn process<V, F>(mut callback: F)
           V: Encodable
 {
     let mut shell = shell(true);
-    process_executed({
-        match Config::new(&mut shell) {
-            Ok(cfg) => callback(os::args().as_slice(), &cfg),
-            Err(e) => Err(CliError::from_boxed(e, 101)),
-        }
-    }, &mut shell)
+    process_executed((|| {
+        let config = try!(Config::new(&mut shell));
+        let args: Vec<_> = try!(env::args().map(|s| {
+            s.into_string().map_err(|s| {
+                human(format!("invalid unicode in argument: {:?}", s))
+            })
+        }).collect());
+        callback(&args, &config)
+    })(), &mut shell)
 }
 
 pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
@@ -158,7 +161,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
                                  with --verbose.".to_string(), BLACK);
     }
 
-    std::os::set_exit_status(exit_code as isize);
+    std::env::set_exit_status(exit_code);
 }
 
 fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
@@ -222,7 +225,7 @@ fn json_from_stdin<T: Decodable>() -> CliResult<T> {
         CliError::new("Standard in did not exist or was not UTF-8", 1)
     }));
 
-    let json = try!(Json::from_str(input.as_slice()).map_err(|_| {
+    let json = try!(Json::from_str(&input).map_err(|_| {
         CliError::new("Could not parse standard in as JSON", 1)
     }));
     let mut decoder = json::Decoder::new(json);

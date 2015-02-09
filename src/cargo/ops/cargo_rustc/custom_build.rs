@@ -51,11 +51,11 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
 
     // Start preparing the process to execute, starting out with some
     // environment variables.
-    let profile = target.get_profile();
+    let profile = target.profile();
     let to_exec = CString::from_slice(to_exec.as_vec());
     let p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
     let mut p = p.env("OUT_DIR", Some(&build_output))
-                 .env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path()
+                 .env("CARGO_MANIFEST_DIR", Some(pkg.manifest_path()
                                                     .dir_path()
                                                     .display().to_string()))
                  .env("NUM_JOBS", Some(cx.jobs().to_string()))
@@ -63,18 +63,17 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                      Kind::Host => cx.config.rustc_host(),
                      Kind::Target => cx.target_triple(),
                  }))
-                 .env("DEBUG", Some(profile.get_debug().to_string()))
-                 .env("OPT_LEVEL", Some(profile.get_opt_level().to_string()))
-                 .env("PROFILE", Some(profile.get_env()))
+                 .env("DEBUG", Some(profile.debug().to_string()))
+                 .env("OPT_LEVEL", Some(profile.opt_level().to_string()))
+                 .env("PROFILE", Some(profile.env()))
                  .env("HOST", Some(cx.config.rustc_host()));
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
-    match cx.resolve.features(pkg.get_package_id()) {
+    match cx.resolve.features(pkg.package_id()) {
         Some(features) => {
             for feat in features.iter() {
-                p = p.env(format!("CARGO_FEATURE_{}",
-                                  super::envify(feat.as_slice())).as_slice(),
+                p = p.env(&format!("CARGO_FEATURE_{}", super::envify(feat)),
                           Some("1"));
             }
         }
@@ -87,18 +86,18 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        let non_build_target = pkg.get_targets().iter().find(|t| {
-            !t.get_profile().is_custom_build()
+        let non_build_target = pkg.targets().iter().find(|t| {
+            !t.profile().is_custom_build()
         }).unwrap();
         cx.dep_targets(pkg, non_build_target).iter().filter_map(|&(pkg, _)| {
-            pkg.get_manifest().get_links().map(|links| {
-                (links.to_string(), pkg.get_package_id().clone())
+            pkg.manifest().links().map(|links| {
+                (links.to_string(), pkg.package_id().clone())
             })
         }).collect::<Vec<_>>()
     };
     let pkg_name = pkg.to_string();
     let build_state = cx.build_state.clone();
-    let id = pkg.get_package_id().clone();
+    let id = pkg.package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                build_output.clone());
     let plugin_deps = super::crawl_build_deps(cx, pkg, target, Kind::Host);
@@ -135,10 +134,9 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
             for &(ref name, ref id) in lib_deps.iter() {
                 let data = &build_state[(id.clone(), kind)].metadata;
                 for &(ref key, ref value) in data.iter() {
-                    p = p.env(format!("DEP_{}_{}",
-                                      super::envify(name.as_slice()),
-                                      super::envify(key.as_slice())).as_slice(),
-                              Some(value.as_slice()));
+                    p = p.env(&format!("DEP_{}_{}", super::envify(name),
+                                       super::envify(key)),
+                              Some(value));
                 }
             }
             p = try!(super::add_plugin_deps(p, &build_state, plugin_deps));
@@ -159,10 +157,10 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(output.output.as_slice()).chain_error(|| {
+        let output = try!(str::from_utf8(&output.output).chain_error(|| {
             human("build script output was not valid utf-8")
         }));
-        let parsed_output = try!(BuildOutput::parse(output, pkg_name.as_slice()));
+        let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
         build_state.insert(id, req, parsed_output);
 
         try!(File::create(&build_output.dir_path().join("output"))
@@ -196,8 +194,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
             human(format!("failed to read cached build command output: {}", e))
         }));
         let contents = try!(f.read_to_string());
-        let output = try!(BuildOutput::parse(contents.as_slice(),
-                                             pkg_name.as_slice()));
+        let output = try!(BuildOutput::parse(&contents, &pkg_name));
         build_state.insert(id, req, output);
 
         fresh.call(tx)
@@ -211,10 +208,10 @@ impl BuildState {
                packages: &PackageSet) -> BuildState {
         let mut sources = HashMap::new();
         for package in packages.iter() {
-            match package.get_manifest().get_links() {
+            match package.manifest().links() {
                 Some(links) => {
                     sources.insert(links.to_string(),
-                                   package.get_package_id().clone());
+                                   package.package_id().clone());
                 }
                 None => {}
             }
@@ -283,9 +280,8 @@ impl BuildOutput {
             };
 
             if key == "rustc-flags" {
-                let whence = whence.as_slice();
                 let (libs, links) = try!(
-                    BuildOutput::parse_rustc_flags(value, whence)
+                    BuildOutput::parse_rustc_flags(value, &whence)
                 );
                 library_links.extend(links.into_iter());
                 library_paths.extend(libs.into_iter());

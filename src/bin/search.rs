@@ -28,7 +28,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         ..
     } = options;
 
-    ops::search(query.as_slice(), config, host)
+    ops::search(&query, config, host)
         .map(|_| None)
         .map_err(|err| CliError::from_boxed(err, 101))
 }

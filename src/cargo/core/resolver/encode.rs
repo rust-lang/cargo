@@ -26,10 +26,10 @@ impl EncodableResolve {
         let packages = self.package.as_ref().unwrap_or(&packages);
 
         {
-            let mut register_pkg = |&mut: pkg: &EncodableDependency|
+            let mut register_pkg = |pkg: &EncodableDependency|
                                     -> CargoResult<()> {
                 let pkgid = try!(pkg.to_package_id(default));
-                let precise = pkgid.get_source_id().get_precise()
+                let precise = pkgid.source_id().precise()
                                    .map(|s| s.to_string());
                 assert!(tmp.insert(pkgid.clone(), precise).is_none(),
                         "a package was referenced twice in the lockfile");
@@ -44,7 +44,7 @@ impl EncodableResolve {
         }
 
         {
-            let mut add_dependencies = |&mut: pkg: &EncodableDependency|
+            let mut add_dependencies = |pkg: &EncodableDependency|
                                         -> CargoResult<()> {
                 let package_id = try!(pkg.to_package_id(default));
 
@@ -89,8 +89,8 @@ pub struct EncodableDependency {
 impl EncodableDependency {
     fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
         PackageId::new(
-            self.name.as_slice(),
-            self.version.as_slice(),
+            &self.name,
+            &self.version,
             self.source.as_ref().unwrap_or(default_source))
     }
 }
@@ -106,7 +106,7 @@ impl Encodable for EncodablePackageId {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let mut out = format!("{} {}", self.name, self.version);
         if let Some(ref s) = self.source {
-            out.push_str(format!(" ({})", s.to_url()).as_slice());
+            out.push_str(&format!(" ({})", s.to_url()));
         }
         out.encode(s)
     }
@@ -116,7 +116,7 @@ impl Decodable for EncodablePackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
-        let captures = regex.captures(string.as_slice())
+        let captures = regex.captures(&string)
                             .expect("invalid serialized PackageId");
 
         let name = captures.at(1).unwrap();
@@ -137,8 +137,8 @@ impl Decodable for EncodablePackageId {
 impl EncodablePackageId {
     fn to_package_id(&self, default_source: &SourceId) -> CargoResult<PackageId> {
         PackageId::new(
-            self.name.as_slice(),
-            self.version.as_slice(),
+            &self.name,
+            &self.version,
             self.source.as_ref().unwrap_or(default_source))
     }
 }
@@ -172,29 +172,29 @@ fn encodable_resolve_node(id: &PackageId, root: &PackageId,
         deps
     });
 
-    let source = if id.get_source_id() == root.get_source_id() {
+    let source = if id.source_id() == root.source_id() {
         None
     } else {
-        Some(id.get_source_id().clone())
+        Some(id.source_id().clone())
     };
 
     EncodableDependency {
-        name: id.get_name().to_string(),
-        version: id.get_version().to_string(),
+        name: id.name().to_string(),
+        version: id.version().to_string(),
         source: source,
         dependencies: deps,
     }
 }
 
 fn encodable_package_id(id: &PackageId, root: &PackageId) -> EncodablePackageId {
-    let source = if id.get_source_id() == root.get_source_id() {
+    let source = if id.source_id() == root.source_id() {
         None
     } else {
-        Some(id.get_source_id().with_precise(None))
+        Some(id.source_id().with_precise(None))
     };
     EncodablePackageId {
-        name: id.get_name().to_string(),
-        version: id.get_version().to_string(),
+        name: id.name().to_string(),
+        version: id.version().to_string(),
         source: source,
     }
 }

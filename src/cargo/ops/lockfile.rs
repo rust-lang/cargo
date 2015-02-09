@@ -8,8 +8,8 @@ use util::{CargoResult, ChainError, human};
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
-    let lockfile = pkg.get_manifest_path().dir_path().join("Cargo.lock");
-    let source_id = pkg.get_package_id().get_source_id();
+    let lockfile = pkg.manifest_path().dir_path().join("Cargo.lock");
+    let source_id = pkg.package_id().source_id();
     load_lockfile(&lockfile, source_id).chain_error(|| {
         human(format!("failed to parse lock file at: {}", lockfile.display()))
     })
@@ -24,14 +24,14 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
 
     let s = try!(f.read_to_string());
 
-    let table = toml::Value::Table(try!(cargo_toml::parse(s.as_slice(), path)));
+    let table = toml::Value::Table(try!(cargo_toml::parse(&s, path)));
     let mut d = toml::Decoder::new(table);
     let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
     Ok(Some(try!(v.to_resolve(sid))))
 }
 
 pub fn write_pkg_lockfile(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
-    let loc = pkg.get_root().join("Cargo.lock");
+    let loc = pkg.root().join("Cargo.lock");
     write_lockfile(&loc, resolve)
 }
 
@@ -60,31 +60,31 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
     match e.toml.get(&"metadata".to_string()) {
         Some(metadata) => {
             out.push_str("[metadata]\n");
-            out.push_str(metadata.to_string().as_slice());
+            out.push_str(&metadata.to_string());
         }
         None => {}
     }
 
-    try!(File::create(dst).write_str(out.as_slice()));
+    try!(File::create(dst).write_str(&out));
     Ok(())
 }
 
 fn emit_package(dep: &toml::Table, out: &mut String) {
-    out.push_str(format!("name = {}\n", lookup(dep, "name")).as_slice());
-    out.push_str(format!("version = {}\n", lookup(dep, "version")).as_slice());
+    out.push_str(&format!("name = {}\n", lookup(dep, "name")));
+    out.push_str(&format!("version = {}\n", lookup(dep, "version")));
 
-    if dep.contains_key(&"source".to_string()) {
-        out.push_str(format!("source = {}\n", lookup(dep, "source")).as_slice());
+    if dep.contains_key("source") {
+        out.push_str(&format!("source = {}\n", lookup(dep, "source")));
     }
 
-    if let Some(ref s) = dep.get(&"dependencies".to_string()) {
+    if let Some(ref s) = dep.get("dependencies") {
         let slice = Value::as_slice(*s).unwrap();
 
         if !slice.is_empty() {
             out.push_str("dependencies = [\n");
 
             for child in slice.iter() {
-                out.push_str(format!(" {},\n", child).as_slice());
+                out.push_str(&format!(" {},\n", child));
             }
 
             out.push_str("]\n");
@@ -94,5 +94,5 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
 }
 
 fn lookup<'a>(table: &'a toml::Table, key: &str) -> &'a toml::Value {
-    table.get(&key.to_string()).expect(format!("Didn't find {}", key).as_slice())
+    table.get(key).expect(&format!("didn't find {}", key))
 }

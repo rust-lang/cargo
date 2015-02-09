@@ -19,16 +19,16 @@ pub fn doc(manifest_path: &Path,
     let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
                                                options.compile_opts.config));
     try!(source.update());
-    let package = try!(source.get_root_package());
+    let package = try!(source.root_package());
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
     if options.compile_opts.spec.is_none() {
-        for target in package.get_targets().iter().filter(|t| t.get_profile().is_doc()) {
+        for target in package.targets().iter().filter(|t| t.profile().is_doc()) {
             if target.is_lib() {
-                assert!(lib_names.insert(target.get_name()));
+                assert!(lib_names.insert(target.name()));
             } else {
-                assert!(bin_names.insert(target.get_name()));
+                assert!(bin_names.insert(target.name()));
             }
         }
         for bin in bin_names.iter() {
@@ -45,7 +45,7 @@ pub fn doc(manifest_path: &Path,
 
     if options.open_result {
         let name = match options.compile_opts.spec {
-            Some(spec) => try!(PackageIdSpec::parse(spec)).get_name().to_string(),
+            Some(spec) => try!(PackageIdSpec::parse(spec)).name().to_string(),
             None => {
                 match lib_names.iter().nth(0) {
                     Some(s) => s.to_string(),
@@ -54,7 +54,7 @@ pub fn doc(manifest_path: &Path,
             }
         };
 
-        let path = package.get_absolute_target_dir().join("doc").join(name)
+        let path = package.absolute_target_dir().join("doc").join(name)
                                                     .join("index.html");
         if path.exists() {
             open_docs(&path);

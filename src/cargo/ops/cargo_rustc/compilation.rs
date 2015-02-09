@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 use semver::Version;
 
 use core::{PackageId, Package};
@@ -95,26 +95,26 @@ impl Compilation {
         }
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
-        let search_path = try!(util::join_paths(search_path.as_slice(),
+        let search_path = try!(util::join_paths(&search_path,
                                                 DynamicLibrary::envvar()));
         let mut cmd = try!(CommandPrototype::new(cmd)).env(
-            DynamicLibrary::envvar(), Some(search_path.as_slice()));
+            DynamicLibrary::envvar(), Some(&search_path));
         for (k, v) in self.extra_env.iter() {
-            cmd = cmd.env(k.as_slice(), v.as_ref().map(|s| s.as_slice()));
+            cmd = cmd.env(k, v.as_ref());
         }
 
-        Ok(cmd.env("CARGO_MANIFEST_DIR", Some(pkg.get_manifest_path().dir_path()))
+        Ok(cmd.env("CARGO_MANIFEST_DIR", Some(pkg.manifest_path().dir_path()))
               .env("CARGO_PKG_VERSION_MAJOR",
-                   Some(pkg.get_version().major.to_string()))
+                   Some(pkg.version().major.to_string()))
               .env("CARGO_PKG_VERSION_MINOR",
-                  Some(pkg.get_version().minor.to_string()))
+                  Some(pkg.version().minor.to_string()))
               .env("CARGO_PKG_VERSION_PATCH",
-                   Some(pkg.get_version().patch.to_string()))
+                   Some(pkg.version().patch.to_string()))
               .env("CARGO_PKG_VERSION_PRE",
-                   pre_version_component(pkg.get_version()))
+                   pre_version_component(pkg.version()))
               .env("CARGO_PKG_VERSION",
-                   Some(pkg.get_version().to_string()))
-              .cwd(pkg.get_root()))
+                   Some(pkg.version().to_string()))
+              .cwd(pkg.root()))
     }
 }
 
@@ -127,7 +127,7 @@ fn pre_version_component(v: &Version) -> Option<String> {
 
     for (i, x) in v.pre.iter().enumerate() {
         if i != 0 { ret.push('.') };
-        ret.push_str(x.to_string().as_slice());
+        ret.push_str(&x.to_string());
     }
 
     Some(ret)

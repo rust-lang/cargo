@@ -41,17 +41,17 @@ struct SerializedPackage {
 
 impl Encodable for Package {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        let manifest = self.get_manifest();
-        let summary = manifest.get_summary();
-        let package_id = summary.get_package_id();
+        let manifest = self.manifest();
+        let summary = manifest.summary();
+        let package_id = summary.package_id();
 
         SerializedPackage {
-            name: package_id.get_name().to_string(),
-            version: package_id.get_version().to_string(),
-            dependencies: summary.get_dependencies().iter().map(|d| {
+            name: package_id.name().to_string(),
+            version: package_id.version().to_string(),
+            dependencies: summary.dependencies().iter().map(|d| {
                 SerializedDependency::from_dependency(d)
             }).collect(),
-            targets: manifest.get_targets().to_vec(),
+            targets: manifest.targets().to_vec(),
             manifest_path: self.manifest_path.display().to_string()
         }.encode(s)
     }
@@ -68,64 +68,35 @@ impl Package {
         }
     }
 
-    pub fn get_manifest(&self) -> &Manifest {
-        &self.manifest
-    }
+    pub fn dependencies(&self) -> &[Dependency] { self.manifest.dependencies() }
+    pub fn manifest(&self) -> &Manifest { &self.manifest }
+    pub fn manifest_path(&self) -> &Path { &self.manifest_path }
+    pub fn name(&self) -> &str { self.package_id().name() }
+    pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
+    pub fn root(&self) -> Path { self.manifest_path.dir_path() }
+    pub fn summary(&self) -> &Summary { self.manifest.summary() }
+    pub fn target_dir(&self) -> &Path { self.manifest.target_dir() }
+    pub fn targets(&self) -> &[Target] { self.manifest().targets() }
+    pub fn version(&self) -> &Version { self.package_id().version() }
 
-    pub fn get_summary(&self) -> &Summary {
-        self.manifest.get_summary()
-    }
-
-    pub fn get_package_id(&self) -> &PackageId {
-        self.manifest.get_package_id()
-    }
-
-    pub fn get_name(&self) -> &str {
-        self.get_package_id().get_name()
-    }
-
-    pub fn get_version(&self) -> &Version {
-        self.get_package_id().get_version()
-    }
-
-    pub fn get_dependencies(&self) -> &[Dependency] {
-        self.get_manifest().get_dependencies()
-    }
-
-    pub fn get_targets(&self) -> &[Target] {
-        self.get_manifest().get_targets()
-    }
-
-    pub fn get_manifest_path(&self) -> &Path {
-        &self.manifest_path
-    }
-
-    pub fn get_root(&self) -> Path {
-        self.manifest_path.dir_path()
-    }
-
-    pub fn get_target_dir(&self) -> &Path {
-        self.manifest.get_target_dir()
-    }
-
-    pub fn get_absolute_target_dir(&self) -> Path {
-        self.get_root().join(self.get_target_dir())
+    pub fn absolute_target_dir(&self) -> Path {
+        self.root().join(self.target_dir())
     }
 
     pub fn has_custom_build(&self) -> bool {
-        self.get_targets().iter().any(|t| t.get_profile().is_custom_build())
+        self.targets().iter().any(|t| t.profile().is_custom_build())
     }
 }
 
 impl fmt::Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.get_summary().get_package_id())
+        write!(f, "{}", self.summary().package_id())
     }
 }
 
 impl PartialEq for Package {
     fn eq(&self, other: &Package) -> bool {
-        self.get_package_id() == other.get_package_id()
+        self.package_id() == other.package_id()
     }
 }
 
@@ -133,7 +104,7 @@ impl Eq for Package {}
 
 impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Package {
     fn hash(&self, into: &mut H) {
-        self.get_package_id().hash(into)
+        self.package_id().hash(into)
     }
 }
 
@@ -159,7 +130,7 @@ impl PackageSet {
 
     /// Get a package by name out of the set
     pub fn get(&self, name: &str) -> &Package {
-        self.packages.iter().find(|pkg| name == pkg.get_name())
+        self.packages.iter().find(|pkg| name == pkg.name())
             .expect("PackageSet.get: empty set")
     }
 
@@ -167,9 +138,7 @@ impl PackageSet {
         names.iter().map(|name| self.get(*name) ).collect()
     }
 
-    pub fn get_packages(&self) -> &[Package] {
-        self.packages.as_slice()
-    }
+    pub fn packages(&self) -> &[Package] { &self.packages }
 
     // For now, assume that the package set contains only one package with a
     // given name
@@ -177,11 +146,11 @@ impl PackageSet {
         let mut graph = graph::Graph::new();
 
         for pkg in self.packages.iter() {
-            let deps: Vec<&str> = pkg.get_dependencies().iter()
-                .map(|dep| dep.get_name())
+            let deps: Vec<&str> = pkg.dependencies().iter()
+                .map(|dep| dep.name())
                 .collect();
 
-            graph.add(pkg.get_name(), deps.as_slice());
+            graph.add(pkg.name(), &deps);
         }
 
         let pkgs = match graph.sort() {
@@ -205,8 +174,8 @@ impl PackageSet {
 impl Registry for PackageSet {
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
         Ok(self.packages.iter()
-            .filter(|pkg| name.get_name() == pkg.get_name())
-            .map(|pkg| pkg.get_summary().clone())
+            .filter(|pkg| name.name() == pkg.name())
+            .map(|pkg| pkg.summary().clone())
             .collect())
     }
 }

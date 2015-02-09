@@ -121,7 +121,7 @@ impl Shell {
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
-        try!(self.write_line(message.to_string().as_slice()));
+        try!(self.write_line(&message.to_string()));
         try!(self.reset());
         try!(self.flush());
         Ok(())
@@ -134,9 +134,9 @@ impl Shell {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
         if self.supports_attr(Attr::Bold) { try!(self.attr(Attr::Bold)); }
-        try!(self.write_str(format!("{:>12}", status).as_slice()));
+        try!(self.write_str(&format!("{:>12}", status)));
         try!(self.reset());
-        try!(self.write_line(format!(" {}", message).as_slice()));
+        try!(self.write_line(&format!(" {}", message)));
         try!(self.flush());
         Ok(())
     }
