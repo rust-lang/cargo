@@ -1352,3 +1352,40 @@ no example target named `foo` to run
 no bin target named `foo` to run
 "));
 });
+
+test!(doctest_feature {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            [features]
+            bar = []
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```rust
+            /// assert_eq!(foo::foo(), 1);
+            /// ```
+            #[cfg(feature = "bar")]
+            pub fn foo() -> i32 { 1 }
+        "#);
+
+    assert_that(p.cargo_process("test").arg("--features").arg("bar"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} foo [..]
+{running} target[..]foo[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 1 test
+test foo_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
+});

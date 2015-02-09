@@ -72,6 +72,10 @@ pub fn run_tests(manifest_path: &Path,
             p = p.arg("--test-args").arg(test_args.connect(" "));
         }
 
+        for feat in compile.features.iter() {
+            p = p.arg("--cfg").arg(format!("feature=\"{}\"", feat));
+        }
+
         for (pkg, libs) in compile.libraries.iter() {
             for lib in libs.iter() {
                 let mut arg = pkg.name().as_bytes().to_vec();

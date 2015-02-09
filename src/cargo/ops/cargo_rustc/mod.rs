@@ -189,6 +189,11 @@ pub fn compile_targets<'a, 'b>(env: &str,
     let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
                     .display().to_string();
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), Some(out_dir));
+
+    if let Some(feats) = cx.resolve.features(pkg.package_id()) {
+        cx.compilation.features.extend(feats.iter().cloned());
+    }
+
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
         let any_dylib = output.library_links.iter().any(|l| {
             !l.ends_with(":static") && !l.ends_with(":framework")
