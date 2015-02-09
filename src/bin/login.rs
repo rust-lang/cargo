@@ -30,7 +30,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let err = (|:| {
+            let err = (|| {
                 let src = try!(SourceId::for_central(config));
                 let mut src = RegistrySource::new(&src, config);
                 try!(src.update());

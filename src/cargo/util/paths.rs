@@ -1,6 +1,6 @@
 use std::{old_io,os};
 use std::old_io::fs;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 
 use util::{human, CargoResult};
 

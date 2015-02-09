@@ -182,7 +182,7 @@ impl GitDatabase {
     pub fn rev_for(&self, reference: &GitReference) -> CargoResult<GitRevision> {
         let id = match *reference {
             GitReference::Tag(ref s) => {
-                try!((|:| {
+                try!((|| {
                     let refname = format!("refs/tags/{}", s);
                     let id = try!(self.repo.refname_to_id(refname.as_slice()));
                     let obj = try!(self.repo.find_object(id, None));
@@ -193,7 +193,7 @@ impl GitDatabase {
                 }))
             }
             GitReference::Branch(ref s) => {
-                try!((|:| {
+                try!((|| {
                     let b = try!(self.repo.find_branch(s.as_slice(),
                                                        git2::BranchType::Local));
                     b.get().target().chain_error(|| {

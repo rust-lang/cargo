@@ -1,6 +1,6 @@
 use std::old_io::{fs, File, USER_DIR};
 use std::old_io::fs::PathExtensions;
-use std::path;
+use std::old_path as path;
 
 use tar::Archive;
 use flate2::{GzBuilder, BestCompression};

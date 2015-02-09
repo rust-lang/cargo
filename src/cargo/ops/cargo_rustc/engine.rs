@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::old_io::process::ProcessOutput;
 use std::os;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 
 use util::{self, CargoResult, ProcessError, ProcessBuilder};
 

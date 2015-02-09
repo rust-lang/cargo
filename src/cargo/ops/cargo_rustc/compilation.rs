@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 use semver::Version;
 
 use core::{PackageId, Package};

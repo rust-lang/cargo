@@ -3,7 +3,7 @@ use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
 use std::old_io::fs::{self, PathExtensions};
 use std::os;
-use std::path;
+use std::old_path as path;
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
