@@ -620,17 +620,17 @@ test!(build_deps_not_for_normal {
             version = "0.5.0"
             authors = []
             build = "build.rs"
-            [build-dependencies.a]
+            [build-dependencies.aaaaa]
             path = "a"
         "#)
-        .file("src/lib.rs", "extern crate a;")
+        .file("src/lib.rs", "extern crate aaaaa;")
         .file("build.rs", "
-            extern crate a;
+            extern crate aaaaa;
             fn main() {}
         ")
         .file("a/Cargo.toml", r#"
             [project]
-            name = "a"
+            name = "aaaaa"
             version = "0.5.0"
             authors = []
         "#)
@@ -639,9 +639,9 @@ test!(build_deps_not_for_normal {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(target),
                 execs().with_status(101)
                        .with_stderr("\
-[..]lib.rs[..] error: can't find crate for `a`
-[..]lib.rs[..] extern crate a;
-[..]           ^~~~~~~~~~~~~~~
+[..]lib.rs[..] error: can't find crate for `aaaaa`
+[..]lib.rs[..] extern crate aaaaa;
+[..]           ^~~~~~~~~~~~~~~~~~~
 error: aborting due to previous error
 Could not compile `foo`.
 

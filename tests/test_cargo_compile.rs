@@ -1585,23 +1585,23 @@ test!(transitive_dependencies_not_available {
             version = "0.0.1"
             authors = []
 
-            [dependencies.a]
+            [dependencies.aaaaa]
             path = "a"
         "#)
-        .file("src/main.rs", "extern crate b; extern crate a; fn main() {}")
+        .file("src/main.rs", "extern crate bbbbb; extern crate aaaaa; fn main() {}")
         .file("a/Cargo.toml", r#"
             [package]
-            name = "a"
+            name = "aaaaa"
             version = "0.0.1"
             authors = []
 
-            [dependencies.b]
+            [dependencies.bbbbb]
             path = "../b"
         "#)
-        .file("a/src/lib.rs", "extern crate b;")
+        .file("a/src/lib.rs", "extern crate bbbbb;")
         .file("b/Cargo.toml", r#"
             [package]
-            name = "b"
+            name = "bbbbb"
             version = "0.0.1"
             authors = []
         "#)
@@ -1610,8 +1610,8 @@ test!(transitive_dependencies_not_available {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
-[..] can't find crate for `b`
-[..] extern crate b; [..]
+[..] can't find crate for `bbbbb`
+[..] extern crate bbbbb; [..]
 [..]
 error: aborting due to previous error
 Could not compile `foo`.

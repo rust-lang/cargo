@@ -84,7 +84,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
         let include = try!(pkg.manifest().include().iter()
                               .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
 
-        let mut filter = |&mut: p: &Path| {
+        let mut filter = |p: &Path| {
             let relative_path = p.path_relative_from(&root).unwrap();
             include.iter().any(|p| p.matches_path(&relative_path)) || {
                 include.len() == 0 &&
