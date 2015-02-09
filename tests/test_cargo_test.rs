@@ -1332,3 +1332,23 @@ test!(bin_is_preserved {
                 execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 });
+
+test!(bad_example {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("run").arg("--example").arg("foo"),
+                execs().with_status(101).with_stderr("\
+no example target named `foo` to run
+"));
+    assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
+                execs().with_status(101).with_stderr("\
+no bin target named `foo` to run
+"));
+});
