@@ -22,7 +22,7 @@ fn setup() {
         [registry]
             index = "{reg}"
     "#, reg = registry()).as_slice()).unwrap();
-    fs::mkdir_recursive(&api_path().join("api/v1"), old_io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&api_path().join("api/v2"), old_io::USER_DIR).unwrap();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{
@@ -50,10 +50,10 @@ test!(simple {
             "keywords": [],
             "license": null,
             "links": {
-                "owners": "/api/v1/crates/hoare/owners",
-                "reverse_dependencies": "/api/v1/crates/hoare/reverse_dependencies",
-                "version_downloads": "/api/v1/crates/hoare/downloads",
-                "versions": "/api/v1/crates/hoare/versions"
+                "owners": "/api/v2/crates/hoare/owners",
+                "reverse_dependencies": "/api/v2/crates/hoare/reverse_dependencies",
+                "version_downloads": "/api/v2/crates/hoare/downloads",
+                "versions": "/api/v2/crates/hoare/versions"
             },
             "max_version": "0.1.1",
             "name": "hoare",
@@ -65,7 +65,7 @@ test!(simple {
             "total": 1
         }
     }"#;
-    let base = api_path().join("api/v1/crates");
+    let base = api_path().join("api/v2/crates");
 
     // Older versions of curl don't peel off query parameters when looking for
     // filenames, so just make both files.

@@ -26,32 +26,7 @@ test!(invalid1 {
 failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `bar` includes `baz` which is neither a dependency nor another feature
-").as_slice()));
-});
-
-test!(invalid2 {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [features]
-            bar = ["baz"]
-
-            [dependencies.bar]
-            path = "foo"
-        "#)
-        .file("src/main.rs", "");
-
-    assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(format!("\
-failed to parse manifest at `[..]`
-
-Caused by:
-  Features and dependencies cannot have the same name: `bar`
+  Feature `bar` requires `baz` which is not a dependency
 ").as_slice()));
 });
 
@@ -161,7 +136,7 @@ test!(invalid6 {
 failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires `bar` which is not an optional dependency
+  Feature `foo` requires `bar` which is not a dependency
 ").as_slice()));
 });
 
@@ -184,7 +159,7 @@ test!(invalid7 {
 failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires `bar` which is not an optional dependency
+  Feature `foo` requires `bar` which is not a dependency
 ").as_slice()));
 });
 
@@ -222,6 +197,9 @@ test!(no_feature_doesnt_build {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [features]
+            bar = ["bar"]
 
             [dependencies.bar]
             path = "bar"
@@ -268,7 +246,10 @@ test!(default_feature_pulled_in {
             authors = []
 
             [features]
-            default = ["bar"]
+            bar = ["bar"]
+
+            [features.default]
+            features = ["bar"]
 
             [dependencies.bar]
             path = "bar"
@@ -314,8 +295,8 @@ test!(cyclic_feature {
             version = "0.0.1"
             authors = []
 
-            [features]
-            default = ["default"]
+            [features.default]
+            features = ["default"]
         "#)
         .file("src/main.rs", "");
 
@@ -333,9 +314,11 @@ test!(cyclic_feature2 {
             version = "0.0.1"
             authors = []
 
-            [features]
-            foo = ["bar"]
-            bar = ["foo"]
+            [features.foo]
+            features = ["bar"]
+
+            [features.bar]
+            features = ["foo"]
         "#)
         .file("src/main.rs", "");
 
@@ -353,15 +336,31 @@ test!(groups_on_groups_on_groups {
             version = "0.0.1"
             authors = []
 
-            [features]
-            default = ["f1"]
-            f1 = ["f2", "bar"]
-            f2 = ["f3", "f4"]
-            f3 = ["f5", "f6", "baz"]
-            f4 = ["f5", "f7"]
-            f5 = ["f6"]
-            f6 = ["f7"]
-            f7 = ["bar"]
+            [features.default]
+            features = ["f1"]
+
+            [features.f1]
+            features = ["f2"]
+            dependencies = ["bar"]
+
+            [features.f2]
+            features = ["f3", "f4"]
+
+            [features.f3]
+            features = ["f5", "f6"]
+            dependencies = ["baz"]
+
+            [features.f4]
+            features = ["f5", "f7"]
+
+            [features.f5]
+            features = ["f6"]
+
+            [features.f6]
+            features = ["f7"]
+
+            [features.f7]
+            dependencies = ["bar"]
 
             [dependencies.bar]
             path = "bar"
@@ -406,6 +405,10 @@ test!(many_cli_features {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [features]
+            bar = ["bar"]
+            baz = ["baz"]
 
             [dependencies.bar]
             path = "bar"
@@ -526,7 +529,9 @@ test!(many_features_no_rebuilds {
             [features]
             ftest  = []
             ftest2 = []
-            fall   = ["ftest", "ftest2"]
+
+            [features.fall]
+            features = ["ftest", "ftest2"]
         "#)
         .file("a/src/lib.rs", "");
 

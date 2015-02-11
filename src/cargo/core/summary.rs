@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::mem;
 
 use semver::Version;
-use core::{Dependency, PackageId, SourceId};
+use core::{Dependency, PackageId, SourceId, Feature};
 
 use util::{CargoResult, human};
 
@@ -14,30 +14,25 @@ use util::{CargoResult, human};
 pub struct Summary {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
-    features: HashMap<String, Vec<String>>,
+    features: HashMap<String, Feature>,
 }
 
 impl Summary {
     pub fn new(pkg_id: PackageId,
                dependencies: Vec<Dependency>,
-               features: HashMap<String, Vec<String>>) -> CargoResult<Summary> {
-        for dep in dependencies.iter() {
-            if features.get(dep.name()).is_some() {
-                return Err(human(format!("Features and dependencies cannot have \
-                                          the same name: `{}`", dep.name())))
-            }
+               features: HashMap<String, Feature>) -> CargoResult<Summary> {
+        for dep in &dependencies {
             if dep.is_optional() && !dep.is_transitive() {
                 return Err(human(format!("Dev-dependencies are not allowed \
                                           to be optional: `{}`",
                                           dep.name())))
             }
         }
-        for (feature, list) in features.iter() {
-            for dep in list.iter() {
+        for (feature, desc) in &features {
+            for dep in desc.dependencies() {
                 let mut parts = dep.splitn(1, '/');
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
-                if !is_reexport && features.get(dep).is_some() { continue }
                 match dependencies.iter().find(|d| d.name() == dep) {
                     Some(d) => {
                         if d.is_optional() || is_reexport { continue }
@@ -47,17 +42,18 @@ impl Summary {
                                                   `optional = true` to the \
                                                   dependency", feature, dep)))
                     }
-                    None if is_reexport => {
-                        return Err(human(format!("Feature `{}` requires `{}` \
-                                                  which is not an optional \
-                                                  dependency", feature, dep)))
-                    }
                     None => {
-                        return Err(human(format!("Feature `{}` includes `{}` \
-                                                  which is neither a dependency \
-                                                  nor another feature",
+                        return Err(human(format!("Feature `{}` requires `{}` \
+                                                  which is not a dependency",
                                                   feature, dep)))
                     }
+                }
+            }
+            for subfeat in desc.features() {
+                if !features.contains_key(subfeat) {
+                    return Err(human(format!("Feature `{}` requires `{}` which \
+                                              is not a feature", feature,
+                                              subfeat)));
                 }
             }
         }
@@ -73,7 +69,7 @@ impl Summary {
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn source_id(&self) -> &SourceId { self.package_id.source_id() }
     pub fn dependencies(&self) -> &[Dependency] { &self.dependencies }
-    pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.features }
+    pub fn features(&self) -> &HashMap<String, Feature> { &self.features }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
         self.package_id = id;

@@ -170,7 +170,7 @@ use rustc_serialize::json;
 use tar::Archive;
 use url::Url;
 
-use core::{Source, SourceId, PackageId, Package, Summary, Registry};
+use core::{Source, SourceId, PackageId, Package, Summary, Registry, Feature};
 use core::dependency::{Dependency, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
@@ -209,7 +209,7 @@ struct RegistryPackage {
     name: String,
     vers: String,
     deps: Vec<RegistryDependency>,
-    features: HashMap<String, Vec<String>>,
+    features: HashMap<String, RegistryFeature>,
     cksum: String,
     yanked: Option<bool>,
 }
@@ -223,6 +223,12 @@ struct RegistryDependency {
     default_features: bool,
     target: Option<String>,
     kind: Option<String>,
+}
+
+#[derive(RustcDecodable)]
+struct RegistryFeature {
+    features: Vec<String>,
+    dependencies: Vec<String>,
 }
 
 impl<'a, 'b> RegistrySource<'a, 'b> {
@@ -407,6 +413,9 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             self.parse_registry_dependency(dep)
         }).collect();
         let deps = try!(deps);
+        let features = features.into_iter().map(|(name, feature)| {
+            (name, self.parse_feature(feature))
+        }).collect();
         self.hashes.insert((name, vers), cksum);
         Ok((try!(Summary::new(pkgid, deps, features)), yanked.unwrap_or(false)))
     }
@@ -431,6 +440,12 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
               .set_features(features)
               .set_only_for_platform(target)
               .set_kind(kind))
+    }
+
+    /// Converts an encoded feature into a cargo feature
+    fn parse_feature(&self, feature: RegistryFeature) -> Feature {
+        let RegistryFeature { dependencies, features } = feature;
+        Feature::new().set_dependencies(dependencies).set_features(features)
     }
 
     /// Actually perform network operations to update the registry

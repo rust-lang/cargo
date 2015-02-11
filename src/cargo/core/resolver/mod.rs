@@ -6,7 +6,7 @@ use std::fmt;
 use std::rc::Rc;
 use semver;
 
-use core::{PackageId, Registry, SourceId, Summary, Dependency};
+use core::{PackageId, Registry, SourceId, Summary, Dependency, Feature};
 use core::PackageIdSpec;
 use util::{CargoResult, Graph, human, ChainError, CargoError};
 use util::profile;
@@ -458,7 +458,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
             continue
         }
         let mut base = feature_deps.remove(dep.name()).unwrap_or(vec![]);
-        for feature in dep.features().iter() {
+        for feature in dep.features() {
             base.push(feature.clone());
             if feature.contains("/") {
                 return Err(human(format!("features in dependencies \
@@ -470,19 +470,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
         ret.insert(dep.name(), (dep, base));
     }
 
-    // All features can only point to optional dependencies, in which case they
-    // should have all been weeded out by the above iteration. Any remaining
-    // features are bugs in that the package does not actually have those
-    // features.
-    if feature_deps.len() > 0 {
-        let unknown = feature_deps.keys().map(|s| s.as_slice())
-                                  .collect::<Vec<&str>>();
-        if unknown.len() > 0 {
-            let features = unknown.connect(", ");
-            return Err(human(format!("Package `{}` does not have these features: \
-                                      `{}`", parent.package_id(), features)))
-        }
-    }
+    assert!(feature_deps.is_empty(), "ended up with leftover features: {:?}", feature_deps);
 
     // Record what list of features is active for this package.
     if used_features.len() > 0 {
@@ -512,78 +500,66 @@ fn build_features(s: &Summary, method: Method)
     let mut visited = HashSet::new();
     match method {
         Method::Everything => {
-            for key in s.features().keys() {
-                try!(add_feature(s, key, &mut deps, &mut used, &mut visited));
-            }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                try!(add_feature(s, dep.name(), &mut deps, &mut used,
-                                 &mut visited));
+                deps.insert(dep.name().to_string(), vec![]);
+            }
+            for (name, feat) in s.features() {
+                try!(add_feature(s, name, feat, &mut deps, &mut used, &mut visited));
             }
         }
         Method::Required { features: requested_features, .. } =>  {
-            for feat in requested_features.iter() {
-                try!(add_feature(s, feat, &mut deps, &mut used, &mut visited));
+            let (good, bad): (Vec<_>, Vec<_>) = requested_features.iter()
+                .filter(|f| !f.is_empty())
+                .partition(|f| s.features().contains_key(*f));
+            if !bad.is_empty() {
+                return Err(human(format!("Package `{}` does not have these features: \
+                                          `{}`", s.package_id(), bad.connect(","))))
+            }
+            for (name, feat) in good.iter().map(|feat| (feat, &s.features()[**feat])) {
+                try!(add_feature(s, name, feat, &mut deps, &mut used, &mut visited));
             }
         }
     }
     match method {
         Method::Everything | Method::Required { uses_default_features: true, .. } => {
-            if s.features().get("default").is_some() &&
-               !visited.contains("default") {
-                try!(add_feature(s, "default", &mut deps, &mut used,
-                                 &mut visited));
+            match s.features().get("default") {
+                Some(feat) if !visited.contains("default") => {
+                    try!(add_feature(s, "default", feat, &mut deps, &mut used, &mut visited));
+                }
+                _ => {}
             }
         }
         _ => {}
     }
     return Ok((deps, used));
 
-    fn add_feature(s: &Summary, feat: &str,
+    fn add_feature(s: &Summary, name: &str, feat: &Feature,
                    deps: &mut HashMap<String, Vec<String>>,
                    used: &mut HashSet<String>,
                    visited: &mut HashSet<String>) -> CargoResult<()> {
-        if feat.is_empty() { return Ok(()) }
+        used.insert(name.to_string());
 
-        // If this feature is of the form `foo/bar`, then we just lookup package
-        // `foo` and enable its feature `bar`. Otherwise this feature is of the
-        // form `foo` and we need to recurse to enable the feature `foo` for our
-        // own package, which may end up enabling more features or just enabling
-        // a dependency.
-        let mut parts = feat.splitn(1, '/');
-        let feat_or_package = parts.next().unwrap();
-        match parts.next() {
-            Some(feat) => {
-                let package = feat_or_package;
-                match deps.entry(package.to_string()) {
-                    Occupied(e) => e.into_mut(),
-                    Vacant(e) => e.insert(Vec::new()),
-                }.push(feat.to_string());
-            }
-            None => {
-                let feat = feat_or_package;
-                if !visited.insert(feat.to_string()) {
-                    return Err(human(format!("Cyclic feature dependency: \
-                                              feature `{}` depends on itself",
-                                              feat)))
-                }
-                used.insert(feat.to_string());
-                match s.features().get(feat) {
-                    Some(recursive) => {
-                        for f in recursive.iter() {
-                            try!(add_feature(s, f, deps, used,
-                                             visited));
-                        }
-                    }
-                    None => {
-                        match deps.entry(feat.to_string()) {
-                            Occupied(..) => {} // already activated
-                            Vacant(e) => { e.insert(Vec::new()); }
-                        }
-                    }
-                }
-                visited.remove(&feat.to_string());
+        for dep in feat.dependencies() {
+            let mut parts = dep.splitn(1, '/');
+            let package = parts.next().unwrap();
+            let feats = match deps.entry(package.to_string()) {
+                Occupied(e) => e.into_mut(),
+                Vacant(e) => e.insert(Vec::new()),
+            };
+            if let Some(feat) = parts.next() {
+                feats.push(feat.to_string());
             }
         }
+
+        for subfeat in feat.features() {
+            if !visited.insert(subfeat.to_string()) {
+                return Err(human(format!("Cyclic feature dependency: feature \
+                                         `{}` depends on itself", subfeat)));
+            }
+            try!(add_feature(s, subfeat, &s.features()[*subfeat], deps, used, visited));
+            visited.remove(subfeat);
+        }
+
         Ok(())
     }
 }

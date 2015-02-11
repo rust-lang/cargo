@@ -6,7 +6,7 @@ use std::old_io::fs::PathExtensions;
 
 use curl::http;
 use git2;
-use registry::{Registry, NewCrate, NewCrateDependency};
+use registry::{Registry, NewCrate, NewCrateDependency, NewCrateFeature};
 use term::color::BLACK;
 
 use core::source::Source;
@@ -88,6 +88,12 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
             }.to_string(),
         }
     }).collect::<Vec<NewCrateDependency>>();
+    let features = pkg.summary().features().iter().map(|(name, feature)| {
+        (name.clone(), NewCrateFeature {
+            dependencies: feature.dependencies().to_vec(),
+            features: feature.features().to_vec(),
+        })
+    }).collect();
     let manifest = pkg.manifest();
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,
@@ -115,7 +121,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
         deps: deps,
-        features: pkg.summary().features().clone(),
+        features: features,
         authors: authors.clone(),
         description: description.clone(),
         homepage: homepage.clone(),
