@@ -1077,3 +1077,26 @@ test!(build_script_with_dynamic_native_dependency {
     assert_that(foo.cargo_process("build").env("SRC", Some(lib.as_vec())),
                 execs().with_status(0));
 });
+
+test!(profile_and_opt_level_set_correctly {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+              use std::env;
+
+              fn main() {
+                  assert_eq!(env::var("OPT_LEVEL").unwrap(), "3");
+                  assert_eq!(env::var("PROFILE").unwrap(), "bench");
+                  assert_eq!(env::var("DEBUG").unwrap(), "false");
+              }
+        "#);
+    assert_that(build.cargo_process("bench"),
+                execs().with_status(0));
+});

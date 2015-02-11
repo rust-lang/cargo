@@ -50,8 +50,13 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let to_exec = script_output.join(to_exec);
 
     // Start preparing the process to execute, starting out with some
-    // environment variables.
-    let profile = target.profile();
+    // environment variables. Note that the profile-related environment
+    // variables are not set with this the build script's profile but rather the
+    // package's profile (some target which isn't a build script).
+    let profile_target = pkg.targets().iter().find(|t| {
+        cx.is_relevant_target(t) && !t.profile().is_custom_build()
+    }).unwrap_or(target);
+    let profile = cx.profile(profile_target);
     let to_exec = CString::from_slice(to_exec.as_vec());
     let p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
     let mut p = p.env("OUT_DIR", Some(&build_output))
