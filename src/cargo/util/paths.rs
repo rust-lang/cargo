@@ -4,7 +4,7 @@ use std::old_io;
 use std::old_path::BytesContainer;
 use std::os;
 
-use util::{human, CargoResult};
+use util::{human, internal, CargoResult, ChainError};
 
 pub fn realpath(original: &Path) -> old_io::IoResult<Path> {
     const MAX_LINKS_FOLLOWED: usize = 256;
@@ -47,8 +47,12 @@ pub fn realpath(original: &Path) -> old_io::IoResult<Path> {
 #[allow(deprecated)] // need an OsStr-based Command first
 pub fn join_paths<T: BytesContainer>(paths: &[T], env: &str)
                                      -> CargoResult<Vec<u8>> {
-    os::join_paths(paths).map_err(|e| {
-        human(format!("failed to join search paths together: {}\n\
-                       Does ${} have an unterminated quote character?", e, env))
+    os::join_paths(paths).or_else(|e| {
+        let paths = paths.iter().map(|p| Path::new(p)).collect::<Vec<_>>();
+        internal(format!("failed to join path array: {:?}", paths)).chain_error(|| {
+            human(format!("failed to join search paths together: {}\n\
+                           Does ${} have an unterminated quote character?",
+                          e, env))
+        })
     })
 }
