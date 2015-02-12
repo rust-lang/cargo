@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>The Manifest Format</title>
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/all.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/prism.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+
+<a href='https://github.com/rust-lang/cargo' class='fork-me'>
+  <img src='images/forkme.png'/>
+</a>
+
+<div id="header">
+    <a href='https://crates.io' class='logo'>
+        <img id="logo" height=100 width=100 src='images/Cargo-Logo-Small.png'/>
+    </a>
+    <a href="index.html">
+        <h1>CARGO</h1>
+    </a>
+
+    <div class="search">
+        <form action="https://crates.io/search"
+              method="GET">
+            <input name="q" class="search" placeholder="Search crates" type="text"/>
+        </form>
+    </div>
+
+    <div class="nav">
+        <a href='https://crates.io/crates'>Browse All Crates</a>
+
+        <span class='sep'>|</span>
+
+        <div class="dropdown-container">
+            <button class="dropdown">
+                Documentation
+                <span class="arrow"></span>
+            </button>
+            <ul id="current-user-links" class="dropdown" data-bindattr-503="503">
+                <li><a href='index.html'>Getting Started</a></li>
+                <li><a href='guide.html'>Guide</a></li>
+                <li><a href='crates-io.html'>Using crates.io</a></li>
+                <li><a href='faq.html'>FAQ</a></li>
+                <li><a href='manifest.html'>Manifest Format</a></li>
+                <li><a href='build-script.html'>Build Scripts</a></li>
+                <li><a href='config.html'>Configuration</a></li>
+                <li><a href='pkgid-spec.html'>Package ID specs</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<main>
+
+
+    <h1 class="title">The Manifest Format</h1>
+    
+<h1 id="the-[package]-section" class='section-header'><a
+                           href="#the-[package]-section">The <code>[package]</code> Section</a></h1>
+<p>The first section in a <code>Cargo.toml</code> is <code>[package]</code>.</p>
+
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot; # the name of the package
+version = &quot;0.0.1&quot;    # the current version, obeying semver
+authors = [ &quot;you@example.com&quot; ]
+</code></pre>
+
+<p>All three of these fields are mandatory. Cargo bakes in the concept of
+<a href="http://semver.org/">Semantic Versioning</a>, so make sure you follow some
+basic rules:</p>
+
+<ul>
+<li>Before you reach 1.0.0, anything goes.</li>
+<li>After 1.0.0, only make breaking changes when you increment the major
+version. In Rust, breaking changes include adding fields to structs or
+variants to enums. Don&#39;t break the build.</li>
+<li>After 1.0.0, don&#39;t add any new public API (no new <code>pub</code> anything) in
+tiny versions. Always increment the minor version if you add any new
+<code>pub</code> structs, traits, fields, types, functions, methods or anything else.</li>
+<li>Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.</li>
+</ul>
+
+<h2 id="the-build-field-(optional)" class='section-header'><a
+                           href="#the-build-field-(optional)">The <code>build</code> Field (optional)</a></h2>
+<p>This field specifies a file in the repository which is a <a href="build-script.html">build
+script</a> for building native code. More information can be
+found in the build script <a href="build-script.html">guide</a>.</p>
+
+<pre><code class="language-toml">[package]
+# ...
+build = &quot;build.rs&quot;
+</code></pre>
+
+<h2 id="the-exclude-field-(optional)" class='section-header'><a
+                           href="#the-exclude-field-(optional)">The <code>exclude</code> Field (optional)</a></h2>
+<p>You can explicitly specify to Cargo that a set of globs should be ignored for
+the purposes of packaging and rebuilding a package. The globs specified in this
+field identify a set of files that are not included when a package is published
+as well as ignored for the purposes of detecting when to rebuild a package.</p>
+
+<p>If a VCS is being used for a package, the <code>exclude</code> field will be seeded with
+the VCS&#39;s ignore settings (<code>.gitignore</code> for git for example).</p>
+
+<pre><code class="language-toml">[package]
+# ...
+exclude = [&quot;build/**/*.o&quot;, &quot;doc/**/*.html&quot;]
+</code></pre>
+
+<h2 id="package-metadata" class='section-header'><a
+                           href="#package-metadata">Package metadata</a></h2>
+<p>There are a number of optional metadata fields also accepted under the
+<code>[package]</code> section:</p>
+
+<pre><code class="language-toml">[package]
+# ...
+
+# A short blurb about the package. This is not rendered in any format when
+# uploaded to crates.io (aka this is not markdown)
+description = &quot;...&quot;
+
+# These URLs point to more information about the repository
+documentation = &quot;...&quot;
+homepage = &quot;...&quot;
+repository = &quot;...&quot;
+
+# This points to a file in the repository (relative to this Cargo.toml). The
+# contents of this file are stored and indexed in the registry.
+readme = &quot;...&quot;
+
+# This is a small list of keywords used to categorize and search for this
+# package.
+keywords = [&quot;...&quot;, &quot;...&quot;]
+
+# This is a string description of the license for this package. Currently
+# crates.io will validate the license provided against a whitelist of known
+# license identifiers from http://spdx.org/licenses/. Multiple licenses can
+# be separated with a `/`
+license = &quot;...&quot;
+
+# If a project is using a nonstandard license, then this key may be specified in
+# lieu of the above key and must point to a file relative to this manifest
+# (similar to the readme key)
+license-file = &quot;...&quot;
+</code></pre>
+
+<p>The <a href="https://crates.io">crates.io</a> registry will render the description, display
+the license, link to the three URLs and categorize by the keywords. These keys
+provide useful information to users of the registry and also influence the
+search ranking of a crate. It is highly discouraged to omit everything in a
+published crate.</p>
+
+<h1 id="the-[dependencies.*]-sections" class='section-header'><a
+                           href="#the-[dependencies.*]-sections">The <code>[dependencies.*]</code> Sections</a></h1>
+<p>You list dependencies using <code>[dependencies.&lt;name&gt;]</code>. For example, if you
+wanted to depend on both <code>hammer</code> and <code>color</code>:</p>
+
+<pre><code class="language-toml">[package]
+# ...
+
+[dependencies.hammer]
+version = &quot;0.5.0&quot; # optional
+git = &quot;https://github.com/wycats/hammer.rs&quot;
+
+[dependencies.color]
+git = &quot;https://github.com/bjz/color-rs&quot;
+</code></pre>
+
+<p>You can specify the source of a dependency in one of two ways at the moment:</p>
+
+<ul>
+<li><code>git = &quot;&lt;git-url&gt;&quot;</code>: A git repository with a <code>Cargo.toml</code> in its root. The
+<code>rev</code>, <code>tag</code>, and <code>branch</code> options are also recognized to use something other
+than the <code>master</code> branch.</li>
+<li><code>path = &quot;&lt;relative-path&gt;&quot;</code>: A path relative to the current <code>Cargo.toml</code>
+with a <code>Cargo.toml</code> in its root.</li>
+</ul>
+
+<p>Dependencies from crates.io are not declared with separate sections:</p>
+
+<pre><code class="language-toml">[dependencies]
+hammer = &quot;0.5.0&quot;
+color = &quot;0.6.0&quot;
+</code></pre>
+
+<p>The syntax of the requirement strings is described in the <a href="crates-io.html#using-crates.io-based-crates">crates.io guide</a>.</p>
+
+<p>Platform-specific dependencies take the same format, but are listed under the
+<code>target.$triple</code> section:</p>
+
+<pre><code class="language-toml">[target.x86_64-unknown-linux-gnu.dependencies]
+openssl = &quot;1.0.1&quot;
+
+[target.x86_64-pc-windows-gnu.dependencies]
+winhttp = &quot;0.4.0&quot;
+</code></pre>
+
+<h1 id="the-[profile.*]-sections" class='section-header'><a
+                           href="#the-[profile.*]-sections">The <code>[profile.*]</code> Sections</a></h1>
+<p>Cargo supports custom configuration of how rustc is invoked through <strong>profiles</strong>
+at the top level. Any manifest may declare a profile, but only the <strong>top level</strong>
+project&#39;s profiles are actually read. All dependencies&#39; profiles will be
+overridden. This is done so the top-level project has control over how its
+dependencies are compiled.</p>
+
+<p>There are five currently supported profile names, all of which have the same
+configuration available to them. Listed below is the configuration available,
+along with the defaults for each profile.</p>
+
+<pre><code class="language-toml"># The development profile, used for `cargo build`
+[profile.dev]
+opt-level = 0  # Controls the --opt-level the compiler builds with
+debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
+rpath = false  # Controls whether the compiler passes `-C rpath`
+lto = false    # Controls `-C lto` for binaries and staticlibs
+
+# The release profile, used for `cargo build --release`
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+
+# The testing profile, used for `cargo test`
+[profile.test]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+
+# The benchmarking profile, used for `cargo bench`
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+
+# The documentation profile, used for `cargo doc`
+[profile.doc]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+</code></pre>
+
+<h1 id="the-[features]-section" class='section-header'><a
+                           href="#the-[features]-section">The <code>[features]</code> Section</a></h1>
+<p>Cargo supports <strong>features</strong> to allow expression of:</p>
+
+<ul>
+<li>Optional dependencies, which enhance a package, but are not required</li>
+<li>Clusters of optional dependencies, such as &quot;postgres&quot;, that would include the
+<code>postgres</code> package, the <code>postgres-macros</code> package, and possibly other packages
+(such as development-time mocking libraries, debugging tools, etc.)</li>
+</ul>
+
+<p>A feature of a package is either an optional dependency, or a set of other
+features. The format for specifying features is:</p>
+
+<pre><code class="language-toml">[package]
+name = &quot;awesome&quot;
+
+[features]
+
+# The &quot;default&quot; set of optional packages. Most people will
+# want to use these packages, but they are strictly optional.
+# Note that `session` is not a package but rather another
+# feature listed in this manifest.
+default = [&quot;jquery&quot;, &quot;uglifier&quot;, &quot;session&quot;]
+
+# The &quot;secure-password&quot; feature depends on the bcrypt package.
+# This aliasing will allow people to talk about the feature in
+# a higher-level way and allow this package to add more
+# requirements to the feature in the future.
+secure-password = [&quot;bcrypt&quot;]
+
+# Features can be used to reexport features of other packages.
+# The `session` feature of package `awesome` will ensure that the
+# `session` feature of the package `cookie` is also enabled.
+session = [&quot;cookie/session&quot;]
+
+[dependencies]
+
+# These packages are mandatory and form the core of this
+# package&#39;s distribution
+cookie = &quot;1.2.0&quot;
+oauth = &quot;1.1.0&quot;
+route-recognizer = &quot;=2.1.0&quot;
+
+# A list of all of the optional dependencies, some of which
+# are included in the above &quot;features&quot;. They can be opted
+# into by apps.
+[dependencies.jquery]
+version = &quot;1.0.2&quot;
+optional = true
+
+[dependencies.uglifier]
+version = &quot;1.5.3&quot;
+optional = true
+
+[dependencies.bcrypt]
+version = &quot;*&quot;
+optional = true
+
+[dependencies.civet]
+version = &quot;*&quot;
+optional = true
+</code></pre>
+
+<p>To use the package <code>awesome</code>:</p>
+
+<pre><code class="language-toml">[dependencies.awesome]
+version = &quot;1.3.5&quot;
+features = [&quot;secure-password&quot;, &quot;civet&quot;]
+
+# do not include the default features, and optionally
+# cherry-pick individual features
+default-features = false
+</code></pre>
+
+<h2 id="rules" class='section-header'><a
+                           href="#rules">Rules</a></h2>
+<p>The usage of features is subject to a few rules:</p>
+
+<ol>
+<li>Feature names must not conflict with other package names in the manifest.
+This is because they are opted into via <code>features = [...]</code>, which only has a
+single namespace</li>
+<li>With the exception of the <code>default</code> feature, all features are opt-in. To opt
+out of the default feature, use <code>default-features = false</code> and cherry-pick
+individual features.</li>
+<li>Feature groups are not allowed to cyclicly depend on one another.</li>
+<li>Dev-dependencies cannot be optional</li>
+<li>Features groups can only reference optional dependencies</li>
+<li>When a feature is selected, Cargo will call <code>rustc</code> with
+<code>--cfg feature=&quot;${feature_name}&quot;</code>. If a feature group is included,
+it and all of its individual features will be included. This can be
+tested in code via <code>#[cfg(feature = &quot;foo&quot;)]</code></li>
+</ol>
+
+<p>Note that it is explicitly allowed for features to not actually activate any
+optional dependencies. This allows packages to internally enable/disable
+features without requiring a new dependency.</p>
+
+<h2 id="usage-in-end-products" class='section-header'><a
+                           href="#usage-in-end-products">Usage In End Products</a></h2>
+<p>One major use-case for this feature is specifying optional features in
+end-products. For example, the Servo project may want to include optional
+features that people can enable or disable when they build it.</p>
+
+<p>In that case, Servo will describe features in its <code>Cargo.toml</code> and they can be
+enabled using command-line flags:</p>
+<pre id='rust-example-rendered' class='rust '>
+$ <span class='ident'>cargo</span> <span class='ident'>build</span> <span class='op'>-</span><span class='op'>-</span><span class='ident'>release</span> <span class='op'>-</span><span class='op'>-</span><span class='ident'>features</span> <span class='string'>&quot;shumway pdf&quot;</span>
+</pre>
+
+<p>Default features could be excluded using <code>--no-default-features</code>.</p>
+
+<h2 id="usage-in-packages" class='section-header'><a
+                           href="#usage-in-packages">Usage In Packages</a></h2>
+<p>In most cases, the concept of &quot;optional dependency&quot; in a library is best
+expressed as a separate package that the top-level application depends on.</p>
+
+<p>However, high-level packages, like Iron or Piston, may want the ability to
+curate a number of packages for easy installation. The current Cargo system
+allows them to curate a number of mandatory dependencies into a single package
+for easy installation.</p>
+
+<p>In some cases, packages may want to provide additional curation for <strong>optional</strong>
+dependencies:</p>
+
+<ul>
+<li>Grouping a number of low-level optional dependencies together into a single
+high-level &quot;feature&quot;.</li>
+<li>Specifying packages that are recommended (or suggested) to be included by
+users of the package.</li>
+<li>Including a feature (like <code>secure-password</code> in the motivating example) that
+will only work if an optional dependency is available, and would be difficult
+to implement as a separate package. For example, it may be overly difficult to
+design an IO package to be completely decoupled from OpenSSL, with opt-in via
+the inclusion of a separate package.</li>
+</ul>
+
+<p>In almost all cases, it is an antipattern to use these features outside of
+high-level packages that are designed for curation. If a feature is optional, it
+can almost certainly be expressed as a separate package.</p>
+
+<h1 id="the-[dev-dependencies.*]-sections" class='section-header'><a
+                           href="#the-[dev-dependencies.*]-sections">The <code>[dev-dependencies.*]</code> Sections</a></h1>
+<p>The format of this section is equivalent to <code>[dependencies.*]</code>. Dev-dependencies
+are not used when compiling a package for building, but are used for compiling
+tests and benchmarks.</p>
+
+<p>These dependencies are <em>not</em> propagated to other packages which depend on this
+package.</p>
+
+<h1 id="the-project-layout" class='section-header'><a
+                           href="#the-project-layout">The Project Layout</a></h1>
+<p>If your project is an executable, name the main source file <code>src/main.rs</code>.
+If it is a library, name the main source file <code>src/lib.rs</code>.</p>
+
+<p>Cargo will also treat any files located in <code>src/bin/*.rs</code> as
+executables.</p>
+
+<p>When you run <code>cargo build</code>, Cargo will compile all of these files into
+the <code>target</code> directory.</p>
+
+<pre><code class="language-notrust">▾ src/          # directory containing source files
+  ▾ bin/        # (optional) directory containing executables
+    *.rs
+  lib.rs        # the main entry point for libraries and packages
+  main.rs       # the main entry point for projects producing executables
+▾ examples/     # (optional) examples
+  *.rs
+▾ tests/        # (optional) integration tests
+  *.rs
+▾ benches/      # (optional) benchmarks
+  *.rs
+</code></pre>
+
+<h1 id="examples" class='section-header'><a
+                           href="#examples">Examples</a></h1>
+<p>Files located under <code>examples</code> are example uses of the functionality
+provided by the library.  When compiled, they are placed in the
+<code>target/examples</code> directory.</p>
+
+<p>They must compile as executables (with <code>main.rs</code>) and load in the
+library by using <code>extern crate &lt;library-name&gt;</code>. They are compiled when
+you run your tests to protect them from bitrotting.</p>
+
+<h1 id="tests" class='section-header'><a
+                           href="#tests">Tests</a></h1>
+<p>When you run <code>cargo test</code>, Cargo will:</p>
+
+<ul>
+<li>Compile your library&#39;s unit tests, which are in files reachable from
+<code>lib.rs</code>. Any sections marked with <code>#[cfg(test)]</code> will be included.</li>
+<li>Compile your library&#39;s integration tests, which are located in
+<code>tests</code>. Files in <code>tests</code> load in your library by using <code>extern crate
+&lt;library-name&gt;</code> like any other code that depends on it.</li>
+<li>Compile your library&#39;s examples.</li>
+</ul>
+
+<h1 id="configuring-a-target" class='section-header'><a
+                           href="#configuring-a-target">Configuring a target</a></h1>
+<p>All of the  <code>[[bin]]</code>, <code>[lib]</code>, <code>[[bench]]</code>, and <code>[[test]]</code> sections support
+similar configuration for specifying how a target should be built. The example
+below uses <code>[lib]</code>, but it also applies to all other sections as well. All
+values listed are the defaults for that option unless otherwise specified.</p>
+
+<pre><code class="language-toml">[package]
+# ...
+
+[lib]
+
+# The name of a target is the name of the library that will be generated. This
+# is defaulted to the name of the package or project.
+name = &quot;foo&quot;
+
+# This field points at where the crate is located, relative to the Cargo.toml.
+path = &quot;src/lib.rs&quot;
+
+# A flag for enabling unit tests for this target. This is used by `cargo test`.
+test = true
+
+# A flag for enabling documentation tests for this target. This is only
+# relevant for libraries, it has no effect on other sections. This is used by
+# `cargo test`.
+doctest = true
+
+# A flag for enabling benchmarks for this target. This is used by `cargo bench`.
+bench = true
+
+# A flag for enabling documentation of this target. This is used by `cargo doc`.
+doc = true
+
+# If the target is meant to be a compiler plugin, this field must be set to true
+# for cargo to correctly compile it and make it available for all dependencies.
+plugin = false
+</code></pre>
+
+<h1 id="building-dynamic-or-static-libraries" class='section-header'><a
+                           href="#building-dynamic-or-static-libraries">Building Dynamic or Static Libraries</a></h1>
+<p>If your project produces a library, you can specify which kind of
+library to build by explicitly listing the library in your <code>Cargo.toml</code>:</p>
+
+<pre><code class="language-toml"># ...
+
+[lib]
+
+name = &quot;...&quot;
+# this could be &quot;staticlib&quot; as well
+crate-type = [&quot;dylib&quot;]
+</code></pre>
+
+<p>The available options are <code>dylib</code>, <code>rlib</code>, and <code>staticlib</code>. You should only use
+this option in a project. Cargo will always compile <strong>packages</strong> (dependencies)
+based on the requirements of the project that includes them.</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "";
+    </script>
+    </main>
+<footer>
+<a href='index.html'>Install</a>
+<span class='sep'>|</span>
+<a href='index.html'>Getting Started</a>
+<span class='sep'>|</span>
+<a href='guide.html'>Guide</a>
+</footer>
+
+<script type='text/javascript' src='javascripts/prism.js'></script>
+<script type='text/javascript' src='javascripts/all.js'></script>
+
+
+</body>
+</html>
