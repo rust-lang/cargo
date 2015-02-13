@@ -26,7 +26,16 @@ pub fn run(manifest_path: &Path,
             !a.profile().is_custom_build()
     });
     let bin = try!(bins.next().chain_error(|| {
-        human("a bin target must be available for `cargo run`")
+        match (name.as_ref(), &target_kind) {
+            (Some(name), &TargetKind::Bin) => {
+                human(format!("no bin target named `{}` to run", name))
+            }
+            (Some(name), &TargetKind::Example) => {
+                human(format!("no example target named `{}` to run", name))
+            }
+            (Some(_), &TargetKind::Lib(..)) => unreachable!(),
+            (None, _) => human("a bin target must be available for `cargo run`"),
+        }
     }));
     match bins.next() {
         Some(..) => return Err(
