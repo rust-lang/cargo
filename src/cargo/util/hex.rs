@@ -1,12 +1,11 @@
-use std::old_io::MemWriter;
 use std::hash::{Hasher, Hash, SipHasher};
 
 use rustc_serialize::hex::ToHex;
 
 pub fn to_hex(num: u64) -> String {
-    let mut writer = MemWriter::with_capacity(8);
+    let mut writer = Vec::with_capacity(8);
     writer.write_le_u64(num).unwrap(); // this should never fail
-    writer.get_ref().to_hex()
+    writer.to_hex()
 }
 
 pub fn short_hash<H: Hash<SipHasher>>(hashable: &H) -> String {

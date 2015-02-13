@@ -23,14 +23,14 @@ test!(plugin_to_the_max {
         "#)
         .file("src/main.rs", r#"
             #![feature(plugin)]
-            #[plugin] #[no_link] extern crate bar;
+            #![plugin(bar)]
             extern crate foo_lib;
 
             fn main() { foo_lib::foo(); }
         "#)
         .file("src/foo_lib.rs", r#"
             #![feature(plugin)]
-            #[plugin] #[no_link] extern crate bar;
+            #![plugin(bar)]
 
             pub fn foo() {}
         "#);
@@ -122,7 +122,7 @@ test!(plugin_with_dynamic_native_dependency {
         "#)
         .file("src/main.rs", r#"
             #![feature(plugin)]
-            #[plugin] #[no_link] extern crate bar;
+            #![plugin(bar)]
 
             fn main() {}
         "#)

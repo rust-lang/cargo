@@ -95,7 +95,7 @@ fn process<V, F>(mut callback: F)
     let mut shell = shell(true);
     process_executed((|| {
         let config = try!(Config::new(&mut shell));
-        let args: Vec<_> = try!(env::args().map(|s| {
+        let args: Vec<_> = try!(env::args_os().map(|s| {
             s.into_string().map_err(|s| {
                 human(format!("invalid unicode in argument: {:?}", s))
             })

@@ -308,7 +308,8 @@ impl<'a> GitCheckout<'a> {
                 // as the submodule's head, then we can bail out and go to the
                 // next submodule.
                 let head_and_repo = child.open().and_then(|repo| {
-                    Ok((try!(repo.head()).target(), repo))
+                    let target = try!(repo.head()).target();
+                    Ok((target, repo))
                 });
                 let repo = match head_and_repo {
                     Ok((head, repo)) => {

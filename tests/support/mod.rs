@@ -227,7 +227,7 @@ impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
 
 // Path to cargo executables
 pub fn cargo_dir() -> Path {
-    env::var_string("CARGO_BIN_PATH").map(Path::new).ok()
+    env::var("CARGO_BIN_PATH").map(Path::new).ok()
         .or_else(|| env::current_exe().ok().map(|s| s.dir_path()))
         .unwrap_or_else(|| {
             panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")

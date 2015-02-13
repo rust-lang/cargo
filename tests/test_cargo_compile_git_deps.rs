@@ -461,7 +461,7 @@ test!(two_revs_same_deps {
             version = "0.0.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     }).unwrap();
 
     let repo = git2::Repository::open(&bar.root()).unwrap();
@@ -469,7 +469,7 @@ test!(two_revs_same_deps {
 
     // Commit the changes and make sure we trigger a recompile
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
-        pub fn bar() -> int { 2 }
+        pub fn bar() -> i32 { 2 }
     "#).unwrap();
     add(&repo);
     let rev2 = commit(&repo);
@@ -511,7 +511,7 @@ test!(two_revs_same_deps {
         "#, bar.url(), rev2).as_slice())
         .file("src/lib.rs", r#"
             extern crate bar;
-            pub fn baz() -> int { bar::bar() }
+            pub fn baz() -> i32 { bar::bar() }
         "#);
 
     baz.build();
@@ -860,7 +860,7 @@ test!(stale_cached_version {
             version = "0.0.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     }).unwrap();
 
     // Update the git database in the cache with the current state of the git
@@ -887,7 +887,7 @@ test!(stale_cached_version {
     // Update the repo, and simulate someone else updating the lockfile and then
     // us pulling it down.
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
-        pub fn bar() -> int { 1 + 0 }
+        pub fn bar() -> i32 { 1 + 0 }
     "#).unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     add(&repo);
@@ -1090,7 +1090,7 @@ test!(git_build_cmd_freshness {
             build = "build.rs"
         "#)
         .file("build.rs", "fn main() {}")
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
         .file(".gitignore", "
             src/bar.rs
         ")
@@ -1166,7 +1166,7 @@ test!(git_repo_changing_no_rebuild {
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     }).unwrap();
 
     // Lock p1 to the first rev in the git repo
@@ -1193,7 +1193,7 @@ test!(git_repo_changing_no_rebuild {
 
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs")).write_str(r#"
-        pub fn bar() -> int { 2 }
+        pub fn bar() -> i32 { 2 }
     "#).unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     add(&repo);
@@ -1256,7 +1256,7 @@ test!(git_dep_build_cmd {
             name = "bar"
         "#)
         .file("bar/src/bar.rs.in", r#"
-            pub fn gimme() -> int { 0 }
+            pub fn gimme() -> i32 { 0 }
         "#)
         .file("bar/build.rs", r#"
             use std::old_io::fs;
@@ -1278,7 +1278,7 @@ test!(git_dep_build_cmd {
 
     // Touching bar.rs.in should cause the `build` command to run again.
     let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).unwrap();
-    file.write_str(r#"pub fn gimme() -> int { 1 }"#).unwrap();
+    file.write_str(r#"pub fn gimme() -> i32 { 1 }"#).unwrap();
     drop(file);
 
     assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
@@ -1297,7 +1297,7 @@ test!(fetch_downloads {
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     }).unwrap();
 
     let p = project("p1")
@@ -1569,7 +1569,7 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
 
     // Just be sure to change a file
     File::create(&dep.root().join("src/lib.rs")).write_str(r#"
-        pub fn bar() -> int { 2 }
+        pub fn bar() -> i32 { 2 }
     "#).unwrap();
     add(&repo);
     commit(&repo);

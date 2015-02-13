@@ -85,7 +85,7 @@ impl CommandPrototype {
 
     pub fn get_env(&self, var: &str) -> Option<CString> {
         self.env.get(var).cloned().or_else(|| {
-            Some(env::var_string(var).ok().map(|s| CString::from_vec(s.into_bytes())))
+            Some(env::var(var).ok().map(|s| CString::from_vec(s.into_bytes())))
         }).and_then(|val| val)
     }
 

@@ -1,8 +1,8 @@
 extern crate toml;
 
 use std::collections::HashMap;
+use std::env;
 use std::old_io::File;
-use std::os;
 
 use cargo::util::{CliResult, Config};
 
@@ -47,6 +47,6 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
 fn fail(reason: &str, value: &str) -> CliResult<Option<Error>>{
     let mut h = HashMap::new();
     h.insert(reason.to_string(), value.to_string());
-    os::set_exit_status(1);
+    env::set_exit_status(1);
     Ok(Some(h))
 }

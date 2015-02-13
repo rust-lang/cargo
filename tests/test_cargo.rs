@@ -25,7 +25,7 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
 }
 
 fn path() -> Vec<Path> {
-    env::split_paths(&env::var("PATH").unwrap_or(OsString::new())).collect()
+    env::split_paths(&env::var_os("PATH").unwrap_or(OsString::new())).collect()
 }
 
 test!(list_commands_looks_at_path {

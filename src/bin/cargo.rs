@@ -245,7 +245,7 @@ fn list_command_directory() -> Vec<Path> {
         dirs.push(path.join("../lib/cargo"));
         dirs.push(path);
     }
-    if let Some(val) = env::var("PATH") {
+    if let Some(val) = env::var_os("PATH") {
         dirs.extend(env::split_paths(&val));
     }
     dirs
