@@ -17,9 +17,10 @@ else
 CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)
 CFG_PACKAGE_VERS=$(CFG_RELEASE)
 endif
-CFG_VER_DATE = $(shell git log -1 --pretty=format:'%ai')
+CFG_VER_DATE = $(shell git log -1 --date=short --pretty=format:'%cd')
 CFG_VER_HASH = $(shell git rev-parse --short HEAD)
-CFG_VERSION = $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE))
+CFG_BUILD_DATE = $(shell date +%F)
+CFG_VERSION = $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE)) (built $(CFG_BUILD_DATE))
 PKG_NAME = cargo-$(CFG_PACKAGE_VERS)
 
 ifdef CFG_DISABLE_VERIFY_INSTALL
