@@ -1,5 +1,5 @@
 use std::fmt::{self, Formatter};
-use std::old_io::{USER_DIR};
+use std::old_io::{USER_DIR, stdout, stdin};
 use std::old_io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
@@ -340,6 +340,22 @@ impl<'a> GitCheckout<'a> {
     }
 }
 
+fn prompt_for_password(username: Option<&str>)->(String, String) {
+    let mut stdout = stdout();
+    let mut stdin = stdin();
+    let username = match username {
+        Some(x) => x.to_string(),
+        _ => {
+            stdout.write_str("Enter username:").unwrap();
+            stdout.flush().unwrap();
+            stdin.read_line().unwrap().trim().to_string()
+        }
+    };
+    stdout.write_str(&format!("Enter password for {}:", &username)).unwrap();
+    stdout.flush().unwrap();
+    (username, stdin.read_line().unwrap().trim().to_string())
+}
+
 fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
                              -> CargoResult<T>
     where F: FnMut(&mut git2::Credentials) -> CargoResult<T>
@@ -371,7 +387,13 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
                                .unwrap_or("git".to_string());
             git2::Cred::ssh_key_from_agent(&user)
         } else if allowed.contains(git2::USER_PASS_PLAINTEXT) {
-            git2::Cred::credential_helper(cfg, url, username)
+            match git2::Cred::credential_helper(cfg, url, username) {
+                Err(_) => {
+                    let (username, password) = prompt_for_password(username);
+                    git2::Cred::userpass_plaintext(&username, &password)
+                },
+                x => x
+            }
         } else if allowed.contains(git2::DEFAULT) {
             git2::Cred::default()
         } else {
