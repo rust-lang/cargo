@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::dynamic_lib::DynamicLibrary;
 use std::ffi::CString;
 use std::old_path::BytesContainer;
@@ -42,6 +42,9 @@ pub struct Compilation {
 
     /// Top-level package that was compiled
     pub package: Package,
+
+    /// Features enabled during this compilation.
+    pub features: HashSet<String>,
 }
 
 impl Compilation {
@@ -55,6 +58,7 @@ impl Compilation {
             binaries: Vec::new(),
             extra_env: HashMap::new(),
             package: pkg.clone(),
+            features: HashSet::new(),
         }
     }
 

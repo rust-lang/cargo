@@ -14,7 +14,7 @@ pub struct Profiler {
     desc: String,
 }
 
-fn enabled() -> bool { env::var("CARGO_PROFILE").is_some() }
+fn enabled() -> bool { env::var_os("CARGO_PROFILE").is_some() }
 
 pub fn start<T: fmt::Display>(desc: T) -> Profiler {
     if !enabled() { return Profiler { desc: String::new() } }

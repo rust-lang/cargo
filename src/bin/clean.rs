@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Config};
@@ -33,7 +33,7 @@ and its format, see the `cargo help pkgid` command.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.shell().set_verbose(options.flag_verbose);
-    debug!("executing; cmd=cargo-clean; args={:?}", os::args());
+    debug!("executing; cmd=cargo-clean; args={:?}", env::args().collect::<Vec<_>>());
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let opts = ops::CleanOptions {

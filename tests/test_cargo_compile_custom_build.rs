@@ -79,32 +79,32 @@ test!(custom_build_env_vars {
             use std::env;
             use std::old_io::fs::PathExtensions;
             fn main() {{
-                let _target = env::var_string("TARGET").unwrap();
+                let _target = env::var("TARGET").unwrap();
 
-                let _ncpus = env::var_string("NUM_JOBS").unwrap();
+                let _ncpus = env::var("NUM_JOBS").unwrap();
 
-                let out = env::var_string("CARGO_MANIFEST_DIR").unwrap();
+                let out = env::var("CARGO_MANIFEST_DIR").unwrap();
                 let p1 = Path::new(out);
                 let cwd = env::current_dir().unwrap();
                 let p2 = cwd.join(Path::new(file!()).dir_path().dir_path());
                 assert!(p1 == p2, "{{}} != {{}}", p1.display(), p2.display());
 
-                let opt = env::var_string("OPT_LEVEL").unwrap();
+                let opt = env::var("OPT_LEVEL").unwrap();
                 assert_eq!(opt.as_slice(), "0");
 
-                let opt = env::var_string("PROFILE").unwrap();
+                let opt = env::var("PROFILE").unwrap();
                 assert_eq!(opt.as_slice(), "compile");
 
-                let debug = env::var_string("DEBUG").unwrap();
+                let debug = env::var("DEBUG").unwrap();
                 assert_eq!(debug.as_slice(), "true");
 
-                let out = env::var_string("OUT_DIR").unwrap();
+                let out = env::var("OUT_DIR").unwrap();
                 assert!(out.as_slice().starts_with(r"{0}"));
                 assert!(Path::new(out).is_dir());
 
-                let _host = env::var_string("HOST").unwrap();
+                let _host = env::var("HOST").unwrap();
 
-                let _feat = env::var_string("CARGO_FEATURE_FOO").unwrap();
+                let _feat = env::var("CARGO_FEATURE_FOO").unwrap();
             }}
         "#,
         p.root().join("target").join("build").display());
@@ -269,8 +269,8 @@ test!(overrides_and_links {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var_string("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(env::var_string("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").unwrap().as_slice(), "baz");
             }
         "#)
         .file(".cargo/config", format!(r#"
@@ -342,8 +342,8 @@ test!(links_passes_env_vars {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var_string("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(env::var_string("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").unwrap().as_slice(), "baz");
             }
         "#)
         .file("a/Cargo.toml", r#"
@@ -441,8 +441,8 @@ test!(rebuild_continues_to_pass_env_vars {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var_string("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(env::var_string("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").unwrap().as_slice(), "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").unwrap().as_slice(), "baz");
             }
         "#);
 
@@ -727,7 +727,7 @@ test!(out_dir_is_preserved {
             use std::env;
             use std::old_io::File;
             fn main() {
-                let out = env::var_string("OUT_DIR").unwrap();
+                let out = env::var("OUT_DIR").unwrap();
                 File::create(&Path::new(out).join("foo")).unwrap();
             }
         "#);
@@ -742,7 +742,7 @@ test!(out_dir_is_preserved {
         use std::env;
         use std::old_io::File;
         fn main() {
-            let out = env::var_string("OUT_DIR").unwrap();
+            let out = env::var("OUT_DIR").unwrap();
             File::open(&Path::new(out).join("foo")).unwrap();
         }
     "#).unwrap();
@@ -808,7 +808,7 @@ test!(code_generation {
             use std::old_io::File;
 
             fn main() {
-                let dst = Path::new(env::var_string("OUT_DIR").unwrap());
+                let dst = Path::new(env::var("OUT_DIR").unwrap());
                 let mut f = File::create(&dst.join("hello.rs")).unwrap();
                 f.write_str("
                     pub fn message() -> &'static str {
@@ -972,9 +972,9 @@ test!(test_a_lib_with_a_build_command {
             use std::old_io::File;
 
             fn main() {
-                let out = Path::new(env::var_string("OUT_DIR").unwrap());
+                let out = Path::new(env::var("OUT_DIR").unwrap());
                 File::create(&out.join("foo.rs")).write_str("
-                    fn foo() -> int { 1 }
+                    fn foo() -> i32 { 1 }
                 ").unwrap();
             }
         "#);
@@ -1062,7 +1062,7 @@ test!(build_script_with_dynamic_native_dependency {
             use std::env;
 
             fn main() {
-                let src = Path::new(env::var_string("SRC").unwrap());
+                let src = Path::new(env::var("SRC").unwrap());
                 println!("cargo:rustc-flags=-L {}", src.dir_path().display());
             }
         "#)

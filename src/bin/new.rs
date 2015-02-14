@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Config};
@@ -28,7 +28,7 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-new; args={:?}", os::args());
+    debug!("executing; cmd=cargo-new; args={:?}", env::args().collect::<Vec<_>>());
     config.shell().set_verbose(options.flag_verbose);
 
     let Options { flag_bin, arg_path, flag_vcs, .. } = options;

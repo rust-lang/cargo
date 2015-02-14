@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Config};
@@ -49,7 +49,7 @@ For more information about package id specifications, see `cargo help pkgid`.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-update; args={:?}", os::args());
+    debug!("executing; cmd=cargo-update; args={:?}", env::args().collect::<Vec<_>>());
     config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 

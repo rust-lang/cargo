@@ -191,7 +191,7 @@ pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
         }
         Err(..) => {}
     }
-    Ok(env::var_string("HTTP_PROXY").ok())
+    Ok(env::var("HTTP_PROXY").ok())
 }
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
@@ -199,7 +199,7 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
         Some((s, _)) => return Ok(Some(s)),
         None => {}
     }
-    Ok(env::var_string("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
+    Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {

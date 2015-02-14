@@ -380,7 +380,7 @@ impl ConfigValue {
 }
 
 fn homedir() -> Option<Path> {
-    let cargo_home = env::var_string("CARGO_HOME").map(|p| Path::new(p)).ok();
+    let cargo_home = env::var("CARGO_HOME").map(|p| Path::new(p)).ok();
     let user_home = env::home_dir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }

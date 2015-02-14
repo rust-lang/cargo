@@ -12,7 +12,7 @@ fn setup() {
 
 fn disabled() -> bool {
     // First, disable if ./configure requested so
-    match env::var_string("CFG_DISABLE_CROSS_TESTS") {
+    match env::var("CFG_DISABLE_CROSS_TESTS") {
         Ok(ref s) if s.as_slice() == "1" => return true,
         _ => {}
     }
@@ -44,7 +44,7 @@ test!(simple_cross {
         "#)
         .file("build.rs", format!(r#"
             fn main() {{
-                assert_eq!(std::env::var_string("TARGET").unwrap().as_slice(), "{}");
+                assert_eq!(std::env::var("TARGET").unwrap().as_slice(), "{}");
             }}
         "#, alternate()).as_slice())
         .file("src/main.rs", r#"
@@ -119,8 +119,7 @@ test!(plugin_deps {
         "#)
         .file("src/main.rs", r#"
             #![feature(plugin)]
-            #[plugin] #[no_link]
-            extern crate bar;
+            #![plugin(bar)]
             extern crate baz;
             fn main() {
                 assert_eq!(bar!(), baz::baz());
@@ -155,7 +154,7 @@ test!(plugin_deps {
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
                           -> Box<MacResult + 'static> {
-                MacExpr::new(quote_expr!(cx, 1i))
+                MacExpr::new(quote_expr!(cx, 1))
             }
         "#);
     let baz = project("baz")
@@ -165,7 +164,7 @@ test!(plugin_deps {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
     bar.build();
     baz.build();
 
@@ -197,8 +196,7 @@ test!(plugin_to_the_max {
         "#)
         .file("src/main.rs", r#"
             #![feature(plugin)]
-            #[plugin] #[no_link]
-            extern crate bar;
+            #![plugin(bar)]
             extern crate baz;
             fn main() {
                 assert_eq!(bar!(), baz::baz());
@@ -320,7 +318,7 @@ test!(plugin_with_extra_dylib_dep {
         "#)
         .file("src/main.rs", r#"
             #![feature(plugin)]
-            #[plugin] #[no_link] extern crate bar;
+            #![plugin(bar)]
 
             fn main() {}
         "#);
@@ -362,7 +360,7 @@ test!(plugin_with_extra_dylib_dep {
             name = "baz"
             crate_type = ["dylib"]
         "#)
-        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
     bar.build();
     baz.build();
 
@@ -464,8 +462,8 @@ test!(cross_with_a_build_script {
         .file("build.rs", format!(r#"
             use std::env;
             fn main() {{
-                assert_eq!(env::var_string("TARGET").unwrap().as_slice(), "{0}");
-                let mut path = Path::new(env::var_string("OUT_DIR").unwrap());
+                assert_eq!(env::var("TARGET").unwrap().as_slice(), "{0}");
+                let mut path = Path::new(env::var("OUT_DIR").unwrap());
                 assert_eq!(path.filename().unwrap(), b"out");
                 path.pop();
                 assert!(path.filename().unwrap().starts_with(b"foo-"));
@@ -530,7 +528,7 @@ test!(build_script_needed_for_host_and_target {
         .file("d1/build.rs", r#"
             use std::env;
             fn main() {
-                let target = env::var_string("TARGET").unwrap();
+                let target = env::var("TARGET").unwrap();
                 println!("cargo:rustc-flags=-L /path/to/{}", target);
             }
         "#)
@@ -643,9 +641,9 @@ test!(build_script_only_host {
             use std::env;
 
             fn main() {
-                assert!(env::var_string("OUT_DIR").unwrap()
+                assert!(env::var("OUT_DIR").unwrap()
                                              .contains("target/build/d1-"),
-                        "bad: {:?}", env::var_string("OUT_DIR"));
+                        "bad: {:?}", env::var("OUT_DIR"));
             }
         "#);
 

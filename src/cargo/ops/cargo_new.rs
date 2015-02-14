@@ -134,8 +134,8 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     let git_config = git_config.as_ref();
     let name = git_config.and_then(|g| g.get_str("user.name").ok())
                          .map(|s| s.to_string())
-                         .or_else(|| env::var_string("USER").ok())      // unix
-                         .or_else(|| env::var_string("USERNAME").ok()); // windows
+                         .or_else(|| env::var("USER").ok())      // unix
+                         .or_else(|| env::var("USERNAME").ok()); // windows
     let name = match name {
         Some(name) => name,
         None => {

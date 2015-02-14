@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 use std::old_path;
 
 use support::{project, execs};
@@ -110,6 +110,6 @@ test!(top_level_overrides_deps {
                     dir = p.root().display(),
                     url = p.url(),
                     sep = old_path::SEP,
-                    prefix = os::consts::DLL_PREFIX,
-                    suffix = os::consts::DLL_SUFFIX).as_slice()));
+                    prefix = env::consts::DLL_PREFIX,
+                    suffix = env::consts::DLL_SUFFIX).as_slice()));
 });

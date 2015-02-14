@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 
 use cargo::ops::CompileOptions;
 use cargo::ops;
@@ -47,7 +47,7 @@ the --release flag will use the `release` profile instead.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-build; args={:?}", os::args());
+    debug!("executing; cmd=cargo-build; args={:?}", env::args().collect::<Vec<_>>());
     config.shell().set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));

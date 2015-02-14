@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 
 use cargo;
 use cargo::util::{CliResult, Config};
@@ -16,7 +16,7 @@ Options:
 ";
 
 pub fn execute(_: Options, _: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-version; args={:?}", os::args());
+    debug!("executing; cmd=cargo-version; args={:?}", env::args().collect::<Vec<_>>());
 
     println!("{}", cargo::version());
 

@@ -1259,7 +1259,7 @@ test!(freshness_ignores_excluded {
             exclude = ["src/b*.rs"]
         "#)
         .file("build.rs", "fn main() {}")
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }");
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }");
     foo.build();
     foo.root().move_into_the_past().unwrap();
 
@@ -1297,15 +1297,15 @@ test!(rebuild_preserves_out_dir {
             use std::old_io::File;
 
             fn main() {
-                let path = Path::new(env::var_string("OUT_DIR").unwrap()).join("foo");
-                if env::var("FIRST").is_some() {
+                let path = Path::new(env::var("OUT_DIR").unwrap()).join("foo");
+                if env::var_os("FIRST").is_some() {
                     File::create(&path).unwrap();
                 } else {
                     File::create(&path).unwrap();
                 }
             }
         "#)
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }");
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }");
     foo.build();
     foo.root().move_into_the_past().unwrap();
 
@@ -1335,7 +1335,7 @@ test!(dep_no_libs {
             [dependencies.bar]
             path = "bar"
         "#)
-        .file("src/lib.rs", "pub fn bar() -> int { 1 }")
+        .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
         .file("bar/Cargo.toml", r#"
             [package]
             name = "bar"
