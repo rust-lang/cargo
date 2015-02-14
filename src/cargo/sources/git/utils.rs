@@ -351,7 +351,7 @@ fn prompt_for_password(username: Option<&str>)->(String, String) {
             stdin.read_line().unwrap().trim().to_string()
         }
     };
-    stdout.write_str(&*format!("Enter password for {}:", &username)).unwrap();
+    stdout.write_str(&format!("Enter password for {}:", &username)).unwrap();
     stdout.flush().unwrap();
     (username, stdin.read_line().unwrap().trim().to_string())
 }
