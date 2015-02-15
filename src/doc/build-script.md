@@ -209,13 +209,17 @@ some code. Let's see what's inside the build script:
 ```rust,no_run
 // build.rs
 
-use std::os;
-use std::io::File;
+use std::env;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 
 fn main() {
-    let dst = Path::new(os::getenv("OUT_DIR").unwrap());
-    let mut f = File::create(&dst.join("hello.rs")).unwrap();
-    f.write_str("
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let dest_path = Path::new(&out_dir).join("hello.rs");
+    let mut f = File::create(&dest_path).unwrap();
+
+    f.write_all(b"
         pub fn message() -> &'static str {
             \"Hello, World!\"
         }
@@ -294,19 +298,19 @@ the build script now:
 ```rust,no_run
 // build.rs
 
-use std::io::Command;
-use std::os;
+use std::process::Command;
+use std::env;
 
 fn main() {
-    let out_dir = os::getenv("OUT_DIR").unwrap();
+    let out_dir = env::var("OUT_DIR").unwrap();
 
     // note that there are a number of downsides to this approach, the comments
     // below detail how to improve the portability of these commands.
     Command::new("gcc").args(&["src/hello.c", "-c", "-o"])
-                       .arg(format!("{}/hello.o", out_dir))
+                       .arg(&format!("{}/hello.o", out_dir))
                        .status().unwrap();
     Command::new("ar").args(&["crus", "libhello.a", "hello.o"])
-                      .cwd(&Path::new(&out_dir))
+                      .current_dir(&Path::new(&out_dir))
                       .status().unwrap();
 
     println!("cargo:rustc-flags=-L native={} -l static=hello", out_dir);
