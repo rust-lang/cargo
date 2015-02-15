@@ -530,8 +530,7 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
             });
             for _ in 0 .. 3 {
                 if path.is_ok() { break }
-                println!("Failed to download package `{}` from {}, retrying",
-                                package, url);
+                try!(self.config.shell().status("Refetching", package));
                 path = self.download_package(package, &url).chain_error(|| {
                     internal(format!("Failed to download package `{}` from {}",
                                 package, url))
