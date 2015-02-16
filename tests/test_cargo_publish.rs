@@ -24,7 +24,7 @@ fn setup() {
             index = "{reg}"
             token = "api-token"
     "#, reg = registry()).as_slice()).unwrap();
-    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), old_io::USER_DIR).unwrap();
+    fs::mkdir_recursive(&upload_path().join("api/v2/crates"), old_io::USER_DIR).unwrap();
 
     repo(&registry_path())
         .file("config.json", format!(r#"{{
@@ -58,7 +58,7 @@ test!(simple {
         dir = p.url(),
         reg = registry()).as_slice()));
 
-    let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
+    let mut f = File::open(&upload_path().join("api/v2/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let sz = f.read_le_u32().unwrap();
     f.seek(sz as i64 + 4, old_io::SeekCur).unwrap();

@@ -10,7 +10,7 @@ use semver;
 use rustc_serialize::{Decodable, Decoder};
 
 use core::SourceId;
-use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
+use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference, Feature};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
@@ -197,6 +197,18 @@ pub struct DetailedTomlDependency {
 }
 
 #[derive(RustcDecodable)]
+pub enum TomlFeature {
+    Simple(Vec<String>),
+    Detailed(DetailedTomlFeature),
+}
+
+#[derive(RustcDecodable, Clone)]
+pub struct DetailedTomlFeature {
+    dependencies: Vec<String>,
+    features: Vec<String>,
+}
+
+#[derive(RustcDecodable)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -209,7 +221,7 @@ pub struct TomlManifest {
     dependencies: Option<HashMap<String, TomlDependency>>,
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
     build_dependencies: Option<HashMap<String, TomlDependency>>,
-    features: Option<HashMap<String, Vec<String>>>,
+    features: Option<HashMap<String, TomlFeature>>,
     target: Option<HashMap<String, TomlPlatform>>,
 }
 
@@ -491,9 +503,7 @@ impl TomlManifest {
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 
-        let summary = try!(Summary::new(pkgid, deps,
-                                        self.features.clone()
-                                            .unwrap_or(HashMap::new())));
+        let summary = try!(Summary::new(pkgid, deps, translate_features(&self.features)));
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
@@ -576,6 +586,24 @@ fn process_dependencies<F>(cx: &mut Context,
     }
 
     Ok(())
+}
+
+fn translate_features(raw: &Option<HashMap<String, TomlFeature>>) -> HashMap<String, Feature> {
+    if let &None = raw {
+        return HashMap::new();
+    }
+
+    raw.as_ref().unwrap().iter().map(|(name, desc)| {
+        let desc = match *desc {
+            TomlFeature::Simple(ref features) => Feature::new().set_dependencies(features.clone()),
+            TomlFeature::Detailed(ref detail) => {
+                Feature::new()
+                    .set_features(detail.features.clone())
+                    .set_dependencies(detail.dependencies.clone())
+            }
+        };
+        (name.clone(), desc)
+    }).collect()
 }
 
 #[derive(RustcDecodable, Debug, Clone)]

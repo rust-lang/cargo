@@ -8,6 +8,7 @@ pub use self::resolver::Resolve;
 pub use self::shell::{Shell, MultiShell, ShellConfig};
 pub use self::source::{Source, SourceId, SourceMap, SourceSet, GitReference};
 pub use self::summary::Summary;
+pub use self::feature::Feature;
 
 pub mod source;
 pub mod package;
@@ -18,4 +19,5 @@ pub mod resolver;
 pub mod summary;
 pub mod shell;
 pub mod registry;
+pub mod feature;
 mod package_id_spec;

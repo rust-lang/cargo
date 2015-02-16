@@ -51,7 +51,7 @@ pub struct NewCrate {
     pub name: String,
     pub vers: String,
     pub deps: Vec<NewCrateDependency>,
-    pub features: HashMap<String, Vec<String>>,
+    pub features: HashMap<String, NewCrateFeature>,
     pub authors: Vec<String>,
     pub description: Option<String>,
     pub documentation: Option<String>,
@@ -72,6 +72,12 @@ pub struct NewCrateDependency {
     pub version_req: String,
     pub target: Option<String>,
     pub kind: String,
+}
+
+#[derive(RustcEncodable)]
+pub struct NewCrateFeature {
+    pub dependencies: Vec<String>,
+    pub features: Vec<String>,
 }
 
 #[derive(RustcDecodable)]
@@ -146,7 +152,7 @@ impl Registry {
         let mut body = ChainedReader::new(vec![Box::new(header) as Box<Reader>,
                                                Box::new(tarball) as Box<Reader>].into_iter());
 
-        let url = format!("{}/api/v1/crates/new", self.host);
+        let url = format!("{}/api/v2/crates/new", self.host);
 
         let token = try!(self.token.as_ref().ok_or(Error::TokenMissing));
         let request = self.handle.put(url, &mut body)
@@ -194,7 +200,7 @@ impl Registry {
     fn req(&mut self, path: String, body: Option<&[u8]>,
            method: Method, authorized: Auth) -> Result<String> {
         let mut req = Request::new(&mut self.handle, method)
-                              .uri(format!("{}/api/v1{}", self.host, path))
+                              .uri(format!("{}/api/v2{}", self.host, path))
                               .header("Accept", "application/json")
                               .content_type("application/json");
 
