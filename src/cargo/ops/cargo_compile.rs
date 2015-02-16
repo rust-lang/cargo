@@ -109,8 +109,13 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         try!(registry.add_overrides(override_ids));
 
         let platform = target.as_ref().map(|e| e.as_slice()).or(Some(rustc_host.as_slice()));
-        let method = Method::Required(dev_deps, &features,
-                                      !no_default_features, platform);
+
+        let method = Method::Required{
+            dev_deps: dev_deps,
+            features: &features,
+            uses_default_features: !no_default_features,
+            target_platform: platform};
+
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, package, method,
                                                 Some(&resolve), None));

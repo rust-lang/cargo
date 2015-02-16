@@ -33,10 +33,10 @@ pub struct Resolve {
 #[derive(Copy)]
 pub enum Method<'a> {
     Everything,
-    Required(/* dev_deps = */ bool,
-             /* features = */ &'a [String],
-             /* uses_default_features = */ bool,
-             /* target_platform = */ Option<&'a str>),
+    Required{ dev_deps: bool,
+              features: &'a [String],
+              uses_default_features: bool,
+              target_platform: Option<&'a str>},
 }
 
 impl Resolve {
@@ -170,7 +170,7 @@ fn activate(mut cx: Box<Context>,
 
     // Extracting the platform request.
     let platform = match method {
-        Method::Required(_, _, _, platform) => platform,
+        Method::Required{target_platform: platform, ..} => platform,
         Method::Everything => None,
     };
 
@@ -230,7 +230,7 @@ fn flag_activated(cx: &mut Context,
     }
     debug!("checking if {} is already activated", summary.package_id());
     let features = match *method {
-        Method::Required(_, features, _, _) => features,
+        Method::Required{features, ..} => features,
         Method::Everything => return false,
     };
     match cx.resolve.features(id) {
@@ -247,8 +247,12 @@ fn activate_deps<'a>(cx: Box<Context>,
                      cur: usize) -> CargoResult<CargoResult<Box<Context>>> {
     if cur == deps.len() { return Ok(Ok(cx)) }
     let (dep, ref candidates, ref features) = deps[cur];
-    let method = Method::Required(false, &features,
-                                  dep.uses_default_features(), platform);
+
+    let method = Method::Required{
+        dev_deps: false,
+        features: &features,
+        uses_default_features: dep.uses_default_features(),
+        target_platform: platform};
 
     let key = (dep.name().to_string(), dep.source_id().clone());
     let prev_active = cx.activations.get(&key)
@@ -424,7 +428,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
                                                (&'a Dependency, Vec<String>)>> {
     let dev_deps = match method {
         Method::Everything => true,
-        Method::Required(dev_deps, _, _, _) => dev_deps,
+        Method::Required{dev_deps, ..} => dev_deps,
     };
 
     // First, filter by dev-dependencies
@@ -434,7 +438,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // Second, ignoring dependencies that should not be compiled for this platform
     let deps = deps.filter(|d| {
         match method {
-            Method::Required(_, _, _, Some(ref platform)) => {
+            Method::Required{target_platform: Some(ref platform), ..} => {
                 d.is_active_for_platform(platform)
             },
             _ => true
@@ -514,14 +518,15 @@ fn build_features(s: &Summary, method: Method)
                                  &mut visited));
             }
         }
-        Method::Required(_, requested_features, _, _) =>  {
+        Method::Required{features: requested_features, ..} =>  {
             for feat in requested_features.iter() {
                 try!(add_feature(s, feat, &mut deps, &mut used, &mut visited));
             }
         }
     }
     match method {
-        Method::Everything | Method::Required(_, _, true, _) => {
+        Method::Everything |
+        Method::Required{uses_default_features: true, ..} => {
             if s.features().get("default").is_some() &&
                !visited.contains("default") {
                 try!(add_feature(s, "default", &mut deps, &mut used,
