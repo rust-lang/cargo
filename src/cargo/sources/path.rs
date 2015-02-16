@@ -162,7 +162,10 @@ impl<'a, 'b> PathSource<'a, 'b> {
                 let rel = try!(rel.to_str().chain_error(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 }));
-                let submodule = try!(repo.find_submodule(rel));
+                // Git submodules are currently only named through `/` path
+                // separators, explicitly not `\` which windows uses. Who knew?
+                let rel = rel.replace(r"\", "/");
+                let submodule = try!(repo.find_submodule(&rel));
                 let repo = match submodule.open() {
                     Ok(repo) => repo,
                     Err(..) => continue,
