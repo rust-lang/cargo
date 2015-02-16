@@ -61,6 +61,7 @@ TARGET_$(1) = $$(TARGET_ROOT)/$(1)
 endif
 DISTDIR_$(1) = $$(TARGET_$(1))/dist
 IMGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)-image
+OVERLAYDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)-overlay
 PKGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)
 BIN_TARGETS_$(1) := $$(BIN_TARGETS:%=$$(TARGET_$(1))/%$$(X))
 endef
@@ -138,8 +139,6 @@ $(DOC_DIR)/%: src/doc/%
 
 # === Distribution
 
-NON_INSTALLED_PREFIXES := README.md,LICENSE-MIT,LICENSE-APACHE,LICENSE-THIRD-PARTY
-
 define DO_DIST_TARGET
 dist-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 
@@ -174,19 +173,23 @@ prepare-image-$(1):
 	cp src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))/etc/bash_completion.d/cargo
 	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
 		$$(IMGDIR_$(1))/share/doc/cargo
-	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
-		$$(IMGDIR_$(1))
 
-$$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-image-$(1)
+prepare-overlay-$(1):
+	rm -Rf $$(OVERLAYDIR_$(1))
+	mkdir -p $$(OVERLAYDIR_$(1))
+	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
+		$$(OVERLAYDIR_$(1))
+	echo "$(CFG_VERSION)" > $$(OVERLAYDIR_$(1))/version
+
+$$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-image-$(1) prepare-overlay-$(1)
 	sh src/rust-installer/gen-installer.sh \
-		--product-name=Cargo \
-		--verify-bin=cargo \
+		--product-name=Rust \
 		--rel-manifest-dir=rustlib \
-		--success-message=Cargo-is-ready-to-roll. \
+		--success-message=Rust-is-ready-to-roll. \
 		--image-dir=$$(IMGDIR_$(1)) \
 		--work-dir=./$$(DISTDIR_$(1)) \
 		--output-dir=./$$(DISTDIR_$(1)) \
-		--non-installed-prefixes=$$(NON_INSTALLED_PREFIXES) \
+		--non-installed-overlay=$$(OVERLAYDIR_$(1)) \
 		--package-name=$$(PKG_NAME)-$(1) \
 		--component-name=cargo \
 		--legacy-manifest-dirs=rustlib,cargo
