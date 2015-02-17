@@ -1,3 +1,4 @@
+use std::env;
 use std::error::{FromError, Error};
 use std::fmt;
 use std::old_io::IoError;
@@ -252,6 +253,7 @@ from_error! {
     toml::Error,
     url::ParseError,
     toml::DecodeError,
+    env::VarError,
 }
 
 impl<E: CargoError> FromError<Human<E>> for Box<CargoError> {
@@ -269,6 +271,7 @@ impl CargoError for toml::Error {}
 impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
 impl CargoError for str::Utf8Error {}
+impl CargoError for env::VarError {}
 
 // =============================================================================
 // Construction helpers
