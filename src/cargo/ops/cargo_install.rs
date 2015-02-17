@@ -6,6 +6,11 @@ use util::{CargoResult, human, ChainError};
 use core::source::Source;
 use sources::PathSource;
 
+#[cfg(windows)]
+const EXE_SUFIX: &'static str = ".exe";
+#[cfg(not(windows))]
+const EXE_SUFIX: &'static str = "";
+
 pub fn install(manifest_path: &Path,
                name: Option<String>,
                prefix: Option<String>,
@@ -27,6 +32,7 @@ pub fn install(manifest_path: &Path,
             None => human("a bin target must be available for `cargo install`"),
         }
     }));
+    let bin_name = format!("{}{}", bin.name(), EXE_SUFIX);
     match bins.next() {
         Some(..) => return Err(
             human("`cargo install` requires that a project only have one executable. \
@@ -41,8 +47,8 @@ pub fn install(manifest_path: &Path,
         None => dst,
     };
     let exe = match bin.profile().dest() {
-        Some(s) => dst.join(s).join(bin.name()),
-        None => dst.join(bin.name()),
+        Some(s) => dst.join(s).join(&bin_name),
+        None => dst.join(&bin_name),
     };
     let exe = match exe.path_relative_from(config.cwd()) {
         Some(path) => path,
@@ -53,7 +59,7 @@ pub fn install(manifest_path: &Path,
         (Some(path), _) | (None, Ok(Some((path, _)))) => path,
         (None, _) => (try!(env::var("HOME")) + "/.local/bin/").to_string()
     };
-    let install_dst = Path::new(prefix).join(bin.name());
+    let install_dst = Path::new(prefix).join(bin_name);
 
     try!(fs::copy(&exe, &install_dst));
 
