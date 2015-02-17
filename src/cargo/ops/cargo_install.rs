@@ -49,9 +49,9 @@ pub fn install(manifest_path: &Path,
         None => exe,
     };
 
-    let prefix = match prefix {
-        Some(path) => path,
-        None => (try!(env::var("HOME")) + "/.local/bin/").to_string()
+    let prefix = match (prefix, config.get_string("install.prefix")) {
+        (Some(path), _) | (None, Ok(Some((path, _)))) => path,
+        (None, _) => (try!(env::var("HOME")) + "/.local/bin/").to_string()
     };
     let install_dst = Path::new(prefix).join(bin.name());
 
