@@ -11,6 +11,11 @@ except ImportError:
     # We are in python2
     from urllib2 import urlopen as urlopen2
     from contextlib import closing
+    if os.environ['SOCKS5_PROXY']:
+        from urllib2 import ProxyHandler, build_opener, install_opener
+        proxy = ProxyHandler({'socks5': os.environ['SOCKS5_PROXY']})
+        opener = build_opener(proxy)
+        install_opener(opener)
     urlopen = lambda url: closing(urlopen2(url))
 
 with open('src/snapshots.txt') as f:
