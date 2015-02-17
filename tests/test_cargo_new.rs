@@ -72,6 +72,8 @@ test!(no_argument {
     assert_that(cargo_process("new"),
                 execs().with_status(1)
                        .with_stderr("\
+Invalid arguments.
+
 Usage:
     cargo new [options] <path>
     cargo new -h | --help
@@ -188,4 +190,16 @@ test!(subpackage_no_git {
                  is_not(existing_file()));
     assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
                  is_not(existing_file()));
+});
+
+test!(unknown_flags {
+    assert_that(cargo_process("new").arg("foo").arg("--flag"),
+                execs().with_status(1)
+                       .with_stderr("\
+Unknown flag: '--flag'
+
+Usage:
+    cargo new [..]
+    cargo new [..]
+"));
 });

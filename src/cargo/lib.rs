@@ -210,12 +210,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                                    .version(Some(version()));
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        let desc = match e {
-            docopt::Error::WithProgramUsage(_, s) => s,
-            ref e if e.fatal() => e.description().to_string(),
-            e => e.to_string(),
-        };
-        CliError::from_error(human(desc), code)
+        CliError::from_error(human(e.to_string()), code)
     })
 }
 
