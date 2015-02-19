@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::io::{BufReader, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use core::{Package, Target};
+use core::{Package, Target, Profile};
 use util;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
 
@@ -43,25 +43,26 @@ pub type Preparation = (Freshness, Work, Work);
 pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
                               pkg: &'a Package,
                               target: &'a Target,
+                              profile: &'a Profile,
                               kind: Kind) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {}",
                                     pkg.package_id(), target.name()));
     let new = dir(cx, pkg, kind);
-    let loc = new.join(&filename(target));
+    let loc = new.join(&filename(target, profile));
 
     info!("fingerprint at: {}", loc.display());
 
-    let fingerprint = try!(calculate(cx, pkg, target, kind));
+    let fingerprint = try!(calculate(cx, pkg, target, profile, kind));
     let is_fresh = try!(is_fresh(&loc, &fingerprint));
 
     let root = cx.out_dir(pkg, kind, target);
     let mut missing_outputs = false;
-    if !target.profile().is_doc() {
-        for filename in try!(cx.target_filenames(target)).iter() {
+    if !profile.doc {
+        for filename in try!(cx.target_filenames(target, profile)).iter() {
             let dst = root.join(filename);
             missing_outputs |= fs::metadata(&dst).is_err();
 
-            if target.profile().is_test() {
+            if target.is_test() || profile.test {
                 cx.compilation.tests.push((target.name().to_string(), dst));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
@@ -146,9 +147,10 @@ impl Fingerprint {
 fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
                      pkg: &'a Package,
                      target: &'a Target,
+                     profile: &'a Profile,
                      kind: Kind)
                      -> CargoResult<Fingerprint> {
-    let key = (pkg.package_id(), target, kind);
+    let key = (pkg.package_id(), target, profile, kind);
     match cx.fingerprints.get(&key) {
         Some(s) => return Ok(s.clone()),
         None => {}
@@ -164,21 +166,22 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
         v
     });
     let extra = util::short_hash(&(cx.config.rustc_version(), target, &features,
-                                   cx.profile(target)));
+                                   profile));
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
-    let deps = try!(cx.dep_targets(pkg, target).into_iter().map(|(p, t)| {
+    let deps = try!(cx.dep_targets(pkg, target, profile).into_iter()
+                      .map(|(pkg, target, profile)| {
         let kind = match kind {
             Kind::Host => Kind::Host,
-            Kind::Target if t.profile().is_for_host() => Kind::Host,
+            Kind::Target if target.for_host() => Kind::Host,
             Kind::Target => Kind::Target,
         };
-        calculate(cx, p, t, kind)
+        calculate(cx, pkg, target, profile, kind)
     }).collect::<CargoResult<Vec<_>>>());
 
     // And finally, calculate what our own local fingerprint is
-    let local = if use_dep_info(pkg, target) {
-        let dep_info = dep_info_loc(cx, pkg, target, kind);
+    let local = if use_dep_info(pkg, profile) {
+        let dep_info = dep_info_loc(cx, pkg, target, profile, kind);
         let mtime = try!(calculate_target_mtime(&dep_info));
 
         // if the mtime listed is not fresh, then remove the `dep_info` file to
@@ -204,10 +207,9 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
 // git/registry source, then the mtime of files may fluctuate, but they won't
 // change so long as the source itself remains constant (which is the
 // responsibility of the source)
-fn use_dep_info(pkg: &Package, target: &Target) -> bool {
-    let doc = target.profile().is_doc();
+fn use_dep_info(pkg: &Package, profile: &Profile) -> bool {
     let path = pkg.summary().source_id().is_path();
-    !doc && path
+    !profile.doc && path
 }
 
 /// Prepare the necessary work for the fingerprint of a build command.
@@ -293,8 +295,8 @@ pub fn dir(cx: &Context, pkg: &Package, kind: Kind) -> PathBuf {
 
 /// Returns the (old, new) location for the dep info file of a target.
 pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
-                    kind: Kind) -> PathBuf {
-    dir(cx, pkg, kind).join(&format!("dep-{}", filename(target)))
+                    profile: &Profile, kind: Kind) -> PathBuf {
+    dir(cx, pkg, kind).join(&format!("dep-{}", filename(target, profile)))
 }
 
 fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
@@ -375,11 +377,11 @@ fn calculate_pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String>
     source.fingerprint(pkg)
 }
 
-fn filename(target: &Target) -> String {
+fn filename(target: &Target, profile: &Profile) -> String {
     let kind = if target.is_lib() {"lib"} else {"bin"};
-    let flavor = if target.profile().is_test() {
+    let flavor = if target.is_test() || profile.test {
         "test-"
-    } else if target.profile().is_doc() {
+    } else if profile.doc {
         "doc-"
     } else {
         ""

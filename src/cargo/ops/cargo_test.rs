@@ -3,58 +3,25 @@ use std::path::Path;
 
 use core::Source;
 use sources::PathSource;
-use ops::{self, ExecEngine, ProcessEngine};
+use ops::{self, ExecEngine, ProcessEngine, Compilation};
 use util::{CargoResult, ProcessError};
 
 pub struct TestOptions<'a, 'b: 'a> {
     pub compile_opts: ops::CompileOptions<'a, 'b>,
     pub no_run: bool,
-    pub name: Option<&'a str>,
 }
 
 pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.compile_opts.config;
-    let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
-                                               config));
-    try!(source.update());
-
-    let mut compile = try!(ops::compile(manifest_path, &options.compile_opts));
-    if options.no_run { return Ok(None) }
-    compile.tests.sort();
-
-    let tarname = options.name;
-    let tests_to_run = compile.tests.iter().filter(|&&(ref test_name, _)| {
-        tarname.map_or(true, |tarname| tarname == *test_name)
-    });
-
-    let cwd = config.cwd();
-    for &(_, ref exe) in tests_to_run {
-        let to_display = match exe.relative_from(&cwd) {
-            Some(path) => path,
-            None => &**exe,
-        };
-        let mut cmd = try!(compile.target_process(exe, &compile.package));
-        cmd.args(test_args);
-        try!(config.shell().concise(|shell| {
-            shell.status("Running", to_display.display().to_string())
-        }));
-        try!(config.shell().verbose(|shell| {
-            shell.status("Running", cmd.to_string())
-        }));
-        match ExecEngine::exec(&mut ProcessEngine, cmd) {
-            Ok(()) => {}
-            Err(e) => return Ok(Some(e))
-        }
-    }
-
-    if options.name.is_some() { return Ok(None) }
-
-    if options.compile_opts.env == "bench" { return Ok(None) }
+    let compile = match try!(build_and_run(manifest_path, options, test_args)) {
+        Ok(compile) => compile,
+        Err(e) => return Ok(Some(e)),
+    };
 
     let libs = compile.package.targets().iter().filter_map(|target| {
-        if !target.profile().is_doctest() || !target.is_lib() {
+        if !target.doctested() || !target.is_lib() {
             return None
         }
         Some((target.src_path(), target.name()))
@@ -104,5 +71,41 @@ pub fn run_benches(manifest_path: &Path,
     let mut args = args.to_vec();
     args.push("--bench".to_string());
 
-    run_tests(manifest_path, options, &args)
+    Ok(try!(build_and_run(manifest_path, options, &args)).err())
+}
+
+fn build_and_run(manifest_path: &Path,
+                 options: &TestOptions,
+                 test_args: &[String])
+                 -> CargoResult<Result<Compilation, ProcessError>> {
+    let config = options.compile_opts.config;
+    let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
+                                               config));
+    try!(source.update());
+
+    let mut compile = try!(ops::compile(manifest_path, &options.compile_opts));
+    if options.no_run { return Ok(Ok(compile)) }
+    compile.tests.sort();
+
+    let cwd = config.cwd();
+    for &(_, ref exe) in &compile.tests {
+        let to_display = match exe.relative_from(&cwd) {
+            Some(path) => path,
+            None => &**exe,
+        };
+        let mut cmd = try!(compile.target_process(exe, &compile.package));
+        cmd.args(test_args);
+        try!(config.shell().concise(|shell| {
+            shell.status("Running", to_display.display().to_string())
+        }));
+        try!(config.shell().verbose(|shell| {
+            shell.status("Running", cmd.to_string())
+        }));
+        match ExecEngine::exec(&mut ProcessEngine, cmd) {
+            Ok(()) => {}
+            Err(e) => return Ok(Err(e))
+        }
+    }
+
+    Ok(Ok(compile))
 }

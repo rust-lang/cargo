@@ -10,7 +10,7 @@ use toml;
 use semver;
 use rustc_serialize::{Decodable, Decoder};
 
-use core::SourceId;
+use core::{SourceId, Profiles};
 use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
@@ -118,9 +118,7 @@ pub fn to_manifest(contents: &[u8],
         Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
         None => {}
     }
-    if manifest.targets().iter()
-               .filter(|t| !t.profile().is_custom_build() )
-               .next().is_none() {
+    if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
         return Err(human(format!("either a [lib] or [[bin]] section must \
                                   be present")))
     }
@@ -449,15 +447,13 @@ impl TomlManifest {
         let new_build = project.build.as_ref().map(PathBuf::new);
 
         // Get targets
-        let profiles = self.profile.clone().unwrap_or(Default::default());
         let targets = normalize(&lib,
                                 &bins,
                                 new_build,
                                 &examples,
                                 &tests,
                                 &benches,
-                                &metadata,
-                                &profiles);
+                                &metadata);
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -510,6 +506,7 @@ impl TomlManifest {
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
         };
+        let profiles = build_profiles(&self.profile);
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          layout.root.join("target"),
@@ -517,7 +514,8 @@ impl TomlManifest {
                                          exclude,
                                          include,
                                          project.links.clone(),
-                                         metadata);
+                                         metadata,
+                                         profiles);
         if used_deprecated_lib {
             manifest.add_warning(format!("the [[lib]] section has been \
                                           deprecated in favor of [lib]"));
@@ -648,77 +646,19 @@ fn normalize(libs: &[TomlLibTarget],
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget],
-             metadata: &Metadata,
-             profiles: &TomlProfiles) -> Vec<Target> {
-    #[derive(Copy)]
-    enum TestDep { Needed, NotNeeded }
-
-    fn merge(profile: Profile, toml: &Option<TomlProfile>) -> Profile {
-        let toml = match *toml {
-            Some(ref toml) => toml,
-            None => return profile,
-        };
-        let opt_level = toml.opt_level.unwrap_or(profile.opt_level());
-        let lto = toml.lto.unwrap_or(profile.lto());
-        let codegen_units = toml.codegen_units;
-        let debug = toml.debug.unwrap_or(profile.debug());
-        let rpath = toml.rpath.unwrap_or(profile.rpath());
-        profile.set_opt_level(opt_level).set_lto(lto)
-               .set_codegen_units(codegen_units)
-               .set_debug(debug).set_rpath(rpath)
-    }
-
-    fn target_profiles(target: &TomlTarget, profiles: &TomlProfiles,
-                       dep: TestDep) -> Vec<Profile> {
-        let mut ret = vec![
-            merge(Profile::default_dev(), &profiles.dev),
-            merge(Profile::default_release(), &profiles.release),
-        ];
-
-        match target.test {
-            Some(true) | None => {
-                ret.push(merge(Profile::default_test(), &profiles.test));
-            }
-            Some(false) => {}
-        }
-
-        let doctest = target.doctest.unwrap_or(true);
-        match target.doc {
-            Some(true) | None => {
-                ret.push(merge(Profile::default_doc().set_doctest(doctest),
-                               &profiles.doc));
-            }
-            Some(false) => {}
-        }
-
-        match target.bench {
-            Some(true) | None => {
-                ret.push(merge(Profile::default_bench(), &profiles.bench));
-            }
-            Some(false) => {}
-        }
-
-        match dep {
-            TestDep::Needed => {
-                ret.push(merge(Profile::default_test().set_test(false),
-                               &profiles.test));
-                ret.push(merge(Profile::default_doc().set_doc(false),
-                               &profiles.doc));
-                ret.push(merge(Profile::default_bench().set_test(false),
-                               &profiles.bench));
-            }
-            _ => {}
-        }
-
-        if target.plugin == Some(true) {
-            ret = ret.into_iter().map(|p| p.set_for_host(true)).collect();
-        }
-
-        ret
+             metadata: &Metadata) -> Vec<Target> {
+    fn configure(toml: &TomlTarget, target: &mut Target) {
+        let t2 = target.clone();
+        target.set_tested(toml.test.unwrap_or(t2.tested()))
+              .set_doc(toml.doc.unwrap_or(t2.documented()))
+              .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
+              .set_benched(toml.bench.unwrap_or(t2.benched()))
+              .set_harness(toml.harness.unwrap_or(t2.harness()))
+              .set_for_host(toml.plugin.unwrap_or(t2.for_host()));
     }
 
     fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget],
-                   dep: TestDep, metadata: &Metadata, profiles: &TomlProfiles) {
+                   metadata: &Metadata) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| {
             PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name)))
@@ -730,145 +670,98 @@ fn normalize(libs: &[TomlLibTarget],
             vec![if l.plugin == Some(true) {LibKind::Dylib} else {LibKind::Lib}]
         });
 
-        for profile in target_profiles(l, profiles, dep).iter() {
-            let mut metadata = metadata.clone();
-            // Libs and their tests are built in parallel, so we need to make
-            // sure that their metadata is different.
-            if profile.is_test() {
-                metadata.mix(&"test");
-            }
-            dst.push(Target::lib_target(&l.name, crate_types.clone(),
-                                        &path.to_path(), profile,
-                                        metadata));
-        }
+        dst.push(Target::lib_target(&l.name, crate_types.clone(),
+                                    &path.to_path(),
+                                    metadata.clone()));
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                   dep: TestDep, metadata: &Metadata,
-                   profiles: &TomlProfiles,
                    default: &mut FnMut(&TomlBinTarget) -> PathBuf) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(bin))
             });
-
-            for profile in target_profiles(bin, profiles, dep).iter() {
-                let metadata = if profile.is_test() {
-                    // Make sure that the name of this test executable doesn't
-                    // conflicts with a library that has the same name and is
-                    // being tested
-                    let mut metadata = metadata.clone();
-                    metadata.mix(&format!("bin-{}", bin.name));
-                    Some(metadata)
-                } else {
-                    None
-                };
-                dst.push(Target::bin_target(&bin.name,
-                                            &path.to_path(),
-                                            profile,
-                                            metadata));
-            }
+            let mut target = Target::bin_target(&bin.name, &path.to_path(),
+                                                None);
+            configure(bin, &mut target);
+            dst.push(target);
         }
     }
 
-    fn custom_build_target(dst: &mut Vec<Target>, cmd: &Path,
-                           profiles: &TomlProfiles) {
-        let profiles = [
-            merge(Profile::default_dev().set_for_host(true).set_custom_build(true),
-                  &profiles.dev),
-        ];
-
+    fn custom_build_target(dst: &mut Vec<Target>, cmd: &Path) {
         let name = format!("build-script-{}",
                            cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
 
-        for profile in profiles.iter() {
-            dst.push(Target::custom_build_target(&name, cmd, profile, None));
-        }
+        dst.push(Target::custom_build_target(&name, cmd, None));
     }
 
-    fn example_targets(dst: &mut Vec<Target>, examples: &[TomlExampleTarget],
-                       profiles: &TomlProfiles,
+    fn example_targets(dst: &mut Vec<Target>,
+                       examples: &[TomlExampleTarget],
                        default: &mut FnMut(&TomlExampleTarget) -> PathBuf) {
         for ex in examples.iter() {
             let path = ex.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(ex))
             });
 
-            let profile = merge(Profile::default_example(), &profiles.test);
-            let profile_release = merge(Profile::default_release(), &profiles.release);
-            dst.push(Target::example_target(&ex.name,
-                                            &path.to_path(),
-                                            &profile));
-            dst.push(Target::example_target(&ex.name,
-                                            &path.to_path(),
-                                            &profile_release));
+            let mut target = Target::example_target(&ex.name, &path.to_path());
+            configure(ex, &mut target);
+            dst.push(target);
         }
     }
 
     fn test_targets(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
-                    metadata: &Metadata, profiles: &TomlProfiles,
+                    metadata: &Metadata,
                     default: &mut FnMut(&TomlTestTarget) -> PathBuf) {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(test))
             });
-            let harness = test.harness.unwrap_or(true);
 
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
             metadata.mix(&format!("test-{}", test.name));
 
-            let profile = Profile::default_test().set_harness(harness);
-            let profile = merge(profile, &profiles.test);
-            dst.push(Target::test_target(&test.name,
-                                         &path.to_path(),
-                                         &profile,
-                                         metadata));
+            let mut target = Target::test_target(&test.name, &path.to_path(),
+                                                 metadata);
+            configure(test, &mut target);
+            dst.push(target);
         }
     }
 
     fn bench_targets(dst: &mut Vec<Target>, benches: &[TomlBenchTarget],
-                     metadata: &Metadata, profiles: &TomlProfiles,
+                     metadata: &Metadata,
                      default: &mut FnMut(&TomlBenchTarget) -> PathBuf) {
         for bench in benches.iter() {
             let path = bench.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(bench))
             });
-            let harness = bench.harness.unwrap_or(true);
 
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
             metadata.mix(&format!("bench-{}", bench.name));
 
-            let profile = Profile::default_bench().set_harness(harness);
-            let profile = merge(profile, &profiles.bench);
-            dst.push(Target::bench_target(&bench.name,
-                                          &path.to_path(),
-                                          &profile,
-                                          metadata));
+            let mut target = Target::bench_target(&bench.name,
+                                                  &path.to_path(),
+                                                  metadata);
+            configure(bench, &mut target);
+            dst.push(target);
         }
     }
 
     let mut ret = Vec::new();
 
-    let test_dep = if examples.len() > 0 || tests.len() > 0 || benches.len() > 0 {
-        TestDep::Needed
-    } else {
-        TestDep::NotNeeded
-    };
-
     match (libs, bins) {
         ([_, ..], [_, ..]) => {
-            lib_targets(&mut ret, libs, TestDep::Needed, metadata, profiles);
-            bin_targets(&mut ret, bins, test_dep, metadata, profiles,
+            lib_targets(&mut ret, libs, metadata);
+            bin_targets(&mut ret, bins,
                         &mut |bin| Path::new("src").join("bin")
                                        .join(&format!("{}.rs", bin.name)));
         },
         ([_, ..], []) => {
-            lib_targets(&mut ret, libs, TestDep::Needed, metadata, profiles);
+            lib_targets(&mut ret, libs, metadata);
         },
         ([], [_, ..]) => {
-            bin_targets(&mut ret, bins, test_dep, metadata, profiles,
+            bin_targets(&mut ret, bins,
                         &mut |bin| Path::new("src")
                                         .join(&format!("{}.rs", bin.name)));
         },
@@ -876,14 +769,14 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     if let Some(custom_build) = custom_build {
-        custom_build_target(&mut ret, &custom_build, profiles);
+        custom_build_target(&mut ret, &custom_build);
     }
 
-    example_targets(&mut ret, examples, profiles,
+    example_targets(&mut ret, examples,
                     &mut |ex| Path::new("examples")
                                    .join(&format!("{}.rs", ex.name)));
 
-    test_targets(&mut ret, tests, metadata, profiles, &mut |test| {
+    test_targets(&mut ret, tests, metadata, &mut |test| {
         if test.name == "test" {
             Path::new("src").join("test.rs")
         } else {
@@ -891,7 +784,7 @@ fn normalize(libs: &[TomlLibTarget],
         }
     });
 
-    bench_targets(&mut ret, benches, metadata, profiles, &mut |bench| {
+    bench_targets(&mut ret, benches, metadata, &mut |bench| {
         if bench.name == "bench" {
             Path::new("src").join("bench.rs")
         } else {
@@ -900,4 +793,39 @@ fn normalize(libs: &[TomlLibTarget],
     });
 
     ret
+}
+
+fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
+    let profiles = profiles.as_ref();
+    return Profiles {
+        release: merge(Profile::default_release(),
+                       profiles.and_then(|p| p.release.as_ref())),
+        dev: merge(Profile::default_dev(),
+                   profiles.and_then(|p| p.dev.as_ref())),
+        test: merge(Profile::default_test(),
+                    profiles.and_then(|p| p.test.as_ref())),
+        bench: merge(Profile::default_bench(),
+                     profiles.and_then(|p| p.bench.as_ref())),
+        doc: merge(Profile::default_doc(),
+                   profiles.and_then(|p| p.doc.as_ref())),
+    };
+
+    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
+        let &TomlProfile {
+            opt_level, lto, codegen_units, debug, rpath
+        } = match toml {
+            Some(toml) => toml,
+            None => return profile,
+        };
+        Profile {
+            opt_level: opt_level.unwrap_or(profile.opt_level),
+            lto: lto.unwrap_or(profile.lto),
+            codegen_units: codegen_units,
+            debuginfo: debug.unwrap_or(profile.debuginfo),
+            ndebug: !debug.unwrap_or(!profile.ndebug),
+            rpath: rpath.unwrap_or(profile.rpath),
+            test: profile.test,
+            doc: profile.doc,
+        }
+    }
 }

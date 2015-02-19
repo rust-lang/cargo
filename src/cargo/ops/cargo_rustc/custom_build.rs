@@ -46,17 +46,15 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     };
 
     // Building the command to execute
-    let to_exec = try!(cx.target_filenames(target))[0].clone();
+    let profile = cx.build_script_profile(pkg.package_id());
+    let to_exec = try!(cx.target_filenames(target, profile))[0].clone();
     let to_exec = script_output.join(&to_exec);
 
     // Start preparing the process to execute, starting out with some
     // environment variables. Note that the profile-related environment
     // variables are not set with this the build script's profile but rather the
-    // package's profile (some target which isn't a build script).
-    let profile_target = pkg.targets().iter().find(|t| {
-        cx.is_relevant_target(t) && !t.profile().is_custom_build()
-    }).unwrap_or(target);
-    let profile = cx.profile(profile_target);
+    // package's library profile.
+    let profile = cx.lib_profile(pkg.package_id());
     let to_exec = to_exec.into_os_string();
     let mut p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
     p.env("OUT_DIR", &build_output)
@@ -66,9 +64,9 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
          Kind::Host => cx.config.rustc_host(),
          Kind::Target => cx.target_triple(),
      })
-     .env("DEBUG", &profile.debug().to_string())
-     .env("OPT_LEVEL", &profile.opt_level().to_string())
-     .env("PROFILE", &profile.env())
+     .env("DEBUG", &profile.debuginfo.to_string())
+     .env("OPT_LEVEL", &profile.opt_level.to_string())
+     .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
      .env("HOST", &cx.config.rustc_host());
 
     // Be sure to pass along all enabled features for this package, this is the
@@ -88,10 +86,11 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        let non_build_target = pkg.targets().iter().find(|t| {
-            !t.profile().is_custom_build()
+        let not_custom = pkg.targets().iter().find(|t| {
+            !t.is_custom_build()
         }).unwrap();
-        cx.dep_targets(pkg, non_build_target).iter().filter_map(|&(pkg, _)| {
+        cx.dep_targets(pkg, not_custom, profile).iter().filter_map(|&(pkg, t, _)| {
+            if !t.linkable() { return None }
             pkg.manifest().links().map(|links| {
                 (links.to_string(), pkg.package_id().clone())
             })
@@ -102,7 +101,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let id = pkg.package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                build_output.clone());
-    let plugin_deps = super::crawl_build_deps(cx, pkg, target, Kind::Host);
+    let plugin_deps = super::crawl_build_deps(cx, pkg, target, profile,
+                                              Kind::Host);
 
     try!(fs::create_dir_all(&cx.layout(pkg, Kind::Target).build(pkg)));
     try!(fs::create_dir_all(&cx.layout(pkg, Kind::Host).build(pkg)));
@@ -206,7 +206,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
 }
 
 impl BuildState {
-    pub fn new(config: super::BuildConfig,
+    pub fn new(config: &super::BuildConfig,
                packages: &PackageSet) -> BuildState {
         let mut sources = HashMap::new();
         for package in packages.iter() {
@@ -219,15 +219,13 @@ impl BuildState {
             }
         }
         let mut outputs = HashMap::new();
-        let i1 = config.host.overrides.into_iter().map(|p| (p, Kind::Host));
-        let i2 = config.target.overrides.into_iter().map(|p| (p, Kind::Target));
+        let i1 = config.host.overrides.iter().map(|p| (p, Kind::Host));
+        let i2 = config.target.overrides.iter().map(|p| (p, Kind::Target));
         for ((name, output), kind) in i1.chain(i2) {
-            match sources.get(&name) {
-                Some(id) => { outputs.insert((id.clone(), kind), output); }
-
-                // If no package is using the library named `name`, then this is
-                // just an override that we ignore.
-                None => {}
+            // If no package is using the library named `name`, then this is
+            // just an override that we ignore.
+            if let Some(id) = sources.get(name) {
+                outputs.insert((id.clone(), kind), output.clone());
             }
         }
         BuildState { outputs: Mutex::new(outputs) }

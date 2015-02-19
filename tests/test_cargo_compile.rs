@@ -600,13 +600,16 @@ test!(crate_version_env_vars {
             }
         "#);
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    println!("build");
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 
+    println!("bin");
     assert_that(process(&p.bin("foo")).unwrap(),
                 execs().with_stdout(format!("0-5-1 @ alpha.1 in {}\n",
                                             p.root().display()).as_slice()));
 
-    assert_that(p.cargo("test"),
+    println!("test");
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -977,7 +980,7 @@ test!(explicit_examples {
             fn main() { println!("{}, {}!", world::get_goodbye(), world::get_world()); }
         "#);
 
-    assert_that(p.cargo_process("test"), execs().with_status(0));
+    assert_that(p.cargo_process("test").arg("-v"), execs().with_status(0));
     assert_that(process(&p.bin("examples/hello")).unwrap(),
                         execs().with_stdout("Hello, World!\n"));
     assert_that(process(&p.bin("examples/goodbye")).unwrap(),
@@ -1545,16 +1548,16 @@ test!(example_bin_same_name {
         .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}");
 
-    p.cargo_process("test").arg("--no-run")
+    p.cargo_process("test").arg("--no-run").arg("-v")
         .exec_with_output()
         .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    p.cargo("test").arg("--no-run")
-        .exec_with_output()
-        .unwrap();
+    p.cargo("test").arg("--no-run").arg("-v")
+                   .exec_with_output()
+                   .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("examples/foo"), existing_file());

@@ -4,9 +4,8 @@
 //! This structure is used to store the dependency graph and dynamically update
 //! it to figure out when a dependency should be built.
 
-use std::collections::hash_set::HashSet;
-use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 pub use self::Freshness::{Fresh, Dirty};
@@ -73,10 +72,12 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn enqueue(&mut self, cx: &K::Context, fresh: Freshness, key: K,
-                   value: V) {
-        // ignore self-deps
-        if self.dep_map.contains_key(&key) { return }
+    pub fn queue(&mut self, cx: &K::Context, fresh: Freshness,
+                 key: K, value: V) -> &mut V {
+        let slot = match self.dep_map.entry(key.clone()) {
+            Occupied(v) => return &mut v.into_mut().1,
+            Vacant(v) => v,
+        };
 
         if fresh == Dirty {
             self.dirty.insert(key.clone());
@@ -91,7 +92,7 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
             };
             assert!(rev.insert(key.clone()));
         }
-        assert!(self.dep_map.insert(key, (my_dependencies, value)).is_none());
+        &mut slot.insert((my_dependencies, value)).1
     }
 
     /// Dequeues a package that is ready to be built.

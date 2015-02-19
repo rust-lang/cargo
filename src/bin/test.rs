@@ -52,20 +52,31 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     config.shell().set_verbose(options.flag_verbose);
 
+    let mut tests = Vec::new();
+    if let Some(s) = options.flag_test {
+        tests.push(s);
+    }
+
     let ops = ops::TestOptions {
-        name: options.flag_test.as_ref().map(|s| &s[..]),
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
-            env: "test",
             config: config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| &s[..]),
-            dev_deps: true,
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| &s[..]),
-            lib_only: false,
             exec_engine: None,
+            release: false,
+            mode: ops::CompileMode::Test,
+            filter: if tests.len() == 0 {
+                ops::CompileFilter::Everything
+            } else {
+                ops::CompileFilter::Only {
+                    lib: false, bins: &[], examples: &[], benches: &[],
+                    tests: &tests,
+                }
+            }
         },
     };
 

@@ -49,16 +49,16 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         all: !options.flag_no_deps,
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
-            env: if options.flag_no_deps {"doc"} else {"doc-all"},
             config: config,
             jobs: options.flag_jobs,
             target: None,
-            dev_deps: false,
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| &s[..]),
-            lib_only: false,
             exec_engine: None,
+            filter: ops::CompileFilter::Everything,
+            release: false,
+            mode: ops::CompileMode::Build,
         },
     };
 

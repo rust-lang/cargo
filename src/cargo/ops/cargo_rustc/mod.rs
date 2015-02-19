@@ -7,6 +7,7 @@ use std::path::{self, PathBuf};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
+use core::{Profile, Profiles};
 use util::{self, CargoResult, human, caused_human};
 use util::{Config, internal, ChainError, Fresh, profile, join_paths};
 
@@ -39,6 +40,8 @@ pub struct BuildConfig {
     pub target: TargetConfig,
     pub jobs: u32,
     pub requested_target: Option<String>,
+    pub exec_engine: Option<Arc<Box<ExecEngine>>>,
+    pub release: bool,
 }
 
 #[derive(Clone, Default)]
@@ -71,35 +74,16 @@ pub fn rustc_version() -> CargoResult<(String, String)> {
     Ok((output, triple))
 }
 
-// This is a temporary assert that ensures the consistency of the arguments
-// given the current limitations of Cargo. The long term fix is to have each
-// Target know the absolute path to the build location.
-fn uniq_target_dest<'a>(targets: &[&'a Target]) -> &'a str {
-    let mut curr: Option<&str> = None;
-
-    for t in targets.iter().filter(|t| !t.profile().is_custom_build()) {
-        let dest = t.profile().dest();
-
-        match curr {
-            Some(curr) => assert_eq!(curr, dest),
-            None => curr = Some(dest)
-        }
-    }
-
-    curr.unwrap()
-}
-
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a, 'b>(env: &str,
-                               targets: &[&'a Target],
+pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                                pkg: &'a Package,
                                deps: &PackageSet,
                                resolve: &'a Resolve,
                                sources: &'a SourceMap<'a>,
                                config: &'a Config<'b>,
                                build_config: BuildConfig,
-                               exec_engine: Option<Arc<Box<ExecEngine>>>)
+                               profiles: &'a Profiles)
                                -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
@@ -109,53 +93,35 @@ pub fn compile_targets<'a, 'b>(env: &str,
 
     try!(links::validate(deps));
 
-    let dest = uniq_target_dest(targets);
+    let dest = if build_config.release {"release"} else {"debug"};
     let root = if resolve.root() == pkg.package_id() {
         pkg
     } else {
         deps.iter().find(|p| p.package_id() == resolve.root()).unwrap()
     };
-    let host_layout = Layout::new(root, None, dest);
+    let host_layout = Layout::new(root, None, &dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
-        layout::Layout::new(root, Some(&target), dest)
+        layout::Layout::new(root, Some(&target), &dest)
     });
 
-    let mut cx = try!(Context::new(env, resolve, sources, deps, config,
+    let mut cx = try!(Context::new(resolve, sources, deps, config,
                                    host_layout, target_layout, pkg,
-                                   build_config));
-    if let Some(exec_engine) = exec_engine {
-        cx.exec_engine = exec_engine.clone();
-    }
+                                   build_config, profiles));
 
     let mut queue = JobQueue::new(cx.resolve, deps, cx.jobs());
 
-    // First ensure that the destination directory exists
-    try!(cx.prepare(pkg));
+    // Prep the context's build requirements and see the job graph for all
+    // packages initially.
+    {
+        let _p = profile::start("preparing build directories");
+        try!(cx.prepare(pkg, targets));
+        prepare_init(&mut cx, pkg, &mut queue, &mut HashSet::new());
+    }
 
     // Build up a list of pending jobs, each of which represent compiling a
     // particular package. No actual work is executed as part of this, that's
-    // all done later as part of the `execute` function which will run
+    // all done next as part of the `execute` function which will run
     // everything in order with proper parallelism.
-    let mut compiled = HashSet::new();
-    each_dep(pkg, &cx, |dep| {
-        compiled.insert(dep.package_id().clone());
-    });
-    for dep in deps.iter() {
-        if dep == pkg || !compiled.contains(dep.package_id()) { continue }
-
-        // Only compile lib targets for dependencies
-        let targets = dep.targets().iter().filter(|target| {
-            target.profile().is_custom_build() ||
-                cx.is_relevant_target(*target)
-        }).collect::<Vec<&Target>>();
-
-        if targets.len() == 0 && dep.package_id() != resolve.root() {
-            return Err(human(format!("Package `{}` has no library targets", dep)))
-        }
-
-        try!(compile(&targets, dep, &mut cx, &mut queue));
-    }
-
     try!(compile(targets, pkg, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -171,7 +137,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
         let any_dylib = output.library_links.iter().any(|l| {
-            !l.ends_with(":static") && !l.ends_with(":framework")
+            !l.starts_with("static=") && !l.starts_with("framework=")
         });
         if !any_dylib { continue }
         for dir in output.library_paths.iter() {
@@ -181,61 +147,54 @@ pub fn compile_targets<'a, 'b>(env: &str,
     Ok(cx.compilation)
 }
 
-fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
+fn compile<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
+                   pkg: &'a Package,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
-    let _p = profile::start(format!("preparing: {}", pkg));
+    let profiling_marker = profile::start(format!("preparing: {}", pkg));
 
-    if targets.is_empty() {
-        return Ok(())
-    }
-
-    // Prepare the fingerprint directory as the first step of building a package
-    let (target1, target2) = fingerprint::prepare_init(cx, pkg, Kind::Target);
-    let mut init = vec![(Job::new(target1, target2), Fresh)];
-    if cx.requested_target().is_some() {
-        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg, Kind::Host);
-        init.push((Job::new(plugin1, plugin2), Fresh));
-    }
-    jobs.enqueue(pkg, Stage::Start, init);
-
-    // After the custom command has run, execute rustc for all targets of our
-    // package.
+    // For each target/profile run the compiler or rustdoc accordingly. After
+    // having done so we enqueue the job in the right portion of the dependency
+    // graph and then move on to the next.
     //
-    // Each target has its own concept of freshness to ensure incremental
-    // rebuilds on the *target* granularity, not the *package* granularity.
-    let (mut libs, mut bins, mut lib_tests, mut bin_tests) =
-            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
-    let (mut build_custom, mut run_custom) = (Vec::new(), Vec::new());
-    for &target in targets.iter() {
-        let work = if target.profile().is_doc() {
-            let rustdoc = try!(rustdoc(pkg, target, cx));
+    // This loop also takes care of enqueueing the work needed to actually run
+    // the custom build commands as well.
+    for &(target, profile) in targets {
+        if !cx.compiled.insert((pkg.package_id(), target, profile)) {
+            continue
+        }
+
+        let work = if profile.doc {
+            let rustdoc = try!(rustdoc(pkg, target, profile, cx));
             vec![(rustdoc, Kind::Target)]
         } else {
             let req = cx.get_requirement(pkg, target);
-            try!(rustc(pkg, target, cx, req))
+            try!(rustc(pkg, target, profile, cx, req))
         };
 
-        // Figure out what stage this work will go into
-        let dst = match (target.is_lib(),
-                         target.profile().is_test(),
-                         target.profile().is_custom_build()) {
-            (_, _, true) => &mut build_custom,
-            (true, true, _) => &mut lib_tests,
-            (false, true, _) => &mut bin_tests,
-            (true, false, _) => &mut libs,
-            (false, false, _) if target.profile().env() == "test" => &mut bin_tests,
-            (false, false, _) => &mut bins,
-        };
         for (work, kind) in work.into_iter() {
             let (freshness, dirty, fresh) =
-                try!(fingerprint::prepare_target(cx, pkg, target, kind));
+                try!(fingerprint::prepare_target(cx, pkg, target, profile, kind));
 
             let dirty = Work::new(move |desc_tx| {
                 try!(work.call(desc_tx.clone()));
                 dirty.call(desc_tx)
             });
+
+            // Figure out what stage this work will go into
+            let dst = match (target.is_lib(),
+                             profile.test,
+                             target.is_custom_build()) {
+                (_, _, true) => jobs.queue(pkg, Stage::BuildCustomBuild),
+                (true, true, _) => jobs.queue(pkg, Stage::LibraryTests),
+                (false, true, _) => jobs.queue(pkg, Stage::BinaryTests),
+                (true, false, _) => jobs.queue(pkg, Stage::Libraries),
+                (false, false, _) if !target.is_bin() => {
+                    jobs.queue(pkg, Stage::BinaryTests)
+                }
+                (false, false, _) => jobs.queue(pkg, Stage::Binaries),
+            };
             dst.push((Job::new(dirty, fresh), freshness));
         }
 
@@ -244,15 +203,13 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
         // because we may need to run the build script multiple times. If the
         // package is needed in both a host and target context, we need to run
         // it once per context.
-        if !target.profile().is_custom_build() { continue }
+        if !target.is_custom_build() { continue }
+        let run_custom = jobs.queue(pkg, Stage::RunCustomBuild);
         let mut reqs = Vec::new();
-        let requirement = targets.iter().fold(None::<Platform>, |req, t| {
-            if !t.profile().is_custom_build() && !t.profile().is_doc() {
-                let r2 = cx.get_requirement(pkg, *t);
-                req.map(|r| r.combine(r2)).or(Some(r2))
-            } else {
-                req
-            }
+        let requirement = pkg.targets().iter().filter(|t| !t.is_custom_build())
+                             .fold(None::<Platform>, |req, t| {
+            let r2 = cx.get_requirement(pkg, t);
+            req.map(|r| r.combine(r2)).or(Some(r2))
         }).unwrap_or(Platform::Target);
         match requirement {
             Platform::Target => reqs.push(Platform::Target),
@@ -266,7 +223,6 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 }
             }
         }
-        let before = run_custom.len();
         for &req in reqs.iter() {
             let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
             let key = (pkg.package_id().clone(), kind);
@@ -278,29 +234,59 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 try!(custom_build::prepare(pkg, target, req, cx));
             run_custom.push((Job::new(dirty, fresh), freshness));
         }
+    }
+    drop(profiling_marker);
 
-        // If no build scripts were run, no need to compile the build script!
-        if run_custom.len() == before {
-            dst.pop();
+    // Be sure to compile all dependencies of this target as well. Don't recurse
+    // if we've already recursed, however.
+    for &(target, profile) in targets {
+        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
+            try!(compile(&[(target, p)], pkg, cx, jobs));
         }
     }
 
-    jobs.enqueue(pkg, Stage::BuildCustomBuild, build_custom);
-    jobs.enqueue(pkg, Stage::RunCustomBuild, run_custom);
-    jobs.enqueue(pkg, Stage::Libraries, libs);
-    jobs.enqueue(pkg, Stage::Binaries, bins);
-    jobs.enqueue(pkg, Stage::BinaryTests, bin_tests);
-    jobs.enqueue(pkg, Stage::LibraryTests, lib_tests);
     Ok(())
 }
 
-fn rustc(package: &Package, target: &Target,
+fn prepare_init<'a, 'b>(cx: &mut Context<'a, 'b>,
+                        pkg: &'a Package,
+                        jobs: &mut JobQueue<'a>,
+                        visited: &mut HashSet<&'a PackageId>) {
+    if !visited.insert(pkg.package_id()) { return }
+
+    // Set up all dependencies
+    for dep in cx.resolve.deps(pkg.package_id()).into_iter().flat_map(|a| a) {
+        let dep = cx.get_package(dep);
+        prepare_init(cx, dep, jobs, visited);
+    }
+
+    // Initialize blank queues for each stage
+    jobs.queue(pkg, Stage::BuildCustomBuild);
+    jobs.queue(pkg, Stage::RunCustomBuild);
+    jobs.queue(pkg, Stage::Libraries);
+    jobs.queue(pkg, Stage::Binaries);
+    jobs.queue(pkg, Stage::LibraryTests);
+    jobs.queue(pkg, Stage::BinaryTests);
+
+    // Prepare the fingerprint directory as the first step of building a package
+    let (target1, target2) = fingerprint::prepare_init(cx, pkg, Kind::Target);
+    let init = jobs.queue(pkg, Stage::Start);
+    if cx.requested_target().is_some() {
+        let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg,
+                                                           Kind::Host);
+        init.push((Job::new(plugin1, plugin2), Fresh));
+    }
+    init.push((Job::new(target1, target2), Fresh));
+}
+
+fn rustc(package: &Package, target: &Target, profile: &Profile,
          cx: &mut Context, req: Platform)
          -> CargoResult<Vec<(Work, Kind)> >{
     let crate_types = target.rustc_crate_types();
-    let rustcs = try!(prepare_rustc(package, target, crate_types, cx, req));
+    let rustcs = try!(prepare_rustc(package, target, profile, crate_types,
+                                    cx, req));
 
-    let plugin_deps = crawl_build_deps(cx, package, target, Kind::Host);
+    let plugin_deps = crawl_build_deps(cx, package, target, profile, Kind::Host);
 
     return rustcs.into_iter().map(|(mut rustc, kind)| {
         let name = package.name().to_string();
@@ -312,15 +298,16 @@ fn rustc(package: &Package, target: &Target,
         }
         let exec_engine = cx.exec_engine.clone();
 
-        let filenames = try!(cx.target_filenames(target));
+        let filenames = try!(cx.target_filenames(target, profile));
         let root = cx.out_dir(package, kind, target);
 
         // Prepare the native lib state (extra -L and -l flags)
         let build_state = cx.build_state.clone();
         let current_id = package.package_id().clone();
         let plugin_deps = plugin_deps.clone();
-        let mut native_lib_deps = crawl_build_deps(cx, package, target, kind);
-        if package.has_custom_build() && !target.profile().is_custom_build() {
+        let mut native_lib_deps = crawl_build_deps(cx, package, target,
+                                                   profile, kind);
+        if package.has_custom_build() && !target.is_custom_build() {
             native_lib_deps.insert(0, current_id.clone());
         }
 
@@ -330,9 +317,10 @@ fn rustc(package: &Package, target: &Target,
             t.is_lib()
         });
 
-        let rustc_dep_info_loc = root.join(&target.file_stem())
+        let rustc_dep_info_loc = root.join(&cx.file_stem(target, profile))
                                      .with_extension("d");
-        let dep_info_loc = fingerprint::dep_info_loc(cx, package, target, kind);
+        let dep_info_loc = fingerprint::dep_info_loc(cx, package, target,
+                                                     profile, kind);
         let cwd = cx.config.cwd().to_path_buf();
 
         Ok((Work::new(move |desc_tx| {
@@ -394,19 +382,24 @@ fn rustc(package: &Package, target: &Target,
     }
 }
 
-fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
-                        target: &Target, kind: Kind) -> Vec<PackageId> {
+fn crawl_build_deps<'a>(cx: &'a Context,
+                        pkg: &'a Package,
+                        target: &Target,
+                        profile: &Profile,
+                        kind: Kind) -> Vec<PackageId> {
     let mut deps = HashSet::new();
-    visit(cx, pkg, target, kind, &mut HashSet::new(), &mut deps);
+    visit(cx, pkg, target, profile, kind, &mut HashSet::new(), &mut deps);
     let mut ret: Vec<_> = deps.into_iter().collect();
     ret.sort();
     return ret;
 
-    fn visit<'a>(cx: &'a Context, pkg: &'a Package, target: &Target,
+    fn visit<'a>(cx: &'a Context,
+                 pkg: &'a Package, target: &Target, profile: &Profile,
                  kind: Kind,
                  visiting: &mut HashSet<&'a PackageId>,
                  libs: &mut HashSet<PackageId>) {
-        for &(pkg, target) in cx.dep_targets(pkg, target).iter() {
+        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
+            if !target.linkable() { continue }
             let req = cx.get_requirement(pkg, target);
             if !req.includes(kind) { continue }
             if !visiting.insert(pkg.package_id()) { continue }
@@ -414,7 +407,7 @@ fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
             if pkg.has_custom_build() {
                 libs.insert(pkg.package_id().clone());
             }
-            visit(cx, pkg, target, kind, visiting, libs);
+            visit(cx, pkg, target, p, kind, visiting, libs);
             visiting.remove(&pkg.package_id());
         }
     }
@@ -431,6 +424,7 @@ fn add_plugin_deps(rustc: &mut CommandPrototype,
     let search_path = rustc.get_env(var).unwrap_or(OsString::new());
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in plugin_deps.into_iter() {
+        debug!("adding libs for plugin dep: {}", id);
         let output = &build_state[(id, Kind::Host)];
         for path in output.library_paths.iter() {
             search_path.push(path.clone());
@@ -441,31 +435,33 @@ fn add_plugin_deps(rustc: &mut CommandPrototype,
     Ok(())
 }
 
-fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
+fn prepare_rustc(package: &Package, target: &Target, profile: &Profile,
+                 crate_types: Vec<&str>,
                  cx: &Context, req: Platform)
                  -> CargoResult<Vec<(CommandPrototype, Kind)>> {
     let mut base = try!(process(CommandType::Rustc, package, target, cx));
-    build_base_args(cx, &mut base, package, target, &crate_types);
+    build_base_args(cx, &mut base, package, target, profile, &crate_types);
 
-    let mut target_cmd = base.clone();
-    let mut plugin_cmd = base;
-    build_plugin_args(&mut target_cmd, cx, package, target, Kind::Target);
-    build_plugin_args(&mut plugin_cmd, cx, package, target, Kind::Host);
-    try!(build_deps_args(&mut target_cmd, target, package, cx, Kind::Target));
-    try!(build_deps_args(&mut plugin_cmd, target, package, cx, Kind::Host));
+    let mut targ_cmd = base.clone();
+    let mut host_cmd = base;
+    build_plugin_args(&mut targ_cmd, cx, package, target, Kind::Target);
+    build_plugin_args(&mut host_cmd, cx, package, target, Kind::Host);
+    try!(build_deps_args(&mut targ_cmd, target, profile, package, cx, Kind::Target));
+    try!(build_deps_args(&mut host_cmd, target, profile, package, cx, Kind::Host));
 
     Ok(match req {
-        Platform::Target => vec![(target_cmd, Kind::Target)],
-        Platform::Plugin => vec![(plugin_cmd, Kind::Host)],
-        Platform::PluginAndTarget if cx.requested_target().is_none() =>
-            vec![(target_cmd, Kind::Target)],
-        Platform::PluginAndTarget => vec![(target_cmd, Kind::Target),
-                                          (plugin_cmd, Kind::Host)],
+        Platform::Target => vec![(targ_cmd, Kind::Target)],
+        Platform::Plugin => vec![(host_cmd, Kind::Host)],
+        Platform::PluginAndTarget if cx.requested_target().is_none() => {
+            vec![(targ_cmd, Kind::Target)]
+        }
+        Platform::PluginAndTarget => vec![(targ_cmd, Kind::Target),
+                                          (host_cmd, Kind::Host)],
     })
 }
 
 
-fn rustdoc(package: &Package, target: &Target,
+fn rustdoc(package: &Package, target: &Target, profile: &Profile,
            cx: &mut Context) -> CargoResult<Work> {
     let kind = Kind::Target;
     let cx_root = cx.get_package(cx.resolve.root()).absolute_target_dir()
@@ -485,7 +481,7 @@ fn rustdoc(package: &Package, target: &Target,
         None => {}
     }
 
-    try!(build_deps_args(&mut rustdoc, target, package, cx, kind));
+    try!(build_deps_args(&mut rustdoc, target, profile, package, cx, kind));
 
     if package.has_custom_build() {
         rustdoc.env("OUT_DIR", &cx.layout(package, kind).build_out(package));
@@ -544,8 +540,12 @@ fn build_base_args(cx: &Context,
                    cmd: &mut CommandPrototype,
                    pkg: &Package,
                    target: &Target,
+                   profile: &Profile,
                    crate_types: &[&str]) {
-    let metadata = target.metadata();
+    let Profile {
+        opt_level, lto, codegen_units, debuginfo, ndebug, rpath, test,
+        doc: _doc,
+    } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
     cmd.cwd(cx.config.cwd());
@@ -559,43 +559,39 @@ fn build_base_args(cx: &Context,
         cmd.arg("--crate-type").arg(crate_type);
     }
 
-    // Despite whatever this target's profile says, we need to configure it
-    // based off the profile found in the root package's targets.
-    let profile = cx.profile(target);
-
-    let prefer_dynamic = profile.is_for_host() ||
+    let prefer_dynamic = target.for_host() ||
                          (crate_types.contains(&"dylib") &&
                           pkg.package_id() != cx.resolve.root());
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
 
-    if profile.opt_level() != 0 {
-        cmd.arg("-C").arg(&format!("opt-level={}", profile.opt_level()));
+    if opt_level != 0 {
+        cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
     // exclusive.
-    let lto = (target.is_bin() || target.is_staticlib()) && profile.lto() &&
-              !profile.is_for_host();
-    if lto {
+    if target.can_lto() && lto && !target.for_host() {
         cmd.args(&["-C", "lto"]);
     } else {
         // There are some restrictions with LTO and codegen-units, so we
         // only add codegen units when LTO is not used.
-        match profile.codegen_units() {
+        match codegen_units {
             Some(n) => { cmd.arg("-C").arg(&format!("codegen-units={}", n)); }
             None => {},
         }
     }
 
-    if profile.debug() {
+    if debuginfo {
         cmd.arg("-g");
-    } else {
+    }
+
+    if ndebug {
         cmd.args(&["--cfg", "ndebug"]);
     }
 
-    if profile.is_test() && profile.uses_test_harness() {
+    if test && target.harness() {
         cmd.arg("--test");
     }
 
@@ -608,7 +604,7 @@ fn build_base_args(cx: &Context,
         None => {}
     }
 
-    match metadata {
+    match cx.target_metadata(target, profile) {
         Some(m) => {
             cmd.arg("-C").arg(&format!("metadata={}", m.metadata));
             cmd.arg("-C").arg(&format!("extra-filename={}", m.extra_filename));
@@ -616,7 +612,7 @@ fn build_base_args(cx: &Context,
         None => {}
     }
 
-    if profile.rpath() {
+    if rpath {
         cmd.arg("-C").arg("rpath");
     }
 }
@@ -641,8 +637,12 @@ fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
     }
 }
 
-fn build_deps_args(cmd: &mut CommandPrototype, target: &Target,
-                   package: &Package, cx: &Context, kind: Kind)
+fn build_deps_args(cmd: &mut CommandPrototype,
+                   target: &Target,
+                   profile: &Profile,
+                   package: &Package,
+                   cx: &Context,
+                   kind: Kind)
                    -> CargoResult<()> {
     let layout = cx.layout(package, kind);
     cmd.arg("-L").arg(&{
@@ -660,24 +660,26 @@ fn build_deps_args(cmd: &mut CommandPrototype, target: &Target,
         cmd.env("OUT_DIR", &layout.build_out(package));
     }
 
-    for &(pkg, target) in cx.dep_targets(package, target).iter() {
-        try!(link_to(cmd, pkg, target, cx, kind));
+    for &(pkg, target, p) in cx.dep_targets(package, target, profile).iter() {
+        if target.linkable() {
+            try!(link_to(cmd, pkg, target, p, cx, kind));
+        }
     }
 
     return Ok(());
 
     fn link_to(cmd: &mut CommandPrototype, pkg: &Package, target: &Target,
-               cx: &Context, kind: Kind) -> CargoResult<()> {
+               profile: &Profile, cx: &Context, kind: Kind) -> CargoResult<()> {
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
         let layout = cx.layout(pkg, match kind {
             Kind::Host => Kind::Host,
-            Kind::Target if target.profile().is_for_host() => Kind::Host,
+            Kind::Target if target.for_host() => Kind::Host,
             Kind::Target => Kind::Target,
         });
 
-        for filename in try!(cx.target_filenames(target)).iter() {
+        for filename in try!(cx.target_filenames(target, profile)).iter() {
             if filename.ends_with(".a") { continue }
             let mut v = OsString::new();
             v.push(target.name());
@@ -705,29 +707,6 @@ pub fn process(cmd: CommandType, pkg: &Package, _target: &Target,
     let mut cmd = try!(cx.compilation.process(cmd, pkg));
     cmd.env(util::dylib_path_envvar(), &search_path);
     Ok(cmd)
-}
-
-fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)
-    where F: FnMut(&'a Package)
-{
-    let mut visited = HashSet::new();
-    let pkg = cx.get_package(pkg.package_id());
-    visit_deps(pkg, cx, &mut visited, &mut f);
-
-    fn visit_deps<'a, F>(pkg: &'a Package, cx: &'a Context,
-                         visited: &mut HashSet<&'a PackageId>, f: &mut F)
-        where F: FnMut(&'a Package)
-    {
-        if !visited.insert(pkg.package_id()) { return }
-        f(pkg);
-        let deps = match cx.resolve.deps(pkg.package_id()) {
-            Some(deps) => deps,
-            None => return,
-        };
-        for dep_id in deps {
-            visit_deps(cx.get_package(dep_id), cx, visited, f);
-        }
-    }
 }
 
 fn envify(s: &str) -> String {

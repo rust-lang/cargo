@@ -1147,7 +1147,7 @@ test!(example_dev_dep {
         .file("bar/src/lib.rs", r#"
             #![feature(macro_rules)]
             // make sure this file takes awhile to compile
-            macro_rules! f0( () => (1u) );
+            macro_rules! f0( () => (1) );
             macro_rules! f1( () => ({(f0!()) + (f0!())}) );
             macro_rules! f2( () => ({(f1!()) + (f1!())}) );
             macro_rules! f3( () => ({(f2!()) + (f2!())}) );
@@ -1164,6 +1164,9 @@ test!(example_dev_dep {
             }
         "#);
     assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+    assert_that(p.cargo("run")
+                 .arg("--example").arg("e1").arg("--release").arg("-v"),
                 execs().with_status(0));
 });
 

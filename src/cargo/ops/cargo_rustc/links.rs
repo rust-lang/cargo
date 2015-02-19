@@ -23,9 +23,7 @@ pub fn validate(deps: &PackageSet) -> CargoResult<()> {
             }
             None => {}
         }
-        if !dep.manifest().targets().iter().any(|t| {
-            t.profile().is_custom_build()
-        }) {
+        if !dep.manifest().targets().iter().any(|t| t.is_custom_build()) {
             return Err(human(format!("package `{}` specifies that it links to \
                                       `{}` but does not have a custom build \
                                       script", dep.package_id(), lib)))

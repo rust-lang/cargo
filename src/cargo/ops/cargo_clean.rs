@@ -3,11 +3,11 @@ use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
 
-use core::PackageSet;
+use core::{PackageSet, Profiles, Profile};
 use core::source::{Source, SourceMap};
 use sources::PathSource;
 use util::{CargoResult, human, ChainError, Config};
-use ops::{self, Layout, Context};
+use ops::{self, Layout, Context, BuildConfig};
 
 pub struct CleanOptions<'a, 'b: 'a> {
     pub spec: Option<&'a str>,
@@ -50,17 +50,23 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     // filenames and such
     let srcs = SourceMap::new();
     let pkgs = PackageSet::new(&[]);
-    let cx = try!(Context::new("compile", &resolve, &srcs, &pkgs, opts.config,
+    let profiles = Profiles::default();
+    let cx = try!(Context::new(&resolve, &srcs, &pkgs, opts.config,
                                Layout::at(root.absolute_target_dir()),
-                               None, &pkg, Default::default()));
+                               None, &pkg, BuildConfig::default(),
+                               &profiles));
 
     // And finally, clean everything out!
     for target in pkg.targets().iter() {
-        let layout = Layout::new(&root, opts.target, target.profile().dest());
+        // TODO: `cargo clean --release`
+        let layout = Layout::new(&root, opts.target, "debug");
         try!(rm_rf(&layout.fingerprint(&pkg)));
-        for filename in try!(cx.target_filenames(target)).iter() {
-            try!(rm_rf(&layout.dest().join(&filename)));
-            try!(rm_rf(&layout.deps().join(&filename)));
+        let profiles = [Profile::default_dev(), Profile::default_test()];
+        for profile in profiles.iter() {
+            for filename in try!(cx.target_filenames(target, profile)).iter() {
+                try!(rm_rf(&layout.dest().join(&filename)));
+                try!(rm_rf(&layout.deps().join(&filename)));
+            }
         }
     }
 

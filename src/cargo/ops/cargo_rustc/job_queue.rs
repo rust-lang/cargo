@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+// use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use threadpool::ThreadPool;
@@ -27,7 +27,7 @@ pub struct JobQueue<'a> {
     packages: &'a PackageSet,
     active: u32,
     pending: HashMap<(&'a PackageId, Stage), PendingBuild>,
-    state: HashMap<&'a PackageId, Freshness>,
+    pkgids: HashSet<&'a PackageId>,
     printed: HashSet<&'a PackageId>,
 }
 
@@ -75,25 +75,17 @@ impl<'a> JobQueue<'a> {
             packages: packages,
             active: 0,
             pending: HashMap::new(),
-            state: HashMap::new(),
+            pkgids: HashSet::new(),
             printed: HashSet::new(),
         }
     }
 
-    pub fn enqueue(&mut self, pkg: &'a Package, stage: Stage,
-                   jobs: Vec<(Job, Freshness)>) {
-        // Record the freshness state of this package as dirty if any job is
-        // dirty or fresh otherwise
-        let fresh = jobs.iter().fold(Fresh, |f1, &(_, f2)| f1.combine(f2));
-        match self.state.entry(pkg.package_id()) {
-            Occupied(mut entry) => { *entry.get_mut() = entry.get().combine(fresh); }
-            Vacant(entry) => { entry.insert(fresh); }
-        };
-
-        // Add the package to the dependency graph
-        self.queue.enqueue(&(self.resolve, self.packages), Fresh,
-                           (pkg.package_id(), stage),
-                           (pkg, jobs));
+    pub fn queue(&mut self, pkg: &'a Package, stage: Stage)
+                 -> &mut Vec<(Job, Freshness)> {
+        self.pkgids.insert(pkg.package_id());
+        &mut self.queue.queue(&(self.resolve, self.packages), Fresh,
+                              (pkg.package_id(), stage),
+                              (pkg, Vec::new())).1
     }
 
     /// Execute all jobs necessary to build the dependency graph.
@@ -123,11 +115,11 @@ impl<'a> JobQueue<'a> {
             // scheduling work as quickly as possibly.
             let (id, stage, fresh, result) = self.rx.recv().unwrap();
             info!("  end: {} {:?}", id, stage);
-            let id = *self.state.keys().find(|&k| *k == &id).unwrap();
+            let id = *self.pkgids.iter().find(|&k| *k == &id).unwrap();
             self.active -= 1;
             match result {
                 Ok(()) => {
-                    let state = &mut self.pending[(id, stage)];
+                    let state = self.pending.get_mut(&(id, stage)).unwrap();
                     state.amt -= 1;
                     state.fresh = state.fresh.combine(fresh);
                     if state.amt == 0 {
@@ -171,9 +163,11 @@ impl<'a> JobQueue<'a> {
             fresh: fresh,
         });
 
-        let mut total_fresh = fresh.combine(self.state[pkg.package_id()]);
+        let mut total_fresh = fresh;
         let mut running = Vec::new();
+        debug!("start {:?} at {:?} for {}", total_fresh, stage, pkg);
         for (job, job_freshness) in jobs.into_iter() {
+            debug!("job: {:?} ({:?})", job_freshness, total_fresh);
             let fresh = job_freshness.combine(fresh);
             total_fresh = total_fresh.combine(fresh);
             let my_tx = self.tx.clone();
@@ -207,8 +201,7 @@ impl<'a> JobQueue<'a> {
         // run for a package, regardless of when that is. We then don't print
         // out any more information for a package after we've printed it once.
         let print = !self.printed.contains(&pkg.package_id());
-        if print && (stage == Stage::Libraries ||
-                     (total_fresh == Dirty && running.len() > 0)) {
+        if print && total_fresh == Dirty && running.len() > 0 {
             self.printed.insert(pkg.package_id());
             match total_fresh {
                 Fresh => try!(config.shell().verbose(|c| {

@@ -1,6 +1,5 @@
 use cargo::ops;
-use cargo::core::manifest::TargetKind;
-use cargo::util::{CliResult, CliError, human, Config};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -47,36 +46,35 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    let env = match (options.flag_release, options.flag_example.is_some()) {
-        (true, _) => "release",
-        (false, true) => "test",
-        (false, false) => "compile"
-    };
+    let (mut examples, mut bins) = (Vec::new(), Vec::new());
+    if let Some(s) = options.flag_bin {
+        bins.push(s);
+    }
+    if let Some(s) = options.flag_example {
+        examples.push(s);
+    }
 
     let compile_opts = ops::CompileOptions {
-        env: env,
         config: config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
-        dev_deps: true,
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
         spec: None,
-        lib_only: false,
         exec_engine: None,
-    };
-
-    let (target_kind, name) = match (options.flag_bin, options.flag_example) {
-        (Some(bin), None) => (TargetKind::Bin, Some(bin)),
-        (None, Some(example)) => (TargetKind::Example, Some(example)),
-        (None, None) => (TargetKind::Bin, None),
-        (Some(_), Some(_)) => return Err(CliError::from_boxed(
-            human("specify either `--bin` or `--example`, not both"), 1)),
+        release: options.flag_release,
+        mode: ops::CompileMode::Build,
+        filter: if examples.len() == 0 && bins.len() == 0 {
+            ops::CompileFilter::Everything
+        } else {
+            ops::CompileFilter::Only {
+                lib: false, tests: &[], benches: &[],
+                bins: &bins, examples: &examples,
+            }
+        },
     };
 
     let err = try!(ops::run(&root,
-                            target_kind,
-                            name,
                             &compile_opts,
                             &options.arg_args).map_err(|err| {
         CliError::from_boxed(err, 101)
