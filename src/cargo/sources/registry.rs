@@ -524,10 +524,19 @@ impl<'a, 'b> Source for RegistrySource<'a, 'b> {
             url.path_mut().unwrap().push(package.name().to_string());
             url.path_mut().unwrap().push(package.version().to_string());
             url.path_mut().unwrap().push("download".to_string());
-            let path = try!(self.download_package(package, &url).chain_error(|| {
+            let mut path = self.download_package(package, &url).chain_error(|| {
                 internal(format!("Failed to download package `{}` from {}",
                                  package, url))
-            }));
+            });
+            for _ in 0 .. 3 {
+                if path.is_ok() { break }
+                try!(self.config.shell().status("Refetching", package));
+                path = self.download_package(package, &url).chain_error(|| {
+                    internal(format!("Failed to download package `{}` from {}",
+                                package, url))
+                });
+            }
+            let path = try!(path);
             let path = try!(self.unpack_package(package, path).chain_error(|| {
                 internal(format!("Failed to unpack package `{}`", package))
             }));
