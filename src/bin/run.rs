@@ -50,7 +50,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let env = match (options.flag_release, options.flag_example.is_some()) {
-        (true, _) => "release",
+        (true, true) => "bench",
+        (true, false) => "release",
         (false, true) => "test",
         (false, false) => "compile"
     };
