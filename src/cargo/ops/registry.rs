@@ -173,11 +173,11 @@ pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
     Ok(handle)
 }
 
-/// Find a globally configured HTTP proxy if one is available.
+/// Find an explicit HTTP proxy if one is available.
 ///
-/// Favor cargo's `http.proxy`, then git's `http.proxy`, then finally a
-/// HTTP_PROXY env var.
-pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
+/// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
+/// via environment variables are picked up by libcurl.
+fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
     match try!(config.get_string("http.proxy")) {
         Some((s, _)) => return Ok(Some(s)),
         None => {}
@@ -191,7 +191,26 @@ pub fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
         }
         Err(..) => {}
     }
-    Ok(env::var("HTTP_PROXY").ok())
+    Ok(None)
+}
+
+/// Determine if an http proxy exists.
+///
+/// Checks the following for existence, in order:
+///
+/// * cargo's `http.proxy`
+/// * git's `http.proxy`
+/// * http_proxy env var
+/// * HTTP_PROXY env var
+/// * https_proxy env var
+/// * HTTPS_PROXY env var
+pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
+    if try!(http_proxy(config)).is_some() {
+        Ok(true)
+    } else {
+        Ok(["http_proxy", "HTTP_PROXY",
+           "https_proxy", "HTTPS_PROXY"].iter().any(|v| env::var(v).is_ok()))
+    }
 }
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {

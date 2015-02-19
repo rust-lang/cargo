@@ -255,8 +255,8 @@ fn init_git_transports(config: &Config) {
     // Only use a custom transport if a proxy is configured, right now libgit2
     // doesn't support proxies and we have to use a custom transport in this
     // case. The custom transport, however, is not as well battle-tested.
-    match cargo::ops::http_proxy(config) {
-        Ok(Some(..)) => {}
+    match cargo::ops::http_proxy_exists(config) {
+        Ok(true) => {}
         _ => return
     }
 
