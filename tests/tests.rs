@@ -1,3 +1,4 @@
+#![deny(warnings)]
 #![feature(collections, core, io, old_io, os, old_path, rustc_private, std_misc, env)]
 
 extern crate cargo;
