@@ -157,7 +157,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
     let email = try!(config.get_string("cargo-new.email")).map(|s| s.0);
     let vcs = try!(config.get_string("cargo-new.vcs"));
 
-    let vcs = match vcs.as_ref().map(|p| (&p.0[], &p.1)) {
+    let vcs = match vcs.as_ref().map(|p| (&p.0[..], &p.1)) {
         Some(("git", _)) => Some(VersionControl::Git),
         Some(("hg", _)) => Some(VersionControl::Hg),
         Some(("none", _)) => Some(VersionControl::NoVcs),

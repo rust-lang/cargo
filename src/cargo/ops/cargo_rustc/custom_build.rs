@@ -57,7 +57,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         cx.is_relevant_target(t) && !t.profile().is_custom_build()
     }).unwrap_or(target);
     let profile = cx.profile(profile_target);
-    let to_exec = CString::from_slice(to_exec.as_vec());
+    let to_exec = try!(CString::new(to_exec.as_vec()));
     let p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
     let mut p = p.env("OUT_DIR", Some(&build_output))
                  .env("CARGO_MANIFEST_DIR", Some(pkg.manifest_path()

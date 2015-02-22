@@ -102,8 +102,8 @@ impl PartialEq for Package {
 
 impl Eq for Package {}
 
-impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Package {
-    fn hash(&self, into: &mut H) {
+impl hash::Hash for Package {
+    fn hash<H: hash::Hasher>(&self, into: &mut H) {
         self.package_id().hash(into)
     }
 }

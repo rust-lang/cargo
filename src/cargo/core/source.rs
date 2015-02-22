@@ -316,8 +316,8 @@ impl PartialEq for SourceIdInner {
     }
 }
 
-impl<S: hash::Writer + hash::Hasher> hash::Hash<S> for SourceId {
-    fn hash(&self, into: &mut S) {
+impl hash::Hash for SourceId {
+    fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match *self.inner {
             SourceIdInner { kind: Kind::Git(..), ref url, .. } => {

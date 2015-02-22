@@ -16,7 +16,7 @@ use super::job::Job;
 /// This structure is backed by the `DependencyQueue` type and manages the
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
-pub struct JobQueue<'a, 'b> {
+pub struct JobQueue<'a> {
     pool: TaskPool,
     queue: DependencyQueue<(&'a PackageId, Stage),
                            (&'a Package, Vec<(Job, Freshness)>)>,
@@ -62,9 +62,9 @@ pub enum Stage {
 
 type Message = (PackageId, Stage, Freshness, CargoResult<()>);
 
-impl<'a, 'b> JobQueue<'a, 'b> {
+impl<'a> JobQueue<'a> {
     pub fn new(resolve: &'a Resolve, packages: &'a PackageSet, jobs: u32)
-               -> JobQueue<'a, 'b> {
+               -> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
             pool: TaskPool::new(jobs as usize),

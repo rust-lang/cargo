@@ -273,8 +273,8 @@ impl Profile {
     }
 }
 
-impl<H: hash::Writer + hash::Hasher> hash::Hash<H> for Profile {
-    fn hash(&self, into: &mut H) {
+impl hash::Hash for Profile {
+    fn hash<H: hash::Hasher>(&self, into: &mut H) {
         // Be sure to match all fields explicitly, but ignore those not relevant
         // to the actual hash of a profile.
         let Profile {

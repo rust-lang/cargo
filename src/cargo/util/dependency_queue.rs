@@ -5,7 +5,7 @@
 //! it to figure out when a dependency should be built.
 
 use std::collections::hash_set::HashSet;
-use std::collections::hash_map::{HashMap, Hasher};
+use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::Hash;
 
@@ -47,7 +47,7 @@ pub enum Freshness {
 }
 
 /// A trait for discovering the dependencies of a piece of data.
-pub trait Dependency: Hash<Hasher> + Eq + Clone {
+pub trait Dependency: Hash + Eq + Clone {
     type Context;
     fn dependencies(&self, cx: &Self::Context) -> Vec<Self>;
 }

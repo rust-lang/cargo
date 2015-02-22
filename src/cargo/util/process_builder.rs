@@ -115,7 +115,7 @@ impl ProcessBuilder {
         let mut program = format!("{}", String::from_utf8_lossy(self.program.as_bytes()));
         for arg in self.args.iter() {
             program.push(' ');
-            program.push_str(&format!("{}", String::from_utf8_lossy(arg.as_bytes()))[]);
+            program.push_str(&format!("{}", String::from_utf8_lossy(arg.as_bytes())));
         }
         program
     }

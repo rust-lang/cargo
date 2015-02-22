@@ -1,4 +1,5 @@
 use std::error::{FromError, Error};
+use std::ffi;
 use std::fmt;
 use std::old_io::IoError;
 use std::old_io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
@@ -17,7 +18,7 @@ pub type CargoResult<T> = Result<T, Box<CargoError>>;
 // =============================================================================
 // CargoError trait
 
-pub trait CargoError: Error + Send {
+pub trait CargoError: Error + Send + 'static {
     fn is_human(&self) -> bool { false }
     fn cargo_cause(&self) -> Option<&CargoError>{ None }
 }
@@ -58,8 +59,8 @@ impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
     }
 }
 
-impl<T, E: CargoError> ChainError<T> for Result<T, E> {
-    fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
+impl<T, E: CargoError + 'static> ChainError<T> for Result<T, E> {
+    fn chain_error<E2: 'static, C>(self, callback: C) -> CargoResult<T>
                          where E2: CargoError, C: FnOnce() -> E2 {
         self.map_err(move |err| {
             Box::new(ChainedError {
@@ -71,7 +72,7 @@ impl<T, E: CargoError> ChainError<T> for Result<T, E> {
 }
 
 impl<T> ChainError<T> for Option<T> {
-    fn chain_error<E, C>(self, callback: C) -> CargoResult<T>
+    fn chain_error<E: 'static, C>(self, callback: C) -> CargoResult<T>
                          where E: CargoError, C: FnOnce() -> E {
         match self {
             Some(t) => Ok(t),
@@ -213,7 +214,7 @@ impl CliError {
         CliError::from_boxed(error, code)
     }
 
-    pub fn from_error<E: CargoError + 'static>(error: E, code: i32) -> CliError {
+    pub fn from_error<E: CargoError>(error: E, code: i32) -> CliError {
         let error = Box::new(error) as Box<CargoError>;
         CliError::from_boxed(error, code)
     }
@@ -252,6 +253,7 @@ from_error! {
     toml::Error,
     url::ParseError,
     toml::DecodeError,
+    ffi::NulError,
 }
 
 impl<E: CargoError> FromError<Human<E>> for Box<CargoError> {
@@ -269,6 +271,7 @@ impl CargoError for toml::Error {}
 impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
 impl CargoError for str::Utf8Error {}
+impl CargoError for ffi::NulError {}
 
 // =============================================================================
 // Construction helpers
@@ -335,7 +338,7 @@ pub fn human<S: fmt::Display>(error: S) -> Box<CargoError> {
     })
 }
 
-pub fn caused_human<S: fmt::Display, E: Error + Send>(error: S, cause: E) -> Box<CargoError> {
+pub fn caused_human<S: fmt::Display, E: Error + Send + 'static>(error: S, cause: E) -> Box<CargoError> {
     Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,

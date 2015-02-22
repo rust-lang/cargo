@@ -215,7 +215,7 @@ fn scrape_build_config(config: &Config,
     };
     base.host = try!(scrape_target_config(config, config.rustc_host()));
     base.target = match target.as_ref() {
-        Some(triple) => try!(scrape_target_config(config, &triple[])),
+        Some(triple) => try!(scrape_target_config(config, &triple)),
         None => base.host.clone(),
     };
     Ok(base)
@@ -224,15 +224,15 @@ fn scrape_build_config(config: &Config,
 fn scrape_target_config(config: &Config, triple: &str)
                         -> CargoResult<ops::TargetConfig> {
     let key = format!("target.{}", triple);
-    let ar = try!(config.get_string(&format!("{}.ar", key)[]));
-    let linker = try!(config.get_string(&format!("{}.linker", key)[]));
+    let ar = try!(config.get_string(&format!("{}.ar", key)));
+    let linker = try!(config.get_string(&format!("{}.linker", key)));
 
     let mut ret = ops::TargetConfig {
         ar: ar.map(|p| p.0),
         linker: linker.map(|p| p.0),
         overrides: HashMap::new(),
     };
-    let table = match try!(config.get_table(&key[])) {
+    let table = match try!(config.get_table(&key)) {
         Some((table, _)) => table,
         None => return Ok(ret),
     };
@@ -245,14 +245,14 @@ fn scrape_target_config(config: &Config, triple: &str)
             metadata: Vec::new(),
         };
         let key = format!("{}.{}", key, lib_name);
-        let table = try!(config.get_table(&key[])).unwrap().0;
+        let table = try!(config.get_table(&key)).unwrap().0;
         for (k, _) in table.into_iter() {
             let key = format!("{}.{}", key, k);
-            let (v, path) = try!(config.get_string(&key[])).unwrap();
+            let (v, path) = try!(config.get_string(&key)).unwrap();
             if k == "rustc-flags" {
                 let whence = format!("in `{}` (in {:?})", key, path);
                 let (paths, links) = try!(
-                    BuildOutput::parse_rustc_flags(&v, &whence[])
+                    BuildOutput::parse_rustc_flags(&v, &whence)
                 );
                 output.library_paths.extend(paths.into_iter());
                 output.library_links.extend(links.into_iter());
