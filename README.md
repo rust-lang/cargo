@@ -58,6 +58,12 @@ bit versions of cargo on unix you would use:
 $ ./configure --target=i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
 ```
 
+## Adding new subcommands to Cargo
+
+Cargo is designed to be extensible with new subcommands without having to modify Cargo itself. See [the Wiki page][third-party-subcommands] for more details and a list of known community-developed subcommands.
+
+[third-party-subcommands]: https://github.com/rust-lang/cargo/wiki/Third-party-cargo-subcommands
+
 ## Contributing to the Docs
 
 To contribute to the docs, all you need to do is change the markdown files in
