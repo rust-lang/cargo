@@ -707,3 +707,27 @@ test!(update_publish_then_update {
    dir = p.url()).as_slice()));
 
 });
+
+test!(fetch_downloads {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("a", "0.1.0", &[]);
+
+    assert_that(p.process(cargo_dir().join("cargo")).arg("fetch"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} registry `[..]`
+{downloading} a v0.1.0 (registry [..])
+", updating = UPDATING, downloading = DOWNLOADING)));
+});
