@@ -92,7 +92,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                       -> CargoResult<(Option<(String, String)>, String)> {
         let process = try!(util::process("rustc"))
                            .arg("-")
-                           .arg("--crate-name").arg("-")
+                           .arg("--crate-name").arg("_")
                            .arg("--crate-type").arg("dylib")
                            .arg("--crate-type").arg("bin")
                            .arg("--print=file-names");
@@ -111,7 +111,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             None
         } else {
             let dylib_parts: Vec<&str> = lines.next().unwrap().trim()
-                                              .split('-').collect();
+                                              .split('_').collect();
             assert!(dylib_parts.len() == 2,
                     "rustc --print-file-name output has changed");
             Some((dylib_parts[0].to_string(), dylib_parts[1].to_string()))
@@ -121,7 +121,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             String::new()
         } else {
             lines.next().unwrap().trim()
-                 .split('-').skip(1).next().unwrap().to_string()
+                 .split('_').skip(1).next().unwrap().to_string()
         };
         Ok((dylib, exe_suffix.to_string()))
     }
