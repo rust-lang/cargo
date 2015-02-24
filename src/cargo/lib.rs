@@ -1,6 +1,7 @@
 #![deny(unused)]
 #![feature(collections, hash, libc, os, std_misc, unicode, env, core)]
 #![feature(old_io, old_path, str_words)]
+#![cfg_attr(test, deny(warnings))]
 
 extern crate libc;
 extern crate "rustc-serialize" as rustc_serialize;

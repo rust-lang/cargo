@@ -52,13 +52,13 @@ impl CommandPrototype {
     }
 
     pub fn arg<T: BytesContainer>(mut self, arg: T) -> CommandPrototype {
-        self.args.push(CString::from_slice(arg.container_as_bytes()));
+        self.args.push(CString::new(arg.container_as_bytes()).unwrap());
         self
     }
 
     pub fn args<T: BytesContainer>(mut self, arguments: &[T]) -> CommandPrototype {
         self.args.extend(arguments.iter().map(|t| {
-            CString::from_slice(t.container_as_bytes())
+            CString::new(t.container_as_bytes()).unwrap()
         }));
         self
     }
@@ -78,14 +78,14 @@ impl CommandPrototype {
 
     pub fn env<T: BytesContainer>(mut self, key: &str,
                                   val: Option<T>) -> CommandPrototype {
-        let val = val.map(|t| CString::from_slice(t.container_as_bytes()));
+        let val = val.map(|t| CString::new(t.container_as_bytes()).unwrap());
         self.env.insert(key.to_string(), val);
         self
     }
 
     pub fn get_env(&self, var: &str) -> Option<CString> {
         self.env.get(var).cloned().or_else(|| {
-            Some(env::var(var).ok().map(|s| CString::from_vec(s.into_bytes())))
+            Some(env::var(var).ok().map(|s| CString::new(s).unwrap()))
         }).and_then(|val| val)
     }
 

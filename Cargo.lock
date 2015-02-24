@@ -7,7 +7,7 @@ dependencies = [
  "docopt 0.6.39 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "git2 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2-curl 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "hamcrest 0.1.0 (git+https://github.com/carllerche/hamcrest-rust.git)",
@@ -98,7 +98,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "git2"
-version = "0.1.20"
+version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -112,7 +112,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "curl 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "git2 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
