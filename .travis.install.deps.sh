@@ -39,10 +39,10 @@ if [ -z "${windows}" ]; then
         src=i686
         dst=x86_64
     fi
-    cp -r rust-nightly-$src-$target/lib/rustlib/$src-$target \
-          rust-nightly-$dst-$target/lib/rustlib
+    cp -r rust-nightly-$src-$target/rustc/lib/rustlib/$src-$target \
+          rust-nightly-$dst-$target/rustc/lib/rustlib
     (cd rust-nightly-$dst-$target && \
-     find lib/rustlib/$src-$target/lib -type f | sed 's/^/file:/' >> \
+     find rustc/lib/rustlib/$src-$target/lib -type f | sed 's/^/file:/' >> \
      manifest-rustc.in)
 
     ./rust-nightly-$dst-$target/install.sh --prefix=rustc
