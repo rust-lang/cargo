@@ -164,7 +164,7 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
         }
     };
     let status = Command::new(command)
-                         .args(args)
+                         .args(&args[1..])
                          .stdin(InheritFd(0))
                          .stdout(InheritFd(1))
                          .stderr(InheritFd(2))
