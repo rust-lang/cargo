@@ -1,20 +1,13 @@
 import distutils.spawn
 import hashlib
 import os
+import subprocess
 import sys
 import tarfile
 import shutil
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    # We are in python2
-    from urllib2 import urlopen as urlopen2
-    from contextlib import closing
-    urlopen = lambda url: closing(urlopen2(url))
-
-with open('src/snapshots.txt') as f:
-    lines = f.readlines()
+f = open('src/snapshots.txt')
+lines = f.readlines()
 
 date = lines[0]
 linux32 = lines[1]
@@ -64,7 +57,7 @@ if me is None:
 
 triple = new_triple
 
-platform, hash = me.strip().split()
+platform, hash = me.strip().split(' ')
 
 tarball = 'cargo-nightly-' + triple + '.tar.gz'
 url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/' + date.strip() + '/' + tarball
@@ -77,22 +70,22 @@ if not os.path.isdir('target/dl'):
 if os.path.isdir(dst):
     shutil.rmtree(dst)
 
-with urlopen(url) as in_file:
-    data = in_file.read()
-    h = hashlib.sha1(data).hexdigest()
-    if h != hash:
-        raise Exception("failed to verify the checksum of the snapshot")
-    with open(dl_path, 'wb') as out_file:
-        out_file.write(data)
+ret = subprocess.call(["curl", "-o", dl_path, url])
+if ret != 0:
+    raise Exception("failed to fetch url")
+h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
+if h != hash:
+    raise Exception("failed to verify the checksum of the snapshot")
 
-with tarfile.open(dl_path) as tar:
-    for p in tar.getnames():
-        name = p.replace("cargo-nightly-" + triple + "/", "", 1)
-        fp = os.path.join(dst, name)
-        print("extracting " + p)
-        tar.extract(p, dst)
-        tp = os.path.join(dst, p)
-        if os.path.isdir(tp) and os.path.exists(fp):
-            continue
-        shutil.move(tp, fp)
+tar = tarfile.open(dl_path)
+for p in tar.getnames():
+    name = p.replace("cargo-nightly-" + triple + "/", "", 1)
+    fp = os.path.join(dst, name)
+    print("extracting " + p)
+    tar.extract(p, dst)
+    tp = os.path.join(dst, p)
+    if os.path.isdir(tp) and os.path.exists(fp):
+        continue
+    shutil.move(tp, fp)
+tar.close()
 shutil.rmtree(os.path.join(dst, 'cargo-nightly-' + triple))
