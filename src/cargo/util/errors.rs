@@ -338,7 +338,10 @@ pub fn human<S: fmt::Display>(error: S) -> Box<CargoError> {
     })
 }
 
-pub fn caused_human<S: fmt::Display, E: Error + Send + 'static>(error: S, cause: E) -> Box<CargoError> {
+pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
+    where S: fmt::Display,
+          E: Error + Send + 'static
+{
     Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,
