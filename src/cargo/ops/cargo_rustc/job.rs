@@ -22,7 +22,7 @@ impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
 
 impl Work {
     pub fn new<F>(f: F) -> Work
-                  where F: FnOnce(Sender<String>) -> CargoResult<()> + Send {
+                  where F: FnOnce(Sender<String>) -> CargoResult<()> + Send + 'static {
         Work { inner: Box::new(f) }
     }
 

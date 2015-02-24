@@ -406,6 +406,6 @@ pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
     try!(f.seek(0, old_io::SeekSet));
     try!(f.write_all(cwd.as_vec()));
     try!(f.write_all(&[0]));
-    try!(f.write_all(&contents[]));
+    try!(f.write_all(&contents));
     Ok(())
 }

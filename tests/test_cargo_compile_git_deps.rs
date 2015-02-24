@@ -1675,7 +1675,7 @@ test!(dont_require_submodules_are_checked_out {
     git2::Repository::init(&project.root()).unwrap();
     let url = path2url(git1.root()).to_string();
     let dst = paths::home().join("foo");
-    git2::Repository::clone(&url[], &dst).unwrap();
+    git2::Repository::clone(&url, &dst).unwrap();
 
     assert_that(git1.process(cargo_dir().join("cargo")).arg("build").arg("-v")
                     .cwd(dst),

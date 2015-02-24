@@ -316,7 +316,7 @@ fn activate_deps<'a>(cx: Box<Context>,
     // Oh well, we couldn't activate any of the candidates, so we just can't
     // activate this dependency at all
     Ok(activation_error(&cx, registry, last_err, parent, dep, prev_active,
-                        &candidates[]))
+                        &candidates))
 }
 
 fn activation_error(cx: &Context,
@@ -360,7 +360,7 @@ fn activation_error(cx: &Context,
                                         .map(|v| v.version())
                                         .map(|v| v.to_string())
                                         .collect::<Vec<_>>()
-                                        .connect(", "))[]);
+                                        .connect(", ")));
 
         return Err(human(msg))
     }

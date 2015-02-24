@@ -8,7 +8,7 @@ pub fn to_hex(num: u64) -> String {
     writer.to_hex()
 }
 
-pub fn short_hash<H: Hash<SipHasher>>(hashable: &H) -> String {
+pub fn short_hash<H: Hash>(hashable: &H) -> String {
     let mut hasher = SipHasher::new_with_keys(0, 0);
     hashable.hash(&mut hasher);
     to_hex(hasher.finish())

@@ -56,7 +56,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                root_pkg: &Package,
                build_config: BuildConfig) -> CargoResult<Context<'a, 'b>> {
         let target = build_config.requested_target.clone();
-        let target = target.as_ref().map(|s| &s[]);
+        let target = target.as_ref().map(|s| &s[..]);
         let (target_dylib, target_exe) = try!(Context::filename_parts(target));
         let (host_dylib, host_exe) = if build_config.requested_target.is_none() {
             (target_dylib.clone(), target_exe.clone())
@@ -358,7 +358,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// Requested (not actual) target for the build
     pub fn requested_target(&self) -> Option<&str> {
-        self.build_config.requested_target.as_ref().map(|s| &s[])
+        self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
     /// Calculate the actual profile to use for a target's compliation.
