@@ -161,7 +161,7 @@ pub fn registry(config: &Config,
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
-    let handle = http::handle();
+    let handle = http::handle().timeout(60);
     let handle = match try!(http_proxy(config)) {
         Some(proxy) => handle.proxy(proxy),
         None => handle,
