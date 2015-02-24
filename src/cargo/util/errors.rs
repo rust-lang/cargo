@@ -70,6 +70,16 @@ impl<T, E: CargoError> ChainError<T> for Result<T, E> {
     }
 }
 
+impl<T> ChainError<T> for Box<CargoError> {
+    fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
+                         where E2: CargoError, C: FnOnce() -> E2 {
+        Err(Box::new(ChainedError {
+            error: callback(),
+            cause: self,
+        }) as Box<CargoError>)
+    }
+}
+
 impl<T> ChainError<T> for Option<T> {
     fn chain_error<E, C>(self, callback: C) -> CargoResult<T>
                          where E: CargoError, C: FnOnce() -> E {
