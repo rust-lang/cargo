@@ -141,7 +141,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
     };
     let host_layout = Layout::new(root, None, dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
-        layout::Layout::new(root, Some(&target[]), dest)
+        layout::Layout::new(root, Some(&target), dest)
     });
 
     let mut cx = try!(Context::new(env, resolve, sources, deps, config,
@@ -209,7 +209,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                    compiled: bool,
                    cx: &mut Context<'a, 'b>,
-                   jobs: &mut JobQueue<'a, 'b>) -> CargoResult<()> {
+                   jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
     let _p = profile::start(format!("preparing: {}", pkg));
 
@@ -475,7 +475,7 @@ fn add_plugin_deps(rustc: CommandPrototype,
             search_path.push(path.clone());
         }
     }
-    let search_path = try!(join_paths(&search_path[], var));
+    let search_path = try!(join_paths(&search_path, var));
     Ok(rustc.env(var, Some(search_path)))
 }
 

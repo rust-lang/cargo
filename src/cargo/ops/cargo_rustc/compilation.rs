@@ -75,14 +75,14 @@ impl Compilation {
     /// See `process`.
     pub fn target_process<T: BytesContainer>(&self, cmd: T, pkg: &Package)
                                      -> CargoResult<CommandPrototype> {
-        let cmd = CString::from_slice(cmd.container_as_bytes());
+        let cmd = try!(CString::new(cmd.container_as_bytes()));
         self.process(CommandType::Target(cmd), pkg)
     }
 
     /// See `process`.
     pub fn host_process<T: BytesContainer>(&self, cmd: T, pkg: &Package)
                                    -> CargoResult<CommandPrototype> {
-        let cmd = CString::from_slice(cmd.container_as_bytes());
+        let cmd = try!(CString::new(cmd.container_as_bytes()));
         self.process(CommandType::Host(cmd), pkg)
     }
 

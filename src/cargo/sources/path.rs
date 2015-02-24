@@ -127,7 +127,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
         let mut ret = Vec::new();
         'outer: for entry in index.iter() {
-            let fname = &entry.path[];
+            let fname = &entry.path[..];
             let file_path = root.join(fname);
 
             // Filter out files outside this package.

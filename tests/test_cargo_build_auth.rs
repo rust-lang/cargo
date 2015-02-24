@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::old_io::net::tcp::TcpAcceptor;
 use std::old_io::{TcpListener, Listener, Acceptor, BufferedStream};
-use std::thread::Thread;
+use std::thread;
 use git2;
 
 use support::{project, execs, UPDATING};
@@ -38,7 +38,7 @@ test!(http_auth_offered {
            .collect()
     }
 
-    let t = Thread::scoped(move|| {
+    let t = thread::spawn(move|| {
         let mut s = BufferedStream::new(a.accept().unwrap());
         let req = headers(&mut s);
         s.write_all(b"\
@@ -130,7 +130,7 @@ test!(https_something_happens {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let t = Thread::scoped(move|| {
+    let t = thread::spawn(move|| {
         drop(a.accept().unwrap());
     });
 
@@ -180,7 +180,7 @@ test!(ssh_something_happens {
     let mut a = listener.listen().unwrap();
     let a2 = a.clone();
     let _c = Closer { a: a2 };
-    let t = Thread::scoped(move|| {
+    let t = thread::spawn(move|| {
         drop(a.accept().unwrap());
     });
 

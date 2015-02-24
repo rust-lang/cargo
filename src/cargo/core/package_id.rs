@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::error::{Error, FromError};
 use std::fmt::{self, Formatter};
-use std::hash::{Hash, SipHasher};
+use std::hash::Hash;
 use std::hash;
 use std::sync::Arc;
 
@@ -56,8 +56,8 @@ impl Decodable for PackageId {
     }
 }
 
-impl<S: hash::Writer + hash::Hasher> Hash<S> for PackageId {
-    fn hash(&self, state: &mut S) {
+impl Hash for PackageId {
+    fn hash<S: hash::Hasher>(&self, state: &mut S) {
         self.inner.name.hash(state);
         self.inner.version.to_string().hash(state);
         self.inner.source_id.hash(state);
@@ -156,7 +156,7 @@ impl PackageId {
 }
 
 impl Metadata {
-    pub fn mix<T: Hash<SipHasher>>(&mut self, t: &T) {
+    pub fn mix<T: Hash>(&mut self, t: &T) {
         let new_metadata = short_hash(&(&self.metadata, t));
         self.extra_filename = format!("-{}", new_metadata);
         self.metadata = new_metadata;

@@ -29,13 +29,13 @@ impl fmt::Display for ProcessBuilder {
 
 impl ProcessBuilder {
     pub fn arg<T: BytesContainer>(mut self, arg: T) -> ProcessBuilder {
-        self.args.push(CString::from_slice(arg.container_as_bytes()));
+        self.args.push(CString::new(arg.container_as_bytes()).unwrap());
         self
     }
 
     pub fn args<T: BytesContainer>(mut self, arguments: &[T]) -> ProcessBuilder {
         self.args.extend(arguments.iter().map(|t| {
-            CString::from_slice(t.container_as_bytes())
+            CString::new(t.container_as_bytes()).unwrap()
         }));
         self
     }
@@ -51,7 +51,7 @@ impl ProcessBuilder {
 
     pub fn env<T: BytesContainer>(mut self, key: &str,
                                   val: Option<T>) -> ProcessBuilder {
-        let val = val.map(|t| CString::from_slice(t.container_as_bytes()));
+        let val = val.map(|t| CString::new(t.container_as_bytes()).unwrap());
         self.env.insert(key.to_string(), val);
         self
     }
@@ -115,7 +115,7 @@ impl ProcessBuilder {
         let mut program = format!("{}", String::from_utf8_lossy(self.program.as_bytes()));
         for arg in self.args.iter() {
             program.push(' ');
-            program.push_str(&format!("{}", String::from_utf8_lossy(arg.as_bytes()))[]);
+            program.push_str(&format!("{}", String::from_utf8_lossy(arg.as_bytes())));
         }
         program
     }
@@ -123,7 +123,7 @@ impl ProcessBuilder {
 
 pub fn process<T: BytesContainer>(cmd: T) -> CargoResult<ProcessBuilder> {
     Ok(ProcessBuilder {
-        program: CString::from_slice(cmd.container_as_bytes()),
+        program: CString::new(cmd.container_as_bytes()).unwrap(),
         args: Vec::new(),
         cwd: try!(env::current_dir()),
         env: HashMap::new(),

@@ -359,12 +359,12 @@ fn lines_match(expected: &str, mut actual: &str) -> bool {
     actual.len() == 0 || expected.ends_with("[..]")
 }
 
-struct ZipAll<T, I1, I2> {
+struct ZipAll<I1: Iterator, I2: Iterator> {
     first: I1,
     second: I2,
 }
 
-impl<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>> Iterator for ZipAll<T, I1, I2> {
+impl<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>> Iterator for ZipAll<I1, I2> {
     type Item = (Option<T>, Option<T>);
     fn next(&mut self) -> Option<(Option<T>, Option<T>)> {
         let first = self.first.next();
@@ -377,10 +377,10 @@ impl<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>> Iterator for ZipAll<T, I1, I
     }
 }
 
-fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAll<T, I1, I2> {
+fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAll<I1, I2> {
     ZipAll {
         first: a,
-        second: b
+        second: b,
     }
 }
 

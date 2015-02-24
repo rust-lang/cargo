@@ -27,10 +27,10 @@ url=https://static-rust-lang-org.s3.amazonaws.com/dist/`cat src/rustversion.txt`
 # future anyway.
 if [ -z "${windows}" ]; then
     rm -rf rustc *.tar.gz
-    curl -O $url/rust-nightly-i686-$target.tar.gz
-    curl -O $url/rust-nightly-x86_64-$target.tar.gz
-    tar xfz rust-nightly-i686-$target.tar.gz
-    tar xfz rust-nightly-x86_64-$target.tar.gz
+    curl -O $url/rustc-nightly-i686-$target.tar.gz
+    curl -O $url/rustc-nightly-x86_64-$target.tar.gz
+    tar xfz rustc-nightly-i686-$target.tar.gz
+    tar xfz rustc-nightly-x86_64-$target.tar.gz
 
     if [ "${BITS}" = "32" ]; then
         src=x86_64
@@ -39,32 +39,29 @@ if [ -z "${windows}" ]; then
         src=i686
         dst=x86_64
     fi
-    cp -r rust-nightly-$src-$target/lib/rustlib/$src-$target \
-          rust-nightly-$dst-$target/lib/rustlib
-    (cd rust-nightly-$dst-$target && \
-     find lib/rustlib/$src-$target/lib -type f | sed 's/^/file:/' >> \
-     manifest-rustc.in)
+    cp -r rustc-nightly-$src-$target/rustc/lib/rustlib/$src-$target \
+          rustc-nightly-$dst-$target/rustc/lib/rustlib
+    (cd rustc-nightly-$dst-$target && \
+     find rustc/lib/rustlib/$src-$target/lib -type f | \
+     sed 's/^rustc\//file:/' >> rustc/manifest.in)
 
-    ./rust-nightly-$dst-$target/install.sh --prefix=rustc
-    rm -rf rust-nightly-$src-$target
-    rm -rf rust-nightly-$dst-$target
-    rm -f rust-nightly-i686-$target.tar.gz
-    rm -f rust-nightly-x86_64-$target.tar.gz
+    ./rustc-nightly-$dst-$target/install.sh --prefix=rustc
+    rm -rf rustc-nightly-$src-$target
+    rm -rf rustc-nightly-$dst-$target
+    rm -f rustc-nightly-i686-$target.tar.gz
+    rm -f rustc-nightly-x86_64-$target.tar.gz
 else
-    rm -rf rustc *.exe
+    rm -rf rustc *.exe *.tar.gz
     if [ "${BITS}" = "64" ]; then
         triple=x86_64-pc-windows-gnu
     else
         triple=i686-pc-windows-gnu
     fi
-    curl -O $url/rust-nightly-$triple.exe
-    innounp -y -x rust-nightly-$triple.exe
-    mv '{app}' rustc
-    # Don't use the bundled gcc, see rust-lang/rust#17442
-    rm -rf rustc/bin/rustlib/$triple/bin
-    # Don't use bundled gcc libs, see rust-lang/rust#19519
-    rm -rf rustc/bin/rustlib/$triple/lib/libmingw*.a
-    rm -f rust-nightly-$triple.exe
+    curl -O $url/rustc-nightly-$triple.tar.gz
+    tar xfz rustc-nightly-$triple.tar.gz
+    ./rustc-nightly-$triple/install.sh --prefix=rustc
+    rm -rf rustc-nightly-$triple
+    rm -f rustc-nightly-$triple.tar.gz
 fi
 
 set +x

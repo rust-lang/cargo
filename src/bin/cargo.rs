@@ -1,4 +1,4 @@
-#![feature(collections, core, io, path, env)]
+#![feature(collections, core, old_io, old_path, env)]
 
 extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -99,7 +99,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let (mut args, command) = match &flags.arg_command[] {
+    let (mut args, command) = match &flags.arg_command[..] {
         "" | "help" if flags.arg_args.len() == 0 => {
             config.shell().set_verbose(true);
             let args = &["foo".to_string(), "-h".to_string()];
@@ -111,7 +111,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         "help" if flags.arg_args[0] == "-h" ||
                   flags.arg_args[0] == "--help" =>
             (flags.arg_args, "help"),
-        "help" => (vec!["-h".to_string()], &flags.arg_args[0][]),
+        "help" => (vec!["-h".to_string()], &flags.arg_args[0][..]),
         s => (flags.arg_args.clone(), s),
     };
     args.insert(0, command.to_string());
