@@ -6,8 +6,8 @@ import sys
 import tarfile
 import shutil
 
-f = open('src/snapshots.txt')
-lines = f.readlines()
+with open('src/snapshots.txt') as f:
+    lines = f.readlines()
 
 date = lines[0]
 linux32 = lines[1]
@@ -57,7 +57,7 @@ if me is None:
 
 triple = new_triple
 
-platform, hash = me.strip().split(' ')
+platform, hash = me.strip().split()
 
 tarball = 'cargo-nightly-' + triple + '.tar.gz'
 url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/' + date.strip() + '/' + tarball
@@ -77,15 +77,14 @@ h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
 if h != hash:
     raise Exception("failed to verify the checksum of the snapshot")
 
-tar = tarfile.open(dl_path)
-for p in tar.getnames():
-    name = p.replace("cargo-nightly-" + triple + "/", "", 1)
-    fp = os.path.join(dst, name)
-    print("extracting " + p)
-    tar.extract(p, dst)
-    tp = os.path.join(dst, p)
-    if os.path.isdir(tp) and os.path.exists(fp):
-        continue
-    shutil.move(tp, fp)
-tar.close()
+with tarfile.open(dl_path) as tar:
+    for p in tar.getnames():
+        name = p.replace("cargo-nightly-" + triple + "/", "", 1)
+        fp = os.path.join(dst, name)
+        print("extracting " + p)
+        tar.extract(p, dst)
+        tp = os.path.join(dst, p)
+        if os.path.isdir(tp) and os.path.exists(fp):
+            continue
+        shutil.move(tp, fp)
 shutil.rmtree(os.path.join(dst, 'cargo-nightly-' + triple))
