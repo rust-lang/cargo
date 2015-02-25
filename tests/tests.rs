@@ -1,3 +1,4 @@
+#![deny(warnings)]
 #![feature(collections, core, io, old_io, os, old_path, rustc_private, std_misc, env)]
 
 extern crate cargo;
@@ -41,6 +42,7 @@ mod test_cargo_features;
 mod test_cargo_fetch;
 mod test_cargo_freshness;
 mod test_cargo_generate_lockfile;
+mod test_cargo_install;
 mod test_cargo_new;
 mod test_cargo_package;
 mod test_cargo_profiles;
