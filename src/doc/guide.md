@@ -1,4 +1,4 @@
-% Guide
+% Cargo Guide
 
 Welcome to the Cargo guide. This guide will give you all that you need to know
 about how to use Cargo to develop Rust projects.

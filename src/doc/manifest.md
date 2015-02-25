@@ -1,4 +1,4 @@
-% The Manifest Format
+% The Manifest Format - Cargo Documentation
 
 # The `[package]` Section
 
