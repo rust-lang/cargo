@@ -264,6 +264,7 @@ need_cmd sed
 need_cmd file
 need_cmd cmake
 need_cmd pkg-config
+need_cmd curl
 
 CFG_SRC_DIR="$(cd $(dirname $0) && pwd)/"
 CFG_BUILD_DIR="$(pwd)/"
