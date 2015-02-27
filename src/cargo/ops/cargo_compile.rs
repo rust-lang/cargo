@@ -26,6 +26,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::num::ToPrimitive;
 use std::os;
+use std::path::Path;
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
@@ -58,7 +59,7 @@ pub fn compile(manifest_path: &Path,
                -> CargoResult<ops::Compilation> {
     debug!("compile; manifest-path={}", manifest_path.display());
 
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                options.config));
     try!(source.update());
 
@@ -163,7 +164,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
     return Ok(ret);
 }
 
-fn source_ids_from_config(config: &Config, cur_path: Path)
+fn source_ids_from_config(config: &Config, cur_path: &Path)
                           -> CargoResult<Vec<SourceId>> {
 
     let configs = try!(config.values());
@@ -180,11 +181,11 @@ fn source_ids_from_config(config: &Config, cur_path: Path)
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
-        p.dir_path().dir_path().join(s)
+        p.parent().unwrap().parent().unwrap().join(s)
     }).filter(|p| {
         // Make sure we don't override the local package, even if it's in the
         // list of override paths.
-        cur_path != *p
+        cur_path != &**p
     }).map(|p| SourceId::for_path(&p)).collect()
 }
 

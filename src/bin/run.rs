@@ -1,5 +1,3 @@
-use std::old_io::process::ExitStatus;
-
 use cargo::ops;
 use cargo::core::manifest::TargetKind;
 use cargo::util::{CliResult, CliError, human, Config};
@@ -86,9 +84,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     match err {
         None => Ok(None),
         Some(err) => {
-            Err(match err.exit {
-                Some(ExitStatus(i)) => CliError::from_boxed(box err, i as i32),
-                _ => CliError::from_boxed(box err, 101),
+            Err(match err.exit.as_ref().and_then(|e| e.code()) {
+                Some(i) => CliError::from_error(err, i),
+                None => CliError::from_error(err, 101),
             })
         }
     }

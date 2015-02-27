@@ -1,4 +1,6 @@
-use std::old_io::{self, fs, File};
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 
 use url::Url;
 use git2;
@@ -7,14 +9,14 @@ use support::path2url;
 
 pub struct RepoBuilder {
     repo: git2::Repository,
-    files: Vec<Path>,
+    files: Vec<PathBuf>,
 }
 
 pub fn repo(p: &Path) -> RepoBuilder { RepoBuilder::init(p) }
 
 impl RepoBuilder {
     pub fn init(p: &Path) -> RepoBuilder {
-        fs::mkdir_recursive(&p.dir_path(), old_io::USER_DIR).unwrap();
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
         let repo = git2::Repository::init(p).unwrap();
         {
             let mut config = repo.config().unwrap();
@@ -24,17 +26,16 @@ impl RepoBuilder {
         RepoBuilder { repo: repo, files: Vec::new() }
     }
 
-    pub fn file<T: Str>(self, path: &str, contents: T) -> RepoBuilder {
+    pub fn file(self, path: &str, contents: &str) -> RepoBuilder {
         let mut me = self.nocommit_file(path, contents);
-        me.files.push(Path::new(path));
+        me.files.push(PathBuf::new(path));
         me
     }
 
-    pub fn nocommit_file<T: Str>(self, path: &str,
-                                 contents: T) -> RepoBuilder {
-        let dst = self.repo.path().dir_path().join(path);
-        fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR).unwrap();
-        File::create(&dst).write_str(contents.as_slice()).unwrap();
+    pub fn nocommit_file(self, path: &str, contents: &str) -> RepoBuilder {
+        let dst = self.repo.workdir().unwrap().join(path);
+        fs::create_dir_all(dst.parent().unwrap()).unwrap();
+        File::create(&dst).unwrap().write_all(contents.as_bytes()).unwrap();
         self
     }
 
@@ -51,5 +52,7 @@ impl RepoBuilder {
                          "Initial commit", &tree, &[]).unwrap();
     }
 
-    pub fn url(&self) -> Url { path2url(self.repo.path().dir_path()) }
+    pub fn url(&self) -> Url {
+        path2url(self.repo.workdir().unwrap().to_path_buf())
+    }
 }

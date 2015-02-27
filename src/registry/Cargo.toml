@@ -8,5 +8,5 @@ name = "registry"
 path = "lib.rs"
 
 [dependencies]
-curl = "0.1"
-rustc-serialize = "0.2"
+curl = "0.2"
+rustc-serialize = "0.3"

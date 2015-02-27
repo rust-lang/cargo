@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::dynamic_lib::DynamicLibrary;
-use std::ffi::CString;
-use std::old_path::BytesContainer;
+use std::ffi::AsOsStr;
+use std::path::PathBuf;
 use semver::Version;
 
 use core::{PackageId, Package};
@@ -15,30 +15,30 @@ pub struct Compilation {
     ///
     /// This is currently used for passing --extern flags to rustdoc tests later
     /// on.
-    pub libraries: HashMap<PackageId, Vec<Path>>,
+    pub libraries: HashMap<PackageId, Vec<PathBuf>>,
 
     /// An array of all tests created during this compilation.
-    pub tests: Vec<(String, Path)>,
+    pub tests: Vec<(String, PathBuf)>,
 
     /// An array of all binaries created.
-    pub binaries: Vec<Path>,
+    pub binaries: Vec<PathBuf>,
 
     /// All directires for the output of native build commands.
     ///
     /// This is currently used to drive some entries which are added to the
     /// LD_LIBRARY_PATH as appropriate.
     // TODO: deprecated, remove
-    pub native_dirs: HashMap<PackageId, Path>,
+    pub native_dirs: HashMap<PackageId, PathBuf>,
 
     /// Root output directory (for the local package's artifacts)
-    pub root_output: Path,
+    pub root_output: PathBuf,
 
     /// Output directory for rust dependencies
-    pub deps_output: Path,
+    pub deps_output: PathBuf,
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
-    pub extra_env: HashMap<String, Option<String>>,
+    pub extra_env: HashMap<String, String>,
 
     /// Top-level package that was compiled
     pub package: Package,
@@ -52,8 +52,8 @@ impl Compilation {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: HashMap::new(),  // TODO: deprecated, remove
-            root_output: Path::new("/"),
-            deps_output: Path::new("/"),
+            root_output: PathBuf::new("/"),
+            deps_output: PathBuf::new("/"),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
@@ -73,17 +73,15 @@ impl Compilation {
     }
 
     /// See `process`.
-    pub fn target_process<T: BytesContainer>(&self, cmd: T, pkg: &Package)
-                                     -> CargoResult<CommandPrototype> {
-        let cmd = try!(CString::new(cmd.container_as_bytes()));
-        self.process(CommandType::Target(cmd), pkg)
+    pub fn target_process<T: AsOsStr + ?Sized>(&self, cmd: &T, pkg: &Package)
+                                               -> CargoResult<CommandPrototype> {
+        self.process(CommandType::Target(cmd.as_os_str().to_os_string()), pkg)
     }
 
     /// See `process`.
-    pub fn host_process<T: BytesContainer>(&self, cmd: T, pkg: &Package)
-                                   -> CargoResult<CommandPrototype> {
-        let cmd = try!(CString::new(cmd.container_as_bytes()));
-        self.process(CommandType::Host(cmd), pkg)
+    pub fn host_process<T: AsOsStr + ?Sized>(&self, cmd: &T, pkg: &Package)
+                                             -> CargoResult<CommandPrototype> {
+        self.process(CommandType::Host(cmd.as_os_str().to_os_string()), pkg)
     }
 
     /// Prepares a new process with an appropriate environment to run against
@@ -93,7 +91,7 @@ impl Compilation {
     /// well as the working directory of the child process.
     pub fn process(&self, cmd: CommandType, pkg: &Package)
                    -> CargoResult<CommandPrototype> {
-        let mut search_path = DynamicLibrary::search_path();
+        let mut search_path = util::dylib_path();
         for dir in self.native_dirs.values() {
             search_path.push(dir.clone());
         }
@@ -101,30 +99,26 @@ impl Compilation {
         search_path.push(self.deps_output.clone());
         let search_path = try!(util::join_paths(&search_path,
                                                 DynamicLibrary::envvar()));
-        let mut cmd = try!(CommandPrototype::new(cmd)).env(
-            DynamicLibrary::envvar(), Some(&search_path));
+        let mut cmd = try!(CommandPrototype::new(cmd));
+        cmd.env(DynamicLibrary::envvar(), &search_path);
         for (k, v) in self.extra_env.iter() {
-            cmd = cmd.env(k, v.as_ref());
+            cmd.env(k, v);
         }
 
-        Ok(cmd.env("CARGO_MANIFEST_DIR", Some(pkg.manifest_path().dir_path()))
-              .env("CARGO_PKG_VERSION_MAJOR",
-                   Some(pkg.version().major.to_string()))
-              .env("CARGO_PKG_VERSION_MINOR",
-                  Some(pkg.version().minor.to_string()))
-              .env("CARGO_PKG_VERSION_PATCH",
-                   Some(pkg.version().patch.to_string()))
-              .env("CARGO_PKG_VERSION_PRE",
-                   pre_version_component(pkg.version()))
-              .env("CARGO_PKG_VERSION",
-                   Some(pkg.version().to_string()))
-              .cwd(pkg.root()))
+        cmd.env("CARGO_MANIFEST_DIR", pkg.root())
+           .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
+           .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
+           .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
+           .env("CARGO_PKG_VERSION_PRE", &pre_version_component(pkg.version()))
+           .env("CARGO_PKG_VERSION", &pkg.version().to_string())
+           .cwd(pkg.root());
+        Ok(cmd)
     }
 }
 
-fn pre_version_component(v: &Version) -> Option<String> {
+fn pre_version_component(v: &Version) -> String {
     if v.pre.is_empty() {
-        return None;
+        return String::new();
     }
 
     let mut ret = String::new();
@@ -134,5 +128,5 @@ fn pre_version_component(v: &Version) -> Option<String> {
         ret.push_str(&x.to_string());
     }
 
-    Some(ret)
+    ret
 }

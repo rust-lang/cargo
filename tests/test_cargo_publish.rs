@@ -1,6 +1,9 @@
-use std::old_io::{self, fs, File, MemReader};
+use std::io::prelude::*;
+use std::fs::{self, File};
+use std::io::{Cursor, SeekFrom};
+use std::path::PathBuf;
 
-use flate2::reader::GzDecoder;
+use flate2::read::GzDecoder;
 use tar::Archive;
 use url::Url;
 
@@ -11,23 +14,23 @@ use support::git::repo;
 
 use hamcrest::assert_that;
 
-fn registry_path() -> Path { paths::root().join("registry") }
-fn registry() -> Url { Url::from_file_path(&registry_path()).ok().unwrap() }
-fn upload_path() -> Path { paths::root().join("upload") }
-fn upload() -> Url { Url::from_file_path(&upload_path()).ok().unwrap() }
+fn registry_path() -> PathBuf { paths::root().join("registry") }
+fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
+fn upload_path() -> PathBuf { paths::root().join("upload") }
+fn upload() -> Url { Url::from_file_path(&*upload_path()).ok().unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), old_io::USER_DIR).unwrap();
-    File::create(&config).write_str(format!(r#"
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(&config).unwrap().write_all(&format!(r#"
         [registry]
             index = "{reg}"
             token = "api-token"
-    "#, reg = registry()).as_slice()).unwrap();
-    fs::mkdir_recursive(&upload_path().join("api/v1/crates"), old_io::USER_DIR).unwrap();
+    "#, reg = registry()).as_bytes()).unwrap();
+    fs::create_dir_all(&upload_path().join("api/v1/crates")).unwrap();
 
     repo(&registry_path())
-        .file("config.json", format!(r#"{{
+        .file("config.json", &format!(r#"{{
             "dl": "{0}",
             "api": "{0}"
         }}"#, upload()))
@@ -60,13 +63,20 @@ test!(simple {
 
     let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
-    let sz = f.read_le_u32().unwrap();
-    f.seek(sz as i64 + 4, old_io::SeekCur).unwrap();
+    let mut sz = [0; 4];
+    assert_eq!(f.read(&mut sz), Ok(4));
+    let sz = ((sz[0] as u32) <<  0) |
+             ((sz[1] as u32) <<  8) |
+             ((sz[2] as u32) << 16) |
+             ((sz[3] as u32) << 24);
+    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f).unwrap();
     assert_eq!(rdr.header().filename(), Some(b"foo-0.0.1.crate"));
-    let inner = MemReader::new(rdr.read_to_end().unwrap());
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let inner = Cursor::new(contents);
     let ar = Archive::new(inner);
     for file in ar.files().unwrap() {
         let file = file.unwrap();

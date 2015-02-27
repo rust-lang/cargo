@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::sync::TaskPool;
 use std::sync::mpsc::{channel, Sender, Receiver};
+
+use threadpool::ThreadPool;
 use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
@@ -17,7 +18,7 @@ use super::job::Job;
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a> {
-    pool: TaskPool,
+    pool: ThreadPool,
     queue: DependencyQueue<(&'a PackageId, Stage),
                            (&'a Package, Vec<(Job, Freshness)>)>,
     tx: Sender<Message>,
@@ -67,7 +68,7 @@ impl<'a> JobQueue<'a> {
                -> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
-            pool: TaskPool::new(jobs as usize),
+            pool: ThreadPool::new(jobs as usize),
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,

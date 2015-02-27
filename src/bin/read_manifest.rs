@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use cargo::core::{Package, Source};
 use cargo::util::{CliResult, CliError, Config};
 use cargo::sources::{PathSource};

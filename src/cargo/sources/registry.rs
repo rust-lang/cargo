@@ -158,12 +158,13 @@
 //!         ...
 //! ```
 
-use std::old_io::{self, fs, File};
-use std::old_io::fs::PathExtensions;
 use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::path::PathBuf;
 
 use curl::http;
-use flate2::reader::GzDecoder;
+use flate2::read::GzDecoder;
 use git2;
 use rustc_serialize::hex::ToHex;
 use rustc_serialize::json;
@@ -181,9 +182,9 @@ static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
 
 pub struct RegistrySource<'a, 'b:'a> {
     source_id: SourceId,
-    checkout_path: Path,
-    cache_path: Path,
-    src_path: Path,
+    checkout_path: PathBuf,
+    cache_path: PathBuf,
+    src_path: PathBuf,
     config: &'a Config<'b>,
     handle: Option<http::Handle>,
     sources: Vec<PathSource<'a, 'b>>,
@@ -265,7 +266,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// This requires that the index has been at least checked out.
     pub fn config(&self) -> CargoResult<RegistryConfig> {
         let mut f = try!(File::open(&self.checkout_path.join("config.json")));
-        let contents = try!(f.read_to_string());
+        let mut contents = String::new();
+        try!(f.read_to_string(&mut contents));
         let config = try!(json::decode(&contents));
         Ok(config)
     }
@@ -281,8 +283,8 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
             Err(..) => {}
         }
 
-        try!(fs::mkdir_recursive(&self.checkout_path, old_io::USER_DIR));
-        let _ = fs::rmdir_recursive(&self.checkout_path);
+        try!(fs::create_dir_all(&self.checkout_path));
+        let _ = fs::remove_dir_all(&self.checkout_path);
         let repo = try!(git2::Repository::init(&self.checkout_path));
         Ok(repo)
     }
@@ -295,14 +297,14 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     ///
     /// No action is taken if the package is already downloaded.
     fn download_package(&mut self, pkg: &PackageId, url: &Url)
-                        -> CargoResult<Path> {
+                        -> CargoResult<PathBuf> {
         // TODO: should discover from the S3 redirect
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let dst = self.cache_path.join(filename);
+        let dst = self.cache_path.join(&filename);
         if dst.exists() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
 
-        try!(fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR));
+        try!(fs::create_dir_all(dst.parent().unwrap()));
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
@@ -333,7 +335,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                                      pkg)))
         }
 
-        try!(File::create(&dst).write_all(resp.get_body()));
+        try!(try!(File::create(&dst)).write_all(resp.get_body()));
         Ok(dst)
     }
 
@@ -341,17 +343,17 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self, pkg: &PackageId, tarball: Path)
-                      -> CargoResult<Path> {
-        let dst = self.src_path.join(format!("{}-{}", pkg.name(),
-                                             pkg.version()));
+    fn unpack_package(&self, pkg: &PackageId, tarball: PathBuf)
+                      -> CargoResult<PathBuf> {
+        let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
+                                              pkg.version()));
         if dst.join(".cargo-ok").exists() { return Ok(dst) }
 
-        try!(fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR));
+        try!(fs::create_dir_all(dst.parent().unwrap()));
         let f = try!(File::open(&tarball));
         let gz = try!(GzDecoder::new(f));
         let mut tar = Archive::new(gz);
-        try!(tar.unpack(&dst.dir_path()));
+        try!(tar.unpack(dst.parent().unwrap()));
         try!(File::create(&dst.join(".cargo-ok")));
         Ok(dst)
     }
@@ -365,16 +367,17 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         let path = self.checkout_path.clone();
         let fs_name = name.chars().map(|c| c.to_lowercase()).collect::<String>();
         let path = match fs_name.len() {
-            1 => path.join("1").join(fs_name),
-            2 => path.join("2").join(fs_name),
-            3 => path.join("3").join(&fs_name[..1]).join(fs_name),
+            1 => path.join("1").join(&fs_name),
+            2 => path.join("2").join(&fs_name),
+            3 => path.join("3").join(&fs_name[..1]).join(&fs_name),
             _ => path.join(&fs_name[0..2])
                      .join(&fs_name[2..4])
-                     .join(fs_name),
+                     .join(&fs_name),
         };
         let summaries = match File::open(&path) {
             Ok(mut f) => {
-                let contents = try!(f.read_to_string());
+                let mut contents = String::new();
+                try!(f.read_to_string(&mut contents));
                 let ret: CargoResult<Vec<(Summary, bool)>>;
                 ret = contents.lines().filter(|l| l.trim().len() > 0)
                               .map(|l| self.parse_registry_package(l))

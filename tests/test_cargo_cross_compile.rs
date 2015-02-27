@@ -1,8 +1,7 @@
 use std::env;
-use std::old_path;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING, DOCTEST, cargo_dir};
+use support::{RUNNING, COMPILING, DOCTEST};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 use cargo::ops::rustc_version;
@@ -59,9 +58,8 @@ test!(simple_cross {
                 execs().with_status(0));
     assert_that(&p.target_bin(target, "foo"), existing_file());
 
-    assert_that(
-      process(p.target_bin(target, "foo")).unwrap(),
-      execs().with_status(0));
+    assert_that(process(&p.target_bin(target, "foo")).unwrap(),
+                execs().with_status(0));
 });
 
 test!(simple_deps {
@@ -96,9 +94,8 @@ test!(simple_deps {
                 execs().with_status(0));
     assert_that(&p.target_bin(target, "foo"), existing_file());
 
-    assert_that(
-      process(p.target_bin(target, "foo")).unwrap(),
-      execs().with_status(0));
+    assert_that(process(&p.target_bin(target, "foo")).unwrap(),
+                execs().with_status(0));
 });
 
 test!(plugin_deps {
@@ -173,9 +170,8 @@ test!(plugin_deps {
                 execs().with_status(0));
     assert_that(&foo.target_bin(target, "foo"), existing_file());
 
-    assert_that(
-      process(foo.target_bin(target, "foo")).unwrap(),
-      execs().with_status(0));
+    assert_that(process(&foo.target_bin(target, "foo")).unwrap(),
+                execs().with_status(0));
 });
 
 test!(plugin_to_the_max {
@@ -253,14 +249,13 @@ test!(plugin_to_the_max {
     assert_that(foo.cargo_process("build").arg("--target").arg(target).arg("-v"),
                 execs().with_status(0));
     println!("second");
-    assert_that(foo.process(cargo_dir().join("cargo")).arg("build").arg("-v")
+    assert_that(foo.cargo("build").arg("-v")
                    .arg("--target").arg(target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(target, "foo"), existing_file());
 
-    assert_that(
-      process(foo.target_bin(target, "foo")).unwrap(),
-      execs().with_status(0));
+    assert_that(process(&foo.target_bin(target, "foo")).unwrap(),
+                execs().with_status(0));
 });
 
 test!(linker_and_ar {
@@ -287,19 +282,18 @@ test!(linker_and_ar {
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
-    --out-dir {dir}{sep}target{sep}{target} \
+    --out-dir {dir}[..]target[..]{target} \
     --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
-    -L dependency={dir}{sep}target{sep}{target} \
-    -L dependency={dir}{sep}target{sep}{target}{sep}deps`
+    -L dependency={dir}[..]target[..]{target} \
+    -L dependency={dir}[..]target[..]{target}[..]deps`
 ",
                             running = RUNNING,
                             compiling = COMPILING,
                             dir = p.root().display(),
                             url = p.url(),
                             target = target,
-                            sep = old_path::SEP,
                             ).as_slice()));
 });
 
@@ -481,11 +475,11 @@ test!(cross_with_a_build_script {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.0 (file://[..])
-{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..]`
-{running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
-{running} `rustc src{sep}main.rs [..] --target {target} [..]`
+{running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..]`
+{running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
+{running} `rustc src[..]main.rs [..] --target {target} [..]`
 ", compiling = COMPILING, running = RUNNING, target = target,
-   dir = p.root().display(), sep = old_path::SEP).as_slice()));
+   dir = p.root().display()).as_slice()));
 });
 
 test!(build_script_needed_for_host_and_target {
@@ -550,24 +544,24 @@ test!(build_script_needed_for_host_and_target {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} d1 v0.0.0 (file://{dir})
-{running} `rustc d1{sep}build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}d1-[..]`
-{running} `{dir}{sep}target{sep}build{sep}d1-[..]build-script-build`
-{running} `{dir}{sep}target{sep}build{sep}d1-[..]build-script-build`
-{running} `rustc d1{sep}src{sep}lib.rs [..] --target {target} [..] \
+{running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`
+{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
+{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
+{running} `rustc d1[..]src[..]lib.rs [..] --target {target} [..] \
            -L /path/to/{target}`
-{running} `rustc d1{sep}src{sep}lib.rs [..] \
+{running} `rustc d1[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
 {compiling} d2 v0.0.0 (file://{dir})
-{running} `rustc d2{sep}src{sep}lib.rs [..] \
+{running} `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
 {compiling} foo v0.0.0 (file://{dir})
-{running} `rustc build.rs [..] --out-dir {dir}{sep}target{sep}build{sep}foo-[..] \
+{running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..] \
            -L /path/to/{host}`
-{running} `{dir}{sep}target{sep}build{sep}foo-[..]build-script-build`
-{running} `rustc src{sep}main.rs [..] --target {target} [..] \
+{running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
+{running} `rustc src[..]main.rs [..] --target {target} [..] \
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
-   dir = p.root().display(), sep = old_path::SEP).as_slice()));
+   dir = p.root().display()).as_slice()));
 });
 
 test!(build_deps_for_the_right_arch {

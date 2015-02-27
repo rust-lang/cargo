@@ -1,11 +1,12 @@
-use std::old_io::fs::PathExtensions;
 use std::collections::HashSet;
+use std::io::prelude::*;
+use std::path::Path;
+use std::process::Command;
 
 use core::PackageIdSpec;
 use core::source::Source;
 use ops;
 use sources::PathSource;
-use std::old_io::process::Command;
 use util::{CargoResult, human};
 
 pub struct DocOptions<'a, 'b: 'a> {
@@ -16,7 +17,7 @@ pub struct DocOptions<'a, 'b: 'a> {
 
 pub fn doc(manifest_path: &Path,
            options: &DocOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                options.compile_opts.config));
     try!(source.update());
     let package = try!(source.root_package());
@@ -54,7 +55,7 @@ pub fn doc(manifest_path: &Path,
             }
         };
 
-        let path = package.absolute_target_dir().join("doc").join(name)
+        let path = package.absolute_target_dir().join("doc").join(&name)
                                                     .join("index.html");
         if path.exists() {
             open_docs(&path);
@@ -67,19 +68,19 @@ pub fn doc(manifest_path: &Path,
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn open_docs(path: &Path) {
     // trying xdg-open
-    match Command::new("xdg-open").arg(path).detached().status() {
+    match Command::new("xdg-open").arg(path).status() {
         Ok(_) => return,
         Err(_) => ()
     };
 
     // trying gnome-open
-    match Command::new("gnome-open").arg(path).detached().status() {
+    match Command::new("gnome-open").arg(path).status() {
         Ok(_) => return,
         Err(_) => ()
     };
 
     // trying kde-open
-    match Command::new("kde-open").arg(path).detached().status() {
+    match Command::new("kde-open").arg(path).status() {
         Ok(_) => return,
         Err(_) => ()
     };
@@ -87,7 +88,7 @@ fn open_docs(path: &Path) {
 
 #[cfg(target_os = "windows")]
 fn open_docs(path: &Path) {
-    match Command::new("start").arg(path).detached().status() {
+    match Command::new("start").arg(path).status() {
         Ok(_) => return,
         Err(_) => ()
     };
@@ -95,7 +96,7 @@ fn open_docs(path: &Path) {
 
 #[cfg(target_os = "macos")]
 fn open_docs(path: &Path) {
-    match Command::new("open").arg(path).detached().status() {
+    match Command::new("open").arg(path).status() {
         Ok(_) => return,
         Err(_) => ()
     };

@@ -1,4 +1,5 @@
 use url::{self, Url, UrlParser};
+use std::path::Path;
 
 pub trait ToUrl {
     fn to_url(self) -> Result<Url, String>;

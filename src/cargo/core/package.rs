@@ -1,6 +1,7 @@
 use std::fmt::{self, Formatter};
 use std::hash;
 use std::slice;
+use std::path::{Path, PathBuf};
 use semver::Version;
 
 use core::{
@@ -25,7 +26,7 @@ pub struct Package {
     // The package's manifest
     manifest: Manifest,
     // The root of the package
-    manifest_path: Path,
+    manifest_path: PathBuf,
     // Where this package came from
     source_id: SourceId,
 }
@@ -63,7 +64,7 @@ impl Package {
                source_id: &SourceId) -> Package {
         Package {
             manifest: manifest,
-            manifest_path: manifest_path.clone(),
+            manifest_path: manifest_path.to_path_buf(),
             source_id: source_id.clone(),
         }
     }
@@ -73,13 +74,13 @@ impl Package {
     pub fn manifest_path(&self) -> &Path { &self.manifest_path }
     pub fn name(&self) -> &str { self.package_id().name() }
     pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
-    pub fn root(&self) -> Path { self.manifest_path.dir_path() }
+    pub fn root(&self) -> &Path { self.manifest_path.parent().unwrap() }
     pub fn summary(&self) -> &Summary { self.manifest.summary() }
     pub fn target_dir(&self) -> &Path { self.manifest.target_dir() }
     pub fn targets(&self) -> &[Target] { self.manifest().targets() }
     pub fn version(&self) -> &Version { self.package_id().version() }
 
-    pub fn absolute_target_dir(&self) -> Path {
+    pub fn absolute_target_dir(&self) -> PathBuf {
         self.root().join(self.target_dir())
     }
 

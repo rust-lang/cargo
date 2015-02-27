@@ -1,5 +1,5 @@
-use std::old_io::{fs, USER_RWX, File, TempDir};
-use std::old_io::fs::PathExtensions;
+use std::fs::{self, File, TempDir};
+use std::io::prelude::*;
 use std::env;
 
 use support::{execs, paths, cargo_dir};
@@ -11,20 +11,20 @@ fn setup() {
 }
 
 fn my_process(s: &str) -> ProcessBuilder {
-    process(s).unwrap()
-        .cwd(paths::root())
-        .env("HOME", Some(paths::home()))
+    let mut p = process(s).unwrap();
+    p.cwd(&paths::root()).env("HOME", &paths::home());
+    return p;
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    process(cargo_dir().join("cargo")).unwrap().arg(s)
-        .cwd(paths::root())
-        .env("HOME", Some(paths::home()))
+    let mut p = process(&cargo_dir().join("cargo")).unwrap();
+    p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
+    return p;
 }
 
 test!(simple_lib {
     assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("none")
-                                    .env("USER", Some("foo")),
+                                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -32,30 +32,30 @@ test!(simple_lib {
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
     assert_that(&paths::root().join("foo/.gitignore"), is_not(existing_file()));
 
-    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
+    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
 });
 
 test!(simple_bin {
     assert_that(cargo_process("new").arg("foo").arg("--bin")
-                                    .env("USER", Some("foo")),
+                                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
 
-    assert_that(cargo_process("build").cwd(paths::root().join("foo")),
+    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
-    assert_that(&paths::root().join(format!("foo/target/foo{}",
-                                            env::consts::EXE_SUFFIX)),
+    assert_that(&paths::root().join(&format!("foo/target/foo{}",
+                                             env::consts::EXE_SUFFIX)),
                 existing_file());
 });
 
 test!(simple_git {
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo").cwd(td.path().clone())
-                                    .env("USER", Some("foo")),
+                                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(td.path(), existing_dir());
@@ -64,7 +64,7 @@ test!(simple_git {
     assert_that(&td.path().join("foo/.git"), existing_dir());
     assert_that(&td.path().join("foo/.gitignore"), existing_file());
 
-    assert_that(cargo_process("build").cwd(td.path().clone().join("foo")),
+    assert_that(cargo_process("build").cwd(&td.path().clone().join("foo")),
                 execs().with_status(0));
 });
 
@@ -82,7 +82,7 @@ Usage:
 
 test!(existing {
     let dst = paths::root().join("foo");
-    fs::mkdir(&dst, USER_RWX).unwrap();
+    fs::create_dir(&dst).unwrap();
     assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
                        .with_stderr(format!("Destination `{}` already exists\n",
@@ -99,13 +99,14 @@ test!(finds_author_user {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo"))
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo")
                                     .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
-    let toml = File::open(&toml).read_to_string().unwrap();
-    assert!(toml.as_slice().contains(r#"authors = ["foo"]"#));
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["foo"]"#));
 });
 
 test!(finds_author_username {
@@ -113,14 +114,15 @@ test!(finds_author_username {
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo")
-                                    .env("USER", None::<&str>)
-                                    .env("USERNAME", Some("foo"))
+                                    .env_remove("USER")
+                                    .env("USERNAME", "foo")
                                     .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
-    let toml = File::open(&toml).read_to_string().unwrap();
-    assert!(toml.as_slice().contains(r#"authors = ["foo"]"#));
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["foo"]"#));
 });
 
 test!(finds_author_git {
@@ -128,12 +130,13 @@ test!(finds_author_git {
                      .exec().unwrap();
     my_process("git").args(&["config", "--global", "user.email", "baz"])
                      .exec().unwrap();
-    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let toml = File::open(&toml).read_to_string().unwrap();
-    assert!(toml.as_slice().contains(r#"authors = ["bar <baz>"]"#));
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 });
 
 test!(author_prefers_cargo {
@@ -142,48 +145,50 @@ test!(author_prefers_cargo {
     my_process("git").args(&["config", "--global", "user.email", "baz"])
                      .exec().unwrap();
     let root = paths::root();
-    fs::mkdir(&root.join(".cargo"), USER_RWX).unwrap();
-    File::create(&root.join(".cargo/config")).write_str(r#"
+    fs::create_dir(&root.join(".cargo")).unwrap();
+    File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
         [cargo-new]
         name = "new-foo"
         email = "new-bar"
         git = false
     "#).unwrap();
 
-    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let toml = File::open(&toml).read_to_string().unwrap();
-    assert!(toml.as_slice().contains(r#"authors = ["new-foo <new-bar>"]"#));
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["new-foo <new-bar>"]"#));
     assert!(!root.join("foo/.gitignore").exists());
 });
 
 test!(git_prefers_command_line {
     let root = paths::root();
     let td = TempDir::new("cargo").unwrap();
-    fs::mkdir(&root.join(".cargo"), USER_RWX).unwrap();
-    File::create(&root.join(".cargo/config")).write_str(r#"
+    fs::create_dir(&root.join(".cargo")).unwrap();
+    File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
         [cargo-new]
         vcs = "none"
         name = "foo"
         email = "bar"
     "#).unwrap();
 
-    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("git").cwd(td.path().clone())
-                                    .env("USER", Some("foo")),
+    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("git")
+                                    .cwd(td.path())
+                                    .env("USER", "foo"),
                 execs().with_status(0));
     assert!(td.path().join("foo/.gitignore").exists());
 });
 
 test!(subpackage_no_git {
-    assert_that(cargo_process("new").arg("foo").env("USER", Some("foo")),
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
     let subpackage = paths::root().join("foo").join("components");
-    fs::mkdir(&subpackage, USER_RWX).unwrap();
+    fs::create_dir(&subpackage).unwrap();
     assert_that(cargo_process("new").arg("foo/components/subcomponent")
-                                    .env("USER", Some("foo")),
+                                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo/components/subcomponent/.git"),

@@ -1,5 +1,3 @@
-use std::old_io::process::ExitStatus;
-
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Human, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
@@ -78,9 +76,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     match err {
         None => Ok(None),
         Some(err) => {
-            Err(match err.exit {
-                Some(ExitStatus(i)) => CliError::new("", i as i32),
-                _ => CliError::from_boxed(box Human(err), 101)
+            Err(match err.exit.as_ref().and_then(|e| e.code()) {
+                Some(i) => CliError::new("", i),
+                None => CliError::from_error(Human(err), 101)
             })
         }
     }

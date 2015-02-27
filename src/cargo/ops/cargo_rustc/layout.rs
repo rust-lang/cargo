@@ -45,19 +45,21 @@
 //!     .fingerprint/
 //! ```
 
-use std::old_io::fs::PathExtensions;
-use std::old_io::{self, fs, IoResult};
+use std::fs;
+use std::io::prelude::*;
+use std::io;
+use std::path::{PathBuf, Path};
 
 use core::Package;
 use util::hex::short_hash;
 
 pub struct Layout {
-    root: Path,
-    deps: Path,
-    native: Path,
-    build: Path,
-    fingerprint: Path,
-    examples: Path,
+    root: PathBuf,
+    deps: PathBuf,
+    native: PathBuf,
+    build: PathBuf,
+    fingerprint: PathBuf,
+    examples: PathBuf,
 }
 
 pub struct LayoutProxy<'a> {
@@ -79,7 +81,7 @@ impl Layout {
         Layout::at(path)
     }
 
-    pub fn at(root: Path) -> Layout {
+    pub fn at(root: PathBuf) -> Layout {
         Layout {
             deps: root.join("deps"),
             native: root.join("native"),
@@ -90,9 +92,9 @@ impl Layout {
         }
     }
 
-    pub fn prepare(&mut self) -> IoResult<()> {
+    pub fn prepare(&mut self) -> io::Result<()> {
         if !self.root.exists() {
-            try!(fs::mkdir_recursive(&self.root, old_io::USER_RWX));
+            try!(fs::create_dir_all(&self.root));
         }
 
         try!(mkdir(&self.deps));
@@ -103,9 +105,9 @@ impl Layout {
 
         return Ok(());
 
-        fn mkdir(dir: &Path) -> IoResult<()> {
+        fn mkdir(dir: &Path) -> io::Result<()> {
             if !dir.exists() {
-                try!(fs::mkdir(dir, old_io::USER_DIR));
+                try!(fs::create_dir(dir));
             }
             Ok(())
         }
@@ -115,19 +117,15 @@ impl Layout {
     pub fn deps<'a>(&'a self) -> &'a Path { &self.deps }
     pub fn examples<'a>(&'a self) -> &'a Path { &self.examples }
 
-    // TODO: deprecated, remove
-    pub fn native(&self, package: &Package) -> Path {
-        self.native.join(self.pkg_dir(package))
-    }
-    pub fn fingerprint(&self, package: &Package) -> Path {
-        self.fingerprint.join(self.pkg_dir(package))
+    pub fn fingerprint(&self, package: &Package) -> PathBuf {
+        self.fingerprint.join(&self.pkg_dir(package))
     }
 
-    pub fn build(&self, package: &Package) -> Path {
-        self.build.join(self.pkg_dir(package))
+    pub fn build(&self, package: &Package) -> PathBuf {
+        self.build.join(&self.pkg_dir(package))
     }
 
-    pub fn build_out(&self, package: &Package) -> Path {
+    pub fn build_out(&self, package: &Package) -> PathBuf {
         self.build(package).join("out")
     }
 
@@ -151,12 +149,9 @@ impl<'a> LayoutProxy<'a> {
 
     pub fn examples(&self) -> &'a Path { self.root.examples() }
 
-    // TODO: deprecated, remove
-    pub fn native(&self, pkg: &Package) -> Path { self.root.native(pkg) }
+    pub fn build(&self, pkg: &Package) -> PathBuf { self.root.build(pkg) }
 
-    pub fn build(&self, pkg: &Package) -> Path { self.root.build(pkg) }
-
-    pub fn build_out(&self, pkg: &Package) -> Path { self.root.build_out(pkg) }
+    pub fn build_out(&self, pkg: &Package) -> PathBuf { self.root.build_out(pkg) }
 
     pub fn proxy(&self) -> &'a Layout { self.root }
 }

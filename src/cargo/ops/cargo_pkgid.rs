@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use ops;
 use core::{Source, PackageIdSpec};
 use sources::{PathSource};
@@ -6,7 +8,7 @@ use util::{CargoResult, human, Config};
 pub fn pkgid(manifest_path: &Path,
              spec: Option<&str>,
              config: &Config) -> CargoResult<PackageIdSpec> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                                config));
     try!(source.update());
     let package = try!(source.root_package());

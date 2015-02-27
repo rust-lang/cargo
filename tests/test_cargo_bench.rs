@@ -1,9 +1,8 @@
-use std::old_path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, FRESH, RUNNING};
-use support::paths::PathExt;
+use support::{COMPILING, FRESH, RUNNING};
+use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -11,7 +10,7 @@ fn setup() {}
 
 test!(cargo_bench_simple {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo").as_slice())
         .file("src/foo.rs", r#"
             extern crate test;
 
@@ -31,12 +30,11 @@ test!(cargo_bench_simple {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-        process(p.bin("foo")).unwrap(),
-        execs().with_stdout("hello\n"));
+    assert_that(process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
-        execs().with_stdout(format!("\
+    assert_that(p.cargo("bench"),
+                execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo-[..]
 
@@ -141,7 +139,7 @@ test!(many_similar_names {
         "#);
 
     let output = p.cargo_process("bench").exec_with_output().unwrap();
-    let output = str::from_utf8(output.output.as_slice()).unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("test bin_bench"), "bin_bench missing\n{}", output);
     assert!(output.contains("test lib_bench"), "lib_bench missing\n{}", output);
     assert!(output.contains("test bench_bench"), "bench_bench missing\n{}", output);
@@ -169,24 +167,23 @@ test!(cargo_bench_failing_test {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-        process(p.bin("foo")).unwrap(),
-        execs().with_stdout("hello\n"));
+    assert_that(process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
-        execs().with_stdout(format!("\
+    assert_that(p.cargo("bench"),
+                execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo-[..]
 
 running 1 test
 test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
-              .with_stderr(format!("\
+              .with_stderr("\
 thread '<main>' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
-    `\"hello\"`, right: `\"nope\"`)', src{sep}foo.rs:14
+    `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
 
-", sep = old_path::SEP))
+")
               .with_status(101));
 });
 
@@ -472,7 +469,7 @@ test!(cargo_bench_twice {
     p.cargo_process("build");
 
     for _ in range(0, 2) {
-        assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
+        assert_that(p.cargo("bench"),
                     execs().with_status(0));
     }
 });
@@ -639,7 +636,7 @@ test!(bin_there_for_integration {
         "#);
 
     let output = p.cargo_process("bench").exec_with_output().unwrap();
-    let output = str::from_utf8(output.output.as_slice()).unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
                             "no main_bench\n{}",
                             output);
@@ -720,7 +717,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("bench").arg("-v"),
+    assert_that(p.cargo("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {fresh} bar v0.0.1 ({dir})
@@ -775,7 +772,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("bench"),
+    assert_that(p.cargo("bench"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {running} target[..]release[..]foo-[..]
@@ -842,18 +839,18 @@ test!(bench_with_examples {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} testbench v6.6.6 ({url})
-{running} `rustc src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
-{running} `rustc src{sep}lib.rs --crate-name testbench --crate-type lib [..]`
-{running} `rustc benches{sep}testb1.rs --crate-name testb1 --crate-type bin \
+{running} `rustc src[..]lib.rs --crate-name testbench --crate-type lib [..]`
+{running} `rustc src[..]lib.rs --crate-name testbench --crate-type lib [..]`
+{running} `rustc benches[..]testb1.rs --crate-name testb1 --crate-type bin \
         [..] --test [..]`
-{running} `{dir}{sep}target{sep}release{sep}testb1-[..] --bench`
+{running} `{dir}[..]target[..]release[..]testb1-[..] --bench`
 
 running 1 test
 test bench_bench2 ... bench:         0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} `{dir}{sep}target{sep}release{sep}testbench-[..] --bench`
+{running} `{dir}[..]target[..]release[..]testbench-[..] --bench`
 
 running 1 test
 test bench_bench1 ... bench:         0 ns/iter (+/- 0)
@@ -864,6 +861,5 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        compiling = COMPILING,
                        running = RUNNING,
                        dir = p.root().display(),
-                       url = p.url(),
-                       sep = old_path::SEP).as_slice()));
+                       url = p.url()).as_slice()));
 });

@@ -1,23 +1,23 @@
-use std::old_io::{fs, File, USER_DIR};
-use std::old_io::fs::PathExtensions;
-use std::old_path;
+use std::io::prelude::*;
+use std::fs::{self, File};
+use std::path::{self, Path, PathBuf};
 
 use tar::Archive;
-use flate2::{GzBuilder, BestCompression};
-use flate2::reader::GzDecoder;
+use flate2::{GzBuilder, Compression};
+use flate2::read::GzDecoder;
 
 use core::source::{Source, SourceId};
 use core::Package;
 use sources::PathSource;
-use util::{CargoResult, human, internal, ChainError, Config};
+use util::{self, CargoResult, human, internal, ChainError, Config};
 use ops;
 
-struct Bomb { path: Option<Path> }
+struct Bomb { path: Option<PathBuf> }
 
 impl Drop for Bomb {
     fn drop(&mut self) {
         match self.path.as_ref() {
-            Some(path) => { let _ = fs::unlink(path); }
+            Some(path) => { let _ = fs::remove_file(path); }
             None => {}
         }
     }
@@ -27,8 +27,8 @@ pub fn package(manifest_path: &Path,
                config: &Config,
                verify: bool,
                list: bool,
-               metadata: bool) -> CargoResult<Option<Path>> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+               metadata: bool) -> CargoResult<Option<PathBuf>> {
+    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
     try!(src.update());
     let pkg = try!(src.root_package());
@@ -38,9 +38,9 @@ pub fn package(manifest_path: &Path,
     }
 
     if list {
-        let root = pkg.manifest_path().dir_path();
+        let root = pkg.root();
         let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
-            file.path_relative_from(&root).unwrap()
+            file.relative_from(&root).unwrap().to_path_buf()
         }).collect();
         list.sort();
         for file in list.iter() {
@@ -50,7 +50,7 @@ pub fn package(manifest_path: &Path,
     }
 
     let filename = format!("package/{}-{}.crate", pkg.name(), pkg.version());
-    let dst = pkg.absolute_target_dir().join(filename);
+    let dst = pkg.absolute_target_dir().join(&filename);
     if dst.exists() { return Ok(Some(dst)) }
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
@@ -110,21 +110,22 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
                                  dst.display())))
     }
 
-    try!(fs::mkdir_recursive(&dst.dir_path(), USER_DIR));
+    try!(fs::create_dir_all(dst.parent().unwrap()));
 
     let tmpfile = try!(File::create(dst));
 
     // Prepare the encoder and its header
-    let encoder = GzBuilder::new().filename(dst.filename().unwrap())
-                                  .writer(tmpfile, BestCompression);
+    let filename = Path::new(dst.file_name().unwrap());
+    let encoder = GzBuilder::new().filename(try!(util::path2bytes(filename)))
+                                  .write(tmpfile, Compression::Best);
 
     // Put all package files into a compressed archive
     let ar = Archive::new(encoder);
-    let root = pkg.manifest_path().dir_path();
+    let root = pkg.root();
     for file in try!(src.list_files(pkg)).iter() {
-        if file == dst { continue }
-        let relative = file.path_relative_from(&root).unwrap();
-        let relative = try!(relative.as_str().chain_error(|| {
+        if &**file == dst { continue }
+        let relative = file.relative_from(&root).unwrap();
+        let relative = try!(relative.to_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         }));
@@ -133,7 +134,7 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
             shell.status("Archiving", &relative)
         }));
         let path = format!("{}-{}{}{}", pkg.name(), pkg.version(),
-                           old_path::SEP, relative);
+                           path::MAIN_SEPARATOR, relative);
         try!(ar.append(&path, &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));
@@ -147,13 +148,13 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     try!(config.shell().status("Verifying", pkg));
 
     let f = try!(GzDecoder::new(try!(File::open(tar))));
-    let dst = pkg.root().join(format!("target/package/{}-{}",
-                                      pkg.name(), pkg.version()));
+    let dst = pkg.root().join(&format!("target/package/{}-{}",
+                                       pkg.name(), pkg.version()));
     if dst.exists() {
-        try!(fs::rmdir_recursive(&dst));
+        try!(fs::remove_dir_all(&dst));
     }
     let mut archive = Archive::new(f);
-    try!(archive.unpack(&dst.dir_path()));
+    try!(archive.unpack(dst.parent().unwrap()));
     let manifest_path = dst.join("Cargo.toml");
 
     // When packages are uploaded to the registry, all path dependencies are

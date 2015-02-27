@@ -1,6 +1,8 @@
-use std::fmt::{self, Formatter};
-use std::old_io::{USER_DIR};
-use std::old_io::fs::{mkdir_recursive, rmdir_recursive, PathExtensions};
+use std::fmt;
+use std::path::{Path, PathBuf};
+use std::fs;
+use std::io::prelude::*;
+
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
 use git2::{self, ObjectType};
@@ -13,7 +15,7 @@ use util::{CargoResult, ChainError, human, ToUrl, internal};
 pub struct GitRevision(git2::Oid);
 
 impl fmt::Display for GitRevision {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
     }
 }
@@ -42,7 +44,7 @@ impl Encodable for GitRemote {
 /// GitCheckouts can be cloned from this GitDatabase.
 pub struct GitDatabase {
     remote: GitRemote,
-    path: Path,
+    path: PathBuf,
     repo: git2::Repository,
 }
 
@@ -66,7 +68,7 @@ impl Encodable for GitDatabase {
 /// and return a CargoError if no revision for that reference was found.
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
-    location: Path,
+    location: PathBuf,
     revision: GitRevision,
     repo: git2::Repository,
 }
@@ -123,14 +125,18 @@ impl GitRemote {
             }
         };
 
-        Ok(GitDatabase { remote: self.clone(), path: into.clone(), repo: repo })
+        Ok(GitDatabase {
+            remote: self.clone(),
+            path: into.to_path_buf(),
+            repo: repo,
+        })
     }
 
     pub fn db_at(&self, db_path: &Path) -> CargoResult<GitDatabase> {
         let repo = try!(git2::Repository::open(db_path));
         Ok(GitDatabase {
             remote: self.clone(),
-            path: db_path.clone(),
+            path: db_path.to_path_buf(),
             repo: repo,
         })
     }
@@ -145,9 +151,9 @@ impl GitRemote {
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
         let url = self.url.to_string();
         if dst.exists() {
-            try!(rmdir_recursive(dst));
+            try!(fs::remove_dir_all(dst));
         }
-        try!(mkdir_recursive(dst, USER_DIR));
+        try!(fs::create_dir_all(dst));
         let repo = try!(git2::Repository::init_bare(dst));
         try!(fetch(&repo, &url, "refs/heads/*:refs/heads/*"));
         Ok(repo)
@@ -222,7 +228,7 @@ impl<'a> GitCheckout<'a> {
            -> GitCheckout<'a>
     {
         GitCheckout {
-            location: path.clone(),
+            location: path.to_path_buf(),
             database: database,
             revision: revision,
             repo: repo,
@@ -240,14 +246,14 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
-        let dirname = into.dir_path();
+        let dirname = into.parent().unwrap();
 
-        try!(mkdir_recursive(&dirname, USER_DIR).chain_error(|| {
+        try!(fs::create_dir_all(&dirname).chain_error(|| {
             human(format!("Couldn't mkdir {}", dirname.display()))
         }));
 
         if into.exists() {
-            try!(rmdir_recursive(into).chain_error(|| {
+            try!(fs::remove_dir_all(into).chain_error(|| {
                 human(format!("Couldn't rmdir {}", into.display()))
             }));
         }
@@ -288,7 +294,7 @@ impl<'a> GitCheckout<'a> {
         return update_submodules(&self.repo);
 
         fn update_submodules(repo: &git2::Repository) -> CargoResult<()> {
-            info!("update submodules for: {}", repo.path().display());
+            info!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in try!(repo.submodules()).into_iter() {
                 try!(child.init(false));
@@ -319,7 +325,7 @@ impl<'a> GitCheckout<'a> {
                         repo
                     }
                     Err(..) => {
-                        let path = repo.path().dir_path().join(child.path());
+                        let path = repo.workdir().unwrap().join(child.path());
                         try!(git2::Repository::clone(url, &path))
                     }
                 };

@@ -45,7 +45,7 @@ test!(build_lib_only {
 
 test!(build_with_no_lib {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo"))
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"
             fn main() {}
         "#);

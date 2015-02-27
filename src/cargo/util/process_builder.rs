@@ -1,26 +1,26 @@
 use std::collections::HashMap;
 use std::env;
-use std::ffi::CString;
-use std::fmt::{self, Formatter};
-use std::old_io::process::{Command, ProcessOutput, InheritFd};
-use std::old_path::BytesContainer;
+use std::ffi::{OsString, AsOsStr};
+use std::fmt;
+use std::path::Path;
+use std::process::{Command, Output};
 
 use util::{CargoResult, ProcessError, process_error};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ProcessBuilder {
-    program: CString,
-    args: Vec<CString>,
-    env: HashMap<String, Option<CString>>,
-    cwd: Path,
+    program: OsString,
+    args: Vec<OsString>,
+    env: HashMap<String, Option<OsString>>,
+    cwd: OsString,
 }
 
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", String::from_utf8_lossy(self.program.as_bytes())));
+        try!(write!(f, "`{}", self.program.to_string_lossy()));
 
         for arg in self.args.iter() {
-            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes())));
+            try!(write!(f, " {}", arg.to_string_lossy()));
         }
 
         write!(f, "`")
@@ -28,41 +28,48 @@ impl fmt::Display for ProcessBuilder {
 }
 
 impl ProcessBuilder {
-    pub fn arg<T: BytesContainer>(mut self, arg: T) -> ProcessBuilder {
-        self.args.push(CString::new(arg.container_as_bytes()).unwrap());
+    pub fn arg<T: AsOsStr + ?Sized>(&mut self, arg: &T) -> &mut ProcessBuilder {
+        self.args.push(arg.as_os_str().to_os_string());
         self
     }
 
-    pub fn args<T: BytesContainer>(mut self, arguments: &[T]) -> ProcessBuilder {
+    pub fn args<T: AsOsStr>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
         self.args.extend(arguments.iter().map(|t| {
-            CString::new(t.container_as_bytes()).unwrap()
+            t.as_os_str().to_os_string()
         }));
         self
     }
 
-    pub fn get_args(&self) -> &[CString] {
+    pub fn cwd<T: AsOsStr + ?Sized>(&mut self, path: &T) -> &mut ProcessBuilder {
+        self.cwd = path.as_os_str().to_os_string();
+        self
+    }
+
+    pub fn env<T: AsOsStr + ?Sized>(&mut self, key: &str,
+                                    val: &T) -> &mut ProcessBuilder {
+        self.env.insert(key.to_string(), Some(val.as_os_str().to_os_string()));
+        self
+    }
+
+    pub fn env_remove(&mut self, key: &str) -> &mut ProcessBuilder {
+        self.env.insert(key.to_string(), None);
+        self
+    }
+
+    pub fn get_args(&self) -> &[OsString] {
         &self.args
     }
+    pub fn get_cwd(&self) -> &Path { Path::new(&self.cwd) }
 
-    pub fn cwd(mut self, path: Path) -> ProcessBuilder {
-        self.cwd = path;
-        self
+    pub fn get_env(&self, var: &str) -> Option<OsString> {
+        self.env.get(var).cloned().or_else(|| Some(env::var_os(var)))
+            .and_then(|s| s)
     }
 
-    pub fn env<T: BytesContainer>(mut self, key: &str,
-                                  val: Option<T>) -> ProcessBuilder {
-        let val = val.map(|t| CString::new(t.container_as_bytes()).unwrap());
-        self.env.insert(key.to_string(), val);
-        self
-    }
+    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> { &self.env }
 
-    // TODO: should InheritFd be hardcoded?
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
-        command.stdout(InheritFd(1))
-               .stderr(InheritFd(2))
-               .stdin(InheritFd(0));
-
         let exit = try!(command.status().map_err(|e| {
             process_error(&format!("Could not execute process `{}`",
                                    self.debug_string()),
@@ -78,8 +85,8 @@ impl ProcessBuilder {
         }
     }
 
-    pub fn exec_with_output(&self) -> Result<ProcessOutput, ProcessError> {
-        let command = self.build_command();
+    pub fn exec_with_output(&self) -> Result<Output, ProcessError> {
+        let mut command = self.build_command();
 
         let output = try!(command.output().map_err(|e| {
             process_error(&format!("Could not execute process `{}`",
@@ -98,7 +105,7 @@ impl ProcessBuilder {
 
     pub fn build_command(&self) -> Command {
         let mut command = Command::new(&self.program);
-        command.cwd(&self.cwd);
+        command.current_dir(&self.cwd);
         for arg in self.args.iter() {
             command.arg(arg);
         }
@@ -112,20 +119,20 @@ impl ProcessBuilder {
     }
 
     fn debug_string(&self) -> String {
-        let mut program = format!("{}", String::from_utf8_lossy(self.program.as_bytes()));
+        let mut program = format!("{}", self.program.to_string_lossy());
         for arg in self.args.iter() {
             program.push(' ');
-            program.push_str(&format!("{}", String::from_utf8_lossy(arg.as_bytes())));
+            program.push_str(&format!("{}", arg.to_string_lossy()));
         }
         program
     }
 }
 
-pub fn process<T: BytesContainer>(cmd: T) -> CargoResult<ProcessBuilder> {
+pub fn process<T: AsOsStr + ?Sized>(cmd: &T) -> CargoResult<ProcessBuilder> {
     Ok(ProcessBuilder {
-        program: CString::new(cmd.container_as_bytes()).unwrap(),
+        program: cmd.as_os_str().to_os_string(),
         args: Vec::new(),
-        cwd: try!(env::current_dir()),
+        cwd: try!(env::current_dir()).as_os_str().to_os_string(),
         env: HashMap::new(),
     })
 }

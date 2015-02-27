@@ -1,7 +1,9 @@
-use std::old_io::{File, MemReader};
+use std::fs::File;
+use std::io::Cursor;
+use std::io::prelude::*;
 
 use tar::Archive;
-use flate2::reader::GzDecoder;
+use flate2::read::GzDecoder;
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir, paths, git};
@@ -38,18 +40,19 @@ test!(simple {
         compiling = COMPILING,
         dir = p.url()).as_slice()));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
-    assert_that(p.process(cargo_dir().join("cargo")).arg("package").arg("-l"),
+    assert_that(p.cargo("package").arg("-l"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
 src[..]main.rs
 "));
-    assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stdout(""));
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let contents = rdr.read_to_end().unwrap();
-    let ar = Archive::new(MemReader::new(contents));
+    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let ar = Archive::new(Cursor::new(contents));
     for f in ar.files().unwrap() {
         let f = f.unwrap();
         let fname = f.filename_bytes();
@@ -111,7 +114,7 @@ warning: manifest has no description, documentation, homepage or repository. See
 http://doc.crates.io/manifest.html#package-metadata for more info."));
 
     let p = project("all")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -155,9 +158,8 @@ test!(package_verbose {
         "#)
         .file("a/src/lib.rs", "");
     p.build();
-    let cargo = process(cargo_dir().join("cargo")).unwrap()
-                                                  .cwd(root)
-                                                  .env("HOME", Some(paths::home()));
+    let mut cargo = process(&cargo_dir().join("cargo")).unwrap();
+    cargo.cwd(&root).env("HOME", &paths::home());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(cargo.arg("package").arg("-v")
                                                     .arg("--no-verify"),
@@ -183,7 +185,7 @@ test!(package_verification {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
-    assert_that(p.process(cargo_dir().join("cargo")).arg("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})

@@ -1,10 +1,11 @@
-use std::error::Error;
 use std::env;
+use std::error::Error;
+use std::ffi::AsOsStr;
 use std::fmt;
-use std::old_io::fs::{self, PathExtensions};
-use std::old_io::process::{ProcessOutput};
-use std::old_io;
-use std::old_path::{Path, BytesContainer};
+use std::fs;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
+use std::process::Output;
 use std::str::{self, Str};
 
 use url::Url;
@@ -12,7 +13,7 @@ use hamcrest as ham;
 use cargo::util::{process,ProcessBuilder};
 use cargo::util::ProcessError;
 
-use support::paths::PathExt;
+use support::paths::CargoPathExt;
 
 pub mod paths;
 pub mod git;
@@ -26,12 +27,12 @@ pub mod registry;
 
 #[derive(PartialEq,Clone)]
 struct FileBuilder {
-    path: Path,
+    path: PathBuf,
     body: String
 }
 
 impl FileBuilder {
-    pub fn new(path: Path, body: &str) -> FileBuilder {
+    pub fn new(path: PathBuf, body: &str) -> FileBuilder {
         FileBuilder { path: path, body: body.to_string() }
     }
 
@@ -43,50 +44,50 @@ impl FileBuilder {
                 .with_err_msg(format!("Could not create file; path={}",
                                       self.path.display())));
 
-        file.write_str(self.body.as_slice())
+        file.write_all(self.body.as_bytes())
             .with_err_msg(format!("Could not write to file; path={}",
                                   self.path.display()))
     }
 
-    fn dirname(&self) -> Path {
-        Path::new(self.path.dirname())
+    fn dirname(&self) -> &Path {
+        self.path.parent().unwrap()
     }
 }
 
 #[derive(PartialEq,Clone)]
 struct SymlinkBuilder {
-    dst: Path,
-    src: Path
+    dst: PathBuf,
+    src: PathBuf,
 }
 
 impl SymlinkBuilder {
-    pub fn new(dst: Path, src: Path) -> SymlinkBuilder {
+    pub fn new(dst: PathBuf, src: PathBuf) -> SymlinkBuilder {
         SymlinkBuilder { dst: dst, src: src }
     }
 
     fn mk(&self) -> Result<(), String> {
         try!(mkdir_recursive(&self.dirname()));
 
-        fs::symlink(&self.dst, &self.src)
+        fs::soft_link(&self.dst, &self.src)
             .with_err_msg(format!("Could not create symlink; dst={} src={}",
                                    self.dst.display(), self.src.display()))
     }
 
-    fn dirname(&self) -> Path {
-        Path::new(self.src.dirname())
+    fn dirname(&self) -> &Path {
+        self.src.parent().unwrap()
     }
 }
 
 #[derive(PartialEq,Clone)]
 pub struct ProjectBuilder {
     name: String,
-    root: Path,
+    root: PathBuf,
     files: Vec<FileBuilder>,
     symlinks: Vec<SymlinkBuilder>
 }
 
 impl ProjectBuilder {
-    pub fn new(name: &str, root: Path) -> ProjectBuilder {
+    pub fn new(name: &str, root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
             name: name.to_string(),
             root: root,
@@ -95,50 +96,55 @@ impl ProjectBuilder {
         }
     }
 
-    pub fn root(&self) -> Path {
+    pub fn root(&self) -> PathBuf {
         self.root.clone()
     }
 
     pub fn url(&self) -> Url { path2url(self.root()) }
 
-    pub fn bin(&self, b: &str) -> Path {
-        self.build_dir().join(format!("{}{}", b, env::consts::EXE_SUFFIX))
+    pub fn bin(&self, b: &str) -> PathBuf {
+        self.build_dir().join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
-    pub fn release_bin(&self, b: &str) -> Path {
-        self.build_dir().join("release").join(format!("{}{}", b,
-                                                      env::consts::EXE_SUFFIX))
+    pub fn release_bin(&self, b: &str) -> PathBuf {
+        self.build_dir().join("release").join(&format!("{}{}", b,
+                                                       env::consts::EXE_SUFFIX))
     }
 
-    pub fn target_bin(&self, target: &str, b: &str) -> Path {
-        self.build_dir().join(target).join(format!("{}{}", b,
-                                                   env::consts::EXE_SUFFIX))
+    pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
+        self.build_dir().join(target).join(&format!("{}{}", b,
+                                                    env::consts::EXE_SUFFIX))
     }
 
-    pub fn build_dir(&self) -> Path {
+    pub fn build_dir(&self) -> PathBuf {
         self.root.join("target")
     }
 
-    pub fn process<T: BytesContainer>(&self, program: T) -> ProcessBuilder {
-        process(program)
-            .unwrap()
-            .cwd(self.root())
-            .env("HOME", Some(paths::home().display().to_string().as_slice()))
+    pub fn process<T: AsOsStr + ?Sized>(&self, program: &T) -> ProcessBuilder {
+        let mut p = process(program).unwrap();
+        p.cwd(&self.root()).env("HOME", &paths::home());
+        return p;
+    }
+
+    pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
+        let mut p = self.process(&cargo_dir().join("cargo"));
+        p.arg(cmd);
+        return p;
     }
 
     pub fn cargo_process(&self, cmd: &str) -> ProcessBuilder {
         self.build();
-        self.process(cargo_dir().join("cargo")).arg(cmd)
+        self.cargo(cmd)
     }
 
-    pub fn file<B: BytesContainer, S: Str>(mut self, path: B,
-                                           body: S) -> ProjectBuilder {
-        self.files.push(FileBuilder::new(self.root.join(path), body.as_slice()));
+    pub fn file<B: AsOsStr + ?Sized>(mut self, path: &B,
+                                     body: &str) -> ProjectBuilder {
+        self.files.push(FileBuilder::new(self.root.join(path), body));
         self
     }
 
-    pub fn symlink<T: BytesContainer>(mut self, dst: T,
-                                      src: T) -> ProjectBuilder {
+    pub fn symlink<T: AsOsStr + ?Sized>(mut self, dst: &T,
+                                        src: &T) -> ProjectBuilder {
         self.symlinks.push(SymlinkBuilder::new(self.root.join(dst),
                                                self.root.join(src)));
         self
@@ -187,7 +193,7 @@ pub fn project(name: &str) -> ProjectBuilder {
 // === Helpers ===
 
 pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
-    fs::mkdir_recursive(path, old_io::USER_DIR)
+    fs::create_dir_all(path)
         .with_err_msg(format!("could not create directory; path={}",
                               path.display()))
 }
@@ -226,12 +232,13 @@ impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
 }
 
 // Path to cargo executables
-pub fn cargo_dir() -> Path {
-    env::var("CARGO_BIN_PATH").map(Path::new).ok()
-        .or_else(|| env::current_exe().ok().map(|s| s.dir_path()))
-        .unwrap_or_else(|| {
-            panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
-        })
+pub fn cargo_dir() -> PathBuf {
+    env::var_os("CARGO_BIN_PATH").map(|s| PathBuf::new(&s)).or_else(|| {
+        env::current_exe().ok().as_ref().and_then(|s| s.parent())
+            .map(|s| s.to_path_buf())
+    }).unwrap_or_else(|| {
+        panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
+    })
 }
 
 /// Returns an absolute path in the filesystem that `path` points to. The
@@ -267,34 +274,34 @@ impl Execs {
         self
     }
 
-    fn match_output(&self, actual: &ProcessOutput) -> ham::MatchResult {
+    fn match_output(&self, actual: &Output) -> ham::MatchResult {
         self.match_status(actual)
             .and(self.match_stdout(actual))
             .and(self.match_stderr(actual))
     }
 
-    fn match_status(&self, actual: &ProcessOutput) -> ham::MatchResult {
+    fn match_status(&self, actual: &Output) -> ham::MatchResult {
         match self.expect_exit_code {
             None => ham::success(),
             Some(code) => {
                 ham::expect(
-                    actual.status.matches_exit_status(code as isize),
+                    actual.status.code() == Some(code),
                     format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
                             actual.status,
-                            String::from_utf8_lossy(actual.output.as_slice()),
-                            String::from_utf8_lossy(actual.error.as_slice())))
+                            String::from_utf8_lossy(&actual.stdout),
+                            String::from_utf8_lossy(&actual.stderr)))
             }
         }
     }
 
-    fn match_stdout(&self, actual: &ProcessOutput) -> ham::MatchResult {
-        self.match_std(self.expect_stdout.as_ref(), actual.output.as_slice(),
-                       "stdout", actual.error.as_slice())
+    fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
+        self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
+                       "stdout", &actual.stderr)
     }
 
-    fn match_stderr(&self, actual: &ProcessOutput) -> ham::MatchResult {
-        self.match_std(self.expect_stderr.as_ref(), actual.error.as_slice(),
-                       "stderr", actual.output.as_slice())
+    fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
+        self.match_std(self.expect_stderr.as_ref(), &actual.stderr,
+                       "stderr", &actual.stdout)
     }
 
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
@@ -348,8 +355,8 @@ impl Execs {
 }
 
 fn lines_match(expected: &str, mut actual: &str) -> bool {
-    for part in expected.split_str("[..]") {
-        match actual.find_str(part) {
+    for part in expected.split("[..]") {
+        match actual.find(part) {
             Some(i) => actual = &actual[i + part.len()..],
             None => {
                 return false
@@ -391,7 +398,13 @@ impl fmt::Display for Execs {
 }
 
 impl ham::Matcher<ProcessBuilder> for Execs {
-    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
+    fn matches(&self, mut process: ProcessBuilder) -> ham::MatchResult {
+        self.matches(&mut process)
+    }
+}
+
+impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
+    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
         let res = process.exec_with_output();
 
         match res {
@@ -485,8 +498,8 @@ pub fn basic_lib_manifest(name: &str) -> String {
     "#, name, name)
 }
 
-pub fn path2url(p: Path) -> Url {
-    Url::from_file_path(&p).ok().unwrap()
+pub fn path2url(p: PathBuf) -> Url {
+    Url::from_file_path(&*p).ok().unwrap()
 }
 
 pub static RUNNING:     &'static str = "     Running";

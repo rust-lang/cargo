@@ -1,16 +1,15 @@
 use std::collections::HashMap;
-use std::env;
-use std::ffi::CString;
-use std::fmt::{self, Formatter};
-use std::old_io::process::ProcessOutput;
-use std::old_path::BytesContainer;
+use std::ffi::{AsOsStr, OsString};
+use std::fmt;
+use std::path::Path;
+use std::process::Output;
 
-use util::{self, CargoResult, ProcessError, ProcessBuilder};
+use util::{CargoResult, ProcessError, ProcessBuilder, process};
 
 /// Trait for objects that can execute commands.
 pub trait ExecEngine: Send + Sync {
     fn exec(&self, CommandPrototype) -> Result<(), ProcessError>;
-    fn exec_with_output(&self, CommandPrototype) -> Result<ProcessOutput, ProcessError>;
+    fn exec_with_output(&self, CommandPrototype) -> Result<Output, ProcessError>;
 }
 
 /// Default implementation of `ExecEngine`.
@@ -19,12 +18,12 @@ pub struct ProcessEngine;
 
 impl ExecEngine for ProcessEngine {
     fn exec(&self, command: CommandPrototype) -> Result<(), ProcessError> {
-        command.into_process_builder().unwrap().exec()
+        command.into_process_builder().exec()
     }
 
     fn exec_with_output(&self, command: CommandPrototype)
-                        -> Result<ProcessOutput, ProcessError> {
-        command.into_process_builder().unwrap().exec_with_output()
+                        -> Result<Output, ProcessError> {
+        command.into_process_builder().exec_with_output()
     }
 }
 
@@ -32,104 +31,64 @@ impl ExecEngine for ProcessEngine {
 #[derive(Clone)]
 pub struct CommandPrototype {
     ty: CommandType,
-    args: Vec<CString>,
-    env: HashMap<String, Option<CString>>,
-    cwd: Path,
+    builder: ProcessBuilder,
 }
 
 impl CommandPrototype {
     pub fn new(ty: CommandType) -> CargoResult<CommandPrototype> {
         Ok(CommandPrototype {
+            builder: try!(match ty {
+                CommandType::Rustc => process("rustc"),
+                CommandType::Rustdoc => process("rustdoc"),
+                CommandType::Target(ref s) |
+                CommandType::Host(ref s) => process(s),
+            }),
             ty: ty,
-            args: Vec::new(),
-            env: HashMap::new(),
-            cwd: try!(env::current_dir()),
         })
     }
 
-    pub fn get_type(&self) -> &CommandType {
-        &self.ty
-    }
+    pub fn get_type(&self) -> &CommandType { &self.ty }
 
-    pub fn arg<T: BytesContainer>(mut self, arg: T) -> CommandPrototype {
-        self.args.push(CString::new(arg.container_as_bytes()).unwrap());
+    pub fn arg<T: AsOsStr + ?Sized>(&mut self, arg: &T) -> &mut CommandPrototype {
+        self.builder.arg(arg);
         self
     }
 
-    pub fn args<T: BytesContainer>(mut self, arguments: &[T]) -> CommandPrototype {
-        self.args.extend(arguments.iter().map(|t| {
-            CString::new(t.container_as_bytes()).unwrap()
-        }));
+    pub fn args<T: AsOsStr>(&mut self, arguments: &[T]) -> &mut CommandPrototype {
+        self.builder.args(arguments);
         self
     }
 
-    pub fn get_args(&self) -> &[CString] {
-        &self.args
-    }
-
-    pub fn cwd(mut self, path: Path) -> CommandPrototype {
-        self.cwd = path;
+    pub fn cwd<T: AsOsStr + ?Sized>(&mut self, path: &T) -> &mut CommandPrototype {
+        self.builder.cwd(path);
         self
     }
 
-    pub fn get_cwd(&self) -> &Path {
-        &self.cwd
-    }
-
-    pub fn env<T: BytesContainer>(mut self, key: &str,
-                                  val: Option<T>) -> CommandPrototype {
-        let val = val.map(|t| CString::new(t.container_as_bytes()).unwrap());
-        self.env.insert(key.to_string(), val);
+    pub fn env<T: AsOsStr + ?Sized>(&mut self, key: &str, val: &T)
+                                    -> &mut CommandPrototype {
+        self.builder.env(key, val);
         self
     }
 
-    pub fn get_env(&self, var: &str) -> Option<CString> {
-        self.env.get(var).cloned().or_else(|| {
-            Some(env::var(var).ok().map(|s| CString::new(s).unwrap()))
-        }).and_then(|val| val)
+    pub fn get_args(&self) -> &[OsString] { self.builder.get_args() }
+    pub fn get_cwd(&self) -> &Path { self.builder.get_cwd() }
+
+    pub fn get_env(&self, var: &str) -> Option<OsString> {
+        self.builder.get_env(var)
     }
 
-    pub fn get_envs(&self) -> &HashMap<String, Option<CString>> {
-        &self.env
+    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> {
+        self.builder.get_envs()
     }
 
-    pub fn into_process_builder(self) -> CargoResult<ProcessBuilder> {
-        let mut builder = try!(match self.ty {
-            CommandType::Rustc => util::process("rustc"),
-            CommandType::Rustdoc => util::process("rustdoc"),
-            CommandType::Target(ref cmd) | CommandType::Host(ref cmd) => {
-                util::process(cmd)
-            },
-        });
-
-        for arg in self.args.into_iter() {
-            builder = builder.arg(arg);
-        }
-        for (key, val) in self.env.into_iter() {
-            builder = builder.env(&key, val.as_ref());
-        }
-
-        builder = builder.cwd(self.cwd);
-
-        Ok(builder)
+    pub fn into_process_builder(self) -> ProcessBuilder {
+        self.builder
     }
 }
 
 impl fmt::Display for CommandPrototype {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.ty {
-            CommandType::Rustc => try!(write!(f, "`rustc")),
-            CommandType::Rustdoc => try!(write!(f, "`rustdoc")),
-            CommandType::Target(ref cmd) | CommandType::Host(ref cmd) => {
-                try!(write!(f, "`{}", String::from_utf8_lossy(cmd.as_bytes())));
-            },
-        }
-
-        for arg in self.args.iter() {
-            try!(write!(f, " {}", String::from_utf8_lossy(arg.as_bytes())));
-        }
-
-        write!(f, "`")
+        self.builder.fmt(f)
     }
 }
 
@@ -139,8 +98,8 @@ pub enum CommandType {
     Rustdoc,
 
     /// The command is to be executed for the target architecture.
-    Target(CString),
+    Target(OsString),
 
     /// The command is to be executed for the host architecture.
-    Host(CString),
+    Host(OsString),
 }

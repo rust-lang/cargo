@@ -1,16 +1,19 @@
-#![feature(collections, core, old_io, old_path, env)]
+#![feature(collections, core, io, path, process, fs, env, std_misc, os, old_io)]
 
 extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;
 extern crate env_logger;
+extern crate toml;
 #[macro_use] extern crate log;
 
 use std::collections::BTreeSet;
 use std::env;
-use std::old_io::fs::{self, PathExtensions};
-use std::old_io::process::{Command,InheritFd,ExitStatus,ExitSignal};
-use std::old_io;
+use std::fs;
+use std::io::prelude::*;
+use std::io;
+use std::path::{PathBuf, Path};
+use std::process::Command;
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
@@ -163,28 +166,24 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
             return handle_error(CliError::new(&msg, 127), shell)
         }
     };
-    let status = Command::new(command)
-                         .args(&args[1..])
-                         .stdin(InheritFd(0))
-                         .stdout(InheritFd(1))
-                         .stderr(InheritFd(2))
-                         .status();
-
-    match status {
-        Ok(ExitStatus(0)) => (),
-        Ok(ExitStatus(i)) => {
-            handle_error(CliError::new("", i as i32), shell)
+    match Command::new(&command).args(&args[1..]).status() {
+        Ok(ref status) if status.success() => {}
+        Ok(ref status) => {
+            match status.code() {
+                Some(code) => handle_error(CliError::new("", code), shell),
+                None => {
+                    let msg = format!("subcommand failed with: {}", status);
+                    handle_error(CliError::new(&msg, 101), shell)
+                }
+            }
         }
-        Ok(ExitSignal(i)) => {
-            let msg = format!("subcommand failed with signal: {}", i);
-            handle_error(CliError::new(&msg, i as i32), shell)
+        Err(ref e) if e.kind() == io::ErrorKind::FileNotFound => {
+            handle_error(CliError::new("No such subcommand", 127), shell)
         }
-        Err(old_io::IoError{kind, ..}) if kind == old_io::FileNotFound =>
-            handle_error(CliError::new("No such subcommand", 127), shell),
-        Err(err) => handle_error(
-            CliError::new(
-                &format!("Subcommand failed to run: {}", err), 127),
-            shell)
+        Err(err) => {
+            let msg = format!("Subcommand failed to run: {}", err);
+            handle_error(CliError::new(&msg, 127), shell)
+        }
     }
 }
 
@@ -194,18 +193,20 @@ fn list_commands() -> BTreeSet<String> {
     let command_prefix = "cargo-";
     let mut commands = BTreeSet::new();
     for dir in list_command_directory().iter() {
-        let entries = match fs::readdir(dir) {
+        let entries = match fs::read_dir(dir) {
             Ok(entries) => entries,
             _ => continue
         };
-        for entry in entries.iter() {
-            let filename = match entry.filename_str() {
+        for entry in entries {
+            let entry = match entry { Ok(e) => e, Err(..) => continue };
+            let entry = entry.path();
+            let filename = match entry.file_name().and_then(|s| s.to_str()) {
                 Some(filename) => filename,
                 _ => continue
             };
             if filename.starts_with(command_prefix) &&
-                    filename.ends_with(env::consts::EXE_SUFFIX) &&
-                    is_executable(entry) {
+               filename.ends_with(env::consts::EXE_SUFFIX) &&
+               is_executable(&entry) {
                 let command = &filename[
                     command_prefix.len()..
                     filename.len() - env::consts::EXE_SUFFIX.len()];
@@ -221,16 +222,20 @@ fn list_commands() -> BTreeSet<String> {
     commands
 }
 
+#[cfg(unix)]
 fn is_executable(path: &Path) -> bool {
-    match fs::stat(path) {
-        Ok(old_io::FileStat{ kind: old_io::FileType::RegularFile, perm, ..}) =>
-            perm.contains(old_io::OTHER_EXECUTE),
-        _ => false
-    }
+    use std::os::unix::prelude::*;
+    path.metadata().map(|m| {
+        m.permissions().mode() & 0o001 == 0o001
+    }).unwrap_or(false)
+}
+#[cfg(windows)]
+fn is_executable(path: &Path) -> bool {
+    path.is_file()
 }
 
 /// Get `Command` to run given command.
-fn find_command(cmd: &str) -> Option<Path> {
+fn find_command(cmd: &str) -> Option<PathBuf> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let dirs = list_command_directory();
     let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe));
@@ -238,7 +243,7 @@ fn find_command(cmd: &str) -> Option<Path> {
 }
 
 /// List candidate locations where subcommands might be installed.
-fn list_command_directory() -> Vec<Path> {
+fn list_command_directory() -> Vec<PathBuf> {
     let mut dirs = vec![];
     if let Ok(mut path) = env::current_exe() {
         path.pop();

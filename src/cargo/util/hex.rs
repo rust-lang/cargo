@@ -3,9 +3,16 @@ use std::hash::{Hasher, Hash, SipHasher};
 use rustc_serialize::hex::ToHex;
 
 pub fn to_hex(num: u64) -> String {
-    let mut writer = Vec::with_capacity(8);
-    writer.write_le_u64(num).unwrap(); // this should never fail
-    writer.to_hex()
+    [
+        (num >>  0) as u8,
+        (num >>  8) as u8,
+        (num >> 16) as u8,
+        (num >> 24) as u8,
+        (num >> 32) as u8,
+        (num >> 40) as u8,
+        (num >> 48) as u8,
+        (num >> 56) as u8,
+    ].to_hex()
 }
 
 pub fn short_hash<H: Hash>(hashable: &H) -> String {

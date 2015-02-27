@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::ffi::CString;
-use std::old_io::fs::PathExtensions;
-use std::old_io::{fs, USER_RWX, File};
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::path::PathBuf;
 use std::str;
 use std::sync::Mutex;
 
@@ -18,7 +18,7 @@ use util::Freshness;
 #[derive(Clone, Debug)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
-    pub library_paths: Vec<Path>,
+    pub library_paths: Vec<PathBuf>,
     /// Names and link kinds of libraries, suitable for the `-l` flag
     pub library_links: Vec<String>,
     /// Metadata to pass to the immediate dependencies
@@ -47,7 +47,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
 
     // Building the command to execute
     let to_exec = try!(cx.target_filenames(target))[0].clone();
-    let to_exec = script_output.join(to_exec);
+    let to_exec = script_output.join(&to_exec);
 
     // Start preparing the process to execute, starting out with some
     // environment variables. Note that the profile-related environment
@@ -57,29 +57,26 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         cx.is_relevant_target(t) && !t.profile().is_custom_build()
     }).unwrap_or(target);
     let profile = cx.profile(profile_target);
-    let to_exec = try!(CString::new(to_exec.as_vec()));
-    let p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
-    let mut p = p.env("OUT_DIR", Some(&build_output))
-                 .env("CARGO_MANIFEST_DIR", Some(pkg.manifest_path()
-                                                    .dir_path()
-                                                    .display().to_string()))
-                 .env("NUM_JOBS", Some(cx.jobs().to_string()))
-                 .env("TARGET", Some(match kind {
-                     Kind::Host => cx.config.rustc_host(),
-                     Kind::Target => cx.target_triple(),
-                 }))
-                 .env("DEBUG", Some(profile.debug().to_string()))
-                 .env("OPT_LEVEL", Some(profile.opt_level().to_string()))
-                 .env("PROFILE", Some(profile.env()))
-                 .env("HOST", Some(cx.config.rustc_host()));
+    let to_exec = to_exec.into_os_string();
+    let mut p = try!(super::process(CommandType::Host(to_exec), pkg, target, cx));
+    p.env("OUT_DIR", &build_output)
+     .env("CARGO_MANIFEST_DIR", pkg.root())
+     .env("NUM_JOBS", &cx.jobs().to_string())
+     .env("TARGET", &match kind {
+         Kind::Host => cx.config.rustc_host(),
+         Kind::Target => cx.target_triple(),
+     })
+     .env("DEBUG", &profile.debug().to_string())
+     .env("OPT_LEVEL", &profile.opt_level().to_string())
+     .env("PROFILE", &profile.env())
+     .env("HOST", &cx.config.rustc_host());
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
     match cx.resolve.features(pkg.package_id()) {
         Some(features) => {
             for feat in features.iter() {
-                p = p.env(&format!("CARGO_FEATURE_{}", super::envify(feat)),
-                          Some("1"));
+                p.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
             }
         }
         None => {}
@@ -107,8 +104,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                build_output.clone());
     let plugin_deps = super::crawl_build_deps(cx, pkg, target, Kind::Host);
 
-    try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Target).build(pkg), USER_RWX));
-    try!(fs::mkdir_recursive(&cx.layout(pkg, Kind::Host).build(pkg), USER_RWX));
+    try!(fs::create_dir_all(&cx.layout(pkg, Kind::Target).build(pkg)));
+    try!(fs::create_dir_all(&cx.layout(pkg, Kind::Host).build(pkg)));
 
     let exec_engine = cx.exec_engine.clone();
 
@@ -123,7 +120,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
         if !build_output.exists() {
-            try!(fs::mkdir(&build_output, USER_RWX).chain_error(|| {
+            try!(fs::create_dir(&build_output).chain_error(|| {
                 internal("failed to create script output directory for \
                           build command")
             }));
@@ -133,18 +130,16 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        let mut p = p;
         {
             let build_state = build_state.outputs.lock().unwrap();
             for &(ref name, ref id) in lib_deps.iter() {
                 let data = &build_state[(id.clone(), kind)].metadata;
                 for &(ref key, ref value) in data.iter() {
-                    p = p.env(&format!("DEP_{}_{}", super::envify(name),
-                                       super::envify(key)),
-                              Some(value));
+                    p.env(&format!("DEP_{}_{}", super::envify(name),
+                                   super::envify(key)), value);
                 }
             }
-            p = try!(super::add_plugin_deps(p, &build_state, plugin_deps));
+            try!(super::add_plugin_deps(&mut p, &build_state, plugin_deps));
         }
 
         // And now finally, run the build command itself!
@@ -162,14 +157,15 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(&output.output).chain_error(|| {
+        let output = try!(str::from_utf8(&output.stdout).chain_error(|| {
             human("build script output was not valid utf-8")
         }));
         let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
         build_state.insert(id, req, parsed_output);
 
-        try!(File::create(&build_output.dir_path().join("output"))
-                  .write_str(output).map_err(|e| {
+        try!(File::create(&build_output.parent().unwrap().join("output"))
+                  .and_then(|mut f| f.write_all(output.as_bytes()))
+                  .map_err(|e| {
             human(format!("failed to write output of custom build command: {}",
                           e))
         }));
@@ -187,18 +183,19 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     //
     // Also note that a fresh build command needs to
     let (freshness, dirty, fresh) =
-            try!(fingerprint::prepare_build_cmd(cx, pkg, kind, Some(target)));
+            try!(fingerprint::prepare_build_cmd(cx, pkg, kind));
     let dirty = Work::new(move |tx| {
         try!(work.call((tx.clone())));
         dirty.call(tx)
     });
     let fresh = Work::new(move |tx| {
         let (id, pkg_name, build_state, build_output) = all;
-        let new_loc = build_output.dir_path().join("output");
+        let new_loc = build_output.parent().unwrap().join("output");
         let mut f = try!(File::open(&new_loc).map_err(|e| {
             human(format!("failed to read cached build command output: {}", e))
         }));
-        let contents = try!(f.read_to_string());
+        let mut contents = String::new();
+        try!(f.read_to_string(&mut contents));
         let output = try!(BuildOutput::parse(&contents, &pkg_name));
         build_state.insert(id, req, output);
 
@@ -303,7 +300,7 @@ impl BuildOutput {
     }
 
     pub fn parse_rustc_flags(value: &str, whence: &str)
-                             -> CargoResult<(Vec<Path>, Vec<String>)> {
+                             -> CargoResult<(Vec<PathBuf>, Vec<String>)> {
         // TODO: some arguments (like paths) may contain spaces
         let value = value.trim();
         let mut flags_iter = value.words();
@@ -326,7 +323,7 @@ impl BuildOutput {
             };
             match flag {
                 "-l" => library_links.push(value.to_string()),
-                "-L" => library_paths.push(Path::new(value)),
+                "-L" => library_paths.push(PathBuf::new(value)),
 
                 // was already checked above
                 _ => return Err(human("only -l and -L flags are allowed"))

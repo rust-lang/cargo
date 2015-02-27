@@ -1,8 +1,9 @@
-use std::old_io::File;
+use std::fs::File;
+use std::io::prelude::*;
 
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use support::{COMPILING, FRESH};
-use support::paths::PathExt;
+use support::paths::CargoPathExt;
 use hamcrest::assert_that;
 
 fn setup() {
@@ -247,15 +248,15 @@ test!(no_feature_doesnt_build {
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-    assert_that(p.process(p.bin("foo")), execs().with_status(0).with_stdout(""));
+    assert_that(p.process(&p.bin("foo")),
+                execs().with_status(0).with_stdout(""));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
-                 .arg("--features").arg("bar"),
+    assert_that(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-    assert_that(p.process(p.bin("foo")),
+    assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 });
 
@@ -295,15 +296,15 @@ test!(default_feature_pulled_in {
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-    assert_that(p.process(p.bin("foo")),
+    assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
-                 .arg("--no-default-features"),
+    assert_that(p.cargo("build").arg("--no-default-features"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
-    assert_that(p.process(p.bin("foo")), execs().with_status(0).with_stdout(""));
+    assert_that(p.process(&p.bin("foo")),
+                execs().with_status(0).with_stdout(""));
 });
 
 test!(cyclic_feature {
@@ -537,7 +538,7 @@ test!(many_features_no_rebuilds {
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     p.root().move_into_the_past().unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
 {fresh} a v0.1.0 ([..])
 {fresh} b v0.1.0 ([..])
@@ -647,8 +648,9 @@ test!(everything_in_the_lockfile {
         .file("d3/src/lib.rs", "");
 
     assert_that(p.cargo_process("fetch"), execs().with_status(0));
-    let lockfile = p.root().join("Cargo.lock");
-    let lockfile = File::open(&lockfile).read_to_string().unwrap();
+    let loc = p.root().join("Cargo.lock");
+    let mut lockfile = String::new();
+    File::open(&loc).unwrap().read_to_string(&mut lockfile).unwrap();
     assert!(lockfile.contains(r#"name = "d1""#), "d1 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d2""#), "d2 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d3""#), "d3 not found\n{}", lockfile);

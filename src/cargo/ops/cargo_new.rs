@@ -1,6 +1,8 @@
 use std::env;
-use std::old_io::fs::PathExtensions;
-use std::old_io::{self, fs, File};
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::io;
+use std::path::Path;
 
 use rustc_serialize::{Decodable, Decoder};
 
@@ -44,7 +46,10 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
     }
-    let name = path.filename_str().unwrap();
+    let name = try!(path.file_name().and_then(|s| s.to_str()).chain_error(|| {
+        human(&format!("cannot create a project with a non-unicode name: {:?}",
+                       path.file_name().unwrap()))
+    }));
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
@@ -61,11 +66,15 @@ fn existing_vcs_repo(path: &Path) -> bool {
     GitRepo::discover(path).is_ok() || HgRepo::discover(path).is_ok()
 }
 
+fn file(p: &Path, contents: &[u8]) -> io::Result<()> {
+    try!(File::create(p)).write_all(contents)
+}
+
 fn mk(config: &Config, path: &Path, name: &str,
       opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
     let mut ignore = "target\n".to_string();
-    let in_existing_vcs_repo = existing_vcs_repo(&path.dir_path());
+    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap());
     if !opts.bin {
         ignore.push_str("Cargo.lock\n");
     }
@@ -80,14 +89,14 @@ fn mk(config: &Config, path: &Path, name: &str,
     match vcs {
         VersionControl::Git => {
             try!(GitRepo::init(path));
-            try!(File::create(&path.join(".gitignore")).write_all(ignore.as_bytes()));
+            try!(file(&path.join(".gitignore"), ignore.as_bytes()));
         },
         VersionControl::Hg => {
             try!(HgRepo::init(path));
-            try!(File::create(&path.join(".hgignore")).write_all(ignore.as_bytes()));
+            try!(file(&path.join(".hgignore"), ignore.as_bytes()));
         },
         VersionControl::NoVcs => {
-            try!(fs::mkdir(path, old_io::USER_RWX));
+            try!(fs::create_dir(path));
         },
     };
 
@@ -102,24 +111,24 @@ fn mk(config: &Config, path: &Path, name: &str,
         (None, None, name, None) => name,
     };
 
-    try!(File::create(&path.join("Cargo.toml")).write_str(&format!(
+    try!(file(&path.join("Cargo.toml"), format!(
 r#"[package]
 
 name = "{}"
 version = "0.0.1"
 authors = ["{}"]
-"#, name, author)));
+"#, name, author).as_bytes()));
 
-    try!(fs::mkdir(&path.join("src"), old_io::USER_RWX));
+    try!(fs::create_dir(&path.join("src")));
 
     if opts.bin {
-        try!(File::create(&path.join("src/main.rs")).write_str("\
+        try!(file(&path.join("src/main.rs"), b"\
 fn main() {
     println!(\"Hello, world!\");
 }
 "));
     } else {
-        try!(File::create(&path.join("src/lib.rs")).write_str("\
+        try!(file(&path.join("src/lib.rs"), b"\
 #[test]
 fn it_works() {
 }

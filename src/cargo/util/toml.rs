@@ -1,10 +1,12 @@
 use std::collections::HashMap;
-
+use std::default::Default;
 use std::fmt;
-use std::old_io::fs::{self, PathExtensions};
+use std::fs;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 use std::slice;
 use std::str;
-use std::default::Default;
+
 use toml;
 use semver;
 use rustc_serialize::{Decodable, Decoder};
@@ -22,18 +24,18 @@ use util::{CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
 #[derive(Clone)]
 pub struct Layout {
-    pub root: Path,
-    lib: Option<Path>,
-    bins: Vec<Path>,
-    examples: Vec<Path>,
-    tests: Vec<Path>,
-    benches: Vec<Path>,
+    pub root: PathBuf,
+    lib: Option<PathBuf>,
+    bins: Vec<PathBuf>,
+    examples: Vec<PathBuf>,
+    tests: Vec<PathBuf>,
+    benches: Vec<PathBuf>,
 }
 
 impl Layout {
-    fn main(&self) -> Option<&Path> {
+    fn main(&self) -> Option<&PathBuf> {
         self.bins.iter().find(|p| {
-            match p.filename_str() {
+            match p.file_name().and_then(|s| s.to_str()) {
                 Some(s) => s == "main.rs",
                 None => false
             }
@@ -41,16 +43,19 @@ impl Layout {
     }
 }
 
-fn try_add_file(files: &mut Vec<Path>, root: &Path, dir: &str) {
-    let p = root.join(dir);
-    if p.exists() {
-        files.push(p);
+fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
+    if file.exists() {
+        files.push(file);
     }
 }
-fn try_add_files(files: &mut Vec<Path>, root: &Path, dir: &str) {
-    match fs::readdir(&root.join(dir)) {
+fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
+    match fs::read_dir(&root) {
         Ok(new) => {
-            files.extend(new.into_iter().filter(|f| f.extension_str() == Some("rs")))
+            files.extend(new.filter_map(|dir| {
+                dir.map(|d| d.path()).ok()
+            }).filter(|f| {
+                f.extension().and_then(|s| s.to_str()) == Some("rs")
+            }))
         }
         Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
     }
@@ -66,20 +71,21 @@ pub fn project_layout(root_path: &Path) -> Layout {
     let mut tests = vec!();
     let mut benches = vec!();
 
-    if root_path.join("src/lib.rs").exists() {
-        lib = Some(root_path.join("src/lib.rs"));
+    let lib_canidate = root_path.join("src").join("lib.rs");
+    if lib_canidate.exists() {
+        lib = Some(lib_canidate);
     }
 
-    try_add_file(&mut bins, root_path, "src/main.rs");
-    try_add_files(&mut bins, root_path, "src/bin");
+    try_add_file(&mut bins, root_path.join("src").join("main.rs"));
+    try_add_files(&mut bins, root_path.join("src").join("bin"));
 
-    try_add_files(&mut examples, root_path, "examples");
+    try_add_files(&mut examples, root_path.join("examples"));
 
-    try_add_files(&mut tests, root_path, "tests");
-    try_add_files(&mut benches, root_path, "benches");
+    try_add_files(&mut tests, root_path.join("tests"));
+    try_add_files(&mut benches, root_path.join("benches"));
 
     Layout {
-        root: root_path.clone(),
+        root: root_path.to_path_buf(),
         lib: lib,
         bins: bins,
         examples: examples,
@@ -92,11 +98,11 @@ pub fn to_manifest(contents: &[u8],
                    source_id: &SourceId,
                    layout: Layout,
                    config: &Config)
-                   -> CargoResult<(Manifest, Vec<Path>)> {
+                   -> CargoResult<(Manifest, Vec<PathBuf>)> {
     let manifest = layout.root.join("Cargo.toml");
-    let manifest = match manifest.path_relative_from(config.cwd()) {
-        Some(path) => path,
-        None => manifest,
+    let manifest = match manifest.relative_from(config.cwd()) {
+        Some(path) => path.to_path_buf(),
+        None => manifest.clone(),
     };
     let contents = try!(str::from_utf8(contents).chain_error(|| {
         human(format!("{} is not valid UTF-8", manifest.display()))
@@ -292,7 +298,7 @@ impl TomlProject {
 struct Context<'a, 'b, 'c: 'b> {
     deps: &'a mut Vec<Dependency>,
     source_id: &'a SourceId,
-    nested_paths: &'a mut Vec<Path>,
+    nested_paths: &'a mut Vec<PathBuf>,
     config: &'b Config<'c>,
 }
 
@@ -314,11 +320,11 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Vec<TomlTarget> {
 
 fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
     layout.bins.iter().filter_map(|bin| {
-        let name = if bin.as_vec() == b"src/main.rs" ||
-                      *bin == layout.root.join("src/main.rs") {
+        let name = if &**bin == Path::new("src/main.rs") ||
+                      *bin == layout.root.join("src").join("main.rs") {
             Some(name.to_string())
         } else {
-            bin.filestem_str().map(|f| f.to_string())
+            bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
         };
 
         name.map(|name| {
@@ -333,7 +339,7 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
 
 fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
     layout.examples.iter().filter_map(|ex| {
-        ex.filestem_str().map(|name| {
+        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
                 name: name.to_string(),
                 path: Some(PathValue::Path(ex.clone())),
@@ -345,7 +351,7 @@ fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
 
 fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
     layout.tests.iter().filter_map(|ex| {
-        ex.filestem_str().map(|name| {
+        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
                 name: name.to_string(),
                 path: Some(PathValue::Path(ex.clone())),
@@ -357,7 +363,7 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
 
 fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
     layout.benches.iter().filter_map(|ex| {
-        ex.filestem_str().map(|name| {
+        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
                 name: name.to_string(),
                 path: Some(PathValue::Path(ex.clone())),
@@ -370,7 +376,7 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
 impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout,
                        config: &Config)
-        -> CargoResult<(Manifest, Vec<Path>)> {
+        -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec!();
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
@@ -441,7 +447,7 @@ impl TomlManifest {
         };
 
         // processing the custom build script
-        let new_build = project.build.clone().map(Path::new);
+        let new_build = project.build.as_ref().map(PathBuf::new);
 
         // Get targets
         let profiles = self.profile.clone().unwrap_or(Default::default());
@@ -558,7 +564,7 @@ fn process_dependencies<F>(cx: &mut Context,
             }
             None => {
                 details.path.as_ref().map(|path| {
-                    cx.nested_paths.push(Path::new(path));
+                    cx.nested_paths.push(PathBuf::new(path));
                     cx.source_id.clone()
                 })
             }
@@ -594,7 +600,7 @@ struct TomlTarget {
 #[derive(RustcDecodable, Clone)]
 enum PathValue {
     String(String),
-    Path(Path),
+    Path(PathBuf),
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
@@ -620,9 +626,9 @@ impl TomlTarget {
 }
 
 impl PathValue {
-    fn to_path(&self) -> Path {
+    fn to_path(&self) -> PathBuf {
         match *self {
-            PathValue::String(ref s) => Path::new(s),
+            PathValue::String(ref s) => PathBuf::new(s),
             PathValue::Path(ref p) => p.clone(),
         }
     }
@@ -639,7 +645,7 @@ impl fmt::Debug for PathValue {
 
 fn normalize(libs: &[TomlLibTarget],
              bins: &[TomlBinTarget],
-             custom_build: Option<Path>,
+             custom_build: Option<PathBuf>,
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget],
@@ -716,7 +722,7 @@ fn normalize(libs: &[TomlLibTarget],
                    dep: TestDep, metadata: &Metadata, profiles: &TomlProfiles) {
         let l = &libs[0];
         let path = l.path.clone().unwrap_or_else(|| {
-            PathValue::String(format!("src/{}.rs", l.name))
+            PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name)))
         });
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             kinds.iter().map(|s| LibKind::from_str(s))
@@ -738,15 +744,13 @@ fn normalize(libs: &[TomlLibTarget],
         }
     }
 
-    fn bin_targets<F>(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                      dep: TestDep, metadata: &Metadata,
-                      profiles: &TomlProfiles,
-                      mut default: F)
-        where F: FnMut(&TomlBinTarget) -> String
-    {
+    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
+                   dep: TestDep, metadata: &Metadata,
+                   profiles: &TomlProfiles,
+                   default: &mut FnMut(&TomlBinTarget) -> PathBuf) {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
-                PathValue::String(default(bin))
+                PathValue::Path(default(bin))
             });
 
             for profile in target_profiles(bin, profiles, dep).iter() {
@@ -775,20 +779,21 @@ fn normalize(libs: &[TomlLibTarget],
                   &profiles.dev),
         ];
 
-        let name = format!("build-script-{}", cmd.filestem_str().unwrap_or(""));
+        let name = format!("build-script-{}",
+                           cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
 
         for profile in profiles.iter() {
             dst.push(Target::custom_build_target(&name, cmd, profile, None));
         }
     }
 
-    fn example_targets<F>(dst: &mut Vec<Target>, examples: &[TomlExampleTarget],
-                          profiles: &TomlProfiles,
-                          mut default: F)
-        where F: FnMut(&TomlExampleTarget) -> String
-    {
+    fn example_targets(dst: &mut Vec<Target>, examples: &[TomlExampleTarget],
+                       profiles: &TomlProfiles,
+                       default: &mut FnMut(&TomlExampleTarget) -> PathBuf) {
         for ex in examples.iter() {
-            let path = ex.path.clone().unwrap_or_else(|| PathValue::String(default(ex)));
+            let path = ex.path.clone().unwrap_or_else(|| {
+                PathValue::Path(default(ex))
+            });
 
             let profile = merge(Profile::default_example(), &profiles.test);
             let profile_release = merge(Profile::default_release(), &profiles.release);
@@ -801,14 +806,12 @@ fn normalize(libs: &[TomlLibTarget],
         }
     }
 
-    fn test_targets<F>(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
-                       metadata: &Metadata, profiles: &TomlProfiles,
-                       mut default: F)
-        where F: FnMut(&TomlTestTarget) -> String
-    {
+    fn test_targets(dst: &mut Vec<Target>, tests: &[TomlTestTarget],
+                    metadata: &Metadata, profiles: &TomlProfiles,
+                    default: &mut FnMut(&TomlTestTarget) -> PathBuf) {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
-                PathValue::String(default(test))
+                PathValue::Path(default(test))
             });
             let harness = test.harness.unwrap_or(true);
 
@@ -825,14 +828,12 @@ fn normalize(libs: &[TomlLibTarget],
         }
     }
 
-    fn bench_targets<F>(dst: &mut Vec<Target>, benches: &[TomlBenchTarget],
-                        metadata: &Metadata, profiles: &TomlProfiles,
-                        mut default: F)
-        where F: FnMut(&TomlBenchTarget) -> String
-    {
+    fn bench_targets(dst: &mut Vec<Target>, benches: &[TomlBenchTarget],
+                     metadata: &Metadata, profiles: &TomlProfiles,
+                     default: &mut FnMut(&TomlBenchTarget) -> PathBuf) {
         for bench in benches.iter() {
             let path = bench.path.clone().unwrap_or_else(|| {
-                PathValue::String(default(bench))
+                PathValue::Path(default(bench))
             });
             let harness = bench.harness.unwrap_or(true);
 
@@ -861,14 +862,16 @@ fn normalize(libs: &[TomlLibTarget],
         ([_, ..], [_, ..]) => {
             lib_targets(&mut ret, libs, TestDep::Needed, metadata, profiles);
             bin_targets(&mut ret, bins, test_dep, metadata, profiles,
-                        |bin| format!("src/bin/{}.rs", bin.name));
+                        &mut |bin| Path::new("src").join("bin")
+                                       .join(&format!("{}.rs", bin.name)));
         },
         ([_, ..], []) => {
             lib_targets(&mut ret, libs, TestDep::Needed, metadata, profiles);
         },
         ([], [_, ..]) => {
             bin_targets(&mut ret, bins, test_dep, metadata, profiles,
-                        |bin| format!("src/{}.rs", bin.name));
+                        &mut |bin| Path::new("src")
+                                        .join(&format!("{}.rs", bin.name)));
         },
         ([], []) => ()
     }
@@ -878,23 +881,24 @@ fn normalize(libs: &[TomlLibTarget],
     }
 
     example_targets(&mut ret, examples, profiles,
-                    |ex| format!("examples/{}.rs", ex.name));
+                    &mut |ex| Path::new("examples")
+                                   .join(&format!("{}.rs", ex.name)));
 
-    test_targets(&mut ret, tests, metadata, profiles,
-                |test| {
-                    if test.name == "test" {
-                        "src/test.rs".to_string()
-                    } else {
-                        format!("tests/{}.rs", test.name)
-                    }});
+    test_targets(&mut ret, tests, metadata, profiles, &mut |test| {
+        if test.name == "test" {
+            Path::new("src").join("test.rs")
+        } else {
+            Path::new("tests").join(&format!("{}.rs", test.name))
+        }
+    });
 
-    bench_targets(&mut ret, benches, metadata, profiles,
-                 |bench| {
-                     if bench.name == "bench" {
-                         "src/bench.rs".to_string()
-                     } else {
-                         format!("benches/{}.rs", bench.name)
-                     }});
+    bench_targets(&mut ret, benches, metadata, profiles, &mut |bench| {
+        if bench.name == "bench" {
+            Path::new("src").join("bench.rs")
+        } else {
+            Path::new("benches").join(&format!("{}.rs", bench.name))
+        }
+    });
 
     ret
 }

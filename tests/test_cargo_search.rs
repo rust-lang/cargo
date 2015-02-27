@@ -1,4 +1,6 @@
-use std::old_io::{self, fs, File};
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::path::PathBuf;
 
 use url::Url;
 
@@ -10,22 +12,22 @@ use support::git::repo;
 
 use hamcrest::assert_that;
 
-fn registry_path() -> Path { paths::root().join("registry") }
-fn registry() -> Url { Url::from_file_path(&registry_path()).ok().unwrap() }
-fn api_path() -> Path { paths::root().join("api") }
-fn api() -> Url { Url::from_file_path(&api_path()).ok().unwrap() }
+fn registry_path() -> PathBuf { paths::root().join("registry") }
+fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
+fn api_path() -> PathBuf { paths::root().join("api") }
+fn api() -> Url { Url::from_file_path(&*api_path()).ok().unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), old_io::USER_DIR).unwrap();
-    File::create(&config).write_str(format!(r#"
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(&config).unwrap().write_all(format!(r#"
         [registry]
             index = "{reg}"
-    "#, reg = registry()).as_slice()).unwrap();
-    fs::mkdir_recursive(&api_path().join("api/v1"), old_io::USER_DIR).unwrap();
+    "#, reg = registry()).as_bytes()).unwrap();
+    fs::create_dir_all(&api_path().join("api/v1")).unwrap();
 
     repo(&registry_path())
-        .file("config.json", format!(r#"{{
+        .file("config.json", &format!(r#"{{
             "dl": "{0}",
             "api": "{0}"
         }}"#, api()))
@@ -33,9 +35,9 @@ fn setup() {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    process(cargo_dir().join("cargo")).unwrap().arg(s)
-        .cwd(paths::root())
-        .env("HOME", Some(paths::home()))
+    let mut b = process(&cargo_dir().join("cargo")).unwrap();
+    b.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
+    b
 }
 
 test!(simple {
@@ -72,10 +74,10 @@ test!(simple {
     //
     // On windows, though, `?` is an invalid character, but we always build curl
     // from source there anyway!
-    File::create(&base).write_str(contents).unwrap();
+    File::create(&base).unwrap().write_all(contents.as_bytes()).unwrap();
     if !cfg!(windows) {
-        File::create(&base.with_filename("crates?q=postgres"))
-             .write_str(contents).unwrap();
+        File::create(&base.with_file_name("crates?q=postgres")).unwrap()
+             .write_all(contents.as_bytes()).unwrap();
     }
 
     assert_that(cargo_process("search").arg("postgres"),
