@@ -1,19 +1,20 @@
-#![feature(core, old_io, old_path)]
+#![feature(core, io, path, fs)]
 
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;
 
-use std::fmt;
-use std::old_io::{self, fs, MemReader, MemWriter, File};
 use std::collections::HashMap;
-use std::old_io::util::ChainedReader;
+use std::fmt;
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::io::{self, Cursor};
+use std::path::Path;
 use std::result;
 
 use curl::http;
 use curl::http::handle::Method::{Put, Get, Delete};
 use curl::http::handle::{Method, Request};
 use rustc_serialize::json;
-
 
 pub struct Registry {
     host: String,
@@ -36,7 +37,7 @@ pub enum Error {
     Api(Vec<String>),
     Unauthorized,
     TokenMissing,
-    Io(old_io::IoError),
+    Io(io::Error),
 }
 
 #[derive(RustcDecodable)]
@@ -133,18 +134,27 @@ impl Registry {
         //      <json request> (metadata for the package)
         //      <le u32 of tarball>
         //      <source tarball>
-        let stat = try!(fs::stat(tarball).map_err(Error::Io));
+        let stat = try!(fs::metadata(tarball).map_err(Error::Io));
         let header = {
-            let mut w = MemWriter::new();
-            w.write_le_u32(json.len() as u32).unwrap();
-            w.write_str(&json).unwrap();
-            w.write_le_u32(stat.size as u32).unwrap();
-            MemReader::new(w.into_inner())
+            let mut w = Vec::new();
+            w.extend([
+                (json.len() >>  0) as u8,
+                (json.len() >>  8) as u8,
+                (json.len() >> 16) as u8,
+                (json.len() >> 24) as u8,
+            ].iter().cloned());
+            w.extend(json.as_bytes().iter().cloned());
+            w.extend([
+                (stat.len() >>  0) as u8,
+                (stat.len() >>  8) as u8,
+                (stat.len() >> 16) as u8,
+                (stat.len() >> 24) as u8,
+            ].iter().cloned());
+            w
         };
         let tarball = try!(File::open(tarball).map_err(Error::Io));
-        let size = stat.size as usize + header.get_ref().len();
-        let mut body = ChainedReader::new(vec![Box::new(header) as Box<Reader>,
-                                               Box::new(tarball) as Box<Reader>].into_iter());
+        let size = stat.len() as usize + header.len();
+        let mut body = Cursor::new(header).chain(tarball);
 
         let url = format!("{}/api/v1/crates/new", self.host);
 

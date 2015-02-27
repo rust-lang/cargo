@@ -1,9 +1,10 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
-use std::ffi::CString;
-use std::old_io::fs::{self, PathExtensions};
-use std::os;
-use std::old_path;
+use std::env;
+use std::ffi::{OsStr, AsOsStr, OsString};
+use std::fs;
+use std::io::prelude::*;
+use std::path::{self, PathBuf};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
@@ -53,34 +54,10 @@ pub struct TargetConfig {
 /// The second element of the tuple returned is the target triple that rustc
 /// is a host for.
 pub fn rustc_version() -> CargoResult<(String, String)> {
-    rustc_new_version().or_else(|_| rustc_old_version())
-}
-
-pub fn rustc_old_version() -> CargoResult<(String, String)> {
-    let output = try!(try!(util::process("rustc"))
-        .arg("-v")
-        .arg("verbose")
-        .exec_with_output());
-    let output = try!(String::from_utf8(output.output).map_err(|_| {
-        internal("rustc -v didn't return utf8 output")
-    }));
-    let triple = {
-        let triple = output.lines().filter(|l| {
-            l.starts_with("host: ")
-        }).map(|l| &l[6..]).next();
-        let triple = try!(triple.chain_error(|| {
-            internal("rustc -v didn't have a line for `host:`")
-        }));
-        triple.to_string()
-    };
-    Ok((output, triple))
-}
-
-pub fn rustc_new_version() -> CargoResult<(String, String)> {
     let output = try!(try!(util::process("rustc"))
         .arg("-vV")
         .exec_with_output());
-    let output = try!(String::from_utf8(output.output).map_err(|_| {
+    let output = try!(String::from_utf8(output.stdout).map_err(|_| {
         internal("rustc -v didn't return utf8 output")
     }));
     let triple = {
@@ -188,7 +165,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
 
     let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
                     .display().to_string();
-    cx.compilation.extra_env.insert("OUT_DIR".to_string(), Some(out_dir));
+    cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
 
     if let Some(feats) = cx.resolve.features(pkg.package_id()) {
         cx.compilation.features.extend(feats.iter().cloned());
@@ -340,12 +317,14 @@ fn rustc(package: &Package, target: &Target,
 
     let plugin_deps = crawl_build_deps(cx, package, target, Kind::Host);
 
-    return rustcs.into_iter().map(|(rustc, kind)| {
+    return rustcs.into_iter().map(|(mut rustc, kind)| {
         let name = package.name().to_string();
         let is_path_source = package.package_id().source_id().is_path();
         let show_warnings = package.package_id() == cx.resolve.root() ||
                             is_path_source;
-        let rustc = if show_warnings {rustc} else {rustc.arg("-Awarnings")};
+        if !show_warnings {
+            rustc.arg("-Awarnings");
+        }
         let exec_engine = cx.exec_engine.clone();
 
         let filenames = try!(cx.target_filenames(target));
@@ -366,12 +345,12 @@ fn rustc(package: &Package, target: &Target,
             t.is_lib()
         });
 
-        let rustc_dep_info_loc = root.join(target.file_stem()).with_extension("d");
+        let rustc_dep_info_loc = root.join(&target.file_stem())
+                                     .with_extension("d");
         let dep_info_loc = fingerprint::dep_info_loc(cx, package, target, kind);
-        let cwd = cx.config.cwd().clone();
+        let cwd = cx.config.cwd().to_path_buf();
 
         Ok((Work::new(move |desc_tx| {
-            let mut rustc = rustc;
             debug!("about to run: {}", rustc);
 
             // Only at runtime have we discovered what the extra -L and -l
@@ -380,9 +359,9 @@ fn rustc(package: &Package, target: &Target,
             // dynamic library load path as a plugin's dynamic library may be
             // located somewhere in there.
             let build_state = build_state.outputs.lock().unwrap();
-            rustc = add_native_deps(rustc, &*build_state, native_lib_deps,
-                                    kind, pass_l_flag, &current_id);
-            rustc = try!(add_plugin_deps(rustc, &*build_state, plugin_deps));
+            add_native_deps(&mut rustc, &*build_state, native_lib_deps,
+                            kind, pass_l_flag, &current_id);
+            try!(add_plugin_deps(&mut rustc, &*build_state, plugin_deps));
             drop(build_state);
 
             // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
@@ -390,7 +369,7 @@ fn rustc(package: &Package, target: &Target,
             for filename in filenames.iter() {
                 let dst = root.join(filename);
                 if dst.exists() {
-                    try!(fs::unlink(&dst));
+                    try!(fs::remove_file(&dst));
                 }
             }
 
@@ -409,25 +388,24 @@ fn rustc(package: &Package, target: &Target,
 
     // Add all relevant -L and -l flags from dependencies (now calculated and
     // present in `state`) to the command provided
-    fn add_native_deps(mut rustc: CommandPrototype,
+    fn add_native_deps(rustc: &mut CommandPrototype,
                        build_state: &BuildMap,
                        native_lib_deps: Vec<PackageId>,
                        kind: Kind,
                        pass_l_flag: bool,
-                       current_id: &PackageId) -> CommandPrototype {
+                       current_id: &PackageId) {
         for id in native_lib_deps.into_iter() {
             debug!("looking up {} {:?}", id, kind);
             let output = &build_state[(id.clone(), kind)];
             for path in output.library_paths.iter() {
-                rustc = rustc.arg("-L").arg(path);
+                rustc.arg("-L").arg(path);
             }
             if pass_l_flag && id == *current_id {
                 for name in output.library_links.iter() {
-                    rustc = rustc.arg("-l").arg(name);
+                    rustc.arg("-l").arg(name);
                 }
             }
         }
-        return rustc;
     }
 }
 
@@ -460,15 +438,13 @@ fn crawl_build_deps<'a>(cx: &'a Context, pkg: &'a Package,
 // For all plugin dependencies, add their -L paths (now calculated and
 // present in `state`) to the dynamic library load path for the command to
 // execute.
-#[allow(deprecated)] // need an OsStr based Command
-fn add_plugin_deps(rustc: CommandPrototype,
+fn add_plugin_deps(rustc: &mut CommandPrototype,
                    build_state: &BuildMap,
                    plugin_deps: Vec<PackageId>)
-                   -> CargoResult<CommandPrototype> {
+                   -> CargoResult<()> {
     let var = DynamicLibrary::envvar();
-    let search_path = rustc.get_env(var)
-                           .unwrap_or(CString::from_slice(b""));
-    let mut search_path = os::split_paths(search_path);
+    let search_path = rustc.get_env(var).unwrap_or(OsString::new());
+    let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in plugin_deps.into_iter() {
         let output = &build_state[(id, Kind::Host)];
         for path in output.library_paths.iter() {
@@ -476,21 +452,22 @@ fn add_plugin_deps(rustc: CommandPrototype,
         }
     }
     let search_path = try!(join_paths(&search_path, var));
-    Ok(rustc.env(var, Some(search_path)))
+    rustc.env(var, &search_path);
+    Ok(())
 }
 
 fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
                  cx: &Context, req: Platform)
                  -> CargoResult<Vec<(CommandPrototype, Kind)>> {
-    let base = try!(process(CommandType::Rustc, package, target, cx));
-    let base = build_base_args(cx, base, package, target, &crate_types);
+    let mut base = try!(process(CommandType::Rustc, package, target, cx));
+    build_base_args(cx, &mut base, package, target, &crate_types);
 
-    let target_cmd = build_plugin_args(base.clone(), cx, package, target, Kind::Target);
-    let plugin_cmd = build_plugin_args(base, cx, package, target, Kind::Host);
-    let target_cmd = try!(build_deps_args(target_cmd, target, package, cx,
-                                          Kind::Target));
-    let plugin_cmd = try!(build_deps_args(plugin_cmd, target, package, cx,
-                                          Kind::Host));
+    let mut target_cmd = base.clone();
+    let mut plugin_cmd = base;
+    build_plugin_args(&mut target_cmd, cx, package, target, Kind::Target);
+    build_plugin_args(&mut plugin_cmd, cx, package, target, Kind::Host);
+    try!(build_deps_args(&mut target_cmd, target, package, cx, Kind::Target));
+    try!(build_deps_args(&mut plugin_cmd, target, package, cx, Kind::Host));
 
     Ok(match req {
         Platform::Target => vec![(target_cmd, Kind::Target)],
@@ -507,28 +484,26 @@ fn rustdoc(package: &Package, target: &Target,
            cx: &mut Context) -> CargoResult<Work> {
     let kind = Kind::Target;
     let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
-    let rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
-    let mut rustdoc = rustdoc.arg(root_path(cx, package, target))
-                         .cwd(cx.config.cwd().clone())
-                         .arg("-o").arg(cx_root)
-                         .arg("--crate-name").arg(target.name());
+    let mut rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
+    rustdoc.arg(&root_path(cx, package, target))
+           .cwd(cx.config.cwd())
+           .arg("-o").arg(&cx_root)
+           .arg("--crate-name").arg(target.name());
 
     match cx.resolve.features(package.package_id()) {
         Some(features) => {
-            for feat in features.iter() {
-                rustdoc = rustdoc.arg("--cfg").arg(format!("feature=\"{}\"", feat));
+            for feat in features {
+                rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
             }
         }
         None => {}
     }
 
-    let mut rustdoc = try!(build_deps_args(rustdoc, target, package, cx, kind));
+    try!(build_deps_args(&mut rustdoc, target, package, cx, kind));
 
-    rustdoc = rustdoc.env("OUT_DIR", if package.has_custom_build() {
-        Some(cx.layout(package, kind).build_out(package))
-    } else {
-        None
-    });
+    if package.has_custom_build() {
+        rustdoc.env("OUT_DIR", &cx.layout(package, kind).build_out(package));
+    }
 
     trace!("commands={}", rustdoc);
 
@@ -569,33 +544,33 @@ fn rustdoc(package: &Package, target: &Target,
 // path is only actually relative if the current directory is an ancestor if it.
 // This means that non-path dependencies (git/registry) will likely be shown as
 // absolute paths instead of relative paths.
-fn root_path(cx: &Context, pkg: &Package, target: &Target) -> Path {
+fn root_path(cx: &Context, pkg: &Package, target: &Target) -> PathBuf {
     let absolute = pkg.root().join(target.src_path());
     let cwd = cx.config.cwd();
-    if cwd.is_ancestor_of(&absolute) {
-        absolute.path_relative_from(cwd).unwrap_or(absolute)
+    if absolute.starts_with(cwd) {
+        absolute.relative_from(cwd).map(|s| s.to_path_buf()).unwrap_or(absolute)
     } else {
         absolute
     }
 }
 
 fn build_base_args(cx: &Context,
-                   mut cmd: CommandPrototype,
+                   cmd: &mut CommandPrototype,
                    pkg: &Package,
                    target: &Target,
-                   crate_types: &[&str]) -> CommandPrototype {
+                   crate_types: &[&str]) {
     let metadata = target.metadata();
 
     // Move to cwd so the root_path() passed below is actually correct
-    cmd = cmd.cwd(cx.config.cwd().clone());
+    cmd.cwd(cx.config.cwd());
 
     // TODO: Handle errors in converting paths into args
-    cmd = cmd.arg(root_path(cx, pkg, target));
+    cmd.arg(&root_path(cx, pkg, target));
 
-    cmd = cmd.arg("--crate-name").arg(target.name());
+    cmd.arg("--crate-name").arg(target.name());
 
     for crate_type in crate_types.iter() {
-        cmd = cmd.arg("--crate-type").arg(*crate_type);
+        cmd.arg("--crate-type").arg(crate_type);
     }
 
     // Despite whatever this target's profile says, we need to configure it
@@ -606,37 +581,37 @@ fn build_base_args(cx: &Context,
                          (crate_types.contains(&"dylib") &&
                           pkg.package_id() != cx.resolve.root());
     if prefer_dynamic {
-        cmd = cmd.arg("-C").arg("prefer-dynamic");
+        cmd.arg("-C").arg("prefer-dynamic");
     }
 
     if profile.opt_level() != 0 {
-        cmd = cmd.arg("-C").arg(format!("opt-level={}", profile.opt_level()));
+        cmd.arg("-C").arg(&format!("opt-level={}", profile.opt_level()));
     }
     if (target.is_bin() || target.is_staticlib()) && profile.lto() {
-        cmd = cmd.args(&["-C", "lto"]);
+        cmd.args(&["-C", "lto"]);
     } else {
         // There are some restrictions with LTO and codegen-units, so we
         // only add codegen units when LTO is not used.
         match profile.codegen_units() {
-            Some(n) => cmd = cmd.arg("-C").arg(format!("codegen-units={}", n)),
+            Some(n) => { cmd.arg("-C").arg(&format!("codegen-units={}", n)); }
             None => {},
         }
     }
 
     if profile.debug() {
-        cmd = cmd.arg("-g");
+        cmd.arg("-g");
     } else {
-        cmd = cmd.args(&["--cfg", "ndebug"]);
+        cmd.args(&["--cfg", "ndebug"]);
     }
 
     if profile.is_test() && profile.uses_test_harness() {
-        cmd = cmd.arg("--test");
+        cmd.arg("--test");
     }
 
     match cx.resolve.features(pkg.package_id()) {
         Some(features) => {
             for feat in features.iter() {
-                cmd = cmd.arg("--cfg").arg(format!("feature=\"{}\"", feat));
+                cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
             }
         }
         None => {}
@@ -644,62 +619,58 @@ fn build_base_args(cx: &Context,
 
     match metadata {
         Some(m) => {
-            cmd = cmd.arg("-C").arg(format!("metadata={}", m.metadata));
-            cmd = cmd.arg("-C").arg(format!("extra-filename={}", m.extra_filename));
+            cmd.arg("-C").arg(&format!("metadata={}", m.metadata));
+            cmd.arg("-C").arg(&format!("extra-filename={}", m.extra_filename));
         }
         None => {}
     }
 
     if profile.rpath() {
-        cmd = cmd.arg("-C").arg("rpath");
+        cmd.arg("-C").arg("rpath");
     }
-
-    return cmd;
 }
 
 
-fn build_plugin_args(mut cmd: CommandPrototype, cx: &Context, pkg: &Package,
-                     target: &Target, kind: Kind) -> CommandPrototype {
-    cmd = cmd.arg("--out-dir");
-    cmd = cmd.arg(cx.out_dir(pkg, kind, target));
-
-    cmd = cmd.arg("--emit=dep-info,link");
+fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
+                     target: &Target, kind: Kind) {
+    cmd.arg("--out-dir").arg(&cx.out_dir(pkg, kind, target));
+    cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
-        fn opt(cmd: CommandPrototype, key: &str, prefix: &str,
-               val: Option<&str>) -> CommandPrototype {
-            match val {
-                Some(val) => {
-                    cmd.arg(key)
-                       .arg(format!("{}{}", prefix, val))
-                }
-                None => cmd
+        fn opt(cmd: &mut CommandPrototype, key: &str, prefix: &str,
+               val: Option<&str>)  {
+            if let Some(val) = val {
+                cmd.arg(key).arg(&format!("{}{}", prefix, val));
             }
         }
 
-        cmd = opt(cmd, "--target", "", cx.requested_target());
-        cmd = opt(cmd, "-C", "ar=", cx.ar(kind));
-        cmd = opt(cmd, "-C", "linker=", cx.linker(kind));
+        opt(cmd, "--target", "", cx.requested_target());
+        opt(cmd, "-C", "ar=", cx.ar(kind));
+        opt(cmd, "-C", "linker=", cx.linker(kind));
     }
-
-    return cmd;
 }
 
-fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package,
-                   cx: &Context,
-                   kind: Kind) -> CargoResult<CommandPrototype> {
+fn build_deps_args(cmd: &mut CommandPrototype, target: &Target,
+                   package: &Package, cx: &Context, kind: Kind)
+                   -> CargoResult<()> {
     let layout = cx.layout(package, kind);
-    cmd = cmd.arg("-L").arg(format!("dependency={}", layout.root().display()));
-    cmd = cmd.arg("-L").arg(format!("dependency={}", layout.deps().display()));
-
-    cmd = cmd.env("OUT_DIR", if package.has_custom_build() {
-        Some(layout.build_out(package))
-    } else {
-        None
+    cmd.arg("-L").arg(&{
+        let mut root = OsString::from_str("dependency=");
+        root.push_os_str(layout.root().as_os_str());
+        root
+    });
+    cmd.arg("-L").arg(&{
+        let mut deps = OsString::from_str("dependency=");
+        deps.push_os_str(layout.deps().as_os_str());
+        deps
     });
 
+    if package.has_custom_build() {
+        cmd.env("OUT_DIR", &layout.build_out(package));
+    }
+
     for &(pkg, target) in cx.dep_targets(package, target).iter() {
-        cmd = try!(link_to(cmd, pkg, target, cx, kind));
+        try!(link_to(cmd, pkg, target, cx, kind));
     }
 
     let targets = package.targets().iter().filter(|target| {
@@ -709,14 +680,14 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
     if (target.is_bin() || target.is_example()) &&
        !target.profile().is_custom_build() {
         for target in targets.filter(|f| f.is_rlib() || f.is_dylib()) {
-            cmd = try!(link_to(cmd, package, target, cx, kind));
+            try!(link_to(cmd, package, target, cx, kind));
         }
     }
 
-    return Ok(cmd);
+    return Ok(());
 
-    fn link_to(mut cmd: CommandPrototype, pkg: &Package, target: &Target,
-               cx: &Context, kind: Kind) -> CargoResult<CommandPrototype> {
+    fn link_to(cmd: &mut CommandPrototype, pkg: &Package, target: &Target,
+               cx: &Context, kind: Kind) -> CargoResult<()> {
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
@@ -727,16 +698,17 @@ fn build_deps_args(mut cmd: CommandPrototype, target: &Target, package: &Package
         });
 
         for filename in try!(cx.target_filenames(target)).iter() {
-            if filename.as_bytes().ends_with(b".a") { continue }
-            let mut v = Vec::new();
-            v.push_all(target.name().as_bytes());
-            v.push(b'=');
-            v.push_all(layout.root().as_vec());
-            v.push(old_path::SEP_BYTE);
-            v.push_all(filename.as_bytes());
-            cmd = cmd.arg("--extern").arg(&v);
+            if filename.ends_with(".a") { continue }
+            let mut v = OsString::new();
+            v.push_os_str(OsStr::from_str(target.name()));
+            v.push_os_str(OsStr::from_str("="));
+            v.push_os_str(layout.root().as_os_str());
+            let s = path::MAIN_SEPARATOR.to_string();
+            v.push_os_str(OsStr::from_str(&s));
+            v.push_os_str(OsStr::from_str(&filename));
+            cmd.arg("--extern").arg(&v);
         }
-        return Ok(cmd);
+        Ok(())
     }
 }
 
@@ -745,14 +717,15 @@ pub fn process(cmd: CommandType, pkg: &Package, _target: &Target,
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let layout = cx.layout(pkg, Kind::Host);
-    let mut search_path = DynamicLibrary::search_path();
-    search_path.push(layout.deps().clone());
+    let mut search_path = util::dylib_path();
+    search_path.push(layout.deps().to_path_buf());
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.
     let search_path = try!(join_paths(&search_path, DynamicLibrary::envvar()));
-    Ok(try!(cx.compilation.process(cmd, pkg))
-              .env(DynamicLibrary::envvar(), Some(&search_path)))
+    let mut cmd = try!(cx.compilation.process(cmd, pkg));
+    cmd.env(DynamicLibrary::envvar(), &search_path);
+    Ok(cmd)
 }
 
 fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)

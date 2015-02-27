@@ -1,8 +1,9 @@
-use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::cmp::Ordering;
+use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::fmt::{self, Formatter};
 use std::hash;
 use std::mem;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
@@ -128,7 +129,7 @@ impl SourceId {
                 SourceId::new(Kind::Registry, url)
                          .with_precise(Some("locked".to_string()))
             }
-            "path" => SourceId::for_path(&Path::new(&url[5..])).unwrap(),
+            "path" => SourceId::for_path(Path::new(&url[5..])).unwrap(),
             _ => panic!("Unsupported serialized SourceId")
         }
     }
@@ -197,7 +198,7 @@ impl SourceId {
         match self.inner.kind {
             Kind::Git(..) => Box::new(GitSource::new(self, config)) as Box<Source>,
             Kind::Path => {
-                let path = match self.inner.url.to_file_path() {
+                let path = match self.inner.url.to_file_path::<PathBuf>() {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };

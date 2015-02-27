@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 use std::iter::repeat;
-use std::old_io::File;
-use std::old_io::fs::PathExtensions;
+use std::path::{Path, PathBuf};
 
 use curl::http;
 use git2;
@@ -30,7 +31,7 @@ pub fn publish(manifest_path: &Path,
                token: Option<String>,
                index: Option<String>,
                verify: bool) -> CargoResult<()> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
     try!(src.update());
     let pkg = try!(src.root_package());
@@ -96,9 +97,13 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     let readme = match *readme {
         Some(ref readme) => {
             let path = pkg.root().join(readme);
-            Some(try!(File::open(&path).read_to_string().chain_error(|| {
+            let mut contents = String::new();
+            try!(File::open(&path).and_then(|mut f| {
+                f.read_to_string(&mut contents)
+            }).chain_error(|| {
                 human("failed to read the specified README")
-            })))
+            }));
+            Some(contents)
         }
         None => None,
     };
@@ -224,7 +229,7 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     let RegistryConfig { index, token: _ } = try!(registry_configuration(config));
     let mut map = HashMap::new();
-    let p = config.cwd().clone();
+    let p = config.cwd().to_path_buf();
     match index {
         Some(index) => {
             map.insert("index".to_string(), ConfigValue::String(index, p.clone()));
@@ -234,7 +239,7 @@ pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     map.insert("token".to_string(), ConfigValue::String(token, p));
 
     config::set_config(config, Location::Global, "registry",
-                       ConfigValue::Table(map, Path::new(".")))
+                       ConfigValue::Table(map, PathBuf::new(".")))
 }
 
 pub struct OwnersOptions {
@@ -251,7 +256,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         Some(ref name) => name.clone(),
         None => {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
-            let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+            let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                     config));
             try!(src.update());
             let pkg = try!(src.root_package());
@@ -314,7 +319,7 @@ pub fn yank(config: &Config,
         Some(name) => name,
         None => {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
-            let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+            let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                     config));
             try!(src.update());
             let pkg = try!(src.root_package());

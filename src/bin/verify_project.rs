@@ -1,9 +1,9 @@
-extern crate toml;
-
 use std::collections::HashMap;
 use std::env;
-use std::old_io::File;
+use std::fs::File;
+use std::io::prelude::*;
 
+use toml;
 use cargo::util::{CliResult, Config};
 
 pub type Error = HashMap<String, String>;
@@ -28,9 +28,10 @@ Options:
 pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     config.shell().set_verbose(args.flag_verbose);
 
-    let file = Path::new(args.flag_manifest_path);
-    let contents = match File::open(&file).read_to_string() {
-        Ok(s) => s,
+    let mut contents = String::new();
+    let file = File::open(&args.flag_manifest_path);
+    match file.and_then(|mut f| f.read_to_string(&mut contents)) {
+        Ok(()) => {},
         Err(e) => return fail("invalid", format!("error reading file: {}",
                                                  e).as_slice())
     };

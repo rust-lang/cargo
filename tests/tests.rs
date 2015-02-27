@@ -1,10 +1,11 @@
-#![feature(collections, core, io, old_io, os, old_path, rustc_private, std_misc, env)]
+#![feature(core, io, old_io, os, old_path)]
+#![feature(std_misc, env, io, path, fs, tempdir, process)]
 
+extern crate "rustc-serialize" as serialize;
 extern crate cargo;
 extern crate flate2;
 extern crate git2;
 extern crate hamcrest;
-extern crate serialize;
 extern crate tar;
 extern crate term;
 extern crate url;

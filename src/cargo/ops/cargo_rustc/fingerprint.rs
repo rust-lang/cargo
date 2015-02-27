@@ -1,6 +1,8 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::old_io::{self, fs, File, BufferedReader};
-use std::old_io::fs::PathExtensions;
+use std::fs::{self, File, OpenOptions};
+use std::io::prelude::*;
+use std::io::{BufReader, SeekFrom};
+use std::path::{Path, PathBuf};
 
 use core::{Package, Target};
 use util;
@@ -45,7 +47,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
     let _p = profile::start(format!("fingerprint: {} / {:?}",
                                     pkg.package_id(), target));
     let new = dir(cx, pkg, kind);
-    let loc = new.join(filename(target));
+    let loc = new.join(&filename(target));
 
     info!("fingerprint at: {}", loc.display());
 
@@ -107,7 +109,7 @@ pub struct Fingerprint {
 #[derive(Clone)]
 enum LocalFingerprint {
     Precalculated(String),
-    MtimeBased(Option<u64>, Path),
+    MtimeBased(Option<u64>, PathBuf),
 }
 
 impl Fingerprint {
@@ -121,7 +123,7 @@ impl Fingerprint {
             LocalFingerprint::MtimeBased(Some(n), _) if !force => n.to_string(),
             LocalFingerprint::MtimeBased(_, ref p) => {
                 debug!("resolving: {}", p.display());
-                try!(fs::stat(p)).modified.to_string()
+                try!(fs::metadata(p)).modified().to_string()
             }
         };
         debug!("inputs: {} {} {:?}", known, self.extra, deps);
@@ -182,7 +184,7 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
         // if the mtime listed is not fresh, then remove the `dep_info` file to
         // ensure that future calls to `resolve()` won't work.
         if mtime.is_none() {
-            let _ = fs::unlink(&dep_info);
+            let _ = fs::remove_file(&dep_info);
         }
         LocalFingerprint::MtimeBased(mtime, dep_info)
     } else {
@@ -225,12 +227,8 @@ fn use_dep_info(pkg: &Package, target: &Target) -> bool {
 ///
 /// The currently implemented solution is option (1), although it is planned to
 /// migrate to option (2) in the near future.
-pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
-                         target: Option<&Target>) -> CargoResult<Preparation> {
-    if target.is_none() {
-        return Ok((Fresh, Work::noop(), Work::noop()));
-    }
-
+pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind)
+                         -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint build cmd: {}",
                                     pkg.package_id()));
     let new = dir(cx, pkg, kind);
@@ -247,14 +245,6 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind,
 
     let is_fresh = try!(is_fresh(&loc, &new_fingerprint));
 
-    // The new custom build command infrastructure handles its own output
-    // directory as part of freshness.
-    if target.is_none() {
-        let native_dir = cx.layout(pkg, kind).native(pkg);
-        cx.compilation.native_dirs.insert(pkg.package_id().clone(),
-                                          native_dir);
-    }
-
     Ok(prepare(is_fresh, loc, new_fingerprint))
 }
 
@@ -266,13 +256,13 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 
     let work1 = Work::new(move |_| {
         if !new1.exists() {
-            try!(fs::mkdir(&new1, old_io::USER_DIR));
+            try!(fs::create_dir(&new1));
         }
         Ok(())
     });
     let work2 = Work::new(move |_| {
         if !new2.exists() {
-            try!(fs::mkdir(&new2, old_io::USER_DIR));
+            try!(fs::create_dir(&new2));
         }
         Ok(())
     });
@@ -282,13 +272,14 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
-fn prepare(is_fresh: bool, loc: Path, fingerprint: Fingerprint) -> Preparation {
+fn prepare(is_fresh: bool, loc: PathBuf, fingerprint: Fingerprint) -> Preparation {
     let write_fingerprint = Work::new(move |_| {
         debug!("write fingerprint: {}", loc.display());
         let fingerprint = try!(fingerprint.resolve(true).chain_error(|| {
             internal("failed to resolve a pending fingerprint")
         }));
-        try!(File::create(&loc).write_str(&fingerprint));
+        let mut f = try!(File::create(&loc));
+        try!(f.write_all(fingerprint.as_bytes()));
         Ok(())
     });
 
@@ -296,14 +287,14 @@ fn prepare(is_fresh: bool, loc: Path, fingerprint: Fingerprint) -> Preparation {
 }
 
 /// Return the (old, new) location for fingerprints for a package
-pub fn dir(cx: &Context, pkg: &Package, kind: Kind) -> Path {
+pub fn dir(cx: &Context, pkg: &Package, kind: Kind) -> PathBuf {
     cx.layout(pkg, kind).proxy().fingerprint(pkg)
 }
 
 /// Returns the (old, new) location for the dep info file of a target.
 pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
-                    kind: Kind) -> Path {
-    dir(cx, pkg, kind).join(format!("dep-{}", filename(target)))
+                    kind: Kind) -> PathBuf {
+    dir(cx, pkg, kind).join(&format!("dep-{}", filename(target)))
 }
 
 fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
@@ -312,7 +303,8 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
         Err(..) => return Ok(false),
     };
 
-    let old_fingerprint = try!(file.read_to_string());
+    let mut old_fingerprint = String::new();
+    try!(file.read_to_string(&mut old_fingerprint));
     let new_fingerprint = match new_fingerprint.resolve(false) {
         Ok(s) => s,
         Err(..) => return Ok(false),
@@ -328,16 +320,17 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
     macro_rules! fs_try {
         ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
     }
-    let mut f = BufferedReader::new(fs_try!(File::open(dep_info)));
+    let mut f = BufReader::new(fs_try!(File::open(dep_info)));
     // see comments in append_current_dir for where this cwd is manifested from.
-    let cwd = fs_try!(f.read_until(0));
-    let cwd = Path::new(&cwd[..cwd.len()-1]);
+    let mut cwd = Vec::new();
+    fs_try!(f.read_until(0, &mut cwd));
+    let cwd = try!(util::bytes2path(&cwd[..cwd.len()-1]));
     let line = match f.lines().next() {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let mtime = try!(fs::stat(dep_info)).modified;
-    let pos = try!(line.find_str(": ").chain_error(|| {
+    let mtime = try!(fs::metadata(dep_info)).modified();
+    let pos = try!(line.find(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
     }));
@@ -354,10 +347,10 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
             file.push(' ');
             file.push_str(deps.next().unwrap())
         }
-        match fs::stat(&cwd.join(&file)) {
-            Ok(stat) if stat.modified <= mtime => {}
-            Ok(stat) => {
-                info!("stale: {} -- {} vs {}", file, stat.modified, mtime);
+        match fs::metadata(&cwd.join(&file)) {
+            Ok(ref stat) if stat.modified() <= mtime => {}
+            Ok(ref stat) => {
+                info!("stale: {} -- {} vs {}", file, stat.modified(), mtime);
                 return Ok(None)
             }
             _ => { info!("stale: {} -- missing", file); return Ok(None) }
@@ -401,10 +394,11 @@ fn filename(target: &Target) -> String {
 // next time.
 pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
     debug!("appending {} <- {}", path.display(), cwd.display());
-    let mut f = try!(File::open_mode(path, old_io::Open, old_io::ReadWrite));
-    let contents = try!(f.read_to_end());
-    try!(f.seek(0, old_io::SeekSet));
-    try!(f.write_all(cwd.as_vec()));
+    let mut f = try!(OpenOptions::new().read(true).write(true).open(path));
+    let mut contents = Vec::new();
+    try!(f.read_to_end(&mut contents));
+    try!(f.seek(SeekFrom::Start(0)));
+    try!(f.write_all(try!(util::path2bytes(cwd))));
     try!(f.write_all(&[0]));
     try!(f.write_all(&contents));
     Ok(())

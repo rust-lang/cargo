@@ -70,7 +70,7 @@ $(foreach target,$(CFG_TARGET),$(eval $(call DIST_TARGET,$(target))))
 ifdef CFG_LOCAL_CARGO
 CARGO := $(CFG_LOCAL_CARGO)
 else
-CARGO := $(TARGET_ROOT)/snapshot/bin/cargo$(X)
+CARGO := $(TARGET_ROOT)/snapshot/cargo/bin/cargo$(X)
 endif
 
 all: $(foreach target,$(CFG_TARGET),cargo-$(target))
@@ -82,11 +82,12 @@ cargo-$(1): $$(CARGO)
 	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(VERBOSE_FLAG) $$(ARGS)
 
 test-unit-$(1): $$(CARGO)
+	@mkdir -p target/$(1)/cit
 	$$(CARGO) test --target $(1) $$(VERBOSE_FLAG) $$(only)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
-$(TARGET_ROOT)/snapshot/bin/cargo$(X): src/snapshots.txt
+$(TARGET_ROOT)/snapshot/cargo/bin/cargo$(X): src/snapshots.txt
 	$(CFG_PYTHON) src/etc/dl-snapshot.py $(CFG_BUILD)
 	touch $@
 

@@ -1,25 +1,25 @@
 #![deny(unused)]
-#![feature(collections, hash, libc, os, std_misc, unicode, env, core)]
-#![feature(old_io, old_path, str_words)]
+#![feature(collections, hash, os, std_misc, unicode, env, core)]
+#![feature(io, path, str_words, process, fs, old_io)]
 #![cfg_attr(test, deny(warnings))]
 
-extern crate libc;
-extern crate "rustc-serialize" as rustc_serialize;
-extern crate regex;
-extern crate term;
-extern crate time;
+#[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
-
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate curl;
 extern crate docopt;
 extern crate flate2;
 extern crate git2;
 extern crate glob;
+extern crate libc;
+extern crate regex;
 extern crate semver;
 extern crate tar;
+extern crate term;
+extern crate threadpool;
+extern crate time;
 extern crate toml;
 extern crate url;
-#[cfg(test)] extern crate hamcrest;
 
 extern crate registry;
 

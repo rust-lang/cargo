@@ -1,9 +1,10 @@
 use std::env;
-use std::old_io::{File, fs};
+use std::fs::{self, File};
+use std::io::prelude::*;
 
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use support::{COMPILING, RUNNING, DOCTEST};
-use support::paths::PathExt;
+use support::paths::CargoPathExt;
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -38,7 +39,8 @@ test!(custom_build_script_failed {
 url = p.url(), compiling = COMPILING, running = RUNNING))
                        .with_stderr(format!("\
 failed to run custom build command for `foo v0.5.0 ({})`
-Process didn't exit successfully: `[..]build[..]build-script-build[..]` (status=101)",
+Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
+    (exit code: 101)",
 p.url())));
 });
 
@@ -77,30 +79,26 @@ test!(custom_build_env_vars {
 
     let file_content = format!(r#"
             use std::env;
-            use std::old_io::fs::PathExtensions;
+            use std::io::prelude::*;
+            use std::path::Path;
+
             fn main() {{
                 let _target = env::var("TARGET").unwrap();
-
                 let _ncpus = env::var("NUM_JOBS").unwrap();
-
-                let out = env::var("CARGO_MANIFEST_DIR").unwrap();
-                let p1 = Path::new(out);
-                let cwd = env::current_dir().unwrap();
-                let p2 = cwd.join(Path::new(file!()).dir_path().dir_path());
-                assert!(p1 == p2, "{{}} != {{}}", p1.display(), p2.display());
+                let _dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
                 let opt = env::var("OPT_LEVEL").unwrap();
-                assert_eq!(opt.as_slice(), "0");
+                assert_eq!(opt, "0");
 
                 let opt = env::var("PROFILE").unwrap();
-                assert_eq!(opt.as_slice(), "compile");
+                assert_eq!(opt, "compile");
 
                 let debug = env::var("DEBUG").unwrap();
-                assert_eq!(debug.as_slice(), "true");
+                assert_eq!(debug, "true");
 
                 let out = env::var("OUT_DIR").unwrap();
-                assert!(out.as_slice().starts_with(r"{0}"));
-                assert!(Path::new(out).is_dir());
+                assert!(out.starts_with(r"{0}"));
+                assert!(Path::new(&out).is_dir());
 
                 let _host = env::var("HOST").unwrap();
 
@@ -109,7 +107,7 @@ test!(custom_build_env_vars {
         "#,
         p.root().join("target").join("build").display());
 
-    let p = p.file("bar/build.rs", file_content);
+    let p = p.file("bar/build.rs", &file_content);
 
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar_feat"),
@@ -397,7 +395,7 @@ test!(only_rerun_build_script {
     File::create(&p.root().join("some-new-file")).unwrap();
     p.root().move_into_the_past().unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
@@ -427,7 +425,7 @@ test!(rebuild_continues_to_pass_env_vars {
     a.root().move_into_the_past().unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [project]
             name = "foo"
             version = "0.5.0"
@@ -453,7 +451,7 @@ test!(rebuild_continues_to_pass_env_vars {
     File::create(&p.root().join("some-new-file")).unwrap();
     p.root().move_into_the_past().unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -478,7 +476,7 @@ test!(testing_and_such {
     File::create(&p.root().join("src/lib.rs")).unwrap();
     p.root().move_into_the_past().unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-vj1"),
+    assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
@@ -500,7 +498,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("doc").arg("-v"),
+    assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
@@ -508,8 +506,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 {running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 
-    File::create(&p.root().join("src/main.rs")).write_str("fn main() {}").unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("run"),
+    File::create(&p.root().join("src/main.rs")).unwrap()
+         .write_all(b"fn main() {}").unwrap();
+    assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
@@ -636,7 +635,7 @@ test!(build_deps_not_for_normal {
         "#)
         .file("a/src/lib.rs", "");
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(target),
+    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr("\
 [..]lib.rs[..] error: can't find crate for `aaaaa`
@@ -738,7 +737,7 @@ test!(out_dir_is_preserved {
     p.root().move_into_the_past().unwrap();
 
     // Change to asserting that it's there
-    File::create(&p.root().join("build.rs")).write_str(r#"
+    File::create(&p.root().join("build.rs")).unwrap().write_all(br#"
         use std::env;
         use std::old_io::File;
         fn main() {
@@ -747,16 +746,16 @@ test!(out_dir_is_preserved {
         }
     "#).unwrap();
     p.root().move_into_the_past().unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 
     // Run a fresh build where file should be preserved
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 
     // One last time to make sure it's still there.
     File::create(&p.root().join("foo")).unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -1026,12 +1025,12 @@ test!(build_script_with_dynamic_native_dependency {
     assert_that(build.cargo_process("build"),
                 execs().with_status(0).with_stderr(""));
     let src = build.root().join("target");
-    let lib = fs::readdir(&src).unwrap().into_iter().find(|lib| {
-        let lib = lib.filename_str().unwrap();
+    let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
+        let lib = lib.file_name().unwrap().to_str().unwrap();
         lib.starts_with(env::consts::DLL_PREFIX) &&
             lib.ends_with(env::consts::DLL_SUFFIX)
     }).unwrap();
-    let libname = lib.filename_str().unwrap();
+    let libname = lib.file_name().unwrap().to_str().unwrap();
     let libname = &libname[env::consts::DLL_PREFIX.len()..
                            libname.len() - env::consts::DLL_SUFFIX.len()];
 
@@ -1066,7 +1065,7 @@ test!(build_script_with_dynamic_native_dependency {
                 println!("cargo:rustc-flags=-L {}", src.dir_path().display());
             }
         "#)
-        .file("bar/src/lib.rs", format!(r#"
+        .file("bar/src/lib.rs", &format!(r#"
             pub fn bar() {{
                 #[link(name = "{}")]
                 extern {{ fn foo(); }}
@@ -1074,7 +1073,7 @@ test!(build_script_with_dynamic_native_dependency {
             }}
         "#, libname));
 
-    assert_that(foo.cargo_process("build").env("SRC", Some(lib.as_vec())),
+    assert_that(foo.cargo_process("build").env("SRC", &lib),
                 execs().with_status(0));
 });
 

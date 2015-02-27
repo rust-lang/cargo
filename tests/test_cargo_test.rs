@@ -1,9 +1,8 @@
-use std::old_path;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, cargo_dir, RUNNING, DOCTEST};
-use support::paths::PathExt;
+use support::{COMPILING, RUNNING, DOCTEST};
+use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -29,12 +28,11 @@ test!(cargo_test_simple {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-        process(p.bin("foo")).unwrap(),
-        execs().with_stdout("hello\n"));
+    assert_that(process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
-        execs().with_stdout(format!("\
+    assert_that(p.cargo("test"),
+                execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]foo-[..]
 
@@ -94,7 +92,7 @@ test!(many_similar_names {
         "#);
 
     let output = p.cargo_process("test").exec_with_output().unwrap();
-    let output = str::from_utf8(output.output.as_slice()).unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
     assert!(output.contains("test test_test"), "test_test missing\n{}", output);
@@ -120,12 +118,11 @@ test!(cargo_test_failing_test {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-        process(p.bin("foo")).unwrap(),
-        execs().with_stdout("hello\n"));
+    assert_that(process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("hello\n"));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
-        execs().with_stdout(format!("\
+    assert_that(p.cargo("test"),
+                execs().with_stdout(format!("\
 {} foo v0.5.0 ({})
 {} target[..]foo-[..]
 
@@ -137,7 +134,7 @@ failures:
 ---- test_hello stdout ----
 <tab>thread 'test_hello' panicked at 'assertion failed: \
     `(left == right) && (right == left)` (left: \
-    `\"hello\"`, right: `\"nope\"`)', src{sep}foo.rs:12
+    `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:12
 
 
 
@@ -147,8 +144,7 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
 
 ",
-        COMPILING, p.url(), RUNNING,
-        sep = old_path::SEP))
+        COMPILING, p.url(), RUNNING))
               .with_stderr(format!("\
 thread '<main>' panicked at 'Some tests failed', [..]
 
@@ -470,7 +466,7 @@ test!(cargo_test_twice {
     p.cargo_process("build");
 
     for _ in range(0, 2) {
-        assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+        assert_that(p.cargo("test"),
                     execs().with_status(0));
     }
 });
@@ -642,7 +638,7 @@ test!(bin_there_for_integration {
         "#);
 
     let output = p.cargo_process("test").exec_with_output().unwrap();
-    let output = str::from_utf8(output.output.as_slice()).unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
 });
@@ -720,7 +716,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
     p.root().move_into_the_past().unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {running} target[..]foo-[..]
@@ -786,7 +782,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {running} target[..]foo-[..]
@@ -842,7 +838,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url()).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(""));
 });
@@ -1017,8 +1013,7 @@ test!(selective_testing {
     p.build();
 
     println!("d1");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
-                 .arg("-p").arg("d1"),
+    assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} d1 v0.0.1 ({dir})
@@ -1031,8 +1026,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
    dir = p.url()).as_slice()));
 
     println!("d2");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
-                 .arg("-p").arg("d2"),
+    assert_that(p.cargo("test").arg("-p").arg("d2"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} d2 v0.0.1 ({dir})
@@ -1045,7 +1039,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
    dir = p.url()).as_slice()));
 
     println!("whole");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
@@ -1096,7 +1090,7 @@ test!(almost_cyclic_but_not_quite {
         .file("c/src/lib.rs", "");
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
 });
 
@@ -1123,8 +1117,7 @@ test!(build_then_selective_test {
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
     p.root().move_into_the_past().unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
-                 .arg("-p").arg("b"),
+    assert_that(p.cargo("test").arg("-p").arg("b"),
                 execs().with_status(0));
 });
 
@@ -1204,8 +1197,7 @@ test!(selective_testing_with_docs {
         .file("d1/d1.rs", "");
     p.build();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test")
-                 .arg("-p").arg("d1"),
+    assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} d1 v0.0.1 ({dir})
@@ -1248,9 +1240,9 @@ test!(example_bin_same_name {
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    assert_that(p.process(p.bin("foo")),
+    assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bin\n"));
-    assert_that(p.process(p.bin("examples/foo")),
+    assert_that(p.process(&p.bin("examples/foo")),
                 execs().with_status(0).with_stdout("example\n"));
 });
 
@@ -1270,7 +1262,7 @@ test!(test_with_example_twice {
                 execs().with_status(0));
     assert_that(&p.bin("examples/foo"), existing_file());
     println!("second");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.bin("examples/foo"), existing_file());
 });
@@ -1328,7 +1320,7 @@ test!(bin_is_preserved {
     assert_that(&p.bin("foo"), existing_file());
 
     println!("testing");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 });

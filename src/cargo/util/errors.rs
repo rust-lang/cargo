@@ -1,8 +1,9 @@
 use std::error::{FromError, Error};
 use std::ffi;
 use std::fmt;
+use std::io;
 use std::old_io::IoError;
-use std::old_io::process::{ProcessOutput, ProcessExit, ExitStatus, ExitSignal};
+use std::process::{Output, ExitStatus};
 use std::str;
 
 use semver;
@@ -111,9 +112,9 @@ impl<E: CargoError> CargoError for ChainedError<E> {
 
 pub struct ProcessError {
     pub desc: String,
-    pub exit: Option<ProcessExit>,
-    pub output: Option<ProcessOutput>,
-    cause: Option<IoError>,
+    pub exit: Option<ExitStatus>,
+    pub output: Option<Output>,
+    cause: Option<io::Error>,
 }
 
 impl Error for ProcessError {
@@ -255,6 +256,7 @@ macro_rules! from_error {
 from_error! {
     semver::ReqParseError,
     IoError,
+    io::Error,
     ProcessError,
     git2::Error,
     json::DecoderError,
@@ -272,6 +274,7 @@ impl<E: CargoError> FromError<Human<E>> for Box<CargoError> {
 
 impl CargoError for semver::ReqParseError {}
 impl CargoError for IoError {}
+impl CargoError for io::Error {}
 impl CargoError for git2::Error {}
 impl CargoError for json::DecoderError {}
 impl CargoError for curl::ErrCode {}
@@ -287,24 +290,24 @@ impl CargoError for ffi::NulError {}
 // Construction helpers
 
 pub fn process_error(msg: &str,
-                     cause: Option<IoError>,
-                     status: Option<&ProcessExit>,
-                     output: Option<&ProcessOutput>) -> ProcessError {
+                     cause: Option<io::Error>,
+                     status: Option<&ExitStatus>,
+                     output: Option<&Output>) -> ProcessError {
     let exit = match status {
-        Some(&ExitStatus(i)) | Some(&ExitSignal(i)) => i.to_string(),
+        Some(s) => s.to_string(),
         None => "never executed".to_string(),
     };
-    let mut desc = format!("{} (status={})", &msg, exit);
+    let mut desc = format!("{} ({})", &msg, exit);
 
     if let Some(out) = output {
-        match str::from_utf8(&out.output) {
+        match str::from_utf8(&out.stdout) {
             Ok(s) if s.trim().len() > 0 => {
                 desc.push_str("\n--- stdout\n");
                 desc.push_str(s);
             }
             Ok(..) | Err(..) => {}
         }
-        match str::from_utf8(&out.error) {
+        match str::from_utf8(&out.stderr) {
             Ok(s) if s.trim().len() > 0 => {
                 desc.push_str("\n--- stderr\n");
                 desc.push_str(s);

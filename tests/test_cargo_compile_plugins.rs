@@ -1,7 +1,7 @@
-use std::old_io::fs;
+use std::fs;
 use std::env;
 
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -78,7 +78,7 @@ test!(plugin_to_the_max {
 
     assert_that(foo.cargo_process("build"),
                 execs().with_status(0));
-    assert_that(foo.process(cargo_dir().join("cargo")).arg("doc"),
+    assert_that(foo.cargo("doc"),
                 execs().with_status(0));
 });
 
@@ -101,12 +101,12 @@ test!(plugin_with_dynamic_native_dependency {
     assert_that(build.cargo_process("build"),
                 execs().with_status(0).with_stderr(""));
     let src = build.root().join("target");
-    let lib = fs::readdir(&src).unwrap().into_iter().find(|lib| {
-        let lib = lib.filename_str().unwrap();
+    let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
+        let lib = lib.file_name().unwrap().to_str().unwrap();
         lib.starts_with(env::consts::DLL_PREFIX) &&
             lib.ends_with(env::consts::DLL_SUFFIX)
     }).unwrap();
-    let libname = lib.filename_str().unwrap();
+    let libname = lib.file_name().unwrap().to_str().unwrap();
     let libname = &libname[env::consts::DLL_PREFIX.len()..
                            libname.len() - env::consts::DLL_SUFFIX.len()];
 
@@ -146,7 +146,7 @@ test!(plugin_with_dynamic_native_dependency {
                 println!("cargo:rustc-flags=-L {}", src.dir_path().display());
             }
         "#)
-        .file("bar/src/lib.rs", format!(r#"
+        .file("bar/src/lib.rs", &format!(r#"
             #![feature(plugin_registrar)]
 
             extern crate rustc;
@@ -162,7 +162,7 @@ test!(plugin_with_dynamic_native_dependency {
             }}
         "#, libname));
 
-    assert_that(foo.cargo_process("build").env("SRC", Some(lib.as_vec())),
+    assert_that(foo.cargo_process("build").env("SRC", &lib),
                 execs().with_status(0));
 });
 

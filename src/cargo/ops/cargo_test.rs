@@ -1,3 +1,5 @@
+use std::ffi::{OsStr, OsString, AsOsStr};
+use std::path::Path;
 
 use core::Source;
 use sources::PathSource;
@@ -14,7 +16,7 @@ pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.compile_opts.config;
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                                config));
     try!(source.update());
 
@@ -29,12 +31,12 @@ pub fn run_tests(manifest_path: &Path,
 
     let cwd = config.cwd();
     for &(_, ref exe) in tests_to_run {
-        let to_display = match exe.path_relative_from(&cwd) {
+        let to_display = match exe.relative_from(&cwd) {
             Some(path) => path,
-            None => exe.clone(),
+            None => &**exe,
         };
-        let cmd = try!(compile.target_process(exe, &compile.package))
-                  .args(test_args);
+        let mut cmd = try!(compile.target_process(exe, &compile.package));
+        cmd.args(test_args);
         try!(config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));
@@ -60,28 +62,27 @@ pub fn run_tests(manifest_path: &Path,
 
     for (lib, name) in libs {
         try!(config.shell().status("Doc-tests", name));
-        let mut p = try!(compile.rustdoc_process(&compile.package))
-                           .arg("--test").arg(lib)
-                           .arg("--crate-name").arg(name)
-                           .arg("-L").arg(&compile.root_output)
-                           .arg("-L").arg(&compile.deps_output)
-                           .cwd(compile.package.root());
+        let mut p = try!(compile.rustdoc_process(&compile.package));
+        p.arg("--test").arg(lib)
+         .arg("--crate-name").arg(name)
+         .arg("-L").arg(&compile.root_output)
+         .arg("-L").arg(&compile.deps_output)
+         .cwd(compile.package.root());
 
-        // FIXME(rust-lang/rust#16272): this should just always be passed.
         if test_args.len() > 0 {
-            p = p.arg("--test-args").arg(test_args.connect(" "));
+            p.arg("--test-args").arg(&test_args.connect(" "));
         }
 
         for feat in compile.features.iter() {
-            p = p.arg("--cfg").arg(format!("feature=\"{}\"", feat));
+            p.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
         }
 
         for (pkg, libs) in compile.libraries.iter() {
             for lib in libs.iter() {
-                let mut arg = pkg.name().as_bytes().to_vec();
-                arg.push(b'=');
-                arg.push_all(lib.as_vec());
-                p = p.arg("--extern").arg(arg);
+                let mut arg = OsString::from_str(pkg.name());
+                arg.push_os_str(OsStr::from_str("="));
+                arg.push_os_str(lib.as_os_str());
+                p.arg("--extern").arg(&arg);
             }
         }
 

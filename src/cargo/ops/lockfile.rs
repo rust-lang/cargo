@@ -1,4 +1,6 @@
-use std::old_io::File;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::Path;
 
 use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
@@ -8,7 +10,7 @@ use util::{CargoResult, ChainError, human};
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
-    let lockfile = pkg.manifest_path().dir_path().join("Cargo.lock");
+    let lockfile = pkg.root().join("Cargo.lock");
     let source_id = pkg.package_id().source_id();
     load_lockfile(&lockfile, source_id).chain_error(|| {
         human(format!("failed to parse lock file at: {}", lockfile.display()))
@@ -22,7 +24,8 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
         Err(_) => return Ok(None)
     };
 
-    let s = try!(f.read_to_string());
+    let mut s = String::new();
+    try!(f.read_to_string(&mut s));
 
     let table = toml::Value::Table(try!(cargo_toml::parse(&s, path)));
     let mut d = toml::Decoder::new(table);
@@ -65,7 +68,7 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
         None => {}
     }
 
-    try!(File::create(dst).write_str(&out));
+    try!(try!(File::create(dst)).write_all(out.as_bytes()));
     Ok(())
 }
 

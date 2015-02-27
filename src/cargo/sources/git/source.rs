@@ -1,6 +1,8 @@
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::mem;
+use std::path::PathBuf;
+
 use url::{self, Url};
 
 use core::source::{Source, SourceId};
@@ -15,8 +17,8 @@ use sources::git::utils::{GitRemote, GitRevision};
 pub struct GitSource<'a, 'b:'a> {
     remote: GitRemote,
     reference: GitReference,
-    db_path: Path,
-    checkout_path: Path,
+    db_path: PathBuf,
+    checkout_path: PathBuf,
     source_id: SourceId,
     path_source: Option<PathSource<'a, 'b>>,
     rev: Option<GitRevision>,
@@ -44,8 +46,8 @@ impl<'a, 'b> GitSource<'a, 'b> {
             GitReference::Rev(ref s) => s.to_string(),
         };
         let checkout_path = config.git_checkout_path()
-                                  .join(ident)
-                                  .join(reference_path);
+                                  .join(&ident)
+                                  .join(&reference_path);
 
         let reference = match source_id.precise() {
             Some(s) => GitReference::Rev(s.to_string()),

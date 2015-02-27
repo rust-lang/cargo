@@ -1,4 +1,4 @@
-use support::{project, execs, cargo_dir, path2url};
+use support::{project, execs, path2url};
 use support::COMPILING;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
@@ -68,7 +68,7 @@ test!(doc_twice {
         compiling = COMPILING,
         dir = path2url(p.root())).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("doc"),
+    assert_that(p.cargo("doc"),
                 execs().with_status(0).with_stdout(""))
 });
 
@@ -109,8 +109,8 @@ test!(doc_deps {
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("doc")
-                 .env("RUST_LOG", Some("cargo::ops::cargo_rustc::fingerprint")),
+    assert_that(p.cargo("doc")
+                 .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint"),
                 execs().with_status(0).with_stdout(""));
 
     assert_that(&p.root().join("target/doc"), existing_dir());

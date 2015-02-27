@@ -3,9 +3,10 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::{HashMap};
 use std::env;
 use std::fmt;
+use std::fs::{self, File};
+use std::io::prelude::*;
 use std::mem;
-use std::old_io::fs::{self, PathExtensions, File};
-use std::old_io;
+use std::path::{Path, PathBuf};
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
@@ -18,14 +19,14 @@ use util::toml as cargo_toml;
 use self::ConfigValue as CV;
 
 pub struct Config<'a> {
-    home_path: Path,
+    home_path: PathBuf,
     shell: RefCell<&'a mut MultiShell>,
     rustc_version: String,
     /// The current host and default target of rustc
     rustc_host: String,
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
-    cwd: Path,
+    cwd: PathBuf,
 }
 
 impl<'a> Config<'a> {
@@ -51,23 +52,23 @@ impl<'a> Config<'a> {
 
     pub fn home(&self) -> &Path { &self.home_path }
 
-    pub fn git_db_path(&self) -> Path {
+    pub fn git_db_path(&self) -> PathBuf {
         self.home_path.join("git").join("db")
     }
 
-    pub fn git_checkout_path(&self) -> Path {
+    pub fn git_checkout_path(&self) -> PathBuf {
         self.home_path.join("git").join("checkouts")
     }
 
-    pub fn registry_index_path(&self) -> Path {
+    pub fn registry_index_path(&self) -> PathBuf {
         self.home_path.join("registry").join("index")
     }
 
-    pub fn registry_cache_path(&self) -> Path {
+    pub fn registry_cache_path(&self) -> PathBuf {
         self.home_path.join("registry").join("cache")
     }
 
-    pub fn registry_source_path(&self) -> Path {
+    pub fn registry_source_path(&self) -> PathBuf {
         self.home_path.join("registry").join("src")
     }
 
@@ -123,7 +124,7 @@ impl<'a> Config<'a> {
         Ok(Some(val.clone()))
     }
 
-    pub fn get_string(&self, key: &str) -> CargoResult<Option<(String, Path)>> {
+    pub fn get_string(&self, key: &str) -> CargoResult<Option<(String, PathBuf)>> {
         match try!(self.get(key)) {
             Some(CV::String(i, path)) => Ok(Some((i, path))),
             Some(val) => self.expected("string", key, val),
@@ -132,7 +133,7 @@ impl<'a> Config<'a> {
     }
 
     pub fn get_table(&self, key: &str)
-                    -> CargoResult<Option<(HashMap<String, CV>, Path)>> {
+                    -> CargoResult<Option<(HashMap<String, CV>, PathBuf)>> {
         match try!(self.get(key)) {
             Some(CV::Table(i, path)) => Ok(Some((i, path))),
             Some(val) => self.expected("table", key, val),
@@ -140,7 +141,7 @@ impl<'a> Config<'a> {
         }
     }
 
-    pub fn get_i64(&self, key: &str) -> CargoResult<Option<(i64, Path)>> {
+    pub fn get_i64(&self, key: &str) -> CargoResult<Option<(i64, PathBuf)>> {
         match try!(self.get(key)) {
             Some(CV::Integer(i, path)) => Ok(Some((i, path))),
             Some(val) => self.expected("integer", key, val),
@@ -155,11 +156,11 @@ impl<'a> Config<'a> {
     }
 
     fn load_values(&self) -> CargoResult<()> {
-        let mut cfg = CV::Table(HashMap::new(), Path::new("."));
+        let mut cfg = CV::Table(HashMap::new(), PathBuf::new("."));
 
-        try!(walk_tree(&self.cwd, |mut file| {
-            let path = file.path().clone();
-            let contents = try!(file.read_to_string());
+        try!(walk_tree(&self.cwd, |mut file, path| {
+            let mut contents = String::new();
+            try!(file.read_to_string(&mut contents));
             let table = try!(cargo_toml::parse(&contents, &path).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
@@ -190,11 +191,11 @@ pub enum Location {
 
 #[derive(Eq,PartialEq,Clone,RustcDecodable)]
 pub enum ConfigValue {
-    Integer(i64, Path),
-    String(String, Path),
-    List(Vec<(String, Path)>, Path),
-    Table(HashMap<String, ConfigValue>, Path),
-    Boolean(bool, Path),
+    Integer(i64, PathBuf),
+    String(String, PathBuf),
+    List(Vec<(String, PathBuf)>, PathBuf),
+    Table(HashMap<String, ConfigValue>, PathBuf),
+    Boolean(bool, PathBuf),
 }
 
 impl fmt::Debug for ConfigValue {
@@ -237,17 +238,17 @@ impl Encodable for ConfigValue {
 impl ConfigValue {
     fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
-            toml::Value::String(val) => Ok(CV::String(val, path.clone())),
-            toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.clone())),
-            toml::Value::Integer(i) => Ok(CV::Integer(i, path.clone())),
+            toml::Value::String(val) => Ok(CV::String(val, path.to_path_buf())),
+            toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.to_path_buf())),
+            toml::Value::Integer(i) => Ok(CV::Integer(i, path.to_path_buf())),
             toml::Value::Array(val) => {
                 Ok(CV::List(try!(val.into_iter().map(|toml| {
                     match toml {
-                        toml::Value::String(val) => Ok((val, path.clone())),
+                        toml::Value::String(val) => Ok((val, path.to_path_buf())),
                         v => Err(human(format!("expected string but found {} \
                                                 in list", v.type_str()))),
                     }
-                }).collect::<CargoResult<_>>()), path.clone()))
+                }).collect::<CargoResult<_>>()), path.to_path_buf()))
             }
             toml::Value::Table(val) => {
                 Ok(CV::Table(try!(val.into_iter().map(|(key, value)| {
@@ -255,7 +256,7 @@ impl ConfigValue {
                         human(format!("failed to parse key `{}`", key))
                     }));
                     Ok((key, value))
-                }).collect::<CargoResult<_>>()), path.clone()))
+                }).collect::<CargoResult<_>>()), path.to_path_buf()))
             }
             v => return Err(human(format!("found TOML configuration value of \
                                            unknown type `{}`", v.type_str())))
@@ -276,7 +277,7 @@ impl ConfigValue {
                 for (key, value) in new.into_iter() {
                     match old.entry(key.clone()) {
                         Occupied(mut entry) => {
-                            let path = value.definition_path().clone();
+                            let path = value.definition_path().to_path_buf();
                             let entry = entry.get_mut();
                             try!(entry.merge(value).chain_error(|| {
                                 human(format!("failed to merge key `{}` between \
@@ -323,7 +324,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn list(&self) -> CargoResult<&[(String, Path)]> {
+    pub fn list(&self) -> CargoResult<&[(String, PathBuf)]> {
         match *self {
             CV::List(ref list, _) => Ok(list),
             _ => self.expected("list"),
@@ -379,25 +380,28 @@ impl ConfigValue {
     }
 }
 
-fn homedir() -> Option<Path> {
-    let cargo_home = env::var("CARGO_HOME").map(|p| Path::new(p)).ok();
+fn homedir() -> Option<PathBuf> {
+    let cargo_home = env::var_os("CARGO_HOME").map(|p| PathBuf::new(&p));
     let user_home = env::home_dir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }
 
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
-    where F: FnMut(File) -> CargoResult<()>
+    where F: FnMut(File, &Path) -> CargoResult<()>
 {
-    let mut current = pwd.clone();
+    let mut current = pwd;
 
     loop {
         let possible = current.join(".cargo").join("config");
         if possible.exists() {
             let file = try!(File::open(&possible));
 
-            try!(walk(file));
+            try!(walk(file, &possible));
         }
-        if !current.pop() { break; }
+        match current.parent() {
+            Some(p) => current = p,
+            None => break,
+        }
     }
 
     // Once we're done, also be sure to walk the home directory even if it's not
@@ -407,11 +411,11 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
-    if !home.is_ancestor_of(pwd) {
+    if !pwd.starts_with(&home) {
         let config = home.join("config");
         if config.exists() {
             let file = try!(File::open(&config));
-            try!(walk(file));
+            try!(walk(file, &config));
         }
     }
 
@@ -429,8 +433,9 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
         Location::Global => cfg.home_path.join("config"),
         Location::Project => unimplemented!(),
     };
-    try!(fs::mkdir_recursive(&file.dir_path(), old_io::USER_DIR));
-    let contents = File::open(&file).read_to_string().unwrap_or("".to_string());
+    try!(fs::create_dir_all(file.parent().unwrap()));
+    let mut contents = String::new();
+    let _ = File::open(&file).and_then(|mut f| f.read_to_string(&mut contents));
     let mut toml = try!(cargo_toml::parse(&contents, &file));
     toml.insert(key.to_string(), value.into_toml());
     let mut out = try!(File::create(&file));

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::path::Path;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
@@ -18,7 +19,7 @@ pub struct UpdateOptions<'a, 'b: 'a> {
 
 pub fn generate_lockfile(manifest_path: &Path, config: &Config)
                          -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                config));
     try!(source.update());
     let package = try!(source.root_package());
@@ -32,7 +33,7 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
 
 pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                opts.config));
     try!(source.update());
     let package = try!(source.root_package());

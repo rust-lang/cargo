@@ -1,6 +1,6 @@
 use std::old_path;
 
-use support::{project, cargo_dir, execs, path2url};
+use support::{project, execs, path2url};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that, existing_file};
 
@@ -131,7 +131,7 @@ hello a.rs
         dir = path2url(p.root()),
         sep = old_path::SEP).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("--bin").arg("b"),
+    assert_that(p.cargo("run").arg("--bin").arg("b"),
                 execs().with_status(0).with_stdout(format!("\
 {running} `target{sep}b`
 hello b.rs
@@ -294,7 +294,7 @@ fast2
         url = path2url(p.root()),
         sep = old_path::SEP).as_slice()));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("run").arg("-v").arg("--example").arg("a"),
+    assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \

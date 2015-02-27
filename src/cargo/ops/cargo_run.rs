@@ -1,3 +1,4 @@
+use std::path::Path;
 
 use ops::{self, ExecEngine};
 use util::{CargoResult, human, process, ProcessError, ChainError};
@@ -11,7 +12,8 @@ pub fn run(manifest_path: &Path,
            options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.config;
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(), config));
+    let mut src = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
+                                            config));
     try!(src.update());
     let root = try!(src.root_package());
     let env = options.env;
@@ -45,7 +47,7 @@ pub fn run(manifest_path: &Path,
     }
 
     let compile = try!(ops::compile(manifest_path, options));
-    let dst = manifest_path.dir_path().join("target");
+    let dst = manifest_path.parent().unwrap().join("target");
     let dst = match options.target {
         Some(target) => dst.join(target),
         None => dst,
@@ -56,14 +58,13 @@ pub fn run(manifest_path: &Path,
         (None, true) => dst.join("examples").join(bin.name()),
         (None, false) => dst.join(bin.name()),
     };
-    let exe = match exe.path_relative_from(config.cwd()) {
+    let exe = match exe.relative_from(config.cwd()) {
         Some(path) => path,
-        None => exe,
+        None => &*exe,
     };
-    let process = try!(try!(compile.target_process(exe, &root))
-                              .into_process_builder())
-                              .args(args)
-                              .cwd(config.cwd().clone());
+    let mut process = try!(compile.target_process(exe, &root))
+                                  .into_process_builder();
+    process.args(args).cwd(config.cwd());
 
     try!(config.shell().status("Running", process.to_string()));
     Ok(process.exec().err())

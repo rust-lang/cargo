@@ -1,7 +1,9 @@
-use std::old_io::{self, fs, File};
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::path::{PathBuf, Path};
 
-use flate2::CompressionLevel::Default;
-use flate2::writer::GzEncoder;
+use flate2::Compression::Default;
+use flate2::write::GzEncoder;
 use git2;
 use serialize::hex::ToHex;
 use tar::Archive;
@@ -12,19 +14,19 @@ use support::paths;
 use support::git::repo;
 use cargo::util::Sha256;
 
-pub fn registry_path() -> Path { paths::root().join("registry") }
-pub fn registry() -> Url { Url::from_file_path(&registry_path()).ok().unwrap() }
-pub fn dl_path() -> Path { paths::root().join("dl") }
-pub fn dl_url() -> Url { Url::from_file_path(&dl_path()).ok().unwrap() }
+pub fn registry_path() -> PathBuf { paths::root().join("registry") }
+pub fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
+pub fn dl_path() -> PathBuf { paths::root().join("dl") }
+pub fn dl_url() -> Url { Url::from_file_path(&*dl_path()).ok().unwrap() }
 
 pub fn init() {
     let config = paths::home().join(".cargo/config");
-    fs::mkdir_recursive(&config.dir_path(), old_io::USER_DIR).unwrap();
-    File::create(&config).write_str(format!(r#"
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(&config).unwrap().write_all(format!(r#"
         [registry]
             index = "{reg}"
             token = "api-token"
-    "#, reg = registry()).as_slice()).unwrap();
+    "#, reg = registry()).as_bytes()).unwrap();
 
     // Init a new registry
     repo(&registry_path())
@@ -57,7 +59,7 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     p.build();
 
     let dst = mock_archive_dst(name, version);
-    fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR).unwrap();
+    fs::create_dir_all(dst.parent().unwrap()).unwrap();
     let f = File::create(&dst).unwrap();
     let a = Archive::new(GzEncoder::new(f, Default));
     a.append(format!("{}-{}/Cargo.toml", name, version).as_slice(),
@@ -67,7 +69,7 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     a.finish().unwrap();
 }
 
-pub fn mock_archive_dst(name: &str, version: &str) -> Path {
+pub fn mock_archive_dst(name: &str, version: &str) -> PathBuf {
     dl_path().join(name).join(version).join("download")
 }
 
@@ -78,8 +80,10 @@ pub fn mock_pkg(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
 pub fn mock_pkg_yank(name: &str, version: &str, deps: &[(&str, &str, &str)],
                      yanked: bool) {
     mock_archive(name, version, deps);
-    let c = File::open(&mock_archive_dst(name, version)).read_to_end().unwrap();
-    let line = pkg(name, version, deps, cksum(c.as_slice()).as_slice(), yanked);
+    let mut c = Vec::new();
+    File::open(&mock_archive_dst(name, version)).unwrap()
+         .read_to_end(&mut c).unwrap();
+    let line = pkg(name, version, deps, &cksum(&c), yanked);
 
     let file = match name.len() {
         1 => format!("1/{}", name),
@@ -95,11 +99,13 @@ pub fn publish(file: &str, line: &str) {
     let mut index = repo.index().unwrap();
     {
         let dst = registry_path().join(file);
-        let prev = File::open(&dst).read_to_string().unwrap_or(String::new());
-        fs::mkdir_recursive(&dst.dir_path(), old_io::USER_DIR).unwrap();
-        File::create(&dst).write_str((prev + line + "\n").as_slice()).unwrap();
+        let mut prev = String::new();
+        let _ = File::open(&dst).and_then(|mut f| f.read_to_string(&mut prev));
+        fs::create_dir_all(dst.parent().unwrap()).unwrap();
+        File::create(&dst).unwrap()
+            .write_all((prev + line + "\n").as_bytes()).unwrap();
     }
-    index.add_path(&Path::new(file)).unwrap();
+    index.add_path(Path::new(file)).unwrap();
     index.write().unwrap();
     let id = index.write_tree().unwrap();
     let tree = repo.find_tree(id).unwrap();

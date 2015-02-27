@@ -2,6 +2,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
 use std::str;
 use std::sync::Arc;
+use std::path::PathBuf;
 
 use regex::Regex;
 
@@ -90,20 +91,19 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// specified as well as the exe suffix
     fn filename_parts(target: Option<&str>)
                       -> CargoResult<(Option<(String, String)>, String)> {
-        let process = try!(util::process("rustc"))
-                           .arg("-")
-                           .arg("--crate-name").arg("_")
-                           .arg("--crate-type").arg("dylib")
-                           .arg("--crate-type").arg("bin")
-                           .arg("--print=file-names");
-        let process = match target {
-            Some(s) => process.arg("--target").arg(s),
-            None => process,
+        let mut process = try!(util::process("rustc"));
+        process.arg("-")
+               .arg("--crate-name").arg("_")
+               .arg("--crate-type").arg("dylib")
+               .arg("--crate-type").arg("bin")
+               .arg("--print=file-names");
+        if let Some(s) = target {
+            process.arg("--target").arg(s);
         };
         let output = try!(process.exec_with_output());
 
-        let error = str::from_utf8(&output.error).unwrap();
-        let output = str::from_utf8(&output.output).unwrap();
+        let error = str::from_utf8(&output.stderr).unwrap();
+        let output = str::from_utf8(&output.stdout).unwrap();
         let mut lines = output.lines();
         let nodylib = Regex::new("unsupported crate type.*dylib").unwrap();
         let nobin = Regex::new("unsupported crate type.*bin").unwrap();
@@ -152,11 +152,11 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         let jobs = self.jobs();
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
-                                          Some(jobs.to_string()));
+                                          jobs.to_string());
         self.compilation.root_output =
-                self.layout(pkg, Kind::Target).proxy().dest().clone();
+                self.layout(pkg, Kind::Target).proxy().dest().to_path_buf();
         self.compilation.deps_output =
-                self.layout(pkg, Kind::Target).proxy().deps().clone();
+                self.layout(pkg, Kind::Target).proxy().deps().to_path_buf();
 
         return Ok(());
     }
@@ -212,14 +212,14 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// Returns the appropriate output directory for the specified package and
     /// target.
-    pub fn out_dir(&self, pkg: &Package, kind: Kind, target: &Target) -> Path {
+    pub fn out_dir(&self, pkg: &Package, kind: Kind, target: &Target) -> PathBuf {
         let out_dir = self.layout(pkg, kind);
         if target.profile().is_custom_build() {
             out_dir.build(pkg)
         } else if target.is_example() {
-            out_dir.examples().clone()
+            out_dir.examples().to_path_buf()
         } else {
-            out_dir.root().clone()
+            out_dir.root().to_path_buf()
         }
     }
 

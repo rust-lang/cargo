@@ -1,16 +1,19 @@
 use std::cmp;
 use std::fmt::{self, Debug, Formatter};
-use std::old_io::fs::{self, PathExtensions};
+use std::fs;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
+
 use glob::Pattern;
 use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{CargoResult, internal, internal_error, human, ChainError, Config};
+use util::{self, CargoResult, internal, internal_error, human, ChainError, Config};
 
 pub struct PathSource<'a, 'b: 'a> {
     id: SourceId,
-    path: Path,
+    path: PathBuf,
     updated: bool,
     packages: Vec<Package>,
     config: &'a Config<'b>,
@@ -34,7 +37,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
         PathSource {
             id: id.clone(),
-            path: path.clone(),
+            path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
             config: config,
@@ -48,7 +51,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
             return Err(internal("source has not been updated"))
         }
 
-        match self.packages.iter().find(|p| p.root() == self.path) {
+        match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),
             None => Err(internal("no package found in source"))
         }
@@ -71,8 +74,8 @@ impl<'a, 'b> PathSource<'a, 'b> {
     /// The basic assumption of this method is that all files in the directory
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
-    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<Path>> {
-        let root = pkg.manifest_path().dir_path();
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+        let root = pkg.root();
 
         let parse = |&: p: &String| {
             Pattern::new(p).map_err(|e| {
@@ -85,7 +88,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
                               .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
 
         let mut filter = |p: &Path| {
-            let relative_path = p.path_relative_from(&root).unwrap();
+            let relative_path = p.relative_from(&root).unwrap();
             include.iter().any(|p| p.matches_path(&relative_path)) || {
                 include.len() == 0 &&
                  !exclude.iter().any(|p| p.matches_path(&relative_path))
@@ -103,7 +106,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
         // us there most of the time!.
         let repo = self.packages.iter()
                        .map(|pkg| pkg.root())
-                       .filter(|path| path.is_ancestor_of(&root))
+                       .filter(|path| root.starts_with(path))
                        .filter_map(|path| git2::Repository::open(&path).ok())
                        .next();
         match repo {
@@ -114,7 +117,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
     fn list_files_git<F>(&self, pkg: &Package, repo: git2::Repository,
                          filter: &mut F)
-                         -> CargoResult<Vec<Path>>
+                         -> CargoResult<Vec<PathBuf>>
         where F: FnMut(&Path) -> bool
     {
         warn!("list_files_git {}", pkg.package_id());
@@ -123,15 +126,20 @@ impl<'a, 'b> PathSource<'a, 'b> {
             Some(dir) => dir,
             None => return Err(internal_error("Can't list files on a bare repository.", "")),
         };
-        let pkg_path = pkg.manifest_path().dir_path();
+
+        // Right now there is a bug such that "/a/b".relative_from("/a/")
+        // returns `None` so here we chop of the trailing slash if there is one.
+        // It is unclear to me whether this is actually a bug with paths or not.
+        let root = util::lose_the_slash(&root);
+        let pkg_path = pkg.root();
 
         let mut ret = Vec::new();
         'outer: for entry in index.iter() {
             let fname = &entry.path[..];
-            let file_path = root.join(fname);
+            let file_path = try!(join(&root, fname));
 
             // Filter out files outside this package.
-            if !pkg_path.is_ancestor_of(&file_path) { continue }
+            if !file_path.starts_with(pkg_path) { continue }
 
             // Filter out Cargo.lock and target always
             if fname == b"Cargo.lock" { continue }
@@ -139,9 +147,9 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
             // Filter out sub-packages of this package
             for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
-                let other_path = other_pkg.manifest_path().dir_path();
-                if pkg_path.is_ancestor_of(&other_path) &&
-                   other_path.is_ancestor_of(&file_path) {
+                let other_path = other_pkg.root();
+                if other_path.starts_with(pkg_path) &&
+                   file_path.starts_with(other_path) {
                     continue 'outer;
                 }
             }
@@ -150,8 +158,8 @@ impl<'a, 'b> PathSource<'a, 'b> {
             //       of just calling stat() again
             if file_path.is_dir() {
                 warn!("  found submodule {}", file_path.display());
-                let rel = file_path.path_relative_from(&root).unwrap();
-                let rel = try!(rel.as_str().chain_error(|| {
+                let rel = file_path.relative_from(&root).unwrap();
+                let rel = try!(rel.to_str().chain_error(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 }));
                 let submodule = try!(repo.find_submodule(rel));
@@ -167,40 +175,57 @@ impl<'a, 'b> PathSource<'a, 'b> {
                 ret.push(file_path);
             }
         }
-        Ok(ret)
+        return Ok(ret);
+
+        #[cfg(unix)]
+        fn join(path: &Path, data: &[u8]) -> CargoResult<PathBuf> {
+            use std::os::unix::prelude::*;
+            use std::ffi::OsStr;
+            Ok(path.join(<OsStr as OsStrExt>::from_bytes(data)))
+        }
+        #[cfg(windows)]
+        fn join(path: &Path, data: &[u8]) -> CargoResult<PathBuf> {
+            use std::str;
+            match str::from_utf8(data) {
+                Ok(s) => Ok(path.join(s)),
+                Err(..) => Err(internal("cannot process path in git with a non \
+                                         unicode filename")),
+            }
+        }
     }
 
     fn list_files_walk<F>(&self, pkg: &Package, mut filter: F)
-                          -> CargoResult<Vec<Path>>
+                          -> CargoResult<Vec<PathBuf>>
         where F: FnMut(&Path) -> bool
     {
         let mut ret = Vec::new();
         for pkg in self.packages.iter().filter(|p| *p == pkg) {
-            let loc = pkg.manifest_path().dir_path();
-            try!(walk(&loc, &mut ret, true, &mut filter));
+            let loc = pkg.manifest_path().parent().unwrap();
+            try!(walk(loc, &mut ret, true, &mut filter));
         }
         return Ok(ret);
 
-        fn walk<F>(path: &Path, ret: &mut Vec<Path>,
+        fn walk<F>(path: &Path, ret: &mut Vec<PathBuf>,
                    is_root: bool, filter: &mut F) -> CargoResult<()>
             where F: FnMut(&Path) -> bool
         {
             if !path.is_dir() {
                 if (*filter)(path) {
-                    ret.push(path.clone());
+                    ret.push(path.to_path_buf());
                 }
                 return Ok(())
             }
             // Don't recurse into any sub-packages that we have
             if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
-            for dir in try!(fs::readdir(path)).iter() {
-                match (is_root, dir.filename_str()) {
+            for dir in try!(fs::read_dir(path)) {
+                let dir = try!(dir).path();
+                match (is_root, dir.file_name().and_then(|s| s.to_str())) {
                     (_,    Some(".git")) |
                     (true, Some("target")) |
                     (true, Some("Cargo.lock")) => continue,
                     _ => {}
                 }
-                try!(walk(dir, ret, false, filter));
+                try!(walk(&dir, ret, false, filter));
             }
             return Ok(())
         }
@@ -259,8 +284,9 @@ impl<'a, 'b> Source for PathSource<'a, 'b> {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            warn!("{} {}", file.stat().map(|s| s.modified).unwrap_or(0), file.display());
-            max = cmp::max(max, file.stat().map(|s| s.modified).unwrap_or(0));
+            let mtime = file.metadata().map(|s| s.modified()).unwrap_or(0);
+            warn!("{} {}", mtime, file.display());
+            max = cmp::max(max, mtime);
         }
         trace!("fingerprint {}: {}", self.path.display(), max);
         Ok(max.to_string())

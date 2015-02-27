@@ -1,58 +1,86 @@
 use std::env;
-use std::old_io::fs;
-use std::old_io;
-use std::old_path::BytesContainer;
-use std::os;
+use std::dynamic_lib::DynamicLibrary;
+use std::ffi::{AsOsStr, OsString};
+use std::path::{Path, PathBuf, Component};
 
 use util::{human, internal, CargoResult, ChainError};
 
-pub fn realpath(original: &Path) -> old_io::IoResult<Path> {
-    const MAX_LINKS_FOLLOWED: usize = 256;
-    let cwd = try!(env::current_dir());
-    let original = cwd.join(original);
-
-    // Right now lstat on windows doesn't work quite well
-    if cfg!(windows) {
-        return Ok(original)
-    }
-
-    let result = original.root_path();
-    let mut result = result.expect("make_absolute has no root_path");
-    let mut followed = 0;
-
-    for part in original.components() {
-        result.push(part);
-
-        loop {
-            if followed == MAX_LINKS_FOLLOWED {
-                return Err(old_io::standard_error(old_io::InvalidInput))
-            }
-
-            match fs::lstat(&result) {
-                Err(..) => break,
-                Ok(ref stat) if stat.kind != old_io::FileType::Symlink => break,
-                Ok(..) => {
-                    followed += 1;
-                    let path = try!(fs::readlink(&result));
-                    result.pop();
-                    result.push(path);
-                }
-            }
-        }
-    }
-
-    return Ok(result);
-}
-
-#[allow(deprecated)] // need an OsStr-based Command first
-pub fn join_paths<T: BytesContainer>(paths: &[T], env: &str)
-                                     -> CargoResult<Vec<u8>> {
-    os::join_paths(paths).or_else(|e| {
-        let paths = paths.iter().map(|p| Path::new(p)).collect::<Vec<_>>();
+pub fn join_paths<T: AsOsStr>(paths: &[T], env: &str) -> CargoResult<OsString> {
+    env::join_paths(paths.iter()).or_else(|e| {
+        let paths = paths.iter().map(|p| {
+            Path::new(p.as_os_str())
+        }).collect::<Vec<_>>();
         internal(format!("failed to join path array: {:?}", paths)).chain_error(|| {
             human(format!("failed to join search paths together: {}\n\
                            Does ${} have an unterminated quote character?",
                           e, env))
         })
     })
+}
+
+pub fn dylib_path() -> Vec<PathBuf> {
+    match env::var_os(DynamicLibrary::envvar()) {
+        Some(var) => env::split_paths(&var).collect(),
+        None => Vec::new(),
+    }
+}
+
+pub fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = path.components();
+    let mut ret = if let Some(c @ Component::Prefix { .. }) = components.peek() {
+        components.next();
+        PathBuf::new(c.as_os_str())
+    } else {
+        PathBuf::new("")
+    };
+
+    for component in components {
+        match component {
+            Component::Prefix { .. } => unreachable!(),
+            Component::Empty => { ret.push(""); }
+            Component::RootDir => { ret.push(component.as_os_str()); }
+            Component::CurDir => {}
+            Component::ParentDir => { ret.pop(); }
+            Component::Normal(c) => { ret.push(c); }
+        }
+    }
+    return ret;
+}
+
+/// Chop off the trailing slash of a path
+pub fn lose_the_slash(path: &Path) -> &Path {
+    let mut components = path.components();
+    match components.next_back() {
+        Some(Component::CurDir) => components.as_path(),
+        _ => path,
+    }
+}
+
+#[cfg(unix)]
+pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
+    use std::os::unix::prelude::*;
+    Ok(path.as_os_str().as_bytes())
+}
+#[cfg(windows)]
+pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
+    match path.as_os_str().to_str() {
+        Some(s) => Ok(s.as_bytes()),
+        None => Err(human(format!("invalid non-unicode path: {}",
+                                  path.display())))
+    }
+}
+
+#[cfg(unix)]
+pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
+    use std::os::unix::prelude::*;
+    use std::ffi::OsStr;
+    Ok(PathBuf::new(<OsStr as OsStrExt>::from_bytes(bytes)))
+}
+#[cfg(windows)]
+pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
+    use std::str;
+    match str::from_utf8(bytes) {
+        Ok(s) => Ok(PathBuf::new(s)),
+        Err(..) => Err(human("invalid non-unicode path")),
+    }
 }

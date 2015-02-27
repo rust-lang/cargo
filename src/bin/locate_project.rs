@@ -24,7 +24,7 @@ pub fn execute(flags: LocateProjectFlags,
                _: &Config) -> CliResult<Option<ProjectLocation>> {
     let root = try!(find_root_manifest_for_cwd(flags.flag_manifest_path));
 
-    let string = try!(root.as_str()
+    let string = try!(root.to_str()
                       .chain_error(|| human("Your project path contains \
                                              characters not representable in \
                                              Unicode"))

@@ -1,4 +1,4 @@
-#![allow(missing_copy_implementations)]
+use std::path::Path;
 
 use git2;
 
@@ -19,12 +19,11 @@ impl GitRepo {
 
 impl HgRepo {
     pub fn init(path: &Path) -> CargoResult<HgRepo> {
-        let path_str = path.as_str().unwrap();
-        try!(try!(process("hg")).arg("init").arg(path_str).exec());
+        try!(try!(process("hg")).arg("init").arg(path).exec());
         return Ok(HgRepo)
     }
     pub fn discover(path: &Path) -> CargoResult<HgRepo> {
-        try!(try!(process("hg")).arg("root").cwd(path.clone()).exec_with_output());
+        try!(try!(process("hg")).arg("root").cwd(path).exec_with_output());
         return Ok(HgRepo)
     }
 }

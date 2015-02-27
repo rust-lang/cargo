@@ -1,4 +1,5 @@
 use std::hash;
+use std::path::{PathBuf, Path};
 
 use semver::Version;
 use rustc_serialize::{Encoder,Encodable};
@@ -13,8 +14,8 @@ use util::{CargoResult, human};
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
-    target_dir: Path,
-    doc_dir: Path,
+    target_dir: PathBuf,
+    doc_dir: PathBuf,
     links: Option<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
@@ -308,7 +309,7 @@ impl hash::Hash for Profile {
 pub struct Target {
     kind: TargetKind,
     name: String,
-    src_path: Path,
+    src_path: PathBuf,
     profile: Profile,
     metadata: Option<Metadata>,
 }
@@ -344,7 +345,7 @@ impl Encodable for Target {
 
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
-               target_dir: Path, doc_dir: Path,
+               target_dir: PathBuf, doc_dir: PathBuf,
                exclude: Vec<String>,
                include: Vec<String>,
                links: Option<String>,
@@ -386,7 +387,7 @@ impl Manifest {
         self.summary = summary;
     }
 
-    pub fn set_target_dir(&mut self, target_dir: Path) {
+    pub fn set_target_dir(&mut self, target_dir: PathBuf) {
         self.target_dir = target_dir;
     }
 }
@@ -406,7 +407,7 @@ impl Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
-            src_path: src_path.clone(),
+            src_path: src_path.to_path_buf(),
             profile: profile.clone(),
             metadata: Some(metadata)
         }
@@ -417,7 +418,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
-            src_path: src_path.clone(),
+            src_path: src_path.to_path_buf(),
             profile: profile.clone(),
             metadata: metadata,
         }
@@ -429,7 +430,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
-            src_path: src_path.clone(),
+            src_path: src_path.to_path_buf(),
             profile: profile.clone(),
             metadata: metadata,
         }
@@ -439,7 +440,7 @@ impl Target {
         Target {
             kind: TargetKind::Example,
             name: name.to_string(),
-            src_path: src_path.clone(),
+            src_path: src_path.to_path_buf(),
             profile: profile.clone(),
             metadata: None,
         }
@@ -450,7 +451,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
-            src_path: src_path.clone(),
+            src_path: src_path.to_path_buf(),
             profile: profile.clone(),
             metadata: Some(metadata),
         }
@@ -461,7 +462,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
-            src_path: src_path.clone(),
+            src_path: src_path.to_path_buf(),
             profile: profile.clone(),
             metadata: Some(metadata),
         }

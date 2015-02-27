@@ -1,4 +1,4 @@
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use hamcrest::assert_that;
 
 fn setup() {}
@@ -99,8 +99,8 @@ test!(bad5 {
             foo = 2
         "#);
     foo.build();
-    assert_that(foo.process(cargo_dir().join("cargo")).arg("new")
-                   .arg("-v").arg("foo").cwd(foo.root().join("foo")),
+    assert_that(foo.cargo("new")
+                   .arg("-v").arg("foo").cwd(&foo.root().join("foo")),
                 execs().with_status(101).with_stderr("\
 Failed to create project `foo` at `[..]`
 

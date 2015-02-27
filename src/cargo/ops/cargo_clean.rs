@@ -1,5 +1,7 @@
 use std::default::Default;
-use std::old_io::fs::{self, PathExtensions};
+use std::fs;
+use std::io::prelude::*;
+use std::path::Path;
 
 use core::PackageSet;
 use core::source::{Source, SourceMap};
@@ -15,7 +17,7 @@ pub struct CleanOptions<'a, 'b: 'a> {
 
 /// Cleans the project from build artifacts.
 pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
-    let mut src = try!(PathSource::for_path(&manifest_path.dir_path(),
+    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             opts.config));
     try!(src.update());
     let root = try!(src.root_package());
@@ -55,11 +57,10 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     // And finally, clean everything out!
     for target in pkg.targets().iter() {
         let layout = Layout::new(&root, opts.target, target.profile().dest());
-        try!(rm_rf(&layout.native(&pkg)));
         try!(rm_rf(&layout.fingerprint(&pkg)));
         for filename in try!(cx.target_filenames(target)).iter() {
-            try!(rm_rf(&layout.dest().join(filename)));
-            try!(rm_rf(&layout.deps().join(filename)));
+            try!(rm_rf(&layout.dest().join(&filename)));
+            try!(rm_rf(&layout.deps().join(&filename)));
         }
     }
 
@@ -68,11 +69,11 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
 
 fn rm_rf(path: &Path) -> CargoResult<()> {
     if path.is_dir() {
-        try!(fs::rmdir_recursive(path).chain_error(|| {
+        try!(fs::remove_dir_all(path).chain_error(|| {
             human("could not remove build directory")
         }));
     } else if path.exists() {
-        try!(fs::unlink(path).chain_error(|| {
+        try!(fs::remove_file(path).chain_error(|| {
             human("failed to remove build artifact")
         }));
     }

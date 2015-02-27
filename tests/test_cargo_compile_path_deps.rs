@@ -1,9 +1,11 @@
-use std::old_io::{fs, File, USER_RWX, timer};
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::old_io::timer;
 use std::time::Duration;
 
-use support::{project, execs, main_file, cargo_dir};
+use support::{project, execs, main_file};
 use support::{COMPILING, RUNNING};
-use support::paths::{self, PathExt};
+use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo;
 use cargo::util::{process};
@@ -82,21 +84,19 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-      cargo::util::process(p.bin("foo")).unwrap(),
-      execs().with_stdout("test passed\n").with_status(0));
+    assert_that(cargo::util::process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("test passed\n").with_status(0));
 
     println!("cleaning");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("clean"),
+    assert_that(p.cargo("clean"),
                 execs().with_stdout("").with_status(0));
     println!("building baz");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
-                 .arg("-p").arg("baz"),
+    assert_that(p.cargo("build").arg("-p").arg("baz"),
                 execs().with_status(0)
                        .with_stdout(format!("{} baz v0.5.0 ({})\n",
                                             COMPILING, p.url())));
     println!("building foo");
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
+    assert_that(p.cargo("build")
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(format!("{} bar v0.5.0 ({})\n\
@@ -239,9 +239,8 @@ test!(cargo_compile_with_transitive_dev_deps {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-      cargo::util::process(p.bin("foo")).unwrap(),
-      execs().with_stdout("zoidberg\n"));
+    assert_that(cargo::util::process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("zoidberg\n"));
 });
 
 test!(no_rebuild_dependency {
@@ -280,12 +279,12 @@ test!(no_rebuild_dependency {
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
     // This time we shouldn't compile bar
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(""));
     p.root().move_into_the_past().unwrap();
 
     p.build(); // rebuild the files (rewriting them in the process)
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
@@ -347,7 +346,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, p.url(),
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(""));
 
     // Make sure an update to baz triggers a rebuild of bar
@@ -355,10 +354,10 @@ test!(deep_dependencies_trigger_rebuild {
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
     timer::sleep(Duration::seconds(1));
-    File::create(&p.root().join("baz/src/baz.rs")).write_str(r#"
+    File::create(&p.root().join("baz/src/baz.rs")).unwrap().write_all(br#"
         pub fn baz() { println!("hello!"); }
     "#).unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(format!("{} baz v0.5.0 ({})\n\
                                              {} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
@@ -368,11 +367,11 @@ test!(deep_dependencies_trigger_rebuild {
 
     // Make sure an update to bar doesn't trigger baz
     timer::sleep(Duration::seconds(1));
-    File::create(&p.root().join("bar/src/bar.rs")).write_str(r#"
+    File::create(&p.root().join("bar/src/bar.rs")).unwrap().write_all(br#"
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).unwrap();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
@@ -437,7 +436,7 @@ test!(no_rebuild_two_deps {
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(""));
     assert_that(&p.bin("foo"), existing_file());
 });
@@ -483,12 +482,12 @@ test!(nested_deps_recompile {
                                             COMPILING, p.url())));
     p.root().move_into_the_past().unwrap();
 
-    File::create(&p.root().join("src/foo.rs")).write_str(r#"
+    File::create(&p.root().join("src/foo.rs")).unwrap().write_all(br#"
         fn main() {}
     "#).unwrap();
 
     // This shouldn't recompile `bar`
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
 });
@@ -515,8 +514,8 @@ test!(error_message_for_missing_manifest {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(format!("Could not find `Cargo.toml` in `{}`\n",
-                                     p.root().join_many(&["src", "bar"]).display())));
+                .with_stderr(&format!("Could not find `Cargo.toml` in `{}`\n",
+                                      p.root().join("src").join("bar").display())));
 
 });
 
@@ -531,13 +530,12 @@ test!(override_relative {
         "#)
        .file("src/lib.rs", "");
 
-    fs::mkdir(&paths::root().join(".cargo"), USER_RWX).unwrap();
-    File::create(&paths::root().join(".cargo/config")).write_str(r#"
-        paths = ["bar"]
-    "#).unwrap();
+    fs::create_dir(&paths::root().join(".cargo")).unwrap();
+    File::create(&paths::root().join(".cargo/config")).unwrap()
+         .write_all(br#"paths = ["bar"]"#).unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [package]
 
             name = "foo"
@@ -567,10 +565,10 @@ test!(override_self {
     let p = project("foo");
     let root = p.root().clone();
     let p = p
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             paths = ['{}']
         "#, root.display()))
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [package]
 
             name = "foo"
@@ -610,11 +608,11 @@ test!(override_path_dep {
        .file("p2/src/lib.rs", "");
 
     let p = project("foo")
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             paths = ['{}', '{}']
         "#, bar.root().join("p1").display(),
             bar.root().join("p2").display()))
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [package]
 
             name = "foo"
@@ -666,10 +664,9 @@ test!(path_dep_build_cmd {
             name = "bar"
         "#)
         .file("bar/build.rs", r#"
-            use std::old_io::fs;
+            use std::fs;
             fn main() {
-                fs::copy(&Path::new("src/bar.rs.in"),
-                         &Path::new("src/bar.rs")).unwrap();
+                fs::copy("src/bar.rs.in", "src/bar.rs").unwrap();
             }
         "#)
         .file("bar/src/bar.rs.in", r#"
@@ -679,7 +676,7 @@ test!(path_dep_build_cmd {
     p.build();
     p.root().join("bar").move_into_the_past().unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
         execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
@@ -687,25 +684,23 @@ test!(path_dep_build_cmd {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-      cargo::util::process(p.bin("foo")).unwrap(),
-      execs().with_stdout("0\n"));
+    assert_that(cargo::util::process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("0\n"));
 
     // Touching bar.rs.in should cause the `build` command to run again.
     {
-        let mut file = fs::File::create(&p.root().join("bar/src/bar.rs.in")).unwrap();
-        file.write_str(r#"pub fn gimme() -> int { 1 }"#).unwrap();
+        let file = fs::File::create(&p.root().join("bar/src/bar.rs.in"));
+        file.unwrap().write_all(br#"pub fn gimme() -> int { 1 }"#).unwrap();
     }
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build"),
+    assert_that(p.cargo("build"),
         execs().with_stdout(format!("{} bar v0.5.0 ({})\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
                                     COMPILING, p.url())));
 
-    assert_that(
-      cargo::util::process(p.bin("foo")).unwrap(),
-      execs().with_stdout("1\n"));
+    assert_that(cargo::util::process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("1\n"));
 });
 
 test!(dev_deps_no_rebuild_lib {
@@ -736,13 +731,13 @@ test!(dev_deps_no_rebuild_lib {
         "#)
         .file("bar/src/lib.rs", "pub fn bar() {}");
     p.build();
-    assert_that(p.process(cargo_dir().join("cargo")).arg("build")
-                 .env("FOO", Some("bar")),
+    assert_that(p.cargo("build")
+                 .env("FOO", "bar"),
                 execs().with_status(0)
                        .with_stdout(format!("{} foo v0.5.0 ({})\n",
                                             COMPILING, p.url())));
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {} [..] v0.5.0 ({})
