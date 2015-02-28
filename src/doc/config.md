@@ -23,9 +23,11 @@ with a configuration file in your home directory.
 
 # Configuration Format
 
-All configuration is currently in the TOML format (like the manifest), with
-simple key-value pairs inside of sections (tables) which all get merged
+All configuration is currently in the [TOML format][toml] (like the manifest),
+with simple key-value pairs inside of sections (tables) which all get merged
 together.
+
+[toml]: https://github.com/toml-lang/toml
 
 # Configuration keys
 
