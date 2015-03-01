@@ -17,7 +17,7 @@ dependencies = [
  "registry 0.1.0",
  "rustc-serialize 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "threadpool 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -251,7 +251,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "tar"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
