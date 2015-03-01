@@ -587,7 +587,12 @@ fn build_base_args(cx: &Context,
     if profile.opt_level() != 0 {
         cmd.arg("-C").arg(&format!("opt-level={}", profile.opt_level()));
     }
-    if (target.is_bin() || target.is_staticlib()) && profile.lto() {
+
+    // Disable LTO for host builds as prefer_dynamic and it are mutually
+    // exclusive.
+    let lto = (target.is_bin() || target.is_staticlib()) && profile.lto() &&
+              !profile.is_for_host();
+    if lto {
         cmd.args(&["-C", "lto"]);
     } else {
         // There are some restrictions with LTO and codegen-units, so we
