@@ -1099,3 +1099,24 @@ test!(profile_and_opt_level_set_correctly {
     assert_that(build.cargo_process("bench"),
                 execs().with_status(0));
 });
+
+test!(build_script_with_lto {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+
+            [profile.dev]
+            lto = true
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+              fn main() {
+              }
+        "#);
+    assert_that(build.cargo_process("build"),
+                execs().with_status(0));
+});
