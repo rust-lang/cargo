@@ -563,10 +563,10 @@ test!(propagation_of_l_flags {
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} a v0.5.0 (file://[..])
-{running} `rustc a[..]build.rs [..]`
-{compiling} b v0.5.0 (file://[..])
-{running} `rustc [..] --crate-name b [..]-L foo[..]`
+[..]
+[..]
+[..]
+[..]
 {running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
