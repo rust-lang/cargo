@@ -284,7 +284,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             None => return vec!(),
             Some(deps) => deps,
         };
-        deps.map(|id| self.get_package(id)).filter(|dep| {
+        let mut ret = deps.map(|id| self.get_package(id)).filter(|dep| {
             let pkg_dep = pkg.dependencies().iter().find(|d| {
                 d.name() == dep.name()
             }).unwrap();
@@ -305,7 +305,24 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         }).filter_map(|pkg| {
             pkg.targets().iter().find(|&t| self.is_relevant_target(t))
                .map(|t| (pkg, t))
-        }).collect()
+        }).collect::<Vec<_>>();
+
+        // If this target is a binary, test, example, etc, then it depends on
+        // the library of the same package. The call to `resolve.deps` above
+        // didn't include `pkg` in the return values, so we need to special case
+        // it here and see if we need to push `(pkg, pkg_lib_target)`.
+        if !target.profile().is_custom_build() &&
+           (target.is_bin() || target.is_example()) {
+            let pkg = self.get_package(pkg.package_id());
+            let target = pkg.targets().iter().filter(|t| {
+                t.is_lib() && t.profile().is_compile() &&
+                    (t.is_rlib() || t.is_dylib())
+            }).next();
+            if let Some(t) = target {
+                ret.push((pkg, t));
+            }
+        }
+        return ret;
     }
 
     /// Gets a package for the given package id.

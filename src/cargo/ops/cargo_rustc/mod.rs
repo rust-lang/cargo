@@ -678,17 +678,6 @@ fn build_deps_args(cmd: &mut CommandPrototype, target: &Target,
         try!(link_to(cmd, pkg, target, cx, kind));
     }
 
-    let targets = package.targets().iter().filter(|target| {
-        target.is_lib() && target.profile().is_compile()
-    });
-
-    if (target.is_bin() || target.is_example()) &&
-       !target.profile().is_custom_build() {
-        for target in targets.filter(|f| f.is_rlib() || f.is_dylib()) {
-            try!(link_to(cmd, package, target, cx, kind));
-        }
-    }
-
     return Ok(());
 
     fn link_to(cmd: &mut CommandPrototype, pkg: &Package, target: &Target,
