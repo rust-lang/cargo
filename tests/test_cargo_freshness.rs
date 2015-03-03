@@ -173,3 +173,31 @@ test!(changing_features_is_ok {
                 execs().with_status(0)
                        .with_stdout(""));
 });
+
+test!(rebuild_tests_if_lib_changes {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("tests/foo.rs", r#"
+            extern crate foo;
+            #[test]
+            fn test() { foo::foo(); }
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("test"),
+                execs().with_status(0));
+
+    File::create(&p.root().join("src/lib.rs")).unwrap();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("test").arg("-v"),
+                execs().with_status(101));
+});
