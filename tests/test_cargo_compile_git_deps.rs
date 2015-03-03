@@ -51,7 +51,8 @@ fn add(repo: &git2::Repository) {
 
 fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
                      path: &Path) -> git2::Submodule<'a> {
-    let mut s = repo.submodule(url, path, false).unwrap();
+    let path = path.to_str().unwrap().replace(r"\", "/");
+    let mut s = repo.submodule(url, Path::new(&path), false).unwrap();
     let subrepo = s.open().unwrap();
     let mut origin = subrepo.find_remote("origin").unwrap();
     origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
@@ -1658,12 +1659,13 @@ test!(dont_require_submodules_are_checked_out {
         "#)
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
+        .file("a/foo", "")
     }).unwrap();
     let git2 = git_repo("dep2", |p| p).unwrap();
 
     let repo = git2::Repository::open(&git1.root()).unwrap();
     let url = path2url(git2.root()).to_string();
-    add_submodule(&repo, &url, &Path::new("submodule"));
+    add_submodule(&repo, &url, &Path::new("a/submodule"));
     commit(&repo);
 
     git2::Repository::init(&project.root()).unwrap();
