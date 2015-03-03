@@ -222,12 +222,11 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs()
-        .with_stdout(format!("{} bar v0.5.0 ({})\n\
-                              {} foo v0.5.0 ({})\n",
-                             COMPILING, p.url(),
-                             COMPILING, p.url()))
-        .with_stderr("\
+                execs().with_stdout(format!("\
+{compiling} (debug) bar v0.5.0 ({url})
+{compiling} (debug) foo v0.5.0 ({url})
+", compiling = COMPILING, url = p.url()))
+                       .with_stderr("\
 [..]warning: function is never used: `dead`[..]
 [..]fn dead() {}
 [..]^~~~~~~~~~~~
@@ -807,7 +806,7 @@ test!(lto_build {
         .file("src/main.rs", "fn main() {}");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} test v0.0.0 ({url})
+{compiling} (release) test v0.0.0 ({url})
 {running} `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
@@ -836,7 +835,7 @@ test!(verbose_build {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} test v0.0.0 ({url})
+{compiling} (debug) test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
@@ -864,7 +863,7 @@ test!(verbose_release_build {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} test v0.0.0 ({url})
+{compiling} (release) test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         --cfg ndebug \
@@ -909,7 +908,7 @@ test!(verbose_release_build_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} (release) foo v0.0.0 ({url})
 {running} `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
@@ -920,7 +919,7 @@ test!(verbose_release_build_deps {
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release[..]deps \
         -L dependency={dir}[..]target[..]release[..]deps`
-{compiling} test v0.0.0 ({url})
+{compiling} (release) test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         --cfg ndebug \
@@ -1138,7 +1137,7 @@ test!(lib_with_standard_name {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} syntax v0.0.1 ({dir})
+{compiling} (debug) syntax v0.0.1 ({dir})
 ",
                        compiling = COMPILING,
                        dir = p.url()).as_slice()));
@@ -1266,7 +1265,7 @@ test!(freshness_ignores_excluded {
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} (debug) foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 
     // Smoke test to make sure it doesn't compile again
@@ -1312,14 +1311,14 @@ test!(rebuild_preserves_out_dir {
     assert_that(foo.cargo("build").env("FIRST", "1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} (debug) foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} (debug) foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 });
 

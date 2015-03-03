@@ -21,7 +21,7 @@ test!(simple {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 {running} `target{sep}foo`
 hello
 ",
@@ -122,7 +122,7 @@ test!(specify_name {
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 {running} `target{sep}a`
 hello a.rs
 ",
@@ -158,7 +158,7 @@ test!(run_example {
 
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 {running} `target{sep}examples{sep}a`
 example
 ",
@@ -210,7 +210,7 @@ test!(one_bin_multiple_examples {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 {running} `target{sep}main`
 hello main.rs
 ",
@@ -265,7 +265,7 @@ test!(example_with_release_flag {
 
     assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({url})
+{compiling} (release) bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
         --cfg ndebug \
@@ -275,7 +275,7 @@ test!(example_with_release_flag {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
-{compiling} foo v0.0.1 ({url})
+{compiling} (release) foo v0.0.1 ({url})
 {running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
         --cfg ndebug \
@@ -296,7 +296,7 @@ fast2
 
     assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({url})
+{compiling} (debug) bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
         -C metadata=[..] \
@@ -305,7 +305,7 @@ fast2
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}deps \
         -L dependency={dir}{sep}target{sep}deps`
-{compiling} foo v0.0.1 ({url})
+{compiling} (debug) foo v0.0.1 ({url})
 {running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -g \
         --out-dir {dir}{sep}target{sep}examples \
@@ -369,7 +369,7 @@ test!(release_works {
 
     assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (release) foo v0.0.1 ({dir})
 {running} `target{sep}release{sep}foo`
 ",
         compiling = COMPILING,

@@ -23,7 +23,7 @@ test!(modifying_and_moving {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = path2url(p.root()))));
 
     assert_that(p.cargo("build"),
@@ -35,7 +35,7 @@ test!(modifying_and_moving {
          .write_all(b"fn main() {}").unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = path2url(p.root()))));
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
@@ -62,7 +62,7 @@ test!(modify_only_some_files {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
@@ -82,7 +82,7 @@ test!(modify_only_some_files {
     assert_that(p.cargo("build")
                  .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 });
@@ -154,19 +154,19 @@ test!(changing_features_is_ok {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stdout("\
-[..]Compiling foo v0.0.1 ([..])
+[..]Compiling (debug) foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stdout("\
-[..]Compiling foo v0.0.1 ([..])
+[..]Compiling (debug) foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout("\
-[..]Compiling foo v0.0.1 ([..])
+[..]Compiling (debug) foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build"),

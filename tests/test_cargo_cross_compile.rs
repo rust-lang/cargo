@@ -280,7 +280,7 @@ test!(linker_and_ar {
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 ({url})
+{compiling} (debug) foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target} \
     --emit=dep-info,link \
@@ -394,7 +394,7 @@ test!(cross_tests {
     assert_that(p.cargo_process("test").arg("--target").arg(target),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.0 ({foo})
+{compiling} (debug) foo v0.0.0 ({foo})
 {running} target[..]{triple}[..]bar-[..]
 
 running 1 test
@@ -474,7 +474,7 @@ test!(cross_with_a_build_script {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.0 (file://[..])
+{compiling} (debug) foo v0.0.0 (file://[..])
 {running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..]`
 {running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
 {running} `rustc src[..]main.rs [..] --target {target} [..]`
@@ -543,7 +543,7 @@ test!(build_script_needed_for_host_and_target {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} d1 v0.0.0 (file://{dir})
+{compiling} (debug) d1 v0.0.0 (file://{dir})
 {running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
@@ -551,10 +551,10 @@ test!(build_script_needed_for_host_and_target {
            -L /path/to/{target}`
 {running} `rustc d1[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
-{compiling} d2 v0.0.0 (file://{dir})
+{compiling} (debug) d2 v0.0.0 (file://{dir})
 {running} `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
-{compiling} foo v0.0.0 (file://{dir})
+{compiling} (debug) foo v0.0.0 (file://{dir})
 {running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..] \
            -L /path/to/{host}`
 {running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
@@ -666,7 +666,7 @@ test!(plugin_build_script_right_arch {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.0.1 ([..])
+{compiling} (debug) foo v0.0.1 ([..])
 {running} `rustc build.rs [..]`
 {running} `[..]build-script-build[..]`
 {running} `rustc src[..]lib.rs [..]`

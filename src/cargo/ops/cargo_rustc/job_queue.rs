@@ -30,6 +30,7 @@ pub struct JobQueue<'a> {
     state: HashMap<&'a PackageId, Freshness>,
     ignored: HashSet<&'a PackageId>,
     printed: HashSet<&'a PackageId>,
+    desc: &'a str,
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -64,8 +65,8 @@ pub enum Stage {
 type Message = (PackageId, Stage, Freshness, CargoResult<()>);
 
 impl<'a> JobQueue<'a> {
-    pub fn new(resolve: &'a Resolve, packages: &'a PackageSet, jobs: u32)
-               -> JobQueue<'a> {
+    pub fn new(resolve: &'a Resolve, packages: &'a PackageSet, jobs: u32,
+               desc: &'a str) -> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
             pool: ThreadPool::new(jobs as usize),
@@ -79,6 +80,7 @@ impl<'a> JobQueue<'a> {
             state: HashMap::new(),
             ignored: HashSet::new(),
             printed: HashSet::new(),
+            desc: desc,
         }
     }
 
@@ -216,12 +218,13 @@ impl<'a> JobQueue<'a> {
         let print = print && !self.printed.contains(&pkg.package_id());
         if print && (stage == Stage::Libraries ||
                      (total_fresh == Dirty && running.len() > 0)) {
+            let msg = format!("({}) {}", self.desc, pkg);
             self.printed.insert(pkg.package_id());
             match total_fresh {
                 Fresh => try!(config.shell().verbose(|c| {
-                    c.status("Fresh", pkg)
+                    c.status("Fresh", &msg)
                 })),
-                Dirty => try!(config.shell().status("Compiling", pkg))
+                Dirty => try!(config.shell().status("Compiling", msg))
             }
         }
         for msg in running.iter() {

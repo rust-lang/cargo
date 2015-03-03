@@ -8,7 +8,7 @@ fn setup() {
 
 fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
     format!("\
-{compiling} {name} v{version} ({url})
+{compiling} (debug) {name} v{version} ({url})
 {running} `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \

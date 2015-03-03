@@ -33,7 +33,7 @@ test!(simple {
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+{compiling} (debug) foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
@@ -77,7 +77,7 @@ test!(metadata_warning {
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+{compiling} (debug) foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
@@ -103,7 +103,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+{compiling} (debug) foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
@@ -130,7 +130,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+{compiling} (debug) foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
@@ -189,7 +189,7 @@ test!(package_verification {
                 execs().with_status(0).with_stdout(format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+{compiling} (debug) foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
