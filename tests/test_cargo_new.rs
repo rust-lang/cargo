@@ -47,7 +47,7 @@ test!(simple_bin {
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/foo{}",
+    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
                                              env::consts::EXE_SUFFIX)),
                 existing_file());
 });

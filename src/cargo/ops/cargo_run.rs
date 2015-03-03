@@ -53,10 +53,8 @@ pub fn run(manifest_path: &Path,
         None => dst,
     };
     let exe = match (bin.profile().dest(), bin.is_example()) {
-        (Some(s), true) => dst.join(s).join("examples").join(bin.name()),
-        (Some(s), false) => dst.join(s).join(bin.name()),
-        (None, true) => dst.join("examples").join(bin.name()),
-        (None, false) => dst.join(bin.name()),
+        (s, true) => dst.join(s).join("examples").join(bin.name()),
+        (s, false) => dst.join(s).join(bin.name()),
     };
     let exe = match exe.relative_from(config.cwd()) {
         Some(path) => path,

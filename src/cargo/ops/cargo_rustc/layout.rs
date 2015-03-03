@@ -68,16 +68,13 @@ pub struct LayoutProxy<'a> {
 }
 
 impl Layout {
-    pub fn new(pkg: &Package, triple: Option<&str>, dest: Option<&str>) -> Layout {
+    pub fn new(pkg: &Package, triple: Option<&str>, dest: &str) -> Layout {
         let mut path = pkg.absolute_target_dir();
         match triple {
             Some(s) => path.push(s),
             None => {}
         }
-        match dest {
-            Some(s) => path.push(s),
-            None => {}
-        }
+        path.push(dest);
         Layout::at(path)
     }
 

@@ -22,7 +22,7 @@ test!(simple {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}foo`
+{running} `target{sep}debug{sep}foo`
 hello
 ",
         compiling = COMPILING,
@@ -123,7 +123,7 @@ test!(specify_name {
     assert_that(p.cargo_process("run").arg("--bin").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}a`
+{running} `target{sep}debug{sep}a`
 hello a.rs
 ",
         compiling = COMPILING,
@@ -133,7 +133,7 @@ hello a.rs
 
     assert_that(p.cargo("run").arg("--bin").arg("b"),
                 execs().with_status(0).with_stdout(format!("\
-{running} `target{sep}b`
+{running} `target{sep}debug{sep}b`
 hello b.rs
 ",
         running = RUNNING,
@@ -159,7 +159,7 @@ test!(run_example {
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}examples{sep}a`
+{running} `target{sep}debug{sep}examples{sep}a`
 example
 ",
         compiling = COMPILING,
@@ -211,7 +211,7 @@ test!(one_bin_multiple_examples {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}main`
+{running} `target{sep}debug{sep}main`
 hello main.rs
 ",
         compiling = COMPILING,
@@ -301,19 +301,19 @@ fast2
         -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
-        --out-dir {dir}{sep}target{sep}deps \
+        --out-dir {dir}{sep}target{sep}debug{sep}deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}deps \
-        -L dependency={dir}{sep}target{sep}deps`
+        -L dependency={dir}{sep}target{sep}debug{sep}deps \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps`
 {compiling} foo v0.0.1 ({url})
 {running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -g \
-        --out-dir {dir}{sep}target{sep}examples \
+        --out-dir {dir}{sep}target{sep}debug{sep}examples \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target \
-        -L dependency={dir}{sep}target{sep}deps \
-         --extern bar={dir}{sep}target{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}examples{sep}a`
+        -L dependency={dir}{sep}target{sep}debug \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps \
+         --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
+{running} `target{sep}debug{sep}examples{sep}a`
 slow1
 slow2
 ",

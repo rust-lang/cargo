@@ -12,10 +12,10 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
 {running} `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
-        --out-dir {dir}{sep}target \
+        --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target \
-        -L dependency={dir}{sep}target{sep}deps`
+        -L dependency={dir}{sep}target{sep}debug \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ",
             running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
             dir = p.root().display(), url = p.url(),
