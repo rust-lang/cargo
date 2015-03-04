@@ -245,7 +245,7 @@ local -a commands;commands=(
 'config-for-key:print key from cargo config file'
 'config-list:print all config from cargo config file'
 'doc:build package documentation'
-'fetch:fetch package dependencie"'
+'fetch:fetch package dependencies'
 'generate-lockfile:create lockfile'
 'git-checkout:git checkout'
 'help:get help for commands'
