@@ -1158,7 +1158,9 @@ test!(simple_staticlib {
         "#)
         .file("src/lib.rs", "pub fn foo() {}");
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    // env var is a test for #1381
+    assert_that(p.cargo_process("build").env("RUST_LOG", "nekoneko=trace"),
+                execs().with_status(0));
 });
 
 test!(staticlib_rlib_and_bin {
