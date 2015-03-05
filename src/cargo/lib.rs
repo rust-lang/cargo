@@ -1,6 +1,6 @@
 #![deny(unused)]
-#![feature(collections, hash, os, std_misc, unicode, env, core)]
-#![feature(io, path, str_words, process, fs, old_io)]
+#![feature(collections, hash, os, std_misc, unicode, core)]
+#![feature(io, path, str_words, fs, old_io, exit_status)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;

@@ -260,7 +260,7 @@ impl BuildOutput {
         let whence = format!("build script of `{}`", pkg_name);
 
         for line in input.lines() {
-            let mut iter = line.splitn(1, |&: c: char| c == ':');
+            let mut iter = line.splitn(1, |c| c == ':');
             if iter.next() != Some("cargo") {
                 // skip this line since it doesn't start with "cargo:"
                 continue;
@@ -271,7 +271,7 @@ impl BuildOutput {
             };
 
             // getting the `key=value` part of the line
-            let mut iter = data.splitn(1, |&: c: char| c == '=');
+            let mut iter = data.splitn(1, |c| c == '=');
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {

@@ -77,7 +77,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
 
-        let parse = |&: p: &String| {
+        let parse = |p: &String| {
             Pattern::new(p).map_err(|e| {
                 human(format!("could not parse pattern `{}`: {}", p, e))
             })
