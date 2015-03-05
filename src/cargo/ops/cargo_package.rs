@@ -6,8 +6,7 @@ use tar::Archive;
 use flate2::{GzBuilder, Compression};
 use flate2::read::GzDecoder;
 
-use core::source::{Source, SourceId};
-use core::Package;
+use core::{Source, SourceId, Package, PackageId};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config};
 use ops;
@@ -160,16 +159,23 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     // When packages are uploaded to the registry, all path dependencies are
     // implicitly converted to registry-based dependencies, so we rewrite those
     // dependencies here.
+    //
+    // We also be sure to point all paths at `dst` instead of the previous
+    // location that the package was original read from. In locking the
+    // `SourceId` we're telling it that the corresponding `PathSource` will be
+    // considered updated and won't actually read any packages.
     let registry = try!(SourceId::for_central(config));
+    let precise = Some("locked".to_string());
+    let new_src = try!(SourceId::for_path(&dst)).with_precise(precise);
+    let new_pkgid = try!(PackageId::new(pkg.name(), pkg.version(), &new_src));
     let new_summary = pkg.summary().clone().map_dependencies(|d| {
         if !d.source_id().is_path() { return d }
         d.set_source_id(registry.clone())
     });
     let mut new_manifest = pkg.manifest().clone();
-    new_manifest.set_summary(new_summary);
+    new_manifest.set_summary(new_summary.override_id(new_pkgid));
     new_manifest.set_target_dir(dst.join("target"));
-    let new_pkg = Package::new(new_manifest, &manifest_path,
-                               pkg.package_id().source_id());
+    let new_pkg = Package::new(new_manifest, &manifest_path, &new_src);
 
     // Now that we've rewritten all our path dependencies, compile it!
     try!(ops::compile_pkg(&new_pkg, &ops::CompileOptions {
