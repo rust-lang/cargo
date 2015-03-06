@@ -75,14 +75,14 @@ pub fn rustc_version() -> CargoResult<(String, String)> {
 // This is a temporary assert that ensures the consistency of the arguments
 // given the current limitations of Cargo. The long term fix is to have each
 // Target know the absolute path to the build location.
-fn uniq_target_dest<'a>(targets: &[&'a Target]) -> Option<&'a str> {
-    let mut curr: Option<Option<&str>> = None;
+fn uniq_target_dest<'a>(targets: &[&'a Target]) -> &'a str {
+    let mut curr: Option<&str> = None;
 
     for t in targets.iter().filter(|t| !t.profile().is_custom_build()) {
         let dest = t.profile().dest();
 
         match curr {
-            Some(curr) => assert!(curr == dest),
+            Some(curr) => assert_eq!(curr, dest),
             None => curr = Some(dest)
         }
     }
@@ -483,7 +483,8 @@ fn prepare_rustc(package: &Package, target: &Target, crate_types: Vec<&str>,
 fn rustdoc(package: &Package, target: &Target,
            cx: &mut Context) -> CargoResult<Work> {
     let kind = Kind::Target;
-    let cx_root = cx.layout(package, kind).proxy().dest().join("doc");
+    let cx_root = cx.get_package(cx.resolve.root()).absolute_target_dir()
+                    .join("doc");
     let mut rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
     rustdoc.arg(&root_path(cx, package, target))
            .cwd(cx.config.cwd())

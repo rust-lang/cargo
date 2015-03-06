@@ -118,7 +118,7 @@ pub struct Profile {
     test: bool,
     doctest: bool,
     doc: bool,
-    dest: Option<String>,
+    dest: String,
     for_host: bool,
     harness: bool, // whether to use the test harness (--test)
     custom_build: bool,
@@ -135,7 +135,7 @@ impl Profile {
             rpath: false,
             test: false,
             doc: false,
-            dest: None,
+            dest: "debug".to_string(),
             for_host: false,
             doctest: false,
             custom_build: false,
@@ -157,7 +157,6 @@ impl Profile {
             env: "test".to_string(),
             debug: true,
             test: true,
-            dest: None,
             .. Profile::default()
         }
     }
@@ -172,10 +171,8 @@ impl Profile {
     pub fn default_bench() -> Profile {
         Profile {
             env: "bench".to_string(),
-            opt_level: 3,
             test: true,
-            dest: Some("release".to_string()),
-            .. Profile::default()
+            .. Profile::default_release()
         }
     }
 
@@ -183,7 +180,7 @@ impl Profile {
         Profile {
             env: "release".to_string(),
             opt_level: 3,
-            dest: Some("release".to_string()),
+            dest: "release".to_string(),
             .. Profile::default()
         }
     }
@@ -191,7 +188,6 @@ impl Profile {
     pub fn default_doc() -> Profile {
         Profile {
             env: "doc".to_string(),
-            dest: None,
             doc: true,
             .. Profile::default()
         }
@@ -210,10 +206,7 @@ impl Profile {
     pub fn opt_level(&self) -> u32 { self.opt_level }
     pub fn rpath(&self) -> bool { self.rpath }
     pub fn uses_test_harness(&self) -> bool { self.harness }
-
-    pub fn dest(&self) -> Option<&str> {
-        self.dest.as_ref().map(|d| d.as_slice())
-    }
+    pub fn dest(&self) -> &str { &self.dest }
 
     pub fn set_opt_level(mut self, level: u32) -> Profile {
         self.opt_level = level;

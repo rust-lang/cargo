@@ -632,7 +632,7 @@ test!(bin_there_for_integration {
             use std::old_io::Command;
             #[test]
             fn test_test() {
-                let status = Command::new("target/foo").status().unwrap();
+                let status = Command::new("target/debug/foo").status().unwrap();
                 assert!(status.matches_exit_status(1));
             }
         "#);

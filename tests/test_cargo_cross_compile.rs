@@ -282,12 +282,12 @@ test!(linker_and_ar {
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
-    --out-dir {dir}[..]target[..]{target} \
+    --out-dir {dir}[..]target[..]{target}[..]debug \
     --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
-    -L dependency={dir}[..]target[..]{target} \
-    -L dependency={dir}[..]target[..]{target}[..]deps`
+    -L dependency={dir}[..]target[..]{target}[..]debug \
+    -L dependency={dir}[..]target[..]{target}[..]debug[..]deps`
 ",
                             running = RUNNING,
                             compiling = COMPILING,
@@ -464,6 +464,8 @@ test!(cross_with_a_build_script {
                 path.pop();
                 assert_eq!(path.filename().unwrap(), b"build");
                 path.pop();
+                assert_eq!(path.filename().unwrap(), b"debug");
+                path.pop();
                 assert_eq!(path.filename().unwrap(), b"{0}");
                 path.pop();
                 assert_eq!(path.filename().unwrap(), b"target");
@@ -636,7 +638,7 @@ test!(build_script_only_host {
 
             fn main() {
                 assert!(env::var("OUT_DIR").unwrap()
-                                             .contains("target/build/d1-"),
+                                             .contains("target/debug/build/d1-"),
                         "bad: {:?}", env::var("OUT_DIR"));
             }
         "#);

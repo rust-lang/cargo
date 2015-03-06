@@ -631,7 +631,7 @@ test!(many_crate_types_old_style_lib_location {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 
-    let files = fs::read_dir(&p.root().join("target")).unwrap();
+    let files = fs::read_dir(&p.root().join("target/debug")).unwrap();
     let mut files: Vec<String> = files.map(|e| e.unwrap().path()).filter_map(|f| {
         match f.file_name().unwrap().to_str().unwrap() {
             "build" | "examples" | "deps" => None,
@@ -669,7 +669,7 @@ test!(many_crate_types_correct {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 
-    let files = fs::read_dir(&p.root().join("target")).unwrap();
+    let files = fs::read_dir(&p.root().join("target/debug")).unwrap();
     let mut files: Vec<String> = files.map(|f| f.unwrap().path()).filter_map(|f| {
         match f.file_name().unwrap().to_str().unwrap() {
             "build" | "examples" | "deps" => None,
@@ -840,10 +840,10 @@ test!(verbose_build {
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
-        --out-dir {dir}[..]target \
+        --out-dir {dir}[..]target[..]debug \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target \
-        -L dependency={dir}[..]target[..]deps`
+        -L dependency={dir}[..]target[..]debug \
+        -L dependency={dir}[..]target[..]debug[..]deps`
 ",
 running = RUNNING, compiling = COMPILING,
 dir = p.root().display(),
@@ -1049,7 +1049,7 @@ test!(release_build_ndebug {
 
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
-    assert_that(process(&p.bin("release/foo")).unwrap(),
+    assert_that(process(&p.release_bin("foo")).unwrap(),
                 execs().with_stdout("fast\n"));
 });
 
