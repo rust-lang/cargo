@@ -105,7 +105,7 @@ test!(custom_build_env_vars {
                 let _feat = env::var("CARGO_FEATURE_FOO").unwrap();
             }}
         "#,
-        p.root().join("target").join("build").display());
+        p.root().join("target").join("debug").join("build").display());
 
     let p = p.file("bar/build.rs", &file_content);
 
@@ -702,13 +702,13 @@ test!(build_cmd_with_a_build_cmd {
 {running} `rustc build.rs --crate-name build-script-build --crate-type bin \
     -C prefer-dynamic -g \
     --out-dir [..]build[..]foo-[..] --emit=dep-info,link \
-    -L [..]target -L [..]target[..]deps \
+    -L [..]target[..]debug -L [..]target[..]deps \
     --extern a=[..]liba-[..].rlib`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name foo --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \
-    --out-dir [..]target --emit=dep-info,link \
-    -L [..]target -L [..]target[..]deps`
+    --out-dir [..]target[..]debug --emit=dep-info,link \
+    -L [..]target[..]debug -L [..]target[..]deps`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
 
@@ -1024,7 +1024,7 @@ test!(build_script_with_dynamic_native_dependency {
         "#);
     assert_that(build.cargo_process("build"),
                 execs().with_status(0).with_stderr(""));
-    let src = build.root().join("target");
+    let src = build.root().join("target/debug");
     let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
         let lib = lib.file_name().unwrap().to_str().unwrap();
         lib.starts_with(env::consts::DLL_PREFIX) &&

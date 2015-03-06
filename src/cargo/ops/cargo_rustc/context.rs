@@ -96,7 +96,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                .arg("--crate-name").arg("_")
                .arg("--crate-type").arg("dylib")
                .arg("--crate-type").arg("bin")
-               .arg("--print=file-names");
+               .arg("--print=file-names")
+               .env_remove("RUST_LOG");
         if let Some(s) = target {
             process.arg("--target").arg(s);
         };

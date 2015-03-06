@@ -22,3 +22,9 @@ impl<'a> ToSemver for &'a String {
         (**self).to_semver()
     }
 }
+
+impl<'a> ToSemver for &'a Version {
+    fn to_semver(self) -> Result<Version, String> {
+        Ok(self.clone())
+    }
+}

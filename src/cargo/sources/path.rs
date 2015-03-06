@@ -58,8 +58,19 @@ impl<'a, 'b> PathSource<'a, 'b> {
     }
 
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
+
         if self.updated {
             Ok(self.packages.clone())
+        } else if self.id.is_path() && self.id.precise().is_some() {
+            // If our source id is a path and it's listed with a precise
+            // version, then it means that we're not allowed to have nested
+            // dependencies (they've been rewritten to crates.io dependencies)
+            // In this case we specifically read just one package, not a list of
+            // packages.
+            let path = self.path.join("Cargo.toml");
+            let (pkg, _) = try!(ops::read_package(&path, &self.id,
+                                                  self.config));
+            Ok(vec![pkg])
         } else {
             ops::read_packages(&self.path, &self.id, self.config)
         }
@@ -203,7 +214,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
     {
         let mut ret = Vec::new();
         for pkg in self.packages.iter().filter(|p| *p == pkg) {
-            let loc = pkg.manifest_path().parent().unwrap();
+            let loc = pkg.root();
             try!(walk(loc, &mut ret, true, &mut filter));
         }
         return Ok(ret);

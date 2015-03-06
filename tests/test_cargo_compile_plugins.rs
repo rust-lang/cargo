@@ -100,7 +100,7 @@ test!(plugin_with_dynamic_native_dependency {
         "#);
     assert_that(build.cargo_process("build"),
                 execs().with_status(0).with_stderr(""));
-    let src = build.root().join("target");
+    let src = build.root().join("target/debug");
     let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
         let lib = lib.file_name().unwrap().to_str().unwrap();
         lib.starts_with(env::consts::DLL_PREFIX) &&

@@ -174,9 +174,9 @@ Be sure to check out the [metadata you can
 specify](manifest.html#package-metadata) to ensure your crate can be discovered
 more easily!
 
-## Limitations
+## Restrictions
 
-There are a few limitations when publish a crate in the registry:
+There are a few restrictions when publishing a crate in the registry:
 
 * Once a version is uploaded, it can never be overwritten. To upload a new copy
   of a crate you must upload a new version.
@@ -192,19 +192,19 @@ to manage a crate.
 
 ## `cargo owner`
 
-A crate is often not developed by only one person, or perhaps the main developer
-changes over time! The owners of a crate is the only person allowed to publish
-new versions of the crate, but owners may also add other owners! This subcommand
-allows you to allow others to publish new versions as well as add new owners
-themselves:
+A crate is often developed by more than one person, or the primary maintainer
+may change over time! The owner of a crate is the only person allowed to publish
+new versions of the crate, but an owner may designate additional owners. Using
+this subcommand, an owner allows others to publish new versions, as well as to
+manage the list of owners themselves:
 
 ```notrust
 $ cargo owner --add my-buddy
 $ cargo owner --remove my-buddy
 ```
 
-The logins specified are the GitHub logins used by the user in question. The
-owner being added must also already have logged into crates.io previously.
+The owner IDs given to these commands must be GitHub user names. In order to be
+added, an owner must have also logged into crates.io previously.
 
 ## `cargo yank`
 
