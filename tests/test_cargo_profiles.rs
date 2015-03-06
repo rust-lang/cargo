@@ -26,7 +26,7 @@ test!(profile_overrides {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} test v0.0.0 ({url})
+{compiling} (debug) test v0.0.0 ({url})
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         --cfg ndebug \
@@ -80,7 +80,7 @@ test!(top_level_overrides_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} (release) foo v0.0.0 ({url})
 {running} `rustc foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
@@ -91,7 +91,7 @@ test!(top_level_overrides_deps {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
-{compiling} test v0.0.0 ({url})
+{compiling} (release) test v0.0.0 ({url})
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \

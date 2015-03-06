@@ -246,15 +246,15 @@ test!(no_feature_doesnt_build {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
@@ -293,15 +293,15 @@ test!(default_feature_pulled_in {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 
     assert_that(p.cargo("build").arg("--no-default-features"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
@@ -394,9 +394,9 @@ test!(groups_on_groups_on_groups {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} ba[..] v0.0.1 ({dir})
-{compiling} ba[..] v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) ba[..] v0.0.1 ({dir})
+{compiling} (debug) ba[..] v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
 });
 
@@ -438,9 +438,9 @@ test!(many_cli_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar baz"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} ba[..] v0.0.1 ({dir})
-{compiling} ba[..] v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) ba[..] v0.0.1 ({dir})
+{compiling} (debug) ba[..] v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
 });
 
@@ -499,9 +499,9 @@ test!(union_features {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} d2 v0.0.1 ({dir})
-{compiling} d1 v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) d2 v0.0.1 ({dir})
+{compiling} (debug) d1 v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
 });
 
@@ -533,15 +533,15 @@ test!(many_features_no_rebuilds {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} a v0.1.0 ({dir})
-{compiling} b v0.1.0 ({dir})
+{compiling} (debug) a v0.1.0 ({dir})
+{compiling} (debug) b v0.1.0 ({dir})
 ", compiling = COMPILING, dir = p.url()).as_slice()));
     p.root().move_into_the_past().unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{fresh} a v0.1.0 ([..])
-{fresh} b v0.1.0 ([..])
+{fresh} (debug) a v0.1.0 ([..])
+{fresh} (debug) b v0.1.0 ([..])
 ", fresh = FRESH).as_slice()));
 });
 

@@ -21,7 +21,7 @@ test!(simple {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
         dir = path2url(p.root())).as_slice()));
@@ -63,7 +63,7 @@ test!(doc_twice {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
         dir = path2url(p.root())).as_slice()));
@@ -99,8 +99,8 @@ test!(doc_deps {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
         dir = path2url(p.root())).as_slice()));
@@ -145,8 +145,8 @@ test!(doc_no_deps {
 
     assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         compiling = COMPILING,
         dir = path2url(p.root())).as_slice()));
@@ -241,7 +241,7 @@ test!(doc_dash_p {
     assert_that(p.cargo_process("doc").arg("-p").arg("a"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} b v0.0.1 (file://[..])
-{compiling} a v0.0.1 (file://[..])
+{compiling} (debug) b v0.0.1 (file://[..])
+{compiling} (debug) a v0.0.1 (file://[..])
 ", compiling = COMPILING).as_slice()));
 });

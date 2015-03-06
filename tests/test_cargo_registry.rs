@@ -33,8 +33,8 @@ test!(simple {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
 {downloading} bar v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
         downloading = DOWNLOADING,
@@ -75,9 +75,9 @@ test!(deps {
 {updating} registry `{reg}`
 {downloading} [..] v0.0.1 (registry file://[..])
 {downloading} [..] v0.0.1 (registry file://[..])
-{compiling} baz v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) baz v0.0.1 (registry file://[..])
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
         downloading = DOWNLOADING,
@@ -197,8 +197,8 @@ version required: >= 0.0.0
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `{reg}`
 {downloading} notyet v0.0.1 (registry file://[..])
-{compiling} notyet v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) notyet v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ",
         updating = UPDATING,
         downloading = DOWNLOADING,
@@ -250,8 +250,8 @@ version required: ^0.0.1
 {verifying} foo v0.0.1 ({dir})
 {updating} registry `[..]`
 {downloading} notyet v0.0.1 (registry file://[..])
-{compiling} notyet v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir}[..])
+{compiling} (debug) notyet v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir}[..])
 ",
     packaging = PACKAGING,
     verifying = VERIFYING,
@@ -282,8 +282,8 @@ test!(lockfile_locks {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 {downloading} bar v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 
@@ -316,9 +316,9 @@ test!(lockfile_locks_transitively {
 {updating} registry `[..]`
 {downloading} [..] v0.0.1 (registry file://[..])
 {downloading} [..] v0.0.1 (registry file://[..])
-{compiling} baz v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) baz v0.0.1 (registry file://[..])
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 
@@ -354,9 +354,9 @@ test!(yanks_are_not_used {
 {updating} registry `[..]`
 {downloading} [..] v0.0.1 (registry file://[..])
 {downloading} [..] v0.0.1 (registry file://[..])
-{compiling} baz v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) baz v0.0.1 (registry file://[..])
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 });
@@ -482,8 +482,8 @@ test!(update_lockfile {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(format!("\
 {downloading} [..] v0.0.2 (registry file://[..])
-{compiling} bar v0.0.2 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.2 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 
@@ -498,8 +498,8 @@ test!(update_lockfile {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(format!("\
 {downloading} [..] v0.0.3 (registry file://[..])
-{compiling} bar v0.0.3 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.3 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 });
@@ -525,8 +525,8 @@ test!(dev_dependency_not_used {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 {downloading} [..] v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 });
@@ -591,9 +591,9 @@ test!(updating_a_dep {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 {downloading} bar v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{compiling} a v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.0.1 (registry file://[..])
+{compiling} (debug) a v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 
@@ -613,9 +613,9 @@ test!(updating_a_dep {
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
 {downloading} bar v0.1.0 (registry file://[..])
-{compiling} bar v0.1.0 (registry file://[..])
-{compiling} a v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) bar v0.1.0 (registry file://[..])
+{compiling} (debug) a v0.0.1 ({dir})
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 });
@@ -657,9 +657,9 @@ test!(git_and_registry_dep {
 {updating} [..]
 {updating} [..]
 {downloading} a v0.0.1 (registry file://[..])
-{compiling} a v0.0.1 (registry [..])
-{compiling} b v0.0.1 ([..])
-{compiling} foo v0.0.1 ({dir})
+{compiling} (debug) a v0.0.1 (registry [..])
+{compiling} (debug) b v0.0.1 ([..])
+{compiling} (debug) foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
     p.root().move_into_the_past().unwrap();
@@ -703,8 +703,8 @@ test!(update_publish_then_update {
                 execs().with_status(0).with_stdout(format!("\
 {updating} [..]
 {downloading} a v0.1.1 (registry file://[..])
-{compiling} a v0.1.1 (registry [..])
-{compiling} foo v0.5.0 ({dir})
+{compiling} (debug) a v0.1.1 (registry [..])
+{compiling} (debug) foo v0.5.0 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url()).as_slice()));
 

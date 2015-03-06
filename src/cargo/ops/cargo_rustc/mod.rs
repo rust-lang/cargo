@@ -128,7 +128,8 @@ pub fn compile_targets<'a, 'b>(env: &str,
         cx.exec_engine = exec_engine.clone();
     }
 
-    let mut queue = JobQueue::new(cx.resolve, deps, cx.jobs());
+    let mut queue = JobQueue::new(cx.resolve, deps, cx.jobs(),
+                                  dest.unwrap_or("debug"));
 
     // First ensure that the destination directory exists
     try!(cx.prepare(pkg));

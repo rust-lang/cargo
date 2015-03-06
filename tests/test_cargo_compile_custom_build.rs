@@ -32,7 +32,7 @@ test!(custom_build_script_failed {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 ({url})
+{compiling} (debug) foo v0.5.0 ({url})
 {running} `rustc build.rs --crate-name build-script-build --crate-type bin [..]`
 {running} `[..]build-script-build[..]`
 ",
@@ -177,7 +177,7 @@ test!(custom_build_script_rustc_flags {
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(101)
                        .with_stdout(format!("\
-{compiling} bar v0.5.0 ({url})
+{compiling} (debug) bar v0.5.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=-[..] \
@@ -363,9 +363,9 @@ test!(links_passes_env_vars {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} [..] v0.5.0 (file://[..])
+{compiling} (debug) [..] v0.5.0 (file://[..])
 {running} `rustc [..]build.rs [..]`
-{compiling} [..] v0.5.0 (file://[..])
+{compiling} (debug) [..] v0.5.0 (file://[..])
 {running} `rustc [..]build.rs [..]`
 {running} `[..]`
 {running} `[..]`
@@ -398,7 +398,7 @@ test!(only_rerun_build_script {
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
@@ -479,7 +479,7 @@ test!(testing_and_such {
     assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 {running} `rustc [..] --crate-name foo [..]`
@@ -501,7 +501,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `rustdoc [..]`
 {running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
@@ -511,7 +511,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `target[..]foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
@@ -569,7 +569,7 @@ test!(propagation_of_l_flags {
 [..]
 {running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar -L foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
@@ -601,9 +601,9 @@ test!(build_deps_simple {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} a v0.5.0 (file://[..])
+{compiling} (debug) a v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name a [..]`
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..] --extern a=[..]`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
@@ -689,16 +689,16 @@ test!(build_cmd_with_a_build_cmd {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} b v0.5.0 (file://[..])
+{compiling} (debug) b v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name b [..]`
-{compiling} a v0.5.0 (file://[..])
+{compiling} (debug) a v0.5.0 (file://[..])
 {running} `rustc a[..]build.rs [..] --extern b=[..]`
 {running} `[..]a-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name a --crate-type lib -g \
     -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target[..]deps --emit=dep-info,link \
     -L [..]target[..]deps -L [..]target[..]deps`
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `rustc build.rs --crate-name build-script-build --crate-type bin \
     -C prefer-dynamic -g \
     --out-dir [..]build[..]foo-[..] --emit=dep-info,link \
@@ -778,7 +778,7 @@ test!(output_separate_lines {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..]`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
@@ -819,7 +819,7 @@ test!(code_generation {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
-{compiling} foo v0.5.0 (file://[..])
+{compiling} (debug) foo v0.5.0 (file://[..])
 {running} `target[..]foo`
 Hello, World!
 ", compiling = COMPILING, running = RUNNING).as_slice()));
