@@ -425,6 +425,11 @@ doc = true
 # If the target is meant to be a compiler plugin, this field must be set to true
 # for cargo to correctly compile it and make it available for all dependencies.
 plugin = false
+
+# If set to false, `cargo test` will omit the --test flag to rustc, which stops
+# it from generating a test harness. This is useful when the binary being built
+# manages the test runner itself.
+harness = true
 ```
 
 # Building Dynamic or Static Libraries
