@@ -69,9 +69,11 @@ pub struct LayoutProxy<'a> {
 impl Layout {
     pub fn new(pkg: &Package, triple: Option<&str>, dest: &str) -> Layout {
         let mut path = pkg.absolute_target_dir();
-        match triple {
-            Some(s) => path.push(s),
-            None => {}
+        // Flexible target specifications often point at filenames, so interpret
+        // the target triple as a Path and then just use the file stem as the
+        // component for the directory name.
+        if let Some(triple) = triple {
+            path.push(Path::new(triple).file_stem().unwrap());
         }
         path.push(dest);
         Layout::at(path)
