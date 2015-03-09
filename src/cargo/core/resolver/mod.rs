@@ -138,7 +138,7 @@ pub fn resolve(summary: &Summary, method: Method,
         activations: HashMap::new(),
         visited: Rc::new(RefCell::new(HashSet::new())),
     });
-    let _p = profile::start(format!("resolving: {:?}", summary));
+    let _p = profile::start(format!("resolving: {}", summary.package_id()));
     match try!(activate(cx, registry, &summary, method)) {
         Ok(cx) => {
             debug!("resolved: {:?}", cx.resolve);

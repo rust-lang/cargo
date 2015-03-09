@@ -14,10 +14,12 @@ pub struct Profiler {
     desc: String,
 }
 
-fn enabled() -> bool { env::var_os("CARGO_PROFILE").is_some() }
+fn enabled_level() -> Option<usize> {
+    env::var("CARGO_PROFILE").ok().and_then(|s| s.parse().ok())
+}
 
 pub fn start<T: fmt::Display>(desc: T) -> Profiler {
-    if !enabled() { return Profiler { desc: String::new() } }
+    if enabled_level().is_none() { return Profiler { desc: String::new() } }
 
     PROFILE_STACK.with(|stack| stack.borrow_mut().push(time::precise_time_ns()));
 
@@ -28,14 +30,18 @@ pub fn start<T: fmt::Display>(desc: T) -> Profiler {
 
 impl Drop for Profiler {
     fn drop(&mut self) {
-        if !enabled() { return }
+        let enabled = match enabled_level() {
+            Some(i) => i,
+            None => return,
+        };
 
         let start = PROFILE_STACK.with(|stack| stack.borrow_mut().pop().unwrap());
         let end = time::precise_time_ns();
 
         let stack_len = PROFILE_STACK.with(|stack| stack.borrow().len());
         if stack_len == 0 {
-            fn print(lvl: usize, msgs: &[Message]) {
+            fn print(lvl: usize, msgs: &[Message], enabled: usize) {
+                if lvl > enabled { return }
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }
@@ -43,7 +49,7 @@ impl Drop for Profiler {
                              repeat("    ").take(lvl + 1).collect::<String>(),
                              time / 1000000, msg);
 
-                    print(lvl + 1, &msgs[last..i]);
+                    print(lvl + 1, &msgs[last..i], enabled);
                     last = i;
                 }
 
@@ -52,7 +58,7 @@ impl Drop for Profiler {
                 let mut msgs = msgs_rc.borrow_mut();
                 msgs.push((0, end - start,
                            mem::replace(&mut self.desc, String::new())));
-                print(0, &msgs);
+                print(0, &msgs, enabled);
             });
         } else {
             MESSAGES.with(|msgs| {
