@@ -50,7 +50,7 @@ pub fn package(manifest_path: &Path,
 
     let filename = format!("package/{}-{}.crate", pkg.name(), pkg.version());
     let dst = pkg.absolute_target_dir().join(&filename);
-    if dst.exists() { return Ok(Some(dst)) }
+    if fs::metadata(&dst).is_ok() { return Ok(Some(dst)) }
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
 
@@ -104,7 +104,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 fn tar(pkg: &Package, src: &PathSource, config: &Config,
        dst: &Path) -> CargoResult<()> {
 
-    if dst.exists() {
+    if fs::metadata(&dst).is_ok() {
         return Err(human(format!("destination already exists: {}",
                                  dst.display())))
     }
@@ -149,7 +149,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     let f = try!(GzDecoder::new(try!(File::open(tar))));
     let dst = pkg.root().join(&format!("target/package/{}-{}",
                                        pkg.name(), pkg.version()));
-    if dst.exists() {
+    if fs::metadata(&dst).is_ok() {
         try!(fs::remove_dir_all(&dst));
     }
     let mut archive = Archive::new(f);

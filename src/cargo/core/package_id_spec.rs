@@ -77,7 +77,8 @@ impl PackageIdSpec {
                             (name_or_version.to_string(), Some(version))
                         }
                         None => {
-                            if name_or_version.char_at(0).is_alphabetic() {
+                            if name_or_version.chars().next().unwrap()
+                                              .is_alphabetic() {
                                 (name_or_version.to_string(), None)
                             } else {
                                 let version = try!(name_or_version.to_semver()

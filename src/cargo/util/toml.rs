@@ -44,7 +44,7 @@ impl Layout {
 }
 
 fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
-    if file.exists() {
+    if fs::metadata(&file).is_ok() {
         files.push(file);
     }
 }
@@ -72,7 +72,7 @@ pub fn project_layout(root_path: &Path) -> Layout {
     let mut benches = vec!();
 
     let lib_canidate = root_path.join("src").join("lib.rs");
-    if lib_canidate.exists() {
+    if fs::metadata(&lib_canidate).is_ok() {
         lib = Some(lib_canidate);
     }
 

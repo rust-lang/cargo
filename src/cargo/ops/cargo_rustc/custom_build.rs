@@ -119,7 +119,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         //
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
-        if !build_output.exists() {
+        if fs::metadata(&build_output).is_err() {
             try!(fs::create_dir(&build_output).chain_error(|| {
                 internal("failed to create script output directory for \
                           build command")

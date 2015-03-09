@@ -1,5 +1,5 @@
 use std::env;
-use std::io::prelude::*;
+use std::fs;
 use std::path::{Path, PathBuf};
 use util::{CargoResult, human, ChainError};
 
@@ -20,7 +20,7 @@ pub fn find_project_manifest(pwd: &Path, file: &str) -> CargoResult<PathBuf> {
 
     loop {
         let manifest = current.join(file);
-        if manifest.exists() {
+        if fs::metadata(&manifest).is_ok() {
             return Ok(manifest)
         }
 
@@ -50,7 +50,7 @@ pub fn find_root_manifest_for_cwd(manifest_path: Option<String>)
 pub fn find_project_manifest_exact(pwd: &Path, file: &str) -> CargoResult<PathBuf> {
     let manifest = pwd.join(file);
 
-    if manifest.exists() {
+    if fs::metadata(&manifest).is_ok() {
         Ok(manifest)
     } else {
         Err(human(format!("Could not find `{}` in `{}`",

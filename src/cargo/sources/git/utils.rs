@@ -150,7 +150,7 @@ impl GitRemote {
 
     fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
         let url = self.url.to_string();
-        if dst.exists() {
+        if fs::metadata(&dst).is_ok() {
             try!(fs::remove_dir_all(dst));
         }
         try!(fs::create_dir_all(dst));
@@ -252,7 +252,7 @@ impl<'a> GitCheckout<'a> {
             human(format!("Couldn't mkdir {}", dirname.display()))
         }));
 
-        if into.exists() {
+        if fs::metadata(&into).is_ok() {
             try!(fs::remove_dir_all(into).chain_error(|| {
                 human(format!("Couldn't rmdir {}", into.display()))
             }));

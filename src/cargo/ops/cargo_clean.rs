@@ -68,11 +68,12 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
 }
 
 fn rm_rf(path: &Path) -> CargoResult<()> {
-    if path.is_dir() {
+    let m = fs::metadata(path);
+    if m.as_ref().map(|s| s.is_dir()) == Ok(true) {
         try!(fs::remove_dir_all(path).chain_error(|| {
             human("could not remove build directory")
         }));
-    } else if path.exists() {
+    } else if m.is_ok() {
         try!(fs::remove_file(path).chain_error(|| {
             human("failed to remove build artifact")
         }));

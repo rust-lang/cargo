@@ -301,7 +301,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         // TODO: should discover from the S3 redirect
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let dst = self.cache_path.join(&filename);
-        if dst.exists() { return Ok(dst) }
+        if fs::metadata(&dst).is_ok() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
 
         try!(fs::create_dir_all(dst.parent().unwrap()));
@@ -347,7 +347,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
                       -> CargoResult<PathBuf> {
         let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
                                               pkg.version()));
-        if dst.join(".cargo-ok").exists() { return Ok(dst) }
+        if fs::metadata(&dst.join(".cargo-ok")).is_ok() { return Ok(dst) }
 
         try!(fs::create_dir_all(dst.parent().unwrap()));
         let f = try!(File::open(&tarball));

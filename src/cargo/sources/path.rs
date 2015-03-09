@@ -167,7 +167,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
             // TODO: the `entry` has a mode we should be able to look at instead
             //       of just calling stat() again
-            if file_path.is_dir() {
+            if fs::metadata(&file_path).map(|m| m.is_dir()) == Ok(true) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = file_path.relative_from(&root).unwrap();
                 let rel = try!(rel.to_str().chain_error(|| {
@@ -223,14 +223,16 @@ impl<'a, 'b> PathSource<'a, 'b> {
                    is_root: bool, filter: &mut F) -> CargoResult<()>
             where F: FnMut(&Path) -> bool
         {
-            if !path.is_dir() {
+            if fs::metadata(&path).map(|m| m.is_dir()) != Ok(true) {
                 if (*filter)(path) {
                     ret.push(path.to_path_buf());
                 }
                 return Ok(())
             }
             // Don't recurse into any sub-packages that we have
-            if !is_root && path.join("Cargo.toml").exists() { return Ok(()) }
+            if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
+                return Ok(())
+            }
             for dir in try!(fs::read_dir(path)) {
                 let dir = try!(dir).path();
                 match (is_root, dir.file_name().and_then(|s| s.to_str())) {
@@ -298,7 +300,7 @@ impl<'a, 'b> Source for PathSource<'a, 'b> {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = file.metadata().map(|s| s.modified()).unwrap_or(0);
+            let mtime = fs::metadata(&file).map(|s| s.modified()).unwrap_or(0);
             warn!("{} {}", mtime, file.display());
             max = cmp::max(max, mtime);
         }

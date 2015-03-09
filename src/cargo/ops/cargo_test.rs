@@ -1,4 +1,4 @@
-use std::ffi::{OsStr, OsString, AsOsStr};
+use std::ffi::OsString;
 use std::path::Path;
 
 use core::Source;
@@ -80,8 +80,8 @@ pub fn run_tests(manifest_path: &Path,
         for (pkg, libs) in compile.libraries.iter() {
             for lib in libs.iter() {
                 let mut arg = OsString::from_str(pkg.name());
-                arg.push_os_str(OsStr::from_str("="));
-                arg.push_os_str(lib.as_os_str());
+                arg.push("=");
+                arg.push(lib);
                 p.arg("--extern").arg(&arg);
             }
         }

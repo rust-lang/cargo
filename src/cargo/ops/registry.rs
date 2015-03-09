@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::env;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::prelude::*;
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
@@ -109,7 +109,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     };
     match *license_file {
         Some(ref file) => {
-            if !pkg.root().join(file).exists() {
+            if fs::metadata(&pkg.root().join(file)).is_err() {
                 return Err(human(format!("the license file `{}` does not exist",
                                          file)))
             }

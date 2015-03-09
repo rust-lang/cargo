@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::io::prelude::*;
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 
@@ -57,7 +57,7 @@ pub fn doc(manifest_path: &Path,
 
         let path = package.absolute_target_dir().join("doc").join(&name)
                                                     .join("index.html");
-        if path.exists() {
+        if fs::metadata(&path).is_ok() {
             open_docs(&path);
         }
     }

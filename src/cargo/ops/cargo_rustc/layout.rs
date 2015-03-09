@@ -46,7 +46,6 @@
 //! ```
 
 use std::fs;
-use std::io::prelude::*;
 use std::io;
 use std::path::{PathBuf, Path};
 
@@ -90,7 +89,7 @@ impl Layout {
     }
 
     pub fn prepare(&mut self) -> io::Result<()> {
-        if !self.root.exists() {
+        if fs::metadata(&self.root).is_err() {
             try!(fs::create_dir_all(&self.root));
         }
 
@@ -103,7 +102,7 @@ impl Layout {
         return Ok(());
 
         fn mkdir(dir: &Path) -> io::Result<()> {
-            if !dir.exists() {
+            if fs::metadata(&dir).is_err() {
                 try!(fs::create_dir(dir));
             }
             Ok(())
