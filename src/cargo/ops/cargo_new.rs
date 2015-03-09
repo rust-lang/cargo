@@ -42,7 +42,7 @@ struct CargoNewConfig {
 
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
-    if path.exists() {
+    if fs::metadata(&path).is_ok() {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
     }

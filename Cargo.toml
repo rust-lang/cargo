@@ -10,38 +10,34 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
-toml = "0.1"
-semver = "0.1"
-curl = "0.2"
-tar = "0.2"
-flate2 = "0.2"
-git2 = "0.2"
-git2-curl = "0.2"
-glob = "0.2"
-time = "0.1"
-log = "0.2"
-env_logger = "0.2"
-docopt = "0.6"
-url = "0.2"
-rustc-serialize = "0.3"
-term = "0.1"
-regex = "0.1"
-threadpool = "0.1"
-libc = "0.1"
+toml = "0.1.18"
+semver = "0.1.16"
+curl = "0.2.2"
+tar = "0.2.3"
+flate2 = "0.2.0"
+git2 = "0.2.1"
+git2-curl = "0.2.1"
+glob = "0.2.2"
+time = "0.1.19"
+log = "0.2.5"
+env_logger = "0.2.2"
+docopt = "0.6.45"
+url = "0.2.23"
+rustc-serialize = "0.3.1"
+term = "0.1.13"
+regex = "0.1.18"
+threadpool = "0.1.1"
+libc = "0.1.2"
+registry = { path = "src/registry" }
 
-[target.i686-pc-windows-gnu.dependencies]
-winapi = "0.1"
-advapi32-sys = "*"
+[target.i686-pc-windows-gnu]
+dependencies = { winapi = "0.1", advapi32-sys = "*" }
+[target.x86_64-pc-windows-gnu]
+dependencies = { winapi = "0.1", advapi32-sys = "*" }
 
-[target.x86_64-pc-windows-gnu.dependencies]
-winapi = "0.1"
-advapi32-sys = "*"
-
-[dev-dependencies.hamcrest]
-git = "https://github.com/carllerche/hamcrest-rust.git"
-
-[dependencies.registry]
-path = "src/registry"
+[dev-dependencies]
+tempdir = "0.3"
+hamcrest = { git = "https://github.com/carllerche/hamcrest-rust.git" }
 
 [[bin]]
 name = "cargo"
@@ -50,9 +46,6 @@ doc = false
 
 [[test]]
 name = "tests"
-[[bench]]
-name = "tests"
-path = "tests/tests.rs"
 
 [[test]]
 name = "resolve"

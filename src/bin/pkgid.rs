@@ -46,7 +46,7 @@ pub fn execute(options: Options,
     config.shell().set_verbose(options.flag_verbose);
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path.clone()));
 
-    let spec = options.arg_spec.as_ref().map(|s| s.as_slice());
+    let spec = options.arg_spec.as_ref().map(|s| &s[..]);
     let spec = try!(ops::pkgid(&root, spec, config).map_err(|err| {
       CliError::from_boxed(err, 101)
     }));

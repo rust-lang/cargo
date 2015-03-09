@@ -88,8 +88,8 @@ pub fn mock_pkg_yank(name: &str, version: &str, deps: &[(&str, &str, &str)],
     let file = match name.len() {
         1 => format!("1/{}", name),
         2 => format!("2/{}", name),
-        3 => format!("3/{}/{}", name.slice_to(1), name),
-        _ => format!("{}/{}/{}", name.slice(0, 2), name.slice(2, 4), name),
+        3 => format!("3/{}/{}", &name[..1], name),
+        _ => format!("{}/{}/{}", &name[0..2], &name[2..4], name),
     };
     publish(file.as_slice(), line.as_slice());
 }

@@ -142,7 +142,7 @@ test!(plugin_deps {
             use rustc::plugin::Registry;
             use syntax::ast::TokenTree;
             use syntax::codemap::Span;
-            use syntax::ext::base::{ExtCtxt, MacExpr, MacResult};
+            use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {
@@ -151,7 +151,7 @@ test!(plugin_deps {
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
                           -> Box<MacResult + 'static> {
-                MacExpr::new(quote_expr!(cx, 1))
+                MacEager::expr(quote_expr!(cx, 1))
             }
         "#);
     let baz = project("baz")
@@ -222,7 +222,7 @@ test!(plugin_to_the_max {
             use rustc::plugin::Registry;
             use syntax::ast::TokenTree;
             use syntax::codemap::Span;
-            use syntax::ext::base::{ExtCtxt, MacExpr, MacResult};
+            use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {
@@ -231,7 +231,7 @@ test!(plugin_to_the_max {
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
                           -> Box<MacResult + 'static> {
-                MacExpr::new(quote_expr!(cx, baz::baz()))
+                MacEager::expr(quote_expr!(cx, baz::baz()))
             }
         "#);
     let baz = project("baz")

@@ -1,6 +1,7 @@
-use std::fs::{self, File, TempDir};
+use std::fs::{self, File};
 use std::io::prelude::*;
 use std::env;
+use tempdir::TempDir;
 
 use support::{execs, paths, cargo_dir};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};

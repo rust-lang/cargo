@@ -59,7 +59,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
     if !target.profile().is_doc() {
         for filename in try!(cx.target_filenames(target)).iter() {
             let dst = root.join(filename);
-            missing_outputs |= !dst.exists();
+            missing_outputs |= fs::metadata(&dst).is_err();
 
             if target.profile().is_test() {
                 cx.compilation.tests.push((target.name().to_string(), dst));
@@ -255,13 +255,13 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
     let new2 = new1.clone();
 
     let work1 = Work::new(move |_| {
-        if !new1.exists() {
+        if fs::metadata(&new1).is_err() {
             try!(fs::create_dir(&new1));
         }
         Ok(())
     });
     let work2 = Work::new(move |_| {
-        if !new2.exists() {
+        if fs::metadata(&new2).is_err() {
             try!(fs::create_dir(&new2));
         }
         Ok(())

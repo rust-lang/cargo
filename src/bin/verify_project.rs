@@ -32,10 +32,9 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     let file = File::open(&args.flag_manifest_path);
     match file.and_then(|mut f| f.read_to_string(&mut contents)) {
         Ok(()) => {},
-        Err(e) => return fail("invalid", format!("error reading file: {}",
-                                                 e).as_slice())
+        Err(e) => return fail("invalid", &format!("error reading file: {}", e))
     };
-    match toml::Parser::new(contents.as_slice()).parse() {
+    match toml::Parser::new(&contents).parse() {
         None => return fail("invalid", "invalid-format"),
         Some(..) => {}
     };

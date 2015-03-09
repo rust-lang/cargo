@@ -1,4 +1,4 @@
-#![feature(collections, core, io, path, process, fs, env, std_misc, os, old_io)]
+#![feature(core, io, path, std_misc, exit_status)]
 
 extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -10,7 +10,6 @@ extern crate toml;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::io::prelude::*;
 use std::io;
 use std::path::{PathBuf, Path};
 use std::process::Command;
@@ -102,39 +101,54 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let (mut args, command) = match &flags.arg_command[..] {
+    let args = match &flags.arg_command[..] {
+        // For the commands `cargo` and `cargo help`, re-execute ourselves as
+        // `cargo -h` so we can go through the normal process of printing the
+        // help message.
         "" | "help" if flags.arg_args.len() == 0 => {
             config.shell().set_verbose(true);
-            let args = &["foo".to_string(), "-h".to_string()];
+            let args = &["cargo".to_string(), "-h".to_string()];
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
-            cargo::process_executed(r, &mut **config.shell());
+            cargo::process_executed(r, &mut config.shell());
             return Ok(None)
         }
+
+        // For `cargo help -h` and `cargo help --help`, print out the help
+        // message for `cargo help`
         "help" if flags.arg_args[0] == "-h" ||
-                  flags.arg_args[0] == "--help" =>
-            (flags.arg_args, "help"),
-        "help" => (vec!["-h".to_string()], &flags.arg_args[0][..]),
-        s => (flags.arg_args.clone(), s),
+                  flags.arg_args[0] == "--help" => {
+            vec!["cargo".to_string(), "help".to_string(), "help".to_string()]
+        }
+
+        // For `cargo help foo`, print out the usage message for the specified
+        // subcommand by executing the command with the `-h` flag.
+        "help" => {
+            vec!["cargo".to_string(), "help".to_string(),
+                 flags.arg_args[0].clone()]
+        }
+
+        // For all other invocations, we're of the form `cargo foo args...`. We
+        // use the exact environment arguments to preserve tokens like `--` for
+        // example.
+        _ => env::args().collect(),
     };
-    args.insert(0, command.to_string());
-    args.insert(0, "foo".to_string());
 
     macro_rules! cmd{ ($name:ident) => (
-        if command == stringify!($name).replace("_", "-") {
+        if args[1] == stringify!($name).replace("_", "-") {
             mod $name;
             config.shell().set_verbose(true);
             let r = cargo::call_main_without_stdin($name::execute, config,
                                                    $name::USAGE,
                                                    &args,
                                                    false);
-            cargo::process_executed(r, &mut **config.shell());
+            cargo::process_executed(r, &mut config.shell());
             return Ok(None)
         }
     ) }
     each_subcommand!(cmd);
 
-    execute_subcommand(&command, &args, &mut config.shell());
+    execute_subcommand(&args[1], &args, &mut config.shell());
     Ok(None)
 }
 
@@ -210,7 +224,7 @@ fn list_commands() -> BTreeSet<String> {
                 let command = &filename[
                     command_prefix.len()..
                     filename.len() - env::consts::EXE_SUFFIX.len()];
-                commands.insert(String::from_str(command));
+                commands.insert(command.to_string());
             }
         }
     }
@@ -225,13 +239,13 @@ fn list_commands() -> BTreeSet<String> {
 #[cfg(unix)]
 fn is_executable(path: &Path) -> bool {
     use std::os::unix::prelude::*;
-    path.metadata().map(|m| {
+    fs::metadata(path).map(|m| {
         m.permissions().mode() & 0o001 == 0o001
     }).unwrap_or(false)
 }
 #[cfg(windows)]
 fn is_executable(path: &Path) -> bool {
-    path.is_file()
+    fs::metadata(path).map(|m| m.is_file()) == Ok(true)
 }
 
 /// Get `Command` to run given command.
@@ -239,7 +253,7 @@ fn find_command(cmd: &str) -> Option<PathBuf> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let dirs = list_command_directory();
     let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe));
-    command_paths.find(|path| path.exists())
+    command_paths.find(|path| fs::metadata(&path).is_ok())
 }
 
 /// List candidate locations where subcommands might be installed.

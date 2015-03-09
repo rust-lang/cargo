@@ -1,7 +1,7 @@
 use std::env;
 use std::fs;
 use std::io::prelude::*;
-use std::io;
+use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
@@ -32,7 +32,29 @@ impl CargoPathExt for Path {
      */
     fn rm_rf(&self) -> io::Result<()> {
         if self.exists() {
-            fs::remove_dir_all(self)
+            for file in fs::read_dir(self).unwrap() {
+                let file = try!(file).path();
+
+                if file.is_dir() {
+                    try!(file.rm_rf());
+                } else {
+                    // On windows we can't remove a readonly file, and git will
+                    // often clone files as readonly. As a result, we have some
+                    // special logic to remove readonly files on windows.
+                    match fs::remove_file(&file) {
+                        Ok(()) => {}
+                        Err(ref e) if cfg!(windows) &&
+                                      e.kind() == ErrorKind::PermissionDenied => {
+                            let mut p = file.metadata().unwrap().permissions();
+                            p.set_readonly(false);
+                            fs::set_permissions(&file, p).unwrap();
+                            try!(fs::remove_file(&file));
+                        }
+                        Err(e) => return Err(e)
+                    }
+                }
+            }
+            fs::remove_dir(self)
         } else {
             Ok(())
         }

@@ -51,17 +51,17 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.shell().set_verbose(options.flag_verbose);
 
     let ops = ops::TestOptions {
-        name: options.flag_bench.as_ref().map(|s| s.as_slice()),
+        name: options.flag_bench.as_ref().map(|s| &s[..]),
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
             env: "bench",
             config: config,
             jobs: options.flag_jobs,
-            target: options.flag_target.as_ref().map(|s| s.as_slice()),
+            target: options.flag_target.as_ref().map(|s| &s[..]),
             dev_deps: true,
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: options.flag_package.as_ref().map(|s| s.as_slice()),
+            spec: options.flag_package.as_ref().map(|s| &s[..]),
             lib_only: false,
             exec_engine: None,
         },

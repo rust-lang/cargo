@@ -1,6 +1,7 @@
 use std::collections::HashSet;
-use std::old_io::net::tcp::TcpAcceptor;
-use std::old_io::{TcpListener, Listener, Acceptor, BufferedStream};
+use std::io::BufStream;
+use std::io::prelude::*;
+use std::net::TcpListener;
 use std::thread;
 use git2;
 
@@ -11,23 +12,12 @@ use hamcrest::assert_that;
 fn setup() {
 }
 
-struct Closer { a: TcpAcceptor }
-
-impl Drop for Closer {
-    fn drop(&mut self) {
-        let _ = self.a.close_accept();
-    }
-}
-
 // Test that HTTP auth is offered from `credential.helper`
 test!(http_auth_offered {
-    let mut listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.socket_name().unwrap();
-    let mut a = listener.listen().unwrap();
-    let a2 = a.clone();
-    let _c = Closer { a: a2 };
+    let a = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = a.socket_addr().unwrap();
 
-    fn headers<R: Buffer>(rdr: &mut R) -> HashSet<String> {
+    fn headers(rdr: &mut BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept", "User-Agent"];
         rdr.lines().map(|s| s.unwrap())
            .take_while(|s| s.len() > 2)
@@ -39,7 +29,7 @@ test!(http_auth_offered {
     }
 
     let t = thread::spawn(move|| {
-        let mut s = BufferedStream::new(a.accept().unwrap());
+        let mut s = BufStream::new(a.accept().unwrap().0);
         let req = headers(&mut s);
         s.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
@@ -53,7 +43,7 @@ test!(http_auth_offered {
         ].into_iter().map(|s| s.to_string()).collect());
         drop(s);
 
-        let mut s = BufferedStream::new(a.accept().unwrap());
+        let mut s = BufStream::new(a.accept().unwrap().0);
         let req = headers(&mut s);
         s.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
@@ -91,7 +81,7 @@ test!(http_auth_offered {
                    script.display().to_string().as_slice()).unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -99,7 +89,7 @@ test!(http_auth_offered {
 
             [dependencies.bar]
             git = "http://127.0.0.1:{}/foo/bar"
-        "#, addr.port).as_slice())
+        "#, addr.port()))
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
@@ -125,17 +115,14 @@ Caused by:
 
 // Boy, sure would be nice to have a TLS implementation in rust!
 test!(https_something_happens {
-    let mut listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.socket_name().unwrap();
-    let mut a = listener.listen().unwrap();
-    let a2 = a.clone();
-    let _c = Closer { a: a2 };
+    let a = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = a.socket_addr().unwrap();
     let t = thread::spawn(move|| {
         drop(a.accept().unwrap());
     });
 
     let p = project("foo")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -143,7 +130,7 @@ test!(https_something_happens {
 
             [dependencies.bar]
             git = "https://127.0.0.1:{}/foo/bar"
-        "#, addr.port).as_slice())
+        "#, addr.port()))
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
@@ -175,11 +162,8 @@ Caused by:
 
 // Boy, sure would be nice to have an SSH implementation in rust!
 test!(ssh_something_happens {
-    let mut listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.socket_name().unwrap();
-    let mut a = listener.listen().unwrap();
-    let a2 = a.clone();
-    let _c = Closer { a: a2 };
+    let a = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = a.socket_addr().unwrap();
     let t = thread::spawn(move|| {
         drop(a.accept().unwrap());
     });
@@ -193,7 +177,7 @@ test!(ssh_something_happens {
 
             [dependencies.bar]
             git = "ssh://127.0.0.1:{}/foo/bar"
-        "#, addr.port).as_slice())
+        "#, addr.port()).as_slice())
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),

@@ -46,11 +46,13 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 
         // Don't recurse into git databases
         if dir.file_name().and_then(|s| s.to_str()) == Some(".git") {
-            return Ok(false);
+            return Ok(false)
         }
 
         // Don't automatically discover packages across git submodules
-        if dir != path && dir.join(".git").exists() { return Ok(false); }
+        if dir != path && fs::metadata(&dir.join(".git")).is_ok() {
+            return Ok(false)
+        }
 
         // Don't ever look at target directories
         if dir.file_name().and_then(|s| s.to_str()) == Some("target") &&
@@ -75,11 +77,13 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 fn walk<F>(path: &Path, callback: &mut F) -> CargoResult<()>
     where F: FnMut(&Path) -> CargoResult<bool>
 {
-    if !path.is_dir() { return Ok(()) }
+    if fs::metadata(&path).map(|m| m.is_dir()) != Ok(true) {
+        return Ok(())
+    }
 
     if !try!(callback(path)) {
         trace!("not processing {}", path.display());
-        return Ok(());
+        return Ok(())
     }
 
     // Ignore any permission denied errors because temporary directories

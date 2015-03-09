@@ -393,7 +393,7 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
 
     loop {
         let possible = current.join(".cargo").join("config");
-        if possible.exists() {
+        if fs::metadata(&possible).is_ok() {
             let file = try!(File::open(&possible));
 
             try!(walk(file, &possible));
@@ -413,7 +413,7 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     }));
     if !pwd.starts_with(&home) {
         let config = home.join("config");
-        if config.exists() {
+        if fs::metadata(&config).is_ok() {
             let file = try!(File::open(&config));
             try!(walk(file, &config));
         }

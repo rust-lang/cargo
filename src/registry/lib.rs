@@ -1,4 +1,4 @@
-#![feature(core, io, path, fs)]
+#![feature(io, path)]
 
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -142,14 +142,14 @@ impl Registry {
                 (json.len() >>  8) as u8,
                 (json.len() >> 16) as u8,
                 (json.len() >> 24) as u8,
-            ].iter().cloned());
-            w.extend(json.as_bytes().iter().cloned());
+            ].iter().map(|x| *x));
+            w.extend(json.as_bytes().iter().map(|x| *x));
             w.extend([
                 (stat.len() >>  0) as u8,
                 (stat.len() >>  8) as u8,
                 (stat.len() >> 16) as u8,
                 (stat.len() >> 24) as u8,
-            ].iter().cloned());
+            ].iter().map(|x| *x));
             w
         };
         let tarball = try!(File::open(tarball).map_err(Error::Io));
@@ -158,7 +158,10 @@ impl Registry {
 
         let url = format!("{}/api/v1/crates/new", self.host);
 
-        let token = try!(self.token.as_ref().ok_or(Error::TokenMissing));
+        let token = match self.token.as_ref() {
+            Some(s) => s,
+            None => return Err(Error::TokenMissing),
+        };
         let request = self.handle.put(url, &mut body)
             .content_length(size)
             .header("Accept", "application/json")
@@ -209,7 +212,10 @@ impl Registry {
                               .content_type("application/json");
 
         if authorized == Auth::Authorized {
-            let token = try!(self.token.as_ref().ok_or(Error::TokenMissing));
+            let token = match self.token.as_ref() {
+                Some(s) => s,
+                None => return Err(Error::TokenMissing),
+            };
             req = req.header("Authorization", &token);
         }
         match body {

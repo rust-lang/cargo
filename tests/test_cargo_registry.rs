@@ -441,7 +441,7 @@ test!(update_with_lockfile_if_packages_missing {
                 execs().with_status(0));
     p.root().move_into_the_past().unwrap();
 
-    fs::remove_dir_all(&paths::home().join(".cargo/registry")).unwrap();
+    paths::home().join(".cargo/registry").rm_rf().unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(format!("\
 {updating} registry `[..]`
@@ -470,7 +470,7 @@ test!(update_lockfile {
 
     r::mock_pkg("bar", "0.0.2", &[]);
     r::mock_pkg("bar", "0.0.3", &[]);
-    fs::remove_dir_all(&paths::home().join(".cargo/registry")).unwrap();
+    paths::home().join(".cargo/registry").rm_rf().unwrap();
     println!("0.0.2 update");
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),

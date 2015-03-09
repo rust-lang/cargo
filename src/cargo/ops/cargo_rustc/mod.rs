@@ -1,7 +1,7 @@
 use std::collections::{HashSet, HashMap};
 use std::dynamic_lib::DynamicLibrary;
 use std::env;
-use std::ffi::{OsStr, AsOsStr, OsString};
+use std::ffi::OsString;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{self, PathBuf};
@@ -368,7 +368,7 @@ fn rustc(package: &Package, target: &Target,
             //                              this manually
             for filename in filenames.iter() {
                 let dst = root.join(filename);
-                if dst.exists() {
+                if fs::metadata(&dst).is_ok() {
                     try!(fs::remove_file(&dst));
                 }
             }
@@ -662,12 +662,12 @@ fn build_deps_args(cmd: &mut CommandPrototype, target: &Target,
     let layout = cx.layout(package, kind);
     cmd.arg("-L").arg(&{
         let mut root = OsString::from_str("dependency=");
-        root.push_os_str(layout.root().as_os_str());
+        root.push(layout.root());
         root
     });
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from_str("dependency=");
-        deps.push_os_str(layout.deps().as_os_str());
+        deps.push(layout.deps());
         deps
     });
 
@@ -695,12 +695,11 @@ fn build_deps_args(cmd: &mut CommandPrototype, target: &Target,
         for filename in try!(cx.target_filenames(target)).iter() {
             if filename.ends_with(".a") { continue }
             let mut v = OsString::new();
-            v.push_os_str(OsStr::from_str(target.name()));
-            v.push_os_str(OsStr::from_str("="));
-            v.push_os_str(layout.root().as_os_str());
-            let s = path::MAIN_SEPARATOR.to_string();
-            v.push_os_str(OsStr::from_str(&s));
-            v.push_os_str(OsStr::from_str(&filename));
+            v.push(target.name());
+            v.push("=");
+            v.push(layout.root());
+            v.push(&path::MAIN_SEPARATOR.to_string());
+            v.push(&filename);
             cmd.arg("--extern").arg(&v);
         }
         Ok(())

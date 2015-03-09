@@ -24,7 +24,7 @@ test!(custom_build_script_failed {
             fn main() {}
         "#)
         .file("build.rs", r#"
-            #![feature(env)]
+            #![feature(exit_status)]
             fn main() {
                 std::env::set_exit_status(101);
             }

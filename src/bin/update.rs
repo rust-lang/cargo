@@ -57,8 +57,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let update_opts = ops::UpdateOptions {
         aggressive: options.flag_aggressive,
-        precise: options.flag_precise.as_ref().map(|s| s.as_slice()),
-        to_update: spec.map(|s| s.as_slice()),
+        precise: options.flag_precise.as_ref().map(|s| &s[..]),
+        to_update: spec.map(|s| &s[..]),
         config: config,
     };
 
