@@ -44,8 +44,8 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
                               pkg: &'a Package,
                               target: &'a Target,
                               kind: Kind) -> CargoResult<Preparation> {
-    let _p = profile::start(format!("fingerprint: {} / {:?}",
-                                    pkg.package_id(), target));
+    let _p = profile::start(format!("fingerprint: {} / {}",
+                                    pkg.package_id(), target.name()));
     let new = dir(cx, pkg, kind);
     let loc = new.join(&filename(target));
 
