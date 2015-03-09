@@ -38,8 +38,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let opts = ops::CleanOptions {
         config: config,
-        spec: options.flag_package.as_ref().map(|s| s.as_slice()),
-        target: options.flag_target.as_ref().map(|s| s.as_slice()),
+        spec: options.flag_package.as_ref().map(|s| &s[..]),
+        target: options.flag_target.as_ref().map(|s| &s[..]),
     };
     ops::clean(&root, &opts).map(|_| None).map_err(|err| {
       CliError::from_boxed(err, 101)

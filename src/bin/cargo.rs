@@ -1,4 +1,4 @@
-#![feature(collections, core, io, path, fs, std_misc, os, old_io, exit_status)]
+#![feature(core, io, path, std_misc, exit_status)]
 
 extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -10,7 +10,6 @@ extern crate toml;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::io::prelude::*;
 use std::io;
 use std::path::{PathBuf, Path};
 use std::process::Command;
@@ -210,7 +209,7 @@ fn list_commands() -> BTreeSet<String> {
                 let command = &filename[
                     command_prefix.len()..
                     filename.len() - env::consts::EXE_SUFFIX.len()];
-                commands.insert(String::from_str(command));
+                commands.insert(command.to_string());
             }
         }
     }
@@ -225,7 +224,7 @@ fn list_commands() -> BTreeSet<String> {
 #[cfg(unix)]
 fn is_executable(path: &Path) -> bool {
     use std::os::unix::prelude::*;
-    path.metadata().map(|m| {
+    fs::metadata(path).map(|m| {
         m.permissions().mode() & 0o001 == 0o001
     }).unwrap_or(false)
 }
@@ -239,7 +238,7 @@ fn find_command(cmd: &str) -> Option<PathBuf> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let dirs = list_command_directory();
     let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe));
-    command_paths.find(|path| path.exists())
+    command_paths.find(|path| fs::metadata(&path).is_ok())
 }
 
 /// List candidate locations where subcommands might be installed.

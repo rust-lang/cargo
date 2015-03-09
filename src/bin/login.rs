@@ -1,4 +1,5 @@
-use std::old_io;
+use std::io::prelude::*;
+use std::io;
 
 use cargo::ops;
 use cargo::core::{SourceId, Source};
@@ -38,7 +39,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                 let host = options.flag_host.clone().unwrap_or(config.api);
                 println!("please visit {}me and paste the API Token below",
                          host);
-                let line = try!(old_io::stdin().read_line());
+                let mut line = String::new();
+                let input = io::stdin();
+                try!(input.lock().read_line(&mut line));
                 Ok(line)
             })();
 
