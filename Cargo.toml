@@ -28,20 +28,16 @@ term = "0.1.13"
 regex = "0.1.18"
 threadpool = "0.1.1"
 libc = "0.1.2"
+registry = { path = "src/registry" }
 
-[target.i686-pc-windows-gnu.dependencies]
-winapi = "0.1"
-advapi32-sys = "*"
+[target.i686-pc-windows-gnu]
+dependencies = { winapi = "0.1", advapi32-sys = "*" }
+[target.x86_64-pc-windows-gnu]
+dependencies = { winapi = "0.1", advapi32-sys = "*" }
 
-[target.x86_64-pc-windows-gnu.dependencies]
-winapi = "0.1"
-advapi32-sys = "*"
-
-[dev-dependencies.hamcrest]
-git = "https://github.com/carllerche/hamcrest-rust.git"
-
-[dependencies.registry]
-path = "src/registry"
+[dev-dependencies]
+tempdir = "0.3"
+hamcrest = { git = "https://github.com/carllerche/hamcrest-rust.git" }
 
 [[bin]]
 name = "cargo"
@@ -50,9 +46,6 @@ doc = false
 
 [[test]]
 name = "tests"
-[[bench]]
-name = "tests"
-path = "tests/tests.rs"
 
 [[test]]
 name = "resolve"

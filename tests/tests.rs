@@ -1,5 +1,5 @@
-#![feature(core, io, old_io, os, old_path)]
-#![feature(std_misc, io, path, fs, tempdir)]
+#![feature(core, io, old_io, old_path)]
+#![feature(std_misc, io, path, fs, net, path_ext, fs_time, fs_walk)]
 
 extern crate "rustc-serialize" as serialize;
 extern crate cargo;
@@ -9,6 +9,7 @@ extern crate hamcrest;
 extern crate tar;
 extern crate term;
 extern crate url;
+extern crate tempdir;
 
 #[macro_use]
 extern crate log;

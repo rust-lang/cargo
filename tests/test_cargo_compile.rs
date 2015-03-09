@@ -1,6 +1,7 @@
 use std::env;
-use std::fs::{self, TempDir, File};
+use std::fs::{self, File};
 use std::io::prelude::*;
+use tempdir::TempDir;
 
 use support::{project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, ProjectBuilder};

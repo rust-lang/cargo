@@ -101,39 +101,54 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let (mut args, command) = match &flags.arg_command[..] {
+    let args = match &flags.arg_command[..] {
+        // For the commands `cargo` and `cargo help`, re-execute ourselves as
+        // `cargo -h` so we can go through the normal process of printing the
+        // help message.
         "" | "help" if flags.arg_args.len() == 0 => {
             config.shell().set_verbose(true);
-            let args = &["foo".to_string(), "-h".to_string()];
+            let args = &["cargo".to_string(), "-h".to_string()];
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
-            cargo::process_executed(r, &mut **config.shell());
+            cargo::process_executed(r, &mut config.shell());
             return Ok(None)
         }
+
+        // For `cargo help -h` and `cargo help --help`, print out the help
+        // message for `cargo help`
         "help" if flags.arg_args[0] == "-h" ||
-                  flags.arg_args[0] == "--help" =>
-            (flags.arg_args, "help"),
-        "help" => (vec!["-h".to_string()], &flags.arg_args[0][..]),
-        s => (flags.arg_args.clone(), s),
+                  flags.arg_args[0] == "--help" => {
+            vec!["cargo".to_string(), "help".to_string(), "help".to_string()]
+        }
+
+        // For `cargo help foo`, print out the usage message for the specified
+        // subcommand by executing the command with the `-h` flag.
+        "help" => {
+            vec!["cargo".to_string(), "help".to_string(),
+                 flags.arg_args[0].clone()]
+        }
+
+        // For all other invocations, we're of the form `cargo foo args...`. We
+        // use the exact environment arguments to preserve tokens like `--` for
+        // example.
+        _ => env::args().collect(),
     };
-    args.insert(0, command.to_string());
-    args.insert(0, "foo".to_string());
 
     macro_rules! cmd{ ($name:ident) => (
-        if command == stringify!($name).replace("_", "-") {
+        if args[1] == stringify!($name).replace("_", "-") {
             mod $name;
             config.shell().set_verbose(true);
             let r = cargo::call_main_without_stdin($name::execute, config,
                                                    $name::USAGE,
                                                    &args,
                                                    false);
-            cargo::process_executed(r, &mut **config.shell());
+            cargo::process_executed(r, &mut config.shell());
             return Ok(None)
         }
     ) }
     each_subcommand!(cmd);
 
-    execute_subcommand(&command, &args, &mut config.shell());
+    execute_subcommand(&args[1], &args, &mut config.shell());
     Ok(None)
 }
 
@@ -230,7 +245,7 @@ fn is_executable(path: &Path) -> bool {
 }
 #[cfg(windows)]
 fn is_executable(path: &Path) -> bool {
-    path.is_file()
+    fs::metadata(path).map(|m| m.is_file()) == Ok(true)
 }
 
 /// Get `Command` to run given command.
