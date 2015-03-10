@@ -77,14 +77,20 @@ are interpreted by Cargo and must be of the form `key=value`.
 Example output:
 
 ```notrust
-cargo:rustc-flags=-l static=foo -L native=/path/to/foo
+cargo:rustc-link-lib=static=foo
+cargo:rustc-link-search=native=/path/to/foo
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
 
+The `rustc-link-lib` key indicates that Cargo should pass a `-l` option to
+rustc. Similarly, `rustc-link-search` indicates that Cargo should pass a `-L`
+option.
+
 The `rustc-flags` key is special and indicates the flags that Cargo will
-pass to Rustc. Currently only `-l` and `-L` are accepted.
+pass to Rustc. Currently only `-l` and `-L` are accepted. Using
+`rustc-link-lib` and `rustc-link-search` is more robust.
 
 Any other element is a user-defined metadata that will be passed to
 dependencies. More information about this can be found in the [`links`][links]
@@ -157,7 +163,8 @@ Cargo [configuration location](config.html).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]
-rustc-flags = "-L /path/to/foo -l foo"
+rustc-link-search = ["/path/to/foo"]
+rustc-link-lib = ["foo"]
 root = "/path/to/foo"
 key = "value"
 ```
@@ -165,7 +172,8 @@ key = "value"
 This section states that for the target `x86_64-unknown-linux-gnu` the library
 named `foo` has the metadata specified. This metadata is the same as the
 metadata generated as if the build script had run, providing a number of
-key/value pairs where the `rustc-flags` key is slightly special.
+key/value pairs where the `rustc-flags`, `rustc-link-search`, and
+`rustc-link-lib` keys are slightly special.
 
 With this configuration, if a package declares that it links to `foo` then the
 build script will **not** be compiled or run, and the metadata specified will
@@ -313,7 +321,8 @@ fn main() {
                       .current_dir(&Path::new(&out_dir))
                       .status().unwrap();
 
-    println!("cargo:rustc-flags=-L native={} -l static=hello", out_dir);
+    println!("cargo:rustc-link-search=native={}", out_dir);
+    println!("cargo:rustc-link-lib=static=hello");
 }
 ```
 

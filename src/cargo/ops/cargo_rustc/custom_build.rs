@@ -287,6 +287,10 @@ impl BuildOutput {
                 );
                 library_links.extend(links.into_iter());
                 library_paths.extend(libs.into_iter());
+            } else if key == "rustc-link-lib" {
+                library_links.push(value.to_string());
+            } else if key == "rustc-link-search" {
+                library_paths.push(PathBuf::new(&value));
             } else {
                 metadata.push((key.to_string(), value.to_string()))
             }
