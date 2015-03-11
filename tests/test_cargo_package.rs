@@ -244,3 +244,21 @@ test!(include {
 {archiving} [..]
 ", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
 });
+
+test!(package_lib_with_bin {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            extern crate foo;
+            fn main() {}
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("package").arg("-v"),
+                execs().with_status(0));
+});
