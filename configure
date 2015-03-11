@@ -374,12 +374,12 @@ if [ ! -z "$CFG_ENABLE_NIGHTLY" ]; then
         mkdir -p .cargo
         cat > .cargo/config <<-EOF
 [target.x86_64-unknown-linux-gnu.openssl]
-rustc-flags = "-l ssl:static -l crypto:static -l dl -L /home/rustbuild/root64/lib"
+rustc-flags = "-l static=ssl -l static=crypto -l dl -L /home/rustbuild/root64/lib"
 root = "/home/rustbuild/root64"
 include = "/home/rustbuild/root64/include"
 
 [target.i686-unknown-linux-gnu.openssl]
-rustc-flags = "-l ssl:static -l crypto:static -l dl -L /home/rustbuild/root32/lib"
+rustc-flags = "-l static=ssl -l static=crypto -l dl -L /home/rustbuild/root32/lib"
 root = "/home/rustbuild/root32"
 include = "/home/rustbuild/root32/include"
 EOF

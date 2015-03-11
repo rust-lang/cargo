@@ -835,7 +835,7 @@ test!(output_separate_lines {
         .file("build.rs", r#"
             fn main() {
                 println!("cargo:rustc-flags=-L foo");
-                println!("cargo:rustc-flags=-l foo:static");
+                println!("cargo:rustc-flags=-l static=foo");
             }
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
@@ -844,7 +844,7 @@ test!(output_separate_lines {
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..]`
 {running} `[..]foo-[..]build-script-build[..]`
-{running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
+{running} `rustc [..] --crate-name foo [..] -L foo -l static=foo`
 ", compiling = COMPILING, running = RUNNING)));
 });
 
