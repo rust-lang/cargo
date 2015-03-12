@@ -146,7 +146,7 @@ class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello
 
 <p>And then run it:</p>
 
-<pre><code class="language-shell">$ ./target/hello_world
+<pre><code class="language-shell">$ ./target/debug/hello_world
 Hello, world!
 </code></pre>
 
@@ -156,11 +156,16 @@ Hello, world!
 <span style="font-weight: bold"
 class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
-class="s1">   Running</span> `target/hello_world`
+class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
 
 <p>You&#39;ll now notice a new file, <code>Cargo.lock</code>. It contains information about our
 dependencies. Since we don&#39;t have any yet, it&#39;s not very interesting.</p>
+
+<p>Once you're ready for release, you can use <code>cargo build --release</code> to compile your files with optimizations:</p>
+<pre><code class="language-shell"><span class="gp">$</span> cargo build --release
+<span style="font-weight: bold"
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
 
 <h2 id="adding-a-dependency" class='section-header'><a
                            href="#adding-a-dependency">Adding a dependency</a></h2>
