@@ -131,14 +131,11 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         (packages, resolved_with_overrides, registry.move_sources())
     };
 
-    let to_build = match spec {
-        Some(spec) => {
-            let pkgid = try!(resolve_with_overrides.query(spec));
-            packages.iter().find(|p| p.package_id() == pkgid).unwrap()
-        }
-        None => package,
+    let pkgid = match spec {
+        Some(spec) => try!(resolve_with_overrides.query(spec)),
+        None => package.package_id(),
     };
-
+    let to_build = packages.iter().find(|p| p.package_id() == pkgid).unwrap();
     let targets = to_build.targets().iter().filter(|target| {
         target.profile().is_custom_build() || match env {
             // doc-all == document everything, so look for doc targets
