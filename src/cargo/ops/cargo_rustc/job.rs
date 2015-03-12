@@ -22,7 +22,8 @@ impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
 
 impl Work {
     pub fn new<F>(f: F) -> Work
-                  where F: FnOnce(Sender<String>) -> CargoResult<()> + Send + 'static {
+        where F: FnOnce(Sender<String>) -> CargoResult<()> + Send + 'static
+    {
         Work { inner: Box::new(f) }
     }
 
@@ -37,19 +38,8 @@ impl Work {
 
 impl Job {
     /// Create a new job representing a unit of work.
-    pub fn new(dirty: Work,
-               fresh: Work) -> Job {
+    pub fn new(dirty: Work, fresh: Work) -> Job {
         Job { dirty: dirty, fresh: fresh }
-    }
-
-    /// Create a new job which will run `fresh` if the job is fresh and
-    /// otherwise not run `dirty`.
-    ///
-    /// Retains the same signature as `new` for compatibility. This job does not
-    /// describe itself to the console.
-    pub fn noop(_dirty: Work,
-                fresh: Work) -> Job {
-        Job { dirty: Work::noop(), fresh: fresh }
     }
 
     /// Consumes this job by running it, returning the result of the

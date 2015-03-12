@@ -142,7 +142,7 @@ pub fn compile_targets<'a, 'b>(env: &str,
         compiled.insert(dep.package_id().clone());
     });
     for dep in deps.iter() {
-        if dep == pkg { continue }
+        if dep == pkg || !compiled.contains(dep.package_id()) { continue }
 
         // Only compile lib targets for dependencies
         let targets = dep.targets().iter().filter(|target| {
@@ -154,11 +154,10 @@ pub fn compile_targets<'a, 'b>(env: &str,
             return Err(human(format!("Package `{}` has no library targets", dep)))
         }
 
-        let compiled = compiled.contains(dep.package_id());
-        try!(compile(&targets, dep, compiled, &mut cx, &mut queue));
+        try!(compile(&targets, dep, &mut cx, &mut queue));
     }
 
-    try!(compile(targets, pkg, true, &mut cx, &mut queue));
+    try!(compile(targets, pkg, &mut cx, &mut queue));
 
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
@@ -184,23 +183,10 @@ pub fn compile_targets<'a, 'b>(env: &str,
 }
 
 fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
-                   compiled: bool,
                    cx: &mut Context<'a, 'b>,
                    jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
     let _p = profile::start(format!("preparing: {}", pkg));
-
-    // Packages/targets which are actually getting compiled are constructed into
-    // a real job. Packages which are *not* compiled still have their jobs
-    // executed, but only if the work is fresh. This is to preserve their
-    // artifacts if any exist.
-    let job = if compiled {
-        Job::new as fn(Work, Work) -> Job
-    } else {
-        Job::noop as fn(Work, Work) -> Job
-    };
-
-    if !compiled { jobs.ignore(pkg); }
 
     if targets.is_empty() {
         return Ok(())
@@ -251,7 +237,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 try!(work.call(desc_tx.clone()));
                 dirty.call(desc_tx)
             });
-            dst.push((job(dirty, fresh), freshness));
+            dst.push((Job::new(dirty, fresh), freshness));
         }
 
         // If this is a custom build command, we need to not only build the
@@ -291,7 +277,7 @@ fn compile<'a, 'b>(targets: &[&'a Target], pkg: &'a Package,
                 }
             let (dirty, fresh, freshness) =
                 try!(custom_build::prepare(pkg, target, req, cx));
-            run_custom.push((job(dirty, fresh), freshness));
+            run_custom.push((Job::new(dirty, fresh), freshness));
         }
 
         // If no build scripts were run, no need to compile the build script!

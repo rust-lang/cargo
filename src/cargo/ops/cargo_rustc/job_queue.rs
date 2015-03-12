@@ -28,7 +28,6 @@ pub struct JobQueue<'a> {
     active: u32,
     pending: HashMap<(&'a PackageId, Stage), PendingBuild>,
     state: HashMap<&'a PackageId, Freshness>,
-    ignored: HashSet<&'a PackageId>,
     printed: HashSet<&'a PackageId>,
 }
 
@@ -77,7 +76,6 @@ impl<'a> JobQueue<'a> {
             active: 0,
             pending: HashMap::new(),
             state: HashMap::new(),
-            ignored: HashSet::new(),
             printed: HashSet::new(),
         }
     }
@@ -96,10 +94,6 @@ impl<'a> JobQueue<'a> {
         self.queue.enqueue(&(self.resolve, self.packages), Fresh,
                            (pkg.package_id(), stage),
                            (pkg, jobs));
-    }
-
-    pub fn ignore(&mut self, pkg: &'a Package) {
-        self.ignored.insert(pkg.package_id());
     }
 
     /// Execute all jobs necessary to build the dependency graph.
@@ -212,8 +206,7 @@ impl<'a> JobQueue<'a> {
         // In general, we try to print "Compiling" for the first nontrivial task
         // run for a package, regardless of when that is. We then don't print
         // out any more information for a package after we've printed it once.
-        let print = !self.ignored.contains(&pkg.package_id());
-        let print = print && !self.printed.contains(&pkg.package_id());
+        let print = !self.printed.contains(&pkg.package_id());
         if print && (stage == Stage::Libraries ||
                      (total_fresh == Dirty && running.len() > 0)) {
             self.printed.insert(pkg.package_id());
