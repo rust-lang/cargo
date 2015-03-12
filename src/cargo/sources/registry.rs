@@ -365,7 +365,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         }
         // see module comment for why this is structured the way it is
         let path = self.checkout_path.clone();
-        let fs_name = name.chars().map(|c| c.to_lowercase()).collect::<String>();
+        let fs_name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
         let path = match fs_name.len() {
             1 => path.join("1").join(&fs_name),
             2 => path.join("2").join(&fs_name),

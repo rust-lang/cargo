@@ -733,7 +733,7 @@ fn each_dep<'a, F>(pkg: &Package, cx: &'a Context, mut f: F)
 
 fn envify(s: &str) -> String {
     s.chars()
-     .map(|c| c.to_uppercase())
+     .flat_map(|c| c.to_uppercase())
      .map(|c| if c == '-' {'_'} else {c})
      .collect()
 }
