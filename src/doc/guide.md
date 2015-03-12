@@ -80,7 +80,7 @@ class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello
 And then run it:
 
 ```shell
-$ ./target/hello_world
+$ ./target/debug/hello_world
 Hello, world!
 ```
 
@@ -90,11 +90,17 @@ We can also use `cargo run` to compile and then run it, all in one step:
 <span style="font-weight: bold"
 class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
-class="s1">   Running</span> `target/hello_world`
+class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
 
 You'll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don't have any yet, it's not very interesting.
+
+Once you're ready for release, you can use `cargo build --release` to compile your files with optimizations turned on:
+
+<pre><code class="language-shell"><span class="gp">$</span> cargo build --release
+<span style="font-weight: bold"
+class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
 
 ## Adding a dependency
 
