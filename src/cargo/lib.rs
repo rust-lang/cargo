@@ -1,5 +1,5 @@
 #![deny(unused)]
-#![feature(hash, os, std_misc, unicode, core)]
+#![feature(hash, os, std_misc, core)]
 #![feature(io, path, str_words, old_io, exit_status, fs_time)]
 #![cfg_attr(test, deny(warnings))]
 
