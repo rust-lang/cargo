@@ -574,6 +574,64 @@ test!(propagation_of_l_flags {
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
 
+test!(propagation_of_l_flags_new {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "bar"
+            build = "build.rs"
+
+            [dependencies.b]
+            path = "../b"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=bar");
+            }
+        "#)
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("b/build.rs", "bad file")
+        .file(".cargo/config", format!(r#"
+            [target.{}.foo]
+            rustc-link-search = ["foo"]
+        "#, target).as_slice());
+
+    assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+[..]
+[..]
+[..]
+[..]
+{running} `[..]a-[..]build-script-build[..]`
+{running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc [..] --crate-name foo [..] -L bar -L foo`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+});
+
 test!(build_deps_simple {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -782,6 +840,32 @@ test!(output_separate_lines {
 {running} `rustc build.rs [..]`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
+", compiling = COMPILING, running = RUNNING).as_slice()));
+});
+
+test!(output_separate_lines_new {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=foo");
+                println!("cargo:rustc-link-lib=static=foo");
+            }
+        "#);
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(101)
+                       .with_stdout(format!("\
+{compiling} foo v0.5.0 (file://[..])
+{running} `rustc build.rs [..]`
+{running} `[..]foo-[..]build-script-build[..]`
+{running} `rustc [..] --crate-name foo [..] -L foo -l static=foo`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
 

@@ -132,6 +132,14 @@ impl<'a> Config<'a> {
         }
     }
 
+    pub fn get_list(&self, key: &str) -> CargoResult<Option<(Vec<(String, PathBuf)>, PathBuf)>> {
+        match try!(self.get(key)) {
+            Some(CV::List(i, path)) => Ok(Some((i, path))),
+            Some(val) => self.expected("list", key, val),
+            None => Ok(None),
+        }
+    }
+
     pub fn get_table(&self, key: &str)
                     -> CargoResult<Option<(HashMap<String, CV>, PathBuf)>> {
         match try!(self.get(key)) {

@@ -134,7 +134,7 @@ test!(plugin_deps {
             plugin = true
         "#)
         .file("src/lib.rs", r#"
-            #![feature(plugin_registrar, quote)]
+            #![feature(plugin_registrar, quote, rustc_private)]
 
             extern crate rustc;
             extern crate syntax;
@@ -213,7 +213,7 @@ test!(plugin_to_the_max {
             path = "../baz"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(plugin_registrar, quote)]
+            #![feature(plugin_registrar, quote, rustc_private)]
 
             extern crate rustc;
             extern crate syntax;
@@ -331,7 +331,7 @@ test!(plugin_with_extra_dylib_dep {
             path = "../baz"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(plugin_registrar)]
+            #![feature(plugin_registrar, rustc_private)]
 
             extern crate rustc;
             extern crate baz;
