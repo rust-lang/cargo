@@ -105,3 +105,24 @@ test!(override_cargo_home {
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
 });
+
+test!(cargo_help {
+    assert_that(process(&cargo_dir().join("cargo")).unwrap(),
+                execs().with_status(0));
+    assert_that(process(&cargo_dir().join("cargo")).unwrap().arg("help"),
+                execs().with_status(0));
+    assert_that(process(&cargo_dir().join("cargo")).unwrap().arg("-h"),
+                execs().with_status(0));
+    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+                       .arg("help").arg("build"),
+                execs().with_status(0));
+    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+                       .arg("build").arg("-h"),
+                execs().with_status(0));
+    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+                       .arg("help").arg("-h"),
+                execs().with_status(0));
+    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+                       .arg("help").arg("help"),
+                execs().with_status(0));
+});
