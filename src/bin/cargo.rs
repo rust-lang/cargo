@@ -118,14 +118,14 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         // message for `cargo help`
         "help" if flags.arg_args[0] == "-h" ||
                   flags.arg_args[0] == "--help" => {
-            vec!["cargo".to_string(), "help".to_string(), "help".to_string()]
+            vec!["cargo".to_string(), "help".to_string(), "-h".to_string()]
         }
 
         // For `cargo help foo`, print out the usage message for the specified
         // subcommand by executing the command with the `-h` flag.
         "help" => {
-            vec!["cargo".to_string(), "help".to_string(),
-                 flags.arg_args[0].clone()]
+            vec!["cargo".to_string(), flags.arg_args[0].clone(),
+                 "-h".to_string()]
         }
 
         // For all other invocations, we're of the form `cargo foo args...`. We
