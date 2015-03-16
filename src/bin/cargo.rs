@@ -1,4 +1,4 @@
-#![feature(core, io, path, std_misc, exit_status)]
+#![feature(core, io, std_misc, exit_status)]
 
 extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;

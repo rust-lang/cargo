@@ -1,7 +1,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::io::prelude::*;
 
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
@@ -286,7 +285,7 @@ impl<'a> GitCheckout<'a> {
     fn reset(&self) -> CargoResult<()> {
         info!("reset {} to {}", self.repo.path().display(), self.revision);
         let object = try!(self.repo.find_object(self.revision.0, None));
-        try!(self.repo.reset(&object, git2::ResetType::Hard, None, None, None));
+        try!(self.repo.reset(&object, git2::ResetType::Hard, None));
         Ok(())
     }
 
@@ -338,7 +337,7 @@ impl<'a> GitCheckout<'a> {
                 }));
 
                 let obj = try!(repo.find_object(head, None));
-                try!(repo.reset(&obj, git2::ResetType::Hard, None, None, None));
+                try!(repo.reset(&obj, git2::ResetType::Hard, None));
                 try!(update_submodules(&repo));
             }
             Ok(())
@@ -371,11 +370,16 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     cred_helper.config(cfg);
     let mut cred_error = false;
     let ret = f(&mut |url, username, allowed| {
-        let creds = if allowed.contains(git2::SSH_KEY) {
+        let creds = if allowed.contains(git2::SSH_KEY) ||
+                       allowed.contains(git2::USERNAME) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())
                                .unwrap_or("git".to_string());
-            git2::Cred::ssh_key_from_agent(&user)
+            if allowed.contains(git2::USERNAME) {
+                git2::Cred::username(&user)
+            } else {
+                git2::Cred::ssh_key_from_agent(&user)
+            }
         } else if allowed.contains(git2::USER_PASS_PLAINTEXT) {
             git2::Cred::credential_helper(cfg, url, username)
         } else if allowed.contains(git2::DEFAULT) {
@@ -405,7 +409,7 @@ pub fn fetch(repo: &git2::Repository, url: &str,
         let mut remote = try!(repo.remote_anonymous(&url, Some(refspec)));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
         remote.set_callbacks(&mut cb);
-        try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None, None));
+        try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None));
         Ok(())
     })
 }

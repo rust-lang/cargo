@@ -141,7 +141,7 @@ fn it_works() {
 fn discover_author() -> CargoResult<(String, Option<String>)> {
     let git_config = GitConfig::open_default().ok();
     let git_config = git_config.as_ref();
-    let name = git_config.and_then(|g| g.get_str("user.name").ok())
+    let name = git_config.and_then(|g| g.get_string("user.name").ok())
                          .map(|s| s.to_string())
                          .or_else(|| env::var("USER").ok())      // unix
                          .or_else(|| env::var("USERNAME").ok()); // windows
@@ -153,7 +153,7 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
                                       user, please set ${}", username_var)))
         }
     };
-    let email = git_config.and_then(|g| g.get_str("user.email").ok());
+    let email = git_config.and_then(|g| g.get_string("user.email").ok());
 
     let name = name.trim().to_string();
     let email = email.map(|s| s.trim().to_string());

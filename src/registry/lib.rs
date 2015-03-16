@@ -1,5 +1,3 @@
-#![feature(io, path)]
-
 extern crate curl;
 extern crate "rustc-serialize" as rustc_serialize;
 

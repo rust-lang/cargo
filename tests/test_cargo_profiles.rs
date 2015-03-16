@@ -1,5 +1,5 @@
 use std::env;
-use std::old_path;
+use std::path::MAIN_SEPARATOR as SEP;
 
 use support::{project, execs};
 use support::{COMPILING, RUNNING};
@@ -38,7 +38,7 @@ test!(profile_overrides {
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ",
-running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
+running = RUNNING, compiling = COMPILING, sep = SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -109,7 +109,7 @@ test!(top_level_overrides_deps {
                     compiling = COMPILING,
                     dir = p.root().display(),
                     url = p.url(),
-                    sep = old_path::SEP,
+                    sep = SEP,
                     prefix = env::consts::DLL_PREFIX,
                     suffix = env::consts::DLL_SUFFIX).as_slice()));
 });
