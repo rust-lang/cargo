@@ -124,7 +124,7 @@ links = "foo"
 build = "build.rs"
 ```
 
-This manifest states that the packages links to the `libfoo` native library, and
+This manifest states that the package links to the `libfoo` native library, and
 it also has a build script for locating and/or building the library. Cargo
 requires that a `build` command is specified if a `links` entry is also
 specified.
