@@ -54,7 +54,6 @@ we need to get started. First, let's check out `Cargo.toml`:
 
 ```toml
 [package]
-
 name = "hello_world"
 version = "0.0.1"
 authors = ["Your Name <you@example.com>"]
@@ -139,13 +138,11 @@ To depend on a library, add it to your `Cargo.toml`.
 
 ```toml
 [package]
-
 name = "hello_world"
 version = "0.0.1"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
-
 git = "https://github.com/bjz/color-rs.git"
 ```
 
@@ -232,13 +229,11 @@ on another project:
 
 ```toml
 [package]
-
 name = "hello_world"
 version = "0.0.1"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
-
 git = "https://github.com/bjz/color-rs.git"
 ```
 
@@ -257,7 +252,6 @@ We could fix this problem by putting a `rev` line in our `Cargo.toml`:
 
 ```toml
 [dependencies.color]
-
 git = "https://github.com/bjz/color-rs.git"
 rev = "bf739419e2d31050615c1ba1a395b474269a4"
 ```
@@ -272,13 +266,11 @@ manifest like this:
 
 ```toml
 [package]
-
 name = "hello_world"
 version = "0.0.1"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
-
 git = "https://github.com/bjz/color-rs.git"
 ```
 
@@ -327,13 +319,11 @@ patch. Here's what `conduit-static`'s `Cargo.toml` looks like:
 
 ```toml
 [package]
-
 name = "conduit-static"
 version = "0.0.1"
 authors = ["Yehuda Katz <wycats@example.com>"]
 
 [dependencies.conduit]
-
 git = "https://github.com/conduit-rust/conduit.git"
 ```
 

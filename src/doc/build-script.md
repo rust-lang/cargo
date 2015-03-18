@@ -204,7 +204,6 @@ Here we can see that we have a `build.rs` build script and our binary in
 # Cargo.toml
 
 [package]
-
 name = "hello-from-generated-code"
 version = "0.0.1"
 authors = ["you@example.com"]
@@ -293,7 +292,6 @@ Pretty similar to before! Next, the manifest:
 # Cargo.toml
 
 [package]
-
 name = "hello-world-from-c"
 version = "0.0.1"
 authors = [ "you@example.com" ]

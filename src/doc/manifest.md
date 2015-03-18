@@ -211,7 +211,6 @@ features. The format for specifying features is:
 name = "awesome"
 
 [features]
-
 # The "default" set of optional packages. Most people will
 # want to use these packages, but they are strictly optional.
 # Note that `session` is not a package but rather another
@@ -230,7 +229,6 @@ secure-password = ["bcrypt"]
 session = ["cookie/session"]
 
 [dependencies]
-
 # These packages are mandatory and form the core of this
 # package's distribution
 cookie = "1.2.0"
@@ -400,7 +398,6 @@ values listed are the defaults for that option unless otherwise specified.
 # ...
 
 [lib]
-
 # The name of a target is the name of the library that will be generated. This
 # is defaulted to the name of the package or project.
 name = "foo"
@@ -441,7 +438,6 @@ library to build by explicitly listing the library in your `Cargo.toml`:
 # ...
 
 [lib]
-
 name = "..."
 # this could be "staticlib" as well
 crate-type = ["dylib"]
