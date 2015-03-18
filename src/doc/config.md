@@ -54,7 +54,6 @@ vcs = "none"
 # literal string "$triple", and it will apply whenever that target triple is
 # being compiled to.
 [target]
-
 # For cargo builds which do not mention --target, these are the ar/linker which
 # are passed to rustc to use (via `-C ar=` and `-C linker=`). By default these
 # flags are not passed to the compiler.
@@ -66,7 +65,6 @@ linker = ".."
 # the `$triple` is being compiled for.
 ar = ".."
 linker = ".."
-
 
 # Configuration keys related to the registry
 [registry]

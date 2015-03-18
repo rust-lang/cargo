@@ -45,7 +45,6 @@ This is all we need to get started. First, let's check out `Cargo.toml`:
 
 ```toml
 [package]
-
 name = "hello_world"
 version = "0.0.1"
 authors = ["Your Name <you@example.com>"]
