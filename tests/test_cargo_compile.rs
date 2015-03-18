@@ -1573,10 +1573,9 @@ test!(compile_then_delete {
     assert_that(p.cargo_process("run"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
     if cfg!(windows) {
-        // HACKHACK: On windows unlinking immediately after running often fails, so sleep
-        use std::old_io::timer::sleep;
+        // On windows unlinking immediately after running often fails, so sleep
         use std::time::duration::Duration;
-        sleep(Duration::milliseconds(100));
+        ::sleep(Duration::milliseconds(100));
     }
     fs::remove_file(&p.bin("foo")).unwrap();
     assert_that(p.cargo("run"),

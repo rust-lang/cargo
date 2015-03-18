@@ -72,7 +72,7 @@ mod imp {
 mod imp {
     extern crate winapi;
     extern crate "advapi32-sys" as advapi32;
-    use std::os;
+    use std::io;
     use std::ptr;
 
     use self::winapi::{DWORD, HCRYPTPROV, HCRYPTHASH};
@@ -82,7 +82,7 @@ mod imp {
 
     macro_rules! call{ ($e:expr) => ({
         if $e == 0 {
-            panic!("failed {}: {}", stringify!($e), os::last_os_error())
+            panic!("failed {}: {}", stringify!($e), io::Error::last_os_error())
         }
     }) }
 

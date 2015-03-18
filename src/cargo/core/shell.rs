@@ -1,5 +1,6 @@
 use std::fmt;
-use std::old_io::{IoResult, stderr};
+use std::io::prelude::*;
+use std::io;
 
 use term::Attr;
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};
@@ -15,7 +16,7 @@ pub struct ShellConfig {
 }
 
 enum AdequateTerminal {
-    NoColor(Box<Writer + Send>),
+    NoColor(Box<Write + Send>),
     Colored(Box<Terminal<UghWhyIsThisNecessary> + Send>)
 }
 
@@ -31,7 +32,7 @@ pub struct MultiShell {
 }
 
 struct UghWhyIsThisNecessary {
-    inner: Box<Writer + Send>,
+    inner: Box<Write + Send>,
 }
 
 impl MultiShell {
@@ -47,35 +48,35 @@ impl MultiShell {
         &mut self.err
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
         self.out().say(message, color)
     }
 
-    pub fn status<T, U>(&mut self, status: T, message: U) -> IoResult<()>
+    pub fn status<T, U>(&mut self, status: T, message: U) -> io::Result<()>
         where T: fmt::Display, U: fmt::Display
     {
         self.out().say_status(status, message, GREEN)
     }
 
-    pub fn verbose<F>(&mut self, mut callback: F) -> IoResult<()>
-        where F: FnMut(&mut MultiShell) -> IoResult<()>
+    pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>
+        where F: FnMut(&mut MultiShell) -> io::Result<()>
     {
         if self.verbose { return callback(self) }
         Ok(())
     }
 
-    pub fn concise<F>(&mut self, mut callback: F) -> IoResult<()>
-        where F: FnMut(&mut MultiShell) -> IoResult<()>
+    pub fn concise<F>(&mut self, mut callback: F) -> io::Result<()>
+        where F: FnMut(&mut MultiShell) -> io::Result<()>
     {
         if !self.verbose { return callback(self) }
         Ok(())
     }
 
-    pub fn error<T: ToString>(&mut self, message: T) -> IoResult<()> {
+    pub fn error<T: ToString>(&mut self, message: T) -> io::Result<()> {
         self.err().say(message, RED)
     }
 
-    pub fn warn<T: ToString>(&mut self, message: T) -> IoResult<()> {
+    pub fn warn<T: ToString>(&mut self, message: T) -> io::Result<()> {
         self.err().say(message, YELLOW)
     }
 
@@ -89,7 +90,7 @@ impl MultiShell {
 }
 
 impl Shell {
-    pub fn create(out: Box<Writer + Send>, config: ShellConfig) -> Shell {
+    pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
         let out = UghWhyIsThisNecessary { inner: out };
         if config.tty && config.color {
             let term = TerminfoTerminal::new(out);
@@ -97,58 +98,58 @@ impl Shell {
                 terminal: Colored(Box::new(t)),
                 config: config
             }).unwrap_or_else(|| {
-                Shell { terminal: NoColor(Box::new(stderr())), config: config }
+                Shell { terminal: NoColor(Box::new(io::stderr())), config: config }
             })
         } else {
             Shell { terminal: NoColor(out.inner), config: config }
         }
     }
 
-    pub fn verbose<F>(&mut self, mut callback: F) -> IoResult<()>
-        where F: FnMut(&mut Shell) -> IoResult<()>
+    pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>
+        where F: FnMut(&mut Shell) -> io::Result<()>
     {
         if self.config.verbose { return callback(self) }
         Ok(())
     }
 
-    pub fn concise<F>(&mut self, mut callback: F) -> IoResult<()>
-        where F: FnMut(&mut Shell) -> IoResult<()>
+    pub fn concise<F>(&mut self, mut callback: F) -> io::Result<()>
+        where F: FnMut(&mut Shell) -> io::Result<()>
     {
         if !self.config.verbose { return callback(self) }
         Ok(())
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> IoResult<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
-        try!(self.write_line(&message.to_string()));
+        try!(write!(self, "{}\n", message.to_string()));
         try!(self.reset());
         try!(self.flush());
         Ok(())
     }
 
     pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)
-                            -> IoResult<()>
+                            -> io::Result<()>
         where T: fmt::Display, U: fmt::Display
     {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
         if self.supports_attr(Attr::Bold) { try!(self.attr(Attr::Bold)); }
-        try!(self.write_str(&format!("{:>12}", status)));
+        try!(write!(self, "{:>12}", status.to_string()));
         try!(self.reset());
-        try!(self.write_line(&format!(" {}", message)));
+        try!(write!(self, " {}\n", message));
         try!(self.flush());
         Ok(())
     }
 
-    fn fg(&mut self, color: color::Color) -> IoResult<bool> {
+    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         match self.terminal {
             Colored(ref mut c) => c.fg(color),
             NoColor(_) => Ok(false)
         }
     }
 
-    fn attr(&mut self, attr: Attr) -> IoResult<bool> {
+    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
         match self.terminal {
             Colored(ref mut c) => c.attr(attr),
             NoColor(_) => Ok(false)
@@ -162,7 +163,7 @@ impl Shell {
         }
     }
 
-    fn reset(&mut self) -> IoResult<()> {
+    fn reset(&mut self) -> io::Result<()> {
         match self.terminal {
             Colored(ref mut c) => c.reset().map(|_| ()),
             NoColor(_) => Ok(())
@@ -170,15 +171,15 @@ impl Shell {
     }
 }
 
-impl Writer for Shell {
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
+impl Write for Shell {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.terminal {
-            Colored(ref mut c) => c.write_all(buf),
-            NoColor(ref mut n) => n.write_all(buf)
+            Colored(ref mut c) => c.write(buf),
+            NoColor(ref mut n) => n.write(buf)
         }
     }
 
-    fn flush(&mut self) -> IoResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         match self.terminal {
             Colored(ref mut c) => c.flush(),
             NoColor(ref mut n) => n.flush()
@@ -186,8 +187,11 @@ impl Writer for Shell {
     }
 }
 
-impl Writer for UghWhyIsThisNecessary {
-    fn write_all(&mut self, bytes: &[u8]) -> IoResult<()> {
-        self.inner.write_all(bytes)
+impl Write for UghWhyIsThisNecessary {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.inner.write(bytes)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
     }
 }

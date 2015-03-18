@@ -1,6 +1,6 @@
 #![deny(unused)]
-#![feature(hash, os, std_misc, core)]
-#![feature(io, path, str_words, old_io, exit_status, fs_time)]
+#![feature(hash, os, std_misc, core, path_relative_from)]
+#![feature(io, str_words, exit_status, fs_time)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;
@@ -25,8 +25,8 @@ extern crate registry;
 
 use std::env;
 use std::error::Error;
-use std::old_io::stdio::{stdout_raw, stderr_raw};
-use std::old_io::{self, stdout, stderr};
+use std::io::prelude::*;
+use std::io;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json};
 use docopt::Docopt;
@@ -119,21 +119,39 @@ pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
 }
 
 pub fn shell(verbose: bool) -> MultiShell {
-    let tty = stderr_raw().isatty();
-    let stderr = Box::new(stderr()) as Box<Writer + Send>;
+    let tty = isatty(libc::STDERR_FILENO);
+    let stderr = Box::new(io::stderr());
 
     let config = ShellConfig { color: true, verbose: verbose, tty: tty };
     let err = Shell::create(stderr, config);
 
-    let tty = stdout_raw().isatty();
-    let stdout = Box::new(stdout()) as Box<Writer + Send>;
+    let tty = isatty(libc::STDOUT_FILENO);
+    let stdout = Box::new(io::stdout());
 
     let config = ShellConfig { color: true, verbose: verbose, tty: tty };
     let out = Shell::create(stdout, config);
 
-    MultiShell::new(out, err, verbose)
-}
+    return MultiShell::new(out, err, verbose);
 
+    #[cfg(unix)]
+    fn isatty(fd: libc::c_int) -> bool {
+        unsafe { libc::isatty(fd) != 0 }
+    }
+    #[cfg(windows)]
+    fn isatty(fd: libc::c_int) -> bool {
+        extern crate "kernel32-sys" as kernel32;
+        extern crate winapi;
+        unsafe {
+            let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {
+                winapi::winbase::STD_OUTPUT_HANDLE
+            } else {
+                winapi::winbase::STD_ERROR_HANDLE
+            });
+            let mut out = 0;
+            kernel32::GetConsoleMode(handle, &mut out) != 0
+        }
+    }
+}
 
 // `output` print variant error strings to either stderr or stdout.
 // For fatal errors, print to stderr;
@@ -216,8 +234,9 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
 }
 
 fn json_from_stdin<T: Decodable>() -> CliResult<T> {
-    let mut reader = old_io::stdin();
-    let input = try!(reader.read_to_string().map_err(|_| {
+    let mut reader = io::stdin();
+    let mut input = String::new();
+    try!(reader.read_to_string(&mut input).map_err(|_| {
         CliError::new("Standard in did not exist or was not UTF-8", 1)
     }));
 

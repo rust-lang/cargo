@@ -25,7 +25,6 @@
 use std::collections::HashMap;
 use std::default::Default;
 use std::num::ToPrimitive;
-use std::os;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -205,7 +204,9 @@ fn scrape_build_config(config: &Config,
         }
         None => None,
     };
-    let jobs = jobs.or(cfg_jobs).unwrap_or(os::num_cpus() as u32);
+    #[allow(deprecated)]
+    fn num_cpus() -> u32 { ::std::os::num_cpus() as u32 }
+    let jobs = jobs.or(cfg_jobs).unwrap_or(num_cpus());
     let mut base = ops::BuildConfig {
         jobs: jobs,
         requested_target: target.clone(),

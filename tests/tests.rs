@@ -1,5 +1,5 @@
-#![feature(core, io, old_io, old_path)]
-#![feature(std_misc, io, path, fs, net, path_ext, fs_time, fs_walk)]
+#![feature(core, io, old_io)]
+#![feature(std_misc, io, fs, net, path_ext, fs_time, fs_walk)]
 
 extern crate "rustc-serialize" as serialize;
 extern crate cargo;
@@ -53,3 +53,8 @@ mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_version;
 mod test_shell;
+
+#[allow(deprecated)]
+fn sleep(dur: std::time::Duration) {
+    std::old_io::timer::sleep(dur)
+}

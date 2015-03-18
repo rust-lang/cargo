@@ -1,6 +1,5 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::old_io::timer;
 use std::path::Path;
 use std::time::Duration;
 use git2;
@@ -56,7 +55,7 @@ fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
     let subrepo = s.open().unwrap();
     let mut origin = subrepo.find_remote("origin").unwrap();
     origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
-    origin.fetch(&[], None, None).unwrap();
+    origin.fetch(&[], None).unwrap();
     origin.save().unwrap();
     subrepo.checkout_head(None).unwrap();
     s.add_finalize().unwrap();
@@ -163,7 +162,7 @@ test!(cargo_compile_git_dep_branch {
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let head = repo.head().unwrap().target().unwrap();
     let head = repo.find_commit(head).unwrap();
-    repo.branch("branchy", &head, true, None, None).unwrap();
+    repo.branch("branchy", &head, true).unwrap();
 
     let project = project
         .file("Cargo.toml", &format!(r#"
@@ -699,7 +698,7 @@ test!(update_with_shared_deps {
     add(&repo);
     commit(&repo);
 
-    timer::sleep(Duration::milliseconds(1000));
+    ::sleep(Duration::milliseconds(1000));
 
     // By default, not transitive updates
     println!("dep1 update");
@@ -891,7 +890,7 @@ test!(stale_cached_version {
     add(&repo);
     commit(&repo);
 
-    timer::sleep(Duration::milliseconds(1000));
+    ::sleep(Duration::milliseconds(1000));
 
     let rev = repo.revparse_single("HEAD").unwrap().id();
 
@@ -987,17 +986,17 @@ test!(dep_with_changed_submodule {
         let mut origin = subrepo.find_remote("origin").unwrap();
         origin.set_url(git_project3.url().to_string().as_slice()).unwrap();
         origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();;
-        origin.fetch(&[], None, None).unwrap();
+        origin.fetch(&[], None).unwrap();
         origin.save().unwrap();
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();
-        subrepo.reset(&obj, git2::ResetType::Hard, None, None, None).unwrap();
+        subrepo.reset(&obj, git2::ResetType::Hard, None).unwrap();
     }
     sub.add_to_index(true).unwrap();
     add(&repo);
     commit(&repo);
 
-    timer::sleep(Duration::milliseconds(1000));
+    ::sleep(Duration::milliseconds(1000));
     // Update the dependency and carry on!
     println!("update");
     assert_that(project.cargo("update").arg("-v"),
@@ -1095,7 +1094,7 @@ test!(git_build_cmd_freshness {
     }).unwrap();
     foo.root().move_into_the_past().unwrap();
 
-    timer::sleep(Duration::milliseconds(1000));
+    ::sleep(Duration::milliseconds(1000));
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0)

@@ -31,7 +31,7 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     let mut contents = String::new();
     let file = File::open(&args.flag_manifest_path);
     match file.and_then(|mut f| f.read_to_string(&mut contents)) {
-        Ok(()) => {},
+        Ok(_) => {},
         Err(e) => return fail("invalid", &format!("error reading file: {}", e))
     };
     match toml::Parser::new(&contents).parse() {

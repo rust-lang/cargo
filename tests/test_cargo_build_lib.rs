@@ -1,4 +1,4 @@
-use std::old_path;
+use std::path::MAIN_SEPARATOR as SEP;
 use support::{basic_bin_manifest, execs, project, ProjectBuilder};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that};
@@ -17,7 +17,7 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ",
-            running = RUNNING, compiling = COMPILING, sep = old_path::SEP,
+            running = RUNNING, compiling = COMPILING, sep = SEP,
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")
 }

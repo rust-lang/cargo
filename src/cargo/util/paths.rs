@@ -26,8 +26,9 @@ pub fn dylib_path() -> Vec<PathBuf> {
 }
 
 pub fn normalize_path(path: &Path) -> PathBuf {
-    let mut components = path.components();
-    let mut ret = if let Some(c @ Component::Prefix { .. }) = components.peek() {
+    let mut components = path.components().peekable();
+    let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek()
+                                                                     .cloned() {
         components.next();
         PathBuf::new(c.as_os_str())
     } else {
@@ -36,8 +37,7 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 
     for component in components {
         match component {
-            Component::Prefix { .. } => unreachable!(),
-            Component::Empty => { ret.push(""); }
+            Component::Prefix(..) => unreachable!(),
             Component::RootDir => { ret.push(component.as_os_str()); }
             Component::CurDir => {}
             Component::ParentDir => { ret.pop(); }
@@ -45,15 +45,6 @@ pub fn normalize_path(path: &Path) -> PathBuf {
         }
     }
     return ret;
-}
-
-/// Chop off the trailing slash of a path
-pub fn lose_the_slash(path: &Path) -> &Path {
-    let mut components = path.components();
-    match components.next_back() {
-        Some(Component::CurDir) => components.as_path(),
-        _ => path,
-    }
 }
 
 #[cfg(unix)]

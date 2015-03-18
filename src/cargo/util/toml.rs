@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::fmt;
 use std::fs;
-use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::slice;
 use std::str;

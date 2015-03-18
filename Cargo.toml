@@ -24,16 +24,16 @@ env_logger = "0.2.2"
 docopt = "0.6.45"
 url = "0.2.23"
 rustc-serialize = "0.3.1"
-term = "0.1.13"
+term = "0.2"
 regex = "0.1.18"
 threadpool = "0.1.1"
 libc = "0.1.2"
 registry = { path = "src/registry" }
 
 [target.i686-pc-windows-gnu]
-dependencies = { winapi = "0.1", advapi32-sys = "*" }
+dependencies = { winapi = "0.1", advapi32-sys = "*", kernel32-sys = "*" }
 [target.x86_64-pc-windows-gnu]
-dependencies = { winapi = "0.1", advapi32-sys = "*" }
+dependencies = { winapi = "0.1", advapi32-sys = "*", kernel32-sys = "*" }
 
 [dev-dependencies]
 tempdir = "0.3"

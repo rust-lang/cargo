@@ -2,7 +2,6 @@ use std::error::{FromError, Error};
 use std::ffi;
 use std::fmt;
 use std::io;
-use std::old_io::IoError;
 use std::process::{Output, ExitStatus};
 use std::str;
 
@@ -255,7 +254,6 @@ macro_rules! from_error {
 
 from_error! {
     semver::ReqParseError,
-    IoError,
     io::Error,
     ProcessError,
     git2::Error,
@@ -273,7 +271,6 @@ impl<E: CargoError> FromError<Human<E>> for Box<CargoError> {
 }
 
 impl CargoError for semver::ReqParseError {}
-impl CargoError for IoError {}
 impl CargoError for io::Error {}
 impl CargoError for git2::Error {}
 impl CargoError for json::DecoderError {}

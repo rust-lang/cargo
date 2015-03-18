@@ -9,7 +9,7 @@ use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{self, CargoResult, internal, internal_error, human, ChainError, Config};
+use util::{CargoResult, internal, internal_error, human, ChainError, Config};
 
 pub struct PathSource<'a, 'b: 'a> {
     id: SourceId,
@@ -138,10 +138,6 @@ impl<'a, 'b> PathSource<'a, 'b> {
             None => return Err(internal_error("Can't list files on a bare repository.", "")),
         };
 
-        // Right now there is a bug such that "/a/b".relative_from("/a/")
-        // returns `None` so here we chop of the trailing slash if there is one.
-        // It is unclear to me whether this is actually a bug with paths or not.
-        let root = util::lose_the_slash(&root);
         let pkg_path = pkg.root();
 
         let mut ret = Vec::new();
