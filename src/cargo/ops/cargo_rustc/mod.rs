@@ -1,5 +1,4 @@
 use std::collections::{HashSet, HashMap};
-use std::dynamic_lib::DynamicLibrary;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
@@ -428,7 +427,7 @@ fn add_plugin_deps(rustc: &mut CommandPrototype,
                    build_state: &BuildMap,
                    plugin_deps: Vec<PackageId>)
                    -> CargoResult<()> {
-    let var = DynamicLibrary::envvar();
+    let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or(OsString::new());
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in plugin_deps.into_iter() {
@@ -702,9 +701,9 @@ pub fn process(cmd: CommandType, pkg: &Package, _target: &Target,
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.
-    let search_path = try!(join_paths(&search_path, DynamicLibrary::envvar()));
+    let search_path = try!(join_paths(&search_path, util::dylib_path_envvar()));
     let mut cmd = try!(cx.compilation.process(cmd, pkg));
-    cmd.env(DynamicLibrary::envvar(), &search_path);
+    cmd.env(util::dylib_path_envvar(), &search_path);
     Ok(cmd)
 }
 
