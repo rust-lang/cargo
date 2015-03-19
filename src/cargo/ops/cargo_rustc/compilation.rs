@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::dynamic_lib::DynamicLibrary;
 use std::ffi::AsOsStr;
 use std::path::PathBuf;
 use semver::Version;
@@ -98,9 +97,9 @@ impl Compilation {
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
         let search_path = try!(util::join_paths(&search_path,
-                                                DynamicLibrary::envvar()));
+                                                util::dylib_path_envvar()));
         let mut cmd = try!(CommandPrototype::new(cmd));
-        cmd.env(DynamicLibrary::envvar(), &search_path);
+        cmd.env(util::dylib_path_envvar(), &search_path);
         for (k, v) in self.extra_env.iter() {
             cmd.env(k, v);
         }

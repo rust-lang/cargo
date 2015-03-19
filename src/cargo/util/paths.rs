@@ -1,5 +1,4 @@
 use std::env;
-use std::dynamic_lib::DynamicLibrary;
 use std::ffi::{AsOsStr, OsString};
 use std::path::{Path, PathBuf, Component};
 
@@ -18,8 +17,14 @@ pub fn join_paths<T: AsOsStr>(paths: &[T], env: &str) -> CargoResult<OsString> {
     })
 }
 
+pub fn dylib_path_envvar() -> &'static str {
+    if cfg!(windows) {"PATH"}
+    else if cfg!(target_os = "macos") {"DYLD_LIBRARY_PATH"}
+    else {"LD_LIBRARY_PATH"}
+}
+
 pub fn dylib_path() -> Vec<PathBuf> {
-    match env::var_os(DynamicLibrary::envvar()) {
+    match env::var_os(dylib_path_envvar()) {
         Some(var) => env::split_paths(&var).collect(),
         None => Vec::new(),
     }
