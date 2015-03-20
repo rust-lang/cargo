@@ -328,9 +328,15 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         let pass_l_flag = target.is_lib() || !package.targets().iter().any(|t| {
             t.is_lib()
         });
+        let do_rename = target.allows_underscores() && !profile.test;
+        let real_name = target.name().to_string();
+        let crate_name = target.crate_name();
 
-        let rustc_dep_info_loc = root.join(&cx.file_stem(target, profile))
-                                     .with_extension("d");
+        let rustc_dep_info_loc = if do_rename {
+            root.join(&crate_name)
+        } else {
+            root.join(&cx.file_stem(target, profile))
+        }.with_extension("d");
         let dep_info_loc = fingerprint::dep_info_loc(cx, package, target,
                                                      profile, kind);
         let cwd = cx.config.cwd().to_path_buf();
@@ -363,7 +369,20 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
                 human(format!("Could not compile `{}`.", name))
             }));
 
-            try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc));
+            if do_rename && real_name != crate_name {
+                let dst = root.join(&filenames[0]);
+                let src = dst.with_file_name(dst.file_name().unwrap()
+                                                .to_str().unwrap()
+                                                .replace(&real_name, &crate_name));
+                try!(fs::rename(&src, &dst).chain_error(|| {
+                    human(format!("could not rename crate {:?}", src))
+                }));
+            }
+
+            try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
+                human(format!("could not rename dep info: {:?}",
+                              rustc_dep_info_loc))
+            }));
             try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
 
             Ok(())
@@ -482,7 +501,7 @@ fn rustdoc(package: &Package, target: &Target, profile: &Profile,
     rustdoc.arg(&root_path(cx, package, target))
            .cwd(cx.config.cwd())
            .arg("-o").arg(&cx_root)
-           .arg("--crate-name").arg(target.name());
+           .arg("--crate-name").arg(&target.crate_name());
 
     match cx.resolve.features(package.package_id()) {
         Some(features) => {
@@ -565,7 +584,7 @@ fn build_base_args(cx: &Context,
     // TODO: Handle errors in converting paths into args
     cmd.arg(&root_path(cx, pkg, target));
 
-    cmd.arg("--crate-name").arg(target.name());
+    cmd.arg("--crate-name").arg(&target.crate_name());
 
     for crate_type in crate_types.iter() {
         cmd.arg("--crate-type").arg(crate_type);
@@ -696,7 +715,7 @@ fn build_deps_args(cmd: &mut CommandPrototype,
         for filename in try!(cx.target_filenames(target, profile)).iter() {
             if filename.ends_with(".a") { continue }
             let mut v = OsString::new();
-            v.push(target.name());
+            v.push(&target.crate_name());
             v.push("=");
             v.push(layout.root());
             v.push(&path::MAIN_SEPARATOR.to_string());

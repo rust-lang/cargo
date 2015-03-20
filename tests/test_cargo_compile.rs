@@ -1653,3 +1653,37 @@ test!(cyclic_deps_rejected {
 cyclic package dependency: package `foo v0.0.1 ([..])` depends on itself
 "));
 });
+
+test!(dashes_to_underscores {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo-bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo_bar; fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.bin("foo-bar"), existing_file());
+});
+
+test!(dashes_in_crate_name_bad {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo-bar"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo_bar; fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(101));
+});

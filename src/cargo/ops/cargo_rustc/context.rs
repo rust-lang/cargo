@@ -282,9 +282,10 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// Returns the file stem for a given target/profile combo
     pub fn file_stem(&self, target: &Target, profile: &Profile) -> String {
         match self.target_metadata(target, profile) {
-            Some(ref metadata) => format!("{}{}", target.name(),
+            Some(ref metadata) => format!("{}{}", target.crate_name(),
                                           metadata.extra_filename),
-            None => target.name().to_string(),
+            None if target.allows_underscores() => target.name().to_string(),
+            None => target.crate_name().to_string(),
         }
     }
 

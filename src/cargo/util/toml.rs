@@ -395,16 +395,17 @@ impl TomlManifest {
                     ManyOrOne::Many(..) => used_deprecated_lib = true,
                     _ => {}
                 }
-                libs.as_slice().iter().map(|t| {
-                    if layout.lib.is_some() && t.path.is_none() {
+                try!(libs.as_slice().iter().map(|t| {
+                    try!(validate_target_name(t));
+                    Ok(if layout.lib.is_some() && t.path.is_none() {
                         TomlTarget {
                             path: layout.lib.as_ref().map(|p| PathValue::Path(p.clone())),
                             .. t.clone()
                         }
                     } else {
                         t.clone()
-                    }
-                }).collect()
+                    })
+                }).collect::<CargoResult<Vec<_>>>())
             }
             None => inferred_lib_target(&project.name, layout),
         };
@@ -413,34 +414,48 @@ impl TomlManifest {
             Some(ref bins) => {
                 let bin = layout.main();
 
-                bins.iter().map(|t| {
-                    if bin.is_some() && t.path.is_none() {
+                try!(bins.iter().map(|t| {
+                    try!(validate_target_name(t));
+                    Ok(if bin.is_some() && t.path.is_none() {
                         TomlTarget {
                             path: bin.as_ref().map(|&p| PathValue::Path(p.clone())),
                             .. t.clone()
                         }
                     } else {
                         t.clone()
-                    }
-                }).collect()
+                    })
+                }).collect::<CargoResult<Vec<_>>>())
             }
             None => inferred_bin_targets(&project.name, layout)
         };
 
         let examples = match self.example {
-            Some(ref examples) => examples.clone(),
+            Some(ref examples) => {
+                for example in examples {
+                    try!(validate_target_name(example));
+                }
+                examples.clone()
+            }
             None => inferred_example_targets(layout),
         };
 
         let tests = match self.test {
-            Some(ref tests) => tests.clone(),
+            Some(ref tests) => {
+                for test in tests {
+                    try!(validate_target_name(test));
+                }
+                tests.clone()
+            }
             None => inferred_test_targets(layout),
         };
 
         let benches = if self.bench.is_none() || self.bench.as_ref().unwrap().is_empty() {
             inferred_bench_targets(layout)
         } else {
-            self.bench.as_ref().unwrap().iter().map(|t| t.clone()).collect()
+            try!(self.bench.as_ref().unwrap().iter().map(|t| {
+                try!(validate_target_name(t));
+                Ok(t.clone())
+            }).collect::<CargoResult<Vec<_>>>())
         };
 
         // processing the custom build script
@@ -526,6 +541,15 @@ impl TomlManifest {
         }
 
         Ok((manifest, nested_paths))
+    }
+}
+
+fn validate_target_name(target: &TomlTarget) -> CargoResult<()> {
+    if target.name.contains("-") {
+        Err(human(format!("target names cannot contain hyphens: {}",
+                          target.name)))
+    } else {
+        Ok(())
     }
 }
 

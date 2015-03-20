@@ -33,7 +33,7 @@ test!(custom_build_script_failed {
                 execs().with_status(101)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 ({url})
-{running} `rustc build.rs --crate-name build-script-build --crate-type bin [..]`
+{running} `rustc build.rs --crate-name build_script_build --crate-type bin [..]`
 {running} `[..]build-script-build[..]`
 ",
 url = p.url(), compiling = COMPILING, running = RUNNING))
@@ -760,7 +760,7 @@ test!(build_cmd_with_a_build_cmd {
     --out-dir [..]target[..]deps --emit=dep-info,link \
     -L [..]target[..]deps -L [..]target[..]deps`
 {compiling} foo v0.5.0 (file://[..])
-{running} `rustc build.rs --crate-name build-script-build --crate-type bin \
+{running} `rustc build.rs --crate-name build_script_build --crate-type bin \
     -C prefer-dynamic -g \
     --out-dir [..]build[..]foo-[..] --emit=dep-info,link \
     -L [..]target[..]debug -L [..]target[..]deps \
