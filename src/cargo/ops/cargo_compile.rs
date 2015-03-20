@@ -33,7 +33,7 @@ use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
-use util::config::Config;
+use util::config::{ConfigValue, Config};
 use util::{CargoResult, human, ChainError, profile};
 
 /// Contains informations about how a package should be compiled.
@@ -117,8 +117,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         return Err(human("jobs must be at least 1"))
     }
 
-    let override_ids = try!(ops::source_ids_from_config(config,
-                                                        package.get_root()));
+    let override_ids = try!(ops::source_ids_from_config(config, package.root()));
 
     let (packages, resolve_with_overrides, sources) = {
         let rustc_host = config.rustc_host().to_string();
