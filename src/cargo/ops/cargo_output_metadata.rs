@@ -68,7 +68,8 @@ pub struct OutputMetadataOptions<'a> {
 ///     featureB = []
 ///
 pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<()> {
-    let (resolved_deps, packages) = try!(resolve_dependencies(opt.manifest_path, opt.features, config));
+    let (resolved_deps, packages) =
+        try!(resolve_dependencies(opt.manifest_path, opt.features, config));
 
 	#[derive(RustcEncodable)]
     struct PackageInfo<'a> {
@@ -156,7 +157,8 @@ fn resolve_dependencies(manifest: &Path, features: Vec<String>, config: &Config)
 
     let rustc_host = config.rustc_host().to_string();
     let default_feature = features.contains(&"default".to_string());
-    let filtered_features = features.into_iter().filter(|s| s.as_slice() != "default").collect::<Vec<_>>();
+    let filtered_features =
+        features.into_iter().filter(|s| s.as_slice() != "default").collect::<Vec<_>>();
 
     let platform = Some(rustc_host.as_slice());
     let method = Method::Required {
@@ -166,7 +168,8 @@ fn resolve_dependencies(manifest: &Path, features: Vec<String>, config: &Config)
         target_platform: platform
     };
 
-    let resolved_specific = try!(ops::resolve_with_previous(&mut registry, &package, method, Some(&resolved), None));
+    let resolved_specific =
+        try!(ops::resolve_with_previous(&mut registry, &package, method, Some(&resolved), None));
 
     let package_ids: Vec<PackageId> = resolved_specific.iter().cloned().collect();
     let packages = try!(registry.get(&package_ids));

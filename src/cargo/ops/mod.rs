@@ -23,7 +23,8 @@ pub use self::registry::{modify_owners, yank, OwnersOptions};
 pub use self::cargo_fetch::{fetch};
 pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{resolve_pkg, resolve_with_previous, source_ids_from_config};
-pub use self::cargo_output_metadata::{output_metadata, OutputTo, OutputFormat, OutputMetadataOptions};
+pub use self::cargo_output_metadata::{
+	output_metadata, OutputTo, OutputFormat, OutputMetadataOptions};
 
 mod cargo_clean;
 mod cargo_compile;
