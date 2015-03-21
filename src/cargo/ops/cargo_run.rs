@@ -18,7 +18,10 @@ pub fn run(manifest_path: &Path,
     // will verify that we're buliding at least one binary, so we don't check
     // for that form of existence here.
     let mut bins = root.manifest().targets().iter().filter(|a| {
-        options.filter.matches(a) && !a.is_lib() && !a.is_custom_build()
+        !a.is_lib() && !a.is_custom_build() && match options.filter {
+            CompileFilter::Everything => a.is_bin(),
+            CompileFilter::Only { .. } => options.filter.matches(a),
+        }
     });
     let _ = bins.next();
     if bins.next().is_some() {
