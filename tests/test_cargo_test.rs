@@ -3,7 +3,7 @@ use std::str;
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
 use support::{COMPILING, RUNNING, DOCTEST};
 use support::paths::CargoPathExt;
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, is_not};
 use cargo::util::process;
 
 fn setup() {}
@@ -1245,18 +1245,24 @@ test!(example_bin_same_name {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `rustc [..]bin[..]foo.rs [..] --test [..]`
-{running} `rustc [..]bin[..]foo.rs [..]`
-{running} `rustc [..]examples[..]foo.rs [..]`
+{running} `rustc [..]`
+{running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING, dir = p.url()).as_slice()));
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    assert_that(p.process(&p.bin("foo")),
-                execs().with_status(0).with_stdout("bin\n"));
     assert_that(p.process(&p.bin("examples/foo")),
                 execs().with_status(0).with_stdout("example\n"));
+
+    assert_that(p.cargo_process("run"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{running} [..]
+bin
+", compiling = COMPILING, running = RUNNING).as_slice()));
+    assert_that(&p.bin("foo"), existing_file());
 });
 
 test!(test_with_example_twice {
