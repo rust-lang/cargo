@@ -14,16 +14,23 @@ pub fn run(manifest_path: &Path,
     try!(src.update());
     let root = try!(src.root_package());
 
-    // Make sure that we're only running at most one binary. The `compile` step
-    // will verify that we're buliding at least one binary, so we don't check
-    // for that form of existence here.
     let mut bins = root.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
             CompileFilter::Everything => a.is_bin(),
             CompileFilter::Only { .. } => options.filter.matches(a),
         }
     });
-    let _ = bins.next();
+    if bins.next().is_none() {
+        match options.filter {
+            CompileFilter::Everything => {
+                return Err(human("a bin target must be available for \
+                                  `cargo run`"))
+            }
+            CompileFilter::Only { .. } => {
+                // this will be verified in cargo_compile
+            }
+        }
+    }
     if bins.next().is_some() {
         match options.filter {
             CompileFilter::Everything => {
