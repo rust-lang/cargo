@@ -91,7 +91,7 @@ test!(many_similar_names {
             #[test] fn test_test() { foo::foo() }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = p.cargo_process("test").arg("-v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);

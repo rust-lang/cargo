@@ -91,7 +91,7 @@ test!(custom_build_env_vars {
                 assert_eq!(opt, "0");
 
                 let opt = env::var("PROFILE").unwrap();
-                assert_eq!(opt, "compile");
+                assert_eq!(opt, "debug");
 
                 let debug = env::var("DEBUG").unwrap();
                 assert_eq!(debug, "true");
@@ -1176,7 +1176,7 @@ test!(profile_and_opt_level_set_correctly {
 
               fn main() {
                   assert_eq!(env::var("OPT_LEVEL").unwrap(), "3");
-                  assert_eq!(env::var("PROFILE").unwrap(), "bench");
+                  assert_eq!(env::var("PROFILE").unwrap(), "release");
                   assert_eq!(env::var("DEBUG").unwrap(), "false");
               }
         "#);

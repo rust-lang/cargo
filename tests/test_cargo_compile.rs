@@ -5,7 +5,7 @@ use tempdir::TempDir;
 
 use support::{project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, ProjectBuilder};
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use cargo::util::process;
 
@@ -1349,9 +1349,7 @@ test!(dep_no_libs {
         "#)
         .file("bar/src/main.rs", "");
     assert_that(foo.cargo_process("build"),
-                execs().with_status(101)
-                       .with_stderr("\
-Package `bar v0.0.0 ([..])` has no library targets"));
+                execs().with_status(0));
 });
 
 test!(recompile_space_in_name {
@@ -1552,14 +1550,14 @@ test!(example_bin_same_name {
         .exec_with_output()
         .unwrap();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
 
     p.cargo("test").arg("--no-run").arg("-v")
                    .exec_with_output()
                    .unwrap();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
 });
 
