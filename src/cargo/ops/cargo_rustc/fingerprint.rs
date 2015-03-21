@@ -64,7 +64,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
 
             if profile.test {
                 cx.compilation.tests.push((target.name().to_string(), dst));
-            } else if target.is_bin() {
+            } else if target.is_bin() || target.is_example() {
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
                 let pkgid = pkg.package_id().clone();
