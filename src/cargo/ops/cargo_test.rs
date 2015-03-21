@@ -20,12 +20,11 @@ pub fn run_tests(manifest_path: &Path,
         Err(e) => return Ok(Some(e)),
     };
 
-    let libs = compile.package.targets().iter().filter_map(|target| {
-        if !target.doctested() || !target.is_lib() {
-            return None
-        }
-        Some((target.src_path(), target.name()))
-    });
+    if options.no_run { return Ok(None) }
+
+    let libs = compile.package.targets().iter()
+                      .filter(|t| t.doctested())
+                      .map(|t| (t.src_path(), t.name()));
 
     for (lib, name) in libs {
         try!(config.shell().status("Doc-tests", name));
