@@ -238,7 +238,7 @@ impl Target {
             src_path: PathBuf::new(""),
             metadata: None,
             doc: true,
-            doctest: true,
+            doctest: false,
             harness: true,
             for_host: false,
             tested: true,
@@ -254,6 +254,7 @@ impl Target {
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
             metadata: Some(metadata),
+            doctest: true,
             ..Target::blank()
         }
     }
