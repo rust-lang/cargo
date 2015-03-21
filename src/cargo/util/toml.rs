@@ -670,9 +670,11 @@ fn normalize(libs: &[TomlLibTarget],
             vec![if l.plugin == Some(true) {LibKind::Dylib} else {LibKind::Lib}]
         });
 
-        dst.push(Target::lib_target(&l.name, crate_types.clone(),
-                                    &path.to_path(),
-                                    metadata.clone()));
+        let mut target = Target::lib_target(&l.name, crate_types.clone(),
+                                            &path.to_path(),
+                                            metadata.clone());
+        configure(l, &mut target);
+        dst.push(target);
     }
 
     fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
