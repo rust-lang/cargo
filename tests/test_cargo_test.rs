@@ -1356,11 +1356,11 @@ test!(bad_example {
 
     assert_that(p.cargo_process("run").arg("--example").arg("foo"),
                 execs().with_status(101).with_stderr("\
-no example target named `foo` to run
+no example target named `foo`
 "));
     assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
                 execs().with_status(101).with_stderr("\
-no bin target named `foo` to run
+no bin target named `foo`
 "));
 });
 
