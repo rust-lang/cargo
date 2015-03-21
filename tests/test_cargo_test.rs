@@ -992,6 +992,7 @@ test!(selective_testing {
                 doctest = false
         "#)
         .file("d1/src/lib.rs", "")
+        .file("d1/src/main.rs", "extern crate d1; fn main() {}")
         .file("d2/Cargo.toml", r#"
             [package]
             name = "d2"
@@ -1002,7 +1003,8 @@ test!(selective_testing {
                 name = "d2"
                 doctest = false
         "#)
-        .file("d2/src/lib.rs", "");
+        .file("d2/src/lib.rs", "")
+        .file("d2/src/main.rs", "extern crate d2; fn main() {}");
     p.build();
 
     println!("d1");
@@ -1014,7 +1016,14 @@ test!(selective_testing {
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]d1-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 
@@ -1027,7 +1036,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]d2-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 
@@ -1040,7 +1056,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 });
