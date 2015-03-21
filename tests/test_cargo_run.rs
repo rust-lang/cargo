@@ -98,7 +98,7 @@ test!(too_many_bins {
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
                        .with_stderr("`cargo run` requires that a project only \
-                                     have one executable. Use the `--bin` option \
+                                     have one executable; use the `--bin` option \
                                      to specify which one to run\n"));
 });
 
@@ -120,9 +120,11 @@ test!(specify_name {
             fn main() { println!("hello b.rs"); }
         "#);
 
-    assert_that(p.cargo_process("run").arg("--bin").arg("a"),
+    assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
+{running} `rustc src[..]lib.rs [..]`
+{running} `rustc src[..]a.rs [..]`
 {running} `target{sep}debug{sep}a`
 hello a.rs
 ",
@@ -131,12 +133,14 @@ hello a.rs
         dir = path2url(p.root()),
         sep = SEP).as_slice()));
 
-    assert_that(p.cargo("run").arg("--bin").arg("b"),
+    assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{running} `rustc src[..]b.rs [..]`
 {running} `target{sep}debug{sep}b`
 hello b.rs
 ",
-        running = RUNNING,
+        running = RUNNING, compiling = COMPILING,
         sep = SEP).as_slice()));
 });
 
@@ -184,9 +188,10 @@ test!(either_name_or_example {
         "#);
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("--example").arg("b"),
-                execs().with_status(1)
-                       .with_stderr("specify either `--bin` or `--example`, \
-                                     not both"));
+                execs().with_status(101)
+                       .with_stderr("`cargo run` can run at most one \
+                                     executable, but multiple were \
+                                     specified"));
 });
 
 test!(one_bin_multiple_examples {
