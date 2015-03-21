@@ -62,7 +62,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
             let dst = root.join(filename);
             missing_outputs |= fs::metadata(&dst).is_err();
 
-            if target.is_test() || profile.test {
+            if profile.test {
                 cx.compilation.tests.push((target.name().to_string(), dst));
             } else if target.is_bin() {
                 cx.compilation.binaries.push(dst);
