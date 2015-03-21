@@ -204,7 +204,6 @@ fn compile<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
         // package is needed in both a host and target context, we need to run
         // it once per context.
         if !target.is_custom_build() { continue }
-        let run_custom = jobs.queue(pkg, Stage::RunCustomBuild);
         let mut reqs = Vec::new();
         let requirement = pkg.targets().iter().filter(|t| !t.is_custom_build())
                              .fold(None::<Platform>, |req, t| {
@@ -223,8 +222,12 @@ fn compile<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                 }
             }
         }
+        let before = jobs.queue(pkg, Stage::RunCustomBuild).len();
         for &req in reqs.iter() {
-            let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target };
+            let kind = match req {
+                Platform::Plugin => Kind::Host,
+                _ => Kind::Target,
+            };
             let key = (pkg.package_id().clone(), kind);
             if pkg.manifest().links().is_some() &&
                 cx.build_state.outputs.lock().unwrap().contains_key(&key) {
@@ -232,7 +235,14 @@ fn compile<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                 }
             let (dirty, fresh, freshness) =
                 try!(custom_build::prepare(pkg, target, req, cx));
+            let run_custom = jobs.queue(pkg, Stage::RunCustomBuild);
             run_custom.push((Job::new(dirty, fresh), freshness));
+        }
+
+        // If we didn't actually run the custom build command, then there's no
+        // need to compile it.
+        if jobs.queue(pkg, Stage::RunCustomBuild).len() == before {
+            jobs.queue(pkg, Stage::BuildCustomBuild).pop();
         }
     }
     drop(profiling_marker);
