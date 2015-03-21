@@ -378,7 +378,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
         // If this is a test profile, then we need to ensure that all binaries
         // are built.
-        if profile.test {
+        if profile.test && (target.is_test() || target.is_bench()) {
             ret.extend(pkg.targets().iter().filter(|t| t.is_bin())
                           .map(|t| (pkg, t, self.lib_profile(pkg.package_id()))));
         }

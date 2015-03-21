@@ -208,8 +208,9 @@ fn generate_targets<'a>(pkg: &'a Package,
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let profiles = pkg.manifest().profiles();
     let build = if release {&profiles.release} else {&profiles.dev};
+    let test = if release {&profiles.bench} else {&profiles.test};
     let profile = match mode {
-        CompileMode::Test => if release {&profiles.bench} else {&profiles.test},
+        CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
     };
@@ -267,14 +268,14 @@ fn generate_targets<'a>(pkg: &'a Package,
                                                               named `{}`",
                                                              desc, name))),
                         };
+                        debug!("found {} `{}`", desc, name);
                         targets.push((t, profile));
                     }
                     Ok(())
                 };
                 try!(find(bins, "bin", TargetKind::Bin, profile));
-                try!(find(examples, "example", TargetKind::Example,
-                          &profiles.dev));
-                try!(find(tests, "test", TargetKind::Test, &profiles.test));
+                try!(find(examples, "example", TargetKind::Example, build));
+                try!(find(tests, "test", TargetKind::Test, test));
                 try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
             }
             Ok(targets)
