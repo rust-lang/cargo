@@ -169,11 +169,14 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
                                    profile));
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
+    //
     // Skip the fingerprints of build scripts as they may not always be
     // available and the dirtiness propagation for modification is tracked
-    // elsewhere
+    // elsewhere. Also skip fingerprints of binaries because they don't actually
+    // induce a recompile, they're just dependencies in the sense that they need
+    // to be built.
     let deps = try!(cx.dep_targets(pkg, target, profile).into_iter()
-                      .filter(|&(_, t, _)| !t.is_custom_build())
+                      .filter(|&(_, t, _)| !t.is_custom_build() && !t.is_bin())
                       .map(|(pkg, target, profile)| {
         let kind = match kind {
             Kind::Host => Kind::Host,
