@@ -15,7 +15,7 @@ fn setup() {
 // Test that HTTP auth is offered from `credential.helper`
 test!(http_auth_offered {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = a.socket_addr().unwrap();
+    let addr = a.local_addr().unwrap();
 
     fn headers(rdr: &mut BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept", "User-Agent"];
@@ -116,7 +116,7 @@ Caused by:
 // Boy, sure would be nice to have a TLS implementation in rust!
 test!(https_something_happens {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = a.socket_addr().unwrap();
+    let addr = a.local_addr().unwrap();
     let t = thread::spawn(move|| {
         drop(a.accept().unwrap());
     });
@@ -163,7 +163,7 @@ Caused by:
 // Boy, sure would be nice to have an SSH implementation in rust!
 test!(ssh_something_happens {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = a.socket_addr().unwrap();
+    let addr = a.local_addr().unwrap();
     let t = thread::spawn(move|| {
         drop(a.accept().unwrap());
     });

@@ -455,6 +455,7 @@ test!(cross_with_a_build_script {
         "#)
         .file("build.rs", format!(r#"
             use std::env;
+            use std::old_path::{{Path, GenericPath}};
             fn main() {{
                 assert_eq!(env::var("TARGET").unwrap().as_slice(), "{0}");
                 let mut path = Path::new(env::var("OUT_DIR").unwrap());

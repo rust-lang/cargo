@@ -57,7 +57,7 @@ define DIST_TARGET
 ifdef CFG_ENABLE_OPTIMIZE
 TARGET_$(1) = $$(TARGET_ROOT)/$(1)/release
 else
-TARGET_$(1) = $$(TARGET_ROOT)/$(1)
+TARGET_$(1) = $$(TARGET_ROOT)/$(1)/debug
 endif
 DISTDIR_$(1) = $$(TARGET_$(1))/dist
 IMGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)-image

@@ -1,4 +1,4 @@
-#![feature(core, io, std_misc, exit_status)]
+#![feature(core, exit_status, fs_ext)]
 
 extern crate "git2-curl" as git2_curl;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -191,7 +191,7 @@ fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
                 }
             }
         }
-        Err(ref e) if e.kind() == io::ErrorKind::FileNotFound => {
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
             handle_error(CliError::new("No such subcommand", 127), shell)
         }
         Err(err) => {
