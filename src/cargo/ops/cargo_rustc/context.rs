@@ -34,7 +34,6 @@ pub struct Context<'a, 'b: 'a> {
     pub exec_engine: Arc<Box<ExecEngine>>,
     pub fingerprints: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
                               Fingerprint>,
-    pub initialized: HashSet<&'a PackageId>,
     pub compiled: HashSet<(&'a PackageId, &'a Target, &'a Profile)>,
     pub build_config: BuildConfig,
 
@@ -92,7 +91,6 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             fingerprints: HashMap::new(),
             profiles: profiles,
             compiled: HashSet::new(),
-            initialized: HashSet::new(),
         })
     }
 
@@ -331,6 +329,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     pub fn dep_targets(&self, pkg: &Package, target: &Target,
                        profile: &Profile)
                        -> Vec<(&'a Package, &'a Target, &'a Profile)> {
+        if profile.doc {
+            return self.doc_deps(pkg);
+        }
         let deps = match self.resolve.deps(pkg.package_id()) {
             None => return Vec::new(),
             Some(deps) => deps,
@@ -380,6 +381,40 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         if profile.test && (target.is_test() || target.is_bench()) {
             ret.extend(pkg.targets().iter().filter(|t| t.is_bin())
                           .map(|t| (pkg, t, self.lib_profile(pkg.package_id()))));
+        }
+        return ret
+    }
+
+    /// Returns the dependencies necessary to document a package
+    fn doc_deps(&self, pkg: &Package)
+                -> Vec<(&'a Package, &'a Target, &'a Profile)> {
+        let deps = self.resolve.deps(pkg.package_id()).into_iter();
+        let deps = deps.flat_map(|a| a).map(|id| {
+            self.get_package(id)
+        }).filter(|dep| {
+            pkg.dependencies().iter().find(|d| {
+                d.name() == dep.name()
+            }).unwrap().is_transitive()
+        }).filter_map(|dep| {
+            dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
+        });
+
+        // To document a library, we depend on dependencies actually being
+        // built. If we're documenting *all* libraries, then we also depend on
+        // the documentation of the library being built.
+        let mut ret = Vec::new();
+        for (dep, lib) in deps {
+            ret.push((dep, lib, self.lib_profile(dep.package_id())));
+            if self.build_config.doc_all {
+                ret.push((dep, lib, &self.profiles.doc));
+            }
+        }
+
+        // Be sure to build/run the build script for documented libraries as
+        // well
+        let pkg = self.get_package(pkg.package_id());
+        if let Some(t) = pkg.targets().iter().find(|t| t.is_custom_build()) {
+            ret.push((pkg, t, self.build_script_profile(pkg.package_id())));
         }
         return ret
     }

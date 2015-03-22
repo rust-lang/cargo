@@ -46,7 +46,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let mut doc_opts = ops::DocOptions {
-        all: !options.flag_no_deps,
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
             config: config,
@@ -58,7 +57,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             exec_engine: None,
             filter: ops::CompileFilter::Everything,
             release: false,
-            mode: ops::CompileMode::Build,
+            mode: ops::CompileMode::Doc {
+                deps: !options.flag_no_deps,
+            },
         },
     };
 

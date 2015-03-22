@@ -10,7 +10,6 @@ use sources::PathSource;
 use util::{CargoResult, human};
 
 pub struct DocOptions<'a, 'b: 'a> {
-    pub all: bool,
     pub open_result: bool,
     pub compile_opts: ops::CompileOptions<'a, 'b>,
 }

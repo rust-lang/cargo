@@ -42,6 +42,7 @@ pub struct BuildConfig {
     pub requested_target: Option<String>,
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
+    pub doc_all: bool,
 }
 
 #[derive(Clone, Default)]

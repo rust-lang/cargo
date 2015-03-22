@@ -66,6 +66,7 @@ pub enum CompileMode {
     Test,
     Build,
     Bench,
+    Doc { deps: bool },
 }
 
 pub enum CompileFilter<'a> {
@@ -168,6 +169,9 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
+        if let CompileMode::Doc { deps } = mode {
+            build_config.doc_all = deps;
+        }
 
         try!(ops::compile_targets(&targets, to_build,
                                   &PackageSet::new(&packages),
@@ -213,6 +217,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
+        CompileMode::Doc { .. } => &profiles.doc,
     };
     return match *filter {
         CompileFilter::Everything => {
@@ -242,6 +247,10 @@ fn generate_targets<'a>(pkg: &'a Package,
                     Ok(pkg.targets().iter().filter(|t| {
                         t.is_bin() || t.is_lib()
                     }).map(|t| (t, profile)).collect())
+                }
+                CompileMode::Doc { .. } => {
+                    Ok(pkg.targets().iter().filter(|t| t.documented())
+                          .map(|t| (t, profile)).collect())
                 }
             }
         }
