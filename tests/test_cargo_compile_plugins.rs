@@ -139,6 +139,7 @@ test!(plugin_with_dynamic_native_dependency {
         "#)
         .file("bar/build.rs", r#"
             use std::old_io::fs;
+            use std::old_path::{Path, GenericPath};
             use std::os;
 
             fn main() {

@@ -228,7 +228,6 @@ pub struct TomlProfiles {
 }
 
 #[derive(RustcDecodable, Clone, Default)]
-#[allow(missing_copy_implementations)]
 pub struct TomlProfile {
     opt_level: Option<u32>,
     lto: Option<bool>,

@@ -1298,6 +1298,7 @@ test!(rebuild_preserves_out_dir {
         .file("build.rs", r#"
             use std::env;
             use std::old_io::File;
+            use std::old_path::{Path, GenericPath};
 
             fn main() {
                 let path = Path::new(env::var("OUT_DIR").unwrap()).join("foo");

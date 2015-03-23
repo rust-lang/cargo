@@ -468,7 +468,7 @@ test!(cargo_bench_twice {
 
     p.cargo_process("build");
 
-    for _ in range(0, 2) {
+    for _ in 0..2 {
         assert_that(p.cargo("bench"),
                     execs().with_status(0));
     }

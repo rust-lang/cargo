@@ -783,6 +783,7 @@ test!(out_dir_is_preserved {
         .file("build.rs", r#"
             use std::env;
             use std::old_io::File;
+            use std::old_path::{Path, GenericPath};
             fn main() {
                 let out = env::var("OUT_DIR").unwrap();
                 File::create(&Path::new(out).join("foo")).unwrap();
@@ -888,7 +889,8 @@ test!(code_generation {
         "#)
         .file("build.rs", r#"
             use std::env;
-            use std::old_io::File;
+            use std::old_io::{File, Writer};
+            use std::old_path::{Path, GenericPath};
 
             fn main() {
                 let dst = Path::new(env::var("OUT_DIR").unwrap());
@@ -1052,7 +1054,8 @@ test!(test_a_lib_with_a_build_command {
         "#)
         .file("build.rs", r#"
             use std::env;
-            use std::old_io::File;
+            use std::old_io::{File, Writer};
+            use std::old_path::{Path, GenericPath};
 
             fn main() {
                 let out = Path::new(env::var("OUT_DIR").unwrap());
@@ -1143,6 +1146,7 @@ test!(build_script_with_dynamic_native_dependency {
         "#)
         .file("bar/build.rs", r#"
             use std::env;
+            use std::old_path::{Path, GenericPath};
 
             fn main() {
                 let src = Path::new(env::var("SRC").unwrap());

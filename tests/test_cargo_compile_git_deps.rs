@@ -1257,6 +1257,7 @@ test!(git_dep_build_cmd {
         "#)
         .file("bar/build.rs", r#"
             use std::old_io::fs;
+            use std::old_path::{Path, GenericPath};
             fn main() {
                 fs::copy(&Path::new("src/bar.rs.in"),
                          &Path::new("src/bar.rs")).unwrap();

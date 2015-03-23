@@ -14,7 +14,7 @@ pub fn lev_distance(me: &str, t: &str) -> usize {
     if me.is_empty() { return t.chars().count(); }
     if t.is_empty() { return me.chars().count(); }
 
-    let mut dcol = range(0, t.len() + 1).collect::<Vec<_>>();
+    let mut dcol = (0..t.len() + 1).collect::<Vec<_>>();
     let mut t_last = 0;
 
     for (i, sc) in me.chars().enumerate() {
@@ -45,7 +45,7 @@ pub fn lev_distance(me: &str, t: &str) -> usize {
 fn test_lev_distance() {
     use std::char::{ from_u32, MAX };
     // Test bytelength agnosticity
-    for c in range(0u32, MAX as u32)
+    for c in (0u32..MAX as u32)
              .filter_map(|i| from_u32(i))
              .map(|i| i.to_string()) {
         assert_eq!(lev_distance(&c, &c), 0);

@@ -10,7 +10,6 @@ use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal};
 
 #[derive(PartialEq, Clone, Debug)]
-#[allow(missing_copy_implementations)]
 pub struct GitRevision(git2::Oid);
 
 impl fmt::Display for GitRevision {

@@ -251,7 +251,7 @@ pub fn cargo_dir() -> PathBuf {
  */
 
 #[derive(Clone)]
-struct Execs {
+pub struct Execs {
     expect_stdout: Option<String>,
     expect_stdin: Option<String>,
     expect_stderr: Option<String>,
@@ -436,7 +436,7 @@ pub fn execs() -> Execs {
 }
 
 #[derive(Clone)]
-struct ShellWrites {
+pub struct ShellWrites {
     expected: String
 }
 

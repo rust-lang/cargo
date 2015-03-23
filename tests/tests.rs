@@ -1,5 +1,5 @@
 #![feature(core, io, old_io)]
-#![feature(std_misc, io, fs, net, path_ext, fs_time, fs_walk)]
+#![feature(std_misc, io, fs, fs_ext, path_ext, fs_time, fs_walk)]
 
 extern crate "rustc-serialize" as serialize;
 extern crate cargo;
