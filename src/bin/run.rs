@@ -64,7 +64,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         exec_engine: None,
         release: options.flag_release,
         mode: ops::CompileMode::Build,
-        filter: if examples.len() == 0 && bins.len() == 0 {
+        filter: if examples.is_empty() && bins.is_empty() {
             ops::CompileFilter::Everything
         } else {
             ops::CompileFilter::Only {

@@ -67,7 +67,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             exec_engine: None,
             release: true,
             mode: ops::CompileMode::Bench,
-            filter: if benches.len() == 0 {
+            filter: if benches.is_empty() {
                 ops::CompileFilter::Everything
             } else {
                 ops::CompileFilter::Only {
