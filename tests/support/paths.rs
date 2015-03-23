@@ -3,6 +3,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::sync::{Once, ONCE_INIT};
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
@@ -101,6 +102,10 @@ impl CargoPathExt for Path {
 /// Ensure required test directories exist and are empty
 pub fn setup() {
     debug!("path setup; root={}; home={}", root().display(), home().display());
+    static INIT: Once = ONCE_INIT;
+    INIT.call_once(|| {
+        root().parent().unwrap().mkdir_p().unwrap();
+    });
     root().rm_rf().unwrap();
     home().mkdir_p().unwrap();
 }
