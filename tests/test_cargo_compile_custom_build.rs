@@ -469,6 +469,7 @@ test!(testing_and_such {
             fn main() {}
         "#);
 
+    println!("build");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
     p.root().move_into_the_past().unwrap();
@@ -476,6 +477,7 @@ test!(testing_and_such {
     File::create(&p.root().join("src/lib.rs")).unwrap();
     p.root().move_into_the_past().unwrap();
 
+    println!("test");
     assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
@@ -498,16 +500,17 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST).as_slice()));
 
+    println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustdoc [..]`
-{running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 
     File::create(&p.root().join("src/main.rs")).unwrap()
          .write_all(b"fn main() {}").unwrap();
+    println!("run");
     assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
