@@ -278,6 +278,7 @@ fn prepare_init<'a, 'b>(cx: &mut Context<'a, 'b>,
     jobs.queue(pkg, Stage::Binaries);
     jobs.queue(pkg, Stage::LibraryTests);
     jobs.queue(pkg, Stage::BinaryTests);
+    jobs.queue(pkg, Stage::End);
 
     // Prepare the fingerprint directory as the first step of building a package
     let (target1, target2) = fingerprint::prepare_init(cx, pkg, Kind::Target);

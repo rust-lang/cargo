@@ -58,6 +58,7 @@ pub enum Stage {
     Binaries,
     LibraryTests,
     BinaryTests,
+    End,
 }
 
 type Message = (PackageId, Stage, Freshness, CargoResult<()>);
@@ -190,28 +191,41 @@ impl<'a> JobQueue<'a> {
         }
 
         // Print out some nice progress information
-        //
-        // This isn't super trivial becuase we don't want to print loads and
-        // loads of information to the console, but we also want to produce a
-        // faithful representation of what's happening. This is somewhat nuanced
-        // as a package can start compiling *very* early on because of custom
-        // build commands and such.
-        //
-        // In general, we try to print "Compiling" for the first nontrivial task
-        // run for a package, regardless of when that is. We then don't print
-        // out any more information for a package after we've printed it once.
-        let print = !self.printed.contains(&pkg.package_id());
-        if print && total_fresh == Dirty && running.len() > 0 {
-            self.printed.insert(pkg.package_id());
-            match total_fresh {
-                Fresh => try!(config.shell().verbose(|c| {
-                    c.status("Fresh", pkg)
-                })),
-                Dirty => try!(config.shell().status("Compiling", pkg))
-            }
-        }
+        try!(self.note_working_on(config, pkg.package_id(), stage, total_fresh,
+                                  running.len()));
         for msg in running.iter() {
             try!(config.shell().verbose(|c| c.status("Running", msg)));
+        }
+        Ok(())
+    }
+
+    // This isn't super trivial becuase we don't want to print loads and
+    // loads of information to the console, but we also want to produce a
+    // faithful representation of what's happening. This is somewhat nuanced
+    // as a package can start compiling *very* early on because of custom
+    // build commands and such.
+    //
+    // In general, we try to print "Compiling" for the first nontrivial task
+    // run for a package, regardless of when that is. We then don't print
+    // out any more information for a package after we've printed it once.
+    fn note_working_on(&mut self, config: &Config, pkg: &'a PackageId,
+                       stage: Stage, fresh: Freshness, cmds_run: usize)
+                       -> CargoResult<()> {
+        if self.printed.contains(&pkg) { return Ok(()) }
+
+        match fresh {
+            // Any dirty stage which runs at least one command gets printed as
+            // being a compiled package
+            Dirty if cmds_run == 0 => {}
+            Dirty => {
+                self.printed.insert(pkg);
+                try!(config.shell().status("Compiling", pkg));
+            }
+            Fresh if stage == Stage::End => {
+                self.printed.insert(pkg);
+                try!(config.shell().verbose(|c| c.status("Fresh", pkg)));
+            }
+            Fresh => {}
         }
         Ok(())
     }
@@ -287,6 +301,13 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
                 };
                 base.extend(deps.map(|(id, _)| (id, Stage::Libraries)));
                 base
+            }
+
+            // A marker stage to indicate when a package has entirely finished
+            // compiling, nothing is actually built as part of this stage.
+            Stage::End => {
+                vec![(id, Stage::Binaries), (id, Stage::BinaryTests),
+                     (id, Stage::LibraryTests)]
             }
         }
     }
