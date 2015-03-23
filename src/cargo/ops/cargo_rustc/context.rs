@@ -330,7 +330,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                        profile: &Profile)
                        -> Vec<(&'a Package, &'a Target, &'a Profile)> {
         if profile.doc {
-            return self.doc_deps(pkg);
+            return self.doc_deps(pkg, target);
         }
         let deps = match self.resolve.deps(pkg.package_id()) {
             None => return Vec::new(),
@@ -386,8 +386,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     }
 
     /// Returns the dependencies necessary to document a package
-    fn doc_deps(&self, pkg: &Package)
+    fn doc_deps(&self, pkg: &Package, target: &Target)
                 -> Vec<(&'a Package, &'a Target, &'a Profile)> {
+        let pkg = self.get_package(pkg.package_id());
         let deps = self.resolve.deps(pkg.package_id()).into_iter();
         let deps = deps.flat_map(|a| a).map(|id| {
             self.get_package(id)
@@ -411,10 +412,15 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         }
 
         // Be sure to build/run the build script for documented libraries as
-        // well
-        let pkg = self.get_package(pkg.package_id());
         if let Some(t) = pkg.targets().iter().find(|t| t.is_custom_build()) {
             ret.push((pkg, t, self.build_script_profile(pkg.package_id())));
+        }
+
+        // If we document a binary, we need the library available
+        if target.is_bin() {
+            if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
+                ret.push((pkg, t, self.lib_profile(pkg.package_id())));
+            }
         }
         return ret
     }
