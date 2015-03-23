@@ -22,7 +22,7 @@ test!(simple {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}foo`
+{running} `target{sep}debug{sep}foo[..]`
 hello
 ",
         compiling = COMPILING,
@@ -125,7 +125,7 @@ test!(specify_name {
 {compiling} foo v0.0.1 ({dir})
 {running} `rustc src[..]lib.rs [..]`
 {running} `rustc src[..]a.rs [..]`
-{running} `target{sep}debug{sep}a`
+{running} `target{sep}debug{sep}a[..]`
 hello a.rs
 ",
         compiling = COMPILING,
@@ -137,7 +137,7 @@ hello a.rs
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ([..])
 {running} `rustc src[..]b.rs [..]`
-{running} `target{sep}debug{sep}b`
+{running} `target{sep}debug{sep}b[..]`
 hello b.rs
 ",
         running = RUNNING, compiling = COMPILING,
@@ -163,7 +163,7 @@ test!(run_example {
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}examples{sep}a`
+{running} `target{sep}debug{sep}examples{sep}a[..]`
 example
 ",
         compiling = COMPILING,
@@ -216,7 +216,7 @@ test!(one_bin_multiple_examples {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}main`
+{running} `target{sep}debug{sep}main[..]`
 hello main.rs
 ",
         compiling = COMPILING,
@@ -289,7 +289,7 @@ test!(example_with_release_flag {
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
          --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}release{sep}examples{sep}a`
+{running} `target{sep}release{sep}examples{sep}a[..]`
 fast1
 fast2
 ",
@@ -318,7 +318,7 @@ fast2
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
          --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}debug{sep}examples{sep}a`
+{running} `target{sep}debug{sep}examples{sep}a[..]`
 slow1
 slow2
 ",
@@ -375,7 +375,7 @@ test!(release_works {
     assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}release{sep}foo`
+{running} `target{sep}release{sep}foo[..]`
 ",
         compiling = COMPILING,
         running = RUNNING,

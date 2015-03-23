@@ -485,7 +485,7 @@ test!(testing_and_such {
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 {running} `rustc [..] --crate-name foo [..]`
-{running} `[..]foo-[..]`
+{running} `[..]foo-[..][..]`
 
 running 0 tests
 
@@ -515,7 +515,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
-{running} `target[..]foo`
+{running} `target[..]foo[..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
 
