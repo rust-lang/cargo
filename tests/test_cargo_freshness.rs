@@ -77,6 +77,8 @@ test!(modify_only_some_files {
     p.root().move_into_the_past().unwrap();
 
     File::create(&bin).unwrap().write_all(b"fn foo() {}").unwrap();
+    // p.root().move_into_the_past().unwrap();
+    // p.root().join("target").move_into_the_past().unwrap();
 
     // Make sure the binary is rebuilt, not the lib
     assert_that(p.cargo("build")
@@ -195,6 +197,8 @@ test!(rebuild_tests_if_lib_changes {
                 execs().with_status(0));
 
     File::create(&p.root().join("src/lib.rs")).unwrap();
+    p.root().move_into_the_past().unwrap();
+    p.root().join("target").move_into_the_past().unwrap();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
