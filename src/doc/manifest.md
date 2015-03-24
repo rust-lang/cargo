@@ -38,12 +38,14 @@ found in the build script [guide][1].
 build = "build.rs"
 ```
 
-## The `exclude` Field (optional)
+## The `exclude` and `include` Fields (optional)
 
-You can explicitly specify to Cargo that a set of globs should be ignored for
-the purposes of packaging and rebuilding a package. The globs specified in this
-field identify a set of files that are not included when a package is published
-as well as ignored for the purposes of detecting when to rebuild a package.
+You can explicitly specify to Cargo that a set of globs should be ignored or
+included for the purposes of packaging and rebuilding a package. The globs
+specified in the `exclude` field identify a set of files that are not included
+when a package is published as well as ignored for the purposes of detecting
+when to rebuild a package, and the globs in `include` specify files that are
+explicitly included.
 
 If a VCS is being used for a package, the `exclude` field will be seeded with
 the VCS's ignore settings (`.gitignore` for git for example).
@@ -53,6 +55,15 @@ the VCS's ignore settings (`.gitignore` for git for example).
 # ...
 exclude = ["build/**/*.o", "doc/**/*.html"]
 ```
+
+```toml
+[package
+# ...
+include = ["src/resource.data"]
+```
+
+The options are mutually exclusive: setting `include` will override an
+`exclude`.
 
 ## Package metadata
 
