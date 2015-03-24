@@ -29,7 +29,7 @@ test!(profile_overrides {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
-        --cfg ndebug \
+        -C debug-assertions=on \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         -C rpath \

@@ -555,7 +555,7 @@ fn build_base_args(cx: &Context,
                    profile: &Profile,
                    crate_types: &[&str]) {
     let Profile {
-        opt_level, lto, codegen_units, debuginfo, ndebug, rpath, test,
+        opt_level, lto, codegen_units, debuginfo, debug_assertions, rpath, test,
         doc: _doc,
     } = *profile;
 
@@ -599,8 +599,10 @@ fn build_base_args(cx: &Context,
         cmd.arg("-g");
     }
 
-    if ndebug {
-        cmd.args(&["--cfg", "ndebug"]);
+    if debug_assertions && opt_level > 0 {
+        cmd.args(&["-C", "debug-assertions=on"]);
+    } else if !debug_assertions && opt_level == 0 {
+        cmd.args(&["-C", "debug-assertions=off"]);
     }
 
     if test && target.harness() {

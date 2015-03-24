@@ -815,7 +815,6 @@ test!(lto_build {
 {running} `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
-        --cfg ndebug \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
@@ -871,7 +870,6 @@ test!(verbose_release_build {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
-        --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]release \
@@ -917,7 +915,6 @@ test!(verbose_release_build_deps {
 {running} `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
-        --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]release[..]deps \
@@ -927,7 +924,6 @@ test!(verbose_release_build_deps {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
-        --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]release \
@@ -1025,10 +1021,10 @@ test!(standard_build_no_ndebug {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             fn main() {
-                if cfg!(ndebug) {
-                    println!("fast")
-                } else {
+                if cfg!(debug_assertions) {
                     println!("slow")
+                } else {
+                    println!("fast")
                 }
             }
         "#);
@@ -1043,10 +1039,10 @@ test!(release_build_ndebug {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             fn main() {
-                if cfg!(ndebug) {
-                    println!("fast")
-                } else {
+                if cfg!(debug_assertions) {
                     println!("slow")
+                } else {
+                    println!("fast")
                 }
             }
         "#);
