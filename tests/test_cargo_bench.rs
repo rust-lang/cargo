@@ -852,3 +852,40 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        dir = p.root().display(),
                        url = p.url()).as_slice()));
 });
+
+test!(test_a_bench {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+
+            [lib]
+            name = "foo"
+            test = false
+            doctest = false
+
+            [[bench]]
+            name = "b"
+            test = true
+        "#)
+        .file("src/lib.rs", "")
+        .file("benches/b.rs", r#"
+            #[test]
+            fn foo() {}
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.1.0 ([..])
+{running} target[..]debug[..]b-[..]
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING)));
+});
