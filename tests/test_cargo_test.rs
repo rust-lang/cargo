@@ -1255,7 +1255,7 @@ test!(example_bin_same_name {
     assert_that(p.process(&p.bin("examples/foo")),
                 execs().with_status(0).with_stdout("example\n"));
 
-    assert_that(p.cargo_process("run"),
+    assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ([..])

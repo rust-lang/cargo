@@ -117,7 +117,7 @@ pub struct Profile {
     pub lto: bool,
     pub codegen_units: Option<u32>,    // None = use rustc default
     pub debuginfo: bool,
-    pub ndebug: bool,
+    pub debug_assertions: bool,
     pub rpath: bool,
     pub test: bool,
     pub doc: bool,
@@ -410,6 +410,7 @@ impl Profile {
     pub fn default_dev() -> Profile {
         Profile {
             debuginfo: true,
+            debug_assertions: true,
             ..Profile::default()
         }
     }
@@ -418,7 +419,6 @@ impl Profile {
         Profile {
             opt_level: 3,
             debuginfo: false,
-            ndebug: true,
             ..Profile::default()
         }
     }
@@ -452,7 +452,7 @@ impl Default for Profile {
             lto: false,
             codegen_units: None,
             debuginfo: false,
-            ndebug: false,
+            debug_assertions: false,
             rpath: false,
             test: false,
             doc: false,

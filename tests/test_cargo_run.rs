@@ -241,10 +241,10 @@ test!(example_with_release_flag {
             extern crate bar;
 
             fn main() {
-                if cfg!(ndebug) {
-                    println!("fast1")
-                } else {
+                if cfg!(debug_assertions) {
                     println!("slow1")
+                } else {
+                    println!("fast1")
                 }
                 bar::baz();
             }
@@ -260,10 +260,10 @@ test!(example_with_release_flag {
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn baz() {
-                if cfg!(ndebug) {
-                    println!("fast2")
-                } else {
+                if cfg!(debug_assertions) {
                     println!("slow2")
+                } else {
+                    println!("fast2")
                 }
             }
         "#);
@@ -273,7 +273,6 @@ test!(example_with_release_flag {
 {compiling} bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
-        --cfg ndebug \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
@@ -283,7 +282,6 @@ test!(example_with_release_flag {
 {compiling} foo v0.0.1 ({url})
 {running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
-        --cfg ndebug \
         --out-dir {dir}{sep}target{sep}release{sep}examples \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release \
@@ -369,7 +367,7 @@ test!(release_works {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            fn main() { if !cfg!(ndebug) { panic!() } }
+            fn main() { if cfg!(debug_assertions) { panic!() } }
         "#);
 
     assert_that(p.cargo_process("run").arg("--release"),
