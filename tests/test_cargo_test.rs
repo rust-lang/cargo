@@ -46,6 +46,54 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
         RUNNING)));
 });
 
+test!(cargo_test_release {
+    let p = project("foo")
+        .file("src/lib.rs", r#"
+            extern crate bar as the_bar;
+
+            pub fn bar() { the_bar::baz(); }
+
+            #[test]
+            fn foo() { bar(); }
+        "#)
+        .file("tests/test.rs", r#"
+            extern crate foo as the_foo;
+
+            #[test]
+            fn foo() { the_foo::bar(); }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "bar"
+            crate_type = ["dylib"]
+        "#)
+        .file("bar/src/lib.rs", "
+             pub fn baz() {}
+        ");
+
+    assert_that(p.cargo_process("test").arg("-v").arg("--release"),
+                execs().with_stdout(format!("\
+{compiling} bar v0.0.1 ({dir})
+{running} [..] -C opt-level=3 [..]
+{compiling} foo v0.0.1 ({dir})
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} `[..]target[..]foo-[..]`
+
+running 1 test
+test test_hello ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        compiling = COMPILING, dir = p.url(), running = RUNNING)));
+});
+
 test!(cargo_test_verbose {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
