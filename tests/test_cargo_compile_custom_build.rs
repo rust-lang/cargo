@@ -91,7 +91,7 @@ test!(custom_build_env_vars {
                 assert_eq!(opt, "0");
 
                 let opt = env::var("PROFILE").unwrap();
-                assert_eq!(opt, "compile");
+                assert_eq!(opt, "debug");
 
                 let debug = env::var("DEBUG").unwrap();
                 assert_eq!(debug, "true");
@@ -469,6 +469,7 @@ test!(testing_and_such {
             fn main() {}
         "#);
 
+    println!("build");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
     p.root().move_into_the_past().unwrap();
@@ -476,6 +477,7 @@ test!(testing_and_such {
     File::create(&p.root().join("src/lib.rs")).unwrap();
     p.root().move_into_the_past().unwrap();
 
+    println!("test");
     assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
                        .with_stdout(format!("\
@@ -483,7 +485,7 @@ test!(testing_and_such {
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
 {running} `rustc [..] --crate-name foo [..]`
-{running} `[..]foo-[..]`
+{running} `[..]foo-[..][..]`
 
 running 0 tests
 
@@ -498,21 +500,22 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST).as_slice()));
 
+    println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustdoc [..]`
-{running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 
     File::create(&p.root().join("src/main.rs")).unwrap()
          .write_all(b"fn main() {}").unwrap();
+    println!("run");
     assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.5.0 (file://[..])
-{running} `target[..]foo`
+{running} `target[..]foo[..]`
 ", compiling = COMPILING, running = RUNNING).as_slice()));
 });
 
@@ -1180,7 +1183,7 @@ test!(profile_and_opt_level_set_correctly {
 
               fn main() {
                   assert_eq!(env::var("OPT_LEVEL").unwrap(), "3");
-                  assert_eq!(env::var("PROFILE").unwrap(), "bench");
+                  assert_eq!(env::var("PROFILE").unwrap(), "release");
                   assert_eq!(env::var("DEBUG").unwrap(), "false");
               }
         "#);

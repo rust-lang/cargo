@@ -51,7 +51,6 @@ test!(build_with_no_lib {
         "#);
 
     assert_that(p.cargo_process("build").arg("--lib"),
-                execs()
-                .with_status(101)
-                .with_stderr("There is no lib to build, remove `--lib` flag"));
+                execs().with_status(101)
+                       .with_stderr("no library targets found"));
 });

@@ -22,7 +22,7 @@ test!(simple {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}foo`
+{running} `target{sep}debug{sep}foo[..]`
 hello
 ",
         compiling = COMPILING,
@@ -98,7 +98,7 @@ test!(too_many_bins {
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
                        .with_stderr("`cargo run` requires that a project only \
-                                     have one executable. Use the `--bin` option \
+                                     have one executable; use the `--bin` option \
                                      to specify which one to run\n"));
 });
 
@@ -120,10 +120,12 @@ test!(specify_name {
             fn main() { println!("hello b.rs"); }
         "#);
 
-    assert_that(p.cargo_process("run").arg("--bin").arg("a"),
+    assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}a`
+{running} `rustc src[..]lib.rs [..]`
+{running} `rustc src[..]a.rs [..]`
+{running} `target{sep}debug{sep}a[..]`
 hello a.rs
 ",
         compiling = COMPILING,
@@ -131,12 +133,14 @@ hello a.rs
         dir = path2url(p.root()),
         sep = SEP).as_slice()));
 
-    assert_that(p.cargo("run").arg("--bin").arg("b"),
+    assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{running} `target{sep}debug{sep}b`
+{compiling} foo v0.0.1 ([..])
+{running} `rustc src[..]b.rs [..]`
+{running} `target{sep}debug{sep}b[..]`
 hello b.rs
 ",
-        running = RUNNING,
+        running = RUNNING, compiling = COMPILING,
         sep = SEP).as_slice()));
 });
 
@@ -159,7 +163,7 @@ test!(run_example {
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}examples{sep}a`
+{running} `target{sep}debug{sep}examples{sep}a[..]`
 example
 ",
         compiling = COMPILING,
@@ -184,9 +188,10 @@ test!(either_name_or_example {
         "#);
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("--example").arg("b"),
-                execs().with_status(1)
-                       .with_stderr("specify either `--bin` or `--example`, \
-                                     not both"));
+                execs().with_status(101)
+                       .with_stderr("`cargo run` can run at most one \
+                                     executable, but multiple were \
+                                     specified"));
 });
 
 test!(one_bin_multiple_examples {
@@ -211,7 +216,7 @@ test!(one_bin_multiple_examples {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}main`
+{running} `target{sep}debug{sep}main[..]`
 hello main.rs
 ",
         compiling = COMPILING,
@@ -284,7 +289,7 @@ test!(example_with_release_flag {
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
          --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}release{sep}examples{sep}a`
+{running} `target{sep}release{sep}examples{sep}a[..]`
 fast1
 fast2
 ",
@@ -313,7 +318,7 @@ fast2
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
          --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}debug{sep}examples{sep}a`
+{running} `target{sep}debug{sep}examples{sep}a[..]`
 slow1
 slow2
 ",
@@ -370,7 +375,7 @@ test!(release_works {
     assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `target{sep}release{sep}foo`
+{running} `target{sep}release{sep}foo[..]`
 ",
         compiling = COMPILING,
         running = RUNNING,

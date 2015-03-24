@@ -30,6 +30,7 @@ use std::sync::Arc;
 
 use core::registry::PackageRegistry;
 use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
@@ -38,19 +39,45 @@ use util::{CargoResult, internal, human, ChainError, profile};
 
 /// Contains informations about how a package should be compiled.
 pub struct CompileOptions<'a, 'b: 'a> {
-    pub env: &'a str,
     pub config: &'a Config<'b>,
     /// Number of concurrent jobs to use.
     pub jobs: Option<u32>,
     /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
     pub target: Option<&'a str>,
-    /// True if dev-dependencies must be compiled.
-    pub dev_deps: bool,
+    /// Extra features to build for the root package
     pub features: &'a [String],
+    /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
+    /// Root package to build (if None it's the current one)
     pub spec: Option<&'a str>,
-    pub lib_only: bool,
+    /// Filter to apply to the root package to select which targets will be
+    /// built.
+    pub filter: CompileFilter<'a>,
+    /// Engine which drives compilation
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
+    /// Whether this is a release build or not
+    pub release: bool,
+    /// Mode for this compile.
+    pub mode: CompileMode,
+}
+
+#[derive(Copy, PartialEq)]
+pub enum CompileMode {
+    Test,
+    Build,
+    Bench,
+    Doc { deps: bool },
+}
+
+pub enum CompileFilter<'a> {
+    Everything,
+    Only {
+        lib: bool,
+        bins: &'a [String],
+        examples: &'a [String],
+        tests: &'a [String],
+        benches: &'a [String],
+    }
 }
 
 pub fn compile(manifest_path: &Path,
@@ -74,9 +101,9 @@ pub fn compile(manifest_path: &Path,
 
 pub fn compile_pkg(package: &Package, options: &CompileOptions)
                    -> CargoResult<ops::Compilation> {
-    let CompileOptions { env, config, jobs, target, spec,
-                         dev_deps, features, no_default_features,
-                         lib_only, ref exec_engine } = *options;
+    let CompileOptions { config, jobs, target, spec, features,
+                         no_default_features, release, mode,
+                         ref filter, ref exec_engine } = *options;
 
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
@@ -108,10 +135,10 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
 
         try!(registry.add_overrides(override_ids));
 
-        let platform = target.as_ref().map(|e| e.as_slice()).or(Some(rustc_host.as_slice()));
+        let platform = target.as_ref().map(|e| &e[..]).or(Some(&rustc_host[..]));
 
         let method = Method::Required{
-            dev_deps: dev_deps,
+            dev_deps: true, // TODO: remove this option?
             features: &features,
             uses_default_features: !no_default_features,
             target_platform: platform};
@@ -135,31 +162,138 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         None => package.package_id(),
     };
     let to_build = packages.iter().find(|p| p.package_id() == pkgid).unwrap();
-    let targets = to_build.targets().iter().filter(|target| {
-        target.profile().is_custom_build() || match env {
-            // doc-all == document everything, so look for doc targets
-            "doc" | "doc-all" => target.profile().env() == "doc",
-            env => target.profile().env() == env,
-        }
-    }).filter(|target| !lib_only || target.is_lib()).collect::<Vec<&Target>>();
-
-    if lib_only && targets.len() == 0 {
-        return Err(human("There is no lib to build, remove `--lib` flag".to_string()));
-    }
+    let targets = try!(generate_targets(to_build, mode, filter, release));
 
     let ret = {
         let _p = profile::start("compiling");
-        let lib_overrides = try!(scrape_build_config(config, jobs, target));
+        let mut build_config = try!(scrape_build_config(config, jobs, target));
+        build_config.exec_engine = exec_engine.clone();
+        build_config.release = release;
+        if let CompileMode::Doc { deps } = mode {
+            build_config.doc_all = deps;
+        }
 
-        try!(ops::compile_targets(&env, &targets, to_build,
+        try!(ops::compile_targets(&targets, to_build,
                                   &PackageSet::new(&packages),
                                   &resolve_with_overrides, &sources,
-                                  config, lib_overrides, exec_engine.clone()))
+                                  config,
+                                  build_config,
+                                  to_build.manifest().profiles()))
     };
 
     return Ok(ret);
 }
 
+impl<'a> CompileFilter<'a> {
+    pub fn matches(&self, target: &Target) -> bool {
+        match *self {
+            CompileFilter::Everything => true,
+            CompileFilter::Only { lib, bins, examples, tests, benches } => {
+                let list = match *target.kind() {
+                    TargetKind::Bin => bins,
+                    TargetKind::Test => tests,
+                    TargetKind::Bench => benches,
+                    TargetKind::Example => examples,
+                    TargetKind::Lib(..) => return lib,
+                    TargetKind::CustomBuild => return false,
+                };
+                list.iter().any(|x| *x == target.name())
+            }
+        }
+    }
+}
+
+/// Given the configuration for a build, this function will generate all
+/// target/profile combinations needed to be built.
+fn generate_targets<'a>(pkg: &'a Package,
+                        mode: CompileMode,
+                        filter: &CompileFilter,
+                        release: bool)
+                        -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
+    let profiles = pkg.manifest().profiles();
+    let build = if release {&profiles.release} else {&profiles.dev};
+    let test = if release {&profiles.bench} else {&profiles.test};
+    let profile = match mode {
+        CompileMode::Test => test,
+        CompileMode::Bench => &profiles.bench,
+        CompileMode::Build => build,
+        CompileMode::Doc { .. } => &profiles.doc,
+    };
+    return match *filter {
+        CompileFilter::Everything => {
+            match mode {
+                CompileMode::Bench => {
+                    Ok(pkg.targets().iter().filter(|t| t.benched()).map(|t| {
+                        (t, profile)
+                    }).collect::<Vec<_>>())
+                }
+                CompileMode::Test => {
+                    let mut base = pkg.targets().iter().filter(|t| {
+                        t.tested()
+                    }).map(|t| {
+                        (t, if t.is_example() {build} else {profile})
+                    }).collect::<Vec<_>>();
+
+                    // Always compile the library if we're testing everything as
+                    // it'll be needed for doctests
+                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
+                        if t.doctested() {
+                            base.push((t, build));
+                        }
+                    }
+                    Ok(base)
+                }
+                CompileMode::Build => {
+                    Ok(pkg.targets().iter().filter(|t| {
+                        t.is_bin() || t.is_lib()
+                    }).map(|t| (t, profile)).collect())
+                }
+                CompileMode::Doc { .. } => {
+                    Ok(pkg.targets().iter().filter(|t| t.documented())
+                          .map(|t| (t, profile)).collect())
+                }
+            }
+        }
+        CompileFilter::Only { lib, bins, examples, tests, benches } => {
+            let mut targets = Vec::new();
+
+            if lib {
+                if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
+                    targets.push((t, profile));
+                } else {
+                    return Err(human(format!("no library targets found")))
+                }
+            }
+
+            {
+                let mut find = |names: &[String], desc, kind, profile| {
+                    for name in names {
+                        let target = pkg.targets().iter().find(|t| {
+                            t.name() == *name && *t.kind() == kind
+                        });
+                        let t = match target {
+                            Some(t) => t,
+                            None => return Err(human(format!("no {} target \
+                                                              named `{}`",
+                                                             desc, name))),
+                        };
+                        debug!("found {} `{}`", desc, name);
+                        targets.push((t, profile));
+                    }
+                    Ok(())
+                };
+                try!(find(bins, "bin", TargetKind::Bin, profile));
+                try!(find(examples, "example", TargetKind::Example, build));
+                try!(find(tests, "test", TargetKind::Test, test));
+                try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
+            }
+            Ok(targets)
+        }
+    };
+}
+
+/// Read the `paths` configuration variable to discover all path overrides that
+/// have been configured.
 fn source_ids_from_config(config: &Config, cur_path: &Path)
                           -> CargoResult<Vec<SourceId>> {
 
@@ -185,9 +319,17 @@ fn source_ids_from_config(config: &Config, cur_path: &Path)
     }).map(|p| SourceId::for_path(&p)).collect()
 }
 
+/// Parse all config files to learn about build configuration. Currently
+/// configured options are:
+///
+/// * build.jobs
+/// * target.$target.ar
+/// * target.$target.linker
+/// * target.$target.libfoo.metadata
 fn scrape_build_config(config: &Config,
                        jobs: Option<u32>,
-                       target: Option<String>) -> CargoResult<ops::BuildConfig> {
+                       target: Option<String>)
+                       -> CargoResult<ops::BuildConfig> {
     let cfg_jobs = match try!(config.get_i64("build.jobs")) {
         Some((n, p)) => {
             match n.to_u32() {
@@ -251,7 +393,8 @@ fn scrape_target_config(config: &Config, triple: &str)
             match try!(config.get(&key)).unwrap() {
                 ConfigValue::String(v, path) => {
                     if k == "rustc-flags" {
-                        let whence = format!("in `{}` (in {:?})", key, path);
+                        let whence = format!("in `{}` (in {})", key,
+                                             path.display());
                         let (paths, links) = try!(
                             BuildOutput::parse_rustc_flags(&v, &whence)
                         );
@@ -263,14 +406,18 @@ fn scrape_target_config(config: &Config, triple: &str)
                 },
                 ConfigValue::List(a, p) => {
                     if k == "rustc-link-lib" {
-                        output.library_links.extend(a.into_iter().map(|(v, _)| v));
+                        output.library_links.extend(a.into_iter().map(|v| v.0));
                     } else if k == "rustc-link-search" {
-                        output.library_paths.extend(a.into_iter().map(|(v, _)| PathBuf::new(&v)));
+                        output.library_paths.extend(a.into_iter().map(|v| {
+                            PathBuf::new(&v.0)
+                        }));
                     } else {
-                        try!(config.expected("string", &k, ConfigValue::List(a, p)));
+                        try!(config.expected("string", &k,
+                                             ConfigValue::List(a, p)));
                     }
                 },
-                // technically could be a list too, but that's the exception to the rule...
+                // technically could be a list too, but that's the exception to
+                // the rule...
                 cv => { try!(config.expected("string", &k, cv)); }
             }
         }

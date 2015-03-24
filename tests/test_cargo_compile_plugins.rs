@@ -49,7 +49,7 @@ test!(plugin_to_the_max {
             path = "../baz"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(plugin_registrar)]
+            #![feature(plugin_registrar, rustc_private)]
 
             extern crate rustc;
             extern crate baz;
@@ -57,7 +57,7 @@ test!(plugin_to_the_max {
             use rustc::plugin::Registry;
 
             #[plugin_registrar]
-            pub fn foo(reg: &mut Registry) {
+            pub fn foo(_reg: &mut Registry) {
                 println!("{}", baz::baz());
             }
         "#);

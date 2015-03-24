@@ -9,6 +9,7 @@ struct Options {
     flag_jobs: Option<u32>,
     flag_manifest_path: Option<String>,
     flag_test: Option<String>,
+    flag_bin: Option<String>,
     flag_no_default_features: bool,
     flag_no_run: bool,
     flag_package: Option<String>,
@@ -24,7 +25,8 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --test NAME              Name of the test executable to run
+    --test NAME              Name of the integration test to run
+    --bin NAME               Name of the binary to run tests for
     --no-run                 Compile, but don't run tests
     -p SPEC, --package SPEC  Package to run tests for
     -j N, --jobs N           The number of jobs to run in parallel
@@ -52,20 +54,34 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     config.shell().set_verbose(options.flag_verbose);
 
+    let (mut tests, mut bins) = (Vec::new(), Vec::new());
+    if let Some(s) = options.flag_test {
+        tests.push(s);
+    }
+    if let Some(s) = options.flag_bin {
+        bins.push(s);
+    }
+
     let ops = ops::TestOptions {
-        name: options.flag_test.as_ref().map(|s| &s[..]),
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
-            env: "test",
             config: config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| &s[..]),
-            dev_deps: true,
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| &s[..]),
-            lib_only: false,
             exec_engine: None,
+            release: false,
+            mode: ops::CompileMode::Test,
+            filter: if tests.is_empty() && bins.is_empty() {
+                ops::CompileFilter::Everything
+            } else {
+                ops::CompileFilter::Only {
+                    lib: false, examples: &[], benches: &[],
+                    tests: &tests, bins: &bins,
+                }
+            }
         },
     };
 

@@ -965,7 +965,7 @@ test!(dep_with_changed_submodule {
                 .with_stdout(format!("{} git repository `[..]`\n\
                                       {} dep1 v0.5.0 ([..])\n\
                                       {} foo v0.5.0 ([..])\n\
-                                      {} `target[..]foo`\n\
+                                      {} `target[..]foo[..]`\n\
                                       project2\
                                       ",
                                       UPDATING,
@@ -1010,7 +1010,7 @@ test!(dep_with_changed_submodule {
     assert_that(project.cargo("run"), execs()
                 .with_stdout(format!("{compiling} dep1 v0.5.0 ([..])\n\
                                       {compiling} foo v0.5.0 ([..])\n\
-                                      {running} `target[..]foo`\n\
+                                      {running} `target[..]foo[..]`\n\
                                       project3\
                                       ",
                                       compiling = COMPILING, running = RUNNING))

@@ -3,7 +3,7 @@ use std::str;
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
 use support::{COMPILING, RUNNING, DOCTEST};
 use support::paths::CargoPathExt;
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, is_not};
 use cargo::util::process;
 
 fn setup() {}
@@ -91,7 +91,7 @@ test!(many_similar_names {
             #[test] fn test_test() { foo::foo() }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = p.cargo_process("test").arg("-v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
@@ -898,7 +898,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
        running = RUNNING,
        dir = prj.url());
 
-    assert_that(prj.cargo_process("test").arg("--test").arg("bin2"),
+    assert_that(prj.cargo_process("test").arg("--bin").arg("bin2"),
         execs().with_status(0).with_stdout(expected_stdout.as_slice()));
 });
 
@@ -917,13 +917,6 @@ test!(test_run_specific_test_target {
 
     let expected_stdout = format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} target[..]b-[..]
-
-running 1 test
-test test_b ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
 {running} target[..]b-[..]
 
 running 1 test
@@ -999,6 +992,7 @@ test!(selective_testing {
                 doctest = false
         "#)
         .file("d1/src/lib.rs", "")
+        .file("d1/src/main.rs", "extern crate d1; fn main() {}")
         .file("d2/Cargo.toml", r#"
             [package]
             name = "d2"
@@ -1009,7 +1003,8 @@ test!(selective_testing {
                 name = "d2"
                 doctest = false
         "#)
-        .file("d2/src/lib.rs", "");
+        .file("d2/src/lib.rs", "")
+        .file("d2/src/main.rs", "extern crate d2; fn main() {}");
     p.build();
 
     println!("d1");
@@ -1021,7 +1016,14 @@ test!(selective_testing {
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]d1-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 
@@ -1034,7 +1036,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]d2-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 
@@ -1047,7 +1056,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ", compiling = COMPILING, running = RUNNING,
    dir = p.url()).as_slice()));
 });
@@ -1147,7 +1157,7 @@ test!(example_dev_dep {
         .file("bar/src/lib.rs", r#"
             #![feature(macro_rules)]
             // make sure this file takes awhile to compile
-            macro_rules! f0( () => (1u) );
+            macro_rules! f0( () => (1) );
             macro_rules! f1( () => ({(f0!()) + (f0!())}) );
             macro_rules! f2( () => ({(f1!()) + (f1!())}) );
             macro_rules! f3( () => ({(f2!()) + (f2!())}) );
@@ -1164,6 +1174,9 @@ test!(example_dev_dep {
             }
         "#);
     assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+    assert_that(p.cargo("run")
+                 .arg("--example").arg("e1").arg("--release").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -1232,18 +1245,24 @@ test!(example_bin_same_name {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} `rustc [..]bin[..]foo.rs [..] --test [..]`
-{running} `rustc [..]bin[..]foo.rs [..]`
-{running} `rustc [..]examples[..]foo.rs [..]`
+{running} `rustc [..]`
+{running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING, dir = p.url()).as_slice()));
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    assert_that(p.process(&p.bin("foo")),
-                execs().with_status(0).with_stdout("bin\n"));
     assert_that(p.process(&p.bin("examples/foo")),
                 execs().with_status(0).with_stdout("example\n"));
+
+    assert_that(p.cargo_process("run"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{running} [..]
+bin
+", compiling = COMPILING, running = RUNNING).as_slice()));
+    assert_that(&p.bin("foo"), existing_file());
 });
 
 test!(test_with_example_twice {
@@ -1337,11 +1356,11 @@ test!(bad_example {
 
     assert_that(p.cargo_process("run").arg("--example").arg("foo"),
                 execs().with_status(101).with_stderr("\
-no example target named `foo` to run
+no example target named `foo`
 "));
     assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
                 execs().with_status(101).with_stderr("\
-no bin target named `foo` to run
+no bin target named `foo`
 "));
 });
 

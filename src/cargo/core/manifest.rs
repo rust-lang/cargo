@@ -1,4 +1,4 @@
-use std::hash;
+use std::default::Default;
 use std::path::{PathBuf, Path};
 
 use semver::Version;
@@ -10,7 +10,7 @@ use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
 /// Contains all the informations about a package, as loaded from a Cargo.toml.
-#[derive(PartialEq,Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
@@ -21,6 +21,7 @@ pub struct Manifest {
     exclude: Vec<String>,
     include: Vec<String>,
     metadata: ManifestMetadata,
+    profiles: Profiles,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -104,196 +105,31 @@ impl LibKind {
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
+    Test,
+    Bench,
     Example,
+    CustomBuild,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug)]
+#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Profile {
-    env: String, // compile, test, dev, bench, etc.
-    opt_level: u32,
-    lto: bool,
-    codegen_units: Option<u32>,    // None = use rustc default
-    debug: bool,
-    rpath: bool,
-    test: bool,
-    doctest: bool,
-    doc: bool,
-    dest: String,
-    for_host: bool,
-    harness: bool, // whether to use the test harness (--test)
-    custom_build: bool,
+    pub opt_level: u32,
+    pub lto: bool,
+    pub codegen_units: Option<u32>,    // None = use rustc default
+    pub debuginfo: bool,
+    pub ndebug: bool,
+    pub rpath: bool,
+    pub test: bool,
+    pub doc: bool,
 }
 
-impl Profile {
-    fn default() -> Profile {
-        Profile {
-            env: String::new(),
-            opt_level: 0,
-            lto: false,
-            codegen_units: None,
-            debug: false,
-            rpath: false,
-            test: false,
-            doc: false,
-            dest: "debug".to_string(),
-            for_host: false,
-            doctest: false,
-            custom_build: false,
-            harness: true,
-        }
-    }
-
-    pub fn default_dev() -> Profile {
-        Profile {
-            env: "compile".to_string(), // run in the default environment only
-            opt_level: 0,
-            debug: true,
-            .. Profile::default()
-        }
-    }
-
-    pub fn default_test() -> Profile {
-        Profile {
-            env: "test".to_string(),
-            debug: true,
-            test: true,
-            .. Profile::default()
-        }
-    }
-
-    pub fn default_example() -> Profile {
-        Profile {
-            test: false,
-            .. Profile::default_test()
-        }
-    }
-
-    pub fn default_bench() -> Profile {
-        Profile {
-            env: "bench".to_string(),
-            test: true,
-            .. Profile::default_release()
-        }
-    }
-
-    pub fn default_release() -> Profile {
-        Profile {
-            env: "release".to_string(),
-            opt_level: 3,
-            dest: "release".to_string(),
-            .. Profile::default()
-        }
-    }
-
-    pub fn default_doc() -> Profile {
-        Profile {
-            env: "doc".to_string(),
-            doc: true,
-            .. Profile::default()
-        }
-    }
-
-    pub fn codegen_units(&self) -> Option<u32> { self.codegen_units }
-    pub fn debug(&self) -> bool { self.debug }
-    pub fn env(&self) -> &str { &self.env }
-    pub fn is_compile(&self) -> bool { self.env == "compile" }
-    pub fn is_custom_build(&self) -> bool { self.custom_build }
-    pub fn is_doc(&self) -> bool { self.doc }
-    pub fn is_doctest(&self) -> bool { self.doctest }
-    pub fn is_for_host(&self) -> bool { self.for_host }
-    pub fn is_test(&self) -> bool { self.test }
-    pub fn lto(&self) -> bool { self.lto }
-    pub fn opt_level(&self) -> u32 { self.opt_level }
-    pub fn rpath(&self) -> bool { self.rpath }
-    pub fn uses_test_harness(&self) -> bool { self.harness }
-    pub fn dest(&self) -> &str { &self.dest }
-
-    pub fn set_opt_level(mut self, level: u32) -> Profile {
-        self.opt_level = level;
-        self
-    }
-
-    pub fn set_lto(mut self, lto: bool) -> Profile {
-        self.lto = lto;
-        self
-    }
-
-    pub fn set_codegen_units(mut self, units: Option<u32>) -> Profile {
-        self.codegen_units = units;
-        self
-    }
-
-    pub fn set_debug(mut self, debug: bool) -> Profile {
-        self.debug = debug;
-        self
-    }
-
-    pub fn set_rpath(mut self, rpath: bool) -> Profile {
-        self.rpath = rpath;
-        self
-    }
-
-    pub fn set_test(mut self, test: bool) -> Profile {
-        self.test = test;
-        self
-    }
-
-    pub fn set_doctest(mut self, doctest: bool) -> Profile {
-        self.doctest = doctest;
-        self
-    }
-
-    pub fn set_doc(mut self, doc: bool) -> Profile {
-        self.doc = doc;
-        self
-    }
-
-    /// Sets whether the `Target` must be compiled for the host instead of the
-    /// target platform.
-    pub fn set_for_host(mut self, for_host: bool) -> Profile {
-        self.for_host = for_host;
-        self
-    }
-
-    pub fn set_harness(mut self, harness: bool) -> Profile {
-        self.harness = harness;
-        self
-    }
-
-    /// Sets whether the `Target` is a custom build script.
-    pub fn set_custom_build(mut self, custom_build: bool) -> Profile {
-        self.custom_build = custom_build;
-        self
-    }
-}
-
-impl hash::Hash for Profile {
-    fn hash<H: hash::Hasher>(&self, into: &mut H) {
-        // Be sure to match all fields explicitly, but ignore those not relevant
-        // to the actual hash of a profile.
-        let Profile {
-            opt_level,
-            lto,
-            codegen_units,
-            debug,
-            rpath,
-            for_host,
-            ref dest,
-            harness,
-
-            // test flags are separated by file, not by profile hash, and
-            // env/doc also don't matter for the actual contents of the output
-            // file, just where the output file is located.
-            doc: _,
-            env: _,
-            test: _,
-            doctest: _,
-
-            custom_build: _,
-        } = *self;
-        (opt_level, lto, codegen_units, debug,
-         rpath, for_host, dest, harness).hash(into)
-    }
+#[derive(Default, Clone, Debug)]
+pub struct Profiles {
+    pub release: Profile,
+    pub dev: Profile,
+    pub test: Profile,
+    pub bench: Profile,
+    pub doc: Profile,
 }
 
 /// Informations about a binary, a library, an example, etc. that is part of the
@@ -303,8 +139,13 @@ pub struct Target {
     kind: TargetKind,
     name: String,
     src_path: PathBuf,
-    profile: Profile,
     metadata: Option<Metadata>,
+    tested: bool,
+    benched: bool,
+    doc: bool,
+    doctest: bool,
+    harness: bool, // whether to use the test harness (--test)
+    for_host: bool,
 }
 
 #[derive(RustcEncodable)]
@@ -312,7 +153,6 @@ pub struct SerializedTarget {
     kind: Vec<&'static str>,
     name: String,
     src_path: String,
-    profile: Profile,
     metadata: Option<Metadata>
 }
 
@@ -324,13 +164,15 @@ impl Encodable for Target {
             }
             TargetKind::Bin => vec!("bin"),
             TargetKind::Example => vec!["example"],
+            TargetKind::Test => vec!["test"],
+            TargetKind::CustomBuild => vec!["custom-build"],
+            TargetKind::Bench => vec!["bench"],
         };
 
         SerializedTarget {
             kind: kind,
             name: self.name.clone(),
             src_path: self.src_path.display().to_string(),
-            profile: self.profile.clone(),
             metadata: self.metadata.clone()
         }.encode(s)
     }
@@ -342,7 +184,8 @@ impl Manifest {
                exclude: Vec<String>,
                include: Vec<String>,
                links: Option<String>,
-               metadata: ManifestMetadata) -> Manifest {
+               metadata: ManifestMetadata,
+               profiles: Profiles) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -353,6 +196,7 @@ impl Manifest {
             include: include,
             links: links,
             metadata: metadata,
+            profiles: profiles,
         }
     }
 
@@ -368,6 +212,7 @@ impl Manifest {
     pub fn targets(&self) -> &[Target] { &self.targets }
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn warnings(&self) -> &[String] { &self.warnings }
+    pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| s.as_slice())
     }
@@ -386,85 +231,106 @@ impl Manifest {
 }
 
 impl Target {
-    pub fn file_stem(&self) -> String {
-        match self.metadata {
-            Some(ref metadata) => format!("{}{}", self.name,
-                                          metadata.extra_filename),
-            None => self.name.clone()
+    fn blank() -> Target {
+        Target {
+            kind: TargetKind::Bin,
+            name: String::new(),
+            src_path: PathBuf::new(""),
+            metadata: None,
+            doc: false,
+            doctest: false,
+            harness: true,
+            for_host: false,
+            tested: true,
+            benched: true,
         }
     }
 
     pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
-                      src_path: &Path, profile: &Profile,
+                      src_path: &Path,
                       metadata: Metadata) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            profile: profile.clone(),
-            metadata: Some(metadata)
+            metadata: Some(metadata),
+            doctest: true,
+            doc: true,
+            ..Target::blank()
         }
     }
 
-    pub fn bin_target(name: &str, src_path: &Path, profile: &Profile,
+    pub fn bin_target(name: &str, src_path: &Path,
                       metadata: Option<Metadata>) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            profile: profile.clone(),
             metadata: metadata,
+            doc: true,
+            ..Target::blank()
         }
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(name: &str, src_path: &Path, profile: &Profile,
+    pub fn custom_build_target(name: &str, src_path: &Path,
                                metadata: Option<Metadata>) -> Target {
         Target {
-            kind: TargetKind::Bin,
+            kind: TargetKind::CustomBuild,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            profile: profile.clone(),
             metadata: metadata,
+            for_host: true,
+            benched: false,
+            tested: false,
+            ..Target::blank()
         }
     }
 
-    pub fn example_target(name: &str, src_path: &Path, profile: &Profile) -> Target {
+    pub fn example_target(name: &str, src_path: &Path) -> Target {
         Target {
             kind: TargetKind::Example,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            profile: profile.clone(),
-            metadata: None,
+            benched: false,
+            ..Target::blank()
         }
     }
 
     pub fn test_target(name: &str, src_path: &Path,
-                       profile: &Profile, metadata: Metadata) -> Target {
+                       metadata: Metadata) -> Target {
         Target {
-            kind: TargetKind::Bin,
+            kind: TargetKind::Test,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            profile: profile.clone(),
             metadata: Some(metadata),
+            benched: false,
+            ..Target::blank()
         }
     }
 
     pub fn bench_target(name: &str, src_path: &Path,
-                        profile: &Profile, metadata: Metadata) -> Target {
+                        metadata: Metadata) -> Target {
         Target {
-            kind: TargetKind::Bin,
+            kind: TargetKind::Bench,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            profile: profile.clone(),
             metadata: Some(metadata),
+            tested: false,
+            ..Target::blank()
         }
     }
 
     pub fn name(&self) -> &str { &self.name }
     pub fn src_path(&self) -> &Path { &self.src_path }
-    pub fn profile(&self) -> &Profile { &self.profile }
     pub fn metadata(&self) -> Option<&Metadata> { self.metadata.as_ref() }
+    pub fn kind(&self) -> &TargetKind { &self.kind }
+    pub fn tested(&self) -> bool { self.tested }
+    pub fn harness(&self) -> bool { self.harness }
+    pub fn documented(&self) -> bool { self.doc }
+    pub fn doctested(&self) -> bool { self.doctest }
+    pub fn for_host(&self) -> bool { self.for_host }
+    pub fn benched(&self) -> bool { self.benched }
 
     pub fn is_lib(&self) -> bool {
         match self.kind {
@@ -473,43 +339,25 @@ impl Target {
         }
     }
 
-    pub fn is_dylib(&self) -> bool {
+    pub fn linkable(&self) -> bool {
         match self.kind {
-            TargetKind::Lib(ref kinds) => kinds.iter().any(|&k| k == LibKind::Dylib),
+            TargetKind::Lib(ref kinds) => {
+                kinds.iter().any(|k| {
+                    match *k {
+                        LibKind::Lib | LibKind::Rlib | LibKind::Dylib => true,
+                        LibKind::StaticLib => false,
+                    }
+                })
+            }
             _ => false
         }
     }
 
-    pub fn is_rlib(&self) -> bool {
-        match self.kind {
-            TargetKind::Lib(ref kinds) =>
-                kinds.iter().any(|&k| k == LibKind::Rlib || k == LibKind::Lib),
-            _ => false
-        }
-    }
-
-    pub fn is_staticlib(&self) -> bool {
-        match self.kind {
-            TargetKind::Lib(ref kinds) => kinds.iter().any(|&k| k == LibKind::StaticLib),
-            _ => false
-        }
-    }
-
-    /// Returns true for binary, bench, and tests.
-    pub fn is_bin(&self) -> bool {
-        match self.kind {
-            TargetKind::Bin => true,
-            _ => false
-        }
-    }
-
-    /// Returns true for exampels
-    pub fn is_example(&self) -> bool {
-        match self.kind {
-            TargetKind::Example => true,
-            _ => false
-        }
-    }
+    pub fn is_bin(&self) -> bool { self.kind == TargetKind::Bin }
+    pub fn is_example(&self) -> bool { self.kind == TargetKind::Example }
+    pub fn is_test(&self) -> bool { self.kind == TargetKind::Test }
+    pub fn is_bench(&self) -> bool { self.kind == TargetKind::Bench }
+    pub fn is_custom_build(&self) -> bool { self.kind == TargetKind::CustomBuild }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<&'static str> {
@@ -517,8 +365,97 @@ impl Target {
             TargetKind::Lib(ref kinds) => {
                 kinds.iter().map(|kind| kind.crate_type()).collect()
             },
+            TargetKind::CustomBuild |
+            TargetKind::Bench |
+            TargetKind::Test |
             TargetKind::Example |
             TargetKind::Bin => vec!("bin"),
+        }
+    }
+
+    pub fn can_lto(&self) -> bool {
+        match self.kind {
+            TargetKind::Lib(ref v) => *v == [LibKind::StaticLib],
+            _ => true,
+        }
+    }
+
+    pub fn set_tested(&mut self, tested: bool) -> &mut Target {
+        self.tested = tested;
+        self
+    }
+    pub fn set_benched(&mut self, benched: bool) -> &mut Target {
+        self.benched = benched;
+        self
+    }
+    pub fn set_doctest(&mut self, doctest: bool) -> &mut Target {
+        self.doctest = doctest;
+        self
+    }
+    pub fn set_for_host(&mut self, for_host: bool) -> &mut Target {
+        self.for_host = for_host;
+        self
+    }
+    pub fn set_harness(&mut self, harness: bool) -> &mut Target {
+        self.harness = harness;
+        self
+    }
+    pub fn set_doc(&mut self, doc: bool) -> &mut Target {
+        self.doc = doc;
+        self
+    }
+}
+
+impl Profile {
+    pub fn default_dev() -> Profile {
+        Profile {
+            debuginfo: true,
+            ..Profile::default()
+        }
+    }
+
+    pub fn default_release() -> Profile {
+        Profile {
+            opt_level: 3,
+            debuginfo: false,
+            ndebug: true,
+            ..Profile::default()
+        }
+    }
+
+    pub fn default_test() -> Profile {
+        Profile {
+            test: true,
+            ..Profile::default_dev()
+        }
+    }
+
+    pub fn default_bench() -> Profile {
+        Profile {
+            test: true,
+            ..Profile::default_release()
+        }
+    }
+
+    pub fn default_doc() -> Profile {
+        Profile {
+            doc: true,
+            ..Profile::default_dev()
+        }
+    }
+}
+
+impl Default for Profile {
+    fn default() -> Profile {
+        Profile {
+            opt_level: 0,
+            lto: false,
+            codegen_units: None,
+            debuginfo: false,
+            ndebug: false,
+            rpath: false,
+            test: false,
+            doc: false,
         }
     }
 }

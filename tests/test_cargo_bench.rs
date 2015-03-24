@@ -55,19 +55,11 @@ test!(bench_tarname {
             name = "foo"
             version = "0.0.1"
             authors = []
-
-            [[bin]]
-            name="bin1"
-            path="src/bin1.rs"
-
-            [[bin]]
-            name="bin2"
-            path="src/bin2.rs"
         "#)
-        .file("src/bin1.rs", r#"
+        .file("benches/bin1.rs", r#"
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
-        .file("src/bin2.rs", r#"
+        .file("benches/bin2.rs", r#"
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
 

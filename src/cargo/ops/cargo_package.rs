@@ -179,16 +179,16 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
 
     // Now that we've rewritten all our path dependencies, compile it!
     try!(ops::compile_pkg(&new_pkg, &ops::CompileOptions {
-        env: "compile",
         config: config,
         jobs: None,
         target: None,
-        dev_deps: false,
         features: &[],
         no_default_features: false,
         spec: None,
-        lib_only: false,
+        filter: ops::CompileFilter::Everything,
         exec_engine: None,
+        release: false,
+        mode: ops::CompileMode::Build,
     }));
 
     Ok(())

@@ -105,7 +105,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         // For the commands `cargo` and `cargo help`, re-execute ourselves as
         // `cargo -h` so we can go through the normal process of printing the
         // help message.
-        "" | "help" if flags.arg_args.len() == 0 => {
+        "" | "help" if flags.arg_args.is_empty() => {
             config.shell().set_verbose(true);
             let args = &["cargo".to_string(), "-h".to_string()];
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,

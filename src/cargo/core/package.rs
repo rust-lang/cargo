@@ -85,7 +85,7 @@ impl Package {
     }
 
     pub fn has_custom_build(&self) -> bool {
-        self.targets().iter().any(|t| t.profile().is_custom_build())
+        self.targets().iter().any(|t| t.is_custom_build())
     }
 }
 

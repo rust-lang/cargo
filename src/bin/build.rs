@@ -47,28 +47,29 @@ the --release flag will use the `release` profile instead.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-build; args={:?}", env::args().collect::<Vec<_>>());
+    debug!("executing; cmd=cargo-build; args={:?}",
+           env::args().collect::<Vec<_>>());
     config.shell().set_verbose(options.flag_verbose);
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
-    let env = if options.flag_release {
-        "release"
-    } else {
-        "compile"
-    };
-
     let opts = CompileOptions {
-        env: env,
         config: config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
-        dev_deps: false,
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
         spec: options.flag_package.as_ref().map(|s| &s[..]),
-        lib_only: options.flag_lib,
         exec_engine: None,
+        mode: ops::CompileMode::Build,
+        release: options.flag_release,
+        filter: if options.flag_lib {
+            ops::CompileFilter::Only {
+                lib: true, bins: &[], examples: &[], benches: &[], tests: &[]
+            }
+        } else {
+            ops::CompileFilter::Everything
+        },
     };
 
     ops::compile(&root, &opts).map(|_| None).map_err(|err| {

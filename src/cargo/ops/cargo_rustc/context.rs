@@ -1,5 +1,5 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::hash_map::HashMap;
+use std::collections::{HashSet, HashMap};
 use std::str;
 use std::sync::Arc;
 use std::path::PathBuf;
@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use regex::Regex;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
+use core::{TargetKind, LibKind, Profiles, Metadata};
 use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
@@ -31,9 +32,11 @@ pub struct Context<'a, 'b: 'a> {
     pub compilation: Compilation,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
-    pub fingerprints: HashMap<(&'a PackageId, &'a Target, Kind), Fingerprint>,
+    pub fingerprints: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
+                              Fingerprint>,
+    pub compiled: HashSet<(&'a PackageId, &'a Target, &'a Profile)>,
+    pub build_config: BuildConfig,
 
-    env: &'a str,
     host: Layout,
     target: Option<Layout>,
     target_triple: String,
@@ -43,19 +46,19 @@ pub struct Context<'a, 'b: 'a> {
     target_dylib: Option<(String, String)>,
     target_exe: String,
     requirements: HashMap<(&'a PackageId, &'a str), Platform>,
-    build_config: BuildConfig,
+    profiles: &'a Profiles,
 }
 
 impl<'a, 'b: 'a> Context<'a, 'b> {
-    pub fn new(env: &'a str,
-               resolve: &'a Resolve,
+    pub fn new(resolve: &'a Resolve,
                sources: &'a SourceMap<'a>,
                deps: &'a PackageSet,
                config: &'a Config<'b>,
                host: Layout,
                target_layout: Option<Layout>,
                root_pkg: &Package,
-               build_config: BuildConfig) -> CargoResult<Context<'a, 'b>> {
+               build_config: BuildConfig,
+               profiles: &'a Profiles) -> CargoResult<Context<'a, 'b>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
         let (target_dylib, target_exe) = try!(Context::filename_parts(target));
@@ -65,9 +68,11 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             try!(Context::filename_parts(None))
         };
         let target_triple = target.unwrap_or(config.rustc_host()).to_string();
+        let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
+            Arc::new(Box::new(ProcessEngine) as Box<ExecEngine>)
+        });
         Ok(Context {
             target_triple: target_triple,
-            env: env,
             host: host,
             target: target_layout,
             resolve: resolve,
@@ -80,10 +85,12 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             host_exe: host_exe,
             requirements: HashMap::new(),
             compilation: Compilation::new(root_pkg),
-            build_state: Arc::new(BuildState::new(build_config.clone(), deps)),
+            build_state: Arc::new(BuildState::new(&build_config, deps)),
             build_config: build_config,
-            exec_engine: Arc::new(Box::new(ProcessEngine) as Box<ExecEngine>),
+            exec_engine: engine,
             fingerprints: HashMap::new(),
+            profiles: profiles,
+            compiled: HashSet::new(),
         })
     }
 
@@ -129,7 +136,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
-    pub fn prepare(&mut self, pkg: &'a Package) -> CargoResult<()> {
+    pub fn prepare(&mut self, pkg: &'a Package,
+                   targets: &[(&'a Target, &'a Profile)])
+                   -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
         try!(self.host.prepare().chain_error(|| {
@@ -146,9 +155,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             None => {}
         }
 
-        let targets = pkg.targets().iter();
-        for target in targets.filter(|t| t.profile().is_compile()) {
-            self.build_requirements(pkg, target, Platform::Target);
+        for &(target, profile) in targets {
+            self.build_requirements(pkg, target, profile, Platform::Target);
         }
 
         let jobs = self.jobs();
@@ -163,8 +171,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     }
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
-                          req: Platform) {
-        let req = if target.profile().is_for_host() {Platform::Plugin} else {req};
+                          profile: &Profile, req: Platform) {
+        let req = if target.for_host() {Platform::Plugin} else {req};
         match self.requirements.entry((pkg.package_id(), target.name())) {
             Occupied(mut entry) => match (*entry.get(), req) {
                 (Platform::Plugin, Platform::Plugin) |
@@ -177,13 +185,15 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Vacant(entry) => { entry.insert(req); }
         };
 
-        for &(pkg, dep) in self.dep_targets(pkg, target).iter() {
-            self.build_requirements(pkg, dep, req);
+        for &(pkg, dep, profile) in self.dep_targets(pkg, target, profile).iter() {
+            self.build_requirements(pkg, dep, profile, req);
         }
 
-        match pkg.targets().iter().find(|t| t.profile().is_custom_build()) {
+        match pkg.targets().iter().find(|t| t.is_custom_build()) {
             Some(custom_build) => {
-                self.build_requirements(pkg, custom_build, Platform::Plugin);
+                let profile = self.build_script_profile(pkg.package_id());
+                self.build_requirements(pkg, custom_build, profile,
+                                        Platform::Plugin);
             }
             None => {}
         }
@@ -191,7 +201,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     pub fn get_requirement(&self, pkg: &'a Package,
                            target: &'a Target) -> Platform {
-        let default = if target.profile().is_for_host() {
+        let default = if target.for_host() {
             Platform::Plugin
         } else {
             Platform::Target
@@ -215,7 +225,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// target.
     pub fn out_dir(&self, pkg: &Package, kind: Kind, target: &Target) -> PathBuf {
         let out_dir = self.layout(pkg, kind);
-        if target.profile().is_custom_build() {
+        if target.is_custom_build() {
             out_dir.build(pkg)
         } else if target.is_example() {
             out_dir.examples().to_path_buf()
@@ -246,31 +256,68 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         &self.target_triple
     }
 
-    /// Return the exact filename of the target.
-    pub fn target_filenames(&self, target: &Target) -> CargoResult<Vec<String>> {
-        let stem = target.file_stem();
+    /// Get the metadata for a target in a specific profile
+    pub fn target_metadata(&self, target: &Target, profile: &Profile)
+                           -> Option<Metadata> {
+        let metadata = target.metadata();
+        if target.is_lib() && profile.test {
+            // Libs and their tests are built in parallel, so we need to make
+            // sure that their metadata is different.
+            metadata.map(|m| m.clone()).map(|mut m| {
+                m.mix(&"test");
+                m
+            })
+        } else if target.is_bin() && profile.test {
+            // Make sure that the name of this test executable doesn't
+            // conflicts with a library that has the same name and is
+            // being tested
+            let mut metadata = self.resolve.root().generate_metadata();
+            metadata.mix(&format!("bin-{}", target.name()));
+            Some(metadata)
+        } else {
+            metadata.map(|m| m.clone())
+        }
+    }
+
+    /// Returns the file stem for a given target/profile combo
+    pub fn file_stem(&self, target: &Target, profile: &Profile) -> String {
+        match self.target_metadata(target, profile) {
+            Some(ref metadata) => format!("{}{}", target.name(),
+                                          metadata.extra_filename),
+            None => target.name().to_string(),
+        }
+    }
+
+    /// Return the filenames that the given target for the given profile will
+    /// generate.
+    pub fn target_filenames(&self, target: &Target, profile: &Profile)
+                            -> CargoResult<Vec<String>> {
+        let stem = self.file_stem(target, profile);
+        let suffix = if target.for_host() {&self.host_exe} else {&self.target_exe};
 
         let mut ret = Vec::new();
-        if target.is_example() || target.is_bin() ||
-           target.profile().is_test() {
-            ret.push(format!("{}{}", stem,
-                             if target.profile().is_for_host() {
-                                 &self.host_exe
-                             } else {
-                                 &self.target_exe
-                             }));
-        } else {
-            if target.is_dylib() {
-                let plugin = target.profile().is_for_host();
-                let kind = if plugin {Kind::Host} else {Kind::Target};
-                let (prefix, suffix) = try!(self.dylib(kind));
-                ret.push(format!("{}{}{}", prefix, stem, suffix));
+        match *target.kind() {
+            TargetKind::Example | TargetKind::Bin | TargetKind::CustomBuild |
+            TargetKind::Bench | TargetKind::Test => {
+                ret.push(format!("{}{}", stem, suffix));
             }
-            if target.is_rlib() {
-                ret.push(format!("lib{}.rlib", stem));
+            TargetKind::Lib(..) if profile.test => {
+                ret.push(format!("{}{}", stem, suffix));
             }
-            if target.is_staticlib() {
-                ret.push(format!("lib{}.a", stem));
+            TargetKind::Lib(ref libs) => {
+                for lib in libs.iter() {
+                    match *lib {
+                        LibKind::Dylib => {
+                            let plugin = target.for_host();
+                            let kind = if plugin {Kind::Host} else {Kind::Target};
+                            let (prefix, suffix) = try!(self.dylib(kind));
+                            ret.push(format!("{}{}{}", prefix, stem, suffix));
+                        }
+                        LibKind::Lib |
+                        LibKind::Rlib => ret.push(format!("lib{}.rlib", stem)),
+                        LibKind::StaticLib => ret.push(format!("lib{}.a", stem)),
+                    }
+                }
             }
         }
         assert!(ret.len() > 0);
@@ -279,10 +326,14 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, pkg: &Package, target: &Target)
-                       -> Vec<(&'a Package, &'a Target)> {
+    pub fn dep_targets(&self, pkg: &Package, target: &Target,
+                       profile: &Profile)
+                       -> Vec<(&'a Package, &'a Target, &'a Profile)> {
+        if profile.doc {
+            return self.doc_deps(pkg, target);
+        }
         let deps = match self.resolve.deps(pkg.package_id()) {
-            None => return vec!(),
+            None => return Vec::new(),
             Some(deps) => deps,
         };
         let mut ret = deps.map(|id| self.get_package(id)).filter(|dep| {
@@ -293,37 +344,85 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             // If this target is a build command, then we only want build
             // dependencies, otherwise we want everything *other than* build
             // dependencies.
-            let is_correct_dep =
-                target.profile().is_custom_build() == pkg_dep.is_build();
+            let is_correct_dep = target.is_custom_build() == pkg_dep.is_build();
 
             // If this dependency is *not* a transitive dependency, then it
             // only applies to test/example targets
             let is_actual_dep = pkg_dep.is_transitive() ||
-                                target.profile().is_test() ||
-                                target.is_example();
+                                target.is_test() ||
+                                target.is_example() ||
+                                profile.test;
 
             is_correct_dep && is_actual_dep
         }).filter_map(|pkg| {
-            pkg.targets().iter().find(|&t| self.is_relevant_target(t))
-               .map(|t| (pkg, t))
+            pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                (pkg, t, self.lib_profile(pkg.package_id()))
+            })
         }).collect::<Vec<_>>();
+
+        // If a target isn't actually a build script itself, then it depends on
+        // the build script if there is one.
+        if target.is_custom_build() { return ret }
+        let pkg = self.get_package(pkg.package_id());
+        if let Some(t) = pkg.targets().iter().find(|t| t.is_custom_build()) {
+            ret.push((pkg, t, self.build_script_profile(pkg.package_id())));
+        }
 
         // If this target is a binary, test, example, etc, then it depends on
         // the library of the same package. The call to `resolve.deps` above
         // didn't include `pkg` in the return values, so we need to special case
         // it here and see if we need to push `(pkg, pkg_lib_target)`.
-        if !target.profile().is_custom_build() &&
-           (target.is_bin() || target.is_example()) {
-            let pkg = self.get_package(pkg.package_id());
-            let target = pkg.targets().iter().filter(|t| {
-                t.is_lib() && t.profile().is_compile() &&
-                    (t.is_rlib() || t.is_dylib())
-            }).next();
-            if let Some(t) = target {
-                ret.push((pkg, t));
+        if target.is_lib() { return ret }
+        if let Some(t) = pkg.targets().iter().find(|t| t.linkable()) {
+            ret.push((pkg, t, self.lib_profile(pkg.package_id())));
+        }
+
+        // Integration tests/benchmarks require binaries to be built
+        if profile.test && (target.is_test() || target.is_bench()) {
+            ret.extend(pkg.targets().iter().filter(|t| t.is_bin())
+                          .map(|t| (pkg, t, self.lib_profile(pkg.package_id()))));
+        }
+        return ret
+    }
+
+    /// Returns the dependencies necessary to document a package
+    fn doc_deps(&self, pkg: &Package, target: &Target)
+                -> Vec<(&'a Package, &'a Target, &'a Profile)> {
+        let pkg = self.get_package(pkg.package_id());
+        let deps = self.resolve.deps(pkg.package_id()).into_iter();
+        let deps = deps.flat_map(|a| a).map(|id| {
+            self.get_package(id)
+        }).filter(|dep| {
+            pkg.dependencies().iter().find(|d| {
+                d.name() == dep.name()
+            }).unwrap().is_transitive()
+        }).filter_map(|dep| {
+            dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
+        });
+
+        // To document a library, we depend on dependencies actually being
+        // built. If we're documenting *all* libraries, then we also depend on
+        // the documentation of the library being built.
+        let mut ret = Vec::new();
+        for (dep, lib) in deps {
+            ret.push((dep, lib, self.lib_profile(dep.package_id())));
+            if self.build_config.doc_all {
+                ret.push((dep, lib, &self.profiles.doc));
             }
         }
-        return ret;
+
+        // Be sure to build/run the build script for documented libraries as
+        if let Some(t) = pkg.targets().iter().find(|t| t.is_custom_build()) {
+            ret.push((pkg, t, self.build_script_profile(pkg.package_id())));
+        }
+
+        // If we document a binary, we need the library available
+        if target.is_bin() {
+            if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
+                ret.push((pkg, t, self.lib_profile(pkg.package_id())));
+            }
+        }
+        return ret
     }
 
     /// Gets a package for the given package id.
@@ -331,26 +430,6 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         self.package_set.iter()
             .find(|pkg| id == pkg.package_id())
             .expect("Should have found package")
-    }
-
-    pub fn env(&self) -> &str {
-        // The "doc-all" environment just means to document everything (see
-        // below), but we want to canonicalize that the the "doc" profile
-        // environment, so do that here.
-        if self.env == "doc-all" {"doc"} else {self.env}
-    }
-
-    pub fn is_relevant_target(&self, target: &Target) -> bool {
-        target.is_lib() && match self.env {
-            "doc" | "test" => target.profile().is_compile(),
-            // doc-all == document everything, so look for doc targets and
-            //            compile targets in dependencies
-            "doc-all" => target.profile().is_compile() ||
-                         (target.profile().env() == "doc" &&
-                          target.profile().is_doc()),
-            _ => target.profile().env() == self.env &&
-                 !target.profile().is_test(),
-        }
     }
 
     /// Get the user-specified linker for a particular host or target
@@ -379,21 +458,18 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
-    /// Calculate the actual profile to use for a target's compliation.
-    ///
-    /// This may involve overriding some options such as debug information,
-    /// rpath, opt level, etc.
-    pub fn profile(&self, target: &Target) -> Profile {
-        let mut profile = target.profile().clone();
-        let root_package = self.get_package(self.resolve.root());
-        for target in root_package.manifest().targets().iter() {
-            let root_profile = target.profile();
-            if root_profile.env() != profile.env() { continue }
-            profile = profile.set_opt_level(root_profile.opt_level())
-                             .set_debug(root_profile.debug())
-                             .set_rpath(root_profile.rpath())
+    pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
+        if self.build_config.release {
+            &self.profiles.release
+        } else {
+            &self.profiles.dev
         }
-        profile
+    }
+
+    pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
+        // TODO: should build scripts always be built with a dev
+        //       profile? How is this controlled at the CLI layer?
+        &self.profiles.dev
     }
 }
 
