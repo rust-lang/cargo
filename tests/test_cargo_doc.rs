@@ -245,3 +245,20 @@ test!(doc_dash_p {
 {compiling} a v0.0.1 (file://[..])
 ", compiling = COMPILING).as_slice()));
 });
+
+test!(doc_same_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/main.rs", "fn main() {}")
+        .file("examples/main.rs", "fn main() {}")
+        .file("tests/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+});
