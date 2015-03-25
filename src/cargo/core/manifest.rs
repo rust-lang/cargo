@@ -322,6 +322,7 @@ impl Target {
     }
 
     pub fn name(&self) -> &str { &self.name }
+    pub fn crate_name(&self) -> String { self.name.replace("-", "_") }
     pub fn src_path(&self) -> &Path { &self.src_path }
     pub fn metadata(&self) -> Option<&Metadata> { self.metadata.as_ref() }
     pub fn kind(&self) -> &TargetKind { &self.kind }
@@ -331,6 +332,10 @@ impl Target {
     pub fn doctested(&self) -> bool { self.doctest }
     pub fn for_host(&self) -> bool { self.for_host }
     pub fn benched(&self) -> bool { self.benched }
+
+    pub fn allows_underscores(&self) -> bool {
+        self.is_bin() || self.is_example() || self.is_custom_build()
+    }
 
     pub fn is_lib(&self) -> bool {
         match self.kind {

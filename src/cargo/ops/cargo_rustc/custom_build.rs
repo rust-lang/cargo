@@ -46,9 +46,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     };
 
     // Building the command to execute
-    let profile = cx.build_script_profile(pkg.package_id());
-    let to_exec = try!(cx.target_filenames(target, profile))[0].clone();
-    let to_exec = script_output.join(&to_exec);
+    let to_exec = script_output.join(target.name());
 
     // Start preparing the process to execute, starting out with some
     // environment variables. Note that the profile-related environment
