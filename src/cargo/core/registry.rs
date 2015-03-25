@@ -110,11 +110,15 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
             // slightly different precise version listed.
-            Some(&(_, Kind::Locked)) => return Ok(()),
+            Some(&(_, Kind::Locked)) => {
+                debug!("load/locked   {}", namespace);
+                return Ok(())
+            }
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
             Some(&(ref previous, _)) if previous.precise().is_none() => {
+                debug!("load/precise  {}", namespace);
                 return Ok(())
             }
 
@@ -123,10 +127,14 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
             // updating this source.
             Some(&(ref previous, _)) => {
                 if previous.precise() == namespace.precise() {
+                    debug!("load/match    {}", namespace);
                     return Ok(())
                 }
+                debug!("load/mismatch {}", namespace);
             }
-            None => {}
+            None => {
+                debug!("load/missing  {}", namespace);
+            }
         }
 
         try!(self.load(namespace, Kind::Normal));

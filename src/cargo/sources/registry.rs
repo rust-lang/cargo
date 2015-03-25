@@ -298,13 +298,14 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     /// No action is taken if the package is already downloaded.
     fn download_package(&mut self, pkg: &PackageId, url: &Url)
                         -> CargoResult<PathBuf> {
-        // TODO: should discover from the S3 redirect
+        // TODO: should discover filename from the S3 redirect
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let dst = self.cache_path.join(&filename);
         if fs::metadata(&dst).is_ok() { return Ok(dst) }
         try!(self.config.shell().status("Downloading", pkg));
 
         try!(fs::create_dir_all(dst.parent().unwrap()));
+        let expected_hash = try!(self.hash(pkg));
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
@@ -320,23 +321,31 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         }
 
         // Verify what we just downloaded
-        let expected = self.hashes.get(&(pkg.name().to_string(),
-                                         pkg.version().to_string()));
-        let expected = try!(expected.chain_error(|| {
-            internal(format!("no hash listed for {}", pkg))
-        }));
         let actual = {
             let mut state = Sha256::new();
             state.update(resp.get_body());
             state.finish()
         };
-        if actual.to_hex() != *expected {
+        if actual.to_hex() != expected_hash {
             return Err(human(format!("Failed to verify the checksum of `{}`",
                                      pkg)))
         }
 
         try!(try!(File::create(&dst)).write_all(resp.get_body()));
         Ok(dst)
+    }
+
+    /// Return the hash listed for a specified PackageId.
+    fn hash(&mut self, pkg: &PackageId) -> CargoResult<String> {
+        let key = (pkg.name().to_string(), pkg.version().to_string());
+        if let Some(s) = self.hashes.get(&key) {
+            return Ok(s.clone())
+        }
+        // Ok, we're missing the key, so parse the index file to load it.
+        try!(self.summaries(pkg.name()));
+        self.hashes.get(&key).chain_error(|| {
+            internal(format!("no hash listed for {}", pkg))
+        }).map(|s| s.clone())
     }
 
     /// Unpacks a downloaded package into a location where it's ready to be
