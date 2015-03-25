@@ -132,6 +132,38 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                     .display().to_string();
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
 
+    for &(target, profile) in targets {
+        for filename in try!(cx.target_filenames(target, profile)).iter() {
+            let dst = cx.out_dir(pkg, Kind::Target, target).join(filename);
+            if profile.test {
+                cx.compilation.tests.push((target.name().to_string(), dst));
+            } else if target.is_bin() || target.is_example() {
+                cx.compilation.binaries.push(dst);
+            } else if target.is_lib() {
+                let pkgid = pkg.package_id().clone();
+                cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
+                  .push((target.crate_name(), dst));
+                if !target.is_lib() { continue }
+
+                // Include immediate lib deps as well
+                for dep in cx.dep_targets(pkg, target, profile).iter() {
+                    let (pkg, target, profile) = *dep;
+                    let pkgid = pkg.package_id();
+                    if !target.is_lib() { continue }
+                    if profile.doc { continue }
+                    if cx.compilation.libraries.contains_key(&pkgid) { continue }
+
+                    let v = try!(cx.target_filenames(target, profile));
+                    let v = v.into_iter().map(|f| {
+                        (target.crate_name(),
+                         cx.out_dir(pkg, Kind::Target, target).join(f))
+                    }).collect::<Vec<_>>();
+                    cx.compilation.libraries.insert(pkgid.clone(), v);
+                }
+            }
+        }
+    }
+
     if let Some(feats) = cx.resolve.features(pkg.package_id()) {
         cx.compilation.features.extend(feats.iter().cloned());
     }

@@ -31,8 +31,11 @@ pub fn run_tests(manifest_path: &Path,
         let mut p = try!(compile.rustdoc_process(&compile.package));
         p.arg("--test").arg(lib)
          .arg("--crate-name").arg(&crate_name)
-         .arg("-L").arg(&compile.root_output)
-         .arg("-L").arg(&compile.deps_output)
+         .arg("-L").arg(&{
+             let mut arg = OsString::from("dependency=");
+             arg.push(&compile.deps_output);
+             arg
+         })
          .cwd(compile.package.root());
 
         if test_args.len() > 0 {
@@ -43,9 +46,9 @@ pub fn run_tests(manifest_path: &Path,
             p.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
         }
 
-        for (pkg, libs) in compile.libraries.iter() {
-            for lib in libs.iter() {
-                let mut arg = OsString::from(pkg.name());
+        for (_, libs) in compile.libraries.iter() {
+            for &(ref name, ref lib) in libs.iter() {
+                let mut arg = OsString::from(name);
                 arg.push("=");
                 arg.push(lib);
                 p.arg("--extern").arg(&arg);
