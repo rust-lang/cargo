@@ -30,7 +30,7 @@ test!(simple {
         .file("src/bar.txt", ""); // should be ignored when packaging
 
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir}[..])
@@ -38,7 +38,7 @@ test!(simple {
         packaging = PACKAGING,
         verifying = VERIFYING,
         compiling = COMPILING,
-        dir = p.url()).as_slice()));
+        dir = p.url())));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
     assert_that(p.cargo("package").arg("-l"),
                 execs().with_status(0).with_stdout("\
@@ -74,7 +74,7 @@ test!(metadata_warning {
             fn main() {}
         "#);
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir}[..])
@@ -82,7 +82,7 @@ test!(metadata_warning {
         packaging = PACKAGING,
         verifying = VERIFYING,
         compiling = COMPILING,
-        dir = p.url()).as_slice())
+        dir = p.url()))
                 .with_stderr("\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository. See \
@@ -100,7 +100,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
             fn main() {}
         "#);
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir}[..])
@@ -108,7 +108,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         packaging = PACKAGING,
         verifying = VERIFYING,
         compiling = COMPILING,
-        dir = p.url()).as_slice())
+        dir = p.url()))
                 .with_stderr("\
 warning: manifest has no description, documentation, homepage or repository. See \
 http://doc.crates.io/manifest.html#package-metadata for more info."));
@@ -127,7 +127,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
             fn main() {}
         "#);
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir}[..])
@@ -135,7 +135,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         packaging = PACKAGING,
         verifying = VERIFYING,
         compiling = COMPILING,
-        dir = p.url()).as_slice()));
+        dir = p.url())));
 });
 
 test!(package_verbose {
@@ -161,15 +161,14 @@ test!(package_verbose {
     let mut cargo = process(&cargo_dir().join("cargo")).unwrap();
     cargo.cwd(&root).env("HOME", &paths::home());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
-    assert_that(cargo.arg("package").arg("-v")
-                                                    .arg("--no-verify"),
-                execs().with_status(0).with_stdout(format!("\
+    assert_that(cargo.arg("package").arg("-v").arg("--no-verify"),
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ([..])
 {archiving} [..]
 {archiving} [..]
 ",
         packaging = PACKAGING,
-        archiving = ARCHIVING).as_slice()));
+        archiving = ARCHIVING)));
 });
 
 test!(package_verification {
@@ -186,7 +185,7 @@ test!(package_verification {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
     assert_that(p.cargo("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir}[..])
@@ -194,7 +193,7 @@ test!(package_verification {
         packaging = PACKAGING,
         verifying = VERIFYING,
         compiling = COMPILING,
-        dir = p.url()).as_slice()));
+        dir = p.url())));
 });
 
 test!(exclude {
@@ -213,11 +212,11 @@ test!(exclude {
         .file("src/bar.txt", "");
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ([..])
 {archiving} [..]
 {archiving} [..]
-", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
+", packaging = PACKAGING, archiving = ARCHIVING)));
 });
 
 test!(include {
@@ -237,12 +236,12 @@ test!(include {
         .file("src/bar.txt", ""); // should be ignored when packaging
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ([..])
 {archiving} [..]
 {archiving} [..]
 {archiving} [..]
-", packaging = PACKAGING, archiving = ARCHIVING).as_slice()));
+", packaging = PACKAGING, archiving = ARCHIVING)));
 });
 
 test!(package_lib_with_bin {

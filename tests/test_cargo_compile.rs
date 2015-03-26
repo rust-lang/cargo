@@ -14,8 +14,8 @@ fn setup() {
 
 test!(cargo_compile_simple {
     let p = project("foo")
-        .file("Cargo.toml", &basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]).as_slice());
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
@@ -26,8 +26,8 @@ test!(cargo_compile_simple {
 
 test!(cargo_compile_manifest_path {
     let p = project("foo")
-        .file("Cargo.toml", &basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]).as_slice());
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
     assert_that(p.cargo_process("build")
                  .arg("--manifest-path").arg("foo/Cargo.toml")
@@ -127,7 +127,7 @@ Could not find `Cargo.toml` in `[..]` or any parent directory
 
 test!(cargo_compile_with_invalid_code {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", "invalid rust code!");
 
     assert_that(p.cargo_process("build"),
@@ -158,10 +158,10 @@ test!(cargo_compile_with_invalid_code_in_deps {
         "#)
         .file("src/main.rs", "invalid rust code!");
     let bar = project("bar")
-        .file("Cargo.toml", basic_bin_manifest("bar").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("bar"))
         .file("src/lib.rs", "invalid rust code!");
     let baz = project("baz")
-        .file("Cargo.toml", basic_bin_manifest("baz").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("baz"))
         .file("src/lib.rs", "invalid rust code!");
     bar.build();
     baz.build();
@@ -170,7 +170,7 @@ test!(cargo_compile_with_invalid_code_in_deps {
 
 test!(cargo_compile_with_warnings_in_the_root_package {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", "fn main() {} fn dead() {}");
 
     assert_that(p.cargo_process("build"),
@@ -202,7 +202,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -224,7 +224,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     assert_that(p.cargo_process("build"),
         execs()
-        .with_stdout(format!("{} bar v0.5.0 ({})\n\
+        .with_stdout(&format!("{} bar v0.5.0 ({})\n\
                               {} foo v0.5.0 ({})\n",
                              COMPILING, p.url(),
                              COMPILING, p.url()))
@@ -257,7 +257,7 @@ test!(cargo_compile_with_nested_deps_inferred {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -315,7 +315,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
             name = "foo"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -374,7 +374,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -442,7 +442,7 @@ test!(cargo_compile_with_nested_deps_longhand {
             name = "foo"
         "#)
         .file("src/foo.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -509,12 +509,12 @@ test!(cargo_compile_with_dep_name_mismatch {
 
             path = "bar"
         "#)
-        .file("src/foo.rs", main_file(r#""i am foo""#, &["bar"]).as_slice())
-        .file("bar/Cargo.toml", basic_bin_manifest("bar").as_slice())
-        .file("bar/src/bar.rs", main_file(r#""i am bar""#, &[]).as_slice());
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &["bar"]))
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/bar.rs", &main_file(r#""i am bar""#, &[]));
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(format!(
+                execs().with_status(101).with_stderr(&format!(
 r#"no matching package named `notquitebar` found (required by `foo`)
 location searched: {proj_dir}
 version required: *
@@ -605,8 +605,8 @@ test!(crate_version_env_vars {
 
     println!("bin");
     assert_that(process(&p.bin("foo")).unwrap(),
-                execs().with_stdout(format!("0-5-1 @ alpha.1 in {}\n",
-                                            p.root().display()).as_slice()));
+                execs().with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
+                                            p.root().display())));
 
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
@@ -644,8 +644,8 @@ test!(many_crate_types_old_style_lib_location {
         }
     }).collect();
     files.sort();
-    let file0 = files[0].as_slice();
-    let file1 = files[1].as_slice();
+    let file0 = &files[0];
+    let file1 = &files[1];
     println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
     assert!(file0.ends_with(env::consts::DLL_SUFFIX) ||
@@ -682,8 +682,8 @@ test!(many_crate_types_correct {
         }
     }).collect();
     files.sort();
-    let file0 = files[0].as_slice();
-    let file1 = files[1].as_slice();
+    let file0 = &files[0];
+    let file1 = &files[1];
     println!("{} {}", file0, file1);
     assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
     assert!(file0.ends_with(env::consts::DLL_SUFFIX) ||
@@ -765,8 +765,8 @@ test!(ignore_broken_symlinks {
     if cfg!(windows) { return }
 
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
-        .file("src/foo.rs", main_file(r#""i am foo""#, &[]).as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar");
 
     assert_that(p.cargo_process("build"), execs());
@@ -810,7 +810,7 @@ test!(lto_build {
         "#)
         .file("src/main.rs", "fn main() {}");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
@@ -838,7 +838,7 @@ test!(verbose_build {
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
@@ -866,7 +866,7 @@ test!(verbose_release_build {
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
@@ -910,7 +910,7 @@ test!(verbose_release_build_deps {
         "#)
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.0 ({url})
 {running} `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
@@ -939,7 +939,7 @@ test!(verbose_release_build_deps {
                     dir = p.root().display(),
                     url = p.url(),
                     prefix = env::consts::DLL_PREFIX,
-                    suffix = env::consts::DLL_SUFFIX).as_slice()));
+                    suffix = env::consts::DLL_SUFFIX)));
 });
 
 test!(explicit_examples {
@@ -1137,11 +1137,11 @@ test!(lib_with_standard_name {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} syntax v0.0.1 ({dir})
 ",
                        compiling = COMPILING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(simple_staticlib {
@@ -1267,7 +1267,7 @@ test!(freshness_ignores_excluded {
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 
@@ -1296,11 +1296,11 @@ test!(rebuild_preserves_out_dir {
         "#)
         .file("build.rs", r#"
             use std::env;
-            use std::old_io::File;
-            use std::old_path::{Path, GenericPath};
+            use std::fs::File;
+            use std::path::Path;
 
             fn main() {
-                let path = Path::new(env::var("OUT_DIR").unwrap()).join("foo");
+                let path = Path::new(&env::var("OUT_DIR").unwrap()).join("foo");
                 if env::var_os("FIRST").is_some() {
                     File::create(&path).unwrap();
                 } else {
@@ -1314,14 +1314,14 @@ test!(rebuild_preserves_out_dir {
 
     assert_that(foo.cargo("build").env("FIRST", "1"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.0 ({url})
 ", compiling = COMPILING, url = foo.url())));
 });
@@ -1434,7 +1434,7 @@ test!(cargo_platform_specific_dependency {
             path = "bar"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 
@@ -1474,7 +1474,7 @@ test!(cargo_platform_specific_dependency {
             path = "bar"
         "#)
         .file("src/main.rs",
-              main_file(r#""{}", bar::gimme()"#, &["bar"]).as_slice())
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
 

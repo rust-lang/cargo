@@ -20,7 +20,7 @@ test!(simple {
         "#);
 
     assert_that(p.cargo_process("run"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}debug{sep}foo[..]`
 hello
@@ -28,7 +28,7 @@ hello
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
     assert_that(&p.bin("foo"), existing_file());
 });
 
@@ -42,8 +42,8 @@ test!(simple_with_args {
         "#)
         .file("src/main.rs", r#"
             fn main() {
-                assert_eq!(std::os::args()[1].as_slice(), "hello");
-                assert_eq!(std::os::args()[2].as_slice(), "world");
+                assert_eq!(std::env::args().nth(1).unwrap(), "hello");
+                assert_eq!(std::env::args().nth(2).unwrap(), "world");
             }
         "#);
 
@@ -60,7 +60,8 @@ test!(exit_code {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            fn main() { std::os::set_exit_status(2); }
+            #![feature(exit_status)]
+            fn main() { std::env::set_exit_status(2); }
         "#);
 
     assert_that(p.cargo_process("run"),
@@ -121,7 +122,7 @@ test!(specify_name {
         "#);
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `rustc src[..]lib.rs [..]`
 {running} `rustc src[..]a.rs [..]`
@@ -131,17 +132,17 @@ hello a.rs
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
 
     assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.1 ([..])
 {running} `rustc src[..]b.rs [..]`
 {running} `target{sep}debug{sep}b[..]`
 hello b.rs
 ",
         running = RUNNING, compiling = COMPILING,
-        sep = SEP).as_slice()));
+        sep = SEP)));
 });
 
 test!(run_example {
@@ -161,7 +162,7 @@ test!(run_example {
         "#);
 
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}debug{sep}examples{sep}a[..]`
 example
@@ -169,7 +170,7 @@ example
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
 });
 
 test!(either_name_or_example {
@@ -214,7 +215,7 @@ test!(one_bin_multiple_examples {
         "#);
 
     assert_that(p.cargo_process("run"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}debug{sep}main[..]`
 hello main.rs
@@ -222,7 +223,7 @@ hello main.rs
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
 });
 
 test!(example_with_release_flag {
@@ -269,7 +270,7 @@ test!(example_with_release_flag {
         "#);
 
     assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
@@ -295,10 +296,10 @@ fast2
         running = RUNNING,
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
 
     assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
@@ -324,7 +325,7 @@ slow2
         running = RUNNING,
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
 });
 
 test!(run_dylib_dep {
@@ -371,14 +372,14 @@ test!(release_works {
         "#);
 
     assert_that(p.cargo_process("run").arg("--release"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `target{sep}release{sep}foo[..]`
 ",
         compiling = COMPILING,
         running = RUNNING,
         dir = path2url(p.root()),
-        sep = SEP).as_slice()));
+        sep = SEP)));
     assert_that(&p.release_bin("foo"), existing_file());
 });
 

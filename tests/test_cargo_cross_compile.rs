@@ -12,7 +12,7 @@ fn setup() {
 fn disabled() -> bool {
     // First, disable if ./configure requested so
     match env::var("CFG_DISABLE_CROSS_TESTS") {
-        Ok(ref s) if s.as_slice() == "1" => return true,
+        Ok(ref s) if *s == "1" => return true,
         _ => {}
     }
 
@@ -41,11 +41,11 @@ test!(simple_cross {
             authors = []
             build = "build.rs"
         "#)
-        .file("build.rs", format!(r#"
+        .file("build.rs", &format!(r#"
             fn main() {{
-                assert_eq!(std::env::var("TARGET").unwrap().as_slice(), "{}");
+                assert_eq!(std::env::var("TARGET").unwrap(), "{}");
             }}
-        "#, alternate()).as_slice())
+        "#, alternate()))
         .file("src/main.rs", r#"
             use std::env;
             fn main() {
@@ -263,12 +263,12 @@ test!(linker_and_ar {
 
     let target = alternate();
     let p = project("foo")
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             [target.{}]
             ar = "my-ar-tool"
             linker = "my-linker-tool"
-        "#, target).as_slice())
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        "#, target))
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             use std::env;
             fn main() {
@@ -279,7 +279,7 @@ test!(linker_and_ar {
     assert_that(p.cargo_process("build").arg("--target").arg(target)
                                               .arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target}[..]debug \
@@ -294,7 +294,7 @@ test!(linker_and_ar {
                             dir = p.root().display(),
                             url = p.url(),
                             target = target,
-                            ).as_slice()));
+                            )));
 });
 
 test!(plugin_with_extra_dylib_dep {
@@ -393,7 +393,7 @@ test!(cross_tests {
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(target),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.0 ({foo})
 {running} target[..]{triple}[..]bar-[..]
 
@@ -453,36 +453,38 @@ test!(cross_with_a_build_script {
             authors = []
             build = 'build.rs'
         "#)
-        .file("build.rs", format!(r#"
+        .file("build.rs", &format!(r#"
+            #![feature(convert)]
             use std::env;
-            use std::old_path::{{Path, GenericPath}};
+            use std::path::PathBuf;
             fn main() {{
-                assert_eq!(env::var("TARGET").unwrap().as_slice(), "{0}");
-                let mut path = Path::new(env::var("OUT_DIR").unwrap());
-                assert_eq!(path.filename().unwrap(), b"out");
+                assert_eq!(env::var("TARGET").unwrap(), "{0}");
+                let mut path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+                assert_eq!(path.file_name().unwrap().to_str().unwrap(), "out");
                 path.pop();
-                assert!(path.filename().unwrap().starts_with(b"foo-"));
+                assert!(path.file_name().unwrap().to_str().unwrap()
+                            .starts_with("foo-"));
                 path.pop();
-                assert_eq!(path.filename().unwrap(), b"build");
+                assert_eq!(path.file_name().unwrap().to_str().unwrap(), "build");
                 path.pop();
-                assert_eq!(path.filename().unwrap(), b"debug");
+                assert_eq!(path.file_name().unwrap().to_str().unwrap(), "debug");
                 path.pop();
-                assert_eq!(path.filename().unwrap(), b"{0}");
+                assert_eq!(path.file_name().unwrap().to_str().unwrap(), "{0}");
                 path.pop();
-                assert_eq!(path.filename().unwrap(), b"target");
+                assert_eq!(path.file_name().unwrap().to_str().unwrap(), "target");
             }}
-        "#, target).as_slice())
+        "#, target))
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.0 (file://[..])
 {running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..]`
 {running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
 {running} `rustc src[..]main.rs [..] --target {target} [..]`
 ", compiling = COMPILING, running = RUNNING, target = target,
-   dir = p.root().display()).as_slice()));
+   dir = p.root().display())));
 });
 
 test!(build_script_needed_for_host_and_target {
@@ -545,7 +547,7 @@ test!(build_script_needed_for_host_and_target {
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} d1 v0.0.0 (file://{dir})
 {running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
@@ -564,7 +566,7 @@ test!(build_script_needed_for_host_and_target {
 {running} `rustc src[..]main.rs [..] --target {target} [..] \
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
-   dir = p.root().display()).as_slice()));
+   dir = p.root().display())));
 });
 
 test!(build_deps_for_the_right_arch {
@@ -668,7 +670,7 @@ test!(plugin_build_script_right_arch {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ([..])
 {running} `rustc build.rs [..]`
 {running} `[..]build-script-build[..]`

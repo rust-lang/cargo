@@ -164,7 +164,7 @@ impl<'a> Config<'a> {
     }
 
     fn load_values(&self) -> CargoResult<()> {
-        let mut cfg = CV::Table(HashMap::new(), PathBuf::new("."));
+        let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
         try!(walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
@@ -389,7 +389,7 @@ impl ConfigValue {
 }
 
 fn homedir() -> Option<PathBuf> {
-    let cargo_home = env::var_os("CARGO_HOME").map(|p| PathBuf::new(&p));
+    let cargo_home = env::var_os("CARGO_HOME").map(PathBuf::from);
     let user_home = env::home_dir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }

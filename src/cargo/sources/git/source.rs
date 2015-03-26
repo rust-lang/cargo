@@ -127,7 +127,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
     match url.scheme_data {
         url::SchemeData::Relative(ref mut rel) => {
             let needs_chopping = {
-                let last = rel.path.last().map(|s| s.as_slice()).unwrap_or("");
+                let last = rel.path.last().map(|s| &s[..]).unwrap_or("");
                 last.ends_with(".git")
             };
             if needs_chopping {

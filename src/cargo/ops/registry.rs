@@ -239,7 +239,7 @@ pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     map.insert("token".to_string(), ConfigValue::String(token, p));
 
     config::set_config(config, Location::Global, "registry",
-                       ConfigValue::Table(map, PathBuf::new(".")))
+                       ConfigValue::Table(map, PathBuf::from(".")))
 }
 
 pub struct OwnersOptions {
@@ -269,7 +269,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     match opts.to_add {
         Some(ref v) => {
-            let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
+            let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
             try!(config.shell().status("Owner", format!("adding `{:#?}` to `{}`",
                                                         v, name)));
             try!(registry.add_owners(&name, &v).map_err(|e| {
@@ -281,7 +281,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     match opts.to_remove {
         Some(ref v) => {
-            let v = v.iter().map(|s| s.as_slice()).collect::<Vec<_>>();
+            let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
             try!(config.shell().status("Owner", format!("removing `{:?}` from `{}`",
                                                         v, name)));
             try!(registry.remove_owners(&name, &v).map_err(|e| {

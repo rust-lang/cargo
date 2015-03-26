@@ -21,9 +21,9 @@ test!(http_auth_offered {
         let valid = ["GET", "Authorization", "Accept", "User-Agent"];
         rdr.lines().map(|s| s.unwrap())
            .take_while(|s| s.len() > 2)
-           .map(|s| s.as_slice().trim().to_string())
+           .map(|s| s.trim().to_string())
            .filter(|s| {
-               valid.iter().any(|prefix| s.as_slice().starts_with(*prefix))
+               valid.iter().any(|prefix| s.starts_with(*prefix))
             })
            .collect()
     }
@@ -78,7 +78,7 @@ test!(http_auth_offered {
     let config = paths::home().join(".gitconfig");
     let mut config = git2::Config::open(&config).unwrap();
     config.set_str("credential.helper",
-                   script.display().to_string().as_slice()).unwrap();
+                   &script.display().to_string()).unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
@@ -93,13 +93,13 @@ test!(http_auth_offered {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stdout(format!("\
+                execs().with_status(101).with_stdout(&format!("\
 {updating} git repository `http://{addr}/foo/bar`
 ",
         updating = UPDATING,
         addr = addr,
-        ).as_slice())
-                      .with_stderr(format!("\
+        ))
+                      .with_stderr(&format!("\
 Unable to update http://{addr}/foo/bar
 
 Caused by:
@@ -134,13 +134,13 @@ test!(https_something_happens {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stdout(format!("\
+                execs().with_status(101).with_stdout(&format!("\
 {updating} git repository `https://{addr}/foo/bar`
 ",
         updating = UPDATING,
         addr = addr,
-        ).as_slice())
-                      .with_stderr(format!("\
+        ))
+                      .with_stderr(&format!("\
 Unable to update https://{addr}/foo/bar
 
 Caused by:
@@ -169,7 +169,7 @@ test!(ssh_something_happens {
     });
 
     let p = project("foo")
-        .file("Cargo.toml", format!(r#"
+        .file("Cargo.toml", &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -177,17 +177,17 @@ test!(ssh_something_happens {
 
             [dependencies.bar]
             git = "ssh://127.0.0.1:{}/foo/bar"
-        "#, addr.port()).as_slice())
+        "#, addr.port()))
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stdout(format!("\
+                execs().with_status(101).with_stdout(&format!("\
 {updating} git repository `ssh://{addr}/foo/bar`
 ",
         updating = UPDATING,
         addr = addr,
-        ).as_slice())
-                      .with_stderr(format!("\
+        ))
+                      .with_stderr(&format!("\
 Unable to update ssh://{addr}/foo/bar
 
 Caused by:

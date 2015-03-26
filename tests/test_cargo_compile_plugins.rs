@@ -138,18 +138,18 @@ test!(plugin_with_dynamic_native_dependency {
             plugin = true
         "#)
         .file("bar/build.rs", r#"
-            use std::old_io::fs;
-            use std::old_path::{Path, GenericPath};
-            use std::os;
+            #![feature(convert)]
+            use std::path::PathBuf;
+            use std::env;
 
             fn main() {
-                let src = Path::new(os::getenv("SRC").unwrap());
-                println!("cargo:rustc-flags=-L {}", src.dir_path().display());
+                let src = PathBuf::from(env::var("SRC").unwrap());
+                println!("cargo:rustc-flags=-L {}", src.parent().unwrap()
+                                                       .display());
             }
         "#)
         .file("bar/src/lib.rs", &format!(r#"
-            #![feature(plugin_registrar)]
-
+            #![feature(plugin_registrar, rustc_private)]
             extern crate rustc;
 
             use rustc::plugin::Registry;

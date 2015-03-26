@@ -409,7 +409,7 @@ fn scrape_target_config(config: &Config, triple: &str)
                         output.library_links.extend(a.into_iter().map(|v| v.0));
                     } else if k == "rustc-link-search" {
                         output.library_paths.extend(a.into_iter().map(|v| {
-                            PathBuf::new(&v.0)
+                            PathBuf::from(&v.0)
                         }));
                     } else {
                         try!(config.expected("string", &k,

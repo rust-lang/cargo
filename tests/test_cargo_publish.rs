@@ -50,7 +50,7 @@ test!(simple {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish").arg("--no-verify"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {updating} registry `{reg}`
 {packaging} foo v0.0.1 ({dir})
 {uploading} foo v0.0.1 ({dir})
@@ -59,7 +59,7 @@ test!(simple {
         uploading = UPLOADING,
         packaging = PACKAGING,
         dir = p.url(),
-        reg = registry()).as_slice()));
+        reg = registry())));
 
     let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball

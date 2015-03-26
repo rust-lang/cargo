@@ -23,12 +23,6 @@ pub trait CargoError: Error + Send + 'static {
     fn cargo_cause(&self) -> Option<&CargoError>{ None }
 }
 
-impl fmt::Debug for Box<CargoError> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
 impl Error for Box<CargoError> {
     fn description(&self) -> &str { (**self).description() }
     fn cause(&self) -> Option<&Error> { (**self).cause() }
@@ -47,6 +41,7 @@ pub trait ChainError<T> {
                          where E: CargoError, F: FnOnce() -> E;
 }
 
+#[derive(Debug)]
 struct ChainedError<E> {
     error: E,
     cause: Box<CargoError>,
@@ -60,6 +55,7 @@ impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
 }
 
 impl<T, E: CargoError + 'static> ChainError<T> for Result<T, E> {
+    #[allow(trivial_casts)]
     fn chain_error<E2: 'static, C>(self, callback: C) -> CargoResult<T>
                          where E2: CargoError, C: FnOnce() -> E2 {
         self.map_err(move |err| {
@@ -77,7 +73,7 @@ impl<T> ChainError<T> for Box<CargoError> {
         Err(Box::new(ChainedError {
             error: callback(),
             cause: self,
-        }) as Box<CargoError>)
+        }))
     }
 }
 
@@ -86,7 +82,7 @@ impl<T> ChainError<T> for Option<T> {
                          where E: CargoError, C: FnOnce() -> E {
         match self {
             Some(t) => Ok(t),
-            None => Err(Box::new(callback()) as Box<CargoError>),
+            None => Err(Box::new(callback())),
         }
     }
 }
@@ -118,6 +114,7 @@ pub struct ProcessError {
 
 impl Error for ProcessError {
     fn description(&self) -> &str { &self.desc }
+    #[allow(trivial_casts)]
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|s| s as &Error)
     }
@@ -177,6 +174,7 @@ impl CargoError for ConcreteCargoError {
 // =============================================================================
 // Human errors
 
+#[derive(Debug)]
 pub struct Human<E>(pub E);
 
 impl<E: Error> Error for Human<E> {
@@ -225,7 +223,7 @@ impl CliError {
     }
 
     pub fn from_error<E: CargoError>(error: E, code: i32) -> CliError {
-        let error = Box::new(error) as Box<CargoError>;
+        let error = Box::new(error);
         CliError::from_boxed(error, code)
     }
 
@@ -355,7 +353,7 @@ pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
     Box::new(ConcreteCargoError {
         description: error.to_string(),
         detail: None,
-        cause: Some(Box::new(cause) as Box<Error + Send>),
+        cause: Some(Box::new(cause)),
         is_human: true
     })
 }

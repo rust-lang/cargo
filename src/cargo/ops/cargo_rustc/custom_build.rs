@@ -131,7 +131,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         {
             let build_state = build_state.outputs.lock().unwrap();
             for &(ref name, ref id) in lib_deps.iter() {
-                let data = &build_state[(id.clone(), kind)].metadata;
+                let data = &build_state[&(id.clone(), kind)].metadata;
                 for &(ref key, ref value) in data.iter() {
                     p.env(&format!("DEP_{}_{}", super::envify(name),
                                    super::envify(key)), value);
@@ -286,7 +286,7 @@ impl BuildOutput {
             } else if key == "rustc-link-lib" {
                 library_links.push(value.to_string());
             } else if key == "rustc-link-search" {
-                library_paths.push(PathBuf::new(&value));
+                library_paths.push(PathBuf::from(value));
             } else {
                 metadata.push((key.to_string(), value.to_string()))
             }
@@ -323,7 +323,7 @@ impl BuildOutput {
             };
             match flag {
                 "-l" => library_links.push(value.to_string()),
-                "-L" => library_paths.push(PathBuf::new(value)),
+                "-L" => library_paths.push(PathBuf::from(value)),
 
                 // was already checked above
                 _ => return Err(human("only -l and -L flags are allowed"))

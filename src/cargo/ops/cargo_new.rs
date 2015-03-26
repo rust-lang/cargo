@@ -22,7 +22,7 @@ pub struct NewOptions<'a> {
 
 impl Decodable for VersionControl {
     fn decode<D: Decoder>(d: &mut D) -> Result<VersionControl, D::Error> {
-        Ok(match try!(d.read_str()).as_slice() {
+        Ok(match &try!(d.read_str())[..] {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
             "none" => VersionControl::NoVcs,

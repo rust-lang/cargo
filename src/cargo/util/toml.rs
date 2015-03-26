@@ -447,7 +447,7 @@ impl TomlManifest {
         };
 
         // processing the custom build script
-        let new_build = project.build.as_ref().map(PathBuf::new);
+        let new_build = project.build.as_ref().map(PathBuf::from);
 
         // Get targets
         let targets = normalize(&lib,
@@ -573,7 +573,7 @@ fn process_dependencies<F>(cx: &mut Context,
             }
             None => {
                 details.path.as_ref().map(|path| {
-                    cx.nested_paths.push(PathBuf::new(path));
+                    cx.nested_paths.push(PathBuf::from(path));
                     cx.source_id.clone()
                 })
             }
@@ -581,7 +581,7 @@ fn process_dependencies<F>(cx: &mut Context,
 
         let dep = try!(Dependency::parse(&n,
                                          details.version.as_ref()
-                                                .map(|v| v.as_slice()),
+                                                .map(|v| &v[..]),
                                          &new_source_id));
         let dep = f(dep)
                      .set_features(details.features.unwrap_or(Vec::new()))
@@ -637,7 +637,7 @@ impl TomlTarget {
 impl PathValue {
     fn to_path(&self) -> PathBuf {
         match *self {
-            PathValue::String(ref s) => PathBuf::new(s),
+            PathValue::String(ref s) => PathBuf::from(s),
             PathValue::Path(ref p) => p.clone(),
         }
     }

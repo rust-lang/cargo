@@ -69,7 +69,7 @@ mod imp {
 #[cfg(windows)]
 mod imp {
     extern crate winapi;
-    extern crate "advapi32-sys" as advapi32;
+    extern crate advapi32_sys as advapi32;
     use std::io;
     use std::ptr;
 

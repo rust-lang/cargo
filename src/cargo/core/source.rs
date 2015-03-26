@@ -109,7 +109,7 @@ impl SourceId {
                 let mut reference = GitReference::Branch("master".to_string());
                 let pairs = url.query_pairs().unwrap_or(Vec::new());
                 for &(ref k, ref v) in pairs.iter() {
-                    match k.as_slice() {
+                    match &k[..] {
                         // map older 'ref' to branch
                         "branch" |
                         "ref" => reference = GitReference::Branch(v.clone()),
@@ -196,22 +196,20 @@ impl SourceId {
     pub fn load<'a>(&self, config: &'a Config) -> Box<Source+'a> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
-            Kind::Git(..) => Box::new(GitSource::new(self, config)) as Box<Source>,
+            Kind::Git(..) => Box::new(GitSource::new(self, config)),
             Kind::Path => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };
-                Box::new(PathSource::new(&path, self, config)) as Box<Source>
-            },
-            Kind::Registry => {
-                Box::new(RegistrySource::new(self, config)) as Box<Source>
+                Box::new(PathSource::new(&path, self, config))
             }
+            Kind::Registry => Box::new(RegistrySource::new(self, config)),
         }
     }
 
     pub fn precise(&self) -> Option<&str> {
-        self.inner.precise.as_ref().map(|s| s.as_slice())
+        self.inner.precise.as_ref().map(|s| &s[..])
     }
 
     pub fn git_reference(&self) -> Option<&GitReference> {
@@ -470,9 +468,9 @@ impl<'src> Source for SourceSet<'src> {
     fn fingerprint(&self, id: &Package) -> CargoResult<String> {
         let mut ret = String::new();
         for source in self.sources.iter() {
-            ret.push_str(try!(source.fingerprint(id)).as_slice());
+            ret.push_str(&try!(source.fingerprint(id))[..]);
         }
-        return Ok(ret);
+        Ok(ret)
     }
 }
 

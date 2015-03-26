@@ -6,7 +6,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-use std::str::{self, Str};
+use std::str;
 
 use url::Url;
 use hamcrest as ham;
@@ -138,14 +138,14 @@ impl ProjectBuilder {
         self.cargo(cmd)
     }
 
-    pub fn file<B: AsOsStr + ?Sized>(mut self, path: &B,
-                                     body: &str) -> ProjectBuilder {
+    pub fn file<B: AsRef<Path>>(mut self, path: B,
+                                body: &str) -> ProjectBuilder {
         self.files.push(FileBuilder::new(self.root.join(path), body));
         self
     }
 
-    pub fn symlink<T: AsOsStr + ?Sized>(mut self, dst: &T,
-                                        src: &T) -> ProjectBuilder {
+    pub fn symlink<T: AsRef<Path>>(mut self, dst: T,
+                                   src: T) -> ProjectBuilder {
         self.symlinks.push(SymlinkBuilder::new(self.root.join(dst),
                                                self.root.join(src)));
         self
@@ -205,15 +205,15 @@ pub fn rmdir_recursive(path: &Path) -> Result<(), String> {
                               path.display()))
 }
 
-pub fn main_file<T: Str>(println: T, deps: &[&str]) -> String {
+pub fn main_file(println: &str, deps: &[&str]) -> String {
     let mut buf = String::new();
 
     for dep in deps.iter() {
-        buf.push_str(format!("extern crate {};\n", dep).as_slice());
+        buf.push_str(&format!("extern crate {};\n", dep));
     }
 
     buf.push_str("fn main() { println!(");
-    buf.push_str(println.as_slice());
+    buf.push_str(&println);
     buf.push_str("); }\n");
 
     buf.to_string()
@@ -234,7 +234,7 @@ impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
 
 // Path to cargo executables
 pub fn cargo_dir() -> PathBuf {
-    env::var_os("CARGO_BIN_PATH").map(|s| PathBuf::new(&s)).or_else(|| {
+    env::var_os("CARGO_BIN_PATH").map(PathBuf::from).or_else(|| {
         env::current_exe().ok().as_ref().and_then(|s| s.parent())
             .map(|s| s.to_path_buf())
     }).unwrap_or_else(|| {
@@ -307,7 +307,7 @@ impl Execs {
 
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
                  description: &str, extra: &[u8]) -> ham::MatchResult {
-        match expected.map(|s| Str::as_slice(s)) {
+        match expected.map(|s| &s[..]) {
             None => ham::success(),
             Some(out) => {
                 let actual = match str::from_utf8(actual) {
@@ -319,14 +319,14 @@ impl Execs {
                 let actual = actual.replace("\r", "");
                 let actual = actual.replace("\t", "<tab>");
 
-                let a = actual.as_slice().lines();
+                let a = actual.lines();
                 let e = out.lines();
 
                 let diffs = zip_all(a, e).enumerate();
                 let diffs = diffs.filter_map(|(i, (a,e))| {
                     match (a, e) {
                         (Some(a), Some(e)) => {
-                            if lines_match(e.as_slice(), a.as_slice()) {
+                            if lines_match(&e, &a) {
                                 None
                             } else {
                                 Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
@@ -416,8 +416,8 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
             Err(e) => {
                 let mut s = format!("could not exec process {}: {}", process, e);
                 match e.cause() {
-                    Some(cause) => s.push_str(format!("\ncaused by: {}",
-                                                      cause.description()).as_slice()),
+                    Some(cause) => s.push_str(&format!("\ncaused by: {}",
+                                                       cause.description())),
                     None => {}
                 }
                 Err(s)

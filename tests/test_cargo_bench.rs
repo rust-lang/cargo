@@ -10,8 +10,9 @@ fn setup() {}
 
 test!(cargo_bench_simple {
     let p = project("foo")
-        .file("Cargo.toml", &basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
+            #![feature(test)]
             extern crate test;
 
             fn hello() -> &'static str {
@@ -34,7 +35,7 @@ test!(cargo_bench_simple {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("bench"),
-                execs().with_stdout(format!("\
+                execs().with_stdout(&format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo-[..]
 
@@ -57,9 +58,11 @@ test!(bench_tarname {
             authors = []
         "#)
         .file("benches/bin1.rs", r#"
+            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
         .file("benches/bin2.rs", r#"
+            #![feature(test)]
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
 
@@ -78,20 +81,21 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
        dir = prj.url());
 
     assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
-        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+        execs().with_status(0).with_stdout(expected_stdout));
 });
 
 test!(cargo_bench_verbose {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
+            #![feature(test)]
             extern crate test;
             fn main() {}
             #[bench] fn bench_hello(_b: &mut test::Bencher) {}
         "#);
 
     assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
-        execs().with_stdout(format!("\
+        execs().with_stdout(&format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc src[..]foo.rs [..]`
 {running} `[..]target[..]release[..]foo-[..] hello --bench`
@@ -114,17 +118,20 @@ test!(many_similar_names {
             authors = []
         "#)
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate test;
             pub fn foo() {}
             #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
+            #![feature(test)]
             extern crate foo;
             extern crate test;
             fn main() {}
             #[bench] fn bin_bench(_b: &mut test::Bencher) { foo::foo() }
         ")
         .file("benches/foo.rs", r#"
+            #![feature(test)]
             extern crate foo;
             extern crate test;
             #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
@@ -139,7 +146,7 @@ test!(many_similar_names {
 
 test!(cargo_bench_failing_test {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             #![feature(test)]
             extern crate test;
@@ -163,7 +170,7 @@ test!(cargo_bench_failing_test {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("bench"),
-                execs().with_stdout(format!("\
+                execs().with_stdout(&format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo-[..]
 
@@ -192,6 +199,7 @@ test!(bench_with_lib_dep {
             path = "src/main.rs"
         "#)
         .file("src/lib.rs", r#"
+            #![feature(test)]
             extern crate test;
             ///
             /// ```rust
@@ -205,6 +213,7 @@ test!(bench_with_lib_dep {
             #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         "#)
         .file("src/main.rs", "
+            #![feature(test)]
             extern crate foo;
             extern crate test;
 
@@ -215,7 +224,7 @@ test!(bench_with_lib_dep {
         ");
 
     assert_that(p.cargo_process("bench"),
-        execs().with_stdout(format!("\
+        execs().with_stdout(&format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]baz-[..]
 
@@ -247,6 +256,7 @@ test!(bench_with_deep_lib_dep {
             path = "../foo"
         "#)
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate foo;
             extern crate test;
             #[bench]
@@ -262,6 +272,7 @@ test!(bench_with_deep_lib_dep {
             authors = []
         "#)
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate test;
 
             pub fn foo() {}
@@ -273,7 +284,7 @@ test!(bench_with_deep_lib_dep {
     p2.build();
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {compiling} bar v0.0.1 ({dir})
 {running} target[..]
@@ -285,7 +296,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(external_bench_explicit {
@@ -301,6 +312,7 @@ test!(external_bench_explicit {
             path = "src/bench.rs"
         "#)
         .file("src/lib.rs", r#"
+            #![feature(test)]
             extern crate test;
             pub fn get_hello() -> &'static str { "Hello" }
 
@@ -308,6 +320,7 @@ test!(external_bench_explicit {
             fn internal_bench(_b: &mut test::Bencher) {}
         "#)
         .file("src/bench.rs", r#"
+            #![feature(test)]
             extern crate foo;
             extern crate test;
 
@@ -316,7 +329,7 @@ test!(external_bench_explicit {
         "#);
 
     assert_that(p.cargo_process("bench"),
-        execs().with_stdout(format!("\
+        execs().with_stdout(&format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]bench-[..]
 
@@ -345,6 +358,7 @@ test!(external_bench_implicit {
             authors = []
         "#)
         .file("src/lib.rs", r#"
+            #![feature(test)]
             extern crate test;
 
             pub fn get_hello() -> &'static str { "Hello" }
@@ -353,6 +367,7 @@ test!(external_bench_implicit {
             fn internal_bench(_b: &mut test::Bencher) {}
         "#)
         .file("benches/external.rs", r#"
+            #![feature(test)]
             extern crate foo;
             extern crate test;
 
@@ -361,7 +376,7 @@ test!(external_bench_implicit {
         "#);
 
     assert_that(p.cargo_process("bench"),
-        execs().with_stdout(format!("\
+        execs().with_stdout(&format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]external-[..]
 
@@ -407,6 +422,7 @@ test!(pass_through_command_line {
             authors = []
         "#)
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate test;
 
             #[bench] fn foo(_b: &mut test::Bencher) {}
@@ -415,7 +431,7 @@ test!(pass_through_command_line {
 
     assert_that(p.cargo_process("bench").arg("bar"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]release[..]foo-[..]
 
@@ -426,7 +442,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 
     assert_that(p.cargo("bench").arg("foo"),
                 execs().with_status(0)
@@ -445,9 +461,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 // tests in an rlib
 test!(cargo_bench_twice {
     let p = project("test_twice")
-        .file("Cargo.toml", basic_lib_manifest("test_twice").as_slice())
+        .file("Cargo.toml", &basic_lib_manifest("test_twice"))
         .file("src/test_twice.rs", r#"
             #![crate_type = "rlib"]
+            #![feature(test)]
 
             extern crate test;
 
@@ -477,10 +494,12 @@ test!(lib_bin_same_name {
             name = "foo"
         "#)
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate test;
             #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
+            #![feature(test)]
             extern crate foo;
             extern crate test;
 
@@ -489,7 +508,7 @@ test!(lib_bin_same_name {
         ");
 
     assert_that(p.cargo_process("bench"),
-        execs().with_stdout(format!("\
+        execs().with_stdout(&format!("\
 {} foo v0.0.1 ({})
 {running} target[..]release[..]foo-[..]
 
@@ -518,6 +537,7 @@ test!(lib_with_standard_name {
             authors = []
         "#)
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate test;
 
             /// ```
@@ -529,6 +549,7 @@ test!(lib_with_standard_name {
             fn foo_bench(_b: &mut test::Bencher) {}
         ")
         .file("benches/bench.rs", "
+            #![feature(test)]
             extern crate syntax;
             extern crate test;
 
@@ -538,7 +559,7 @@ test!(lib_with_standard_name {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} syntax v0.0.1 ({dir})
 {running} target[..]release[..]bench-[..]
 
@@ -556,7 +577,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(lib_with_standard_name2 {
@@ -576,6 +597,7 @@ test!(lib_with_standard_name2 {
             pub fn foo() {}
         ")
         .file("src/main.rs", "
+            #![feature(test)]
             extern crate syntax;
             extern crate test;
 
@@ -587,7 +609,7 @@ test!(lib_with_standard_name2 {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} syntax v0.0.1 ({dir})
 {running} target[..]release[..]syntax-[..]
 
@@ -598,7 +620,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(bin_there_for_integration {
@@ -610,17 +632,19 @@ test!(bin_there_for_integration {
             authors = []
         "#)
         .file("src/main.rs", "
+            #![feature(test)]
             extern crate test;
-            fn main() { std::os::set_exit_status(1); }
+            fn main() { panic!(); }
             #[bench] fn main_bench(_b: &mut test::Bencher) {}
         ")
         .file("benches/foo.rs", r#"
+            #![feature(test)]
             extern crate test;
-            use std::old_io::Command;
+            use std::process::Command;
             #[bench]
             fn bench_bench(_b: &mut test::Bencher) {
                 let status = Command::new("target/release/foo").status().unwrap();
-                assert!(status.matches_exit_status(1));
+                assert_eq!(status.code(), Some(101));
             }
         "#);
 
@@ -650,6 +674,7 @@ test!(bench_dylib {
             path = "bar"
         "#)
         .file("src/lib.rs", r#"
+            #![feature(test)]
             extern crate "bar" as the_bar;
             extern crate test;
 
@@ -659,6 +684,7 @@ test!(bench_dylib {
             fn foo(_b: &mut test::Bencher) {}
         "#)
         .file("benches/bench.rs", r#"
+            #![feature(test)]
             extern crate "foo" as the_foo;
             extern crate test;
 
@@ -681,7 +707,7 @@ test!(bench_dylib {
 
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} bar v0.0.1 ({dir})
 {running} [..] -C opt-level=3 [..]
 {compiling} foo v0.0.1 ({dir})
@@ -704,11 +730,11 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("bench").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {fresh} bar v0.0.1 ({dir})
 {fresh} foo v0.0.1 ({dir})
 {running} [..]target[..]release[..]bench-[..]
@@ -727,7 +753,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        fresh = FRESH, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(bench_twice_with_build_cmd {
@@ -741,6 +767,7 @@ test!(bench_twice_with_build_cmd {
         "#)
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "
+            #![feature(test)]
             extern crate test;
             #[bench]
             fn foo(_b: &mut test::Bencher) {}
@@ -748,7 +775,7 @@ test!(bench_twice_with_build_cmd {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]release[..]foo-[..]
 
@@ -759,11 +786,11 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 
     assert_that(p.cargo("bench"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {running} target[..]release[..]foo-[..]
 
 running 1 test
@@ -790,6 +817,7 @@ test!(bench_with_examples {
             name = "testb1"
         "#)
         .file("src/lib.rs", r#"
+            #![feature(test)]
             extern crate test;
             use test::Bencher;
 
@@ -805,6 +833,7 @@ test!(bench_with_examples {
             }
         "#)
         .file("benches/testb1.rs", "
+            #![feature(test)]
             extern crate testbench;
             extern crate test;
 
@@ -826,7 +855,7 @@ test!(bench_with_examples {
 
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} testbench v6.6.6 ({url})
 {running} `rustc src[..]lib.rs --crate-name testbench --crate-type lib [..]`
 {running} `rustc src[..]lib.rs --crate-name testbench --crate-type lib [..]`
@@ -850,7 +879,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        compiling = COMPILING,
                        running = RUNNING,
                        dir = p.root().display(),
-                       url = p.url()).as_slice()));
+                       url = p.url())));
 });
 
 test!(test_a_bench {
@@ -878,7 +907,7 @@ test!(test_a_bench {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.1.0 ([..])
 {running} target[..]debug[..]b-[..]
 

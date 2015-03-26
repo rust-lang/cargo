@@ -67,13 +67,13 @@ impl Dependency {
     pub fn source_id(&self) -> &SourceId { &self.source_id }
     pub fn kind(&self) -> Kind { self.kind }
     pub fn specified_req(&self) -> Option<&str> {
-        self.specified_req.as_ref().map(|s| s.as_slice())
+        self.specified_req.as_ref().map(|s| &s[..])
     }
 
     /// If none, this dependencies must be built for all platforms.
     /// If some, it must only be built for the specified platform.
     pub fn only_for_platform(&self) -> Option<&str> {
-        self.only_for_platform.as_ref().map(|s| s.as_slice())
+        self.only_for_platform.as_ref().map(|s| &s[..])
     }
 
     pub fn set_kind(mut self, kind: Kind) -> Dependency {

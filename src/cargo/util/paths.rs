@@ -35,9 +35,9 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek()
                                                                      .cloned() {
         components.next();
-        PathBuf::new(c.as_os_str())
+        PathBuf::from(c.as_os_str())
     } else {
-        PathBuf::new("")
+        PathBuf::new()
     };
 
     for component in components {
@@ -70,13 +70,13 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
     use std::os::unix::prelude::*;
     use std::ffi::OsStr;
-    Ok(PathBuf::new(<OsStr as OsStrExt>::from_bytes(bytes)))
+    Ok(PathBuf::from(OsStr::from_bytes(bytes)))
 }
 #[cfg(windows)]
 pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
     use std::str;
     match str::from_utf8(bytes) {
-        Ok(s) => Ok(PathBuf::new(s)),
+        Ok(s) => Ok(PathBuf::from(s)),
         Err(..) => Err(human("invalid non-unicode path")),
     }
 }
