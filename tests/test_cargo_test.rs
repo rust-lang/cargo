@@ -1400,3 +1400,22 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
 });
+
+test!(dashes_to_underscores {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo-bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// assert_eq!(foo_bar::foo(), 1);
+            /// ```
+            pub fn foo() -> i32 { 1 }
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+});
