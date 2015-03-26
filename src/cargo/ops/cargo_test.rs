@@ -24,13 +24,13 @@ pub fn run_tests(manifest_path: &Path,
 
     let libs = compile.package.targets().iter()
                       .filter(|t| t.doctested())
-                      .map(|t| (t.src_path(), t.name()));
+                      .map(|t| (t.src_path(), t.name(), t.crate_name()));
 
-    for (lib, name) in libs {
+    for (lib, name, crate_name) in libs {
         try!(config.shell().status("Doc-tests", name));
         let mut p = try!(compile.rustdoc_process(&compile.package));
         p.arg("--test").arg(lib)
-         .arg("--crate-name").arg(name)
+         .arg("--crate-name").arg(&crate_name)
          .arg("-L").arg(&compile.root_output)
          .arg("-L").arg(&compile.deps_output)
          .cwd(compile.package.root());
