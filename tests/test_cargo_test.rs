@@ -10,7 +10,7 @@ fn setup() {}
 
 test!(cargo_test_simple {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             fn hello() -> &'static str {
                 "hello"
@@ -48,7 +48,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 test!(cargo_test_verbose {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             fn main() {}
             #[test] fn test_hello() {}
@@ -100,7 +100,7 @@ test!(many_similar_names {
 
 test!(cargo_test_failing_test {
     let p = project("foo")
-        .file("Cargo.toml", basic_bin_manifest("foo").as_slice())
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             fn hello() -> &'static str {
                 "hello"
@@ -253,7 +253,7 @@ test!(test_with_deep_lib_dep {
     p2.build();
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {compiling} bar v0.0.1 ({dir})
 {running} target[..]
@@ -273,7 +273,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(external_test_explicit {
@@ -408,7 +408,7 @@ test!(pass_through_command_line {
 
     assert_that(p.cargo_process("test").arg("bar"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -426,11 +426,11 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 
     assert_that(p.cargo_process("test").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -448,14 +448,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 // Regression test for running cargo-test twice with
 // tests in an rlib
 test!(cargo_test_twice {
     let p = project("test_twice")
-        .file("Cargo.toml", basic_lib_manifest("test_twice").as_slice())
+        .file("Cargo.toml", &basic_lib_manifest("test_twice"))
         .file("src/test_twice.rs", r#"
             #![crate_type = "rlib"]
 
@@ -547,7 +547,7 @@ test!(lib_with_standard_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} syntax v0.0.1 ({dir})
 {running} target[..]syntax-[..]
 
@@ -572,7 +572,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST, dir = p.url()).as_slice()));
+                       doctest = DOCTEST, dir = p.url())));
 });
 
 test!(lib_with_standard_name2 {
@@ -602,7 +602,7 @@ test!(lib_with_standard_name2 {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} syntax v0.0.1 ({dir})
 {running} target[..]syntax-[..]
 
@@ -613,7 +613,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(bin_there_for_integration {
@@ -625,15 +625,15 @@ test!(bin_there_for_integration {
             authors = []
         "#)
         .file("src/main.rs", "
-            fn main() { std::os::set_exit_status(1); }
+            fn main() { panic!(); }
             #[test] fn main_test() {}
         ")
         .file("tests/foo.rs", r#"
-            use std::old_io::Command;
+            use std::process::Command;
             #[test]
             fn test_test() {
                 let status = Command::new("target/debug/foo").status().unwrap();
-                assert!(status.matches_exit_status(1));
+                assert_eq!(status.code(), Some(101));
             }
         "#);
 
@@ -688,7 +688,7 @@ test!(test_dylib {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} bar v0.0.1 ({dir})
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
@@ -714,7 +714,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("test"),
                 execs().with_status(0)
@@ -762,7 +762,7 @@ test!(test_twice_with_build_cmd {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -780,7 +780,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
@@ -818,7 +818,7 @@ test!(test_then_build {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -836,7 +836,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ",
                        compiling = COMPILING, running = RUNNING,
                        doctest = DOCTEST,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
@@ -858,11 +858,11 @@ test!(test_no_run {
 
     assert_that(p.cargo_process("test").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 ",
                        compiling = COMPILING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(test_run_specific_bin_target {
@@ -899,7 +899,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
        dir = prj.url());
 
     assert_that(prj.cargo_process("test").arg("--bin").arg("bin2"),
-        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+        execs().with_status(0).with_stdout(&expected_stdout));
 });
 
 test!(test_run_specific_test_target {
@@ -930,7 +930,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
        dir = prj.url());
 
     assert_that(prj.cargo_process("test").arg("--test").arg("b"),
-        execs().with_status(0).with_stdout(expected_stdout.as_slice()));
+        execs().with_status(0).with_stdout(&expected_stdout));
 });
 
 test!(test_no_harness {
@@ -955,12 +955,12 @@ test!(test_no_harness {
 
     assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]bar-[..]
 ",
                        compiling = COMPILING, running = RUNNING,
-                       dir = p.url()).as_slice()));
+                       dir = p.url())));
 });
 
 test!(selective_testing {
@@ -1010,7 +1010,7 @@ test!(selective_testing {
     println!("d1");
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} d1 v0.0.1 ({dir})
 {running} target[..]d1-[..]
 
@@ -1025,12 +1025,12 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING,
-   dir = p.url()).as_slice()));
+   dir = p.url())));
 
     println!("d2");
     assert_that(p.cargo("test").arg("-p").arg("d2"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} d2 v0.0.1 ({dir})
 {running} target[..]d2-[..]
 
@@ -1045,12 +1045,12 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING,
-   dir = p.url()).as_slice()));
+   dir = p.url())));
 
     println!("whole");
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -1059,7 +1059,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING,
-   dir = p.url()).as_slice()));
+   dir = p.url())));
 });
 
 test!(almost_cyclic_but_not_quite {
@@ -1212,7 +1212,7 @@ test!(selective_testing_with_docs {
 
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} d1 v0.0.1 ({dir})
 {running} target[..]deps[..]d1[..]
 
@@ -1227,7 +1227,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, dir = p.url(),
-   doctest = DOCTEST).as_slice()));
+   doctest = DOCTEST)));
 });
 
 test!(example_bin_same_name {
@@ -1243,11 +1243,11 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo_process("test").arg("--no-run").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} `rustc [..]`
 {running} `rustc [..]`
-", compiling = COMPILING, running = RUNNING, dir = p.url()).as_slice()));
+", compiling = COMPILING, running = RUNNING, dir = p.url())));
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
@@ -1257,11 +1257,11 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.0.1 ([..])
 {running} [..]
 bin
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
     assert_that(&p.bin("foo"), existing_file());
 });
 
@@ -1314,13 +1314,13 @@ test!(example_with_dev_dep {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 [..]
 [..]
 [..]
 [..]
 {running} `rustc [..] --crate-name ex [..] --extern a=[..]`
-", running = RUNNING).as_slice()));
+", running = RUNNING)));
 });
 
 test!(bin_is_preserved {

@@ -256,7 +256,7 @@ fn activate_deps<'a>(cx: Box<Context>,
 
     let key = (dep.name().to_string(), dep.source_id().clone());
     let prev_active = cx.activations.get(&key)
-                                    .map(|v| v.as_slice()).unwrap_or(&[]);
+                                    .map(|v| &v[..]).unwrap_or(&[]);
     trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
          candidates.len());
     trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
@@ -473,7 +473,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // features are bugs in that the package does not actually have those
     // features.
     if feature_deps.len() > 0 {
-        let unknown = feature_deps.keys().map(|s| s.as_slice())
+        let unknown = feature_deps.keys().map(|s| &s[..])
                                   .collect::<Vec<&str>>();
         if unknown.len() > 0 {
             let features = unknown.connect(", ");

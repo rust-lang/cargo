@@ -423,7 +423,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
 
         let dep = try!(Dependency::parse(&name, Some(&req),
                                          &self.source_id));
-        let kind = match kind.as_ref().map(|s| s.as_slice()).unwrap_or("") {
+        let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,
             _ => Kind::Normal,

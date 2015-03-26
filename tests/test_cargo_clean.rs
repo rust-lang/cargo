@@ -6,8 +6,8 @@ fn setup() {
 
 test!(cargo_clean_simple {
     let p = project("foo")
-              .file("Cargo.toml", &basic_bin_manifest("foo").as_slice())
-              .file("src/foo.rs", &main_file(r#""i am foo""#, &[]).as_slice());
+              .file("Cargo.toml", &basic_bin_manifest("foo"))
+              .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(&p.build_dir(), existing_dir());
@@ -19,8 +19,8 @@ test!(cargo_clean_simple {
 
 test!(different_dir {
     let p = project("foo")
-              .file("Cargo.toml", &basic_bin_manifest("foo").as_slice())
-              .file("src/foo.rs", &main_file(r#""i am foo""#, &[]).as_slice())
+              .file("Cargo.toml", &basic_bin_manifest("foo"))
+              .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
               .file("src/bar/a.rs", "");
 
     assert_that(p.cargo_process("build"), execs().with_status(0));

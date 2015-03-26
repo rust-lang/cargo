@@ -400,7 +400,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
                        current_id: &PackageId) {
         for id in native_lib_deps.into_iter() {
             debug!("looking up {} {:?}", id, kind);
-            let output = &build_state[(id.clone(), kind)];
+            let output = &build_state[&(id.clone(), kind)];
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
@@ -456,7 +456,7 @@ fn add_plugin_deps(rustc: &mut CommandPrototype,
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in plugin_deps.into_iter() {
         debug!("adding libs for plugin dep: {}", id);
-        let output = &build_state[(id, Kind::Host)];
+        let output = &build_state[&(id, Kind::Host)];
         for path in output.library_paths.iter() {
             search_path.push(path.clone());
         }
@@ -679,12 +679,12 @@ fn build_deps_args(cmd: &mut CommandPrototype,
                    -> CargoResult<()> {
     let layout = cx.layout(package, kind);
     cmd.arg("-L").arg(&{
-        let mut root = OsString::from_str("dependency=");
+        let mut root = OsString::from("dependency=");
         root.push(layout.root());
         root
     });
     cmd.arg("-L").arg(&{
-        let mut deps = OsString::from_str("dependency=");
+        let mut deps = OsString::from("dependency=");
         deps.push(layout.deps());
         deps
     });

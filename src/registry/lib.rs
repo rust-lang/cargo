@@ -1,5 +1,5 @@
 extern crate curl;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 use std::collections::HashMap;
 use std::fmt;

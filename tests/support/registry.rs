@@ -5,7 +5,7 @@ use std::path::{PathBuf, Path};
 use flate2::Compression::Default;
 use flate2::write::GzEncoder;
 use git2;
-use serialize::hex::ToHex;
+use rustc_serialize::hex::ToHex;
 use tar::Archive;
 use url::Url;
 
@@ -30,9 +30,9 @@ pub fn init() {
 
     // Init a new registry
     repo(&registry_path())
-        .file("config.json", format!(r#"
+        .file("config.json", &format!(r#"
             {{"dl":"{}","api":""}}
-        "#, dl_url()).as_slice())
+        "#, dl_url()))
         .build();
 }
 
@@ -44,17 +44,17 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
         authors = []
     "#, name, version);
     for &(dep, req, kind) in deps.iter() {
-        manifest.push_str(format!(r#"
+        manifest.push_str(&format!(r#"
             [{}dependencies.{}]
             version = "{}"
         "#, match kind {
             "build" => "build-",
             "dev" => "dev-",
             _ => ""
-        }, dep, req).as_slice());
+        }, dep, req));
     }
     let p = project(name)
-        .file("Cargo.toml", manifest.as_slice())
+        .file("Cargo.toml", &manifest)
         .file("src/lib.rs", "");
     p.build();
 
@@ -62,9 +62,9 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     fs::create_dir_all(dst.parent().unwrap()).unwrap();
     let f = File::create(&dst).unwrap();
     let a = Archive::new(GzEncoder::new(f, Default));
-    a.append(format!("{}-{}/Cargo.toml", name, version).as_slice(),
+    a.append(&format!("{}-{}/Cargo.toml", name, version),
              &mut File::open(&p.root().join("Cargo.toml")).unwrap()).unwrap();
-    a.append(format!("{}-{}/src/lib.rs", name, version).as_slice(),
+    a.append(&format!("{}-{}/src/lib.rs", name, version),
              &mut File::open(&p.root().join("src/lib.rs")).unwrap()).unwrap();
     a.finish().unwrap();
 }
@@ -91,7 +91,7 @@ pub fn mock_pkg_yank(name: &str, version: &str, deps: &[(&str, &str, &str)],
         3 => format!("3/{}/{}", &name[..1], name),
         _ => format!("{}/{}/{}", &name[0..2], &name[2..4], name),
     };
-    publish(file.as_slice(), line.as_slice());
+    publish(&file, &line);
 }
 
 pub fn publish(file: &str, line: &str) {

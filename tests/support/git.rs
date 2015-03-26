@@ -28,7 +28,7 @@ impl RepoBuilder {
 
     pub fn file(self, path: &str, contents: &str) -> RepoBuilder {
         let mut me = self.nocommit_file(path, contents);
-        me.files.push(PathBuf::new(path));
+        me.files.push(PathBuf::from(path));
         me
     }
 

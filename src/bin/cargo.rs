@@ -1,9 +1,9 @@
 #![feature(core, exit_status, fs_ext)]
 
-extern crate "git2-curl" as git2_curl;
-extern crate "rustc-serialize" as rustc_serialize;
 extern crate cargo;
 extern crate env_logger;
+extern crate git2_curl;
+extern crate rustc_serialize;
 extern crate toml;
 #[macro_use] extern crate log;
 

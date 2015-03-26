@@ -214,7 +214,7 @@ impl Manifest {
     pub fn warnings(&self) -> &[String] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn links(&self) -> Option<&str> {
-        self.links.as_ref().map(|s| s.as_slice())
+        self.links.as_ref().map(|s| &s[..])
     }
 
     pub fn add_warning(&mut self, s: String) {
@@ -235,7 +235,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: String::new(),
-            src_path: PathBuf::new(""),
+            src_path: PathBuf::new(),
             metadata: None,
             doc: false,
             doctest: false,

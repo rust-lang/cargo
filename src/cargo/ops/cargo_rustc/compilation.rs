@@ -51,8 +51,8 @@ impl Compilation {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: HashMap::new(),  // TODO: deprecated, remove
-            root_output: PathBuf::new("/"),
-            deps_output: PathBuf::new("/"),
+            root_output: PathBuf::from("/"),
+            deps_output: PathBuf::from("/"),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),

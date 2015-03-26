@@ -69,7 +69,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         };
         let target_triple = target.unwrap_or(config.rustc_host()).to_string();
         let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
-            Arc::new(Box::new(ProcessEngine) as Box<ExecEngine>)
+            Arc::new(Box::new(ProcessEngine))
         });
         Ok(Context {
             target_triple: target_triple,
@@ -242,7 +242,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
         let (triple, pair) = if kind == Kind::Host {
             (self.config.rustc_host(), &self.host_dylib)
         } else {
-            (self.target_triple.as_slice(), &self.target_dylib)
+            (&self.target_triple[..], &self.target_dylib)
         };
         match *pair {
             None => return Err(human(format!("dylib outputs are not supported \
@@ -435,12 +435,12 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// Get the user-specified linker for a particular host or target
     pub fn linker(&self, kind: Kind) -> Option<&str> {
-        self.target_config(kind).linker.as_ref().map(|s| s.as_slice())
+        self.target_config(kind).linker.as_ref().map(|s| &s[..])
     }
 
     /// Get the user-specified `ar` program for a particular host or target
     pub fn ar(&self, kind: Kind) -> Option<&str> {
-        self.target_config(kind).ar.as_ref().map(|s| s.as_slice())
+        self.target_config(kind).ar.as_ref().map(|s| &s[..])
     }
 
     /// Get the target configuration for a particular host or target

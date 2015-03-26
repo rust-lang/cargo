@@ -1,7 +1,7 @@
-#![feature(core, io, old_io)]
+#![feature(io, convert, thread_sleep)]
 #![feature(std_misc, io, fs, fs_ext, path_ext, fs_time, fs_walk)]
 
-extern crate "rustc-serialize" as serialize;
+extern crate rustc_serialize;
 extern crate cargo;
 extern crate flate2;
 extern crate git2;
@@ -54,7 +54,6 @@ mod test_cargo_test;
 mod test_cargo_version;
 mod test_shell;
 
-#[allow(deprecated)]
 fn sleep(dur: std::time::Duration) {
-    std::old_io::timer::sleep(dur)
+    std::thread::sleep(dur)
 }

@@ -31,13 +31,13 @@ test!(custom_build_script_failed {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 ({url})
 {running} `rustc build.rs --crate-name build_script_build --crate-type bin [..]`
 {running} `[..]build-script-build[..]`
 ",
 url = p.url(), compiling = COMPILING, running = RUNNING))
-                       .with_stderr(format!("\
+                       .with_stderr(&format!("\
 failed to run custom build command for `foo v0.5.0 ({})`
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
     (exit code: 101)",
@@ -81,6 +81,7 @@ test!(custom_build_env_vars {
             use std::env;
             use std::io::prelude::*;
             use std::path::Path;
+            use std::fs;
 
             fn main() {{
                 let _target = env::var("TARGET").unwrap();
@@ -98,7 +99,7 @@ test!(custom_build_env_vars {
 
                 let out = env::var("OUT_DIR").unwrap();
                 assert!(out.starts_with(r"{0}"));
-                assert!(Path::new(&out).is_dir());
+                assert_eq!(fs::metadata(&out).map(|m| m.is_dir()), Ok(true));
 
                 let _host = env::var("HOST").unwrap();
 
@@ -135,7 +136,7 @@ test!(custom_build_script_wrong_rustc_flags {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(format!("\
+                       .with_stderr(&format!("\
 Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
 `-aaa -bbb`",
 p.url())));
@@ -176,7 +177,7 @@ test!(custom_build_script_rustc_flags {
     // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(101)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} bar v0.5.0 ({url})
 {running} `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
@@ -267,16 +268,16 @@ test!(overrides_and_links {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(env::var("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
             }
         "#)
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             [target.{}.foo]
             rustc-flags = "-L foo -L bar"
             foo = "bar"
             bar = "baz"
-        "#, target).as_slice())
+        "#, target))
         .file("a/Cargo.toml", r#"
             [project]
             name = "a"
@@ -290,14 +291,14 @@ test!(overrides_and_links {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 [..]
 [..]
 [..]
 [..]
 [..]
 {running} `rustc [..] --crate-name foo [..] -L foo -L bar[..]`
-", running = RUNNING).as_slice()));
+", running = RUNNING)));
 });
 
 test!(unused_overrides {
@@ -313,12 +314,12 @@ test!(unused_overrides {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             [target.{}.foo]
             rustc-flags = "-L foo -L bar"
             foo = "bar"
             bar = "baz"
-        "#, target).as_slice());
+        "#, target));
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
@@ -340,8 +341,8 @@ test!(links_passes_env_vars {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(env::var("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
             }
         "#)
         .file("a/Cargo.toml", r#"
@@ -362,7 +363,7 @@ test!(links_passes_env_vars {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} [..] v0.5.0 (file://[..])
 {running} `rustc [..]build.rs [..]`
 {compiling} [..] v0.5.0 (file://[..])
@@ -371,7 +372,7 @@ test!(links_passes_env_vars {
 {running} `[..]`
 {running} `[..]`
 {running} `rustc [..] --crate-name foo [..]`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(only_rerun_build_script {
@@ -397,11 +398,11 @@ test!(only_rerun_build_script {
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(rebuild_continues_to_pass_env_vars {
@@ -439,8 +440,8 @@ test!(rebuild_continues_to_pass_env_vars {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var("DEP_FOO_FOO").unwrap().as_slice(), "bar");
-                assert_eq!(env::var("DEP_FOO_BAR").unwrap().as_slice(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
             }
         "#);
 
@@ -480,7 +481,7 @@ test!(testing_and_such {
     println!("test");
     assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
@@ -498,25 +499,25 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, running = RUNNING, doctest = DOCTEST).as_slice()));
+", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)));
 
     println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustdoc [..]`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 
     File::create(&p.root().join("src/main.rs")).unwrap()
          .write_all(b"fn main() {}").unwrap();
     println!("run");
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `target[..]foo[..]`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(propagation_of_l_flags {
@@ -558,14 +559,14 @@ test!(propagation_of_l_flags {
         "#)
         .file("b/src/lib.rs", "")
         .file("b/build.rs", "bad file")
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             [target.{}.foo]
             rustc-flags = "-L foo"
-        "#, target).as_slice());
+        "#, target));
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 [..]
 [..]
 [..]
@@ -574,7 +575,7 @@ test!(propagation_of_l_flags {
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar -L foo`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(propagation_of_l_flags_new {
@@ -616,14 +617,14 @@ test!(propagation_of_l_flags_new {
         "#)
         .file("b/src/lib.rs", "")
         .file("b/build.rs", "bad file")
-        .file(".cargo/config", format!(r#"
+        .file(".cargo/config", &format!(r#"
             [target.{}.foo]
             rustc-link-search = ["foo"]
-        "#, target).as_slice());
+        "#, target));
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 [..]
 [..]
 [..]
@@ -632,7 +633,7 @@ test!(propagation_of_l_flags_new {
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar -L foo`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(build_deps_simple {
@@ -661,14 +662,14 @@ test!(build_deps_simple {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} a v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name a [..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..] --extern a=[..]`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..]`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(build_deps_not_for_normal {
@@ -749,7 +750,7 @@ test!(build_cmd_with_a_build_cmd {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} b v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name b [..]`
 {compiling} a v0.5.0 (file://[..])
@@ -770,7 +771,7 @@ test!(build_cmd_with_a_build_cmd {
     -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target[..]debug --emit=dep-info,link \
     -L [..]target[..]debug -L [..]target[..]deps`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(out_dir_is_preserved {
@@ -785,11 +786,11 @@ test!(out_dir_is_preserved {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             use std::env;
-            use std::old_io::File;
-            use std::old_path::{Path, GenericPath};
+            use std::fs::File;
+            use std::path::Path;
             fn main() {
                 let out = env::var("OUT_DIR").unwrap();
-                File::create(&Path::new(out).join("foo")).unwrap();
+                File::create(Path::new(&out).join("foo")).unwrap();
             }
         "#);
 
@@ -804,7 +805,7 @@ test!(out_dir_is_preserved {
         use std::old_io::File;
         fn main() {
             let out = env::var("OUT_DIR").unwrap();
-            File::open(&Path::new(out).join("foo")).unwrap();
+            File::open(&Path::new(&out).join("foo")).unwrap();
         }
     "#).unwrap();
     p.root().move_into_the_past().unwrap();
@@ -839,12 +840,12 @@ test!(output_separate_lines {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..]`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -l foo:static`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(output_separate_lines_new {
@@ -865,12 +866,12 @@ test!(output_separate_lines_new {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs [..]`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..] --crate-name foo [..] -L foo -l static=foo`
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 #[cfg(not(windows))] // FIXME(#867)
@@ -891,14 +892,16 @@ test!(code_generation {
             }
         "#)
         .file("build.rs", r#"
+            #![feature(convert)]
             use std::env;
-            use std::old_io::{File, Writer};
-            use std::old_path::{Path, GenericPath};
+            use std::fs::File;
+            use std::io::prelude::*;
+            use std::path::PathBuf;
 
             fn main() {
-                let dst = Path::new(env::var("OUT_DIR").unwrap());
+                let dst = PathBuf::from(env::var("OUT_DIR").unwrap());
                 let mut f = File::create(&dst.join("hello.rs")).unwrap();
-                f.write_str("
+                f.write_all(b"
                     pub fn message() -> &'static str {
                         \"Hello, World!\"
                     }
@@ -907,11 +910,11 @@ test!(code_generation {
         "#);
     assert_that(p.cargo_process("run"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout(&format!("\
 {compiling} foo v0.5.0 (file://[..])
 {running} `target[..]foo`
 Hello, World!
-", compiling = COMPILING, running = RUNNING).as_slice()));
+", compiling = COMPILING, running = RUNNING)));
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
@@ -1056,13 +1059,15 @@ test!(test_a_lib_with_a_build_command {
             }
         "#)
         .file("build.rs", r#"
+            #![feature(convert)]
             use std::env;
-            use std::old_io::{File, Writer};
-            use std::old_path::{Path, GenericPath};
+            use std::io::prelude::*;
+            use std::fs::File;
+            use std::path::PathBuf;
 
             fn main() {
-                let out = Path::new(env::var("OUT_DIR").unwrap());
-                File::create(&out.join("foo.rs")).write_str("
+                let out = PathBuf::from(env::var("OUT_DIR").unwrap());
+                File::create(out.join("foo.rs")).unwrap().write_all(b"
                     fn foo() -> i32 { 1 }
                 ").unwrap();
             }
@@ -1148,12 +1153,14 @@ test!(build_script_with_dynamic_native_dependency {
             build = "build.rs"
         "#)
         .file("bar/build.rs", r#"
+            #![feature(convert)]
             use std::env;
-            use std::old_path::{Path, GenericPath};
+            use std::path::PathBuf;
 
             fn main() {
-                let src = Path::new(env::var("SRC").unwrap());
-                println!("cargo:rustc-flags=-L {}", src.dir_path().display());
+                let src = PathBuf::from(env::var("SRC").unwrap());
+                println!("cargo:rustc-flags=-L {}", src.parent().unwrap()
+                                                       .display());
             }
         "#)
         .file("bar/src/lib.rs", &format!(r#"

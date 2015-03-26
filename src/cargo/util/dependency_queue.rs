@@ -131,7 +131,7 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
             if fresh == Dirty {
                 self.dirty.insert(dep.clone());
             }
-            assert!(self.dep_map[*dep].0.remove(key));
+            assert!(self.dep_map.get_mut(dep).unwrap().0.remove(key));
         }
     }
 }

@@ -1,11 +1,11 @@
 #![deny(unused)]
-#![feature(hash, os, std_misc, core, path_relative_from)]
-#![feature(io, str_words, exit_status, fs_time)]
+#![feature(os, std_misc, core, path_relative_from)]
+#![feature(io, str_words, exit_status, fs_time, convert)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate curl;
 extern crate docopt;
 extern crate flate2;
@@ -139,7 +139,7 @@ pub fn shell(verbose: bool) -> MultiShell {
     }
     #[cfg(windows)]
     fn isatty(fd: libc::c_int) -> bool {
-        extern crate "kernel32-sys" as kernel32;
+        extern crate kernel32_sys as kernel32;
         extern crate winapi;
         unsafe {
             let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {
@@ -224,7 +224,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
 {
     let docopt = Docopt::new(usage).unwrap()
                                    .options_first(options_first)
-                                   .argv(args.iter().map(|s| s.as_slice()))
+                                   .argv(args.iter().map(|s| &s[..]))
                                    .help(true)
                                    .version(Some(version()));
     docopt.decode().map_err(|e| {

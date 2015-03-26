@@ -25,7 +25,7 @@ test!(profile_overrides {
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
@@ -79,7 +79,7 @@ test!(top_level_overrides_deps {
         "#)
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout(&format!("\
 {compiling} foo v0.0.0 ({url})
 {running} `rustc foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
@@ -111,5 +111,5 @@ test!(top_level_overrides_deps {
                     url = p.url(),
                     sep = SEP,
                     prefix = env::consts::DLL_PREFIX,
-                    suffix = env::consts::DLL_SUFFIX).as_slice()));
+                    suffix = env::consts::DLL_SUFFIX)));
 });
