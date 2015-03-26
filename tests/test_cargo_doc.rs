@@ -262,3 +262,28 @@ test!(doc_same_name {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
 });
+
+test!(doc_target {
+    const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            #![feature(no_std)]
+            #![no_std]
+
+            extern {
+                pub static A: u32;
+            }
+        "#);
+
+    assert_that(p.cargo_process("doc").arg("--target").arg(TARGET).arg("--verbose"),
+                execs().with_status(0));
+    assert_that(&p.root().join(&format!("target/{}/doc", TARGET)), existing_dir());
+    assert_that(&p.root().join(&format!("target/{}/doc/foo/index.html", TARGET)), existing_file());
+});

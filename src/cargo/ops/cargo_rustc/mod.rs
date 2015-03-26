@@ -495,13 +495,20 @@ fn prepare_rustc(package: &Package, target: &Target, profile: &Profile,
 fn rustdoc(package: &Package, target: &Target, profile: &Profile,
            cx: &mut Context) -> CargoResult<Work> {
     let kind = Kind::Target;
-    let cx_root = cx.get_package(cx.resolve.root()).absolute_target_dir()
-                    .join("doc");
+    let mut doc_dir = cx.get_package(cx.resolve.root()).absolute_target_dir();
     let mut rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
     rustdoc.arg(&root_path(cx, package, target))
            .cwd(cx.config.cwd())
-           .arg("-o").arg(&cx_root)
            .arg("--crate-name").arg(&target.crate_name());
+
+    if let Some(target) = cx.requested_target() {
+        rustdoc.arg("--target").arg(target);
+        doc_dir.push(target);
+    }
+
+    doc_dir.push("doc");
+
+    rustdoc.arg("-o").arg(&doc_dir);
 
     match cx.resolve.features(package.package_id()) {
         Some(features) => {

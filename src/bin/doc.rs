@@ -4,6 +4,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
 struct Options {
+    flag_target: Option<String>,
     flag_features: Vec<String>,
     flag_jobs: Option<u32>,
     flag_manifest_path: Option<String>,
@@ -28,6 +29,7 @@ Options:
     -j N, --jobs N           The number of jobs to run in parallel
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
+    --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to document
     -v, --verbose            Use verbose output
 
@@ -50,7 +52,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         compile_opts: ops::CompileOptions {
             config: config,
             jobs: options.flag_jobs,
-            target: None,
+            target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| &s[..]),
