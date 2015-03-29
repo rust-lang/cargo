@@ -375,12 +375,12 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
                                                 .to_str().unwrap()
                                                 .replace(&real_name, &crate_name));
                 try!(fs::rename(&src, &dst).chain_error(|| {
-                    human(format!("could not rename crate {:?}", src))
+                    internal(format!("could not rename crate {:?}", src))
                 }));
             }
 
             try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
-                human(format!("could not rename dep info: {:?}",
+                internal(format!("could not rename dep info: {:?}",
                               rustc_dep_info_loc))
             }));
             try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
