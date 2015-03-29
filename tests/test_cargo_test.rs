@@ -637,7 +637,7 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("test").exec_with_output().unwrap();
+    let output = p.cargo_process("test").arg("-v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);

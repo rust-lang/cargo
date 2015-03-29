@@ -648,7 +648,7 @@ test!(bin_there_for_integration {
             }
         "#);
 
-    let output = p.cargo_process("bench").exec_with_output().unwrap();
+    let output = p.cargo_process("bench").arg("-v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
                             "no main_bench\n{}",
