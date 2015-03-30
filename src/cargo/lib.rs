@@ -139,7 +139,7 @@ pub fn shell(verbose: bool) -> MultiShell {
     }
     #[cfg(windows)]
     fn isatty(fd: libc::c_int) -> bool {
-        extern crate kernel32_sys as kernel32;
+        extern crate kernel32;
         extern crate winapi;
         unsafe {
             let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {

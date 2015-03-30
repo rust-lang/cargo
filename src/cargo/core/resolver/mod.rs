@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fmt;
 use std::rc::Rc;
 use semver;
@@ -92,10 +91,7 @@ impl Resolve {
                     spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
             for id in ids.iter() {
-                match version_cnt.entry(id.version()) {
-                    Vacant(e) => { e.insert(1); }
-                    Occupied(e) => *e.into_mut() += 1,
-                }
+                *version_cnt.entry(id.version()).or_insert(0) += 1;
             }
             for id in ids.iter() {
                 if version_cnt[id.version()] == 1 {
@@ -483,10 +479,9 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // Record what list of features is active for this package.
     if used_features.len() > 0 {
         let pkgid = parent.package_id();
-        match cx.resolve.features.entry(pkgid.clone()) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.insert(HashSet::new()),
-        }.extend(used_features.into_iter());
+        cx.resolve.features.entry(pkgid.clone())
+          .or_insert(HashSet::new())
+          .extend(used_features);
     }
 
     Ok(ret)
@@ -551,10 +546,9 @@ fn build_features(s: &Summary, method: Method)
         match parts.next() {
             Some(feat) => {
                 let package = feat_or_package;
-                match deps.entry(package.to_string()) {
-                    Occupied(e) => e.into_mut(),
-                    Vacant(e) => e.insert(Vec::new()),
-                }.push(feat.to_string());
+                deps.entry(package.to_string())
+                    .or_insert(Vec::new())
+                    .push(feat.to_string());
             }
             None => {
                 let feat = feat_or_package;
@@ -572,10 +566,7 @@ fn build_features(s: &Summary, method: Method)
                         }
                     }
                     None => {
-                        match deps.entry(feat.to_string()) {
-                            Occupied(..) => {} // already activated
-                            Vacant(e) => { e.insert(Vec::new()); }
-                        }
+                        deps.entry(feat.to_string()).or_insert(Vec::new());
                     }
                 }
                 visited.remove(&feat.to_string());

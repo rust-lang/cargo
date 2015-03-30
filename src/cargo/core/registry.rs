@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
@@ -148,14 +147,10 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
-        let sub_map = match self.locked.entry(id.source_id().clone()) {
-            Occupied(e) => e.into_mut(),
-            Vacant(e) => e.insert(HashMap::new()),
-        };
-        let sub_vec = match sub_map.entry(id.name().to_string()) {
-            Occupied(e) => e.into_mut(),
-            Vacant(e) => e.insert(Vec::new()),
-        };
+        let sub_map = self.locked.entry(id.source_id().clone())
+                                 .or_insert(HashMap::new());
+        let sub_vec = sub_map.entry(id.name().to_string())
+                             .or_insert(Vec::new());
         sub_vec.push((id, deps));
     }
 

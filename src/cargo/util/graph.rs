@@ -1,9 +1,7 @@
 use std::fmt;
 use std::hash::Hash;
-use std::collections::hash_set::HashSet;
+use std::collections::hash_set::{HashSet, Iter};
 use std::collections::hash_map::{HashMap, Keys};
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::hash_set::Iter;
 
 pub struct Graph<N> {
     nodes: HashMap<N, HashSet<N>>
@@ -27,10 +25,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 
     pub fn link(&mut self, node: N, child: N) {
-        match self.nodes.entry(node) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.insert(HashSet::new()),
-        }.insert(child);
+        self.nodes.entry(node).or_insert(HashSet::new()).insert(child);
     }
 
     pub fn get_nodes(&self) -> &HashMap<N, HashSet<N>> {
