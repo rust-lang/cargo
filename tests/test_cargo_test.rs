@@ -659,7 +659,7 @@ test!(test_dylib {
             path = "bar"
         "#)
         .file("src/lib.rs", r#"
-            extern crate "bar" as the_bar;
+            extern crate bar as the_bar;
 
             pub fn bar() { the_bar::baz(); }
 
@@ -667,7 +667,7 @@ test!(test_dylib {
             fn foo() { bar(); }
         "#)
         .file("tests/test.rs", r#"
-            extern crate "foo" as the_foo;
+            extern crate foo as the_foo;
 
             #[test]
             fn foo() { the_foo::bar(); }

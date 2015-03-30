@@ -185,7 +185,7 @@ fn activate(mut cx: Box<Context>,
         let mut candidates = try!(registry.query(dep));
         // When we attempt versions for a package, we'll want to start at the
         // maximum version and work our way down.
-        candidates.as_mut_slice().sort_by(|a, b| {
+        candidates.sort_by(|a, b| {
             b.version().cmp(a.version())
         });
         let candidates = candidates.into_iter().map(Rc::new).collect::<Vec<_>>();
@@ -196,7 +196,7 @@ fn activate(mut cx: Box<Context>,
     // before recursing on dependencies with more candidates. This way if the
     // dependency with only one candidate can't be resolved we don't have to do
     // a bunch of work before we figure that out.
-    deps.as_mut_slice().sort_by(|&(_, ref a, _), &(_, ref b, _)| {
+    deps.sort_by(|&(_, ref a, _), &(_, ref b, _)| {
         a.len().cmp(&b.len())
     });
 
@@ -220,9 +220,7 @@ fn flag_activated(cx: &mut Context,
                   method: &Method) -> bool {
     let id = summary.package_id();
     let key = (id.name().to_string(), id.source_id().clone());
-    let prev = cx.activations.entry(key).get().unwrap_or_else(|e| {
-        e.insert(Vec::new())
-    });
+    let prev = cx.activations.entry(key).or_insert(Vec::new());
     if !prev.iter().any(|c| c == summary) {
         cx.resolve.graph.add(id.clone(), &[]);
         prev.push(summary.clone());

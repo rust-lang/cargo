@@ -675,7 +675,7 @@ test!(bench_dylib {
         "#)
         .file("src/lib.rs", r#"
             #![feature(test)]
-            extern crate "bar" as the_bar;
+            extern crate bar as the_bar;
             extern crate test;
 
             pub fn bar() { the_bar::baz(); }
@@ -685,7 +685,7 @@ test!(bench_dylib {
         "#)
         .file("benches/bench.rs", r#"
             #![feature(test)]
-            extern crate "foo" as the_foo;
+            extern crate foo as the_foo;
             extern crate test;
 
             #[bench]

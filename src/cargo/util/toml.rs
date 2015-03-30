@@ -764,22 +764,17 @@ fn normalize(libs: &[TomlLibTarget],
 
     let mut ret = Vec::new();
 
-    match (libs, bins) {
-        ([_, ..], [_, ..]) => {
-            lib_targets(&mut ret, libs, metadata);
-            bin_targets(&mut ret, bins,
-                        &mut |bin| Path::new("src").join("bin")
-                                       .join(&format!("{}.rs", bin.name)));
-        },
-        ([_, ..], []) => {
-            lib_targets(&mut ret, libs, metadata);
-        },
-        ([], [_, ..]) => {
-            bin_targets(&mut ret, bins,
-                        &mut |bin| Path::new("src")
-                                        .join(&format!("{}.rs", bin.name)));
-        },
-        ([], []) => ()
+    if libs.len() > 0 && bins.len() > 0 {
+        lib_targets(&mut ret, libs, metadata);
+        bin_targets(&mut ret, bins,
+                    &mut |bin| Path::new("src").join("bin")
+                                   .join(&format!("{}.rs", bin.name)));
+    } else if libs.len() > 0 && bins.len() == 0 {
+        lib_targets(&mut ret, libs, metadata);
+    } else if libs.len() == 0 && bins.len() > 0 {
+        bin_targets(&mut ret, bins,
+                    &mut |bin| Path::new("src")
+                                    .join(&format!("{}.rs", bin.name)));
     }
 
     if let Some(custom_build) = custom_build {

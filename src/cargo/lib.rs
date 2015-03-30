@@ -1,5 +1,5 @@
 #![deny(unused)]
-#![feature(os, std_misc, core, path_relative_from)]
+#![feature(os, std_misc, core, path_relative_from, collections)]
 #![feature(io, str_words, exit_status, fs_time, convert)]
 #![cfg_attr(test, deny(warnings))]
 

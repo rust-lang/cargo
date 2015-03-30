@@ -72,7 +72,7 @@ test!(plugin_to_the_max {
             name = "baz"
             crate_type = ["dylib"]
         "#)
-        .file("src/lib.rs", "pub fn baz() -> int { 1 }");
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
     bar.build();
     baz.build();
 
