@@ -1416,6 +1416,6 @@ test!(dashes_to_underscores {
             pub fn foo() -> i32 { 1 }
         "#);
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
 });

@@ -1674,3 +1674,45 @@ test!(dont_require_submodules_are_checked_out {
     assert_that(git1.cargo("build").arg("-v").cwd(&dst),
                 execs().with_status(0));
 });
+
+test!(doctest_same_name {
+    let a2 = git_repo("a2", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn a2() {}")
+    }).unwrap();
+
+    let a1 = git_repo("a1", |p| {
+        p.file("Cargo.toml", &format!(r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            a = {{ git = '{}' }}
+        "#, a2.url()))
+        .file("src/lib.rs", "extern crate a; pub fn a1() {}")
+    }).unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = {{ git = '{}' }}
+        "#, a1.url()))
+        .file("src/lib.rs", r#"
+            #[macro_use]
+            extern crate a;
+        "#);
+
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0));
+});

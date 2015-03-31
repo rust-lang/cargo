@@ -58,18 +58,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
     let mut missing_outputs = false;
     if !profile.doc {
         for filename in try!(cx.target_filenames(target, profile)).iter() {
-            let dst = root.join(filename);
-            missing_outputs |= fs::metadata(&dst).is_err();
-
-            if profile.test {
-                cx.compilation.tests.push((target.name().to_string(), dst));
-            } else if target.is_bin() || target.is_example() {
-                cx.compilation.binaries.push(dst);
-            } else if target.is_lib() {
-                let pkgid = pkg.package_id().clone();
-                cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
-                  .push(dst);
-            }
+            missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
     }
 

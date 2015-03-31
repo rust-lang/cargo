@@ -14,7 +14,7 @@ pub struct Compilation {
     ///
     /// This is currently used for passing --extern flags to rustdoc tests later
     /// on.
-    pub libraries: HashMap<PackageId, Vec<PathBuf>>,
+    pub libraries: HashMap<PackageId, Vec<(String, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
     pub tests: Vec<(String, PathBuf)>,
