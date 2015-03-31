@@ -31,9 +31,9 @@ libc = "0.1.2"
 registry = { path = "src/registry" }
 
 [target.i686-pc-windows-gnu]
-dependencies = { winapi = "0.1", advapi32-sys = "*", kernel32-sys = "*" }
+dependencies = { winapi = "0.1", advapi32-sys = "0.1", kernel32-sys = "0.1" }
 [target.x86_64-pc-windows-gnu]
-dependencies = { winapi = "0.1", advapi32-sys = "*", kernel32-sys = "*" }
+dependencies = { winapi = "0.1", advapi32-sys = "0.1", kernel32-sys = "0.1" }
 
 [dev-dependencies]
 tempdir = "0.3"

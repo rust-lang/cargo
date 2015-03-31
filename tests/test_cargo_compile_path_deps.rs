@@ -669,7 +669,7 @@ test!(path_dep_build_cmd {
             }
         "#)
         .file("bar/src/bar.rs.in", r#"
-            pub fn gimme() -> int { 0 }
+            pub fn gimme() -> i32 { 0 }
         "#);
 
     p.build();
@@ -689,7 +689,7 @@ test!(path_dep_build_cmd {
     // Touching bar.rs.in should cause the `build` command to run again.
     {
         let file = fs::File::create(&p.root().join("bar/src/bar.rs.in"));
-        file.unwrap().write_all(br#"pub fn gimme() -> int { 1 }"#).unwrap();
+        file.unwrap().write_all(br#"pub fn gimme() -> i32 { 1 }"#).unwrap();
     }
 
     assert_that(p.cargo("build"),

@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fmt;
 use std::rc::Rc;
 use semver;
@@ -92,10 +91,7 @@ impl Resolve {
                     spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
             for id in ids.iter() {
-                match version_cnt.entry(id.version()) {
-                    Vacant(e) => { e.insert(1); }
-                    Occupied(e) => *e.into_mut() += 1,
-                }
+                *version_cnt.entry(id.version()).or_insert(0) += 1;
             }
             for id in ids.iter() {
                 if version_cnt[id.version()] == 1 {
@@ -185,7 +181,7 @@ fn activate(mut cx: Box<Context>,
         let mut candidates = try!(registry.query(dep));
         // When we attempt versions for a package, we'll want to start at the
         // maximum version and work our way down.
-        candidates.as_mut_slice().sort_by(|a, b| {
+        candidates.sort_by(|a, b| {
             b.version().cmp(a.version())
         });
         let candidates = candidates.into_iter().map(Rc::new).collect::<Vec<_>>();
@@ -196,7 +192,7 @@ fn activate(mut cx: Box<Context>,
     // before recursing on dependencies with more candidates. This way if the
     // dependency with only one candidate can't be resolved we don't have to do
     // a bunch of work before we figure that out.
-    deps.as_mut_slice().sort_by(|&(_, ref a, _), &(_, ref b, _)| {
+    deps.sort_by(|&(_, ref a, _), &(_, ref b, _)| {
         a.len().cmp(&b.len())
     });
 
@@ -220,9 +216,7 @@ fn flag_activated(cx: &mut Context,
                   method: &Method) -> bool {
     let id = summary.package_id();
     let key = (id.name().to_string(), id.source_id().clone());
-    let prev = cx.activations.entry(key).get().unwrap_or_else(|e| {
-        e.insert(Vec::new())
-    });
+    let prev = cx.activations.entry(key).or_insert(Vec::new());
     if !prev.iter().any(|c| c == summary) {
         cx.resolve.graph.add(id.clone(), &[]);
         prev.push(summary.clone());
@@ -485,10 +479,9 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     // Record what list of features is active for this package.
     if used_features.len() > 0 {
         let pkgid = parent.package_id();
-        match cx.resolve.features.entry(pkgid.clone()) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.insert(HashSet::new()),
-        }.extend(used_features.into_iter());
+        cx.resolve.features.entry(pkgid.clone())
+          .or_insert(HashSet::new())
+          .extend(used_features);
     }
 
     Ok(ret)
@@ -553,10 +546,9 @@ fn build_features(s: &Summary, method: Method)
         match parts.next() {
             Some(feat) => {
                 let package = feat_or_package;
-                match deps.entry(package.to_string()) {
-                    Occupied(e) => e.into_mut(),
-                    Vacant(e) => e.insert(Vec::new()),
-                }.push(feat.to_string());
+                deps.entry(package.to_string())
+                    .or_insert(Vec::new())
+                    .push(feat.to_string());
             }
             None => {
                 let feat = feat_or_package;
@@ -574,10 +566,7 @@ fn build_features(s: &Summary, method: Method)
                         }
                     }
                     None => {
-                        match deps.entry(feat.to_string()) {
-                            Occupied(..) => {} // already activated
-                            Vacant(e) => { e.insert(Vec::new()); }
-                        }
+                        deps.entry(feat.to_string()).or_insert(Vec::new());
                     }
                 }
                 visited.remove(&feat.to_string());

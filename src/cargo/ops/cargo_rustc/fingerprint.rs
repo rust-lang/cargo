@@ -1,4 +1,3 @@
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::{BufReader, SeekFrom};
@@ -68,10 +67,8 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
                 cx.compilation.binaries.push(dst);
             } else if target.is_lib() {
                 let pkgid = pkg.package_id().clone();
-                match cx.compilation.libraries.entry(pkgid) {
-                    Occupied(entry) => entry.into_mut(),
-                    Vacant(entry) => entry.insert(Vec::new()),
-                }.push(dst);
+                cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
+                  .push(dst);
             }
         }
     }

@@ -86,10 +86,7 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in key.dependencies(cx).into_iter() {
             assert!(my_dependencies.insert(dep.clone()));
-            let rev = match self.reverse_dep_map.entry(dep) {
-                Occupied(entry) => entry.into_mut(),
-                Vacant(entry) => entry.insert(HashSet::new()),
-            };
+            let rev = self.reverse_dep_map.entry(dep).or_insert(HashSet::new());
             assert!(rev.insert(key.clone()));
         }
         &mut slot.insert((my_dependencies, value)).1

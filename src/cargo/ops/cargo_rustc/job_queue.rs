@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
-// use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use threadpool::ThreadPool;
