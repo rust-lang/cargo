@@ -155,7 +155,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(&output.stdout).chain_error(|| {
+        let output = try!(str::from_utf8(&output.stdout).map_err(|_| {
             human("build script output was not valid utf-8")
         }));
         let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
@@ -256,7 +256,7 @@ impl BuildOutput {
         let whence = format!("build script of `{}`", pkg_name);
 
         for line in input.lines() {
-            let mut iter = line.splitn(1, |c| c == ':');
+            let mut iter = line.splitn(2, ':');
             if iter.next() != Some("cargo") {
                 // skip this line since it doesn't start with "cargo:"
                 continue;
@@ -267,7 +267,7 @@ impl BuildOutput {
             };
 
             // getting the `key=value` part of the line
-            let mut iter = data.splitn(1, |c| c == '=');
+            let mut iter = data.splitn(2, '=');
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {
@@ -301,9 +301,9 @@ impl BuildOutput {
 
     pub fn parse_rustc_flags(value: &str, whence: &str)
                              -> CargoResult<(Vec<PathBuf>, Vec<String>)> {
-        // TODO: some arguments (like paths) may contain spaces
         let value = value.trim();
-        let mut flags_iter = value.words();
+        let mut flags_iter = value.split(|c: char| c.is_whitespace())
+                                  .filter(|w| w.chars().any(|c| !c.is_whitespace()));
         let (mut library_links, mut library_paths) = (Vec::new(), Vec::new());
         loop {
             let flag = match flags_iter.next() {

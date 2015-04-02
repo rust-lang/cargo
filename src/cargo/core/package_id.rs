@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::error::{Error, FromError};
+use std::error::Error;
 use std::fmt::{self, Formatter};
 use std::hash::Hash;
 use std::hash;
@@ -108,8 +108,8 @@ impl CargoError for PackageIdError {
     fn is_human(&self) -> bool { true }
 }
 
-impl FromError<PackageIdError> for Box<CargoError> {
-    fn from_error(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
+impl From<PackageIdError> for Box<CargoError> {
+    fn from(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, RustcEncodable, Debug)]

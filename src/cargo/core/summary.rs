@@ -34,7 +34,7 @@ impl Summary {
         }
         for (feature, list) in features.iter() {
             for dep in list.iter() {
-                let mut parts = dep.splitn(1, '/');
+                let mut parts = dep.splitn(2, '/');
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
                 if !is_reexport && features.get(dep).is_some() { continue }

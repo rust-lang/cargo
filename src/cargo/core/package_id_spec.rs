@@ -26,7 +26,7 @@ impl PackageIdSpec {
                 }
             }
         }
-        let mut parts = spec.splitn(1, ':');
+        let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
             Some(version) => Some(try!(Version::parse(version).map_err(human))),
@@ -69,7 +69,7 @@ impl PackageIdSpec {
             }));
             match frag {
                 Some(fragment) => {
-                    let mut parts = fragment.splitn(1, ':');
+                    let mut parts = fragment.splitn(2, ':');
                     let name_or_version = parts.next().unwrap();
                     match parts.next() {
                         Some(part) => {

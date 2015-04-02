@@ -179,7 +179,7 @@ test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
               .with_stderr("\
 thread '<main>' panicked at 'assertion failed: \
-    `(left == right) && (right == left)` (left: \
+    `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
 
 ")

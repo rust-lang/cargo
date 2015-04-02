@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::error::FromError;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io;
@@ -77,7 +76,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 fn walk<F>(path: &Path, callback: &mut F) -> CargoResult<()>
     where F: FnMut(&Path) -> CargoResult<bool>
 {
-    if fs::metadata(&path).map(|m| m.is_dir()) != Ok(true) {
+    if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
         return Ok(())
     }
 
@@ -93,7 +92,7 @@ fn walk<F>(path: &Path, callback: &mut F) -> CargoResult<()>
         Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => {
             return Ok(())
         }
-        Err(e) => return Err(FromError::from_error(e)),
+        Err(e) => return Err(From::from(e)),
     };
     for dir in dirs {
         let dir = try!(dir).path();

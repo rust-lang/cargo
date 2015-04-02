@@ -600,7 +600,9 @@ fn root_path(cx: &Context, pkg: &Package, target: &Target) -> PathBuf {
     let absolute = pkg.root().join(target.src_path());
     let cwd = cx.config.cwd();
     if absolute.starts_with(cwd) {
-        absolute.relative_from(cwd).map(|s| s.to_path_buf()).unwrap_or(absolute)
+        util::without_prefix(&absolute, cwd).map(|s| {
+            s.to_path_buf()
+        }).unwrap_or(absolute)
     } else {
         absolute
     }

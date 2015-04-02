@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use std::env;
 use std::fs::File;
 use std::io::prelude::*;
+use std::process;
 
-use toml;
 use cargo::util::{CliResult, Config};
+use rustc_serialize::json;
+use toml;
 
 pub type Error = HashMap<String, String>;
 
@@ -32,10 +33,10 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     let file = File::open(&args.flag_manifest_path);
     match file.and_then(|mut f| f.read_to_string(&mut contents)) {
         Ok(_) => {},
-        Err(e) => return fail("invalid", &format!("error reading file: {}", e))
+        Err(e) => fail("invalid", &format!("error reading file: {}", e))
     };
     match toml::Parser::new(&contents).parse() {
-        None => return fail("invalid", "invalid-format"),
+        None => fail("invalid", "invalid-format"),
         Some(..) => {}
     };
 
@@ -44,9 +45,9 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     Ok(Some(h))
 }
 
-fn fail(reason: &str, value: &str) -> CliResult<Option<Error>>{
+fn fail(reason: &str, value: &str) -> ! {
     let mut h = HashMap::new();
     h.insert(reason.to_string(), value.to_string());
-    env::set_exit_status(1);
-    Ok(Some(h))
+    println!("{}", json::encode(&h).unwrap());
+    process::exit(1)
 }

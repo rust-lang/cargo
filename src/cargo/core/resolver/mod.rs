@@ -541,7 +541,7 @@ fn build_features(s: &Summary, method: Method)
         // form `foo` and we need to recurse to enable the feature `foo` for our
         // own package, which may end up enabling more features or just enabling
         // a dependency.
-        let mut parts = feat.splitn(1, '/');
+        let mut parts = feat.splitn(2, '/');
         let feat_or_package = parts.next().unwrap();
         match parts.next() {
             Some(feat) => {

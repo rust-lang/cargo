@@ -75,7 +75,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
 
 fn rm_rf(path: &Path) -> CargoResult<()> {
     let m = fs::metadata(path);
-    if m.as_ref().map(|s| s.is_dir()) == Ok(true) {
+    if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
         try!(fs::remove_dir_all(path).chain_error(|| {
             human("could not remove build directory")
         }));

@@ -3,7 +3,6 @@ use std::default::Default;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::slice;
 use std::str;
 
 use toml;
@@ -15,7 +14,7 @@ use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
-use util::{CargoResult, human, ToUrl, ToSemver, ChainError, Config};
+use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
 /// Representation of the projects file layout.
 ///
@@ -99,11 +98,11 @@ pub fn to_manifest(contents: &[u8],
                    config: &Config)
                    -> CargoResult<(Manifest, Vec<PathBuf>)> {
     let manifest = layout.root.join("Cargo.toml");
-    let manifest = match manifest.relative_from(config.cwd()) {
+    let manifest = match util::without_prefix(&manifest, config.cwd()) {
         Some(path) => path.to_path_buf(),
         None => manifest.clone(),
     };
-    let contents = try!(str::from_utf8(contents).chain_error(|| {
+    let contents = try!(str::from_utf8(contents).map_err(|_| {
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
     let root = try!(parse(contents, &manifest));
@@ -204,7 +203,7 @@ pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
     profile: Option<TomlProfiles>,
-    lib: Option<ManyOrOne<TomlLibTarget>>,
+    lib: Option<TomlLibTarget>,
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
@@ -233,21 +232,6 @@ pub struct TomlProfile {
     debug: Option<bool>,
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
-}
-
-#[derive(RustcDecodable)]
-pub enum ManyOrOne<T> {
-    Many(Vec<T>),
-    One(T),
-}
-
-impl<T> ManyOrOne<T> {
-    fn as_slice(&self) -> &[T] {
-        match *self {
-            ManyOrOne::Many(ref v) => v,
-            ManyOrOne::One(ref t) => slice::ref_slice(t),
-        }
-    }
 }
 
 #[derive(RustcDecodable)]
@@ -305,14 +289,14 @@ struct Context<'a, 'b, 'c: 'b> {
 // otherwise acceptable executable names are not used when inside of
 // `src/bin/*`, but it seems ok to not build executables with non-UTF8
 // paths.
-fn inferred_lib_target(name: &str, layout: &Layout) -> Vec<TomlTarget> {
+fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
     layout.lib.as_ref().map(|lib| {
-        vec![TomlTarget {
+        TomlTarget {
             name: name.to_string(),
             path: Some(PathValue::Path(lib.clone())),
             .. TomlTarget::new()
-        }]
-    }).unwrap_or(Vec::new())
+        }
+    })
 }
 
 fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
@@ -388,24 +372,17 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
 
-        let mut used_deprecated_lib = false;
         let lib = match self.lib {
-            Some(ref libs) => {
-                match *libs {
-                    ManyOrOne::Many(..) => used_deprecated_lib = true,
-                    _ => {}
-                }
-                try!(libs.as_slice().iter().map(|t| {
-                    try!(validate_library_name(t));
-                    Ok(if layout.lib.is_some() && t.path.is_none() {
-                        TomlTarget {
-                            path: layout.lib.as_ref().map(|p| PathValue::Path(p.clone())),
-                            .. t.clone()
-                        }
-                    } else {
-                        t.clone()
-                    })
-                }).collect::<CargoResult<Vec<_>>>())
+            Some(ref lib) => {
+                try!(validate_library_name(lib));
+                Some(if layout.lib.is_some() && lib.path.is_none() {
+                    TomlTarget {
+                        path: layout.lib.as_ref().map(|p| PathValue::Path(p.clone())),
+                        .. lib.clone()
+                    }
+                } else {
+                    lib.clone()
+                })
             }
             None => inferred_lib_target(&project.name, layout),
         };
@@ -519,10 +496,6 @@ impl TomlManifest {
                                          project.links.clone(),
                                          metadata,
                                          profiles);
-        if used_deprecated_lib {
-            manifest.add_warning(format!("the [[lib]] section has been \
-                                          deprecated in favor of [lib]"));
-        }
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("warning: only one of `license` or \
                                                    `license-file` is necessary"));
@@ -652,7 +625,7 @@ impl fmt::Debug for PathValue {
     }
 }
 
-fn normalize(libs: &[TomlLibTarget],
+fn normalize(lib: &Option<TomlLibTarget>,
              bins: &[TomlBinTarget],
              custom_build: Option<PathBuf>,
              examples: &[TomlExampleTarget],
@@ -669,9 +642,8 @@ fn normalize(libs: &[TomlLibTarget],
               .set_for_host(toml.plugin.unwrap_or(t2.for_host()));
     }
 
-    fn lib_targets(dst: &mut Vec<Target>, libs: &[TomlLibTarget],
-                   metadata: &Metadata) {
-        let l = &libs[0];
+    fn lib_target(dst: &mut Vec<Target>, l: &TomlLibTarget,
+                  metadata: &Metadata) {
         let path = l.path.clone().unwrap_or_else(|| {
             PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name)))
         });
@@ -764,14 +736,12 @@ fn normalize(libs: &[TomlLibTarget],
 
     let mut ret = Vec::new();
 
-    if libs.len() > 0 && bins.len() > 0 {
-        lib_targets(&mut ret, libs, metadata);
+    if let Some(ref lib) = *lib {
+        lib_target(&mut ret, lib, metadata);
         bin_targets(&mut ret, bins,
                     &mut |bin| Path::new("src").join("bin")
                                    .join(&format!("{}.rs", bin.name)));
-    } else if libs.len() > 0 && bins.len() == 0 {
-        lib_targets(&mut ret, libs, metadata);
-    } else if libs.len() == 0 && bins.len() > 0 {
+    } else if bins.len() > 0 {
         bin_targets(&mut ret, bins,
                     &mut |bin| Path::new("src")
                                     .join(&format!("{}.rs", bin.name)));

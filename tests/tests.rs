@@ -1,5 +1,4 @@
-#![feature(io, convert, thread_sleep)]
-#![feature(std_misc, io, fs, fs_ext, path_ext, fs_time, fs_walk)]
+#![feature(fs, fs_ext, path_ext, fs_time, fs_walk)]
 
 extern crate rustc_serialize;
 extern crate cargo;
@@ -53,7 +52,3 @@ mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_version;
 mod test_shell;
-
-fn sleep(dur: std::time::Duration) {
-    std::thread::sleep(dur)
-}

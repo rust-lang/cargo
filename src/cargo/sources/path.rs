@@ -9,7 +9,7 @@ use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{CargoResult, internal, internal_error, human, ChainError, Config};
+use util::{self, CargoResult, internal, internal_error, human, ChainError, Config};
 
 pub struct PathSource<'a, 'b: 'a> {
     id: SourceId,
@@ -99,7 +99,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
                               .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
 
         let mut filter = |p: &Path| {
-            let relative_path = p.relative_from(&root).unwrap();
+            let relative_path = util::without_prefix(p, &root).unwrap();
             include.iter().any(|p| p.matches_path(&relative_path)) || {
                 include.len() == 0 &&
                  !exclude.iter().any(|p| p.matches_path(&relative_path))
@@ -163,9 +163,9 @@ impl<'a, 'b> PathSource<'a, 'b> {
 
             // TODO: the `entry` has a mode we should be able to look at instead
             //       of just calling stat() again
-            if fs::metadata(&file_path).map(|m| m.is_dir()) == Ok(true) {
+            if fs::metadata(&file_path).map(|m| m.is_dir()).unwrap_or(false) {
                 warn!("  found submodule {}", file_path.display());
-                let rel = file_path.relative_from(&root).unwrap();
+                let rel = util::without_prefix(&file_path, &root).unwrap();
                 let rel = try!(rel.to_str().chain_error(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 }));
@@ -219,7 +219,7 @@ impl<'a, 'b> PathSource<'a, 'b> {
                    is_root: bool, filter: &mut F) -> CargoResult<()>
             where F: FnMut(&Path) -> bool
         {
-            if fs::metadata(&path).map(|m| m.is_dir()) != Ok(true) {
+            if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
                 if (*filter)(path) {
                     ret.push(path.to_path_buf());
                 }

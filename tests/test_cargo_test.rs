@@ -133,7 +133,7 @@ failures:
 
 ---- test_hello stdout ----
 <tab>thread 'test_hello' panicked at 'assertion failed: \
-    `(left == right) && (right == left)` (left: \
+    `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:12
 
 
@@ -1166,11 +1166,8 @@ test!(example_dev_dep {
             macro_rules! f6( () => ({(f5!()) + (f5!())}) );
             macro_rules! f7( () => ({(f6!()) + (f6!())}) );
             macro_rules! f8( () => ({(f7!()) + (f7!())}) );
-            macro_rules! f9( () => ({(f8!()) + (f8!())}) );
-            macro_rules! f10( () => ({(f9!()) + (f9!())}) );
-            macro_rules! f11( () => ({(f10!()) + (f10!())}) );
             pub fn bar() {
-                f11!();
+                f8!();
             }
         "#);
     assert_that(p.cargo_process("test"),

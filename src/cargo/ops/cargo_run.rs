@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use ops::{self, ExecEngine, CompileFilter};
-use util::{CargoResult, human, process, ProcessError};
+use util::{self, CargoResult, human, process, ProcessError};
 use core::source::Source;
 use sources::PathSource;
 
@@ -47,7 +47,7 @@ pub fn run(manifest_path: &Path,
 
     let compile = try!(ops::compile(manifest_path, options));
     let exe = &compile.binaries[0];
-    let exe = match exe.relative_from(config.cwd()) {
+    let exe = match util::without_prefix(&exe, config.cwd()) {
         Some(path) => path,
         None => &**exe,
     };

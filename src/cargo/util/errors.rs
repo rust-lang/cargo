@@ -1,4 +1,4 @@
-use std::error::{FromError, Error};
+use std::error::Error;
 use std::ffi;
 use std::fmt;
 use std::io;
@@ -233,8 +233,8 @@ impl CliError {
     }
 }
 
-impl FromError<Box<CargoError>> for CliError {
-    fn from_error(err: Box<CargoError>) -> CliError {
+impl From<Box<CargoError>> for CliError {
+    fn from(err: Box<CargoError>) -> CliError {
         CliError::from_boxed(err, 101)
     }
 }
@@ -244,8 +244,8 @@ impl FromError<Box<CargoError>> for CliError {
 
 macro_rules! from_error {
     ($($p:ty,)*) => (
-        $(impl FromError<$p> for Box<CargoError> {
-            fn from_error(t: $p) -> Box<CargoError> { Box::new(t) }
+        $(impl From<$p> for Box<CargoError> {
+            fn from(t: $p) -> Box<CargoError> { Box::new(t) }
         })*
     )
 }
@@ -264,8 +264,8 @@ from_error! {
     ffi::NulError,
 }
 
-impl<E: CargoError> FromError<Human<E>> for Box<CargoError> {
-    fn from_error(t: Human<E>) -> Box<CargoError> { Box::new(t) }
+impl<E: CargoError> From<Human<E>> for Box<CargoError> {
+    fn from(t: Human<E>) -> Box<CargoError> { Box::new(t) }
 }
 
 impl CargoError for semver::ReqParseError {}
@@ -278,7 +278,6 @@ impl CargoError for CliError {}
 impl CargoError for toml::Error {}
 impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
-impl CargoError for str::Utf8Error {}
 impl CargoError for ffi::NulError {}
 
 // =============================================================================

@@ -39,7 +39,7 @@ pub fn package(manifest_path: &Path,
     if list {
         let root = pkg.root();
         let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
-            file.relative_from(&root).unwrap().to_path_buf()
+            util::without_prefix(&file, &root).unwrap().to_path_buf()
         }).collect();
         list.sort();
         for file in list.iter() {
@@ -123,7 +123,7 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
     let root = pkg.root();
     for file in try!(src.list_files(pkg)).iter() {
         if &**file == dst { continue }
-        let relative = file.relative_from(&root).unwrap();
+        let relative = util::without_prefix(&file, &root).unwrap();
         let relative = try!(relative.to_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))

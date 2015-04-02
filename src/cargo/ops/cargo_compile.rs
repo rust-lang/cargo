@@ -24,7 +24,6 @@
 
 use std::collections::HashMap;
 use std::default::Default;
-use std::num::ToPrimitive;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -332,23 +331,19 @@ fn scrape_build_config(config: &Config,
                        -> CargoResult<ops::BuildConfig> {
     let cfg_jobs = match try!(config.get_i64("build.jobs")) {
         Some((n, p)) => {
-            match n.to_u32() {
-                Some(n) => Some(n),
-                None if n <= 0 => {
-                    return Err(human(format!("build.jobs must be positive, \
-                                              but found {} in {:?}", n, p)));
-                }
-                None => {
-                    return Err(human(format!("build.jobs is too large: \
-                                              found {} in {:?}", n, p)));
-                }
+            if n <= 0 {
+                return Err(human(format!("build.jobs must be positive, \
+                                          but found {} in {:?}", n, p)));
+            } else if n >= u32::max_value() as i64 {
+                return Err(human(format!("build.jobs is too large: \
+                                          found {} in {:?}", n, p)));
+            } else {
+                Some(n as u32)
             }
         }
         None => None,
     };
-    #[allow(deprecated)]
-    fn num_cpus() -> u32 { ::std::os::num_cpus() as u32 }
-    let jobs = jobs.or(cfg_jobs).unwrap_or(num_cpus());
+    let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
     let mut base = ops::BuildConfig {
         jobs: jobs,
         requested_target: target.clone(),

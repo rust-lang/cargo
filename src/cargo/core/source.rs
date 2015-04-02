@@ -99,7 +99,7 @@ impl SourceId {
     ///                     656c58fb7c5ef5f12bc747f".to_string());
     /// ```
     pub fn from_url(string: String) -> SourceId {
-        let mut parts = string.splitn(1, '+');
+        let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
 
