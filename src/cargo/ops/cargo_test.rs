@@ -4,7 +4,7 @@ use std::path::Path;
 use core::Source;
 use sources::PathSource;
 use ops::{self, ExecEngine, ProcessEngine, Compilation};
-use util::{CargoResult, ProcessError};
+use util::{self, CargoResult, ProcessError};
 
 pub struct TestOptions<'a, 'b: 'a> {
     pub compile_opts: ops::CompileOptions<'a, 'b>,
@@ -91,7 +91,7 @@ fn build_and_run(manifest_path: &Path,
 
     let cwd = config.cwd();
     for &(_, ref exe) in &compile.tests {
-        let to_display = match exe.relative_from(&cwd) {
+        let to_display = match util::without_prefix(exe, &cwd) {
             Some(path) => path,
             None => &**exe,
         };

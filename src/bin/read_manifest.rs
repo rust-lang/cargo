@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::error::Error;
 
 use cargo::core::{Package, Source};
 use cargo::util::{CliResult, CliError, Config};

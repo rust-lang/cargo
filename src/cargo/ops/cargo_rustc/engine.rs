@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ffi::{AsOsStr, OsString};
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::Path;
 use std::process::Output;
@@ -49,23 +49,23 @@ impl CommandPrototype {
 
     pub fn get_type(&self) -> &CommandType { &self.ty }
 
-    pub fn arg<T: AsOsStr + ?Sized>(&mut self, arg: &T) -> &mut CommandPrototype {
+    pub fn arg<T: AsRef<OsStr>>(&mut self, arg: T) -> &mut CommandPrototype {
         self.builder.arg(arg);
         self
     }
 
-    pub fn args<T: AsOsStr>(&mut self, arguments: &[T]) -> &mut CommandPrototype {
+    pub fn args<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut CommandPrototype {
         self.builder.args(arguments);
         self
     }
 
-    pub fn cwd<T: AsOsStr + ?Sized>(&mut self, path: &T) -> &mut CommandPrototype {
+    pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut CommandPrototype {
         self.builder.cwd(path);
         self
     }
 
-    pub fn env<T: AsOsStr + ?Sized>(&mut self, key: &str, val: &T)
-                                    -> &mut CommandPrototype {
+    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T)
+                                -> &mut CommandPrototype {
         self.builder.env(key, val);
         self
     }

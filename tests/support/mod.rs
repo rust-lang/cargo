@@ -1,6 +1,6 @@
 use std::env;
 use std::error::Error;
-use std::ffi::AsOsStr;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::io::prelude::*;
@@ -121,7 +121,7 @@ impl ProjectBuilder {
         self.root.join("target")
     }
 
-    pub fn process<T: AsOsStr + ?Sized>(&self, program: &T) -> ProcessBuilder {
+    pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
         let mut p = process(program).unwrap();
         p.cwd(&self.root()).env("HOME", &paths::home());
         return p;

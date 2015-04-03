@@ -1,6 +1,7 @@
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::thread;
 use tempdir::TempDir;
 
 use support::{project, execs, main_file, basic_bin_manifest};
@@ -1186,21 +1187,6 @@ test!(staticlib_rlib_and_bin {
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 });
 
-test!(opt_out_of_lib {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-              lib = []
-
-              [package]
-              name = "foo"
-              authors = []
-              version = "0.0.1"
-        "#)
-        .file("src/lib.rs", "bad syntax")
-        .file("src/main.rs", "fn main() {}");
-    assert_that(p.cargo_process("build"), execs().with_status(0));
-});
-
 test!(opt_out_of_bin {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1230,24 +1216,6 @@ test!(single_lib {
         "#)
         .file("src/bar.rs", "");
     assert_that(p.cargo_process("build"), execs().with_status(0));
-});
-
-test!(deprecated_lib {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-              [package]
-              name = "foo"
-              authors = []
-              version = "0.0.1"
-
-              [[lib]]
-              name = "foo"
-        "#)
-        .file("src/foo.rs", "");
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0)
-                       .with_stderr("\
-the [[lib]] section has been deprecated in favor of [lib]\n"));
 });
 
 test!(freshness_ignores_excluded {
@@ -1572,8 +1540,7 @@ test!(compile_then_delete {
     assert_that(&p.bin("foo"), existing_file());
     if cfg!(windows) {
         // On windows unlinking immediately after running often fails, so sleep
-        use std::time::duration::Duration;
-        ::sleep(Duration::milliseconds(100));
+        thread::sleep_ms(100);
     }
     fs::remove_file(&p.bin("foo")).unwrap();
     assert_that(p.cargo("run"),

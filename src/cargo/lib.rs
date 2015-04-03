@@ -1,18 +1,19 @@
 #![deny(unused)]
-#![feature(os, std_misc, core, path_relative_from, collections)]
-#![feature(io, str_words, exit_status, fs_time, convert)]
+#![feature(fs_time)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
-extern crate rustc_serialize;
 extern crate curl;
 extern crate docopt;
 extern crate flate2;
 extern crate git2;
 extern crate glob;
 extern crate libc;
+extern crate num_cpus;
 extern crate regex;
+extern crate registry;
+extern crate rustc_serialize;
 extern crate semver;
 extern crate tar;
 extern crate term;
@@ -20,8 +21,6 @@ extern crate threadpool;
 extern crate time;
 extern crate toml;
 extern crate url;
-
-extern crate registry;
 
 use std::env;
 use std::error::Error;
@@ -180,7 +179,7 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
                                  with --verbose.".to_string(), BLACK);
     }
 
-    std::env::set_exit_status(exit_code);
+    std::process::exit(exit_code);
 }
 
 fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {

@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::ffi::AsOsStr;
+use std::ffi::OsStr;
 use std::path::PathBuf;
 use semver::Version;
 
@@ -72,15 +72,15 @@ impl Compilation {
     }
 
     /// See `process`.
-    pub fn target_process<T: AsOsStr + ?Sized>(&self, cmd: &T, pkg: &Package)
+    pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
                                                -> CargoResult<CommandPrototype> {
-        self.process(CommandType::Target(cmd.as_os_str().to_os_string()), pkg)
+        self.process(CommandType::Target(cmd.as_ref().to_os_string()), pkg)
     }
 
     /// See `process`.
-    pub fn host_process<T: AsOsStr + ?Sized>(&self, cmd: &T, pkg: &Package)
+    pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
                                              -> CargoResult<CommandPrototype> {
-        self.process(CommandType::Host(cmd.as_os_str().to_os_string()), pkg)
+        self.process(CommandType::Host(cmd.as_ref().to_os_string()), pkg)
     }
 
     /// Prepares a new process with an appropriate environment to run against

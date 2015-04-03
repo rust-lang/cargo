@@ -1,14 +1,12 @@
 use std::env;
-use std::ffi::{AsOsStr, OsString};
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf, Component};
 
 use util::{human, internal, CargoResult, ChainError};
 
-pub fn join_paths<T: AsOsStr>(paths: &[T], env: &str) -> CargoResult<OsString> {
+pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     env::join_paths(paths.iter()).or_else(|e| {
-        let paths = paths.iter().map(|p| {
-            Path::new(p.as_os_str())
-        }).collect::<Vec<_>>();
+        let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
         internal(format!("failed to join path array: {:?}", paths)).chain_error(|| {
             human(format!("failed to join search paths together: {}\n\
                            Does ${} have an unterminated quote character?",
@@ -50,6 +48,21 @@ pub fn normalize_path(path: &Path) -> PathBuf {
         }
     }
     return ret;
+}
+
+pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
+    let mut a = a.components();
+    let mut b = b.components();
+    loop {
+        let mut a2 = a.clone();
+        match (a2.next(), b.next()) {
+            (Some(x), Some(y)) if x == y => a = a2,
+            (Some(_), Some(_)) |
+            (None, Some(_)) => return None,
+            (Some(_), None) |
+            (None, None) => return Some(a.as_path()),
+        }
+    }
 }
 
 #[cfg(unix)]

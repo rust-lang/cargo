@@ -64,7 +64,7 @@ test!(simple {
     let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz), Ok(4));
+    assert_eq!(f.read(&mut sz).unwrap(), 4);
     let sz = ((sz[0] as u32) <<  0) |
              ((sz[1] as u32) <<  8) |
              ((sz[2] as u32) << 16) |

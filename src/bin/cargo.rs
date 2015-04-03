@@ -1,4 +1,4 @@
-#![feature(core, exit_status, fs_ext)]
+#![cfg_attr(unix, feature(fs_ext))]
 
 extern crate cargo;
 extern crate env_logger;
@@ -153,18 +153,18 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 }
 
 fn find_closest(cmd: &str) -> Option<String> {
-    match list_commands().iter()
-                            // doing it this way (instead of just .min_by(|c|
-                            // c.lev_distance(cmd))) allows us to only make
-                            // suggestions that have an edit distance of
-                            // 3 or less
-                            .map(|c| (lev_distance(&c, cmd), c))
-                            .filter(|&(d, _): &(usize, &String)| d < 4)
-                            .min_by(|&(d, _)| d) {
-        Some((_, c)) => {
-            Some(c.to_string())
-        },
-        None => None
+    let cmds = list_commands();
+    // Only consider candidates with a lev_distance of 3 or less so we don't
+    // suggest out-of-the-blue options.
+    let mut filtered = cmds.iter().map(|c| (lev_distance(&c, cmd), c))
+                                  .filter(|&(d, _)| d < 4)
+                                  .collect::<Vec<_>>();
+    filtered.sort_by(|a, b| a.0.cmp(&b.0));
+
+    if filtered.len() == 0 {
+        None
+    } else {
+        Some(filtered[0].1.to_string())
     }
 }
 
@@ -245,7 +245,7 @@ fn is_executable(path: &Path) -> bool {
 }
 #[cfg(windows)]
 fn is_executable(path: &Path) -> bool {
-    fs::metadata(path).map(|m| m.is_file()) == Ok(true)
+    fs::metadata(path).map(|m| m.is_file()).unwrap_or(false)
 }
 
 /// Get `Command` to run given command.

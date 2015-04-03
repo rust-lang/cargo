@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::env;
-use std::ffi::{OsString, AsOsStr};
+use std::ffi::{OsString, OsStr};
 use std::fmt;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -28,26 +28,26 @@ impl fmt::Display for ProcessBuilder {
 }
 
 impl ProcessBuilder {
-    pub fn arg<T: AsOsStr + ?Sized>(&mut self, arg: &T) -> &mut ProcessBuilder {
-        self.args.push(arg.as_os_str().to_os_string());
+    pub fn arg<T: AsRef<OsStr>>(&mut self, arg: T) -> &mut ProcessBuilder {
+        self.args.push(arg.as_ref().to_os_string());
         self
     }
 
-    pub fn args<T: AsOsStr>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
+    pub fn args<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
         self.args.extend(arguments.iter().map(|t| {
-            t.as_os_str().to_os_string()
+            t.as_ref().to_os_string()
         }));
         self
     }
 
-    pub fn cwd<T: AsOsStr + ?Sized>(&mut self, path: &T) -> &mut ProcessBuilder {
-        self.cwd = path.as_os_str().to_os_string();
+    pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut ProcessBuilder {
+        self.cwd = path.as_ref().to_os_string();
         self
     }
 
-    pub fn env<T: AsOsStr + ?Sized>(&mut self, key: &str,
-                                    val: &T) -> &mut ProcessBuilder {
-        self.env.insert(key.to_string(), Some(val.as_os_str().to_os_string()));
+    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str,
+                                val: T) -> &mut ProcessBuilder {
+        self.env.insert(key.to_string(), Some(val.as_ref().to_os_string()));
         self
     }
 
@@ -128,9 +128,9 @@ impl ProcessBuilder {
     }
 }
 
-pub fn process<T: AsOsStr + ?Sized>(cmd: &T) -> CargoResult<ProcessBuilder> {
+pub fn process<T: AsRef<OsStr>>(cmd: T) -> CargoResult<ProcessBuilder> {
     Ok(ProcessBuilder {
-        program: cmd.as_os_str().to_os_string(),
+        program: cmd.as_ref().to_os_string(),
         args: Vec::new(),
         cwd: try!(env::current_dir()).as_os_str().to_os_string(),
         env: HashMap::new(),

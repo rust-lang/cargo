@@ -99,7 +99,7 @@ test!(custom_build_env_vars {
 
                 let out = env::var("OUT_DIR").unwrap();
                 assert!(out.starts_with(r"{0}"));
-                assert_eq!(fs::metadata(&out).map(|m| m.is_dir()), Ok(true));
+                assert!(fs::metadata(&out).map(|m| m.is_dir()).unwrap_or(false));
 
                 let _host = env::var("HOST").unwrap();
 

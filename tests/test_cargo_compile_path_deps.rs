@@ -1,6 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::time::Duration;
+use std::thread;
 
 use support::{project, execs, main_file};
 use support::{COMPILING, RUNNING};
@@ -352,7 +352,7 @@ test!(deep_dependencies_trigger_rebuild {
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
-    ::sleep(Duration::seconds(1));
+    thread::sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs")).unwrap().write_all(br#"
         pub fn baz() { println!("hello!"); }
     "#).unwrap();
@@ -365,7 +365,7 @@ test!(deep_dependencies_trigger_rebuild {
                                             COMPILING, p.url())));
 
     // Make sure an update to bar doesn't trigger baz
-    ::sleep(Duration::seconds(1));
+    thread::sleep_ms(1000);
     File::create(&p.root().join("bar/src/bar.rs")).unwrap().write_all(br#"
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
