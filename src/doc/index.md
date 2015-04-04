@@ -70,7 +70,7 @@ class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello
 And then run it:
 
 ```shell
-$ ./target/hello_world
+$ ./target/debug/hello_world
 Hello, world!
 ```
 
