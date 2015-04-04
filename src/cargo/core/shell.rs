@@ -8,7 +8,7 @@ use term::{Terminal, TerminfoTerminal, color};
 
 use self::AdequateTerminal::{NoColor, Colored};
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct ShellConfig {
     pub color: bool,
     pub verbose: bool,
