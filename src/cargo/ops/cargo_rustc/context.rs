@@ -18,7 +18,7 @@ use super::layout::{Layout, LayoutProxy};
 use super::{Kind, Compilation, BuildConfig};
 use super::{ProcessEngine, ExecEngine};
 
-#[derive(Debug, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Platform {
     Target,
     Plugin,
