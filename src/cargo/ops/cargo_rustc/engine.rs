@@ -13,7 +13,7 @@ pub trait ExecEngine: Send + Sync {
 }
 
 /// Default implementation of `ExecEngine`.
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct ProcessEngine;
 
 impl ExecEngine for ProcessEngine {
