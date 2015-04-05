@@ -60,7 +60,7 @@ pub struct CompileOptions<'a, 'b: 'a> {
     pub mode: CompileMode,
 }
 
-#[derive(Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CompileMode {
     Test,
     Build,

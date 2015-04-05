@@ -29,7 +29,7 @@ pub struct Resolve {
     metadata: Option<Metadata>,
 }
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum Method<'a> {
     Everything,
     Required{ dev_deps: bool,
