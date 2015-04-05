@@ -25,7 +25,7 @@ for platform in sorted(snaps):
     tarball = 'cargo-nightly-' + triple + '.tar.gz'
     url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/' + date + '/' + tarball
     dl_path = "target/dl/" + tarball
-    ret = subprocess.call(["curl", "-s", "-o", dl_path, url])
+    ret = subprocess.call(["curl", "-f", "-s", "-o", dl_path, url])
     if ret != 0:
         raise Exception("failed to fetch url")
     h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
