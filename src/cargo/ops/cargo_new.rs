@@ -73,7 +73,7 @@ fn file(p: &Path, contents: &[u8]) -> io::Result<()> {
 fn mk(config: &Config, path: &Path, name: &str,
       opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
-    let mut ignore = "target\n".to_string();
+    let mut ignore = "/target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap());
     if !opts.bin {
         ignore.push_str("Cargo.lock\n");
