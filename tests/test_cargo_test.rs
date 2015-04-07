@@ -1445,3 +1445,31 @@ test!(doctest_dev_dep {
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(filter_no_doc_tests {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// extern crate b;
+            /// ```
+            pub fn foo() {}
+        "#)
+        .file("tests/foo.rs", "");
+
+    assert_that(p.cargo_process("test").arg("--test=foo"),
+                execs().with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{running} target[..]debug[..]foo[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING)));
+});

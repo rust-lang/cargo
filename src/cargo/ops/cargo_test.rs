@@ -20,7 +20,14 @@ pub fn run_tests(manifest_path: &Path,
         Err(e) => return Ok(Some(e)),
     };
 
-    if options.no_run { return Ok(None) }
+    // If a specific test was requested or we're not running any tests at all,
+    // don't run any doc tests.
+    if let ops::CompileFilter::Only { .. } = options.compile_opts.filter {
+        return Ok(None)
+    }
+    if options.no_run {
+        return Ok(None)
+    }
 
     let libs = compile.package.targets().iter()
                       .filter(|t| t.doctested())
