@@ -1416,3 +1416,32 @@ test!(dashes_to_underscores {
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(doctest_dev_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dev-dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// extern crate b;
+            /// ```
+            pub fn foo() {}
+        "#)
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0));
+});
