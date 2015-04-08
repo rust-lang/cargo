@@ -85,3 +85,10 @@ test!(simple {
 {updating} registry `[..]`
 hoare (0.1.1)    Design by contract style assertions for Rust", updating = UPDATING)));
 });
+
+test!(help {
+    assert_that(cargo_process("search").arg("-h"),
+                execs().with_status(0));
+    assert_that(cargo_process("help").arg("search"),
+                execs().with_status(0));
+});
