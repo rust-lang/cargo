@@ -13,6 +13,7 @@ Search packages in crates.io
 
 Usage:
     cargo search [options] <query>
+    cargo search [-h | --help]
 
 Options:
     -h, --help              Print this message
