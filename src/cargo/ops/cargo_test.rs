@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::ffi::{OsString, OsStr};
 use std::path::Path;
 
 use core::Source;
@@ -55,6 +55,19 @@ pub fn run_tests(manifest_path: &Path,
 
         for (_, libs) in compile.libraries.iter() {
             for &(ref name, ref lib) in libs.iter() {
+                // Note that we can *only* doctest rlib outputs here.  A
+                // staticlib output cannot be linked by the compiler (it just
+                // doesn't do that). A dylib output, however, can be linked by
+                // the compiler, but will always fail. Currently all dylibs are
+                // built as "static dylibs" where the standard library is
+                // statically linked into the dylib. The doc tests fail,
+                // however, for now as they try to link the standard library
+                // dynamically as well, causing problems. As a result we only
+                // pass `--extern` for rlib deps and skip out on all other
+                // artifacts.
+                if lib.extension() != Some(OsStr::new("rlib")) {
+                    continue
+                }
                 let mut arg = OsString::from(name);
                 arg.push("=");
                 arg.push(lib);

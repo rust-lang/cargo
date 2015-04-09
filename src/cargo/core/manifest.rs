@@ -329,9 +329,17 @@ impl Target {
     pub fn tested(&self) -> bool { self.tested }
     pub fn harness(&self) -> bool { self.harness }
     pub fn documented(&self) -> bool { self.doc }
-    pub fn doctested(&self) -> bool { self.doctest }
     pub fn for_host(&self) -> bool { self.for_host }
     pub fn benched(&self) -> bool { self.benched }
+
+    pub fn doctested(&self) -> bool {
+        self.doctest && match self.kind {
+            TargetKind::Lib(ref kinds) => {
+                kinds.contains(&LibKind::Rlib) || kinds.contains(&LibKind::Lib)
+            }
+            _ => false,
+        }
+    }
 
     pub fn allows_underscores(&self) -> bool {
         self.is_bin() || self.is_example() || self.is_custom_build()
