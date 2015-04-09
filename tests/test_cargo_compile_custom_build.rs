@@ -1252,3 +1252,51 @@ test!(test_duplicate_deps {
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
 });
+
+test!(cfg_feedback {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/main.rs", "
+            #[cfg(foo)]
+            fn main() {}
+        ")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-cfg=foo");
+            }
+        "#);
+    assert_that(build.cargo_process("build"),
+                execs().with_status(0));
+});
+
+test!(cfg_override {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+        "#)
+        .file("src/main.rs", "
+            #[cfg(foo)]
+            fn main() {}
+        ")
+        .file("build.rs", "")
+        .file(".cargo/config", &format!(r#"
+            [target.{}.a]
+            rustc-cfg = ["foo"]
+        "#, target));
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});

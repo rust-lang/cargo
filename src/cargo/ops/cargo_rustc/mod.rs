@@ -436,9 +436,14 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
-            if pass_l_flag && id == *current_id {
-                for name in output.library_links.iter() {
-                    rustc.arg("-l").arg(name);
+            if id == *current_id {
+                for cfg in &output.cfgs {
+                    rustc.arg("--cfg").arg(cfg);
+                }
+                if pass_l_flag {
+                    for name in output.library_links.iter() {
+                        rustc.arg("-l").arg(name);
+                    }
                 }
             }
         }

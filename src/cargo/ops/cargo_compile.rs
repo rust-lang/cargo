@@ -379,6 +379,7 @@ fn scrape_target_config(config: &Config, triple: &str)
         let mut output = BuildOutput {
             library_paths: Vec::new(),
             library_links: Vec::new(),
+            cfgs: Vec::new(),
             metadata: Vec::new(),
         };
         let key = format!("{}.{}", key, lib_name);
@@ -406,6 +407,8 @@ fn scrape_target_config(config: &Config, triple: &str)
                         output.library_paths.extend(a.into_iter().map(|v| {
                             PathBuf::from(&v.0)
                         }));
+                    } else if k == "rustc-cfg" {
+                        output.cfgs.extend(a.into_iter().map(|v| v.0));
                     } else {
                         try!(config.expected("string", &k,
                                              ConfigValue::List(a, p)));
