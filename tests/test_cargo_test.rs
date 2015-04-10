@@ -705,15 +705,8 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
                        compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
                        dir = p.url())));
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("test"),
@@ -733,15 +726,8 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ",
-                       running = RUNNING,
-                       doctest = DOCTEST)));
+                       running = RUNNING)));
 
 });
 
@@ -1472,4 +1458,62 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING)));
+});
+
+test!(dylib_doctest {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            crate-type = ["rlib", "dylib"]
+            test = false
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// foo::foo();
+            /// ```
+            pub fn foo() {}
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{doctest} foo
+
+running 1 test
+test foo_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, doctest = DOCTEST)));
+});
+
+test!(dylib_doctest2 {
+    // can't doctest dylibs as they're statically linked together
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            crate-type = ["dylib"]
+            test = false
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// foo::foo();
+            /// ```
+            pub fn foo() {}
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_stdout(""));
 });
