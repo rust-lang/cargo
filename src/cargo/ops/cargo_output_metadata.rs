@@ -9,6 +9,7 @@ use util::CargoResult;
 use util::config::Config;
 use term::color::BLACK;
 use core::{Source, Package, PackageId};
+use core::manifest::{Target};
 use core::registry::PackageRegistry;
 use core::resolver::{Resolve, Method};
 use sources::PathSource;
@@ -77,6 +78,7 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
         path: Cow<'a, str>,
         dependencies: Vec<String>,
         features: Option<&'a HashMap<String, Vec<String>>>,
+        targets: &'a[Target]
     };
 
 	#[derive(RustcEncodable)]
@@ -103,6 +105,7 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
                     Some(features)
                 }
             },
+            targets: package.manifest().targets()
         };
 
         if let Some(dep_deps) = resolved_deps.deps(package.package_id()) {
@@ -158,9 +161,9 @@ fn resolve_dependencies(manifest: &Path, features: Vec<String>, config: &Config)
     let rustc_host = config.rustc_host().to_string();
     let default_feature = features.contains(&"default".to_string());
     let filtered_features =
-        features.into_iter().filter(|s| s.as_slice() != "default").collect::<Vec<_>>();
+        features.into_iter().filter(|s| s != "default").collect::<Vec<_>>();
 
-    let platform = Some(rustc_host.as_slice());
+    let platform = Some(rustc_host.as_ref());
     let method = Method::Required {
         dev_deps: false,
         features: &filtered_features,
@@ -174,7 +177,7 @@ fn resolve_dependencies(manifest: &Path, features: Vec<String>, config: &Config)
     let package_ids: Vec<PackageId> = resolved_specific.iter().cloned().collect();
     let packages = try!(registry.get(&package_ids));
     for package in packages.iter() {
-        debug!("{}: {:?}", package.package_id(), package.root());
+        debug!("{}: {:?}", package.package_id(), package.manifest().targets());
     }
     //debug!("{}", try!(json::encode(&try!(registry.get(&package_ids)))));
 
