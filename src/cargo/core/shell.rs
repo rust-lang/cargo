@@ -55,7 +55,7 @@ impl MultiShell {
     pub fn status<T, U>(&mut self, status: T, message: U) -> io::Result<()>
         where T: fmt::Display, U: fmt::Display
     {
-        self.err().say_status(status, message, GREEN)
+        self.out().say_status(status, message, GREEN)
     }
 
     pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>

@@ -51,23 +51,23 @@ pub struct OutputMetadataOptions<'a> {
 /// format to stdout or the specified file.
 ///
 /// The TOML format is e.g.:
+/// ```toml
+/// root = "libA"
 ///
-///     root = "libA"
+/// [packages.libA]
+/// dependencies = ["libB"]
+/// path = "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/libA-0.1"
+/// version = "0.1"
 ///
-///     [packages.libA]
-///     dependencies = ["libB"]
-///     path = "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/libA-0.1"
-///     version = "0.1"
+/// [packages.libB]
+/// dependencies = []
+/// path = "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/libB-0.4"
+/// version = "0.4"
 ///
-///     [packages.libB]
-///     dependencies = []
-///     path = "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/libB-0.4"
-///     version = "0.4"
-///
-///     [packages.libB.features]
-///     featureA = ["featureB"]
-///     featureB = []
-///
+/// [packages.libB.features]
+/// featureA = ["featureB"]
+/// featureB = []
+/// ```
 pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<()> {
     let (resolved_deps, packages) =
         try!(resolve_dependencies(opt.manifest_path, opt.features, config));
