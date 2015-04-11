@@ -245,12 +245,7 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
         let (id, stage) = *self;
         let pkg = packages.iter().find(|p| p.package_id() == id).unwrap();
         let deps = resolve.deps(id).into_iter().flat_map(|a| a)
-                          .filter(|dep| *dep != id)
-                          .map(|dep| {
-                              (dep, pkg.dependencies().iter().find(|d| {
-                                  d.name() == dep.name()
-                              }).unwrap())
-                          });
+                          .filter(|dep| *dep != id);
         match stage {
             Stage::Start => Vec::new(),
 
@@ -259,8 +254,11 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
             // dependencies (making them available to us).
             Stage::BuildCustomBuild => {
                 let mut base = vec![(id, Stage::Start)];
-                base.extend(deps.filter(|&(_, dep)| dep.is_build())
-                                .map(|(id, _)| (id, Stage::Libraries)));
+                base.extend(deps
+                    .filter(|id| pkg.dependencies().iter()
+                        .find(|d| d.name() == id.name() && d.is_build())
+                        .is_some())
+                    .map(|id| (id, Stage::Libraries)));
                 base
             }
 
@@ -270,8 +268,11 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
             // commands themselves (as they may provide input to us).
             Stage::RunCustomBuild => {
                 let mut base = vec![(id, Stage::BuildCustomBuild)];
-                base.extend(deps.filter(|&(_, dep)| dep.is_transitive())
-                                .map(|(id, _)| (id, Stage::RunCustomBuild)));
+                base.extend(deps
+                    .filter(|id| pkg.dependencies().iter()
+                        .find(|d| d.name() == id.name() && d.is_transitive())
+                        .is_some())
+                    .map(|id| (id, Stage::RunCustomBuild)));
                 base
             }
 
@@ -279,8 +280,11 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
             // all our transitive dependencies.
             Stage::Libraries => {
                 let mut base = vec![(id, Stage::RunCustomBuild)];
-                base.extend(deps.filter(|&(_, dep)| dep.is_transitive())
-                                .map(|(id, _)| (id, Stage::Libraries)));
+                base.extend(deps
+                    .filter(|id| pkg.dependencies().iter()
+                        .find(|d| d.name() == id.name() && d.is_transitive())
+                        .is_some())
+                    .map(|id| (id, Stage::Libraries)));
                 base
             }
 
@@ -298,7 +302,7 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
                 } else {
                     vec![(id, Stage::RunCustomBuild)]
                 };
-                base.extend(deps.map(|(id, _)| (id, Stage::Libraries)));
+                base.extend(deps.map(|id| (id, Stage::Libraries)));
                 base
             }
 
