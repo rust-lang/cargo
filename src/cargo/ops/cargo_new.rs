@@ -114,7 +114,7 @@ fn mk(config: &Config, path: &Path, name: &str,
     try!(file(&path.join("Cargo.toml"), format!(
 r#"[package]
 name = "{}"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["{}"]
 "#, name, author).as_bytes()));
 

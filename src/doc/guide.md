@@ -55,7 +55,7 @@ we need to get started. First, let's check out `Cargo.toml`:
 ```toml
 [package]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 ```
 
@@ -74,7 +74,7 @@ Cargo generated a 'hello world' for us. Let's compile it:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
+class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
 
 And then run it:
 
@@ -87,7 +87,7 @@ We can also use `cargo run` to compile and then run it, all in one step:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
+class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
@@ -99,7 +99,7 @@ Once you're ready for release, you can use `cargo build --release` to compile yo
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build --release
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
+class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
 
 ## Adding a dependency
 
@@ -127,7 +127,7 @@ $ cd color-rs
 To build, just use `cargo build`:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (file:///path/to/project/color-rs)</code></pre>
+<span style="font-weight: bold" class="s1">   Compiling</span> color v0.1.0 (file:///path/to/project/color-rs)</code></pre>
 
 This will fetch all of the dependencies and then build them, along with the
 project.
@@ -139,7 +139,7 @@ To depend on a library, add it to your `Cargo.toml`.
 ```toml
 [package]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
@@ -172,8 +172,8 @@ Let's tell Cargo to fetch this new dependency and update the `Cargo.lock`:
 Compile it:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo run
-<span style="font-weight: bold" class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
+<span style="font-weight: bold" class="s1">   Compiling</span> color v0.1.0 (https://github.com/bjz/color-rs.git#bf739419)
+<span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
 Converting RGB to HSV!
 HSV: HSV { h: 0, s: 1, v: 1 }</code></pre>
@@ -184,14 +184,14 @@ contains the exact information about which revision we used:
 ```toml
 [root]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
- "color 0.0.1 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)",
+ "color 0.1.0 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)",
 ]
 
 [[package]]
 name = "color"
-version = "0.0.1"
+version = "0.1.0"
 source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98"
 
 ```
@@ -230,7 +230,7 @@ on another project:
 ```toml
 [package]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
@@ -267,7 +267,7 @@ manifest like this:
 ```toml
 [package]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies.color]
@@ -280,14 +280,14 @@ Cargo will take the latest commit, and write that information out into our
 ```toml
 [root]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
- "color 0.0.1 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)",
+ "color 0.1.0 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)",
 ]
 
 [[package]]
 name = "color"
-version = "0.0.1"
+version = "0.1.0"
 source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98"
 
 ```
@@ -320,7 +320,7 @@ patch. Here's what `conduit-static`'s `Cargo.toml` looks like:
 ```toml
 [package]
 name = "conduit-static"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Yehuda Katz <wycats@example.com>"]
 
 [dependencies.conduit]
@@ -385,9 +385,9 @@ To run your tests, just run `cargo test`:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo test
 <span style="font-weight: bold"
-class="s1">   Compiling</span> color v0.0.1 (https://github.com/bjz/color-rs.git#bf739419)
+class="s1">   Compiling</span> color v0.1.0 (https://github.com/bjz/color-rs.git#bf739419)
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
+class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">     Running</span> target/test/hello_world-9c2b65bbb79eabce
 

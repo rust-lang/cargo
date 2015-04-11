@@ -46,7 +46,7 @@ This is all we need to get started. First, let's check out `Cargo.toml`:
 ```toml
 [package]
 name = "hello_world"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 ```
 
@@ -65,7 +65,7 @@ Cargo generated a 'hello world' for us. Let's compile it:
 
 <pre><code class="language-shell">$ cargo build
 <span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.0.1 (file:///path/to/project/hello_world)</code></pre>
+class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
 
 And then run it:
 
@@ -78,7 +78,7 @@ We can also use `cargo run` to compile and then run it, all in one step:
 
 <pre><code class="language-shell">$ cargo run
 <span style="font-weight: bold"
-class="s1">     Fresh</span> hello_world v0.0.1 (file:///path/to/project/hello_world)
+class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/hello_world`
 Hello, world!</code></pre>

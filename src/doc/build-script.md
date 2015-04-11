@@ -205,7 +205,7 @@ Here we can see that we have a `build.rs` build script and our binary in
 
 [package]
 name = "hello-from-generated-code"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["you@example.com"]
 build = "build.rs"
 ```
@@ -293,7 +293,7 @@ Pretty similar to before! Next, the manifest:
 
 [package]
 name = "hello-world-from-c"
-version = "0.0.1"
+version = "0.1.0"
 authors = [ "you@example.com" ]
 build = "build.rs"
 ```
@@ -433,7 +433,7 @@ relevant Cargo package.
 ```toml
 [package]
 name = "libgit2-sys"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["..."]
 links = "git2"
 build = "build.rs"
