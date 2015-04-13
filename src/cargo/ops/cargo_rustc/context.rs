@@ -338,23 +338,24 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             Some(deps) => deps,
         };
         let mut ret = deps.map(|id| self.get_package(id)).filter(|dep| {
-            let pkg_dep = pkg.dependencies().iter().find(|d| {
-                d.name() == dep.name() &&
+            pkg.dependencies().iter().filter(|d| {
+                d.name() == dep.name()
+            }).any(|d| {
 
                 // If this target is a build command, then we only want build
                 // dependencies, otherwise we want everything *other than* build
                 // dependencies.
-                target.is_custom_build() == d.is_build() &&
+                let is_correct_dep = target.is_custom_build() == d.is_build();
 
                 // If this dependency is *not* a transitive dependency, then it
                 // only applies to test/example targets
-                (d.is_transitive() ||
-                 target.is_test() ||
-                 target.is_example() ||
-                 profile.test)
-            });
+                let is_actual_dep = d.is_transitive() ||
+                                    target.is_test() ||
+                                    target.is_example() ||
+                                    profile.test;
 
-            pkg_dep.is_some()
+                is_correct_dep && is_actual_dep
+            })
         }).filter_map(|pkg| {
             pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
                 (pkg, t, self.lib_profile(pkg.package_id()))
