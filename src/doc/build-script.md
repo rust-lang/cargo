@@ -312,7 +312,7 @@ fn main() {
 
     // note that there are a number of downsides to this approach, the comments
     // below detail how to improve the portability of these commands.
-    Command::new("gcc").args(&["src/hello.c", "-c", "-o"])
+    Command::new("gcc").args(&["src/hello.c", "-c", "-fPIC", "-o"])
                        .arg(&format!("{}/hello.o", out_dir))
                        .status().unwrap();
     Command::new("ar").args(&["crus", "libhello.a", "hello.o"])
