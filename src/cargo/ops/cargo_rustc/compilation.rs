@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use semver::Version;
 
-use core::{PackageId, Package};
+use core::{PackageId, Package, Target};
 use util::{self, CargoResult};
 
 use super::{CommandType, CommandPrototype};
@@ -14,7 +14,7 @@ pub struct Compilation {
     ///
     /// This is currently used for passing --extern flags to rustdoc tests later
     /// on.
-    pub libraries: HashMap<PackageId, Vec<(String, PathBuf)>>,
+    pub libraries: HashMap<PackageId, Vec<(Target, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
     pub tests: Vec<(String, PathBuf)>,

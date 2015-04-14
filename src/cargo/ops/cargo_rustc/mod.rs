@@ -142,7 +142,7 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
             } else if target.is_lib() {
                 let pkgid = pkg.package_id().clone();
                 cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
-                  .push((target.crate_name(), dst));
+                  .push((target.clone(), dst));
             }
             if !target.is_lib() { continue }
 
@@ -156,7 +156,7 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
 
                 let v = try!(cx.target_filenames(target, profile));
                 let v = v.into_iter().map(|f| {
-                    (target.crate_name(),
+                    (target.clone(),
                      cx.out_dir(pkg, Kind::Target, target).join(f))
                 }).collect::<Vec<_>>();
                 cx.compilation.libraries.insert(pkgid.clone(), v);

@@ -188,3 +188,34 @@ test!(plugin_integration {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
 });
+
+test!(doctest_a_plugin {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", r#"
+            #[macro_use]
+            extern crate bar;
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "bar"
+            plugin = true
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0));
+});
