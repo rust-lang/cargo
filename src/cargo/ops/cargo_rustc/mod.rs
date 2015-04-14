@@ -694,21 +694,22 @@ fn build_base_args(cx: &Context,
 
 fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) {
+    fn opt(cmd: &mut CommandPrototype, key: &str, prefix: &str,
+           val: Option<&str>)  {
+        if let Some(val) = val {
+            cmd.arg(key).arg(&format!("{}{}", prefix, val));
+        }
+    }
+
     cmd.arg("--out-dir").arg(&cx.out_dir(pkg, kind, target));
     cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
-        fn opt(cmd: &mut CommandPrototype, key: &str, prefix: &str,
-               val: Option<&str>)  {
-            if let Some(val) = val {
-                cmd.arg(key).arg(&format!("{}{}", prefix, val));
-            }
-        }
-
         opt(cmd, "--target", "", cx.requested_target());
-        opt(cmd, "-C", "ar=", cx.ar(kind));
-        opt(cmd, "-C", "linker=", cx.linker(kind));
     }
+
+    opt(cmd, "-C", "ar=", cx.ar(kind));
+    opt(cmd, "-C", "linker=", cx.linker(kind));
 }
 
 fn build_deps_args(cmd: &mut CommandPrototype,

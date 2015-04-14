@@ -2,6 +2,7 @@ use std::fs;
 use std::env;
 
 use support::{project, execs};
+use support::{COMPILING, RUNNING};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -218,4 +219,51 @@ test!(doctest_a_plugin {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
+});
+
+// See #1515
+test!(native_plugin_dependency_with_custom_ar_linker {
+    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            plugin = true
+        "#)
+        .file("src/lib.rs", "");
+
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "bar"
+
+            [dependencies.foo]
+            path = "../foo"
+        "#)
+        .file("src/lib", "")
+        .file(".cargo/config", &format!(r#"
+            [target.{}]
+            ar = "ar"
+            linker = "cc"
+        "#, target));
+
+    foo.build();
+    assert_that(bar.cargo_process("build").arg("--verbose"),
+    execs().with_stdout(&format!("\
+{compiling} foo v0.0.1 ({url})
+{running} `rustc [..] -C ar=ar -C linker=cc [..]`
+{compiling} bar v0.0.1 ({url})
+{running} `rustc [..] -C ar=ar -C linker=cc [..]`
+", compiling = COMPILING, running = RUNNING, url = bar.url())))
 });
