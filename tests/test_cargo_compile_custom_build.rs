@@ -1218,3 +1218,37 @@ test!(build_script_with_lto {
     assert_that(build.cargo_process("build"),
                 execs().with_status(0));
 });
+
+test!(test_duplicate_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            build = "build.rs"
+
+            [dependencies.bar]
+            path = "bar"
+
+            [build-dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            fn main() { bar::do_nothing() }
+        "#)
+        .file("build.rs", r#"
+            extern crate bar;
+            fn main() { bar::do_nothing() }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "pub fn do_nothing() {}");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+});
