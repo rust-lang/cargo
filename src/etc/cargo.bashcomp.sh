@@ -1,14 +1,12 @@
 command -v cargo >/dev/null 2>&1 &&
 _cargo()
 {
-	local cur prev words cword cmd commands
+	local cur prev words cword cmd
 	_init_completion || return
 
 	COMPREPLY=()
 
 	cmd=${words[1]}
-
-	commands=$(cargo --list | tail -n +2)
 
 	opt_common='-h --help -v --verbose'
 	opt_pkg='-p --package'
@@ -43,7 +41,7 @@ _cargo()
 		if [[ "$cur" == -* ]]; then
 			COMPREPLY=( $( compgen -W "${opts[_nocmd]}" -- "$cur" ) )
 		else
-			COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "$(cargo --list | tail -n +2)" -- "$cur" ) )
 		fi
 	elif [[ $cword -gt 2 && "$prev" = "$opt_mani" ]]; then
 		_filedir
