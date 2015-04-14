@@ -1,109 +1,59 @@
-have cargo &&
-_cargo() {
-    local commands split=false
-    local cur cmd
+command -v cargo >/dev/null 2>&1 &&
+_cargo()
+{
+	local cur prev words cword cmd
+	_init_completion || return
 
-    COMPREPLY=()
-    cur=$(_get_cword "=")
-    cmd="${COMP_WORDS[1]}"
+	COMPREPLY=()
 
-    _expand || return 0
+	cmd=${words[1]}
 
-    commands=$(cargo --list|grep -v 'Installed Commands:')
+	opt_common='-h --help -v --verbose'
+	opt_pkg='-p --package'
+	opt_feat='--features --no-default-features'
+	opt_mani='--manifest-path'
 
-    # these options require an argument
-    if [[ "${cmd}" == -@(A|B|C|G|g|m) ]] ; then
-        return 0
-    fi
+	declare -A opts
+	opts[_nocmd]="$opt_common -V --version --list"
+	opts[bench]="$opt_common $opt_pkg $opt_feat $opt_mani --target --bench --no-run -j --jobs"
+	opts[build]="$opt_common $opt_pkg $opt_feat $opt_mani --target -j --jobs --lib --release"
+	opts[clean]="$opt_common $opt_pkg $opt_mani --target"
+	opts[doc]="$opt_common $opt_pkg $opt_feat $opt_mani --target --open --no-deps -j --jobs"
+	opts[fetch]="$opt_common $opt_mani"
+	opts[generate-lockfile]="${opts[fetch]}"
+	opts[git-checkout]="$opt_common --reference= --url="
+	opts[locate-project]="${opts[fetch]}"
+	opts[login]="$opt_common --host"
+	opts[new]="$opt_common --vcs --bin"
+	opts[owner]="$opt_common -a --add -r --remove -l --list --index --token"
+	opts[pkgid]="${opts[fetch]}"
+	opts[publish]="$opt_common $opt_mani --host --token --no-verify"
+	opts[read-manifest]="${opts[fetch]}"
+	opts[run]="$opt_common $opt_feat $opt_mani --target --bin --example -j --jobs --release"
+	opts[test]="$opt_common $opt_pkg $opt_feat $opt_mani --target --test --bin --no-run -j --jobs"
+	opts[update]="$opt_common $opt_pkg $opt_mani --aggressive --precise"
+	opts[package]="$opt_common $opt_mani -l --list --no-verify --no-metadata"
+	opts[verify-project]="${opts[fetch]}"
+	opts[version]="$opt_common"
+	opts[yank]="$opt_common --vers --undo --index --token"
 
-    _split_longopt && split=true
+	if [[ $cword -eq 1 ]]; then
+		if [[ "$cur" == -* ]]; then
+			COMPREPLY=( $( compgen -W "${opts[_nocmd]}" -- "$cur" ) )
+		else
+			COMPREPLY=( $( compgen -W "$(cargo --list | tail -n +2)" -- "$cur" ) )
+		fi
+	elif [[ $cword -gt 2 && "$prev" = "$opt_mani" ]]; then
+		_filedir
+	elif [[ "$cur" == -* ]]; then
+		COMPREPLY=( $( compgen -W "${opts[$cmd]}" -- "$cur" ) )
+	fi
 
-    case "${cmd}" in
-        bench|test)
-            COMPREPLY=( $(compgen -W \
-                "--features --help --jobs --manifest-path --no-default-features \
-                 --no-run --package --target --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        build)
-            COMPREPLY=( $(compgen -W \
-                "--features --help --jobs --manifest-path --no-default-features \
-                 --package --release --target --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        clean)
-            COMPREPLY=( $(compgen -W \
-                "--help --manifest-path --package --target --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        config-for-key)
-            COMPREPLY=( $(compgen -W \
-                "--help --human --key=" \
-                 -- "${cur}") )
-            return 0;;
-        config-for-key)
-            COMPREPLY=( $(compgen -W \
-                "--help --human" \
-                 -- "${cur}") )
-            return 0;;
-        doc)
-            COMPREPLY=( $(compgen -W \
-                "--features --help --jobs --manifest-path --no-default-features \
-                 --no-deps --open --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        fetch|generate-lockfile|package|pkgid|read-manifest|verify-project)
-            COMPREPLY=( $(compgen -W \
-                "--help --manifest-path --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        git-checkout)
-            COMPREPLY=( $(compgen -W \
-                "--help --reference= --url= --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        locate-project)
-            COMPREPLY=( $(compgen -W \
-                "--help --host --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        new)
-            COMPREPLY=( $(compgen -W \
-                "--bin --git --help --hg --no-git --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        run)
-            COMPREPLY=( $(compgen -W \
-                "--features --help --jobs --manifest-path --no-default-features \
-                 --release --target --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        update)
-            COMPREPLY=( $(compgen -W \
-                "--aggressive --help --manifest-path --package --precise --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        upload)
-            COMPREPLY=( $(compgen -W \
-                "--help --host --manifest-path --token --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        version)
-            COMPREPLY=( $(compgen -W \
-                "--help --verbose" \
-                 -- "${cur}") )
-            return 0;;
-        help)
-            return 0;;
-    esac
-
-    $split && return 0
-
-    if [ ${COMP_CWORD} -eq 1 ]; then
-        COMPREPLY=( $(compgen -W \
-            "${commands} --help --list --verbose --version" -- "${cur}") )
-        return 0
-    fi
-    _filedir
+	if [[ ${#COMPREPLY[@]} == 1 && ${COMPREPLY[0]} != "--"*"=" ]] ; then
+		compopt +o nospace
+	fi
+	return 0
 } &&
-complete -F _cargo ${nospace} cargo
+complete -o nospace -F _cargo cargo
+
+# vim:ft=sh
