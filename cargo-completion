@@ -1,0 +1,46 @@
+
+_cargo()
+{
+	local cur prev words cword
+	_init_completion || return
+
+	COMPREPLY=()
+
+	local cmd=${words[1]}
+
+	#commands='bench build clean doc new package run search test update version'
+	#commands+='fetch generate-lockfile git-checkout locate-project login owner pkgid publish read-manifest verify-project yank'
+	opt_common='-h --help -v --verbose'
+	opt_pkg='-p --package'
+	opt_feat='--features --no-default-features'
+	opt_mani='--manifest-path'
+	declare -A opts
+	opts[_nocmd]="$opt_common -V --version --list"
+	opts[bench]="$opt_common $opt_pkg $opt_feat $opt_mani --target --bench --no-run -j --jobs"
+	opts[build]="$opt_common $opt_pkg $opt_feat $opt_mani --target -j --jobs --lib --release"
+	opts[clean]="$opt_common $opt_pkg $opt_mani --target"
+	opts[doc]="$opt_common $opt_pkg $opt_feat $opt_mani --target --open --no-deps -j --jobs"
+	opts[new]="$opt_common --vcs --bin"
+	opts[run]="$opt_common $opt_feat $opt_mani --target --bin --example -j --jobs --release"
+	opts[test]="$opt_common $opt_pkg $opt_feat $opt_mani --target --test --bin --no-run -j --jobs"
+	opts[update]="$opt_common $opt_pkg $opt_mani --aggressive --precise"
+	opts[package]="$opt_common $opt_mani -l --list --no-verify --no-metadata"
+	opts[version]="$opt_common"
+
+	if [[ $cword -eq 1 ]]; then
+		if [[ "$cur" == -* ]]; then
+			COMPREPLY=( $( compgen -W "${opts[_nocmd]}" -- "$cur" ) )
+		else
+			COMPREPLY=( $( compgen -W "$(cargo --list | tail -n +2)" -- "$cur" ) )
+		fi
+	elif [[ $cword -gt 2 && "$prev" = "$opt_mani" ]]; then
+		_filedir
+	elif [[ "$cur" == -* ]]; then
+		COMPREPLY=( $( compgen -W "${opts[$cmd]}" -- "$cur" ) )
+	fi
+
+	return 0
+} &&
+complete -F _cargo cargo
+
+# vim:ft=sh
