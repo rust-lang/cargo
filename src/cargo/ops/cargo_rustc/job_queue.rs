@@ -254,11 +254,11 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
             // dependencies (making them available to us).
             Stage::BuildCustomBuild => {
                 let mut base = vec![(id, Stage::Start)];
-                base.extend(deps
-                    .filter(|id| pkg.dependencies().iter()
-                        .find(|d| d.name() == id.name() && d.is_build())
-                        .is_some())
-                    .map(|id| (id, Stage::Libraries)));
+                base.extend(deps.filter(|id| {
+                    pkg.dependencies().iter().any(|d| {
+                        d.name() == id.name() && d.is_build()
+                    })
+                }).map(|id| (id, Stage::Libraries)));
                 base
             }
 
@@ -268,11 +268,11 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
             // commands themselves (as they may provide input to us).
             Stage::RunCustomBuild => {
                 let mut base = vec![(id, Stage::BuildCustomBuild)];
-                base.extend(deps
-                    .filter(|id| pkg.dependencies().iter()
-                        .find(|d| d.name() == id.name() && d.is_transitive())
-                        .is_some())
-                    .map(|id| (id, Stage::RunCustomBuild)));
+                base.extend(deps.filter(|id| {
+                    pkg.dependencies().iter().any(|d| {
+                        d.name() == id.name() && d.is_transitive()
+                    })
+                }).map(|id| (id, Stage::RunCustomBuild)));
                 base
             }
 
@@ -280,11 +280,11 @@ impl<'a> Dependency for (&'a PackageId, Stage) {
             // all our transitive dependencies.
             Stage::Libraries => {
                 let mut base = vec![(id, Stage::RunCustomBuild)];
-                base.extend(deps
-                    .filter(|id| pkg.dependencies().iter()
-                        .find(|d| d.name() == id.name() && d.is_transitive())
-                        .is_some())
-                    .map(|id| (id, Stage::Libraries)));
+                base.extend(deps.filter(|id| {
+                    pkg.dependencies().iter().any(|d| {
+                        d.name() == id.name() && d.is_transitive()
+                    })
+                }).map(|id| (id, Stage::Libraries)));
                 base
             }
 
