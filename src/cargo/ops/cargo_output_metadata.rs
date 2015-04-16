@@ -6,7 +6,6 @@ use rustc_serialize::{json, Decoder, Decodable};
 use toml;
 use util::CargoResult;
 use util::config::Config;
-use term::color::BLACK;
 use core::{Source, Package};
 use core::resolver::Resolve;
 use sources::PathSource;
@@ -73,24 +72,33 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
             opt.manifest_path, config, opt.features, opt.target, opt.no_default_features));
 
     #[derive(RustcEncodable)]
+    struct RootPackageInfo<'a> {
+        name: &'a str,
+        version: String,
+        features: Option<&'a HashMap<String, Vec<String>>>,
+    }
+
+    #[derive(RustcEncodable)]
     struct ExportInfo<'a> {
-        root: String,
-        root_features: Option<&'a HashMap<String, Vec<String>>>,
-        packages: HashMap<String, &'a Package>
+        root: RootPackageInfo<'a>,
+        packages: Vec<&'a Package>
     }
 
     let mut output = ExportInfo {
-        root: resolved_deps.root().name().to_string(),
-        root_features: None,
-        packages: HashMap::new()
+        root: RootPackageInfo {
+            name: resolved_deps.root().name(),
+            version: format!("{}", resolved_deps.root().version()),
+            features: None,
+        },
+        packages: Vec::new()
     };
 
     for package in packages.iter() {
-        output.packages.insert(package.name().to_string(), &package);
+        output.packages.push(&package);
         if package.package_id() == resolved_deps.root() {
             let features = package.manifest().summary().features();
             if !features.is_empty() {
-                output.root_features = Some(features);
+                output.root.features = Some(features);
             }
         }
     }
@@ -101,7 +109,7 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
     };
 
     match opt.output_to {
-        OutputTo::StdOut         => try!(config.shell().say(serialized_str, BLACK)),
+        OutputTo::StdOut => println!("{}", serialized_str),
         OutputTo::Path(ref path) => {
             let mut file = try!(fs::File::create(path));
             try!(file.write_all(serialized_str.as_bytes()));

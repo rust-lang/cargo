@@ -99,10 +99,10 @@ pub fn compile(manifest_path: &Path,
     compile_pkg(&package, options)
 }
 
-pub fn resolve_dependencies<'a, 'b>(package: &Package, config: &'a Config<'b>,
-                                    target: &Option<String>, features: Vec<String>,
-                                    no_default_features: bool)
-                                    -> CargoResult<(Vec<Package>, Resolve, SourceMap<'a>)> {
+pub fn resolve_dependencies<'a>(package: &Package, config: &'a Config,
+                                target: &Option<String>, features: Vec<String>,
+                                no_default_features: bool)
+                                -> CargoResult<(Vec<Package>, Resolve, SourceMap<'a>)> {
     let override_ids = try!(source_ids_from_config(config, package.root()));
 
     let mut registry = PackageRegistry::new(config);
