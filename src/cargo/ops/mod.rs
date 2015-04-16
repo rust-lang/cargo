@@ -26,7 +26,6 @@ pub use self::registry::{modify_owners, yank, OwnersOptions};
 pub use self::cargo_fetch::{fetch};
 pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{resolve_pkg, resolve_with_previous};
-pub use self::resolve::source_ids_from_config;
 pub use self::cargo_output_metadata::{output_metadata, OutputTo, OutputFormat};
 pub use self::cargo_output_metadata::OutputMetadataOptions;
 
