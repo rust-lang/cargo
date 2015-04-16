@@ -7,7 +7,7 @@ struct Options {
     flag_output_path: OutputTo,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
-	flag_output_format: OutputFormat,
+    flag_output_format: OutputFormat,
     flag_features: String,
 }
 
@@ -55,10 +55,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let manifest = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let options = OutputMetadataOptions {
         manifest_path: &manifest,
-		output_to: options.flag_output_path,
-		output_format: options.flag_output_format,
+        output_to: options.flag_output_path,
+        output_format: options.flag_output_format,
         features: options.flag_features.split(',').map(|x| x.to_string()).collect::<Vec<String>>(),
-	};
+    };
 
     output_metadata(options, config)
         .map(|_| None)

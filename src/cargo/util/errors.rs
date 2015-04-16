@@ -256,7 +256,7 @@ from_error! {
     ProcessError,
     git2::Error,
     json::DecoderError,
-	json::EncoderError,
+    json::EncoderError,
     curl::ErrCode,
     CliError,
     toml::Error,

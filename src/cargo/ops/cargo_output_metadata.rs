@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Write;
 use std::fs;
@@ -9,7 +8,6 @@ use util::CargoResult;
 use util::config::Config;
 use term::color::BLACK;
 use core::{Source, Package, PackageId};
-use core::manifest::{Target};
 use core::registry::PackageRegistry;
 use core::resolver::{Resolve, Method};
 use sources::PathSource;
@@ -17,31 +15,31 @@ use ops;
 
 #[derive(RustcDecodable)]
 pub enum OutputFormat {
-	Toml,
-	Json,
+    Toml,
+    Json,
 }
 
 /// Where the dependencies should be written to.
 pub enum OutputTo {
-	Path(PathBuf),
-	StdOut,
+    Path(PathBuf),
+    StdOut,
 }
 
 impl Decodable for OutputTo {
-	fn decode<D: Decoder>(d: &mut D) -> Result<OutputTo, D::Error> {
-		d.read_option(|d, b| {
-			if b {
-				Ok(OutputTo::Path(try!(Decodable::decode(d))))
-			} else {
-				Ok(OutputTo::StdOut)
-			}
-		})
-	}
+    fn decode<D: Decoder>(d: &mut D) -> Result<OutputTo, D::Error> {
+        d.read_option(|d, b| {
+            if b {
+                Ok(OutputTo::Path(try!(Decodable::decode(d))))
+            } else {
+                Ok(OutputTo::StdOut)
+            }
+        })
+    }
 }
 
 pub struct OutputMetadataOptions<'a> {
-	pub output_to: OutputTo,
-	pub output_format: OutputFormat,
+    pub output_to: OutputTo,
+    pub output_format: OutputFormat,
     pub manifest_path: &'a Path,
     pub features: Vec<String>,
 }
@@ -72,55 +70,33 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
     let (resolved_deps, packages) =
         try!(resolve_dependencies(opt.manifest_path, opt.features, config));
 
-	#[derive(RustcEncodable)]
-    struct PackageInfo<'a> {
-        version: String,
-        path: Cow<'a, str>,
-        dependencies: Vec<String>,
-        features: Option<&'a HashMap<String, Vec<String>>>,
-        targets: &'a[Target]
-    };
-
-	#[derive(RustcEncodable)]
-	struct ExportInfo<'a> {
+    #[derive(RustcEncodable)]
+    struct ExportInfo<'a> {
         root: String,
-		packages: HashMap<String, PackageInfo<'a>>
-	}
+        root_features: Option<&'a HashMap<String, Vec<String>>>,
+        packages: HashMap<String, &'a Package>
+    }
 
     let mut output = ExportInfo {
         root: resolved_deps.root().name().to_string(),
+        root_features: None,
         packages: HashMap::new()
-	};
+    };
 
     for package in packages.iter() {
-        let mut package_info = PackageInfo {
-            version: format!("{}", package.version()),
-            path: (*package.root()).to_string_lossy(),
-            dependencies: Vec::new(),
-            features: {
-                let features = package.manifest().summary().features();
-                if features.is_empty() {
-                    None
-                } else {
-                    Some(features)
-                }
-            },
-            targets: package.manifest().targets()
-        };
-
-        if let Some(dep_deps) = resolved_deps.deps(package.package_id()) {
-            for dep_dep in dep_deps {
-                package_info.dependencies.push(dep_dep.name().to_string());
+        output.packages.insert(package.name().to_string(), &package);
+        if package.package_id() == resolved_deps.root() {
+            let features = package.manifest().summary().features();
+            if !features.is_empty() {
+                output.root_features = Some(features);
             }
         }
-
-        output.packages.insert(package.name().to_string(), package_info);
     }
 
     let serialized_str = match opt.output_format {
-		OutputFormat::Toml => toml::encode_str(&output),
-		OutputFormat::Json => try!(json::encode(&output)),
-	};
+        OutputFormat::Toml => toml::encode_str(&output),
+        OutputFormat::Json => try!(json::encode(&output)),
+    };
 
     match opt.output_to {
         OutputTo::StdOut         => try!(config.shell().say(serialized_str, BLACK)),
@@ -176,10 +152,6 @@ fn resolve_dependencies(manifest: &Path, features: Vec<String>, config: &Config)
 
     let package_ids: Vec<PackageId> = resolved_specific.iter().cloned().collect();
     let packages = try!(registry.get(&package_ids));
-    for package in packages.iter() {
-        debug!("{}: {:?}", package.package_id(), package.manifest().targets());
-    }
-    //debug!("{}", try!(json::encode(&try!(registry.get(&package_ids)))));
 
     Ok((resolved_specific, packages))
 }
