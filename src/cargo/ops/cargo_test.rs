@@ -45,6 +45,10 @@ pub fn run_tests(manifest_path: &Path,
          })
          .cwd(compile.package.root());
 
+        for native_dep in compile.native_dirs.values() {
+            p.arg("-L").arg(native_dep);
+        }
+
         if test_args.len() > 0 {
             p.arg("--test-args").arg(&test_args.connect(" "));
         }
