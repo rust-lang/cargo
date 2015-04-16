@@ -30,7 +30,8 @@ use std::sync::Arc;
 use core::registry::PackageRegistry;
 use core::{Source, PackageSet, Package, Target, PackageId};
 use core::{Profile, TargetKind};
-use core::resolver::Method;
+use core::resolver::{Method, Resolve};
+use core::source::SourceMap;
 use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
 use util::config::{ConfigValue, Config};
@@ -98,6 +99,48 @@ pub fn compile(manifest_path: &Path,
     compile_pkg(&package, options)
 }
 
+pub fn resolve_dependencies<'a, 'b>(package: &Package, config: &'a Config<'b>,
+                                    target: &Option<String>, features: Vec<String>,
+                                    no_default_features: bool)
+                                    -> CargoResult<(Vec<Package>, Resolve, SourceMap<'a>)> {
+    let override_ids = try!(ops::source_ids_from_config(config, package.root()));
+
+    let mut registry = PackageRegistry::new(config);
+
+    // First, resolve the package's *listed* dependencies, as well as
+    // downloading and updating all remotes and such.
+    let resolve = try!(ops::resolve_pkg(&mut registry, package));
+
+    // Second, resolve with precisely what we're doing. Filter out
+    // transitive dependencies if necessary, specify features, handle
+    // overrides, etc.
+    let _p = profile::start("resolving w/ overrides...");
+
+    try!(registry.add_overrides(override_ids));
+
+    let rustc_host = config.rustc_host().to_string();
+    let platform = target.as_ref().map(|e| &e[..]).or(Some(&rustc_host[..]));
+
+    let method = Method::Required{
+        dev_deps: true, // TODO: remove this option?
+        features: &features,
+        uses_default_features: !no_default_features,
+        target_platform: platform};
+
+    let resolved_with_overrides =
+            try!(ops::resolve_with_previous(&mut registry, package, method,
+                                            Some(&resolve), None));
+
+    let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
+        r.clone()
+    }).collect();
+    let packages = try!(registry.get(&req).chain_error(|| {
+        human("Unable to get packages from source")
+    }));
+
+    return Ok((packages, resolved_with_overrides, registry.move_sources()));
+}
+
 pub fn compile_pkg(package: &Package, options: &CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { config, jobs, target, spec, features,
@@ -117,44 +160,8 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         return Err(human("jobs must be at least 1"))
     }
 
-    let override_ids = try!(ops::source_ids_from_config(config, package.root()));
-
-    let (packages, resolve_with_overrides, sources) = {
-        let rustc_host = config.rustc_host().to_string();
-        let mut registry = PackageRegistry::new(config);
-
-        // First, resolve the package's *listed* dependencies, as well as
-        // downloading and updating all remotes and such.
-        let resolve = try!(ops::resolve_pkg(&mut registry, package));
-
-        // Second, resolve with precisely what we're doing. Filter out
-        // transitive dependencies if necessary, specify features, handle
-        // overrides, etc.
-        let _p = profile::start("resolving w/ overrides...");
-
-        try!(registry.add_overrides(override_ids));
-
-        let platform = target.as_ref().map(|e| &e[..]).or(Some(&rustc_host[..]));
-
-        let method = Method::Required{
-            dev_deps: true, // TODO: remove this option?
-            features: &features,
-            uses_default_features: !no_default_features,
-            target_platform: platform};
-
-        let resolved_with_overrides =
-                try!(ops::resolve_with_previous(&mut registry, package, method,
-                                                Some(&resolve), None));
-
-        let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
-            r.clone()
-        }).collect();
-        let packages = try!(registry.get(&req).chain_error(|| {
-            human("Unable to get packages from source")
-        }));
-
-        (packages, resolved_with_overrides, registry.move_sources())
-    };
+    let (packages, resolve_with_overrides, sources) =
+        try!(resolve_dependencies(package, config, &target, features, no_default_features));
 
     let pkgid = match spec {
         Some(spec) => try!(resolve_with_overrides.query(spec)),

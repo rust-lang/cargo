@@ -7,9 +7,8 @@ use toml;
 use util::CargoResult;
 use util::config::Config;
 use term::color::BLACK;
-use core::{Source, Package, PackageId};
-use core::registry::PackageRegistry;
-use core::resolver::{Resolve, Method};
+use core::{Source, Package};
+use core::resolver::Resolve;
 use sources::PathSource;
 use ops;
 
@@ -38,10 +37,12 @@ impl Decodable for OutputTo {
 }
 
 pub struct OutputMetadataOptions<'a> {
-    pub output_to: OutputTo,
-    pub output_format: OutputFormat,
-    pub manifest_path: &'a Path,
     pub features: Vec<String>,
+    pub output_format: OutputFormat,
+    pub output_to: OutputTo,
+    pub manifest_path: &'a Path,
+    pub no_default_features: bool,
+    pub target: Option<String>,
 }
 
 /// Loads the manifest, resolves the dependencies of the project to the concrete
@@ -68,7 +69,8 @@ pub struct OutputMetadataOptions<'a> {
 /// ```
 pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<()> {
     let (resolved_deps, packages) =
-        try!(resolve_dependencies(opt.manifest_path, opt.features, config));
+        try!(resolve_dependencies(
+            opt.manifest_path, config, opt.features, opt.target, opt.no_default_features));
 
     #[derive(RustcEncodable)]
     struct ExportInfo<'a> {
@@ -111,47 +113,17 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
 
 /// Loads the manifest and resolves the dependencies of the project to the
 /// concrete used versions. Afterwards available overrides of dependencies are applied.
-fn resolve_dependencies(manifest: &Path, features: Vec<String>, config: &Config)
+fn resolve_dependencies(manifest: &Path, config: &Config, features: Vec<String>,
+                        target: Option<String>, no_default_features: bool)
     -> CargoResult<(Resolve, Vec<Package>)> {
     let mut source = try!(PathSource::for_path(manifest.parent().unwrap(), config));
     try!(source.update());
 
     let package = try!(source.root_package());
 
-    for key in package.manifest().warnings().iter() {
-        try!(config.shell().warn(key))
-    }
+    let (packages, resolve_with_overrides, _) =
+            try!(ops::cargo_compile::resolve_dependencies(
+                &package, config, &target, features, no_default_features));
 
-    let override_ids = try!(ops::source_ids_from_config(config, package.root()));
-    let mut registry = PackageRegistry::new(config);
-
-    // First, resolve the package's *listed* dependencies, as well as
-    // downloading and updating all remotes and such.
-    let resolved = try!(ops::resolve_pkg(&mut registry, &package));
-
-    // Second, resolve with precisely what we're doing. Filter out
-    // transitive dependencies if necessary, specify features, handle
-    // overrides, etc.
-    try!(registry.add_overrides(override_ids));
-
-    let rustc_host = config.rustc_host().to_string();
-    let default_feature = features.contains(&"default".to_string());
-    let filtered_features =
-        features.into_iter().filter(|s| s != "default").collect::<Vec<_>>();
-
-    let platform = Some(rustc_host.as_ref());
-    let method = Method::Required {
-        dev_deps: false,
-        features: &filtered_features,
-        uses_default_features: default_feature,
-        target_platform: platform
-    };
-
-    let resolved_specific =
-        try!(ops::resolve_with_previous(&mut registry, &package, method, Some(&resolved), None));
-
-    let package_ids: Vec<PackageId> = resolved_specific.iter().cloned().collect();
-    let packages = try!(registry.get(&package_ids));
-
-    Ok((resolved_specific, packages))
+    Ok((resolve_with_overrides, packages))
 }

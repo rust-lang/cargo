@@ -4,11 +4,13 @@ use cargo::util::important_paths::find_root_manifest_for_cwd;
 
 #[derive(RustcDecodable)]
 struct Options {
-    flag_output_path: OutputTo,
+    flag_features: Vec<String>,
     flag_manifest_path: Option<String>,
-    flag_verbose: bool,
+    flag_no_default_features: bool,
     flag_output_format: OutputFormat,
-    flag_features: String,
+    flag_output_path: OutputTo,
+    flag_target: Option<String>,
+    flag_verbose: bool,
 }
 
 pub const USAGE: &'static str = r#"
@@ -25,9 +27,11 @@ Options:
     -o, --output-path PATH   Path the output is written to, otherwise stdout is used
     -f, --output-format FMT  Output format [default: toml]
                              Valid values: toml, json
-    --features FEATURES      Comma-separated list of features [default: default]
+    --features FEATURES      Space-separated list of features
+    --no-default-features    Do not include the `default` feature
     --manifest-path PATH     Path to the manifest
     -v, --verbose            Use verbose output
+    --target TRIPLE          Build for the target triple
 
 The TOML format is e.g.:
 
@@ -54,10 +58,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let manifest = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let options = OutputMetadataOptions {
+        features: options.flag_features,
         manifest_path: &manifest,
-        output_to: options.flag_output_path,
+        no_default_features: options.flag_no_default_features,
         output_format: options.flag_output_format,
-        features: options.flag_features.split(',').map(|x| x.to_string()).collect::<Vec<String>>(),
+        output_to: options.flag_output_path,
+        target: options.flag_target,
     };
 
     output_metadata(options, config)
