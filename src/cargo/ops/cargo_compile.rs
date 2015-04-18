@@ -138,7 +138,7 @@ pub fn resolve_dependencies<'a>(package: &Package, config: &'a Config,
         human("Unable to get packages from source")
     }));
 
-    return Ok((packages, resolved_with_overrides, registry.move_sources()));
+    Ok((packages, resolved_with_overrides, registry.move_sources()))
 }
 
 pub fn compile_pkg(package: &Package, options: &CompileOptions)
