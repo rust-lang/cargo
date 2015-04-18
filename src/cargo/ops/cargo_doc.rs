@@ -87,7 +87,7 @@ fn open_docs(path: &Path) {
 
 #[cfg(target_os = "windows")]
 fn open_docs(path: &Path) {
-    match Command::new("start").arg(path).status() {
+    match Command::new("cmd").arg("/C").arg("start").arg("").arg(path).status() {
         Ok(_) => return,
         Err(_) => ()
     };
