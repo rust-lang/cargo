@@ -47,7 +47,7 @@ pub fn doc(manifest_path: &Path,
         let name = match options.compile_opts.spec {
             Some(spec) => try!(PackageIdSpec::parse(spec)).name().to_string(),
             None => {
-                match lib_names.iter().nth(0) {
+                match lib_names.iter().chain(bin_names.iter()).nth(0) {
                     Some(s) => s.to_string(),
                     None => return Ok(())
                 }
