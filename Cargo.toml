@@ -26,7 +26,7 @@ url = "0.2.23"
 rustc-serialize = "0.3.1"
 term = "0.2"
 regex = "0.1.18"
-threadpool = "0.1.1"
+threadpool = "0.1.4"
 libc = "0.1.2"
 registry = { path = "src/registry" }
 num_cpus = "0.1"
