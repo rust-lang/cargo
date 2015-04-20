@@ -50,6 +50,12 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         human(&format!("cannot create a project with a non-unicode name: {:?}",
                        path.file_name().unwrap()))
     }));
+    let name =
+        if opts.bin {
+            name
+        } else {
+            strip_rust_affixes(name)
+        };
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
@@ -60,6 +66,20 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
     })
+}
+
+fn strip_rust_affixes(name: &str) -> &str {
+    for &prefix in &["rust-", "rust_", "rs-", "rs_"] {
+        if name.starts_with(prefix) {
+            return &name[prefix.len()..];
+        }
+    }
+    for &suffix in &["-rust", "_rust", "-rs", "_rs"] {
+        if name.ends_with(suffix) {
+            return &name[..name.len()-suffix.len()];
+        }
+    }
+    name
 }
 
 fn existing_vcs_repo(path: &Path) -> bool {
@@ -181,4 +201,21 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         email: email,
         version_control: vcs,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::strip_rust_affixes;
+
+    #[test]
+    fn affixes_stripped() {
+        assert_eq!(strip_rust_affixes("rust-foo"), "foo");
+        assert_eq!(strip_rust_affixes("foo-rs"), "foo");
+        assert_eq!(strip_rust_affixes("rs_foo"), "foo");
+        // Only one affix is stripped
+        assert_eq!(strip_rust_affixes("rs-foo-rs"), "foo-rs");
+        assert_eq!(strip_rust_affixes("foo-rs-rs"), "foo-rs");
+        // It shouldn't touch the middle
+        assert_eq!(strip_rust_affixes("some-rust-crate"), "some-rust-crate");
+    }
 }
