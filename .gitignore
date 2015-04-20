@@ -4,4 +4,6 @@
 /Makefile
 /config.mk
 src/doc/build
+src/registry/target
+src/registry/Cargo.lock
 rustc

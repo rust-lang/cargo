@@ -43,8 +43,15 @@ _cargo()
 		else
 			COMPREPLY=( $( compgen -W "$(cargo --list | tail -n +2)" -- "$cur" ) )
 		fi
-	elif [[ $cword -gt 2 && "$prev" = "$opt_mani" ]]; then
-		_filedir
+	elif [[ $cword -gt 2 ]]; then
+		case "${prev}" in
+			"$opt_mani")
+				_filedir toml
+				;;
+			--example)
+				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
+				;;
+		esac
 	elif [[ "$cur" == -* ]]; then
 		COMPREPLY=( $( compgen -W "${opts[$cmd]}" -- "$cur" ) )
 	fi
@@ -56,4 +63,16 @@ _cargo()
 } &&
 complete -o nospace -F _cargo cargo
 
+_locate_manifest(){
+	local manifest=`cargo locate-project 2>/dev/null`
+	# regexp-replace manifest '\{"root":"|"\}' ''
+	echo ${manifest:9:-2}
+}
+
+_get_examples(){
+	local files=($(dirname $(_locate_manifest))/examples/*.rs)
+	local names=("${files[@]##*/}")
+	local names=("${names[@]%.*}")
+	echo "${names[@]}"
+}
 # vim:ft=sh
