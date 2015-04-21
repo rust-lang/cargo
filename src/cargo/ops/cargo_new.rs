@@ -8,6 +8,8 @@ use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
 
+use term::color::BLACK;
+
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
 use util::Config;
 
@@ -57,7 +59,14 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
             if opts.bin {
                 dir_name
             } else {
-                strip_rust_affixes(dir_name)
+                let new_name = strip_rust_affixes(dir_name);
+                if new_name != dir_name {
+                    let message = format!(
+                        "Note: package will be named `{}`; use --name to override",
+                        new_name);
+                    try!(config.shell().say(&message, BLACK));
+                }
+                new_name
             }
         }
     };
