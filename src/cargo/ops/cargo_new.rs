@@ -18,6 +18,7 @@ pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
     pub bin: bool,
     pub path: &'a str,
+    pub name: Option<&'a str>,
 }
 
 impl Decodable for VersionControl {
@@ -46,16 +47,20 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
     }
-    let name = try!(path.file_name().and_then(|s| s.to_str()).chain_error(|| {
-        human(&format!("cannot create a project with a non-unicode name: {:?}",
-                       path.file_name().unwrap()))
-    }));
-    let name =
-        if opts.bin {
-            name
-        } else {
-            strip_rust_affixes(name)
-        };
+    let name = match opts.name {
+        Some(name) => name,
+        None => {
+            let dir_name = try!(path.file_name().and_then(|s| s.to_str()).chain_error(|| {
+                human(&format!("cannot create a project with a non-unicode name: {:?}",
+                               path.file_name().unwrap()))
+            }));
+            if opts.bin {
+                dir_name
+            } else {
+                strip_rust_affixes(dir_name)
+            }
+        }
+    };
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
