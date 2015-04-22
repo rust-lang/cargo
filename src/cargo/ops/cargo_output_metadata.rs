@@ -27,7 +27,8 @@ impl Decodable for OutputTo {
     fn decode<D: Decoder>(d: &mut D) -> Result<OutputTo, D::Error> {
         d.read_option(|d, b| {
             if b {
-                Ok(OutputTo::Path(try!(Decodable::decode(d))))
+                let path = PathBuf::from(try!(d.read_str()));
+                Ok(OutputTo::Path(path))
             } else {
                 Ok(OutputTo::StdOut)
             }
