@@ -35,8 +35,11 @@ test!(cargo_metadata_simple_json {
     let p = project("foo")
             .file("Cargo.toml", &basic_bin_manifest("foo"));
 
-    assert_that(p.cargo_process("metadata").arg("-f").arg("json"), execs().with_stdout(format!(r#"{{"root":{{"name":"foo","version":"0.5.0","features":null}},"packages":[{{"name":"foo","version":"0.5.0","dependencies":[],"targets":[{{"kind":["bin"],"name":"foo","src_path":"src/foo.rs","metadata":null}}],"manifest_path":"{}/Cargo.toml"}}]}}
-"#, p.root().to_str().unwrap())));
+    assert_that(p.cargo_process("metadata").arg("-f").arg("json"), execs().with_stdout(format!(
+    "{{\"root\":{{\"name\":\"foo\",\"version\":\"0.5.0\",\"features\":null}},\"packages\":\
+[{{\"name\":\"foo\",\"version\":\"0.5.0\",\"dependencies\":[],\"targets\":[{{\"kind\":[\"bin\"],\
+\"name\":\"foo\",\"src_path\":\"src/foo.rs\",\"metadata\":null}}],\"manifest_path\":\"{}/\
+Cargo.toml\"}}]}}\n", p.root().to_str().unwrap())));
 });
 
 test!(cargo_metadata_with_invalid_manifest {
@@ -58,7 +61,8 @@ test!(cargo_metadata_simple_file {
     let p = project("foo")
             .file("Cargo.toml", &basic_bin_manifest("foo"));
 
-    assert_that(p.cargo_process("metadata").arg("--output-path").arg("metadata.toml"), execs().with_status(0));
+    assert_that(p.cargo_process("metadata").arg("--output-path").arg("metadata.toml"),
+        execs().with_status(0));
 
     let outputfile = p.root().join("metadata.toml");
     assert_that(&outputfile, existing_file());
