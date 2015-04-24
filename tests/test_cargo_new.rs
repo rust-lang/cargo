@@ -96,6 +96,34 @@ test!(invalid_characters {
                        .with_stderr("Invalid character `.` in crate name: `foo.rs`"));
 });
 
+test!(rust_prefix_stripped {
+    assert_that(cargo_process("new").arg("rust-foo"),
+                execs().with_status(0)
+                       .with_stdout("Note: package will be named `foo`; use --name to override"));
+    let toml = paths::root().join("rust-foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"name = "foo""#));
+});
+
+test!(bin_disables_stripping {
+    assert_that(cargo_process("new").arg("rust-foo").arg("--bin"),
+                execs().with_status(0));
+    let toml = paths::root().join("rust-foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"name = "rust-foo""#));
+});
+
+test!(explicit_name_not_stripped {
+    assert_that(cargo_process("new").arg("foo").arg("--name").arg("rust-bar"),
+                execs().with_status(0));
+    let toml = paths::root().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"name = "rust-bar""#));
+});
+
 test!(finds_author_user {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
