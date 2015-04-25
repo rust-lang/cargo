@@ -62,7 +62,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
                 let new_name = strip_rust_affixes(dir_name);
                 if new_name != dir_name {
                     let message = format!(
-                        "Note: package will be named `{}`; use --name to override",
+                        "note: package will be named `{}`; use --name to override",
                         new_name);
                     try!(config.shell().say(&message, BLACK));
                 }
