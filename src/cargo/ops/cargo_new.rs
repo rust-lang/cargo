@@ -8,6 +8,8 @@ use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
 
+use term::color::BLACK;
+
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
 use util::Config;
 
@@ -18,6 +20,7 @@ pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
     pub bin: bool,
     pub path: &'a str,
+    pub name: Option<&'a str>,
 }
 
 impl Decodable for VersionControl {
@@ -46,10 +49,27 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
     }
-    let name = try!(path.file_name().and_then(|s| s.to_str()).chain_error(|| {
-        human(&format!("cannot create a project with a non-unicode name: {:?}",
-                       path.file_name().unwrap()))
-    }));
+    let name = match opts.name {
+        Some(name) => name,
+        None => {
+            let dir_name = try!(path.file_name().and_then(|s| s.to_str()).chain_error(|| {
+                human(&format!("cannot create a project with a non-unicode name: {:?}",
+                               path.file_name().unwrap()))
+            }));
+            if opts.bin {
+                dir_name
+            } else {
+                let new_name = strip_rust_affixes(dir_name);
+                if new_name != dir_name {
+                    let message = format!(
+                        "note: package will be named `{}`; use --name to override",
+                        new_name);
+                    try!(config.shell().say(&message, BLACK));
+                }
+                new_name
+            }
+        }
+    };
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
@@ -60,6 +80,20 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
     })
+}
+
+fn strip_rust_affixes(name: &str) -> &str {
+    for &prefix in &["rust-", "rust_", "rs-", "rs_"] {
+        if name.starts_with(prefix) {
+            return &name[prefix.len()..];
+        }
+    }
+    for &suffix in &["-rust", "_rust", "-rs", "_rs"] {
+        if name.ends_with(suffix) {
+            return &name[..name.len()-suffix.len()];
+        }
+    }
+    name
 }
 
 fn existing_vcs_repo(path: &Path) -> bool {
@@ -181,4 +215,21 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         email: email,
         version_control: vcs,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::strip_rust_affixes;
+
+    #[test]
+    fn affixes_stripped() {
+        assert_eq!(strip_rust_affixes("rust-foo"), "foo");
+        assert_eq!(strip_rust_affixes("foo-rs"), "foo");
+        assert_eq!(strip_rust_affixes("rs_foo"), "foo");
+        // Only one affix is stripped
+        assert_eq!(strip_rust_affixes("rs-foo-rs"), "foo-rs");
+        assert_eq!(strip_rust_affixes("foo-rs-rs"), "foo-rs");
+        // It shouldn't touch the middle
+        assert_eq!(strip_rust_affixes("some-rust-crate"), "some-rust-crate");
+    }
 }
