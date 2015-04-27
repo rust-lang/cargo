@@ -37,7 +37,7 @@ value unless otherwise noted.
 ```toml
 # An array of paths to local repositories which are to be used as overrides for
 # dependencies. For more information see the Cargo Guide.
-paths = [ "/path/to/override" ]
+paths = ["/path/to/override"]
 
 [cargo-new]
 # This is your name/email to place in the `authors` section of a new Cargo.toml

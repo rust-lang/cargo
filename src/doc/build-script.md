@@ -294,7 +294,7 @@ Pretty similar to before! Next, the manifest:
 [package]
 name = "hello-world-from-c"
 version = "0.1.0"
-authors = [ "you@example.com" ]
+authors = ["you@example.com"]
 build = "build.rs"
 ```
 

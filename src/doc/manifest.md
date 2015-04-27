@@ -8,7 +8,7 @@ The first section in a `Cargo.toml` is `[package]`.
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
-authors = [ "you@example.com" ]
+authors = ["you@example.com"]
 ```
 
 All three of these fields are mandatory. Cargo bakes in the concept of
