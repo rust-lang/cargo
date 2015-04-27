@@ -97,7 +97,7 @@ test!(invalid_characters {
 });
 
 test!(rust_prefix_stripped {
-    assert_that(cargo_process("new").arg("rust-foo"),
+    assert_that(cargo_process("new").arg("rust-foo").env("USER", "foo"),
                 execs().with_status(0)
                        .with_stdout("note: package will be named `foo`; use --name to override"));
     let toml = paths::root().join("rust-foo/Cargo.toml");
@@ -107,7 +107,7 @@ test!(rust_prefix_stripped {
 });
 
 test!(bin_disables_stripping {
-    assert_that(cargo_process("new").arg("rust-foo").arg("--bin"),
+    assert_that(cargo_process("new").arg("rust-foo").arg("--bin").env("USER", "foo"),
                 execs().with_status(0));
     let toml = paths::root().join("rust-foo/Cargo.toml");
     let mut contents = String::new();
@@ -116,7 +116,7 @@ test!(bin_disables_stripping {
 });
 
 test!(explicit_name_not_stripped {
-    assert_that(cargo_process("new").arg("foo").arg("--name").arg("rust-bar"),
+    assert_that(cargo_process("new").arg("foo").arg("--name").arg("rust-bar").env("USER", "foo"),
                 execs().with_status(0));
     let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
