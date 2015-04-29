@@ -768,7 +768,6 @@ test!(build_cmd_with_a_build_cmd {
     --extern a=[..]liba-[..].rlib`
 {running} `[..]foo-[..]build-script-build[..]`
 {running} `rustc [..]lib.rs --crate-name foo --crate-type lib -g \
-    -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target[..]debug --emit=dep-info,link \
     -L [..]target[..]debug -L [..]target[..]deps`
 ", compiling = COMPILING, running = RUNNING)));
