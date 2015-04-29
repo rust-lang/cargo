@@ -842,8 +842,6 @@ test!(verbose_build {
                 execs().with_status(0).with_stdout(&format!("\
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]debug \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]debug \
@@ -871,8 +869,6 @@ test!(verbose_release_build {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
@@ -925,8 +921,6 @@ test!(verbose_release_build_deps {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
@@ -1619,6 +1613,30 @@ test!(cyclic_deps_rejected {
                        .with_stderr("\
 cyclic package dependency: package `foo v0.0.1 ([..])` depends on itself
 "));
+});
+
+test!(predictable_filenames {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            crate-type = ["staticlib", "dylib", "rlib"]
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/debug/libfoo.a"), existing_file());
+    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    let dylib_name = format!("{}foo{}", env::consts::DLL_PREFIX,
+                             env::consts::DLL_SUFFIX);
+    assert_that(&p.root().join("target/debug").join(dylib_name),
+                existing_file());
 });
 
 test!(dashes_to_underscores {

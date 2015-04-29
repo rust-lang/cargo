@@ -57,7 +57,7 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
     let root = cx.out_dir(pkg, kind, target);
     let mut missing_outputs = false;
     if !profile.doc {
-        for filename in try!(cx.target_filenames(target, profile)).iter() {
+        for filename in try!(cx.target_filenames(pkg, target, profile)).iter() {
             missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
     }

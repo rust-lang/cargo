@@ -257,8 +257,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     }
 
     /// Get the metadata for a target in a specific profile
-    pub fn target_metadata(&self, target: &Target, profile: &Profile)
-                           -> Option<Metadata> {
+    pub fn target_metadata(&self, pkg: &Package, target: &Target,
+                           profile: &Profile) -> Option<Metadata> {
         let metadata = target.metadata();
         if target.is_lib() && profile.test {
             // Libs and their tests are built in parallel, so we need to make
@@ -269,19 +269,26 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             })
         } else if target.is_bin() && profile.test {
             // Make sure that the name of this test executable doesn't
-            // conflicts with a library that has the same name and is
+            // conflict with a library that has the same name and is
             // being tested
-            let mut metadata = self.resolve.root().generate_metadata();
+            let mut metadata = pkg.package_id().generate_metadata();
             metadata.mix(&format!("bin-{}", target.name()));
             Some(metadata)
+        } else if pkg.package_id() == self.resolve.root() && !profile.test {
+            // If we're not building a unit test then the root package never
+            // needs any metadata as it's guaranteed to not conflict with any
+            // other output filenames. This means that we'll have predictable
+            // file names like `target/debug/libfoo.{a,so,rlib}` and such.
+            None
         } else {
             metadata.map(|m| m.clone())
         }
     }
 
     /// Returns the file stem for a given target/profile combo
-    pub fn file_stem(&self, target: &Target, profile: &Profile) -> String {
-        match self.target_metadata(target, profile) {
+    pub fn file_stem(&self, pkg: &Package, target: &Target,
+                     profile: &Profile) -> String {
+        match self.target_metadata(pkg, target, profile) {
             Some(ref metadata) => format!("{}{}", target.crate_name(),
                                           metadata.extra_filename),
             None if target.allows_underscores() => target.name().to_string(),
@@ -291,9 +298,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// Return the filenames that the given target for the given profile will
     /// generate.
-    pub fn target_filenames(&self, target: &Target, profile: &Profile)
-                            -> CargoResult<Vec<String>> {
-        let stem = self.file_stem(target, profile);
+    pub fn target_filenames(&self, pkg: &Package, target: &Target,
+                            profile: &Profile) -> CargoResult<Vec<String>> {
+        let stem = self.file_stem(pkg, target, profile);
         let suffix = if target.for_host() {&self.host_exe} else {&self.target_exe};
 
         let mut ret = Vec::new();

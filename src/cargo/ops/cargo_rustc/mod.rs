@@ -133,7 +133,7 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
 
     for &(target, profile) in targets {
-        for filename in try!(cx.target_filenames(target, profile)).iter() {
+        for filename in try!(cx.target_filenames(pkg, target, profile)).iter() {
             let dst = cx.out_dir(pkg, Kind::Target, target).join(filename);
             if profile.test {
                 cx.compilation.tests.push((target.name().to_string(), dst));
@@ -154,7 +154,7 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                 if profile.doc { continue }
                 if cx.compilation.libraries.contains_key(&pkgid) { continue }
 
-                let v = try!(cx.target_filenames(target, profile));
+                let v = try!(cx.target_filenames(pkg, target, profile));
                 let v = v.into_iter().map(|f| {
                     (target.clone(),
                      cx.out_dir(pkg, Kind::Target, target).join(f))
@@ -342,7 +342,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         }
         let exec_engine = cx.exec_engine.clone();
 
-        let filenames = try!(cx.target_filenames(target, profile));
+        let filenames = try!(cx.target_filenames(package, target, profile));
         let root = cx.out_dir(package, kind, target);
 
         // Prepare the native lib state (extra -L and -l flags)
@@ -367,7 +367,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         let rustc_dep_info_loc = if do_rename {
             root.join(&crate_name)
         } else {
-            root.join(&cx.file_stem(target, profile))
+            root.join(&cx.file_stem(package, target, profile))
         }.with_extension("d");
         let dep_info_loc = fingerprint::dep_info_loc(cx, package, target,
                                                      profile, kind);
@@ -683,7 +683,7 @@ fn build_base_args(cx: &Context,
         None => {}
     }
 
-    match cx.target_metadata(target, profile) {
+    match cx.target_metadata(pkg, target, profile) {
         Some(m) => {
             cmd.arg("-C").arg(&format!("metadata={}", m.metadata));
             cmd.arg("-C").arg(&format!("extra-filename={}", m.extra_filename));
@@ -758,7 +758,7 @@ fn build_deps_args(cmd: &mut CommandPrototype,
             Kind::Target => Kind::Target,
         });
 
-        for filename in try!(cx.target_filenames(target, profile)).iter() {
+        for filename in try!(cx.target_filenames(pkg, target, profile)).iter() {
             if filename.ends_with(".a") { continue }
             let mut v = OsString::new();
             v.push(&target.crate_name());

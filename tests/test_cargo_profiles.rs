@@ -30,8 +30,6 @@ test!(profile_overrides {
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -C debug-assertions=on \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
         -C rpath \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
@@ -95,8 +93,6 @@ test!(top_level_overrides_deps {
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release \

@@ -63,7 +63,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         try!(rm_rf(&layout.fingerprint(&pkg)));
         let profiles = [Profile::default_dev(), Profile::default_test()];
         for profile in profiles.iter() {
-            for filename in try!(cx.target_filenames(target, profile)).iter() {
+            for filename in try!(cx.target_filenames(&pkg, target, profile)).iter() {
                 try!(rm_rf(&layout.dest().join(&filename)));
                 try!(rm_rf(&layout.deps().join(&filename)));
             }
