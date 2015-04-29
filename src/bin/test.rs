@@ -15,6 +15,7 @@ struct Options {
     flag_package: Option<String>,
     flag_target: Option<String>,
     flag_verbose: bool,
+    flag_release: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -30,6 +31,7 @@ Options:
     --no-run                 Compile, but don't run tests
     -p SPEC, --package SPEC  Package to run tests for
     -j N, --jobs N           The number of jobs to run in parallel
+    --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
     --target TRIPLE          Build for the target triple
@@ -72,7 +74,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| &s[..]),
             exec_engine: None,
-            release: false,
+            release: options.flag_release,
             mode: ops::CompileMode::Test,
             filter: if tests.is_empty() && bins.is_empty() {
                 ops::CompileFilter::Everything
