@@ -8,11 +8,15 @@ struct Options {
     flag_package: Option<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
-    flag_bench: Option<String>,
     flag_no_default_features: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
+    flag_lib: bool,
+    flag_bin: Vec<String>,
+    flag_example: Vec<String>,
+    flag_test: Vec<String>,
+    flag_bench: Vec<String>,
     arg_args: Vec<String>,
 }
 
@@ -24,7 +28,11 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --bench NAME             Name of the bench to run
+    --lib                    Benchmark only this package's library
+    --bin NAME               Benchmark only the specified binary
+    --example NAME           Benchmark only the specified example
+    --test NAME              Benchmark only the specified test
+    --bench NAME             Benchmark only the specified bench
     --no-run                 Compile, but don't run benchmarks
     -p SPEC, --package SPEC  Package to run benchmarks for
     -j N, --jobs N           The number of jobs to run in parallel
@@ -50,11 +58,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     config.shell().set_verbose(options.flag_verbose);
 
-    let mut benches = Vec::new();
-    if let Some(s) = options.flag_bench {
-        benches.push(s);
-    }
-
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         compile_opts: ops::CompileOptions {
@@ -67,14 +70,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             exec_engine: None,
             release: true,
             mode: ops::CompileMode::Bench,
-            filter: if benches.is_empty() {
-                ops::CompileFilter::Everything
-            } else {
-                ops::CompileFilter::Only {
-                    lib: false, bins: &[], examples: &[], tests: &[],
-                    benches: &benches,
-                }
-            },
+            filter: ops::CompileFilter::new(options.flag_lib,
+                                            &options.flag_bin,
+                                            &options.flag_test,
+                                            &options.flag_example,
+                                            &options.flag_bench),
         },
     };
 

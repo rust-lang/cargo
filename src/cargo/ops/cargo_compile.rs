@@ -184,6 +184,22 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
 }
 
 impl<'a> CompileFilter<'a> {
+    pub fn new(lib_only: bool,
+               bins: &'a [String],
+               tests: &'a [String],
+               examples: &'a [String],
+               benches: &'a [String]) -> CompileFilter<'a> {
+        if lib_only || !bins.is_empty() || !tests.is_empty() ||
+           !examples.is_empty() || !benches.is_empty() {
+            CompileFilter::Only {
+                lib: lib_only, bins: bins, examples: examples, benches: benches,
+                tests: tests,
+            }
+        } else {
+            CompileFilter::Everything
+        }
+    }
+
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Everything => true,

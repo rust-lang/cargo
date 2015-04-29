@@ -1654,3 +1654,30 @@ test!(dashes_in_crate_name_bad {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101));
 });
+
+test!(filtering {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("src/bin/b.rs", "fn main() {}")
+        .file("examples/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--lib"),
+                execs().with_status(0));
+    assert_that(&p.bin("a"), is_not(existing_file()));
+
+    assert_that(p.cargo("build").arg("--bin=a").arg("--example=a"),
+                execs().with_status(0));
+    assert_that(&p.bin("a"), existing_file());
+    assert_that(&p.bin("b"), is_not(existing_file()));
+    assert_that(&p.bin("examples/a"), existing_file());
+    assert_that(&p.bin("examples/b"), is_not(existing_file()));
+});
