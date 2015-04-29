@@ -254,16 +254,14 @@ test!(native_plugin_dependency_with_custom_ar_linker {
         .file("src/lib", "")
         .file(".cargo/config", &format!(r#"
             [target.{}]
-            ar = "ar"
-            linker = "cc"
+            ar = "nonexistent-ar"
+            linker = "nonexistent-linker"
         "#, target));
 
     foo.build();
     assert_that(bar.cargo_process("build").arg("--verbose"),
-    execs().with_stdout(&format!("\
+                execs().with_stdout(&format!("\
 {compiling} foo v0.0.1 ({url})
-{running} `rustc [..] -C ar=ar -C linker=cc [..]`
-{compiling} bar v0.0.1 ({url})
-{running} `rustc [..] -C ar=ar -C linker=cc [..]`
+{running} `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 ", compiling = COMPILING, running = RUNNING, url = bar.url())))
 });
