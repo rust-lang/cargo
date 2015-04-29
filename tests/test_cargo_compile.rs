@@ -9,6 +9,7 @@ use support::{COMPILING, RUNNING, ProjectBuilder};
 use hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use cargo::util::process;
+use cargo::ops::rustc_version;
 
 fn setup() {
 }
@@ -1386,48 +1387,67 @@ Caused by:
 "));
 });
 
-#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_os = "linux"))]
 test!(cargo_platform_specific_dependency {
+    let (_, host) = rustc_version().unwrap();
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml", &format!(r#"
             [project]
-
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
+            build = "build.rs"
 
-            [target.i686-unknown-linux-gnu.dependencies.bar]
-            path = "bar"
-            [target.x86_64-unknown-linux-gnu.dependencies.bar]
-            path = "bar"
+            [target.{host}.dependencies]
+            dep = {{ path = "dep" }}
+            [target.{host}.build-dependencies]
+            build = {{ path = "build" }}
+            [target.{host}.dev-dependencies]
+            dev = {{ path = "dev" }}
+        "#, host = host))
+        .file("src/main.rs", r#"
+            extern crate dep;
+            fn main() { dep::dep() }
         "#)
-        .file("src/main.rs",
-              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
-        .file("bar/Cargo.toml", r#"
+        .file("tests/foo.rs", r#"
+            extern crate dev;
+            #[test]
+            fn foo() { dev::dev() }
+        "#)
+        .file("build.rs", r#"
+            extern crate build;
+            fn main() { build::build(); }
+        "#)
+        .file("dep/Cargo.toml", r#"
             [project]
-
-            name = "bar"
+            name = "dep"
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
-        .file("bar/src/lib.rs", r#"
-            pub fn gimme() -> String {
-                "test passed".to_string()
-            }
-        "#);
+        .file("dep/src/lib.rs", "pub fn dep() {}")
+        .file("build/Cargo.toml", r#"
+            [project]
+            name = "build"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("build/src/lib.rs", "pub fn build() {}")
+        .file("dev/Cargo.toml", r#"
+            [project]
+            name = "dev"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("dev/src/lib.rs", "pub fn dev() {}");
 
-    p.cargo_process("build")
-        .exec_with_output()
-        .unwrap();
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
 
     assert_that(&p.bin("foo"), existing_file());
-
-    assert_that(process(&p.bin("foo")).unwrap(),
-                execs().with_stdout("test passed\n"));
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
 });
 
-#[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), target_os = "linux")))]
-test!(cargo_platform_specific_dependency {
+test!(bad_platform_specific_dependency {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1436,9 +1456,7 @@ test!(cargo_platform_specific_dependency {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [target.i686-unknown-linux-gnu.dependencies.bar]
-            path = "bar"
-            [target.x86_64-unknown-linux-gnu.dependencies.bar]
+            [target.wrong-target.dependencies.bar]
             path = "bar"
         "#)
         .file("src/main.rs",
@@ -1459,7 +1477,7 @@ test!(cargo_platform_specific_dependency {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_status(101));
+                execs().with_status(101));
 });
 
 test!(cargo_platform_specific_dependency_wrong_platform {

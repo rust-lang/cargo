@@ -465,6 +465,18 @@ impl TomlManifest {
                                               |dep| {
                         dep.set_only_for_platform(Some(name.clone()))
                     }));
+                    try!(process_dependencies(&mut cx,
+                                              platform.build_dependencies.as_ref(),
+                                              |dep| {
+                        dep.set_only_for_platform(Some(name.clone()))
+                           .set_kind(Kind::Build)
+                    }));
+                    try!(process_dependencies(&mut cx,
+                                              platform.dev_dependencies.as_ref(),
+                                              |dep| {
+                        dep.set_only_for_platform(Some(name.clone()))
+                           .set_kind(Kind::Development)
+                    }));
                 }
             }
         }
@@ -589,6 +601,8 @@ enum PathValue {
 #[derive(RustcDecodable)]
 struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
+    build_dependencies: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
 impl TomlTarget {
