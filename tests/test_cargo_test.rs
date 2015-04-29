@@ -46,6 +46,71 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
         RUNNING)));
 });
 
+test!(cargo_test_release {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate bar;
+            pub fn foo() { bar::bar(); }
+
+            #[test]
+            fn test() { foo(); }
+        "#)
+        .file("tests/test.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn test() { foo::foo(); }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "pub fn bar() {}");
+
+    assert_that(p.cargo_process("test").arg("-v").arg("--release"),
+                execs().with_stdout(format!("\
+{compiling} bar v0.0.1 ({dir})
+{running} [..] -C opt-level=3 [..]
+{compiling} foo v0.1.0 ({dir})
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} [..] -C opt-level=3 [..]
+{running} `[..]target[..]foo-[..]`
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} `[..]target[..]test-[..]`
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+{running} `[..]target[..]test-[..]`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+compiling = COMPILING, dir = p.url(), running = RUNNING, doctest = DOCTEST)));
+});
+
 test!(cargo_test_verbose {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
