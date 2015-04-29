@@ -15,7 +15,11 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_release: bool,
-    flag_lib: bool
+    flag_lib: bool,
+    flag_bin: Vec<String>,
+    flag_example: Vec<String>,
+    flag_test: Vec<String>,
+    flag_bench: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -28,7 +32,11 @@ Options:
     -h, --help               Print this message
     -p SPEC, --package SPEC  Package to build
     -j N, --jobs N           The number of jobs to run in parallel
-    --lib                    Build only lib (if present in package)
+    --lib                    Build only this package's library
+    --bin NAME               Build only the specified binary
+    --example NAME           Build only the specified example
+    --test NAME              Build only the specified test
+    --bench NAME             Build only the specified benchmark
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
@@ -63,13 +71,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         exec_engine: None,
         mode: ops::CompileMode::Build,
         release: options.flag_release,
-        filter: if options.flag_lib {
-            ops::CompileFilter::Only {
-                lib: true, bins: &[], examples: &[], benches: &[], tests: &[]
-            }
-        } else {
-            ops::CompileFilter::Everything
-        },
+        filter: ops::CompileFilter::new(options.flag_lib,
+                                        &options.flag_bin,
+                                        &options.flag_test,
+                                        &options.flag_example,
+                                        &options.flag_bench),
     };
 
     ops::compile(&root, &opts).map(|_| None).map_err(|err| {
