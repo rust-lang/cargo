@@ -59,11 +59,12 @@ exclude = ["build/**/*.o", "doc/**/*.html"]
 ```toml
 [package
 # ...
-include = ["src/resource.data"]
+include = ["src/**/*", "Cargo.toml"]
 ```
 
 The options are mutually exclusive: setting `include` will override an
-`exclude`.
+`exclude`. Note that `include` must be an exhaustive list of files as otherwise
+necessary source files may not be included.
 
 ## Package metadata
 
