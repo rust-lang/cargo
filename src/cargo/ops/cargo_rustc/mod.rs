@@ -49,6 +49,7 @@ pub struct BuildConfig {
 pub struct TargetConfig {
     pub ar: Option<String>,
     pub linker: Option<String>,
+    pub features: Vec<String>,
     pub overrides: HashMap<String, BuildOutput>,
 }
 
@@ -629,6 +630,10 @@ fn build_base_args(cx: &Context,
 
     for crate_type in crate_types.iter() {
         cmd.arg("--crate-type").arg(crate_type);
+    }
+
+    for target_feature in cx.build_config.target.features.iter() {
+        cmd.arg("-C").arg("target-feature=".to_string()+target_feature);
     }
 
     let prefer_dynamic = target.for_host() ||

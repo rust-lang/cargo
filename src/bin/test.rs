@@ -14,6 +14,7 @@ struct Options {
     flag_no_run: bool,
     flag_package: Option<String>,
     flag_target: Option<String>,
+    flag_target_features: Vec<String>,
     flag_verbose: bool,
 }
 
@@ -24,17 +25,18 @@ Usage:
     cargo test [options] [--] [<args>...]
 
 Options:
-    -h, --help               Print this message
-    --test NAME              Name of the integration test to run
-    --bin NAME               Name of the binary to run tests for
-    --no-run                 Compile, but don't run tests
-    -p SPEC, --package SPEC  Package to run tests for
-    -j N, --jobs N           The number of jobs to run in parallel
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --manifest-path PATH     Path to the manifest to build tests for
-    -v, --verbose            Use verbose output
+    -h, --help                  Print this message
+    --test NAME                 Name of the integration test to run
+    --bin NAME                  Name of the binary to run tests for
+    --no-run                    Compile, but don't run tests
+    -p SPEC, --package SPEC     Package to run tests for
+    -j N, --jobs N              The number of jobs to run in parallel
+    --features FEATURES         Space-separated list of features to also build
+    --no-default-features       Do not build the `default` feature
+    --target TRIPLE             Build for the target triple
+    --target-features FEATURES  Build with the the target features
+    --manifest-path PATH        Path to the manifest to build tests for
+    -v, --verbose               Use verbose output
 
 All of the trailing arguments are passed to the test binaries generated for
 filtering tests and generally providing options configuring how they run. For
@@ -68,6 +70,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             config: config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| &s[..]),
+            target_features: &options.flag_target_features,
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
             spec: options.flag_package.as_ref().map(|s| &s[..]),
