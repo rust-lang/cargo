@@ -10,6 +10,7 @@ struct Options {
     flag_features: Vec<String>,
     flag_no_default_features: bool,
     flag_target: Option<String>,
+    flag_target_features: Vec<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_release: bool,
@@ -23,16 +24,17 @@ Usage:
     cargo run [options] [--] [<args>...]
 
 Options:
-    -h, --help              Print this message
-    --bin NAME              Name of the bin target to run
-    --example NAME          Name of the example target to run
-    -j N, --jobs N          The number of jobs to run in parallel
-    --release               Build artifacts in release mode, with optimizations
-    --features FEATURES     Space-separated list of features to also build
-    --no-default-features   Do not build the `default` feature
-    --target TRIPLE         Build for the target triple
-    --manifest-path PATH    Path to the manifest to execute
-    -v, --verbose           Use verbose output
+    -h, --help                  Print this message
+    --bin NAME                  Name of the bin target to run
+    --example NAME              Name of the example target to run
+    -j N, --jobs N              The number of jobs to run in parallel
+    --release                   Build artifacts in release mode, with optimizations
+    --features FEATURES         Space-separated list of features to also build
+    --no-default-features       Do not build the `default` feature
+    --target TRIPLE             Build for the target triple
+    --target-features FEATURES  Build for the target triple
+    --manifest-path PATH        Path to the manifest to execute
+    -v, --verbose               Use verbose output
 
 If neither `--bin` or `--example` are given, then if the project only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
@@ -58,6 +60,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         config: config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
+        target_features: &options.flag_target_features,
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
         spec: None,

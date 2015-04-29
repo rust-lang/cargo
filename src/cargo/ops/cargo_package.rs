@@ -182,6 +182,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
         config: config,
         jobs: None,
         target: None,
+        target_features: &[],
         features: &[],
         no_default_features: false,
         spec: None,

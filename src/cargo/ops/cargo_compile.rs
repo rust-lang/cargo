@@ -43,6 +43,7 @@ pub struct CompileOptions<'a, 'b: 'a> {
     pub jobs: Option<u32>,
     /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
     pub target: Option<&'a str>,
+    pub target_features: &'a [String],
     /// Extra features to build for the root package
     pub features: &'a [String],
     /// Flag if the default feature should be built for the root package
@@ -100,11 +101,14 @@ pub fn compile(manifest_path: &Path,
 
 pub fn compile_pkg(package: &Package, options: &CompileOptions)
                    -> CargoResult<ops::Compilation> {
-    let CompileOptions { config, jobs, target, spec, features,
-                         no_default_features, release, mode,
+    let CompileOptions { config, jobs, target, target_features, spec,
+                         features, no_default_features, release, mode,
                          ref filter, ref exec_engine } = *options;
 
     let target = target.map(|s| s.to_string());
+    let target_features = target_features.iter().flat_map(|s| {
+        s.split(' ')
+    }).map(|s| s.to_string()).collect::<Vec<String>>();
     let features = features.iter().flat_map(|s| {
         s.split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
@@ -165,7 +169,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
 
     let ret = {
         let _p = profile::start("compiling");
-        let mut build_config = try!(scrape_build_config(config, jobs, target));
+        let mut build_config = try!(scrape_build_config(config, jobs, target, target_features));
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
         if let CompileMode::Doc { deps } = mode {
@@ -327,7 +331,8 @@ fn source_ids_from_config(config: &Config, cur_path: &Path)
 /// * target.$target.libfoo.metadata
 fn scrape_build_config(config: &Config,
                        jobs: Option<u32>,
-                       target: Option<String>)
+                       target: Option<String>,
+                       target_features: Vec<String>)
                        -> CargoResult<ops::BuildConfig> {
     let cfg_jobs = match try!(config.get_i64("build.jobs")) {
         Some((n, p)) => {
@@ -354,6 +359,7 @@ fn scrape_build_config(config: &Config,
         Some(triple) => try!(scrape_target_config(config, &triple)),
         None => base.host.clone(),
     };
+    base.target.features = target_features;
     Ok(base)
 }
 
@@ -367,6 +373,7 @@ fn scrape_target_config(config: &Config, triple: &str)
     let mut ret = ops::TargetConfig {
         ar: ar.map(|p| p.0),
         linker: linker.map(|p| p.0),
+        features: Vec::new(),
         overrides: HashMap::new(),
     };
     let table = match try!(config.get_table(&key)) {
