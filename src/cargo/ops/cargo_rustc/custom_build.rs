@@ -21,6 +21,8 @@ pub struct BuildOutput {
     pub library_paths: Vec<PathBuf>,
     /// Names and link kinds of libraries, suitable for the `-l` flag
     pub library_links: Vec<String>,
+    /// Various `--cfg` flags to pass to the compiler
+    pub cfgs: Vec<String>,
     /// Metadata to pass to the immediate dependencies
     pub metadata: Vec<(String, String)>,
 }
@@ -252,6 +254,7 @@ impl BuildOutput {
     pub fn parse(input: &str, pkg_name: &str) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
+        let mut cfgs = Vec::new();
         let mut metadata = Vec::new();
         let whence = format!("build script of `{}`", pkg_name);
 
@@ -277,24 +280,25 @@ impl BuildOutput {
                                               whence, line)))
             };
 
-            if key == "rustc-flags" {
-                let (libs, links) = try!(
-                    BuildOutput::parse_rustc_flags(value, &whence)
-                );
-                library_links.extend(links.into_iter());
-                library_paths.extend(libs.into_iter());
-            } else if key == "rustc-link-lib" {
-                library_links.push(value.to_string());
-            } else if key == "rustc-link-search" {
-                library_paths.push(PathBuf::from(value));
-            } else {
-                metadata.push((key.to_string(), value.to_string()))
+            match key {
+                "rustc-flags" => {
+                    let (libs, links) = try!(
+                        BuildOutput::parse_rustc_flags(value, &whence)
+                    );
+                    library_links.extend(links.into_iter());
+                    library_paths.extend(libs.into_iter());
+                }
+                "rustc-link-lib" => library_links.push(value.to_string()),
+                "rustc-link-search" => library_paths.push(PathBuf::from(value)),
+                "rustc-cfg" => cfgs.push(value.to_string()),
+                _ => metadata.push((key.to_string(), value.to_string())),
             }
         }
 
         Ok(BuildOutput {
             library_paths: library_paths,
             library_links: library_links,
+            cfgs: cfgs,
             metadata: metadata,
         })
     }
@@ -317,8 +321,8 @@ impl BuildOutput {
             }
             let value = match flags_iter.next() {
                 Some(v) => v,
-                None => return Err(human(format!("Flag in rustc-flags has no value \
-                                                  in {}: `{}`",
+                None => return Err(human(format!("Flag in rustc-flags has no \
+                                                  value in {}: `{}`",
                                                   whence, value)))
             };
             match flag {

@@ -79,18 +79,22 @@ Example output:
 ```notrust
 cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
+cargo:rustc-cfg=foo
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
 
-The `rustc-link-lib` key indicates that Cargo should pass a `-l` option to
-rustc. Similarly, `rustc-link-search` indicates that Cargo should pass a `-L`
-option.
+There are a few special keys that Cargo recognizes, affecting how the crate this
+build script is for is built:
 
-The `rustc-flags` key is special and indicates the flags that Cargo will
-pass to Rustc. Currently only `-l` and `-L` are accepted. Using
-`rustc-link-lib` and `rustc-link-search` is more robust.
+* `rustc-link-lib` indicates that the specified value should be passed to the
+  compiler as a `-l` flag.
+* `rustc-link-search` indicates the specified value should be passed to the
+  compiler as a `-L` flag.
+* `rustc-cfg` indicates that the specified directive will be passed as a `--cfg`
+  flag to the compiler. This is often useful for performing compile-time
+  detection of various features.
 
 Any other element is a user-defined metadata that will be passed to
 dependencies. More information about this can be found in the [`links`][links]
