@@ -73,7 +73,11 @@ pub fn update_lockfile(manifest_path: &Path,
                                          .with_precise(Some(precise));
                         try!(registry.add_sources(&[precise]));
                     }
-                    None => {}
+                    None => {
+                        let imprecise = dep.source_id().clone()
+                                           .with_precise(None);
+                        try!(registry.add_sources(&[imprecise]));
+                    }
                 }
             }
         }
