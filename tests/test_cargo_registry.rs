@@ -733,3 +733,41 @@ test!(fetch_downloads {
 {downloading} a v0.1.0 (registry [..])
 ", updating = UPDATING, downloading = DOWNLOADING)));
 });
+
+test!(update_transitive_dependency {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("a", "0.1.0", &[("b", "*", "normal")]);
+    r::mock_pkg("b", "0.1.0", &[]);
+
+    assert_that(p.cargo("fetch"),
+                execs().with_status(0));
+
+    r::mock_pkg("b", "0.1.1", &[]);
+
+    assert_that(p.cargo("update").arg("-pb"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} registry `[..]`
+", updating = UPDATING)));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{downloading} b v0.1.1 (registry file://[..])
+{compiling} b v0.1.1 (registry [..])
+{compiling} a v0.1.0 (registry [..])
+{compiling} foo v0.5.0 ([..])
+", downloading = DOWNLOADING, compiling = COMPILING)));
+});
