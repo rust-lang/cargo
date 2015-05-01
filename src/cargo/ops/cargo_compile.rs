@@ -58,6 +58,9 @@ pub struct CompileOptions<'a, 'b: 'a> {
     pub release: bool,
     /// Mode for this compile.
     pub mode: CompileMode,
+    /// The specified target will be compiled with all the available arguments,
+    /// note that this only accounts for the *final* invocation of rustc
+    pub target_rustc_args: Option<&'a [String]>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -102,7 +105,8 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
-                         ref filter, ref exec_engine } = *options;
+                         ref filter, ref exec_engine,
+                         ref target_rustc_args } = *options;
 
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
@@ -168,6 +172,7 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
+        build_config.target_rustc_args = target_rustc_args.map(|a| a.to_vec());
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }

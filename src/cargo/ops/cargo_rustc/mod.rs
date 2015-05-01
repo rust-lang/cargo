@@ -43,6 +43,7 @@ pub struct BuildConfig {
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
     pub doc_all: bool,
+    pub target_rustc_args: Option<Vec<String>>,
 }
 
 #[derive(Clone, Default)]
