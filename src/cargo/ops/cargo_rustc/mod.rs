@@ -665,6 +665,10 @@ fn build_base_args(cx: &Context,
         cmd.arg("-g");
     }
 
+    if let Some(ref args) = cx.build_config.target_rustc_args {
+        cmd.args(args);
+    }
+
     if debug_assertions && opt_level > 0 {
         cmd.args(&["-C", "debug-assertions=on"]);
     } else if !debug_assertions && opt_level == 0 {
