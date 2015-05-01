@@ -75,6 +75,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(publish);
     $mac!(read_manifest);
     $mac!(run);
+    $mac!(rustc);
     $mac!(search);
     $mac!(test);
     $mac!(update);

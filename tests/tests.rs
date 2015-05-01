@@ -48,6 +48,7 @@ mod test_cargo_profiles;
 mod test_cargo_publish;
 mod test_cargo_registry;
 mod test_cargo_run;
+mod test_cargo_rustc;
 mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_version;
