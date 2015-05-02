@@ -91,3 +91,25 @@ test!(build_main_and_allow_unstable_options {
                 .with_stdout(verbose_output_for_target_with_args(false, &p,
                                                                  "-Z unstable-options")));
 });
+
+test!(fails_when_trying_to_build_main_and_lib_with_args {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "foo"
+            version = "0.0.1"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("src/lib.rs", r#" "#);
+
+
+    assert_that(p.cargo_process("rustc").arg("-v")
+                .arg("--").arg("-Z").arg("unstable-options"),
+                execs()
+                .with_status(101)
+                .with_stderr("extra arguments to `rustc` can only be invoked for one target"));
+});

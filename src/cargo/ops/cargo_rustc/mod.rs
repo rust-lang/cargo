@@ -43,7 +43,6 @@ pub struct BuildConfig {
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
     pub doc_all: bool,
-    pub target_rustc_args: Option<Vec<String>>,
 }
 
 #[derive(Clone, Default)]
@@ -624,7 +623,6 @@ fn build_base_args(cx: &Context,
         opt_level, lto, codegen_units, ref rustc_args, debuginfo, debug_assertions,
         rpath, test, doc: _doc,
     } = *profile;
-    let _ = rustc_args;
 
     // Move to cwd so the root_path() passed below is actually correct
     cmd.cwd(cx.config.cwd());
@@ -666,7 +664,7 @@ fn build_base_args(cx: &Context,
         cmd.arg("-g");
     }
 
-    if let Some(ref args) = cx.build_config.target_rustc_args {
+    if let &Some(ref args) = rustc_args {
         cmd.args(args);
     }
 

@@ -167,12 +167,28 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
     let to_build = packages.iter().find(|p| p.package_id() == pkgid).unwrap();
     let targets = try!(generate_targets(to_build, mode, filter, release));
 
+    let target_with_args = match target_rustc_args {
+        &Some(args) => {
+            if targets.len() > 1 {
+                return Err(human("extra arguments to `rustc` can only be \
+                                  invoked for one target"))
+            }
+            let (target, profile) = targets[0];
+            let mut profile = profile.clone();
+            profile.rustc_args = Some(args.to_vec());
+            Some((target, profile))
+        },
+        &None => None,
+    };
+
+    let targets = target_with_args.as_ref().map(|&(t, ref p)| vec!((t, p)))
+                                           .unwrap_or(targets);
+
     let ret = {
         let _p = profile::start("compiling");
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
-        build_config.target_rustc_args = target_rustc_args.map(|a| a.to_vec());
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }
