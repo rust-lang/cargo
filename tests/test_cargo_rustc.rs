@@ -43,7 +43,7 @@ test!(build_lib_for_foo {
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("--lib").arg("-v").arg("foo"),
+    assert_that(p.cargo_process("rustc").arg("--lib").arg("-v"),
                 execs()
                 .with_status(0)
                 .with_stdout(verbose_output_for_target(true, &p)));
@@ -63,7 +63,7 @@ test!(build_lib_and_allow_unstable_options {
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("--lib").arg("-v").arg("foo")
+    assert_that(p.cargo_process("rustc").arg("--lib").arg("-v")
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
@@ -84,7 +84,7 @@ test!(build_main_and_allow_unstable_options {
             fn main() {}
         "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v").arg("foo")
+    assert_that(p.cargo_process("rustc").arg("-v")
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
