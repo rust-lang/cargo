@@ -31,5 +31,6 @@ pub mod toml;
 pub mod lev_distance;
 mod dependency_queue;
 mod sha256;
+mod shell_escape;
 mod vcs;
 mod mtime;
