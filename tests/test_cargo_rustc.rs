@@ -82,14 +82,31 @@ test!(build_main_and_allow_unstable_options {
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
+        "#)
+        .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v")
+    assert_that(p.cargo_process("rustc").arg("-v").arg("--bin").arg("foo")
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout(verbose_output_for_target_with_args(false, &p,
-                                                                 "-Z unstable-options")));
+                .with_stdout(&format!("\
+{compiling} {name} v{version} ({url})
+{running} `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
+        --out-dir {dir}{sep}target{sep}debug \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}debug \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+{running} `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
+        -Z unstable-options \
+        --out-dir {dir}{sep}target{sep}debug \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}debug \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps \
+        --extern {name}={dir}{sep}target{sep}debug{sep}lib{name}.rlib`
+",
+            running = RUNNING, compiling = COMPILING, sep = SEP,
+            dir = p.root().display(), url = p.url(),
+            name = "foo", version = "0.0.1")));
 });
 
 test!(fails_when_trying_to_build_main_and_lib_with_args {
@@ -105,7 +122,6 @@ test!(fails_when_trying_to_build_main_and_lib_with_args {
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
-
 
     assert_that(p.cargo_process("rustc").arg("-v")
                 .arg("--").arg("-Z").arg("unstable-options"),
