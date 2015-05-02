@@ -116,6 +116,7 @@ pub struct Profile {
     pub opt_level: u32,
     pub lto: bool,
     pub codegen_units: Option<u32>,    // None = use rustc default
+    pub rustc_args: Option<Vec<String>>,
     pub debuginfo: bool,
     pub debug_assertions: bool,
     pub rpath: bool,
@@ -464,6 +465,7 @@ impl Default for Profile {
             opt_level: 0,
             lto: false,
             codegen_units: None,
+            rustc_args: None,
             debuginfo: false,
             debug_assertions: false,
             rpath: false,
