@@ -4,7 +4,7 @@ use std::io::{BufReader, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use core::{Package, Target, Profile};
-use util;
+use util::{self, MTime};
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
 
 use super::Kind;
@@ -96,7 +96,7 @@ pub struct Fingerprint {
 #[derive(Clone)]
 enum LocalFingerprint {
     Precalculated(String),
-    MtimeBased(Option<u64>, PathBuf),
+    MtimeBased(Option<MTime>, PathBuf),
 }
 
 impl Fingerprint {
@@ -110,7 +110,7 @@ impl Fingerprint {
             LocalFingerprint::MtimeBased(Some(n), _) if !force => n.to_string(),
             LocalFingerprint::MtimeBased(_, ref p) => {
                 debug!("resolving: {}", p.display());
-                try!(fs::metadata(p)).modified().to_string()
+                try!(MTime::of(p)).to_string()
             }
         };
         debug!("inputs: {} {} {:?}", known, self.extra, deps);
@@ -311,7 +311,7 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
     Ok(old_fingerprint == new_fingerprint)
 }
 
-fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
+fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<MTime>> {
     macro_rules! fs_try {
         ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
     }
@@ -324,7 +324,7 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let mtime = try!(fs::metadata(dep_info)).modified();
+    let mtime = try!(MTime::of(dep_info));
     let pos = try!(line.find(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
@@ -342,10 +342,10 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<u64>> {
             file.push(' ');
             file.push_str(deps.next().unwrap())
         }
-        match fs::metadata(&cwd.join(&file)) {
-            Ok(ref stat) if stat.modified() <= mtime => {}
-            Ok(ref stat) => {
-                info!("stale: {} -- {} vs {}", file, stat.modified(), mtime);
+        match MTime::of(&cwd.join(&file)) {
+            Ok(file_mtime) if file_mtime <= mtime => {}
+            Ok(file_mtime) => {
+                info!("stale: {} -- {} vs {}", file, file_mtime, mtime);
                 return Ok(None)
             }
             _ => { info!("stale: {} -- missing", file); return Ok(None) }
