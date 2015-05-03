@@ -1,5 +1,5 @@
 #![deny(unused)]
-#![feature(fs_time)]
+#![feature(metadata_ext)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;

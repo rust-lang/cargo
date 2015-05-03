@@ -9,7 +9,8 @@ use git2;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{self, CargoResult, internal, internal_error, human, ChainError, Config};
+use util::{self, CargoResult, internal, internal_error, human, ChainError};
+use util::{MTime, Config};
 
 pub struct PathSource<'a, 'b: 'a> {
     id: SourceId,
@@ -289,14 +290,14 @@ impl<'a, 'b> Source for PathSource<'a, 'b> {
             return Err(internal_error("BUG: source was not updated", ""));
         }
 
-        let mut max = 0;
+        let mut max = MTime::zero();
         for file in try!(self.list_files(pkg)).iter() {
             // An fs::stat error here is either because path is a
             // broken symlink, a permissions error, or a race
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = fs::metadata(&file).map(|s| s.modified()).unwrap_or(0);
+            let mtime = MTime::of(&file).unwrap_or(MTime::zero());
             warn!("{} {}", mtime, file.display());
             max = cmp::max(max, mtime);
         }
