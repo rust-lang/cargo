@@ -10,9 +10,10 @@
 
 use std::borrow::Cow;
 
-static SHELL_SPECIAL: &'static str = r#"\$'"`!"#;
+static SHELL_SPECIAL: &'static str = r#" \$'"`!"#;
 
-/// Escape characters that may have special meaning in a shell.
+/// Escape characters that may have special meaning in a shell,
+/// including spaces.
 pub fn shell_escape(s: Cow<str>) -> Cow<str> {
     let escape_char = '\\';
     // check if string needs to be escaped
@@ -32,9 +33,11 @@ pub fn shell_escape(s: Cow<str>) -> Cow<str> {
 
 #[test]
 fn test_shell_escape() {
-    assert_eq!(shell_escape("--aaa=bbb ccc".into()), "--aaa=bbb ccc");
+    assert_eq!(shell_escape("--aaa=bbb-ccc".into()), "--aaa=bbb-ccc");
+    assert_eq!(shell_escape("linker=gcc -L/foo -Wl,bar".into()),
+                            r#"linker=gcc\ -L/foo\ -Wl,bar"#);
     assert_eq!(shell_escape(r#"--features="default""#.into()),
                             r#"--features=\"default\""#);
-    assert_eq!(shell_escape(r#"'!\$` \\ \n"#.into()),
-                            r#"\'\!\\\$\` \\\\ \\n"#);
+    assert_eq!(shell_escape(r#"'!\$`\\\n "#.into()),
+                            r#"\'\!\\\$\`\\\\\\n\ "#);
 }
