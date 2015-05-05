@@ -655,3 +655,43 @@ test!(everything_in_the_lockfile {
     assert!(lockfile.contains(r#"name = "d2""#), "d2 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d3""#), "d3 not found\n{}", lockfile);
 });
+
+test!(no_rebuild_when_frobbing_default_feature {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            a = { path = "../a", features = ["f1"], default-features = false }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            default = ["f1"]
+            f1 = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+});

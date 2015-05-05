@@ -112,7 +112,12 @@ impl Resolve {
 
 impl fmt::Debug for Resolve {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.graph.fmt(fmt)
+        try!(write!(fmt, "graph: {:?}\n", self.graph));
+        try!(write!(fmt, "\nfeatures: {{\n"));
+        for (pkg, features) in &self.features {
+            try!(write!(fmt, "  {}: {:?}\n", pkg, features));
+        }
+        write!(fmt, "}}")
     }
 }
 
@@ -223,12 +228,17 @@ fn flag_activated(cx: &mut Context,
         return false
     }
     debug!("checking if {} is already activated", summary.package_id());
-    let features = match *method {
-        Method::Required{features, ..} => features,
+    let (features, use_default) = match *method {
+        Method::Required { features, uses_default_features, .. } => {
+            (features, uses_default_features)
+        }
         Method::Everything => return false,
     };
     match cx.resolve.features(id) {
-        Some(prev) => features.iter().all(|f| prev.contains(f)),
+        Some(prev) => {
+            features.iter().all(|f| prev.contains(f)) &&
+                (!use_default || prev.contains("default"))
+        }
         None => features.len() == 0,
     }
 }
@@ -422,7 +432,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
                                                (&'a Dependency, Vec<String>)>> {
     let dev_deps = match method {
         Method::Everything => true,
-        Method::Required{dev_deps, ..} => dev_deps,
+        Method::Required { dev_deps, .. } => dev_deps,
     };
 
     // First, filter by dev-dependencies
@@ -519,14 +529,13 @@ fn build_features(s: &Summary, method: Method)
     }
     match method {
         Method::Everything |
-        Method::Required{uses_default_features: true, ..} => {
-            if s.features().get("default").is_some() &&
-               !visited.contains("default") {
+        Method::Required { uses_default_features: true, .. } => {
+            if s.features().get("default").is_some() {
                 try!(add_feature(s, "default", &mut deps, &mut used,
                                  &mut visited));
             }
         }
-        _ => {}
+        Method::Required { uses_default_features: false, .. } => {}
     }
     return Ok((deps, used));
 
@@ -560,9 +569,8 @@ fn build_features(s: &Summary, method: Method)
                 used.insert(feat.to_string());
                 match s.features().get(feat) {
                     Some(recursive) => {
-                        for f in recursive.iter() {
-                            try!(add_feature(s, f, deps, used,
-                                             visited));
+                        for f in recursive {
+                            try!(add_feature(s, f, deps, used, visited));
                         }
                     }
                     None => {
