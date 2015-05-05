@@ -153,6 +153,7 @@ fn calculate<'a, 'b>(cx: &mut Context<'a, 'b>,
     });
     let extra = util::short_hash(&(cx.config.rustc_version(), target, &features,
                                    profile));
+    debug!("extra {:?} {:?} {:?} = {}", target, profile, features, extra);
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
     //
