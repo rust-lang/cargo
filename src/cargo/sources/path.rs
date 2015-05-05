@@ -123,35 +123,49 @@ impl<'a, 'b> PathSource<'a, 'b> {
                        .next();
         match repo {
             Some(repo) => self.list_files_git(pkg, repo, &mut filter),
-            None => self.list_files_walk(pkg, filter),
+            None => self.list_files_walk(pkg, &mut filter),
         }
     }
 
-    fn list_files_git<F>(&self, pkg: &Package, repo: git2::Repository,
-                         filter: &mut F)
-                         -> CargoResult<Vec<PathBuf>>
-        where F: FnMut(&Path) -> bool
-    {
+    fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
+                      filter: &mut FnMut(&Path) -> bool)
+                      -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = try!(repo.index());
-        let root = match repo.workdir() {
-            Some(dir) => dir,
-            None => return Err(internal_error("Can't list files on a bare repository.", "")),
-        };
-
+        let root = try!(repo.workdir().chain_error(|| {
+            internal_error("Can't list files on a bare repository.", "")
+        }));
         let pkg_path = pkg.root();
 
         let mut ret = Vec::new();
-        'outer: for entry in index.iter() {
-            let fname = &entry.path[..];
-            let file_path = try!(join(&root, fname));
+
+        // We use information from the git repository to guide use in traversing
+        // its tree. The primary purpose of this is to take advantage of the
+        // .gitignore and auto-ignore files that don't matter.
+        //
+        // Here we're also careful to look at both tracked an untracked files as
+        // the untracked files are often part of a build and may become relevant
+        // as part of a future commit.
+        let index_files = index.iter().map(|entry| join(&root, &entry.path));
+        let mut opts = git2::StatusOptions::new();
+        opts.include_untracked(true);
+        let statuses = try!(repo.statuses(Some(&mut opts)));
+        let untracked = statuses.iter().map(|entry| {
+            join(&root, entry.path_bytes())
+        });
+
+        'outer: for file_path in index_files.chain(untracked) {
+            let file_path = try!(file_path);
 
             // Filter out files outside this package.
             if !file_path.starts_with(pkg_path) { continue }
 
             // Filter out Cargo.lock and target always
-            if fname == b"Cargo.lock" { continue }
-            if fname == b"target" { continue }
+            {
+                let fname = file_path.file_name().and_then(|s| s.to_str());
+                if fname == Some("Cargo.lock") { continue }
+                if fname == Some("target") { continue }
+            }
 
             // Filter out sub-packages of this package
             for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
@@ -173,13 +187,16 @@ impl<'a, 'b> PathSource<'a, 'b> {
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
                 let rel = rel.replace(r"\", "/");
-                let submodule = try!(repo.find_submodule(&rel));
-                let repo = match submodule.open() {
-                    Ok(repo) => repo,
-                    Err(..) => continue,
-                };
-                let files = try!(self.list_files_git(pkg, repo, filter));
-                ret.extend(files.into_iter());
+                match repo.find_submodule(&rel).and_then(|s| s.open()) {
+                    Ok(repo) => {
+                        let files = try!(self.list_files_git(pkg, repo, filter));
+                        ret.extend(files.into_iter());
+                    }
+                    Err(..) => {
+                        try!(PathSource::walk(&file_path, &mut ret, false,
+                                              filter));
+                    }
+                }
             } else if (*filter)(&file_path) {
                 // We found a file!
                 warn!("  found {}", file_path.display());
@@ -205,43 +222,40 @@ impl<'a, 'b> PathSource<'a, 'b> {
         }
     }
 
-    fn list_files_walk<F>(&self, pkg: &Package, mut filter: F)
-                          -> CargoResult<Vec<PathBuf>>
-        where F: FnMut(&Path) -> bool
-    {
+    fn list_files_walk(&self, pkg: &Package, filter: &mut FnMut(&Path) -> bool)
+                       -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         for pkg in self.packages.iter().filter(|p| *p == pkg) {
             let loc = pkg.root();
-            try!(walk(loc, &mut ret, true, &mut filter));
+            try!(PathSource::walk(loc, &mut ret, true, filter));
         }
         return Ok(ret);
+    }
 
-        fn walk<F>(path: &Path, ret: &mut Vec<PathBuf>,
-                   is_root: bool, filter: &mut F) -> CargoResult<()>
-            where F: FnMut(&Path) -> bool
-        {
-            if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
-                if (*filter)(path) {
-                    ret.push(path.to_path_buf());
-                }
-                return Ok(())
-            }
-            // Don't recurse into any sub-packages that we have
-            if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
-                return Ok(())
-            }
-            for dir in try!(fs::read_dir(path)) {
-                let dir = try!(dir).path();
-                match (is_root, dir.file_name().and_then(|s| s.to_str())) {
-                    (_,    Some(".git")) |
-                    (true, Some("target")) |
-                    (true, Some("Cargo.lock")) => continue,
-                    _ => {}
-                }
-                try!(walk(&dir, ret, false, filter));
+    fn walk(path: &Path, ret: &mut Vec<PathBuf>,
+            is_root: bool, filter: &mut FnMut(&Path) -> bool) -> CargoResult<()>
+    {
+        if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
+            if (*filter)(path) {
+                ret.push(path.to_path_buf());
             }
             return Ok(())
         }
+        // Don't recurse into any sub-packages that we have
+        if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
+            return Ok(())
+        }
+        for dir in try!(fs::read_dir(path)) {
+            let dir = try!(dir).path();
+            match (is_root, dir.file_name().and_then(|s| s.to_str())) {
+                (_,    Some(".git")) |
+                (true, Some("target")) |
+                (true, Some("Cargo.lock")) => continue,
+                _ => {}
+            }
+            try!(PathSource::walk(&dir, ret, false, filter));
+        }
+        return Ok(())
     }
 }
 
