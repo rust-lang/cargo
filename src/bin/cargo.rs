@@ -48,7 +48,7 @@ Some common cargo commands are:
     test        Run the tests
     bench       Run the benchmarks
     update      Update dependencies listed in Cargo.lock
-    search      Search crates from host of a registry
+    search      Search registry for crates
 
 See 'cargo help <command>' for more information on a specific command.
 ";
