@@ -5,7 +5,7 @@ use std::path::Path;
 
 /// A helper structure to represent the modification time of a file.
 ///
-/// The actual value contined within is platform-specific and does not have the
+/// The actual value contained within is platform-specific and does not have the
 /// same meaning across platforms, but comparisons and stringification can be
 /// significant among platforms.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Copy, Clone)]

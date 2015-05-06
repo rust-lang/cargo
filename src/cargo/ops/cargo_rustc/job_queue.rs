@@ -198,7 +198,7 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    // This isn't super trivial becuase we don't want to print loads and
+    // This isn't super trivial because we don't want to print loads and
     // loads of information to the console, but we also want to produce a
     // faithful representation of what's happening. This is somewhat nuanced
     // as a package can start compiling *very* early on because of custom
