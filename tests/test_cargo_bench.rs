@@ -68,7 +68,7 @@ test!(bench_tarname {
 
     let expected_stdout = format!("\
 {compiling} foo v0.0.1 ({dir})
-{runnning} target[..]release[..]bin2[..]
+{running} target[..]release[..]bin2[..]
 
 running 1 test
 test run2 ... bench:         0 ns/iter (+/- 0)
@@ -77,7 +77,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
        compiling = COMPILING,
-       runnning = RUNNING,
+       running = RUNNING,
        dir = prj.url());
 
     assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),

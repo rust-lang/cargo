@@ -225,7 +225,7 @@ test!(cargo_compile_git_dep_tag {
             "#)
     }).unwrap();
 
-    // Make a tag correponding to the current HEAD
+    // Make a tag corresponding to the current HEAD
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let head = repo.head().unwrap().target().unwrap();
     repo.tag("v0.1.0",

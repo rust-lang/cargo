@@ -5,7 +5,7 @@ use util::{CargoResult, Fresh, Dirty, Freshness};
 pub struct Job { dirty: Work, fresh: Work }
 
 /// Each proc should send its description before starting.
-/// It should send either once or close immediatly.
+/// It should send either once or close immediately.
 pub struct Work {
     inner: Box<FnBox<Sender<String>, CargoResult<()>> + Send>,
 }

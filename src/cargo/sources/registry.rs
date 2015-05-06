@@ -316,7 +316,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
         // TODO: don't download into memory (curl-rust doesn't expose it)
         let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
         if resp.get_code() != 200 && resp.get_code() != 0 {
-            return Err(internal(format!("Failed to get 200 reponse from {}\n{}",
+            return Err(internal(format!("Failed to get 200 response from {}\n{}",
                                         url, resp)))
         }
 
