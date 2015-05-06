@@ -167,8 +167,8 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
     let to_build = packages.iter().find(|p| p.package_id() == pkgid).unwrap();
     let targets = try!(generate_targets(to_build, mode, filter, release));
 
-    let target_with_args = match target_rustc_args {
-        &Some(args) => {
+    let target_with_args = match *target_rustc_args {
+        Some(args) => {
             if targets.len() > 1 {
                 return Err(human("extra arguments to `rustc` can only be \
                                   invoked for one target"))
@@ -178,10 +178,10 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
             profile.rustc_args = Some(args.to_vec());
             Some((target, profile))
         },
-        &None => None,
+        None => None,
     };
 
-    let targets = target_with_args.as_ref().map(|&(t, ref p)| vec!((t, p)))
+    let targets = target_with_args.as_ref().map(|&(t, ref p)| vec![(t, p)])
                                            .unwrap_or(targets);
 
     let ret = {

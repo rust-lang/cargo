@@ -664,7 +664,7 @@ fn build_base_args(cx: &Context,
         cmd.arg("-g");
     }
 
-    if let &Some(ref args) = rustc_args {
+    if let Some(ref args) = *rustc_args {
         cmd.args(args);
     }
 
