@@ -6,6 +6,11 @@ use hamcrest::{assert_that};
 fn setup() {
 }
 
+fn cargo_rustc_error() -> &'static str {
+    "extra arguments to `rustc` can only be passed to one target, consider filtering\n\
+    the package by passing e.g. `--lib` or `--bin NAME` to specify a single target"
+}
+
 test!(build_lib_for_foo {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -118,7 +123,7 @@ test!(fails_when_trying_to_build_main_and_lib_with_args {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(101)
-                .with_stderr("extra arguments to `rustc` can only be invoked for one target"));
+                .with_stderr(cargo_rustc_error()));
 });
 
 test!(build_with_args_to_one_of_multiple_binaries {
@@ -178,7 +183,7 @@ test!(fails_with_args_to_all_binaries {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(101)
-                .with_stderr("extra arguments to `rustc` can only be invoked for one target"));
+                .with_stderr(cargo_rustc_error()));
 });
 
 test!(build_with_args_to_one_of_multiple_tests {

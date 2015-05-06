@@ -168,16 +168,16 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
     let targets = try!(generate_targets(to_build, mode, filter, release));
 
     let target_with_args = match *target_rustc_args {
-        Some(args) => {
-            if targets.len() > 1 {
-                return Err(human("extra arguments to `rustc` can only be \
-                                  invoked for one target"))
-            }
+        Some(args) if targets.len() == 1 => {
             let (target, profile) = targets[0];
             let mut profile = profile.clone();
             profile.rustc_args = Some(args.to_vec());
             Some((target, profile))
-        },
+        }
+        Some(_) =>
+            return Err(human("extra arguments to `rustc` can only be passed to one target, \
+                              consider filtering\nthe package by passing e.g. `--lib` or \
+                              `--bin NAME` to specify a single target")),
         None => None,
     };
 
