@@ -45,20 +45,16 @@ Options:
     --manifest-path PATH     Path to the manifest to fetch depednencies for
     -v, --verbose            Use verbose output
 
-The <pkgid> specified (defaults to the current package) will have all of its
-dependencies compiled, and then the package itself will be compiled. This
-command requires that a lockfile is available and dependencies have been
-fetched.
+The specified target for the current package (or package specified by SPEC if
+provided) will be compiled along with all of its dependencies. The specified
+<opts>... will all be passed to the final compiler invocation, not any of the
+dependencies. Note that the compiler will still unconditionally receive
+arguments such as -L, --extern, and --crate-type, and the specified <opts>...
+will simply be added to the compiler invocation.
 
-All of the trailing arguments are passed through to the *final* rustc
-invocation, not any of the dependencies.
-
-Dependencies will not be recompiled if they do not need to be, but the package
-specified will always be compiled. The compiler will receive a number of
-arguments unconditionally such as --extern, -L, etc. Note that dependencies are
-recompiled when the flags they're compiled with change, so it is not allowed to
-manually compile a package's dependencies and then compile the package against
-the artifacts just generated.
+This command requires that only one target is being compiled. If more than one
+target is available for the current package the filters of --lib, --bin, etc,
+must be used to select which target is compiled.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
