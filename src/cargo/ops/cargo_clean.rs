@@ -7,7 +7,7 @@ use core::{PackageSet, Profiles, Profile};
 use core::source::{Source, SourceMap};
 use sources::PathSource;
 use util::{CargoResult, human, ChainError, Config};
-use ops::{self, Layout, Context, BuildConfig};
+use ops::{self, Layout, Context, BuildConfig, Kind};
 
 pub struct CleanOptions<'a, 'b: 'a> {
     pub spec: Option<&'a str>,
@@ -63,7 +63,8 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         try!(rm_rf(&layout.fingerprint(&pkg)));
         let profiles = [Profile::default_dev(), Profile::default_test()];
         for profile in profiles.iter() {
-            for filename in try!(cx.target_filenames(&pkg, target, profile)).iter() {
+            for filename in try!(cx.target_filenames(&pkg, target, profile,
+                                                     Kind::Target)).iter() {
                 try!(rm_rf(&layout.dest().join(&filename)));
                 try!(rm_rf(&layout.deps().join(&filename)));
             }

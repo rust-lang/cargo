@@ -133,8 +133,10 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
 
     for &(target, profile) in targets {
-        for filename in try!(cx.target_filenames(pkg, target, profile)).iter() {
-            let dst = cx.out_dir(pkg, Kind::Target, target).join(filename);
+        let kind = Kind::Target;
+        for filename in try!(cx.target_filenames(pkg, target, profile,
+                                                 kind)).iter() {
+            let dst = cx.out_dir(pkg, kind, target).join(filename);
             if profile.test {
                 cx.compilation.tests.push((target.name().to_string(), dst));
             } else if target.is_bin() || target.is_example() {
@@ -154,10 +156,9 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                 if profile.doc { continue }
                 if cx.compilation.libraries.contains_key(&pkgid) { continue }
 
-                let v = try!(cx.target_filenames(pkg, target, profile));
+                let v = try!(cx.target_filenames(pkg, target, profile, kind));
                 let v = v.into_iter().map(|f| {
-                    (target.clone(),
-                     cx.out_dir(pkg, Kind::Target, target).join(f))
+                    (target.clone(), cx.out_dir(pkg, kind, target).join(f))
                 }).collect::<Vec<_>>();
                 cx.compilation.libraries.insert(pkgid.clone(), v);
             }
@@ -342,7 +343,8 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         }
         let exec_engine = cx.exec_engine.clone();
 
-        let filenames = try!(cx.target_filenames(package, target, profile));
+        let filenames = try!(cx.target_filenames(package, target, profile,
+                                                 kind));
         let root = cx.out_dir(package, kind, target);
 
         // Prepare the native lib state (extra -L and -l flags)
@@ -753,13 +755,14 @@ fn build_deps_args(cmd: &mut CommandPrototype,
         // If this target is itself a plugin *or* if it's being linked to a
         // plugin, then we want the plugin directory. Otherwise we want the
         // target directory (hence the || here).
-        let layout = cx.layout(pkg, match kind {
+        let kind = match kind {
             Kind::Host => Kind::Host,
             Kind::Target if target.for_host() => Kind::Host,
             Kind::Target => Kind::Target,
-        });
+        };
+        let layout = cx.layout(pkg, kind);
 
-        for filename in try!(cx.target_filenames(pkg, target, profile)).iter() {
+        for filename in try!(cx.target_filenames(pkg, target, profile, kind)).iter() {
             if filename.ends_with(".a") { continue }
             let mut v = OsString::new();
             v.push(&target.crate_name());

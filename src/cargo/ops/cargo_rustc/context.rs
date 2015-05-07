@@ -299,7 +299,8 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
     /// Return the filenames that the given target for the given profile will
     /// generate.
     pub fn target_filenames(&self, pkg: &Package, target: &Target,
-                            profile: &Profile) -> CargoResult<Vec<String>> {
+                            profile: &Profile, kind: Kind)
+                            -> CargoResult<Vec<String>> {
         let stem = self.file_stem(pkg, target, profile);
         let suffix = if target.for_host() {&self.host_exe} else {&self.target_exe};
 
@@ -316,8 +317,6 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
                 for lib in libs.iter() {
                     match *lib {
                         LibKind::Dylib => {
-                            let plugin = target.for_host();
-                            let kind = if plugin {Kind::Host} else {Kind::Target};
                             let (prefix, suffix) = try!(self.dylib(kind));
                             ret.push(format!("{}{}{}", prefix, stem, suffix));
                         }

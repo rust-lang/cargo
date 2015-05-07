@@ -51,13 +51,14 @@ pub fn prepare_target<'a, 'b>(cx: &mut Context<'a, 'b>,
 
     info!("fingerprint at: {}", loc.display());
 
-    let fingerprint = try!(calculate(cx, pkg, target, profile, kind));
-    let is_fresh = try!(is_fresh(&loc, &fingerprint));
+    let mut fingerprint = try!(calculate(cx, pkg, target, profile, kind));
+    let is_fresh = try!(is_fresh(&loc, &mut fingerprint));
 
     let root = cx.out_dir(pkg, kind, target);
     let mut missing_outputs = false;
     if !profile.doc {
-        for filename in try!(cx.target_filenames(pkg, target, profile)).iter() {
+        for filename in try!(cx.target_filenames(pkg, target, profile,
+                                                 kind)).iter() {
             missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
     }
