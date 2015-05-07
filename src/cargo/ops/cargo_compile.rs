@@ -58,6 +58,9 @@ pub struct CompileOptions<'a, 'b: 'a> {
     pub release: bool,
     /// Mode for this compile.
     pub mode: CompileMode,
+    /// The specified target will be compiled with all the available arguments,
+    /// note that this only accounts for the *final* invocation of rustc
+    pub target_rustc_args: Option<&'a [String]>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -102,7 +105,8 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
                    -> CargoResult<ops::Compilation> {
     let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
-                         ref filter, ref exec_engine } = *options;
+                         ref filter, ref exec_engine,
+                         ref target_rustc_args } = *options;
 
     let target = target.map(|s| s.to_string());
     let features = features.iter().flat_map(|s| {
@@ -162,6 +166,23 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
     };
     let to_build = packages.iter().find(|p| p.package_id() == pkgid).unwrap();
     let targets = try!(generate_targets(to_build, mode, filter, release));
+
+    let target_with_args = match *target_rustc_args {
+        Some(args) if targets.len() == 1 => {
+            let (target, profile) = targets[0];
+            let mut profile = profile.clone();
+            profile.rustc_args = Some(args.to_vec());
+            Some((target, profile))
+        }
+        Some(_) =>
+            return Err(human("extra arguments to `rustc` can only be passed to one target, \
+                              consider filtering\nthe package by passing e.g. `--lib` or \
+                              `--bin NAME` to specify a single target")),
+        None => None,
+    };
+
+    let targets = target_with_args.as_ref().map(|&(t, ref p)| vec![(t, p)])
+                                           .unwrap_or(targets);
 
     let ret = {
         let _p = profile::start("compiling");

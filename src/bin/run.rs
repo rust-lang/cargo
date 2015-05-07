@@ -72,6 +72,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                 bins: &bins, examples: &examples,
             }
         },
+        target_rustc_args: None,
     };
 
     let err = try!(ops::run(&root,

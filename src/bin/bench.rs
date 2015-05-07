@@ -75,6 +75,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                             &options.flag_test,
                                             &options.flag_example,
                                             &options.flag_bench),
+            target_rustc_args: None,
         },
     };
 

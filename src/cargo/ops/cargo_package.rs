@@ -189,6 +189,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
         exec_engine: None,
         release: false,
         mode: ops::CompileMode::Build,
+        target_rustc_args: None,
     }));
 
     Ok(())

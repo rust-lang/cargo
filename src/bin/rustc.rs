@@ -7,6 +7,7 @@ use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
+    arg_opts: Option<Vec<String>>,
     flag_package: Option<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
@@ -23,14 +24,14 @@ struct Options {
 }
 
 pub const USAGE: &'static str = "
-Compile a local package and all of its dependencies
+Compile a package and all of its dependencies
 
 Usage:
-    cargo build [options]
+    cargo rustc [options] [--] [<opts>...]
 
 Options:
     -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to build
+    -p SPEC, --package SPEC  The profile to compile for
     -j N, --jobs N           The number of jobs to run in parallel
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
@@ -38,24 +39,26 @@ Options:
     --test NAME              Build only the specified test
     --bench NAME             Build only the specified benchmark
     --release                Build artifacts in release mode, with optimizations
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --manifest-path PATH     Path to the manifest to compile
+    --features FEATURES      Features to compile for the package
+    --no-default-features    Do not compile default features for the package
+    --target TRIPLE          Target triple which compiles will be for
+    --manifest-path PATH     Path to the manifest to fetch depednencies for
     -v, --verbose            Use verbose output
 
-If the --package argument is given, then SPEC is a package id specification
-which indicates which package should be built. If it is not given, then the
-current package is built. For more information on SPEC and its format, see the
-`cargo help pkgid` command.
+The specified target for the current package (or package specified by SPEC if
+provided) will be compiled along with all of its dependencies. The specified
+<opts>... will all be passed to the final compiler invocation, not any of the
+dependencies. Note that the compiler will still unconditionally receive
+arguments such as -L, --extern, and --crate-type, and the specified <opts>...
+will simply be added to the compiler invocation.
 
-Compilation can be configured via the use of profiles which are configured in
-the manifest. The default profile for this command is `dev`, but passing
-the --release flag will use the `release` profile instead.
+This command requires that only one target is being compiled. If more than one
+target is available for the current package the filters of --lib, --bin, etc,
+must be used to select which target is compiled.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-build; args={:?}",
+    debug!("executing; cmd=cargo-rustc; args={:?}",
            env::args().collect::<Vec<_>>());
     config.shell().set_verbose(options.flag_verbose);
 
@@ -76,10 +79,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                         &options.flag_test,
                                         &options.flag_example,
                                         &options.flag_bench),
-        target_rustc_args: None,
+        target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
     };
 
     ops::compile(&root, &opts).map(|_| None).map_err(|err| {
         CliError::from_boxed(err, 101)
     })
 }
+
+

@@ -62,6 +62,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
             },
+            target_rustc_args: None,
         },
     };
 

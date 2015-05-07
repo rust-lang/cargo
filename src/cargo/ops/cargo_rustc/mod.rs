@@ -622,8 +622,8 @@ fn build_base_args(cx: &Context,
                    profile: &Profile,
                    crate_types: &[&str]) {
     let Profile {
-        opt_level, lto, codegen_units, debuginfo, debug_assertions, rpath, test,
-        doc: _doc,
+        opt_level, lto, codegen_units, ref rustc_args, debuginfo, debug_assertions,
+        rpath, test, doc: _doc,
     } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
@@ -664,6 +664,10 @@ fn build_base_args(cx: &Context,
 
     if debuginfo {
         cmd.arg("-g");
+    }
+
+    if let Some(ref args) = *rustc_args {
+        cmd.args(args);
     }
 
     if debug_assertions && opt_level > 0 {
