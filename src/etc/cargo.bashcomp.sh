@@ -2,45 +2,44 @@ command -v cargo >/dev/null 2>&1 &&
 _cargo()
 {
 	local cur prev words cword cmd
-	_init_completion || return
+	_get_comp_words_by_ref cur prev words cword
 
 	COMPREPLY=()
 
 	cmd=${words[1]}
 
-	opt_common='-h --help -v --verbose'
-	opt_pkg='-p --package'
-	opt_feat='--features --no-default-features'
-	opt_mani='--manifest-path'
-	opt_jobs='-j --jobs'
+	local opt_common='-h --help -v --verbose'
+	local opt_pkg='-p --package'
+	local opt_feat='--features --no-default-features'
+	local opt_mani='--manifest-path'
+	local opt_jobs='-j --jobs'
 
-	declare -A opts
-	opts[_nocmd]="$opt_common -V --version --list"
-	opts[bench]="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run"
-	opts[build]="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --release"
-	opts[clean]="$opt_common $opt_pkg $opt_mani --target"
-	opts[doc]="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --open --no-deps"
-	opts[fetch]="$opt_common $opt_mani"
-	opts[generate-lockfile]="${opts[fetch]}"
-	opts[git-checkout]="$opt_common --reference= --url="
-	opts[locate-project]="$opt_mani -h --help"
-	opts[login]="$opt_common --host"
-	opts[new]="$opt_common --vcs --bin --name"
-	opts[owner]="$opt_common -a --add -r --remove -l --list --index --token"
-	opts[pkgid]="${opts[fetch]}"
-	opts[publish]="$opt_common $opt_mani --host --token --no-verify"
-	opts[read-manifest]="${opts[fetch]}"
-	opts[run]="$opt_common $opt_feat $opt_mani $opt_jobs --target --bin --example --release"
-	opts[test]="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run --release"
-	opts[update]="$opt_common $opt_pkg $opt_mani --aggressive --precise"
-	opts[package]="$opt_common $opt_mani -l --list --no-verify --no-metadata"
-	opts[verify-project]="${opts[fetch]}"
-	opts[version]="$opt_common"
-	opts[yank]="$opt_common --vers --undo --index --token"
+	local opt___nocmd="$opt_common -V --version --list"
+	local opt__bench="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run"
+	local opt__build="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --release"
+	local opt__clean="$opt_common $opt_pkg $opt_mani --target"
+	local opt__doc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --open --no-deps"
+	local opt__fetch="$opt_common $opt_mani"
+	local opt__generate_lockfile="${opt__fetch}"
+	local opt__git_checkout="$opt_common --reference= --url="
+	local opt__locate_project="$opt_mani -h --help"
+	local opt__login="$opt_common --host"
+	local opt__new="$opt_common --vcs --bin --name"
+	local opt__owner="$opt_common -a --add -r --remove -l --list --index --token"
+	local opt__pkgid="${opt__fetch}"
+	local opt__publish="$opt_common $opt_mani --host --token --no-verify"
+	local opt__read_manifest="${opt__fetch}"
+	local opt__run="$opt_common $opt_feat $opt_mani $opt_jobs --target --bin --example --release"
+	local opt__test="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run --release"
+	local opt__update="$opt_common $opt_pkg $opt_mani --aggressive --precise"
+	local opt__package="$opt_common $opt_mani -l --list --no-verify --no-metadata"
+	local opt__verify_project="${opt__fetch}"
+	local opt__version="$opt_common"
+	local opt__yank="$opt_common --vers --undo --index --token"
 
 	if [[ $cword -eq 1 ]]; then
 		if [[ "$cur" == -* ]]; then
-			COMPREPLY=( $( compgen -W "${opts[_nocmd]}" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "${opt___nocmd}" -- "$cur" ) )
 		else
 			COMPREPLY=( $( compgen -W "$(cargo --list | tail -n +2)" -- "$cur" ) )
 		fi
@@ -53,17 +52,17 @@ _cargo()
 				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
 				;;
 			*)
-				COMPREPLY=( $( compgen -W "${opts[$cmd]}" -- "$cur" ) )
+				local opt_var=opt__${cmd//-/_}
+				COMPREPLY=( $( compgen -W "${!opt_var}" -- "$cur" ) )
 				;;
 		esac
 	fi
 
-	if [[ ${#COMPREPLY[@]} == 1 && ${COMPREPLY[0]} != "--"*"=" ]] ; then
-		compopt +o nospace
-	fi
+	# compopt does not work in bash version 3
+
 	return 0
 } &&
-complete -o nospace -F _cargo cargo
+complete -F _cargo cargo
 
 _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
