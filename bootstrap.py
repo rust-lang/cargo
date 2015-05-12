@@ -43,11 +43,14 @@ The cargo root option defaults to the current directory if unspecified.  The
 target directory defaults to Python equivilent of 'mktemp -d' if unspecified.
 """
 
-import argparse, inspect, os, re, shutil, sys, tempfile
+import argparse, cStringIO, httplib, inspect, json, os, re, shutil, sys
+import tarfile, tempfile, urlparse
 import pytoml as toml
 import dulwich.porcelain as git
 
 CRATES_INDEX = 'git://github.com/rust-lang/crates.io-index.git'
+CARGO_REPO = 'git://github.com/rust-lang/cargo.git'
+CRATE_API_DL = 'https://crates.io/api/v1/crates/%s/%s/download'
 SV_RANGE = re.compile('^(?P<op>(?:\<|\>|=|\<=|\>=|\^|\~))?'
                       '(?P<major>(?:\*|0|[1-9][0-9]*))'
                       '(\.(?P<minor>(?:\*|0|[1-9][0-9]*)))?'
@@ -59,6 +62,10 @@ SEMVER = re.compile('(?P<major>(?:0|[1-9][0-9]*))'
                     '(\.(?P<patch>(?:0|[1-9][0-9]*)))?'
                     '(\-(?P<prerelease>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?'
                     '(\+(?P<build>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$')
+BUILT = {}
+CRATES = {}
+UNRESOLVED = []
+
 
 class PreRelease(object):
 
@@ -183,6 +190,9 @@ class Semver(dict):
         if build is not None:
             s += '+' + build
         return s
+
+    def __hash__(self):
+        return hash(str(self))
 
     def parts(self):
         major, minor, patch, prerelease, build = self.parts_raw()
@@ -468,13 +478,16 @@ def test_semver():
     print '"0.0.*"  lower: %s, upper: %s' % (SemverRange('0.0.*').lower(), SemverRange('0.0.*').upper())
 
 
-CRATES = {}
-
 class Crate(object):
 
-    def __init__(self, crate, ver):
+    def __init__(self, crate, ver, deps, cdir = None):
         self._crate = str(crate)
-        self._ver = Semver(ver)
+        self._version = Semver(ver)
+        self._dep_info = deps
+        self._dir = cdir
+        self._resolved = False
+        self._deps = []
+        self._refs = []
 
     def name(self):
         return self._crate
@@ -483,36 +496,165 @@ class Crate(object):
         return self._version
 
     def __str__(self):
-        return '%s-%s' % (self._crate, self._version)
-
-    def __repr__(self):
-        return self.__str__()
+        return '%s-%s' % (self.name(), self.version())
 
     def add_dep(self, crate):
-        self._deps.append(crate.name(), create.version())
+        if str(crate) not in self._deps:
+            self._deps.append(str(crate))
+            crate.add_ref(self)
 
+    def add_ref(self, crate):
+        if str(crate) not in self._refs:
+            self._refs.append(str(crate))
 
-def crate_from_toml(cdir, idir):
-    with open(os.path.join(cdir, 'Cargo.toml'), 'rb') as ctoml:
-        cfg = toml.load(ctoml)
-        crate = Crate(cfg['project']['name'], cfg['project']['version'])
-        CRATES[crate] = crate
-        import pdb; pdb.set_trace()
-        process_toml_deps(crate, cfg['dependencies'], cdir, idir)
+    def resolved(self):
+        return self._resolved
 
-def create_from_index(cdir, idir):
-    pass
+    def resolve(self, tdir, idir):
+        global CRATES
 
-def process_toml_deps(crate, deps, cdir, idir):
-    pass
-    #for k,v in deps.iteritems():
-    #    if not deps.has_key(str(k)):
-    #        deps[str(k)] = CargoDep(k, v)
-    #return deps
+        if self._resolved:
+            return
+        if CRATES.has_key(str(self)):
+            return
 
+        if self._dep_info is not None:
+            print 'Resolving dependencies for: %s' % str(self)
+            for k,v in self._dep_info.iteritems():
+                if type(v) is not dict:
+                    svr = SemverRange(v)
+                    name, ver = crate_info_from_index(idir, k, svr)
+                    dep = dl_and_init_crate(tdir, name, ver)
+                    if dep is not None:
+                        self.add_dep(dep)
+                elif v.has_key('path'):
+                    dep_path = os.path.join(self._dir, v['path'])
+                    dep = init_crate_from_toml(dep_path)
+                    if dep is not None:
+                        self.add_dep(dep)
+                else:
+                    print 'unknown dep declaration: %s' % str(v)
 
-def process_index_deps(crate, cdir, idir):
-    pass
+        self._resolved = True
+        CRATES[str(self)] = self
+
+    def build(self, by):
+        global BUILT
+        global CRATES
+
+        if BUILT.has_key(str(self)):
+            print '%s is already built' % str(self)
+            return
+
+        for dep in self._deps:
+            if CRATES.has_key(dep):
+                CRATES[dep].build(self)
+
+        print 'building %s' % str(self)
+        BUILT[str(self)] = str(by)
+
+def init_crate_from_toml(cdir):
+    global UNRESOLVED
+
+    try:
+        with open(os.path.join(cdir, 'Cargo.toml'), 'rb') as ctoml:
+            cfg = toml.load(ctoml)
+            if cfg.has_key('project'):
+                p = cfg['project']
+            elif cfg.has_key('package'):
+                p = cfg['package']
+            if cfg.has_key('dependencies'):
+                d = cfg['dependencies']
+            else:
+                d = None
+            crate = Crate(p['name'], p['version'], d, cdir)
+    except:
+        print 'failed to load toml file for: %s' % cdir
+        crate = None
+    if crate is not None:
+        UNRESOLVED.append(crate)
+
+    return crate
+
+def dl_crate(url, depth=0):
+    if depth > 10:
+        raise RuntimeError('too many redirects')
+
+    loc = urlparse.urlparse(url)
+    if loc.scheme == 'https':
+        conn = httplib.HTTPSConnection(loc.netloc)
+    elif loc.scheme == 'http':
+        conn = httplib.HTTPConnection(loc.netloc)
+    else:
+        raise RuntimeError('unsupported url scheme: %s' % loc.scheme)
+
+    conn.request("GET", loc.path)
+    res = conn.getresponse()
+    print '%sconnected to %s...%s' % ((' ' * depth), url, res.status)
+    headers = dict(res.getheaders())
+    if headers.has_key('location') and headers['location'] != url:
+        return dl_crate(headers['location'], depth + 1)
+
+    buf = cStringIO.StringIO(res.read())
+    return buf
+
+def dl_and_init_crate(tdir, name, ver):
+    global CRATES
+    try:
+        cname = '%s-%s' % (name, ver)
+        cdir = os.path.join(tdir, cname)
+        if CRATES.has_key(cname):
+            print 'skipping %s...already downloaded' % cname
+            return
+
+        if not os.path.isdir(cdir):
+            print 'Downloading %s source to %s' % (cname, cdir)
+            dl = CRATE_API_DL % (name, ver)
+            buf = dl_crate(dl)
+            with tarfile.open(fileobj=buf) as tf:
+                print 'unpacking result to %s...' % cdir
+                tf.extractall(path=tdir)
+
+    except Exception, e:
+        self._dir = None
+        raise e
+
+    return init_crate_from_toml(cdir)
+
+def crate_info_from_index(idir, name, svr):
+    if len(name) == 1:
+        ipath = os.path.join(idir, '1', name)
+    elif len(name) == 2:
+        ipath = os.path.join(idir, '2', name)
+    elif len(name) == 3:
+        ipath = os.path.join(idir, '3', name[0:1], name)
+    else:
+        ipath = os.path.join(idir, name[0:2], name[2:4], name)
+
+    print 'opening crate info: %s' % ipath
+    dep_infos = []
+    with open(ipath, 'rb') as fin:
+        lines = fin.readlines()
+        for l in lines:
+            dep_infos.append(json.loads(l))
+
+    passed = {}
+    for info in dep_infos:
+        if not info.has_key('vers'):
+            continue
+        sv = Semver(info['vers'])
+        if svr.compare(sv):
+            passed[sv] = info
+
+    keys = sorted(passed.iterkeys())
+    #print 'matched versions in sorted order:'
+    #for k in keys:
+    #    print '\t%s' % k
+
+    best_match = keys.pop()
+    print 'best match is %s-%s' % (name, best_match)
+    best_info = passed[best_match]
+    return (best_info['name'], best_info['vers'])
 
 def args_parser():
     parser = argparse.ArgumentParser(description='Cargo Bootstrap Tool')
@@ -530,9 +672,18 @@ def args_parser():
                         help="don't delete the target dir and crate index")
     return parser
 
-def clone_index(tdir):
-    print "cloning crates index to: %s" % tdir
-    repo = git.clone(CRATES_INDEX, repo_path)
+def open_or_clone_repo(rdir, rurl, no_clone):
+    try:
+        repo = git.open_repo(rdir)
+        return repo
+    except:
+        repo = None
+
+    if repo is None and no_clone is False:
+        print 'Cloning %s to %s' % (rurl, rdir)
+        return git.clone(rurl, rdir)
+
+    return repo
 
 if __name__ == "__main__":
     try:
@@ -549,16 +700,40 @@ if __name__ == "__main__":
             args.crate_index = os.path.normpath(os.path.join(args.target_dir, 'index'))
         print "cargo: %s, target: %s, index: %s" % \
               (args.cargo_root, args.target_dir, args.crate_index)
-        if not args.no_clone:
-            clone_index(args.crate_index)
-            print "\n"
+
+        index = open_or_clone_repo(args.crate_index, CRATES_INDEX, args.no_clone)
+        cargo = open_or_clone_repo(args.cargo_root, CARGO_REPO, args.no_clone)
+
+        if index is None:
+            raise RuntimeError('You must have a local clone of the crates index ' \
+                               'or omit --no-clone to allow this script to clone ' \
+                               'it for you.')
+        if cargo is None:
+            raise RuntimeError('You must  have a local clone of the cargo repo '\
+                               'so that this script can read the cargo toml file.')
 
         # load cargo deps
-        #crate_from_toml(args.cargo_root, args.crate_index)
+        cargo_crate = init_crate_from_toml(args.cargo_root)
+
+        # resolve and download all of the dependencies
+        print '===================================='
+        print '===== DOWNLOADING DEPENDENCIES ====='
+        print '===================================='
+        print '\n\n'
+        while len(UNRESOLVED) > 0:
+            crate = UNRESOLVED.pop(0)
+            crate.resolve(args.target_dir, args.crate_index)
+
+        # build cargo
+        print '=========================='
+        print '===== BUILDING CARGO ====='
+        print '=========================='
+        print '\n\n'
+        cargo_crate.build('bootstrap.py')
 
         # cleanup
         if not args.no_clean:
-            print "cleaning up..." 
+            print "cleaning up..."
             shutil.rmtree(args.target_dir)
         print "done"
 
