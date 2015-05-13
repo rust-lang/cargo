@@ -4,6 +4,7 @@ extern crate rustc_serialize;
 extern crate cargo;
 extern crate flate2;
 extern crate git2;
+extern crate bufstream;
 extern crate hamcrest;
 extern crate tar;
 extern crate term;

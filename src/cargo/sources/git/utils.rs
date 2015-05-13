@@ -407,7 +407,7 @@ pub fn fetch(repo: &git2::Repository, url: &str,
         cb.credentials(|a, b, c| f(a, b, c));
         let mut remote = try!(repo.remote_anonymous(&url, Some(refspec)));
         try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        remote.set_callbacks(&mut cb);
+        remote.set_callbacks(cb);
         try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None));
         Ok(())
     })

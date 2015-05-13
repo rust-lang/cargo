@@ -1,8 +1,9 @@
 use std::collections::HashSet;
-use std::io::BufStream;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::thread;
+
+use bufstream::BufStream;
 use git2;
 
 use support::{project, execs, UPDATING};
