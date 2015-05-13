@@ -43,8 +43,20 @@ The cargo root option defaults to the current directory if unspecified.  The
 target directory defaults to Python equivilent of 'mktemp -d' if unspecified.
 """
 
-import argparse, cStringIO, httplib, inspect, json, os, re, shutil, sys
-import tarfile, tempfile, urlparse
+import argparse, \
+       cStringIO, \
+       hashlib, \
+       httplib, \
+       inspect, \
+       json, \
+       os, \
+       re, \
+       shutil, \
+       subprocess, \
+       sys, \
+       tarfile, \
+       tempfile, \
+       urlparse
 import pytoml as toml
 import dulwich.porcelain as git
 
@@ -255,6 +267,7 @@ class SemverRange(dict):
 
         self._input = sv
         self.update(match.groupdict())
+        self.prerelease = PreRelease(self['prerelease'])
 
         # fix up the op
         op = self['op']
@@ -275,6 +288,29 @@ class SemverRange(dict):
 
     def parts_raw(self):
         return (self['major'],self['minor'],self['patch'],self['prerelease'],self['build'])
+
+    def __str__(self):
+        major, minor, patch, prerelease, build = self.parts_raw()
+        s = self['op']
+        if major is None:
+            s += '0'
+        else:
+            s += major
+        s += '.'
+        if minor is None:
+            s += '0'
+        else:
+            s += minor
+        s += '.'
+        if patch is None:
+            s += '0'
+        else:
+            s += patch
+        if len(self.prerelease):
+            s += '-' + str(self.prerelease)
+        if build is not None:
+            s += '+' + build
+        return s
 
     def lower(self):
         op = self['op']
@@ -415,9 +451,6 @@ class SemverRange(dict):
 
         raise RuntimeError('Semver comparison failed to find a matching op')
 
-    def __str__(self):
-        return self._input
-
 def test_semver():
     print '\ntesting parsing:'
     print '"1"                    is: "%s"' % Semver("1")
@@ -480,13 +513,14 @@ def test_semver():
 
 class Crate(object):
 
-    def __init__(self, crate, ver, deps, cdir = None):
+    def __init__(self, crate, ver, deps, cdir, build):
         self._crate = str(crate)
         self._version = Semver(ver)
         self._dep_info = deps
         self._dir = cdir
+        self._build = build
         self._resolved = False
-        self._deps = []
+        self._deps = {}
         self._refs = []
 
     def name(self):
@@ -498,10 +532,12 @@ class Crate(object):
     def __str__(self):
         return '%s-%s' % (self.name(), self.version())
 
-    def add_dep(self, crate):
-        if str(crate) not in self._deps:
-            self._deps.append(str(crate))
-            crate.add_ref(self)
+    def add_dep(self, crate, features):
+        if self._deps.has_key(str(crate)):
+            return
+
+        self._deps[str(crate)] = { 'features': features }
+        crate.add_ref(self)
 
     def add_ref(self, crate):
         if str(crate) not in self._refs:
@@ -512,6 +548,7 @@ class Crate(object):
 
     def resolve(self, tdir, idir):
         global CRATES
+        global UNRESOLVED
 
         if self._resolved:
             return
@@ -519,62 +556,115 @@ class Crate(object):
             return
 
         if self._dep_info is not None:
-            print 'Resolving dependencies for: %s' % str(self)
-            for k,v in self._dep_info.iteritems():
-                if type(v) is not dict:
-                    svr = SemverRange(v)
-                    name, ver = crate_info_from_index(idir, k, svr)
-                    dep = dl_and_init_crate(tdir, name, ver)
-                    if dep is not None:
-                        self.add_dep(dep)
-                elif v.has_key('path'):
-                    dep_path = os.path.join(self._dir, v['path'])
-                    dep = init_crate_from_toml(dep_path)
-                    if dep is not None:
-                        self.add_dep(dep)
+            print '\nResolving dependencies for: %s' % str(self)
+            for d in self._dep_info:
+                kind = d.get('kind', 'normal')
+                if kind != 'normal':
+                    print 'skipping non-normal dep %s' % d['name']
+                    continue
+
+                optional = d.get('optional', False)
+                if optional:
+                    print 'skipping optional dep %s' % d['name']
+                    continue
+
+                svr = SemverRange(d['req'])
+                print '\nLooking for %s %s' % (d['name'], str(svr))
+                name, ver, deps, ftrs, cksum = crate_info_from_index(idir, d['name'], svr)
+                cdir = dl_and_check_crate(tdir, name, ver, cksum)
+                _, _, _, build = crate_info_from_toml(cdir)
+                try:
+                    dcrate = Crate(name, ver, deps, cdir, build)
+                    UNRESOLVED.append(dcrate)
+                except:
+                    dcrate = None
+
+                # clean up the list of features that are enabled
+                tftrs = d.get('features', [])
+                if type(tftrs) is dict:
+                    tftrs = tftrs.keys()
                 else:
-                    print 'unknown dep declaration: %s' % str(v)
+                    tftrs = filter(lambda x: len(x) > 0, tftrs)
+
+                # add 'default' if default_features is true
+                if d.get('default_features', True):
+                    tftrs.append('default')
+
+                features = []
+                if type(ftrs) is dict:
+                    # add any available features that are activated by the
+                    # dependency entry in the parent's dependency record
+                    for k in tftrs:
+                        if ftrs.has_key(k):
+                            features += ftrs[k]
+                else:
+                    features += filter(lambda x: (len(x) > 0) and (x in tftrs), ftrs)
+
+                if dcrate is not None:
+                    self.add_dep(dcrate, features)
 
         self._resolved = True
         CRATES[str(self)] = self
 
-    def build(self, by):
+    def build(self, by, out_dir, features=[]):
         global BUILT
         global CRATES
 
         if BUILT.has_key(str(self)):
-            print '%s is already built' % str(self)
             return
 
-        for dep in self._deps:
+        for dep,info in self._deps.iteritems():
             if CRATES.has_key(dep):
-                CRATES[dep].build(self)
+                CRATES[dep].build(self, out_dir, info['features'])
 
-        print 'building %s' % str(self)
-        BUILT[str(self)] = str(by)
+        print 'building %s with features: %s (needed by: %s)' % (str(self), features, ', '.join(self._refs))
 
-def init_crate_from_toml(cdir):
-    global UNRESOLVED
-
-    try:
-        with open(os.path.join(cdir, 'Cargo.toml'), 'rb') as ctoml:
-            cfg = toml.load(ctoml)
-            if cfg.has_key('project'):
-                p = cfg['project']
-            elif cfg.has_key('package'):
-                p = cfg['package']
-            if cfg.has_key('dependencies'):
-                d = cfg['dependencies']
+        cmds = []
+        for b in self._build:
+            v = str(self._version).replace('.','_')
+            cmd = ['rustc']
+            cmd.append(os.path.join(self._dir, b['path']))
+            cmd.append('--crate-name')
+            if b['type'] == 'lib':
+                cmd.append(b['name'])
+                cmd.append('--crate-type')
+                cmd.append('lib')
+            elif b['type'] == 'build_script':
+                cmd.append('build_script_%s_%s' % (b['name'], v))
+                cmd.append('--crate-type')
+                cmd.append('bin')
             else:
-                d = None
-            crate = Crate(p['name'], p['version'], d, cdir)
-    except:
-        print 'failed to load toml file for: %s' % cdir
-        crate = None
-    if crate is not None:
-        UNRESOLVED.append(crate)
+                cmd.append(b['name'])
+                cmd.append('--crate-type')
+                cmd.append('bin')
 
-    return crate
+            for f in features:
+                cmd.append('--cfg')
+                cmd.append('feature="%s"' % f)
+
+            cmd.append('--out-dir')
+            cmd.append('%s' % out_dir)
+            cmd.append('-L')
+            cmd.append('%s' % out_dir)
+            cmds.append(cmd)
+
+            if b['type'] == 'build_script':
+                cmds.append([os.path.join(out_dir, 'build_script_%s_%s' % (b['name'], v))])
+
+        for c in cmds:
+            print ' %s' % ' '.join(c)
+            proc = subprocess.Popen(c, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (out, err) = proc.communicate()
+            out = out.split('\n')
+            err = err.split('\n')
+            for o in out:
+                if len(o) > 1:
+                    print ' %s' % o
+            for e in err:
+                if len(e) > 1:
+                    print ' %s' % e
+
+        BUILT[str(self)] = str(by)
 
 def dl_crate(url, depth=0):
     if depth > 10:
@@ -595,10 +685,9 @@ def dl_crate(url, depth=0):
     if headers.has_key('location') and headers['location'] != url:
         return dl_crate(headers['location'], depth + 1)
 
-    buf = cStringIO.StringIO(res.read())
-    return buf
+    return res.read()
 
-def dl_and_init_crate(tdir, name, ver):
+def dl_and_check_crate(tdir, name, ver, cksum):
     global CRATES
     try:
         cname = '%s-%s' % (name, ver)
@@ -611,7 +700,16 @@ def dl_and_init_crate(tdir, name, ver):
             print 'Downloading %s source to %s' % (cname, cdir)
             dl = CRATE_API_DL % (name, ver)
             buf = dl_crate(dl)
-            with tarfile.open(fileobj=buf) as tf:
+            if (cksum is not None):
+                h = hashlib.sha256()
+                h.update(buf)
+                if h.hexdigest() == cksum:
+                    print 'Checksum is good...%s' % cksum
+                else:
+                    print 'Checksum is BAD (%s != %s)' % (h.hexdigest(), cksum)
+
+            fbuf = cStringIO.StringIO(buf)
+            with tarfile.open(fileobj=fbuf) as tf:
                 print 'unpacking result to %s...' % cdir
                 tf.extractall(path=tdir)
 
@@ -619,7 +717,71 @@ def dl_and_init_crate(tdir, name, ver):
         self._dir = None
         raise e
 
-    return init_crate_from_toml(cdir)
+    return cdir
+
+def crate_info_from_toml(cdir):
+    try:
+        with open(os.path.join(cdir, 'Cargo.toml'), 'rb') as ctoml:
+            cfg = toml.load(ctoml)
+            build = []
+            p = cfg.get('package',cfg.get('project', {}))
+            name = p.get('name', None)
+            ver = p.get('version', None)
+            if (name is None) or (ver is None):
+                raise RuntimeError('invalid .toml file format')
+
+            # look for a "build" item
+            bf = p.get('build', None)
+            if bf is not None:
+                if bf == 'lib.rs':
+                    bftype = 'lib'
+                else:
+                    bftype = 'build_script'
+                build.append({'type': bftype, 'path':bf, 'name':name.replace('-','_')})
+
+            # look for libs array
+            libs = cfg.get('lib', [])
+            if type(libs) is not list:
+                libs = [libs]
+            for l in libs:
+                l['type'] = 'lib'
+                build.append(l)
+
+            # look for bins array
+            bins = cfg.get('bin', [])
+            if type(bins) is not list:
+                bins = [bins]
+            for b in bins:
+                tb = {'type': 'bin', 'name':b['name'], 'path':os.path.join('bin', '%s.rs'%b['name'])}
+                build.append(tb)
+
+            # if no explicit directions on what to build, then add a default
+            if len(build) == 0:
+                build.append({'type':'lib', 'path':'lib.rs', 'name':name.replace('-','_')})
+
+            for b in build:
+                bpath = os.path.join(cdir, b['path'])
+                if not os.path.isfile(bpath):
+                    bpath = os.path.join(cdir, 'src', b['path'])
+                    if os.path.isfile(bpath):
+                        b['path'] = os.path.join('src', b['path'])
+                    else:
+                        raise RuntimeError('could not find %s to build in %s', (build, cdir))
+
+
+            d = cfg.get('dependencies', {})
+            deps = []
+            for k,v in d.iteritems():
+                if type(v) is not dict:
+                    deps.append({'name':k, 'req': v})
+                elif v.has_key('path'):
+                    req = v.get('version', '0')
+                    deps.append({'name':k, 'path': v['path'], 'req':req})
+            return (name, ver, deps, build)
+    except Exception, e:
+        print 'failed to load toml file for: %s' % cdir
+
+    return (None, None, [], 'lib.rs')
 
 def crate_info_from_index(idir, name, svr):
     if len(name) == 1:
@@ -654,7 +816,12 @@ def crate_info_from_index(idir, name, svr):
     best_match = keys.pop()
     print 'best match is %s-%s' % (name, best_match)
     best_info = passed[best_match]
-    return (best_info['name'], best_info['vers'])
+    name = best_info.get('name', None)
+    ver = best_info.get('vers', None)
+    deps = best_info.get('deps', [])
+    ftrs = best_info.get('features', [])
+    cksum = best_info.get('cksum', None)
+    return (name, ver, deps, ftrs, cksum)
 
 def args_parser():
     parser = argparse.ArgumentParser(description='Cargo Bootstrap Tool')
@@ -713,23 +880,27 @@ if __name__ == "__main__":
                                'so that this script can read the cargo toml file.')
 
         # load cargo deps
-        cargo_crate = init_crate_from_toml(args.cargo_root)
+        name, ver, deps, build = crate_info_from_toml(args.cargo_root)
+        cargo_crate = Crate(name, ver, deps, args.cargo_root, build)
+        UNRESOLVED.append(cargo_crate)
 
         # resolve and download all of the dependencies
+        print ''
         print '===================================='
         print '===== DOWNLOADING DEPENDENCIES ====='
         print '===================================='
-        print '\n\n'
+        print ''
         while len(UNRESOLVED) > 0:
             crate = UNRESOLVED.pop(0)
             crate.resolve(args.target_dir, args.crate_index)
 
         # build cargo
+        print ''
         print '=========================='
         print '===== BUILDING CARGO ====='
         print '=========================='
-        print '\n\n'
-        cargo_crate.build('bootstrap.py')
+        print ''
+        cargo_crate.build('bootstrap.py', args.target_dir)
 
         # cleanup
         if not args.no_clean:
