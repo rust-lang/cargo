@@ -39,6 +39,7 @@ dependencies = { winapi = "0.1", advapi32-sys = "0.1", kernel32-sys = "0.1" }
 [dev-dependencies]
 tempdir = "0.3"
 hamcrest = { git = "https://github.com/carllerche/hamcrest-rust.git" }
+bufstream = "0.1"
 
 [[bin]]
 name = "cargo"

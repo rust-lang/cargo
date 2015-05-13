@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::io::prelude::*;
+use std::os;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 use std::str;
@@ -65,10 +66,20 @@ impl SymlinkBuilder {
         SymlinkBuilder { dst: dst, src: src }
     }
 
+    #[cfg(unix)]
     fn mk(&self) -> Result<(), String> {
         try!(mkdir_recursive(&self.dirname()));
 
-        fs::soft_link(&self.dst, &self.src)
+        os::unix::fs::symlink(&self.dst, &self.src)
+            .with_err_msg(format!("Could not create symlink; dst={} src={}",
+                                   self.dst.display(), self.src.display()))
+    }
+
+    #[cfg(windows)]
+    fn mk(&self) -> Result<(), String> {
+        try!(mkdir_recursive(&self.dirname()));
+
+        os::windows::fs::symlink_file(&self.dst, &self.src)
             .with_err_msg(format!("Could not create symlink; dst={} src={}",
                                    self.dst.display(), self.src.display()))
     }
