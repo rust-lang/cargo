@@ -57,7 +57,7 @@ exclude = ["build/**/*.o", "doc/**/*.html"]
 ```
 
 ```toml
-[package
+[package]
 # ...
 include = ["src/**/*", "Cargo.toml"]
 ```
