@@ -133,7 +133,7 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
     cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
 
     for &(target, profile) in targets {
-        let kind = Kind::Target;
+        let kind = Kind::from(target);
         for filename in try!(cx.target_filenames(pkg, target, profile,
                                                  kind)).iter() {
             let dst = cx.out_dir(pkg, kind, target).join(filename);
@@ -156,6 +156,7 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
                 if profile.doc { continue }
                 if cx.compilation.libraries.contains_key(&pkgid) { continue }
 
+                let kind = kind.for_target(target);
                 let v = try!(cx.target_filenames(pkg, target, profile, kind));
                 let v = v.into_iter().map(|f| {
                     (target.clone(), cx.out_dir(pkg, kind, target).join(f))
@@ -756,14 +757,7 @@ fn build_deps_args(cmd: &mut CommandPrototype,
 
     fn link_to(cmd: &mut CommandPrototype, pkg: &Package, target: &Target,
                profile: &Profile, cx: &Context, kind: Kind) -> CargoResult<()> {
-        // If this target is itself a plugin *or* if it's being linked to a
-        // plugin, then we want the plugin directory. Otherwise we want the
-        // target directory (hence the || here).
-        let kind = match kind {
-            Kind::Host => Kind::Host,
-            Kind::Target if target.for_host() => Kind::Host,
-            Kind::Target => Kind::Target,
-        };
+        let kind = kind.for_target(target);
         let layout = cx.layout(pkg, kind);
 
         for filename in try!(cx.target_filenames(pkg, target, profile, kind)).iter() {
@@ -801,4 +795,21 @@ fn envify(s: &str) -> String {
      .flat_map(|c| c.to_uppercase())
      .map(|c| if c == '-' {'_'} else {c})
      .collect()
+}
+
+impl Kind {
+    fn from(target: &Target) -> Kind {
+        if target.for_host() {Kind::Host} else {Kind::Target}
+    }
+
+    fn for_target(&self, target: &Target) -> Kind {
+        // Once we start compiling for the `Host` kind we continue doing so, but
+        // if we are a `Target` kind and then we start compiling for a target
+        // that needs to be on the host we lift ourselves up to `Host`
+        match *self {
+            Kind::Host => Kind::Host,
+            Kind::Target if target.for_host() => Kind::Host,
+            Kind::Target => Kind::Target,
+        }
+    }
 }
