@@ -81,7 +81,33 @@ BSCRIPT = re.compile('^cargo:(?P<key>([^\s=]+))(=(?P<value>.+))?$')
 BUILT = {}
 CRATES = {}
 UNRESOLVED = []
+PFX = []
+IDNT = 0
 
+
+def idnt(f):
+    def do_indent():
+        global IDNT
+        IDNT += 1
+        f()
+        IDNT -= 1
+    return do_indent
+
+def dbgCtx(f):
+    def do_dbg(self):
+        global IDNT
+        global PFX
+        IDNT += 1
+        PFX.append(self.name())
+        f(self)
+        PFX.pop()
+        IDNT -= 1
+    return do_dbg
+
+def dbg(s):
+    global IDNT
+    global PFX
+    print '%s%s: %s' % ((IDNT * '  '), ':'.join(PFX), s)
 
 class PreRelease(object):
 
@@ -534,18 +560,22 @@ class Runner(object):
         self._returncode = 0
 
     def __call__(self, c, e):
+        global IDNT
+        IDNT += 1
         cmd = self._cmd + c
         env = dict(self._env, **e)
-        print '  ' + ' '.join(cmd)
+        dbg(' '.join(cmd))
 
         proc = subprocess.Popen(cmd, env=env, \
                                 stdout=subprocess.PIPE)
+        IDNT += 1
         while proc.poll() is None:
             l = proc.stdout.readline().rstrip('\n')
             self._output.append(l)
-            print '    ' + l
+            dbg(l)
             sys.stdout.flush()
         self._returncode = proc.wait()
+        IDNT -= 2
         return self._output
 
     def output(self):
@@ -629,6 +659,7 @@ class Crate(object):
     def resolved(self):
         return self._resolved
 
+    @dbgCtx
     def resolve(self, tdir, idir):
         global CRATES
         global UNRESOLVED
@@ -639,20 +670,26 @@ class Crate(object):
             return
 
         if self._dep_info is not None:
-            print '\nResolving dependencies for: %s' % str(self)
+            global IDNT
+            print ''
+            dbg('Resolving dependencies for: %s' % str(self))
+            IDNT += 1
             for d in self._dep_info:
                 kind = d.get('kind', 'normal')
                 if kind not in ('normal', 'build'):
-                    print '\n  Skipping %s dep %s' % (kind, d['name'])
+                    print ''
+                    dbg('Skipping %s dep %s' % (kind, d['name']))
                     continue
 
                 optional = d.get('optional', False)
                 if optional:
-                    print '\n  Skipping optional dep %s' % d['name']
+                    print ''
+                    dbg('Skipping optional dep %s' % d['name'])
                     continue
 
                 svr = SemverRange(d['req'])
-                print '\n  Looking up info for %s %s' % (d['name'], str(svr))
+                print ''
+                dbg('Looking up info for %s %s' % (d['name'], str(svr)))
                 name, ver, deps, ftrs, cksum = crate_info_from_index(idir, d['name'], svr)
                 cdir = dl_and_check_crate(tdir, name, ver, cksum)
                 _, _, tdeps, build = crate_info_from_toml(cdir)
@@ -692,7 +729,7 @@ class Crate(object):
         self._resolved = True
         CRATES[str(self)] = self
 
-
+    @dbgCtx
     def build(self, by, out_dir, features=[]):
         global BUILT
         global CRATES
@@ -714,7 +751,8 @@ class Crate(object):
                 self._dep_env[CRATES[dep].name()] = env
 
         if os.path.isfile(output):
-            print '\nSkipping %s, already built (needed by: %s)' % (str(self), str(by))
+            print ''
+            dbg('Skipping %s, already built (needed by: %s)' % (str(self), str(by)))
             BUILT[str(self)] = str(by)
             return ({'name':self.name(), 'lib':output}, self._env)
 
@@ -786,7 +824,8 @@ class Crate(object):
                 bcmd = os.path.join(out_dir, 'build_script_%s-%s' % (b['name'], v))
                 cmds.append(BuildScriptRunner(bcmd, env))
 
-        print '\nBuilding %s (needed by: %s)' % (str(self), str(by))
+        print ''
+        dbg('Building %s (needed by: %s)' % (str(self), str(by)))
 
         bcmd = []
         benv = {}
@@ -800,14 +839,17 @@ class Crate(object):
             benv = dict(benv, **e1)
             self._env = dict(self._env, **e2)
 
-            print '==== cmd: %s' % bcmd
-            print '==== env: %s' % benv
-            print '=== denv: %s' % self._env
+            dbg(' cmd: %s' % bcmd)
+            dbg(' env: %s' % benv)
+            dbg('denv: %s' % self._env)
+            print ''
 
         BUILT[str(self)] = str(by)
         return ({'name':self.name(), 'lib':output}, self._env)
 
+@idnt
 def dl_crate(url, depth=0):
+    global IDNT
     if depth > 10:
         raise RuntimeError('too many redirects')
 
@@ -821,37 +863,38 @@ def dl_crate(url, depth=0):
 
     conn.request("GET", loc.path)
     res = conn.getresponse()
-    print '    %sconnected to %s...%s' % ((' ' * depth), url, res.status)
+    dbg('%sconnected to %s...%s' % ((' ' * depth), url, res.status))
     headers = dict(res.getheaders())
     if headers.has_key('location') and headers['location'] != url:
         return dl_crate(headers['location'], depth + 1)
 
     return res.read()
 
+@idnt
 def dl_and_check_crate(tdir, name, ver, cksum):
     global CRATES
     try:
         cname = '%s-%s' % (name, ver)
         cdir = os.path.join(tdir, cname)
         if CRATES.has_key(cname):
-            print '    skipping %s...already downloaded' % cname
+            dbg('skipping %s...already downloaded' % cname)
             return cdir
 
         if not os.path.isdir(cdir):
-            print '    Downloading %s source to %s' % (cname, cdir)
+            dbg('Downloading %s source to %s' % (cname, cdir))
             dl = CRATE_API_DL % (name, ver)
             buf = dl_crate(dl)
             if (cksum is not None):
                 h = hashlib.sha256()
                 h.update(buf)
                 if h.hexdigest() == cksum:
-                    print '    Checksum is good...%s' % cksum
+                    dbg('Checksum is good...%s' % cksum)
                 else:
-                    print '    Checksum is BAD (%s != %s)' % (h.hexdigest(), cksum)
+                    dbg('Checksum is BAD (%s != %s)' % (h.hexdigest(), cksum))
 
             fbuf = cStringIO.StringIO(buf)
             with tarfile.open(fileobj=fbuf) as tf:
-                print '    unpacking result to %s...' % cdir
+                dbg('unpacking result to %s...' % cdir)
                 tf.extractall(path=tdir)
 
     except Exception, e:
@@ -860,6 +903,7 @@ def dl_and_check_crate(tdir, name, ver, cksum):
 
     return cdir
 
+@idnt
 def crate_info_from_toml(cdir):
     try:
         with open(os.path.join(cdir, 'Cargo.toml'), 'rb') as ctoml:
@@ -954,10 +998,11 @@ def crate_info_from_toml(cdir):
 
     except Exception, e:
         import pdb; pdb.set_trace()
-        print 'failed to load toml file for: %s (%s)' % (cdir, str(e))
+        dbg('failed to load toml file for: %s (%s)' % (cdir, str(e)))
 
     return (None, None, [], 'lib.rs')
 
+@idnt
 def crate_info_from_index(idir, name, svr):
     global TARGET
 
@@ -970,7 +1015,7 @@ def crate_info_from_index(idir, name, svr):
     else:
         ipath = os.path.join(idir, name[0:2], name[2:4], name)
 
-    print '    opening crate info: %s' % ipath
+    dbg('opening crate info: %s' % ipath)
     dep_infos = []
     with open(ipath, 'rb') as fin:
         lines = fin.readlines()
@@ -987,7 +1032,7 @@ def crate_info_from_index(idir, name, svr):
 
     keys = sorted(passed.iterkeys())
     best_match = keys.pop()
-    print '    best match is %s-%s' % (name, best_match)
+    dbg('best match is %s-%s' % (name, best_match))
     best_info = passed[best_match]
     name = best_info.get('name', None)
     ver = best_info.get('vers', None)
@@ -1020,6 +1065,7 @@ def args_parser():
                         help="don't delete the target dir and crate index")
     return parser
 
+@idnt
 def open_or_clone_repo(rdir, rurl, no_clone):
     try:
         repo = git.open_repo(rdir)
@@ -1028,7 +1074,7 @@ def open_or_clone_repo(rdir, rurl, no_clone):
         repo = None
 
     if repo is None and no_clone is False:
-        print 'Cloning %s to %s' % (rurl, rdir)
+        dbg('Cloning %s to %s' % (rurl, rdir))
         return git.clone(rurl, rdir)
 
     return repo
@@ -1046,8 +1092,8 @@ if __name__ == "__main__":
         # clone the cargo index
         if args.crate_index is None:
             args.crate_index = os.path.normpath(os.path.join(args.target_dir, 'index'))
-        print "cargo: %s, target: %s, index: %s" % \
-              (args.cargo_root, args.target_dir, args.crate_index)
+        dbg('cargo: %s, target: %s, index: %s' % \
+              (args.cargo_root, args.target_dir, args.crate_index))
 
         TARGET = args.target
         HOST = args.host
