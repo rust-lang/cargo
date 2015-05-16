@@ -892,6 +892,7 @@ def crate_info_from_toml(cdir):
             for lnk in lnks:
                 boverrides.update(cfg.get('target', {}).get(TARGET, {}).get(lnk, {}))
 
+            bmain = False
             if bf is not None:
                 build.append({'type':'build_script', \
                               'path':bf, \
@@ -909,6 +910,7 @@ def crate_info_from_toml(cdir):
                 if l.get('path', None) is None:
                     l['path'] = 'lib.rs'
                 build.append(l)
+                bmain = True
 
             # look for bins array
             bins = cfg.get('bin', [])
@@ -921,9 +923,10 @@ def crate_info_from_toml(cdir):
                               'name':b['name'], \
                               'path':b['path'], \
                               'links': lnks})
+                bmain = True
 
             # if no explicit directions on what to build, then add a default
-            if len(build) == 0:
+            if bmain == False:
                 build.append({'type':'lib', 'path':'lib.rs', 'name':name.replace('-','_')})
 
             for b in build:
