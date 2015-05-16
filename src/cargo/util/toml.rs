@@ -118,8 +118,8 @@ pub fn to_manifest(contents: &[u8],
         None => {}
     }
     if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
-        return Err(human(format!("either a [lib] or [[bin]] section must \
-                                  be present")))
+        return Err(human(format!("either a [lib] (lib.rs) or [[bin]] (main.rs) section must \
+                                  be present in src")))
     }
     return Ok((manifest, paths));
 

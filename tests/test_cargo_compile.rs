@@ -794,7 +794,7 @@ test!(missing_lib_and_bin {
 failed to parse manifest at `[..]Cargo.toml`
 
 Caused by:
-  either a [lib] or [[bin]] section must be present\n"));
+  either a [lib] (lib.rs) or [[bin]] (main.rs) section must be present in src\n"));
 });
 
 test!(lto_build {
