@@ -38,6 +38,7 @@ Command Line Options
 
 --cargo-root <path>    specify the path to the cargo repo root.
 --target-dir <path>    specify the location to store build results.
+--target <triple>      e.g. x86_64-unknown-bitrig
 
 The cargo root option defaults to the current directory if unspecified.  The
 target directory defaults to Python equivilent of 'mktemp -d' if unspecified.
@@ -60,6 +61,8 @@ import argparse, \
 import pytoml as toml
 import dulwich.porcelain as git
 
+TARGET = None
+HOST = None
 CRATES_INDEX = 'git://github.com/rust-lang/crates.io-index.git'
 CARGO_REPO = 'git://github.com/rust-lang/cargo.git'
 CRATE_API_DL = 'https://crates.io/api/v1/crates/%s/%s/download'
@@ -69,11 +72,12 @@ SV_RANGE = re.compile('^(?P<op>(?:\<|\>|=|\<=|\>=|\^|\~))?'
                       '(\.(?P<patch>(?:\*|0|[1-9][0-9]*)))?'
                       '(\-(?P<prerelease>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?'
                       '(\+(?P<build>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$')
-SEMVER = re.compile('(?P<major>(?:0|[1-9][0-9]*))'
+SEMVER = re.compile('^(?P<major>(?:0|[1-9][0-9]*))'
                     '(\.(?P<minor>(?:0|[1-9][0-9]*)))?'
                     '(\.(?P<patch>(?:0|[1-9][0-9]*)))?'
                     '(\-(?P<prerelease>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?'
                     '(\+(?P<build>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$')
+BSCRIPT = re.compile('^cargo:(?P<key>([^\s=]+))(=(?P<value>.+))?$')
 BUILT = {}
 CRATES = {}
 UNRESOLVED = []
@@ -291,26 +295,34 @@ class SemverRange(dict):
 
     def __str__(self):
         major, minor, patch, prerelease, build = self.parts_raw()
-        s = self['op']
-        if major is None:
-            s += '0'
+        if self['op'] == '*':
+            if self['major'] == '*':
+                return '*'
+            elif self['minor'] == '*':
+                return major + '*'
+            else:
+                return major + '.' + minor + '.*'
         else:
-            s += major
-        s += '.'
-        if minor is None:
-            s += '0'
-        else:
-            s += minor
-        s += '.'
-        if patch is None:
-            s += '0'
-        else:
-            s += patch
-        if len(self.prerelease):
-            s += '-' + str(self.prerelease)
-        if build is not None:
-            s += '+' + build
-        return s
+            s = self['op']
+            if major is None:
+                s += '0'
+            else:
+                s += major
+            s += '.'
+            if minor is None:
+                s += '0'
+            else:
+                s += minor
+            s += '.'
+            if patch is None:
+                s += '0'
+            else:
+                s += patch
+            if len(self.prerelease):
+                s += '-' + str(self.prerelease)
+            if build is not None:
+                s += '+' + build
+            return s
 
     def lower(self):
         op = self['op']
@@ -511,6 +523,71 @@ def test_semver():
     print '"0.0.*"  lower: %s, upper: %s' % (SemverRange('0.0.*').lower(), SemverRange('0.0.*').upper())
 
 
+class Runner(object):
+
+    def __init__(self, c, e):
+        self._cmd = c
+        if type(self._cmd) is not list:
+            self._cmd = [self._cmd]
+        self._env = e
+        self._output = []
+        self._returncode = 0
+
+    def __call__(self, c, e):
+        cmd = self._cmd + c
+        env = dict(self._env, **e)
+        print '  ' + ' '.join(cmd)
+
+        proc = subprocess.Popen(cmd, env=env, \
+                                stdout=subprocess.PIPE)
+        while proc.poll() is None:
+            l = proc.stdout.readline().rstrip('\n')
+            self._output.append(l)
+            print '    ' + l
+            sys.stdout.flush()
+        self._returncode = proc.wait()
+        return self._output
+
+    def output(self):
+        return self._output
+
+    def returncode(self):
+        return self._returncode
+
+class RustcRunner(Runner):
+
+    def __call__(self, c, e):
+        super(RustcRunner, self).__call__(c, e)
+        return ([], {}, {})
+
+class BuildScriptRunner(Runner):
+
+    def __call__(self, c, e):
+        super(BuildScriptRunner, self).__call__(c, e)
+
+        # parse the output for cargo: lines
+        cmd = []
+        env = {}
+        denv = {}
+        for l in self.output():
+            match = BSCRIPT.match(str(l))
+            if match is None:
+                continue
+            pieces = match.groupdict()
+            k = pieces['key']
+            v = pieces['value']
+
+            if k == 'rustc-link-lib':
+                cmd += ['-l', v]
+            elif k == 'rustc-link-search':
+                cmd += ['-L', v]
+            elif k == 'rustc-cfg':
+                cmd += ['--cfg', v]
+                env['CARGO_FEATURE_%s' % v.upper().replace('-','_')] = 1
+            else:
+                denv[k] = v
+        return (cmd, env, denv)
+
 class Crate(object):
 
     def __init__(self, crate, ver, deps, cdir, build):
@@ -518,10 +595,15 @@ class Crate(object):
         self._version = Semver(ver)
         self._dep_info = deps
         self._dir = cdir
-        self._build = build
+        # put the build scripts first
+        self._build = filter(lambda x: x.get('type', None) == 'build_script', build)
+        # then add the lib/bin builds
+        self._build += filter(lambda x: x.get('type', None) != 'build_script', build)
         self._resolved = False
         self._deps = {}
         self._refs = []
+        self._env = {}
+        self._dep_env = {}
 
     def name(self):
         return self._crate
@@ -536,6 +618,7 @@ class Crate(object):
         if self._deps.has_key(str(crate)):
             return
 
+        features = [str(x) for x in features]
         self._deps[str(crate)] = { 'features': features }
         crate.add_ref(self)
 
@@ -559,22 +642,25 @@ class Crate(object):
             print '\nResolving dependencies for: %s' % str(self)
             for d in self._dep_info:
                 kind = d.get('kind', 'normal')
-                if kind != 'normal':
-                    print 'skipping non-normal dep %s' % d['name']
+                if kind not in ('normal', 'build'):
+                    print '\n  Skipping %s dep %s' % (kind, d['name'])
                     continue
 
                 optional = d.get('optional', False)
                 if optional:
-                    print 'skipping optional dep %s' % d['name']
+                    print '\n  Skipping optional dep %s' % d['name']
                     continue
 
                 svr = SemverRange(d['req'])
-                print '\nLooking for %s %s' % (d['name'], str(svr))
+                print '\n  Looking up info for %s %s' % (d['name'], str(svr))
                 name, ver, deps, ftrs, cksum = crate_info_from_index(idir, d['name'], svr)
                 cdir = dl_and_check_crate(tdir, name, ver, cksum)
-                _, _, _, build = crate_info_from_toml(cdir)
+                _, _, tdeps, build = crate_info_from_toml(cdir)
+                deps += tdeps
                 try:
                     dcrate = Crate(name, ver, deps, cdir, build)
+                    if CRATES.has_key(str(dcrate)):
+                        dcrate = CRATES[str(dcrate)]
                     UNRESOLVED.append(dcrate)
                 except:
                     dcrate = None
@@ -606,19 +692,51 @@ class Crate(object):
         self._resolved = True
         CRATES[str(self)] = self
 
+
     def build(self, by, out_dir, features=[]):
         global BUILT
         global CRATES
+        global TARGET
+        global HOST
+
+        extra_filename = '-' + str(self.version()).replace('.','_')
+        output_name = self.name().replace('-','_')
+        output = os.path.join(out_dir, 'lib%s%s.rlib' % (output_name, extra_filename))
 
         if BUILT.has_key(str(self)):
-            return
+            return ({'name':self.name(), 'lib':output}, self._env)
 
+        externs = []
         for dep,info in self._deps.iteritems():
             if CRATES.has_key(dep):
-                CRATES[dep].build(self, out_dir, info['features'])
+                extern, env = CRATES[dep].build(self, out_dir, info['features'])
+                externs.append(extern)
+                self._dep_env[CRATES[dep].name()] = env
 
-        print 'building %s with features: %s (needed by: %s)' % (str(self), features, ', '.join(self._refs))
+        if os.path.isfile(output):
+            print '\nSkipping %s, already built (needed by: %s)' % (str(self), str(by))
+            BUILT[str(self)] = str(by)
+            return ({'name':self.name(), 'lib':output}, self._env)
 
+        # build the environment for subcommands
+        env = dict(os.environ)
+        env['OUT_DIR'] = out_dir
+        env['TARGET'] = TARGET
+        env['HOST'] = HOST
+        env['NUM_JOBS'] = '1'
+        env['CARGO_MANIFEST_DIR'] = self._dir
+        env['OPT_LEVEL'] = '0'
+        env['DEBUG'] = '0'
+        env['PROFILE'] = 'release'
+        for f in features:
+            env['CARGO_FEATURE_%s' % f.upper().replace('-','_')] = '1'
+        for l,e in self._dep_env.iteritems():
+            for k,v in e.iteritems():
+                if type(v) is not str and type(v) is not unicode:
+                    v = str(v)
+                env['DEP_%s_%s' % (l.upper(), v.upper())] = v
+
+        # create the builders, build scrips are first
         cmds = []
         for b in self._build:
             v = str(self._version).replace('.','_')
@@ -630,7 +748,7 @@ class Crate(object):
                 cmd.append('--crate-type')
                 cmd.append('lib')
             elif b['type'] == 'build_script':
-                cmd.append('build_script_%s_%s' % (b['name'], v))
+                cmd.append('build_script_%s' % b['name'])
                 cmd.append('--crate-type')
                 cmd.append('bin')
             else:
@@ -640,31 +758,54 @@ class Crate(object):
 
             for f in features:
                 cmd.append('--cfg')
-                cmd.append('feature="%s"' % f)
+                cmd.append('feature=\"%s\"' % f)
+
+            cmd.append('-C')
+            cmd.append('extra-filename=' + extra_filename)
 
             cmd.append('--out-dir')
             cmd.append('%s' % out_dir)
             cmd.append('-L')
             cmd.append('%s' % out_dir)
-            cmds.append(cmd)
 
+            for e in externs:
+                cmd.append('--extern')
+                cmd.append('%s=%s' % (e['name'], e['lib']))
+
+            # add in the native libraries to link to
+            if b['type'] != 'build_script':
+                for l in b.get('links', []):
+                    cmd.append('-l')
+                    cmd.append(l)
+
+            # queue up the runner
+            cmds.append(RustcRunner(cmd, env))
+
+            # queue up the build script runner
             if b['type'] == 'build_script':
-                cmds.append([os.path.join(out_dir, 'build_script_%s_%s' % (b['name'], v))])
+                bcmd = os.path.join(out_dir, 'build_script_%s-%s' % (b['name'], v))
+                cmds.append(BuildScriptRunner(bcmd, env))
 
+        print '\nBuilding %s (needed by: %s)' % (str(self), str(by))
+
+        bcmd = []
+        benv = {}
         for c in cmds:
-            print ' %s' % ' '.join(c)
-            proc = subprocess.Popen(c, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (out, err) = proc.communicate()
-            out = out.split('\n')
-            err = err.split('\n')
-            for o in out:
-                if len(o) > 1:
-                    print ' %s' % o
-            for e in err:
-                if len(e) > 1:
-                    print ' %s' % e
+            (c1, e1, e2) = c(bcmd, benv)
+
+            if c.returncode() != 0:
+                raise RuntimeError('build command failed: %s' % c.returncode())
+
+            bcmd += c1
+            benv = dict(benv, **e1)
+            self._env = dict(self._env, **e2)
+
+            print '==== cmd: %s' % bcmd
+            print '==== env: %s' % benv
+            print '=== denv: %s' % self._env
 
         BUILT[str(self)] = str(by)
+        return ({'name':self.name(), 'lib':output}, self._env)
 
 def dl_crate(url, depth=0):
     if depth > 10:
@@ -680,7 +821,7 @@ def dl_crate(url, depth=0):
 
     conn.request("GET", loc.path)
     res = conn.getresponse()
-    print '%sconnected to %s...%s' % ((' ' * depth), url, res.status)
+    print '    %sconnected to %s...%s' % ((' ' * depth), url, res.status)
     headers = dict(res.getheaders())
     if headers.has_key('location') and headers['location'] != url:
         return dl_crate(headers['location'], depth + 1)
@@ -693,24 +834,24 @@ def dl_and_check_crate(tdir, name, ver, cksum):
         cname = '%s-%s' % (name, ver)
         cdir = os.path.join(tdir, cname)
         if CRATES.has_key(cname):
-            print 'skipping %s...already downloaded' % cname
-            return
+            print '    skipping %s...already downloaded' % cname
+            return cdir
 
         if not os.path.isdir(cdir):
-            print 'Downloading %s source to %s' % (cname, cdir)
+            print '    Downloading %s source to %s' % (cname, cdir)
             dl = CRATE_API_DL % (name, ver)
             buf = dl_crate(dl)
             if (cksum is not None):
                 h = hashlib.sha256()
                 h.update(buf)
                 if h.hexdigest() == cksum:
-                    print 'Checksum is good...%s' % cksum
+                    print '    Checksum is good...%s' % cksum
                 else:
-                    print 'Checksum is BAD (%s != %s)' % (h.hexdigest(), cksum)
+                    print '    Checksum is BAD (%s != %s)' % (h.hexdigest(), cksum)
 
             fbuf = cStringIO.StringIO(buf)
             with tarfile.open(fileobj=fbuf) as tf:
-                print 'unpacking result to %s...' % cdir
+                print '    unpacking result to %s...' % cdir
                 tf.extractall(path=tdir)
 
     except Exception, e:
@@ -726,18 +867,37 @@ def crate_info_from_toml(cdir):
             build = []
             p = cfg.get('package',cfg.get('project', {}))
             name = p.get('name', None)
+            #if name == 'num_cpus':
+            #    import pdb; pdb.set_trace()
             ver = p.get('version', None)
             if (name is None) or (ver is None):
+                import pdb; pdb.set_trace()
                 raise RuntimeError('invalid .toml file format')
+
+            # look for a "links" item
+            lnks = p.get('links', [])
+            if type(lnks) is not list:
+                lnks = [lnks]
 
             # look for a "build" item
             bf = p.get('build', None)
+
+            # if we have a 'links', there must be a 'build'
+            if len(lnks) > 0 and bf is None:
+                import pdb; pdb.set_trace()
+                raise RuntimeError('cargo requires a "build" item if "links" is specified')
+
+            # there can be target specific build script overrides
+            boverrides = {}
+            for lnk in lnks:
+                boverrides.update(cfg.get('target', {}).get(TARGET, {}).get(lnk, {}))
+
             if bf is not None:
-                if bf == 'lib.rs':
-                    bftype = 'lib'
-                else:
-                    bftype = 'build_script'
-                build.append({'type': bftype, 'path':bf, 'name':name.replace('-','_')})
+                build.append({'type':'build_script', \
+                              'path':bf, \
+                              'name':name.replace('-','_'), \
+                              'links': lnks, \
+                              'overrides': boverrides})
 
             # look for libs array
             libs = cfg.get('lib', [])
@@ -745,6 +905,9 @@ def crate_info_from_toml(cdir):
                 libs = [libs]
             for l in libs:
                 l['type'] = 'lib'
+                l['links'] = lnks
+                if l.get('path', None) is None:
+                    l['path'] = 'lib.rs'
                 build.append(l)
 
             # look for bins array
@@ -752,8 +915,12 @@ def crate_info_from_toml(cdir):
             if type(bins) is not list:
                 bins = [bins]
             for b in bins:
-                tb = {'type': 'bin', 'name':b['name'], 'path':os.path.join('bin', '%s.rs'%b['name'])}
-                build.append(tb)
+                if b.get('path', None) is None:
+                    b['path'] = os.path.join('bin', '%s.rs' % b['name'])
+                build.append({'type': 'bin', \
+                              'name':b['name'], \
+                              'path':b['path'], \
+                              'links': lnks})
 
             # if no explicit directions on what to build, then add a default
             if len(build) == 0:
@@ -766,10 +933,12 @@ def crate_info_from_toml(cdir):
                     if os.path.isfile(bpath):
                         b['path'] = os.path.join('src', b['path'])
                     else:
+                        import pdb; pdb.set_trace()
                         raise RuntimeError('could not find %s to build in %s', (build, cdir))
 
-
-            d = cfg.get('dependencies', {})
+            d = cfg.get('build-dependencies', {})
+            d.update(cfg.get('dependencies', {}))
+            d.update(cfg.get('target', {}).get(TARGET, {}).get('dependencies', {}))
             deps = []
             for k,v in d.iteritems():
                 if type(v) is not dict:
@@ -777,13 +946,18 @@ def crate_info_from_toml(cdir):
                 elif v.has_key('path'):
                     req = v.get('version', '0')
                     deps.append({'name':k, 'path': v['path'], 'req':req})
+
             return (name, ver, deps, build)
+
     except Exception, e:
-        print 'failed to load toml file for: %s' % cdir
+        import pdb; pdb.set_trace()
+        print 'failed to load toml file for: %s (%s)' % (cdir, str(e))
 
     return (None, None, [], 'lib.rs')
 
 def crate_info_from_index(idir, name, svr):
+    global TARGET
+
     if len(name) == 1:
         ipath = os.path.join(idir, '1', name)
     elif len(name) == 2:
@@ -793,7 +967,7 @@ def crate_info_from_index(idir, name, svr):
     else:
         ipath = os.path.join(idir, name[0:2], name[2:4], name)
 
-    print 'opening crate info: %s' % ipath
+    print '    opening crate info: %s' % ipath
     dep_infos = []
     with open(ipath, 'rb') as fin:
         lines = fin.readlines()
@@ -809,18 +983,18 @@ def crate_info_from_index(idir, name, svr):
             passed[sv] = info
 
     keys = sorted(passed.iterkeys())
-    #print 'matched versions in sorted order:'
-    #for k in keys:
-    #    print '\t%s' % k
-
     best_match = keys.pop()
-    print 'best match is %s-%s' % (name, best_match)
+    print '    best match is %s-%s' % (name, best_match)
     best_info = passed[best_match]
     name = best_info.get('name', None)
     ver = best_info.get('vers', None)
     deps = best_info.get('deps', [])
     ftrs = best_info.get('features', [])
     cksum = best_info.get('cksum', None)
+
+    # only include deps without a 'target' or ones with matching 'target'
+    deps = filter(lambda x: x.get('target', TARGET) == TARGET, deps)
+
     return (name, ver, deps, ftrs, cksum)
 
 def args_parser():
@@ -831,6 +1005,10 @@ def args_parser():
                         help="specify the path for storing built dependency libs")
     parser.add_argument('--crate-index', type=str, default=None,
                         help="path to where the crate index should be cloned")
+    parser.add_argument('--target', type=str, default=None,
+                        help="target triple for machine we're bootstrapping for")
+    parser.add_argument('--host', type=str, default=None,
+                        help="host triple for machine we're bootstrapping on")
     parser.add_argument('--test-semver', action='store_true',
                         help="run semver parsing tests")
     parser.add_argument('--no-clone', action='store_true',
@@ -868,6 +1046,8 @@ if __name__ == "__main__":
         print "cargo: %s, target: %s, index: %s" % \
               (args.cargo_root, args.target_dir, args.crate_index)
 
+        TARGET = args.target
+        HOST = args.host
         index = open_or_clone_repo(args.crate_index, CRATES_INDEX, args.no_clone)
         cargo = open_or_clone_repo(args.cargo_root, CARGO_REPO, args.no_clone)
 
@@ -876,8 +1056,23 @@ if __name__ == "__main__":
                                'or omit --no-clone to allow this script to clone ' \
                                'it for you.')
         if cargo is None:
-            raise RuntimeError('You must  have a local clone of the cargo repo '\
+            raise RuntimeError('You must have a local clone of the cargo repo '\
                                'so that this script can read the cargo toml file.')
+
+        if TARGET is None:
+            raise RuntimeError('You must specify the target triple of this machine')
+        if HOST is None:
+            HOST = TARGET
+
+    except Exception, e:
+        frame = inspect.trace()[-1]
+        print >> sys.stderr, "\nException:\n from %s, line %d:\n %s\n" % (frame[1], frame[2], e)
+        parser.print_help()
+        if not args.no_clean:
+            shutil.rmtree(args.target_dir)
+        sys.exit(1)
+
+    try:
 
         # load cargo deps
         name, ver, deps, build = crate_info_from_toml(args.cargo_root)
@@ -889,7 +1084,6 @@ if __name__ == "__main__":
         print '===================================='
         print '===== DOWNLOADING DEPENDENCIES ====='
         print '===================================='
-        print ''
         while len(UNRESOLVED) > 0:
             crate = UNRESOLVED.pop(0)
             crate.resolve(args.target_dir, args.crate_index)
@@ -899,7 +1093,6 @@ if __name__ == "__main__":
         print '=========================='
         print '===== BUILDING CARGO ====='
         print '=========================='
-        print ''
         cargo_crate.build('bootstrap.py', args.target_dir)
 
         # cleanup
@@ -911,7 +1104,6 @@ if __name__ == "__main__":
     except Exception, e:
         frame = inspect.trace()[-1]
         print >> sys.stderr, "\nException:\n from %s, line %d:\n %s\n" % (frame[1], frame[2], e)
-        parser.print_help()
         if not args.no_clean:
             shutil.rmtree(args.target_dir)
         sys.exit(1)
