@@ -365,6 +365,10 @@ impl TomlManifest {
             human("No `package` or `project` section found.")
         }));
 
+        if project.name.trim().is_empty() {
+            return Err(human("package name cannot be an empty string."))
+        }
+
         let pkgid = try!(project.to_package_id(source_id));
         let metadata = pkgid.generate_metadata();
 
@@ -390,6 +394,10 @@ impl TomlManifest {
         let bins = match self.bin {
             Some(ref bins) => {
                 let bin = layout.main();
+
+                for target in bins {
+                    try!(validate_binary_name(target));
+                }
 
                 bins.iter().map(|t| {
                     if bin.is_some() && t.path.is_none() {
@@ -518,9 +526,19 @@ impl TomlManifest {
 }
 
 fn validate_library_name(target: &TomlTarget) -> CargoResult<()> {
-    if target.name.contains("-") {
+    if target.name.trim().is_empty() {
+        Err(human(format!("library target names cannot be empty.")))
+    } else if target.name.contains("-") {
         Err(human(format!("library target names cannot contain hyphens: {}",
                           target.name)))
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_binary_name(target: &TomlTarget) -> CargoResult<()> {
+    if target.name.trim().is_empty() {
+        Err(human(format!("binary target names cannot be empty.")))
     } else {
         Ok(())
     }
