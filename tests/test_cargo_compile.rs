@@ -116,6 +116,72 @@ Caused by:
 
 });
 
+test!(cargo_compile_with_invalid_package_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = ""
+            authors = []
+            version = "0.0.0"
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs()
+                .with_status(101)
+                .with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  package name cannot be an empty string.
+"))
+});
+
+test!(cargo_compile_with_invalid_bin_target_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = ""
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs()
+                .with_status(101)
+                .with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  binary target names cannot be empty.
+"))
+});
+
+test!(cargo_compile_with_invalid_lib_target_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [lib]
+            name = ""
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs()
+                .with_status(101)
+                .with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  library target names cannot be empty.
+"))
+});
+
 test!(cargo_compile_without_manifest {
     let tmpdir = TempDir::new("cargo").unwrap();
     let p = ProjectBuilder::new("foo", tmpdir.path().to_path_buf());
