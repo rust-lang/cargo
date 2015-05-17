@@ -53,6 +53,7 @@ pub fn doc(manifest_path: &Path,
                 }
             }
         };
+        let name = name.replace("-", "_");
 
         let path = package.absolute_target_dir().join("doc").join(&name)
                                                     .join("index.html");
