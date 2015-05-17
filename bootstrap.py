@@ -78,36 +78,30 @@ SEMVER = re.compile('^(?P<major>(?:0|[1-9][0-9]*))'
                     '(\-(?P<prerelease>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?'
                     '(\+(?P<build>[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$')
 BSCRIPT = re.compile('^cargo:(?P<key>([^\s=]+))(=(?P<value>.+))?$')
+BNAME = re.compile('^(lib)?(?P<name>([^_]+))(_.*)?$')
 BUILT = {}
 CRATES = {}
 UNRESOLVED = []
 PFX = []
-IDNT = 0
-
 
 def idnt(f):
-    def do_indent():
-        global IDNT
-        IDNT += 1
-        f()
-        IDNT -= 1
+    def do_indent(*cargs):
+        ret = f(*cargs)
+        return ret
     return do_indent
 
 def dbgCtx(f):
-    def do_dbg(self):
-        global IDNT
+    def do_dbg(self, *cargs):
         global PFX
-        IDNT += 1
         PFX.append(self.name())
-        f(self)
+        ret = f(self, *cargs)
         PFX.pop()
-        IDNT -= 1
+        return ret
     return do_dbg
 
 def dbg(s):
-    global IDNT
     global PFX
-    print '%s%s: %s' % ((IDNT * '  '), ':'.join(PFX), s)
+    print '%s: %s' % (':'.join(PFX), s)
 
 class PreRelease(object):
 
@@ -560,22 +554,19 @@ class Runner(object):
         self._returncode = 0
 
     def __call__(self, c, e):
-        global IDNT
-        IDNT += 1
         cmd = self._cmd + c
         env = dict(self._env, **e)
+        dbg(' env: %s' % e)
         dbg(' '.join(cmd))
 
         proc = subprocess.Popen(cmd, env=env, \
                                 stdout=subprocess.PIPE)
-        IDNT += 1
         while proc.poll() is None:
             l = proc.stdout.readline().rstrip('\n')
             self._output.append(l)
             dbg(l)
             sys.stdout.flush()
         self._returncode = proc.wait()
-        IDNT -= 2
         return self._output
 
     def output(self):
@@ -641,6 +632,9 @@ class Crate(object):
     def version(self):
         return self._version
 
+    def dir(self):
+        return self._dir
+
     def __str__(self):
         return '%s-%s' % (self.name(), self.version())
 
@@ -670,10 +664,8 @@ class Crate(object):
             return
 
         if self._dep_info is not None:
-            global IDNT
             print ''
             dbg('Resolving dependencies for: %s' % str(self))
-            IDNT += 1
             for d in self._dep_info:
                 kind = d.get('kind', 'normal')
                 if kind not in ('normal', 'build'):
@@ -690,10 +682,15 @@ class Crate(object):
                 svr = SemverRange(d['req'])
                 print ''
                 dbg('Looking up info for %s %s' % (d['name'], str(svr)))
-                name, ver, deps, ftrs, cksum = crate_info_from_index(idir, d['name'], svr)
-                cdir = dl_and_check_crate(tdir, name, ver, cksum)
-                _, _, tdeps, build = crate_info_from_toml(cdir)
-                deps += tdeps
+                if d.get('local', None) is None:
+                    name, ver, deps, ftrs, cksum = crate_info_from_index(idir, d['name'], svr)
+                    cdir = dl_and_check_crate(tdir, name, ver, cksum)
+                    _, tver, tdeps, build = crate_info_from_toml(cdir)
+                    deps += tdeps
+                else:
+                    cdir = d['path']
+                    name, ver, deps, build = crate_info_from_toml(cdir)
+
                 try:
                     dcrate = Crate(name, ver, deps, cdir, build)
                     if CRATES.has_key(str(dcrate)):
@@ -762,10 +759,18 @@ class Crate(object):
         env['TARGET'] = TARGET
         env['HOST'] = HOST
         env['NUM_JOBS'] = '1'
-        env['CARGO_MANIFEST_DIR'] = self._dir
         env['OPT_LEVEL'] = '0'
         env['DEBUG'] = '0'
         env['PROFILE'] = 'release'
+        env['CARGO_MANIFEST_DIR'] = self.dir()
+        env['CARGO_PKG_VERSION_MAJOR'] = self.version()['major']
+        env['CARGO_PKG_VERSION_MINOR'] = self.version()['minor']
+        env['CARGO_PKG_VERSION_PATCH'] = self.version()['patch']
+        pre = self.version()['prerelease']
+        if pre is None:
+            pre = ''
+        env['CARGO_PKG_VERSION_PRE'] = pre
+        env['CARGO_PKG_VERSION'] = str(self.version())
         for f in features:
             env['CARGO_FEATURE_%s' % f.upper().replace('-','_')] = '1'
         for l,e in self._dep_env.iteritems():
@@ -782,15 +787,15 @@ class Crate(object):
             cmd.append(os.path.join(self._dir, b['path']))
             cmd.append('--crate-name')
             if b['type'] == 'lib':
-                cmd.append(b['name'])
+                cmd.append(b['name'].replace('-','_'))
                 cmd.append('--crate-type')
                 cmd.append('lib')
             elif b['type'] == 'build_script':
-                cmd.append('build_script_%s' % b['name'])
+                cmd.append('build_script_%s' % b['name'].replace('-','_'))
                 cmd.append('--crate-type')
                 cmd.append('bin')
             else:
-                cmd.append(b['name'])
+                cmd.append(b['name'].replace('-','_'))
                 cmd.append('--crate-type')
                 cmd.append('bin')
 
@@ -808,7 +813,7 @@ class Crate(object):
 
             for e in externs:
                 cmd.append('--extern')
-                cmd.append('%s=%s' % (e['name'], e['lib']))
+                cmd.append('%s=%s' % (e['name'].replace('-','_'), e['lib']))
 
             # add in the native libraries to link to
             if b['type'] != 'build_script':
@@ -816,13 +821,18 @@ class Crate(object):
                     cmd.append('-l')
                     cmd.append(l)
 
+            # get the pkg key name
+            match = BNAME.match(b['name'])
+            if match is not None:
+                match = match.groupdict()['name'].replace('-','_')
+
             # queue up the runner
-            cmds.append(RustcRunner(cmd, env))
+            cmds.append({'name':b['name'], 'env_key':match, 'cmd':RustcRunner(cmd, env)})
 
             # queue up the build script runner
             if b['type'] == 'build_script':
                 bcmd = os.path.join(out_dir, 'build_script_%s-%s' % (b['name'], v))
-                cmds.append(BuildScriptRunner(bcmd, env))
+                cmds.append({'name':b['name'], 'env_key':match, 'cmd':BuildScriptRunner(bcmd, env)})
 
         print ''
         dbg('Building %s (needed by: %s)' % (str(self), str(by)))
@@ -830,14 +840,19 @@ class Crate(object):
         bcmd = []
         benv = {}
         for c in cmds:
-            (c1, e1, e2) = c(bcmd, benv)
+            runner = c['cmd']
 
-            if c.returncode() != 0:
-                raise RuntimeError('build command failed: %s' % c.returncode())
+            (c1, e1, e2) = runner(bcmd, benv)
+
+            if runner.returncode() != 0:
+                raise RuntimeError('build command failed: %s' % runner.returncode())
 
             bcmd += c1
             benv = dict(benv, **e1)
-            self._env = dict(self._env, **e2)
+
+            key = c['env_key']
+            for k,v in e2.iteritems():
+                self._env['DEP_%s_%s' % (key.upper(), k.upper())] = v
 
             dbg(' cmd: %s' % bcmd)
             dbg(' env: %s' % benv)
@@ -849,7 +864,6 @@ class Crate(object):
 
 @idnt
 def dl_crate(url, depth=0):
-    global IDNT
     if depth > 10:
         raise RuntimeError('too many redirects')
 
@@ -991,8 +1005,10 @@ def crate_info_from_toml(cdir):
                 if type(v) is not dict:
                     deps.append({'name':k, 'req': v})
                 elif v.has_key('path'):
-                    req = v.get('version', '0')
-                    deps.append({'name':k, 'path': v['path'], 'req':req})
+                    if v.get('version', None) is None:
+                        deps.append({'name':k, 'path':os.path.join(cdir, v['path']), 'local':True, 'req':0})
+                    else:
+                        deps.append({'name':k, 'path': v['path'], 'req':v['version']})
 
             return (name, ver, deps, build)
 
