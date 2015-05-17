@@ -26,9 +26,9 @@ pub fn doc(manifest_path: &Path,
     if options.compile_opts.spec.is_none() {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
-                assert!(lib_names.insert(target.name()));
+                assert!(lib_names.insert(target.crate_name()));
             } else {
-                assert!(bin_names.insert(target.name()));
+                assert!(bin_names.insert(target.crate_name()));
             }
         }
         for bin in bin_names.iter() {
@@ -45,7 +45,7 @@ pub fn doc(manifest_path: &Path,
 
     if options.open_result {
         let name = match options.compile_opts.spec {
-            Some(spec) => try!(PackageIdSpec::parse(spec)).name().to_string(),
+            Some(spec) => try!(PackageIdSpec::parse(spec)).name().replace("-", "_").to_string(),
             None => {
                 match lib_names.iter().chain(bin_names.iter()).nth(0) {
                     Some(s) => s.to_string(),
@@ -53,7 +53,6 @@ pub fn doc(manifest_path: &Path,
                 }
             }
         };
-        let name = name.replace("-", "_");
 
         let path = package.absolute_target_dir().join("doc").join(&name)
                                                     .join("index.html");
