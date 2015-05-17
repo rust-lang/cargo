@@ -953,7 +953,9 @@ test!(build_script_only {
 failed to parse manifest at `[..]`
 
 Caused by:
-  either a [lib] (lib.rs) or [[bin]] (main.rs) section must be present in src"));
+  no targets specified in the manifest
+
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present"));
 });
 
 test!(shared_dep_with_a_build_script {
