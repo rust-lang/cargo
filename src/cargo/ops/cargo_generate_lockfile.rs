@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use core::PackageId;
@@ -89,6 +89,7 @@ pub fn update_lockfile(manifest_path: &Path,
                                                   Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid)));
+    compare_dependency_graphs(&previous_resolve, &resolve);
     try!(ops::write_pkg_lockfile(&package, &resolve));
     return Ok(());
 
@@ -104,6 +105,29 @@ pub fn update_lockfile(manifest_path: &Path,
                 }
             }
             None => {}
+        }
+    }
+
+    fn compare_dependency_graphs<'a>(previous_resolve: &'a Resolve, resolve: &'a Resolve) {
+        let mut dependencies = HashMap::new();
+        for dep in resolve.iter() {
+            dependencies.insert(dep.name(), dep.version());
+        }
+        for dep in previous_resolve.iter() {
+            match dependencies.get(dep.name()) {
+                Some(&version) => {
+                    if version != dep.version() {
+                        println!("    Updating {} v{} -> v{}", dep.name(), dep.version(), version)
+                    }
+                    dependencies.remove(dep.name());
+                }
+                None => {
+                    println!("   Removed dependency {} v{}", dep.name(), dep.version());
+                }
+            }
+        }
+        for (name, version) in dependencies.iter() {
+            println!("    New dependency {} {}", name, version);
         }
     }
 }

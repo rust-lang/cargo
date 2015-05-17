@@ -476,6 +476,7 @@ test!(update_lockfile {
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
+{updating} bar v0.0.1 -> v0.0.2
 ", updating = UPDATING)));
 
     println!("0.0.2 build");
@@ -492,6 +493,7 @@ test!(update_lockfile {
                  .arg("-p").arg("bar"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
+{updating} bar v0.0.2 -> v0.0.3
 ", updating = UPDATING)));
 
     println!("0.0.3 build");
@@ -760,6 +762,7 @@ test!(update_transitive_dependency {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {updating} registry `[..]`
+{updating} b v0.1.0 -> v0.1.1
 ", updating = UPDATING)));
 
     assert_that(p.cargo("build"),
