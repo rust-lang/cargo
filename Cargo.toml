@@ -14,7 +14,7 @@ curl = "0.2"
 docopt = "0.6"
 env_logger = "0.3"
 flate2 = "0.2"
-git2 = "0.2"
+git2 = { version = "0.2", features = ["unstable"] }
 git2-curl = "0.2"
 glob = "0.2"
 libc = "0.1"
@@ -24,7 +24,7 @@ regex = "0.1"
 registry = { path = "src/registry" }
 rustc-serialize = "0.3"
 semver = "0.1"
-tar = "0.2"
+tar = { version = "0.2", features = ["nightly"] }
 term = "0.2"
 threadpool = "0.1"
 time = "0.1"
