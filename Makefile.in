@@ -1,4 +1,4 @@
-CFG_RELEASE_NUM=0.2.0
+CFG_RELEASE_NUM=0.3.0
 CFG_RELEASE_LABEL=
 
 include config.mk
