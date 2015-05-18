@@ -1758,6 +1758,29 @@ test!(dashes_in_crate_name_bad {
                 execs().with_status(101));
 });
 
+test!(rustc_env_var {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build")
+                 .env("RUSTC", "rustc-that-does-not-exist").arg("-v"),
+                execs().with_status(101)
+                       .with_stderr("\
+Could not execute process `rustc-that-does-not-exist -vV` ([..])
+
+Caused by:
+[..]
+"));
+    assert_that(&p.bin("a"), is_not(existing_file()));
+});
+
 test!(filtering {
     let p = project("foo")
         .file("Cargo.toml", r#"

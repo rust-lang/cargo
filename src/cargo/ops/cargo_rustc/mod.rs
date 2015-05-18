@@ -57,7 +57,7 @@ pub struct TargetConfig {
 /// The second element of the tuple returned is the target triple that rustc
 /// is a host for.
 pub fn rustc_version() -> CargoResult<(String, String)> {
-    let output = try!(try!(util::process("rustc"))
+    let output = try!(try!(util::process(util::rustc()))
         .arg("-vV")
         .exec_with_output());
     let output = try!(String::from_utf8(output.stdout).map_err(|_| {

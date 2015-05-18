@@ -79,9 +79,14 @@ timeout = 60000   # Timeout for each HTTP request, in milliseconds
 jobs = 1        # number of jobs to run by default (default to # cpus)
 ```
 
-# Configuration of registry cache
+# Environment Variables
 
-Cargo maintains a local cache of the registry index and of git
-checkouts of crates.  By default these are stored under
-`$HOME/.cargo`. The location can be overridden by setting the
-`CARGO_HOME` environment variable.
+Cargo recognizes a few global environment variables to configure how it runs:
+
+* `CARGO_HOME` - Cargo maintains a local cache of the registry index and of git
+  checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
+  this variable overrides the location of this directory.
+* `RUSTC` - Instead of running `rustc`, Cargo will execute this specified
+  compiler instead.
+* `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
+  `rustdoc` instance instead.

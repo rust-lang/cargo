@@ -394,6 +394,14 @@ fn homedir() -> Option<PathBuf> {
     return cargo_home.or(user_home);
 }
 
+pub fn rustc() -> String {
+    env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string())
+}
+
+pub fn rustdoc() -> String {
+    env::var("RUSTDOC").unwrap_or_else(|_| "rustdoc".to_string())
+}
+
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     where F: FnMut(File, &Path) -> CargoResult<()>
 {
