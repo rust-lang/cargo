@@ -10,8 +10,8 @@ use sources::{PathSource};
 use util::config::{Config};
 use util::{CargoResult, human};
 
-pub struct UpdateOptions<'a, 'b: 'a> {
-    pub config: &'a Config<'b>,
+pub struct UpdateOptions<'a> {
+    pub config: &'a Config,
     pub to_update: Option<&'a str>,
     pub precise: Option<&'a str>,
     pub aggressive: bool,

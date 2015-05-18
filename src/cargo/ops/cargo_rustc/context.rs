@@ -25,8 +25,8 @@ pub enum Platform {
     PluginAndTarget,
 }
 
-pub struct Context<'a, 'b: 'a> {
-    pub config: &'a Config<'b>,
+pub struct Context<'a> {
+    pub config: &'a Config,
     pub resolve: &'a Resolve,
     pub sources: &'a SourceMap<'a>,
     pub compilation: Compilation,
@@ -49,16 +49,16 @@ pub struct Context<'a, 'b: 'a> {
     profiles: &'a Profiles,
 }
 
-impl<'a, 'b: 'a> Context<'a, 'b> {
+impl<'a> Context<'a> {
     pub fn new(resolve: &'a Resolve,
                sources: &'a SourceMap<'a>,
                deps: &'a PackageSet,
-               config: &'a Config<'b>,
+               config: &'a Config,
                host: Layout,
                target_layout: Option<Layout>,
                root_pkg: &Package,
                build_config: BuildConfig,
-               profiles: &'a Profiles) -> CargoResult<Context<'a, 'b>> {
+               profiles: &'a Profiles) -> CargoResult<Context<'a>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
         let (target_dylib, target_exe) = try!(Context::filename_parts(target));

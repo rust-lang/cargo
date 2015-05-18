@@ -6,8 +6,8 @@ use sources::PathSource;
 use ops::{self, ExecEngine, ProcessEngine, Compilation};
 use util::{self, CargoResult, ProcessError};
 
-pub struct TestOptions<'a, 'b: 'a> {
-    pub compile_opts: ops::CompileOptions<'a, 'b>,
+pub struct TestOptions<'a> {
+    pub compile_opts: ops::CompileOptions<'a>,
     pub no_run: bool,
 }
 

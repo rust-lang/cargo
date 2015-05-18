@@ -12,19 +12,19 @@ use ops;
 use util::{self, CargoResult, internal, internal_error, human, ChainError};
 use util::{MTime, Config};
 
-pub struct PathSource<'a, 'b: 'a> {
+pub struct PathSource<'cfg> {
     id: SourceId,
     path: PathBuf,
     updated: bool,
     packages: Vec<Package>,
-    config: &'a Config<'b>,
+    config: &'cfg Config,
 }
 
 // TODO: Figure out if packages should be discovered in new or self should be
 // mut and packages are discovered in update
-impl<'a, 'b> PathSource<'a, 'b> {
-    pub fn for_path(path: &Path, config: &'a Config<'b>)
-                    -> CargoResult<PathSource<'a, 'b>> {
+impl<'cfg> PathSource<'cfg> {
+    pub fn for_path(path: &Path, config: &'cfg Config)
+                    -> CargoResult<PathSource<'cfg>> {
         trace!("PathSource::for_path; path={}", path.display());
         Ok(PathSource::new(path, &try!(SourceId::for_path(path)), config))
     }
@@ -32,8 +32,8 @@ impl<'a, 'b> PathSource<'a, 'b> {
     /// Invoked with an absolute path to a directory that contains a Cargo.toml.
     /// The source will read the manifest and find any other packages contained
     /// in the directory structure reachable by the root manifest.
-    pub fn new(path: &Path, id: &SourceId, config: &'a Config<'b>)
-               -> PathSource<'a, 'b> {
+    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
+               -> PathSource<'cfg> {
         trace!("new; id={}", id);
 
         PathSource {
@@ -259,13 +259,13 @@ impl<'a, 'b> PathSource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Debug for PathSource<'a, 'b> {
+impl<'cfg> Debug for PathSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "the paths source")
     }
 }
 
-impl<'a, 'b> Registry for PathSource<'a, 'b> {
+impl<'cfg> Registry for PathSource<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut summaries: Vec<Summary> = self.packages.iter()
                                               .map(|p| p.summary().clone())
@@ -274,7 +274,7 @@ impl<'a, 'b> Registry for PathSource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Source for PathSource<'a, 'b> {
+impl<'cfg> Source for PathSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
             let packages = try!(self.read_packages());

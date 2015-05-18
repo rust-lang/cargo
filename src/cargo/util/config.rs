@@ -18,9 +18,9 @@ use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
-pub struct Config<'a> {
+pub struct Config {
     home_path: PathBuf,
-    shell: RefCell<&'a mut MultiShell>,
+    shell: RefCell<MultiShell>,
     rustc_version: String,
     /// The current host and default target of rustc
     rustc_host: String,
@@ -29,8 +29,8 @@ pub struct Config<'a> {
     cwd: PathBuf,
 }
 
-impl<'a> Config<'a> {
-    pub fn new(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
+impl Config {
+    pub fn new(shell: MultiShell) -> CargoResult<Config> {
         let cwd = try!(env::current_dir().chain_error(|| {
             human("couldn't get the current directory of the process")
         }));
@@ -72,7 +72,7 @@ impl<'a> Config<'a> {
         self.home_path.join("registry").join("src")
     }
 
-    pub fn shell(&self) -> RefMut<&'a mut MultiShell> {
+    pub fn shell(&self) -> RefMut<MultiShell> {
         self.shell.borrow_mut()
     }
 

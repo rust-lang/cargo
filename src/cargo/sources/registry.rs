@@ -180,14 +180,14 @@ use ops;
 
 static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
 
-pub struct RegistrySource<'a, 'b:'a> {
+pub struct RegistrySource<'cfg> {
     source_id: SourceId,
     checkout_path: PathBuf,
     cache_path: PathBuf,
     src_path: PathBuf,
-    config: &'a Config<'b>,
+    config: &'cfg Config,
     handle: Option<http::Handle>,
-    sources: Vec<PathSource<'a, 'b>>,
+    sources: Vec<PathSource<'cfg>>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     cache: HashMap<String, Vec<(Summary, bool)>>,
     updated: bool,
@@ -226,9 +226,9 @@ struct RegistryDependency {
     kind: Option<String>,
 }
 
-impl<'a, 'b> RegistrySource<'a, 'b> {
+impl<'cfg> RegistrySource<'cfg> {
     pub fn new(source_id: &SourceId,
-               config: &'a Config<'b>) -> RegistrySource<'a, 'b> {
+               config: &'cfg Config) -> RegistrySource<'cfg> {
         let hash = hex::short_hash(source_id);
         let ident = source_id.url().host().unwrap().to_string();
         let part = format!("{}-{}", ident, hash);
@@ -472,7 +472,7 @@ impl<'a, 'b> RegistrySource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
+impl<'cfg> Registry for RegistrySource<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
@@ -511,7 +511,7 @@ impl<'a, 'b> Registry for RegistrySource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Source for RegistrySource<'a, 'b> {
+impl<'cfg> Source for RegistrySource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         // If we have an imprecise version then we don't know what we're going
         // to look for, so we always atempt to perform an update here.

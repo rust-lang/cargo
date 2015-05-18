@@ -9,10 +9,10 @@ use sources::PathSource;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context, BuildConfig, Kind};
 
-pub struct CleanOptions<'a, 'b: 'a> {
+pub struct CleanOptions<'a> {
     pub spec: Option<&'a str>,
     pub target: Option<&'a str>,
-    pub config: &'a Config<'b>,
+    pub config: &'a Config,
 }
 
 /// Cleans the project from build artifacts.

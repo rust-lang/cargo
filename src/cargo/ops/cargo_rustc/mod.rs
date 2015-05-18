@@ -77,15 +77,15 @@ pub fn rustc_version() -> CargoResult<(String, String)> {
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
-                               pkg: &'a Package,
-                               deps: &PackageSet,
-                               resolve: &'a Resolve,
-                               sources: &'a SourceMap<'a>,
-                               config: &'a Config<'b>,
-                               build_config: BuildConfig,
-                               profiles: &'a Profiles)
-                               -> CargoResult<Compilation> {
+pub fn compile_targets<'a>(targets: &[(&'a Target, &'a Profile)],
+                           pkg: &'a Package,
+                           deps: &PackageSet,
+                           resolve: &'a Resolve,
+                           sources: &'a SourceMap<'a>,
+                           config: &'a Config,
+                           build_config: BuildConfig,
+                           profiles: &'a Profiles)
+                           -> CargoResult<Compilation> {
     if targets.is_empty() {
         return Ok(Compilation::new(pkg))
     }
@@ -181,10 +181,10 @@ pub fn compile_targets<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
     Ok(cx.compilation)
 }
 
-fn compile<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
-                   pkg: &'a Package,
-                   cx: &mut Context<'a, 'b>,
-                   jobs: &mut JobQueue<'a>) -> CargoResult<()> {
+fn compile<'a>(targets: &[(&'a Target, &'a Profile)],
+               pkg: &'a Package,
+               cx: &mut Context<'a>,
+               jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
     let profiling_marker = profile::start(format!("preparing: {}", pkg));
 
@@ -292,10 +292,10 @@ fn compile<'a, 'b>(targets: &[(&'a Target, &'a Profile)],
     Ok(())
 }
 
-fn prepare_init<'a, 'b>(cx: &mut Context<'a, 'b>,
-                        pkg: &'a Package,
-                        jobs: &mut JobQueue<'a>,
-                        visited: &mut HashSet<&'a PackageId>) {
+fn prepare_init<'a>(cx: &mut Context<'a>,
+                    pkg: &'a Package,
+                    jobs: &mut JobQueue<'a>,
+                    visited: &mut HashSet<&'a PackageId>) {
     if !visited.insert(pkg.package_id()) { return }
 
     // Set up all dependencies
