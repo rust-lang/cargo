@@ -82,9 +82,9 @@ pub enum CompileFilter<'a> {
     }
 }
 
-pub fn compile(manifest_path: &Path,
-               options: &CompileOptions)
-               -> CargoResult<ops::Compilation> {
+pub fn compile<'a>(manifest_path: &Path,
+                   options: &CompileOptions<'a>)
+                   -> CargoResult<ops::Compilation<'a>> {
     debug!("compile; manifest-path={}", manifest_path.display());
 
     let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
@@ -101,8 +101,9 @@ pub fn compile(manifest_path: &Path,
     compile_pkg(&package, options)
 }
 
-pub fn compile_pkg(package: &Package, options: &CompileOptions)
-                   -> CargoResult<ops::Compilation> {
+pub fn compile_pkg<'a>(package: &Package,
+                       options: &CompileOptions<'a>)
+                       -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
                          ref filter, ref exec_engine,
@@ -174,10 +175,12 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
             profile.rustc_args = Some(args.to_vec());
             Some((target, profile))
         }
-        Some(_) =>
-            return Err(human("extra arguments to `rustc` can only be passed to one target, \
-                              consider filtering\nthe package by passing e.g. `--lib` or \
-                              `--bin NAME` to specify a single target")),
+        Some(_) => {
+            return Err(human("extra arguments to `rustc` can only be passed to \
+                              one target, consider filtering\nthe package by \
+                              passing e.g. `--lib` or `--bin NAME` to specify \
+                              a single target"))
+        }
         None => None,
     };
 
@@ -195,7 +198,8 @@ pub fn compile_pkg(package: &Package, options: &CompileOptions)
 
         try!(ops::compile_targets(&targets, to_build,
                                   &PackageSet::new(&packages),
-                                  &resolve_with_overrides, &sources,
+                                  &resolve_with_overrides,
+                                  &sources,
                                   config,
                                   build_config,
                                   to_build.manifest().profiles()))

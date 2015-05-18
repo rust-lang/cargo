@@ -1,4 +1,4 @@
-pub use self::config::{Config, rustc, rustdoc};
+pub use self::config::Config;
 pub use self::process_builder::{process, ProcessBuilder};
 pub use self::errors::{CargoResult, CargoError, ChainError, CliResult};
 pub use self::errors::{CliError, ProcessError};

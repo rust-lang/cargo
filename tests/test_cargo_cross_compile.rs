@@ -4,7 +4,6 @@ use support::{project, execs, basic_bin_manifest};
 use support::{RUNNING, COMPILING, DOCTEST};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
-use cargo::ops::rustc_version;
 
 fn setup() {
 }
@@ -491,7 +490,7 @@ test!(build_script_needed_for_host_and_target {
     if disabled() { return }
 
     let target = alternate();
-    let (_, host) = rustc_version().unwrap();
+    let host = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]

@@ -39,11 +39,11 @@ pub type Preparation = (Freshness, Work, Work);
 /// This function will calculate the fingerprint for a target and prepare the
 /// work necessary to either write the fingerprint or copy over all fresh files
 /// from the old directories to their new locations.
-pub fn prepare_target<'a>(cx: &mut Context<'a>,
-                          pkg: &'a Package,
-                          target: &'a Target,
-                          profile: &'a Profile,
-                          kind: Kind) -> CargoResult<Preparation> {
+pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                                pkg: &'a Package,
+                                target: &'a Target,
+                                profile: &'a Profile,
+                                kind: Kind) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {}",
                                     pkg.package_id(), target.name()));
     let new = dir(cx, pkg, kind);
@@ -131,12 +131,12 @@ impl Fingerprint {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies and is calculated in `calculate_target_fresh`.
-fn calculate<'a>(cx: &mut Context<'a>,
-                 pkg: &'a Package,
-                 target: &'a Target,
-                 profile: &'a Profile,
-                 kind: Kind)
-                 -> CargoResult<Fingerprint> {
+fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                       pkg: &'a Package,
+                       target: &'a Target,
+                       profile: &'a Profile,
+                       kind: Kind)
+                       -> CargoResult<Fingerprint> {
     let key = (pkg.package_id(), target, profile, kind);
     match cx.fingerprints.get(&key) {
         Some(s) => return Ok(s.clone()),

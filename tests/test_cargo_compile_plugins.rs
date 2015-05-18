@@ -223,7 +223,7 @@ test!(doctest_a_plugin {
 
 // See #1515
 test!(native_plugin_dependency_with_custom_ar_linker {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
 
     let foo = project("foo")
         .file("Cargo.toml", r#"

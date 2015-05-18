@@ -3,7 +3,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::io::prelude::*;
-use std::path::{self, PathBuf};
+use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
@@ -56,8 +56,8 @@ pub struct TargetConfig {
 ///
 /// The second element of the tuple returned is the target triple that rustc
 /// is a host for.
-pub fn rustc_version() -> CargoResult<(String, String)> {
-    let output = try!(try!(util::process(util::rustc()))
+pub fn rustc_version<P: AsRef<Path>>(rustc: P) -> CargoResult<(String, String)> {
+    let output = try!(try!(util::process(rustc.as_ref()))
         .arg("-vV")
         .exec_with_output());
     let output = try!(String::from_utf8(output.stdout).map_err(|_| {
@@ -77,17 +77,17 @@ pub fn rustc_version() -> CargoResult<(String, String)> {
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a>(targets: &[(&'a Target, &'a Profile)],
-                           pkg: &'a Package,
-                           deps: &PackageSet,
-                           resolve: &'a Resolve,
-                           sources: &'a SourceMap<'a>,
-                           config: &'a Config,
-                           build_config: BuildConfig,
-                           profiles: &'a Profiles)
-                           -> CargoResult<Compilation> {
+pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
+                                     pkg: &'a Package,
+                                     deps: &'a PackageSet,
+                                     resolve: &'a Resolve,
+                                     sources: &'a SourceMap<'cfg>,
+                                     config: &'cfg Config,
+                                     build_config: BuildConfig,
+                                     profiles: &'a Profiles)
+                                     -> CargoResult<Compilation<'cfg>> {
     if targets.is_empty() {
-        return Ok(Compilation::new(pkg))
+        return Ok(Compilation::new(pkg, config))
     }
 
     debug!("compile_targets: {}", pkg);
@@ -181,10 +181,10 @@ pub fn compile_targets<'a>(targets: &[(&'a Target, &'a Profile)],
     Ok(cx.compilation)
 }
 
-fn compile<'a>(targets: &[(&'a Target, &'a Profile)],
-               pkg: &'a Package,
-               cx: &mut Context<'a>,
-               jobs: &mut JobQueue<'a>) -> CargoResult<()> {
+fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
+                     pkg: &'a Package,
+                     cx: &mut Context<'a, 'cfg>,
+                     jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
     let profiling_marker = profile::start(format!("preparing: {}", pkg));
 
@@ -292,10 +292,10 @@ fn compile<'a>(targets: &[(&'a Target, &'a Profile)],
     Ok(())
 }
 
-fn prepare_init<'a>(cx: &mut Context<'a>,
-                    pkg: &'a Package,
-                    jobs: &mut JobQueue<'a>,
-                    visited: &mut HashSet<&'a PackageId>) {
+fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                          pkg: &'a Package,
+                          jobs: &mut JobQueue<'a>,
+                          visited: &mut HashSet<&'a PackageId>) {
     if !visited.insert(pkg.package_id()) { return }
 
     // Set up all dependencies

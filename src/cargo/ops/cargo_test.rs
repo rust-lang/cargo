@@ -101,10 +101,10 @@ pub fn run_benches(manifest_path: &Path,
     Ok(try!(build_and_run(manifest_path, options, &args)).err())
 }
 
-fn build_and_run(manifest_path: &Path,
-                 options: &TestOptions,
-                 test_args: &[String])
-                 -> CargoResult<Result<Compilation, ProcessError>> {
+fn build_and_run<'a>(manifest_path: &Path,
+                     options: &TestOptions<'a>,
+                     test_args: &[String])
+                     -> CargoResult<Result<Compilation<'a>, ProcessError>> {
     let config = options.compile_opts.config;
     let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                                config));

@@ -102,10 +102,7 @@ test!(bad5 {
     assert_that(foo.cargo("new")
                    .arg("-v").arg("foo").cwd(&foo.root().join("foo")),
                 execs().with_status(101).with_stderr("\
-Failed to create project `foo` at `[..]`
-
-Caused by:
-  Couldn't load Cargo configuration
+Couldn't load Cargo configuration
 
 Caused by:
   failed to merge key `foo` between files:
@@ -186,10 +183,7 @@ test!(invalid_global_config {
 
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
-failed to parse manifest at `[..]Cargo.toml`
-
-Caused by:
-  Couldn't load Cargo configuration
+Couldn't load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]config`

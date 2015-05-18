@@ -76,7 +76,9 @@ proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000   # Timeout for each HTTP request, in milliseconds
 
 [build]
-jobs = 1        # number of jobs to run by default (default to # cpus)
+jobs = 1             # number of jobs to run by default (default to # cpus)
+rustc = "rustc"      # path to the compiler to execute
+rustdoc = "rustdoc"  # path to the doc generator to execute
 ```
 
 # Environment Variables
