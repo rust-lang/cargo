@@ -11,12 +11,13 @@ with open('src/snapshots.txt') as f:
     lines = f.readlines()
 
 date = lines[0]
-linux32 = lines[1]
-linux64 = lines[2]
-mac32 = lines[3]
-mac64 = lines[4]
-win32 = lines[5]
-win64 = lines[6]
+bitrig64 = lines[1]
+linux32 = lines[2]
+linux64 = lines[3]
+mac32 = lines[4]
+mac64 = lines[5]
+win32 = lines[6]
+win64 = lines[7]
 triple = sys.argv[1]
 
 ts = triple.split('-')
