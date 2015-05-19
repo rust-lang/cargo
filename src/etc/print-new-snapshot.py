@@ -18,6 +18,7 @@ snaps = {
     'linux-x86_64': 'x86_64-unknown-linux-gnu',
     'winnt-i386': 'i686-pc-windows-gnu',
     'winnt-x86_64': 'x86_64-pc-windows-gnu',
+    'bitrig-x86_64': 'x86_64-unknown-bitrig',
 }
 
 for platform in sorted(snaps):

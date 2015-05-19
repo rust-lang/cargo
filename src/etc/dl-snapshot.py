@@ -52,6 +52,9 @@ elif target_os == 'windows':
     elif arch == 'x86_64':
         me = win64
         new_triple = 'x86_64-pc-windows-gnu'
+elif target_os == 'bitrig':
+    me = bitrig64
+    new_triple = 'x86_64-unknown-bitrig'
 
 if me is None:
     raise Exception("no snapshot for the triple: " + triple)
