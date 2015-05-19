@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tarfile
 import shutil
+import contextlib
 
 with open('src/snapshots.txt') as f:
     lines = f.readlines()
@@ -70,14 +71,22 @@ if not os.path.isdir('target/dl'):
 if os.path.isdir(dst):
     shutil.rmtree(dst)
 
-ret = subprocess.call(["curl", "-o", dl_path, url])
-if ret != 0:
-    raise Exception("failed to fetch url")
-h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
-if h != hash:
-    raise Exception("failed to verify the checksum of the snapshot")
+exists = False
+if os.path.exists(dl_path):
+    h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
+    if h == hash:
+        print("file already present %s (%s)" % (dl_path, hash,))
+        exists = True
 
-with tarfile.open(dl_path) as tar:
+if not exists:
+    ret = subprocess.call(["curl", "-o", dl_path, url])
+    if ret != 0:
+        raise Exception("failed to fetch url")
+    h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
+    if h != hash:
+        raise Exception("failed to verify the checksum of the snapshot")
+
+with contextlib.closing(tarfile.open(dl_path)) as tar:
     for p in tar.getnames():
         name = p.replace("cargo-nightly-" + triple + "/", "", 1)
         fp = os.path.join(dst, name)
