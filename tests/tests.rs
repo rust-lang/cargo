@@ -44,6 +44,7 @@ mod test_cargo_fetch;
 mod test_cargo_freshness;
 mod test_cargo_generate_lockfile;
 mod test_cargo_new;
+mod test_cargo_metadata;
 mod test_cargo_package;
 mod test_cargo_profiles;
 mod test_cargo_publish;
