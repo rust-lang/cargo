@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir};
-use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
+use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING};
 use support::paths::{self, CargoPathExt};
 use support::registry as r;
 use support::git;
@@ -504,6 +504,27 @@ test!(update_lockfile {
 {compiling} foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url())));
+
+   println!("new dependencies update");
+   r::mock_pkg("bar", "0.0.4", &[("spam", "0.2.5", "")]);
+   r::mock_pkg("spam", "0.2.5", &[]);
+   assert_that(p.cargo("update")
+                .arg("-p").arg("bar"),
+               execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{updating} bar v0.0.3 -> v0.0.4
+{adding} spam v0.2.5
+", updating = UPDATING, adding = ADDING)));
+
+   println!("new dependencies update");
+   r::mock_pkg("bar", "0.0.5", &[]);
+   assert_that(p.cargo("update")
+                .arg("-p").arg("bar"),
+               execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{updating} bar v0.0.4 -> v0.0.5
+{removing} spam v0.2.5
+", updating = UPDATING, removing = REMOVING)));
 });
 
 test!(dev_dependency_not_used {

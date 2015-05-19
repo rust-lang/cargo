@@ -89,7 +89,21 @@ pub fn update_lockfile(manifest_path: &Path,
                                                   Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid)));
-    compare_dependency_graphs(&previous_resolve, &resolve);
+    for dep in compare_dependency_graphs(&previous_resolve, &resolve) {
+        try!(match dep {
+            (None, Some(pkg)) => opts.config.shell().status("Adding",
+                format!("{} v{}", pkg.name(), pkg.version())),
+            (Some(pkg), None) => opts.config.shell().status("Removing",
+                format!("{} v{}", pkg.name(), pkg.version())),
+            (Some(pkg1), Some(pkg2)) => {
+                if pkg1.version() != pkg2.version() {
+                    opts.config.shell().status("Updating",
+                        format!("{} v{} -> v{}", pkg1.name(), pkg1.version(), pkg2.version()))
+                } else {Ok(())}
+            }
+            (None, None) => unreachable!(),
+        });
+    }
     try!(ops::write_pkg_lockfile(&package, &resolve));
     return Ok(());
 
@@ -108,26 +122,22 @@ pub fn update_lockfile(manifest_path: &Path,
         }
     }
 
-    fn compare_dependency_graphs<'a>(previous_resolve: &'a Resolve, resolve: &'a Resolve) {
-        let mut dependencies = HashMap::new();
-        for dep in resolve.iter() {
-            dependencies.insert(dep.name(), dep.version());
-        }
+    fn compare_dependency_graphs<'a>(previous_resolve: &'a Resolve,
+                                     resolve: &'a Resolve) ->
+                                     Vec<(Option<&'a PackageId>, Option<&'a PackageId>)> {
+        let mut changes = HashMap::new();
         for dep in previous_resolve.iter() {
-            match dependencies.get(dep.name()) {
-                Some(&version) => {
-                    if version != dep.version() {
-                        println!("    Updating {} v{} -> v{}", dep.name(), dep.version(), version)
-                    }
-                    dependencies.remove(dep.name());
-                }
-                None => {
-                    println!("   Removed dependency {} v{}", dep.name(), dep.version());
-                }
+            changes.insert(dep.name(), (Some(dep), None));
+        }
+        for dep in resolve.iter() {
+            if !changes.contains_key(dep.name()) {
+                changes.insert(dep.name(), (None, None));
             }
+            let value = changes.get_mut(dep.name()).unwrap();
+            value.1 = Some(dep);
         }
-        for (name, version) in dependencies.iter() {
-            println!("    New dependency {} {}", name, version);
-        }
+        let mut package_names: Vec<&str> = changes.keys().map(|x| *x).collect();
+        package_names.sort();
+        package_names.iter().map(|name| *changes.get(name).unwrap()).collect()
     }
 }
