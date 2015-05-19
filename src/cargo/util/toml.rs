@@ -53,6 +53,15 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
                 dir.map(|d| d.path()).ok()
             }).filter(|f| {
                 f.extension().and_then(|s| s.to_str()) == Some("rs")
+            }).filter(|f| {
+                // Some unix editors may create "dotfiles" next to original
+                // source files while they're being edited, but these files are
+                // rarely actually valid Rust source files and sometimes aren't
+                // even valid UTF-8. Here we just ignore all of them and require
+                // that they are explicitly specified in Cargo.toml if desired.
+                f.file_name().and_then(|s| s.to_str()).map(|s| {
+                    !s.starts_with(".")
+                }).unwrap_or(true)
             }))
         }
         Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}

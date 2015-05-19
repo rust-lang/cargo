@@ -1784,3 +1784,19 @@ test!(filtering {
     assert_that(&p.bin("examples/a"), existing_file());
     assert_that(&p.bin("examples/b"), is_not(existing_file()));
 });
+
+test!(ignore_dotfile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/bin/.a.rs", "")
+        .file("src/bin/a.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+});
