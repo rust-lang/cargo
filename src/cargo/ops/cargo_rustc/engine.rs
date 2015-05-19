@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::Output;
 
 use util::{CargoResult, ProcessError, ProcessBuilder, process};
+use util::Config;
 
 /// Trait for objects that can execute commands.
 pub trait ExecEngine: Send + Sync {
@@ -35,11 +36,12 @@ pub struct CommandPrototype {
 }
 
 impl CommandPrototype {
-    pub fn new(ty: CommandType) -> CargoResult<CommandPrototype> {
+    pub fn new(ty: CommandType, config: &Config)
+               -> CargoResult<CommandPrototype> {
         Ok(CommandPrototype {
             builder: try!(match ty {
-                CommandType::Rustc => process("rustc"),
-                CommandType::Rustdoc => process("rustdoc"),
+                CommandType::Rustc => process(config.rustc()),
+                CommandType::Rustdoc => process(config.rustdoc()),
                 CommandType::Target(ref s) |
                 CommandType::Host(ref s) => process(s),
             }),

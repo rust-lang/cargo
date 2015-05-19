@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use semver::Version;
 
 use core::{PackageId, Package, Target};
-use util::{self, CargoResult};
+use util::{self, CargoResult, Config};
 
 use super::{CommandType, CommandPrototype};
 
 /// A structure returning the result of a compilation.
-pub struct Compilation {
+pub struct Compilation<'cfg> {
     /// All libraries which were built for a package.
     ///
     /// This is currently used for passing --extern flags to rustdoc tests later
@@ -44,10 +44,12 @@ pub struct Compilation {
 
     /// Features enabled during this compilation.
     pub features: HashSet<String>,
+
+    config: &'cfg Config,
 }
 
-impl Compilation {
-    pub fn new(pkg: &Package) -> Compilation {
+impl<'cfg> Compilation<'cfg> {
+    pub fn new(pkg: &Package, config: &'cfg Config) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: HashMap::new(),  // TODO: deprecated, remove
@@ -58,6 +60,7 @@ impl Compilation {
             extra_env: HashMap::new(),
             package: pkg.clone(),
             features: HashSet::new(),
+            config: config,
         }
     }
 
@@ -98,7 +101,7 @@ impl Compilation {
         search_path.push(self.deps_output.clone());
         let search_path = try!(util::join_paths(&search_path,
                                                 util::dylib_path_envvar()));
-        let mut cmd = try!(CommandPrototype::new(cmd));
+        let mut cmd = try!(CommandPrototype::new(cmd, self.config));
         cmd.env(util::dylib_path_envvar(), &search_path);
         for (k, v) in self.extra_env.iter() {
             cmd.env(k, v);

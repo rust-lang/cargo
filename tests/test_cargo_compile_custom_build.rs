@@ -251,7 +251,7 @@ linked to by one package
 });
 
 test!(overrides_and_links {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -302,7 +302,7 @@ test!(overrides_and_links {
 });
 
 test!(unused_overrides {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -521,7 +521,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 });
 
 test!(propagation_of_l_flags {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -579,7 +579,7 @@ test!(propagation_of_l_flags {
 });
 
 test!(propagation_of_l_flags_new {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -673,7 +673,7 @@ test!(build_deps_simple {
 });
 
 test!(build_deps_not_for_normal {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1276,7 +1276,7 @@ test!(cfg_feedback {
 });
 
 test!(cfg_override {
-    let (_, target) = ::cargo::ops::rustc_version().unwrap();
+    let target = ::rustc_host();
 
     let p = project("foo")
         .file("Cargo.toml", r#"

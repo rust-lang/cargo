@@ -2,6 +2,7 @@ use std::cell::{RefCell, RefMut, Ref, Cell};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::{HashMap};
 use std::env;
+use std::ffi::OsString;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -18,36 +19,47 @@ use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
-pub struct Config<'a> {
+pub struct Config {
     home_path: PathBuf,
-    shell: RefCell<&'a mut MultiShell>,
+    shell: RefCell<MultiShell>,
     rustc_version: String,
     /// The current host and default target of rustc
     rustc_host: String,
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
     cwd: PathBuf,
+    rustc: PathBuf,
+    rustdoc: PathBuf,
 }
 
-impl<'a> Config<'a> {
-    pub fn new(shell: &'a mut MultiShell) -> CargoResult<Config<'a>> {
+impl Config {
+    pub fn new(shell: MultiShell) -> CargoResult<Config> {
         let cwd = try!(env::current_dir().chain_error(|| {
             human("couldn't get the current directory of the process")
         }));
-        let (rustc_version, rustc_host) = try!(ops::rustc_version());
 
-        Ok(Config {
+        let mut cfg = Config {
             home_path: try!(homedir().chain_error(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
             shell: RefCell::new(shell),
-            rustc_version: rustc_version,
-            rustc_host: rustc_host,
+            rustc_version: String::new(),
+            rustc_host: String::new(),
             cwd: cwd,
             values: RefCell::new(HashMap::new()),
             values_loaded: Cell::new(false),
-        })
+            rustc: PathBuf::from("rustc"),
+            rustdoc: PathBuf::from("rustdoc"),
+        };
+
+        cfg.rustc = try!(cfg.get_tool("rustc"));
+        cfg.rustdoc = try!(cfg.get_tool("rustdoc"));
+        let (rustc_version, rustc_host) = try!(ops::rustc_version(cfg.rustc()));
+        cfg.rustc_version = rustc_version;
+        cfg.rustc_host = rustc_host;
+
+        Ok(cfg)
     }
 
     pub fn home(&self) -> &Path { &self.home_path }
@@ -72,9 +84,13 @@ impl<'a> Config<'a> {
         self.home_path.join("registry").join("src")
     }
 
-    pub fn shell(&self) -> RefMut<&'a mut MultiShell> {
+    pub fn shell(&self) -> RefMut<MultiShell> {
         self.shell.borrow_mut()
     }
+
+    pub fn rustc(&self) -> &Path { &self.rustc }
+
+    pub fn rustdoc(&self) -> &Path { &self.rustdoc }
 
     /// Return the output of `rustc -v verbose`
     pub fn rustc_version(&self) -> &str { &self.rustc_version }
@@ -188,6 +204,20 @@ impl<'a> Config<'a> {
             _ => unreachable!(),
         };
         Ok(())
+    }
+
+    fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+        let var = format!("build.{}", tool);
+        if let Some((tool, path)) = try!(self.get_string(&var)) {
+            if tool.contains("/") || (cfg!(windows) && tool.contains("\\")) {
+                return Ok(path.join(tool))
+            }
+            return Ok(PathBuf::from(tool))
+        }
+
+        let var = tool.chars().flat_map(|c| c.to_uppercase()).collect::<String>();
+        let tool = env::var_os(&var).unwrap_or_else(|| OsString::from(tool));
+        Ok(PathBuf::from(tool))
     }
 }
 

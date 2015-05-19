@@ -9,7 +9,6 @@ use support::{COMPILING, RUNNING, ProjectBuilder};
 use hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use cargo::util::process;
-use cargo::ops::rustc_version;
 
 fn setup() {
 }
@@ -1449,7 +1448,7 @@ Caused by:
 });
 
 test!(cargo_platform_specific_dependency {
-    let (_, host) = rustc_version().unwrap();
+    let host = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
             [project]
@@ -1756,6 +1755,28 @@ test!(dashes_in_crate_name_bad {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101));
+});
+
+test!(rustc_env_var {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build")
+                 .env("RUSTC", "rustc-that-does-not-exist").arg("-v"),
+                execs().with_status(101)
+                       .with_stderr("\
+Could not execute process `rustc-that-does-not-exist -vV` ([..])
+
+Caused by:
+[..]".to_string() + if cfg!(windows) {"\n[..]\n"} else {"\n"}));
+    assert_that(&p.bin("a"), is_not(existing_file()));
 });
 
 test!(filtering {

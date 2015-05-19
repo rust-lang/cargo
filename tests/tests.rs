@@ -54,3 +54,7 @@ mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_version;
 mod test_shell;
+
+fn rustc_host() -> String {
+    cargo::ops::rustc_version("rustc").unwrap().1
+}

@@ -92,16 +92,20 @@ fn process<V, F>(mut callback: F)
     where F: FnMut(&[String], &Config) -> CliResult<Option<V>>,
           V: Encodable
 {
-    let mut shell = shell(true);
-    process_executed((|| {
-        let config = try!(Config::new(&mut shell));
+    let mut config = None;
+    let result = (|| {
+        config = Some(try!(Config::new(shell(true))));
         let args: Vec<_> = try!(env::args_os().map(|s| {
             s.into_string().map_err(|s| {
                 human(format!("invalid unicode in argument: {:?}", s))
             })
         }).collect());
-        callback(&args, &config)
-    })(), &mut shell)
+        callback(&args, config.as_ref().unwrap())
+    })();
+    let mut verbose_shell = shell(true);
+    let mut shell = config.as_ref().map(|s| s.shell());
+    let shell = shell.as_mut().map(|s| &mut **s).unwrap_or(&mut verbose_shell);
+    process_executed(result, shell)
 }
 
 pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
@@ -113,7 +117,7 @@ pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
             let encoded = json::encode(&encodable).unwrap();
             println!("{}", encoded);
         }
-        _ => {}
+        Ok(None) => {}
     }
 }
 

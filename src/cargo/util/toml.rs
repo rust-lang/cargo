@@ -286,11 +286,11 @@ impl TomlProject {
     }
 }
 
-struct Context<'a, 'b, 'c: 'b> {
+struct Context<'a, 'b> {
     deps: &'a mut Vec<Dependency>,
     source_id: &'a SourceId,
     nested_paths: &'a mut Vec<PathBuf>,
-    config: &'b Config<'c>,
+    config: &'b Config,
 }
 
 // These functions produce the equivalent of specific manifest entries. One

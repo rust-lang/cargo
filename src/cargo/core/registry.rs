@@ -32,9 +32,9 @@ impl Registry for Vec<Summary> {
 /// `SourceMap` structure contained within which is a mapping of a `SourceId` to
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
-pub struct PackageRegistry<'a, 'b: 'a> {
-    sources: SourceMap<'a>,
-    config: &'a Config<'b>,
+pub struct PackageRegistry<'cfg> {
+    sources: SourceMap<'cfg>,
+    config: &'cfg Config,
 
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
@@ -67,8 +67,8 @@ enum Kind {
     Normal,
 }
 
-impl<'a, 'b> PackageRegistry<'a, 'b> {
-    pub fn new(config: &'a Config<'b>) -> PackageRegistry<'a, 'b> {
+impl<'cfg> PackageRegistry<'cfg> {
+    pub fn new(config: &'cfg Config) -> PackageRegistry<'cfg> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
@@ -100,7 +100,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
         Ok(ret)
     }
 
-    pub fn move_sources(self) -> SourceMap<'a> {
+    pub fn move_sources(self) -> SourceMap<'cfg> {
         self.sources
     }
 
@@ -275,7 +275,7 @@ impl<'a, 'b> PackageRegistry<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Registry for PackageRegistry<'a, 'b> {
+impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let overrides = try!(self.query_overrides(dep));
 

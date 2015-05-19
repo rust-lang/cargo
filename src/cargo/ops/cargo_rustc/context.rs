@@ -25,11 +25,11 @@ pub enum Platform {
     PluginAndTarget,
 }
 
-pub struct Context<'a, 'b: 'a> {
-    pub config: &'a Config<'b>,
+pub struct Context<'a, 'cfg: 'a> {
+    pub config: &'cfg Config,
     pub resolve: &'a Resolve,
-    pub sources: &'a SourceMap<'a>,
-    pub compilation: Compilation,
+    pub sources: &'a SourceMap<'cfg>,
+    pub compilation: Compilation<'cfg>,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
     pub fingerprints: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
@@ -49,23 +49,24 @@ pub struct Context<'a, 'b: 'a> {
     profiles: &'a Profiles,
 }
 
-impl<'a, 'b: 'a> Context<'a, 'b> {
+impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn new(resolve: &'a Resolve,
-               sources: &'a SourceMap<'a>,
+               sources: &'a SourceMap<'cfg>,
                deps: &'a PackageSet,
-               config: &'a Config<'b>,
+               config: &'cfg Config,
                host: Layout,
                target_layout: Option<Layout>,
                root_pkg: &Package,
                build_config: BuildConfig,
-               profiles: &'a Profiles) -> CargoResult<Context<'a, 'b>> {
+               profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
-        let (target_dylib, target_exe) = try!(Context::filename_parts(target));
+        let (target_dylib, target_exe) = try!(Context::filename_parts(target,
+                                                                      config));
         let (host_dylib, host_exe) = if build_config.requested_target.is_none() {
             (target_dylib.clone(), target_exe.clone())
         } else {
-            try!(Context::filename_parts(None))
+            try!(Context::filename_parts(None, config))
         };
         let target_triple = target.unwrap_or(config.rustc_host()).to_string();
         let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
@@ -84,7 +85,7 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
             host_dylib: host_dylib,
             host_exe: host_exe,
             requirements: HashMap::new(),
-            compilation: Compilation::new(root_pkg),
+            compilation: Compilation::new(root_pkg, config),
             build_state: Arc::new(BuildState::new(&build_config, deps)),
             build_config: build_config,
             exec_engine: engine,
@@ -96,9 +97,9 @@ impl<'a, 'b: 'a> Context<'a, 'b> {
 
     /// Run `rustc` to discover the dylib prefix/suffix for the target
     /// specified as well as the exe suffix
-    fn filename_parts(target: Option<&str>)
+    fn filename_parts(target: Option<&str>, cfg: &Config)
                       -> CargoResult<(Option<(String, String)>, String)> {
-        let mut process = try!(util::process("rustc"));
+        let mut process = try!(util::process(cfg.rustc()));
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--crate-type").arg("dylib")

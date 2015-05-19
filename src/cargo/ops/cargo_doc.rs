@@ -9,9 +9,9 @@ use ops;
 use sources::PathSource;
 use util::{CargoResult, human};
 
-pub struct DocOptions<'a, 'b: 'a> {
+pub struct DocOptions<'a> {
     pub open_result: bool,
-    pub compile_opts: ops::CompileOptions<'a, 'b>,
+    pub compile_opts: ops::CompileOptions<'a>,
 }
 
 pub fn doc(manifest_path: &Path,

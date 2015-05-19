@@ -14,20 +14,20 @@ use sources::git::utils::{GitRemote, GitRevision};
 
 /* TODO: Refactor GitSource to delegate to a PathSource
  */
-pub struct GitSource<'a, 'b:'a> {
+pub struct GitSource<'cfg> {
     remote: GitRemote,
     reference: GitReference,
     db_path: PathBuf,
     checkout_path: PathBuf,
     source_id: SourceId,
-    path_source: Option<PathSource<'a, 'b>>,
+    path_source: Option<PathSource<'cfg>>,
     rev: Option<GitRevision>,
-    config: &'a Config<'b>,
+    config: &'cfg Config,
 }
 
-impl<'a, 'b> GitSource<'a, 'b> {
+impl<'cfg> GitSource<'cfg> {
     pub fn new(source_id: &SourceId,
-               config: &'a Config<'b>) -> GitSource<'a, 'b> {
+               config: &'cfg Config) -> GitSource<'cfg> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let reference = match source_id.git_reference() {
@@ -141,7 +141,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
     return url;
 }
 
-impl<'a, 'b> Debug for GitSource<'a, 'b> {
+impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         try!(write!(f, "git repo at {}", self.remote.url()));
 
@@ -152,7 +152,7 @@ impl<'a, 'b> Debug for GitSource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Registry for GitSource<'a, 'b> {
+impl<'cfg> Registry for GitSource<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let src = self.path_source.as_mut()
                       .expect("BUG: update() must be called before query()");
@@ -160,7 +160,7 @@ impl<'a, 'b> Registry for GitSource<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Source for GitSource<'a, 'b> {
+impl<'cfg> Source for GitSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         let actual_rev = self.remote.rev_for(&self.db_path, &self.reference);
         let should_update = actual_rev.is_err() ||
