@@ -209,7 +209,12 @@ impl Config {
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         let var = format!("build.{}", tool);
         if let Some((tool, path)) = try!(self.get_string(&var)) {
+            // If this tool has a path separator in it, calculate the path
+            // relative to the config file (specified by `path`). To do that we
+            // chop off the `.cargo/config` at the end of the path and then join
+            // on the tool.
             if tool.contains("/") || (cfg!(windows) && tool.contains("\\")) {
+                let path = path.parent().unwrap().parent().unwrap();
                 return Ok(path.join(tool))
             }
             return Ok(PathBuf::from(tool))
