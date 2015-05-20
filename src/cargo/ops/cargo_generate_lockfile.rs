@@ -90,19 +90,16 @@ pub fn update_lockfile(manifest_path: &Path,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid)));
     for dep in compare_dependency_graphs(&previous_resolve, &resolve) {
-        try!(match dep {
-            (None, Some(pkg)) => opts.config.shell().status("Adding",
-                format!("{} v{}", pkg.name(), pkg.version())),
-            (Some(pkg), None) => opts.config.shell().status("Removing",
-                format!("{} v{}", pkg.name(), pkg.version())),
+        let (status, msg) = match dep {
+            (None, Some(pkg)) => ("Adding", format!("{} v{}", pkg.name(), pkg.version())),
+            (Some(pkg), None) => ("Removing", format!("{} v{}", pkg.name(), pkg.version())),
             (Some(pkg1), Some(pkg2)) => {
-                if pkg1.version() != pkg2.version() {
-                    opts.config.shell().status("Updating",
-                        format!("{} v{} -> v{}", pkg1.name(), pkg1.version(), pkg2.version()))
-                } else {Ok(())}
+                if pkg1.version() == pkg2.version() { continue }
+                ("Updating", format!("{} v{} -> v{}", pkg1.name(), pkg1.version(), pkg2.version()))
             }
-            (None, None) => unreachable!(),
-        });
+            (None, None) => continue,
+        };
+        try!(opts.config.shell().status(status, msg));
     }
     try!(ops::write_pkg_lockfile(&package, &resolve));
     return Ok(());
@@ -138,6 +135,6 @@ pub fn update_lockfile(manifest_path: &Path,
         }
         let mut package_names: Vec<&str> = changes.keys().map(|x| *x).collect();
         package_names.sort();
-        package_names.iter().map(|name| *changes.get(name).unwrap()).collect()
+        package_names.iter().map(|name| changes[name]).collect()
     }
 }
