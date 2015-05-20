@@ -14,6 +14,7 @@ pub fn fetch(manifest_path: &Path, config: &Config) -> CargoResult<()> {
     let package = try!(source.root_package());
 
     let mut registry = PackageRegistry::new(config);
+    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_pkg(&mut registry, &package));
 
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();

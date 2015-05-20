@@ -59,7 +59,6 @@ impl<'cfg> PathSource<'cfg> {
     }
 
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
-
         if self.updated {
             Ok(self.packages.clone())
         } else if self.id.is_path() && self.id.precise().is_some() {
