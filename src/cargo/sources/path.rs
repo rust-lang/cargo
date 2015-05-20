@@ -4,8 +4,9 @@ use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use glob::Pattern;
 use git2;
+use glob::Pattern;
+use libc;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
@@ -146,15 +147,19 @@ impl<'cfg> PathSource<'cfg> {
         // Here we're also careful to look at both tracked an untracked files as
         // the untracked files are often part of a build and may become relevant
         // as part of a future commit.
-        let index_files = index.iter().map(|entry| join(&root, &entry.path));
+        let index_files = index.iter().map(|entry| {
+            let is_dir = entry.mode & (libc::S_IFMT as u32) ==
+                                      (libc::S_IFDIR as u32);
+            (join(&root, &entry.path), Some(is_dir))
+        });
         let mut opts = git2::StatusOptions::new();
         opts.include_untracked(true);
         let statuses = try!(repo.statuses(Some(&mut opts)));
         let untracked = statuses.iter().map(|entry| {
-            join(&root, entry.path_bytes())
+            (join(&root, entry.path_bytes()), None)
         });
 
-        'outer: for file_path in index_files.chain(untracked) {
+        'outer: for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = try!(file_path);
 
             // Filter out files outside this package.
@@ -176,9 +181,10 @@ impl<'cfg> PathSource<'cfg> {
                 }
             }
 
-            // TODO: the `entry` has a mode we should be able to look at instead
-            //       of just calling stat() again
-            if fs::metadata(&file_path).map(|m| m.is_dir()).unwrap_or(false) {
+            let is_dir = is_dir.or_else(|| {
+                fs::metadata(&file_path).ok().map(|m| m.is_dir())
+            }).unwrap_or(false);
+            if is_dir {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, &root).unwrap();
                 let rel = try!(rel.to_str().chain_error(|| {
