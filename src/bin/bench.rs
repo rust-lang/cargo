@@ -51,6 +51,9 @@ which indicates which package should be benchmarked. If it is not given, then
 the current package is benchmarked. For more information on SPEC and its format,
 see the `cargo help pkgid` command.
 
+The --jobs argument affects the building of the benchmark executable but does
+not affect how many jobs are used when running the benchmarks.
+
 Compilation can be customized with the `bench` profile in the manifest.
 ";
 
