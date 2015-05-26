@@ -13,6 +13,8 @@ use term::color::BLACK;
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
 use util::Config;
 
+use toml;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
 
@@ -149,8 +151,8 @@ fn mk(config: &Config, path: &Path, name: &str,
 r#"[package]
 name = "{}"
 version = "0.1.0"
-authors = ["{}"]
-"#, name, author).as_bytes()));
+authors = [{}]
+"#, name, toml::Value::String(author)).as_bytes()));
 
     try!(fs::create_dir(&path.join("src")));
 

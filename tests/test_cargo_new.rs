@@ -138,6 +138,20 @@ test!(finds_author_user {
     assert!(contents.contains(r#"authors = ["foo"]"#));
 });
 
+test!(finds_author_user_escaped {
+    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
+    // the hierarchy
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo \"bar\"")
+                                    .cwd(td.path().clone()),
+                execs().with_status(0));
+
+    let toml = td.path().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["foo \"bar\""]"#));
+});
+
 test!(finds_author_username {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
