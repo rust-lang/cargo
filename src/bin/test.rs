@@ -55,6 +55,9 @@ which indicates which package should be tested. If it is not given, then the
 current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 
+The --jobs argument affects the building of the test executable but does
+not affect how many jobs are used when running the tests.
+
 Compilation can be configured via the `test` profile in the manifest.
 ";
 
