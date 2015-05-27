@@ -73,13 +73,8 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     }
 }
 
-fn walk<F>(path: &Path, callback: &mut F) -> CargoResult<()>
-    where F: FnMut(&Path) -> CargoResult<bool>
-{
-    if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
-        return Ok(())
-    }
-
+fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
+        -> CargoResult<()> {
     if !try!(callback(path)) {
         trace!("not processing {}", path.display());
         return Ok(())
@@ -95,8 +90,10 @@ fn walk<F>(path: &Path, callback: &mut F) -> CargoResult<()>
         Err(e) => return Err(From::from(e)),
     };
     for dir in dirs {
-        let dir = try!(dir).path();
-        try!(walk(&dir, callback));
+        let dir = try!(dir);
+        if try!(dir.file_type()).is_dir() {
+            try!(walk(&dir.path(), callback));
+        }
     }
     Ok(())
 }
