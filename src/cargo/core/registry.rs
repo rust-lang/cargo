@@ -140,6 +140,11 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(())
     }
 
+    pub fn preload(&mut self, id: &SourceId, source: Box<Source + 'cfg>) {
+        self.sources.insert(id, source);
+        self.source_ids.insert(id.clone(), (id.clone(), Kind::Locked));
+    }
+
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
             try!(self.load(id, Kind::Locked));

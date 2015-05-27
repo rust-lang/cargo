@@ -98,10 +98,11 @@ pub fn compile<'a>(manifest_path: &Path,
     for key in package.manifest().warnings().iter() {
         try!(options.config.shell().warn(key))
     }
-    compile_pkg(&package, options)
+    compile_pkg(&package, Some(Box::new(source)), options)
 }
 
 pub fn compile_pkg<'a>(package: &Package,
+                       source: Option<Box<Source + 'a>>,
                        options: &CompileOptions<'a>)
                        -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
@@ -127,6 +128,12 @@ pub fn compile_pkg<'a>(package: &Package,
     let (packages, resolve_with_overrides, sources) = {
         let rustc_host = config.rustc_host().to_string();
         let mut registry = PackageRegistry::new(config);
+        if let Some(source) = source {
+            registry.preload(package.package_id().source_id(), source);
+        } else {
+            try!(registry.add_sources(&[package.package_id().source_id()
+                                               .clone()]));
+        }
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.

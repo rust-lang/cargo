@@ -24,6 +24,7 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
     try!(source.update());
     let package = try!(source.root_package());
     let mut registry = PackageRegistry::new(config);
+    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
                                                   None, None));
@@ -84,6 +85,7 @@ pub fn update_lockfile(manifest_path: &Path,
         None => to_avoid.extend(previous_resolve.iter()),
     }
 
+    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_with_previous(&mut registry,
                                                   &package,
                                                   Method::Everything,

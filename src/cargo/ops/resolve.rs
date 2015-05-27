@@ -36,8 +36,6 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>)
                                  -> CargoResult<Resolve> {
-    let root = package.package_id().source_id().clone();
-    try!(registry.add_sources(&[root]));
 
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a git

@@ -178,7 +178,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     let new_pkg = Package::new(new_manifest, &manifest_path, &new_src);
 
     // Now that we've rewritten all our path dependencies, compile it!
-    try!(ops::compile_pkg(&new_pkg, &ops::CompileOptions {
+    try!(ops::compile_pkg(&new_pkg, None, &ops::CompileOptions {
         config: config,
         jobs: None,
         target: None,
