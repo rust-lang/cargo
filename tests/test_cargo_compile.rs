@@ -1821,3 +1821,45 @@ test!(ignore_dotfile {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 });
+
+test!(custom_target_dir {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
+
+    assert_that(p.cargo("build").env("CARGO_TARGET_DIR", "foo/target"),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/target/debug").join(&exe_name),
+                existing_file());
+    assert_that(&p.root().join("target/debug").join(&exe_name),
+                is_not(existing_file()));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/target/debug").join(&exe_name),
+                existing_file());
+    assert_that(&p.root().join("target/debug").join(&exe_name),
+                existing_file());
+
+    fs::create_dir(p.root().join(".cargo")).unwrap();
+    File::create(p.root().join(".cargo/config")).unwrap().write_all(br#"
+        [build]
+        target-dir = "bar/target"
+    "#).unwrap();
+    assert_that(p.cargo("build").env("CARGO_TARGET_DIR", "foo/target"),
+                execs().with_status(0));
+    assert_that(&p.root().join("bar/target/debug").join(&exe_name),
+                existing_file());
+    assert_that(&p.root().join("foo/target/debug").join(&exe_name),
+                existing_file());
+    assert_that(&p.root().join("target/debug").join(&exe_name),
+                existing_file());
+});

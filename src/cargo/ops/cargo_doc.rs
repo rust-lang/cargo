@@ -54,8 +54,8 @@ pub fn doc(manifest_path: &Path,
             }
         };
 
-        let path = package.absolute_target_dir().join("doc").join(&name)
-                                                    .join("index.html");
+        let target_dir = options.compile_opts.config.target_dir(&package);
+        let path = target_dir.join("doc").join(&name).join("index.html");
         if fs::metadata(&path).is_ok() {
             open_docs(&path);
         }

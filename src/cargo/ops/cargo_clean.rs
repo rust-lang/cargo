@@ -21,13 +21,13 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
                                             opts.config));
     try!(src.update());
     let root = try!(src.root_package());
-    let manifest = root.manifest();
+    let target_dir = opts.config.target_dir(&root);
 
     // If we have a spec, then we need to delete some package,s otherwise, just
     // remove the whole target directory and be done with it!
     let spec = match opts.spec {
         Some(spec) => spec,
-        None => return rm_rf(manifest.target_dir()),
+        None => return rm_rf(&target_dir),
     };
 
     // Load the lockfile (if one's available), and resolve spec to a pkgid
@@ -52,14 +52,14 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     let pkgs = PackageSet::new(&[]);
     let profiles = Profiles::default();
     let cx = try!(Context::new(&resolve, &srcs, &pkgs, opts.config,
-                               Layout::at(root.absolute_target_dir()),
+                               Layout::at(target_dir),
                                None, &pkg, BuildConfig::default(),
                                &profiles));
 
     // And finally, clean everything out!
     for target in pkg.targets().iter() {
         // TODO: `cargo clean --release`
-        let layout = Layout::new(&root, opts.target, "debug");
+        let layout = Layout::new(opts.config, &root, opts.target, "debug");
         try!(rm_rf(&layout.fingerprint(&pkg)));
         let profiles = [Profile::default_dev(), Profile::default_test()];
         for profile in profiles.iter() {

@@ -519,8 +519,6 @@ impl TomlManifest {
         let profiles = build_profiles(&self.profile);
         let mut manifest = Manifest::new(summary,
                                          targets,
-                                         layout.root.join("target"),
-                                         layout.root.join("doc"),
                                          exclude,
                                          include,
                                          project.links.clone(),

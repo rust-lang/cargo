@@ -76,9 +76,10 @@ proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000   # Timeout for each HTTP request, in milliseconds
 
 [build]
-jobs = 1             # number of jobs to run by default (default to # cpus)
-rustc = "rustc"      # path to the compiler to execute
-rustdoc = "rustdoc"  # path to the doc generator to execute
+jobs = 1               # number of jobs to run by default (default to # cpus)
+rustc = "rustc"        # path to the compiler to execute
+rustdoc = "rustdoc"    # path to the doc generator to execute
+target-dir = "target"  # path of where to place all generated artifacts
 ```
 
 # Environment Variables
@@ -92,3 +93,5 @@ Cargo recognizes a few global environment variables to configure how it runs:
   compiler instead.
 * `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead.
+* `CARGO_TARGET_DIR` - Location of where to place all generated artifacts,
+  relative to the current working directory.
