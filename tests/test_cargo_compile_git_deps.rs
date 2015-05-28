@@ -515,7 +515,7 @@ test!(two_revs_same_deps {
 
     baz.build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(0));
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
