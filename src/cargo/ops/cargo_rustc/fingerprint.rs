@@ -4,8 +4,10 @@ use std::io::{BufReader, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use filetime::FileTime;
+
 use core::{Package, Target, Profile};
-use util::{self, MTime};
+use util;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
 
 use super::Kind;
@@ -99,7 +101,7 @@ struct FingerprintInner {
 #[derive(Clone)]
 enum LocalFingerprint {
     Precalculated(String),
-    MtimeBased(Option<MTime>, PathBuf),
+    MtimeBased(Option<FileTime>, PathBuf),
 }
 
 impl FingerprintInner {
@@ -118,7 +120,8 @@ impl FingerprintInner {
             LocalFingerprint::MtimeBased(Some(n), _) if !force => n.to_string(),
             LocalFingerprint::MtimeBased(_, ref p) => {
                 debug!("resolving: {}", p.display());
-                try!(MTime::of(p)).to_string()
+                let meta = try!(fs::metadata(p));
+                FileTime::from_last_modification_time(&meta).to_string()
             }
         };
         let resolved = util::short_hash(&(&known, &self.extra, &deps));
@@ -326,7 +329,7 @@ fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
     Ok(old_fingerprint == new_fingerprint)
 }
 
-fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<MTime>> {
+fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<FileTime>> {
     macro_rules! fs_try {
         ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
     }
@@ -339,7 +342,8 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<MTime>> {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let mtime = try!(MTime::of(dep_info));
+    let meta = try!(fs::metadata(&dep_info));
+    let mtime = FileTime::from_last_modification_time(&meta);
     let pos = try!(line.find(": ").chain_error(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
@@ -357,13 +361,14 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<MTime>> {
             file.push(' ');
             file.push_str(deps.next().unwrap())
         }
-        match MTime::of(&cwd.join(&file)) {
-            Ok(file_mtime) if file_mtime <= mtime => {}
-            Ok(file_mtime) => {
-                info!("stale: {} -- {} vs {}", file, file_mtime, mtime);
-                return Ok(None)
-            }
-            _ => { info!("stale: {} -- missing", file); return Ok(None) }
+        let meta = match fs::metadata(cwd.join(&file)) {
+            Ok(meta) => meta,
+            Err(..) => { info!("stale: {} -- missing", file); return Ok(None) }
+        };
+        let file_mtime = FileTime::from_last_modification_time(&meta);
+        if file_mtime > mtime {
+            info!("stale: {} -- {} vs {}", file, file_mtime, mtime);
+            return Ok(None)
         }
     }
 

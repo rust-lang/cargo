@@ -1,11 +1,12 @@
 #![deny(unused)]
-#![feature(metadata_ext, file_type, dir_entry_ext)]
+#![feature(file_type, dir_entry_ext)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
 extern crate curl;
 extern crate docopt;
+extern crate filetime;
 extern crate flate2;
 extern crate git2;
 extern crate glob;

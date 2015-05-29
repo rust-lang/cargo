@@ -31,6 +31,7 @@ threadpool = "0.1"
 time = "0.1"
 toml = "0.1"
 url = "0.2"
+filetime = "0.1"
 
 [target.i686-pc-windows-gnu]
 dependencies = { winapi = "0.1", advapi32-sys = "0.1", kernel32-sys = "0.1" }
