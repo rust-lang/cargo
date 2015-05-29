@@ -101,7 +101,7 @@ test test ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 {doctest} foo
-{running} `[..]target[..]test-[..]`
+{running} `rustdoc --test [..]lib.rs[..]`
 
 running 0 tests
 

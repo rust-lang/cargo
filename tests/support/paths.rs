@@ -12,9 +12,11 @@ thread_local!(static TASK_ID: usize = NEXT_ID.fetch_add(1, Ordering::SeqCst));
 
 pub fn root() -> PathBuf {
     env::current_exe().unwrap()
-                  .parent().unwrap()
+                  .parent().unwrap() // chop off exe name
+                  .parent().unwrap() // chop off 'debug'
+                  .parent().unwrap() // chop off target
                   .join(CARGO_INTEGRATION_TEST_DIR)
-                  .join(&TASK_ID.with(|my_id| format!("test-{}", my_id)))
+                  .join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
 }
 
 pub fn home() -> PathBuf {
