@@ -52,3 +52,33 @@ test!(build_with_no_lib {
                 execs().with_status(101)
                        .with_stderr("no library targets found"));
 });
+
+test!(build_with_relative_cargo_home_path {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "foo"
+            version = "0.0.1"
+            authors = ["wycats@example.com"]
+
+            [dependencies]
+
+            "test-dependency" = { path = "src/test_dependency" }
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("src/test_dependency/src/lib.rs", r#" "#)
+        .file("src/test_dependency/Cargo.toml", r#"
+            [package]
+
+            name = "test-dependency"
+            version = "0.0.1"
+            authors = ["wycats@example.com"]
+        "#);
+
+    assert_that(p.cargo_process("build").env("CARGO_HOME", "./cargo_home/"),
+                execs()
+                .with_status(0));
+});

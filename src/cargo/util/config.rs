@@ -39,7 +39,7 @@ impl Config {
         }));
 
         let mut cfg = Config {
-            home_path: try!(homedir().chain_error(|| {
+            home_path: try!(homedir(cwd.as_path()).chain_error(|| {
                 human("Cargo couldn't find your home directory. \
                       This probably means that $HOME was not set.")
             })),
@@ -423,8 +423,10 @@ impl ConfigValue {
     }
 }
 
-fn homedir() -> Option<PathBuf> {
-    let cargo_home = env::var_os("CARGO_HOME").map(PathBuf::from);
+fn homedir(cwd: &Path) -> Option<PathBuf> {
+    let cargo_home = env::var_os("CARGO_HOME").map(|home| {
+        cwd.join(home)
+    });
     let user_home = env::home_dir().map(|p| p.join(".cargo"));
     return cargo_home.or(user_home);
 }
@@ -450,7 +452,7 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = try!(homedir().chain_error(|| {
+    let home = try!(homedir(pwd).chain_error(|| {
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
