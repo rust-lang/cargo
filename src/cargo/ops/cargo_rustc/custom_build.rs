@@ -7,7 +7,7 @@ use std::sync::Mutex;
 
 use core::{Package, Target, PackageId, PackageSet};
 use util::{CargoResult, human, Human};
-use util::{internal, ChainError};
+use util::{internal, ChainError, profile};
 
 use super::job::Work;
 use super::{fingerprint, process, Kind, Context, Platform};
@@ -41,6 +41,8 @@ pub struct BuildState {
 /// only run once (not twice).
 pub fn prepare(pkg: &Package, target: &Target, req: Platform,
                cx: &mut Context) -> CargoResult<(Work, Work, Freshness)> {
+    let _p = profile::start(format!("build script prepare: {}/{}",
+                                    pkg, target.name()));
     let kind = match req { Platform::Plugin => Kind::Host, _ => Kind::Target, };
     let (script_output, build_output) = {
         (cx.layout(pkg, Kind::Host).build(pkg),

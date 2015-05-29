@@ -187,7 +187,6 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
                      cx: &mut Context<'a, 'cfg>,
                      jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
-    let profiling_marker = profile::start(format!("preparing: {}", pkg));
 
     // For each target/profile run the compiler or rustdoc accordingly. After
     // having done so we enqueue the job in the right portion of the dependency
@@ -200,6 +199,8 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             continue
         }
 
+        let profiling_marker = profile::start(format!("preparing: {}/{}",
+                                                      pkg, target.name()));
         let work = if profile.doc {
             let rustdoc = try!(rustdoc(pkg, target, profile, cx));
             vec![(rustdoc, Kind::Target)]
@@ -231,6 +232,12 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
                 (false, false, _) => jobs.queue(pkg, Stage::Binaries),
             };
             dst.push((Job::new(dirty, fresh), freshness));
+        }
+        drop(profiling_marker);
+
+        // Be sure to compile all dependencies of this target as well.
+        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
+            try!(compile(&[(target, p)], pkg, cx, jobs));
         }
 
         // If this is a custom build command, we need to not only build the
@@ -278,15 +285,6 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
         // need to compile it.
         if jobs.queue(pkg, Stage::RunCustomBuild).len() == before {
             jobs.queue(pkg, Stage::BuildCustomBuild).pop();
-        }
-    }
-    drop(profiling_marker);
-
-    // Be sure to compile all dependencies of this target as well. Don't recurse
-    // if we've already recursed, however.
-    for &(target, profile) in targets {
-        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
-            try!(compile(&[(target, p)], pkg, cx, jobs));
         }
     }
 
