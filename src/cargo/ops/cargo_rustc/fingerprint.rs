@@ -2,6 +2,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::{BufReader, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use core::{Package, Target, Profile};
 use util::{self, MTime};
@@ -87,11 +88,12 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 /// `DependencyQueue`, but it also needs to be retained here because Cargo can
 /// be interrupted while executing, losing the state of the `DependencyQueue`
 /// graph.
-#[derive(Clone)]
-pub struct Fingerprint {
+pub type Fingerprint = Arc<FingerprintInner>;
+struct FingerprintInner {
     extra: String,
     deps: Vec<Fingerprint>,
     local: LocalFingerprint,
+    resolved: Mutex<Option<String>>,
 }
 
 #[derive(Clone)]
@@ -100,8 +102,13 @@ enum LocalFingerprint {
     MtimeBased(Option<MTime>, PathBuf),
 }
 
-impl Fingerprint {
+impl FingerprintInner {
     fn resolve(&self, force: bool) -> CargoResult<String> {
+        if !force {
+            if let Some(ref s) = *self.resolved.lock().unwrap() {
+                return Ok(s.clone())
+            }
+        }
         let mut deps: Vec<_> = try!(self.deps.iter().map(|s| {
             s.resolve(force)
         }).collect());
@@ -114,8 +121,10 @@ impl Fingerprint {
                 try!(MTime::of(p)).to_string()
             }
         };
-        debug!("inputs: {} {} {:?}", known, self.extra, deps);
-        Ok(util::short_hash(&(known, &self.extra, &deps)))
+        let resolved = util::short_hash(&(&known, &self.extra, &deps));
+        debug!("inputs: {} {} {:?} => {}", known, self.extra, deps, resolved);
+        *self.resolved.lock().unwrap() = Some(resolved.clone());
+        Ok(resolved)
     }
 }
 
@@ -188,11 +197,12 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     } else {
         LocalFingerprint::Precalculated(try!(calculate_pkg_fingerprint(cx, pkg)))
     };
-    let fingerprint = Fingerprint {
+    let fingerprint = Arc::new(FingerprintInner {
         extra: extra,
         deps: deps,
         local: local,
-    };
+        resolved: Mutex::new(None),
+    });
     cx.fingerprints.insert(key, fingerprint.clone());
     Ok(fingerprint)
 }
@@ -234,11 +244,12 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind)
     info!("fingerprint at: {}", loc.display());
 
     let new_fingerprint = try!(calculate_build_cmd_fingerprint(cx, pkg));
-    let new_fingerprint = Fingerprint {
+    let new_fingerprint = Arc::new(FingerprintInner {
         extra: String::new(),
         deps: Vec::new(),
         local: LocalFingerprint::Precalculated(new_fingerprint),
-    };
+        resolved: Mutex::new(None),
+    });
 
     let is_fresh = try!(is_fresh(&loc, &new_fingerprint));
 
@@ -269,7 +280,9 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
-fn prepare(is_fresh: bool, loc: PathBuf, fingerprint: Fingerprint) -> Preparation {
+fn prepare(is_fresh: bool,
+           loc: PathBuf,
+           fingerprint: Fingerprint) -> Preparation {
     let write_fingerprint = Work::new(move |_| {
         debug!("write fingerprint: {}", loc.display());
         let fingerprint = try!(fingerprint.resolve(true).chain_error(|| {
