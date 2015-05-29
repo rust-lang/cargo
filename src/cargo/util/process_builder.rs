@@ -6,6 +6,7 @@ use std::path::Path;
 use std::process::{Command, Output};
 
 use util::{CargoResult, ProcessError, process_error};
+use util::shell_escape::shell_escape;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ProcessBuilder {
@@ -20,7 +21,7 @@ impl fmt::Display for ProcessBuilder {
         try!(write!(f, "`{}", self.program.to_string_lossy()));
 
         for arg in self.args.iter() {
-            try!(write!(f, " {}", arg.to_string_lossy()));
+            try!(write!(f, " {}", shell_escape(arg.to_string_lossy())));
         }
 
         write!(f, "`")
