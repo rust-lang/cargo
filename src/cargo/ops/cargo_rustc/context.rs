@@ -36,6 +36,8 @@ pub struct Context<'a, 'cfg: 'a> {
                               Fingerprint>,
     pub compiled: HashSet<(&'a PackageId, &'a Target, &'a Profile)>,
     pub build_config: BuildConfig,
+    pub build_scripts: HashMap<(&'a PackageId, Kind),
+                               Vec<(&'a PackageId, Profile)>>,
 
     host: Layout,
     target: Option<Layout>,
@@ -92,6 +94,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             fingerprints: HashMap::new(),
             profiles: profiles,
             compiled: HashSet::new(),
+            build_scripts: HashMap::new(),
         })
     }
 

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::str;
 use std::sync::Mutex;
 
-use core::{Package, Target, PackageId, PackageSet};
+use core::{Package, Target, PackageId, PackageSet, Profile};
 use util::{CargoResult, human, Human};
 use util::{internal, ChainError, profile};
 
@@ -103,8 +103,7 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let id = pkg.package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                build_output.clone());
-    let plugin_deps = super::crawl_build_deps(cx, pkg, target, profile,
-                                              Kind::Host);
+    let plugin_deps = super::load_build_deps(cx, pkg, profile, Kind::Host);
 
     try!(fs::create_dir_all(&cx.layout(pkg, Kind::Target).build(pkg)));
     try!(fs::create_dir_all(&cx.layout(pkg, Kind::Host).build(pkg)));
@@ -336,5 +335,88 @@ impl BuildOutput {
             };
         }
         Ok((library_paths, library_links))
+    }
+}
+
+/// Compute the `build_scripts` map in the `Context` which tracks what build
+/// scripts each package depends on.
+///
+/// The global `build_scripts` map lists for all (package, kind) tuples what set
+/// of packages' build script outputs must be considered. For example this lists
+/// all dependencies' `-L` flags which need to be propagated transitively.
+///
+/// The given set of targets to this function is the initial set of
+/// targets/profiles which are being built.
+pub fn build_map(cx: &mut Context, targets: &[(&Target, &Profile)]) {
+    let mut ret = HashMap::new();
+    let pkg = cx.get_package(cx.resolve.root());
+    for &(target, profile) in targets {
+        build(&mut ret, Kind::Target, pkg, target, profile, cx);
+        build(&mut ret, Kind::Host, pkg, target, profile, cx);
+    }
+
+    // Make the output a little more deterministic by sorting all dependencies
+    for (&(id, kind), slot) in ret.iter_mut() {
+        slot.sort_by(|&(p1, _), &(p2, _)| p1.cmp(p2));
+        slot.dedup();
+        debug!("script deps: {}/{:?} => {:?}", id, kind,
+               slot.iter().map(|&(s, _)| s.to_string()).collect::<Vec<_>>());
+    }
+    cx.build_scripts = ret;
+
+    // Recursive function to build up the map we're constructing. This function
+    // memoizes all of its return values as it goes along.
+    fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<(&'b PackageId, Kind),
+                                                Vec<(&'b PackageId, Profile)>>,
+                           kind: Kind,
+                           pkg: &'b Package,
+                           target: &Target,
+                           profile: &Profile,
+                           cx: &Context<'b, 'cfg>)
+                           -> &'a [(&'b PackageId, Profile)] {
+        // If this target has crossed into "host-land" we need to change the
+        // kind that we're compiling for, and otherwise just do a quick
+        // pre-flight check to see if we've already calculated the set of
+        // dependencies.
+        let kind = if target.for_host() {Kind::Host} else {kind};
+        let id = pkg.package_id();
+        if out.contains_key(&(id, kind)) {
+            return &out[&(id, kind)]
+        }
+
+        // This loop is both the recursive and additive portion of this
+        // function, the key part of the logic being around determining the
+        // right `kind` to recurse on. If a dependency fits in the kind that
+        // we've got specified, then we just keep plazing a trail, but otherwise
+        // we *switch* the kind we're looking at because it must fit into the
+        // other category.
+        //
+        // We always recurse, but only add to our own array if the target is
+        // linkable to us (e.g. not a binary) and it's for the same original
+        // `kind`.
+        let mut ret = Vec::new();
+        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
+            let req = cx.get_requirement(pkg, target);
+
+            let dep_kind = if req.includes(kind) {
+                kind
+            } else if kind == Kind::Target {
+                Kind::Host
+            } else {
+                Kind::Target
+            };
+            let dep_scripts = build(out, dep_kind, pkg, target, p, cx);
+
+            if target.linkable() && kind == dep_kind {
+                if pkg.has_custom_build() {
+                    ret.push((pkg.package_id(), profile.clone()));
+                }
+                ret.extend(dep_scripts.iter().cloned());
+            }
+        }
+
+        let prev = out.entry((id, kind)).or_insert(Vec::new());
+        prev.extend(ret);
+        return prev
     }
 }
