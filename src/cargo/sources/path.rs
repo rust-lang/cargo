@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 
 use git2;
 use glob::Pattern;
-use libc;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
@@ -147,8 +146,8 @@ impl<'cfg> PathSource<'cfg> {
         // the untracked files are often part of a build and may become relevant
         // as part of a future commit.
         let index_files = index.iter().map(|entry| {
-            let is_dir = entry.mode & (libc::S_IFMT as u32) ==
-                                      (libc::S_IFDIR as u32);
+            use libgit2_sys::git_filemode_t::GIT_FILEMODE_COMMIT;
+            let is_dir = entry.mode == GIT_FILEMODE_COMMIT as u32;
             (join(&root, &entry.path), Some(is_dir))
         });
         let mut opts = git2::StatusOptions::new();

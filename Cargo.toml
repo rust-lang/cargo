@@ -18,6 +18,7 @@ git2 = { version = "0.2", features = ["unstable"] }
 git2-curl = "0.2"
 glob = "0.2"
 libc = "0.1"
+libgit2-sys = "0.2"
 log = "0.3"
 num_cpus = "0.1"
 regex = "0.1"
