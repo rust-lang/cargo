@@ -245,13 +245,23 @@ impl PartialEq for SourceId {
 
 impl PartialOrd for SourceId {
     fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
-        self.to_string().partial_cmp(&other.to_string())
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
-        self.to_string().cmp(&other.to_string())
+        match self.inner.kind.cmp(&other.inner.kind) {
+            Ordering::Equal => {}
+            ord => return ord,
+        }
+        if let Kind::Git(..) = self.inner.kind {
+            match self.inner.precise.cmp(&other.inner.precise) {
+                Ordering::Equal => {}
+                ord => return ord,
+            }
+        }
+        self.inner.url.to_string().cmp(&other.inner.url.to_string())
     }
 }
 
