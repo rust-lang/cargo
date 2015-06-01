@@ -215,13 +215,13 @@ mod test {
     #[test]
     pub fn test_url_to_path_ident_with_path() {
         let ident = ident(&url("https://github.com/carlhuda/cargo"));
-        assert_eq!(ident, "cargo-51d6ede913e3e1d5");
+        assert!(ident.starts_with("cargo-"));
     }
 
     #[test]
     pub fn test_url_to_path_ident_without_path() {
         let ident = ident(&url("https://github.com"));
-        assert_eq!(ident, "_empty-eba8a1ec0f6907fb");
+        assert!(ident.starts_with("_empty-"));
     }
 
     #[test]

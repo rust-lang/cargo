@@ -263,7 +263,7 @@ impl Ord for SourceId {
                 ord => return ord,
             }
         }
-        self.inner.url.to_string().cmp(&other.inner.url.to_string())
+        self.inner.url.cmp(&other.inner.url)
     }
 }
 
