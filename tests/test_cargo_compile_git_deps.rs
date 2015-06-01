@@ -4,81 +4,19 @@ use std::path::Path;
 use std::thread;
 use git2;
 
-use support::{ProjectBuilder, project, execs, main_file, path2url};
+use support::{git, project, execs, main_file, path2url};
 use support::{COMPILING, UPDATING, RUNNING};
 use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that,existing_file};
 use cargo;
-use cargo::util::{ProcessError, process};
-
+use cargo::util::process;
 
 fn setup() {
 }
 
-fn git_repo<F>(name: &str, callback: F) -> Result<ProjectBuilder, ProcessError>
-    where F: FnOnce(ProjectBuilder) -> ProjectBuilder
-{
-    let mut git_project = project(name);
-    git_project = callback(git_project);
-    git_project.build();
-
-    let repo = git2::Repository::init(&git_project.root()).unwrap();
-    let mut cfg = repo.config().unwrap();
-    cfg.set_str("user.email", "foo@bar.com").unwrap();
-    cfg.set_str("user.name", "Foo Bar").unwrap();
-    drop(cfg);
-    add(&repo);
-    commit(&repo);
-    Ok(git_project)
-}
-
-fn add(repo: &git2::Repository) {
-    // FIXME(libgit2/libgit2#2514): apparently add_all will add all submodules
-    // as well, and then fail b/c they're a directory. As a stopgap, we just
-    // ignore all submodules.
-    let mut s = repo.submodules().unwrap();
-    for submodule in s.iter_mut() {
-        submodule.add_to_index(false).unwrap();
-    }
-    let mut index = repo.index().unwrap();
-    index.add_all(["*"].iter(), git2::ADD_DEFAULT,
-                  Some(&mut (|a, _b| {
-        if s.iter().any(|s| a.starts_with(s.path())) {1} else {0}
-    }))).unwrap();
-    index.write().unwrap();
-}
-
-fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
-                     path: &Path) -> git2::Submodule<'a> {
-    let path = path.to_str().unwrap().replace(r"\", "/");
-    let mut s = repo.submodule(url, Path::new(&path), false).unwrap();
-    let subrepo = s.open().unwrap();
-    let mut origin = subrepo.find_remote("origin").unwrap();
-    origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
-    origin.fetch(&[], None).unwrap();
-    origin.save().unwrap();
-    subrepo.checkout_head(None).unwrap();
-    s.add_finalize().unwrap();
-    return s;
-}
-
-fn commit(repo: &git2::Repository) -> git2::Oid {
-    let tree_id = repo.index().unwrap().write_tree().unwrap();
-    let sig = repo.signature().unwrap();
-    let mut parents = Vec::new();
-    match repo.head().ok().map(|h| h.target().unwrap()) {
-        Some(parent) => parents.push(repo.find_commit(parent).unwrap()),
-        None => {}
-    }
-    let parents = parents.iter().collect::<Vec<_>>();
-    repo.commit(Some("HEAD"), &sig, &sig, "test",
-                &repo.find_tree(tree_id).unwrap(),
-                &parents).unwrap()
-}
-
 test!(cargo_compile_simple_git_dep {
     let project = project("foo");
-    let git_project = git_repo("dep1", |project| {
+    let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [project]
@@ -138,7 +76,7 @@ test!(cargo_compile_simple_git_dep {
 
 test!(cargo_compile_git_dep_branch {
     let project = project("foo");
-    let git_project = git_repo("dep1", |project| {
+    let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [project]
@@ -205,7 +143,7 @@ test!(cargo_compile_git_dep_branch {
 
 test!(cargo_compile_git_dep_tag {
     let project = project("foo");
-    let git_project = git_repo("dep1", |project| {
+    let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [project]
@@ -275,7 +213,7 @@ test!(cargo_compile_git_dep_tag {
 });
 
 test!(cargo_compile_with_nested_paths {
-    let git_project = git_repo("dep1", |project| {
+    let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [project]
@@ -349,7 +287,7 @@ test!(cargo_compile_with_nested_paths {
 });
 
 test!(cargo_compile_with_meta_package {
-    let git_project = git_repo("meta-dep", |project| {
+    let git_project = git::new("meta-dep", |project| {
         project
             .file("dep1/Cargo.toml", r#"
                 [project]
@@ -453,7 +391,7 @@ Caused by:
 });
 
 test!(two_revs_same_deps {
-    let bar = git_repo("meta-dep", |project| {
+    let bar = git::new("meta-dep", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -470,8 +408,8 @@ test!(two_revs_same_deps {
     File::create(&bar.root().join("src/lib.rs")).unwrap().write_all(br#"
         pub fn bar() -> i32 { 2 }
     "#).unwrap();
-    add(&repo);
-    let rev2 = commit(&repo);
+    git::add(&repo);
+    let rev2 = git::commit(&repo);
 
     let foo = project("foo")
         .file("Cargo.toml", &format!(r#"
@@ -522,7 +460,7 @@ test!(two_revs_same_deps {
 });
 
 test!(recompilation {
-    let git_project = git_repo("bar", |project| {
+    let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", r#"
                 [project]
@@ -591,8 +529,8 @@ test!(recompilation {
     // Commit the changes and make sure we don't trigger a recompile because the
     // lockfile says not to change
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     println!("compile after commit");
     assert_that(p.cargo("build"),
@@ -621,7 +559,7 @@ test!(recompilation {
 });
 
 test!(update_with_shared_deps {
-    let git_project = git_repo("bar", |project| {
+    let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", r#"
                 [project]
@@ -695,8 +633,8 @@ test!(update_with_shared_deps {
     "#).unwrap();
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let old_head = repo.head().unwrap().target().unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     thread::sleep_ms(1000);
 
@@ -743,7 +681,7 @@ test!(update_with_shared_deps {
 
 test!(dep_with_submodule {
     let project = project("foo");
-    let git_project = git_repo("dep1", |project| {
+    let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [package]
@@ -752,14 +690,14 @@ test!(dep_with_submodule {
                 authors = ["carlhuda@example.com"]
             "#)
     }).unwrap();
-    let git_project2 = git_repo("dep2", |project| {
+    let git_project2 = git::new("dep2", |project| {
         project.file("lib.rs", "pub fn dep() {}")
     }).unwrap();
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let url = path2url(git_project2.root()).to_string();
-    add_submodule(&repo, &url, Path::new("src"));
-    commit(&repo);
+    git::add_submodule(&repo, &url, Path::new("src"));
+    git::commit(&repo);
 
     let project = project
         .file("Cargo.toml", &format!(r#"
@@ -784,7 +722,7 @@ test!(dep_with_submodule {
 
 test!(two_deps_only_update_one {
     let project = project("foo");
-    let git1 = git_repo("dep1", |project| {
+    let git1 = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [package]
@@ -794,7 +732,7 @@ test!(two_deps_only_update_one {
             "#)
             .file("src/lib.rs", "")
     }).unwrap();
-    let git2 = git_repo("dep2", |project| {
+    let git2 = git::new("dep2", |project| {
         project
             .file("Cargo.toml", r#"
                 [package]
@@ -838,8 +776,8 @@ test!(two_deps_only_update_one {
         pub fn foo() {}
     "#).unwrap();
     let repo = git2::Repository::open(&git1.root()).unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     assert_that(project.cargo("update")
                        .arg("-p").arg("dep1"),
@@ -850,7 +788,7 @@ test!(two_deps_only_update_one {
 });
 
 test!(stale_cached_version {
-    let bar = git_repo("meta-dep", |project| {
+    let bar = git::new("meta-dep", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -887,8 +825,8 @@ test!(stale_cached_version {
         pub fn bar() -> i32 { 1 + 0 }
     "#).unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     thread::sleep_ms(1000);
 
@@ -921,7 +859,7 @@ test!(stale_cached_version {
 
 test!(dep_with_changed_submodule {
     let project = project("foo");
-    let git_project = git_repo("dep1", |project| {
+    let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
                 [package]
@@ -931,20 +869,20 @@ test!(dep_with_changed_submodule {
             "#)
     }).unwrap();
 
-    let git_project2 = git_repo("dep2", |project| {
+    let git_project2 = git::new("dep2", |project| {
         project
             .file("lib.rs", "pub fn dep() -> &'static str { \"project2\" }")
     }).unwrap();
 
-    let git_project3 = git_repo("dep3", |project| {
+    let git_project3 = git::new("dep3", |project| {
         project
             .file("lib.rs", "pub fn dep() -> &'static str { \"project3\" }")
     }).unwrap();
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    let mut sub = add_submodule(&repo, &git_project2.url().to_string(),
-                                &Path::new("src"));
-    commit(&repo);
+    let mut sub = git::add_submodule(&repo, &git_project2.url().to_string(),
+                                     &Path::new("src"));
+    git::commit(&repo);
 
     let project = project
         .file("Cargo.toml", &format!(r#"
@@ -993,8 +931,8 @@ test!(dep_with_changed_submodule {
         subrepo.reset(&obj, git2::ResetType::Hard, None).unwrap();
     }
     sub.add_to_index(true).unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     thread::sleep_ms(1000);
     // Update the dependency and carry on!
@@ -1019,7 +957,7 @@ test!(dep_with_changed_submodule {
 });
 
 test!(dev_deps_with_testing {
-    let p2 = git_repo("bar", |project| {
+    let p2 = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -1078,7 +1016,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 });
 
 test!(git_build_cmd_freshness {
-    let foo = git_repo("foo", |project| {
+    let foo = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -1117,7 +1055,7 @@ test!(git_build_cmd_freshness {
 });
 
 test!(git_name_not_always_needed {
-    let p2 = git_repo("bar", |project| {
+    let p2 = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -1156,7 +1094,7 @@ test!(git_name_not_always_needed {
 });
 
 test!(git_repo_changing_no_rebuild {
-    let bar = git_repo("bar", |project| {
+    let bar = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -1193,8 +1131,8 @@ test!(git_repo_changing_no_rebuild {
         pub fn bar() -> i32 { 2 }
     "#).unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     // Lock p2 to the second rev
     let p2 = project("p2")
@@ -1221,7 +1159,7 @@ test!(git_repo_changing_no_rebuild {
 });
 
 test!(git_dep_build_cmd {
-    let p = git_repo("foo", |project| {
+    let p = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
             [project]
 
@@ -1283,7 +1221,7 @@ test!(git_dep_build_cmd {
 });
 
 test!(fetch_downloads {
-    let bar = git_repo("bar", |project| {
+    let bar = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -1313,7 +1251,7 @@ test!(fetch_downloads {
 });
 
 test!(warnings_in_git_dep {
-    let bar = git_repo("bar", |project| {
+    let bar = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -1346,7 +1284,7 @@ test!(warnings_in_git_dep {
 });
 
 test!(update_ambiguous {
-    let foo1 = git_repo("foo1", |project| {
+    let foo1 = git::new("foo1", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -1355,7 +1293,7 @@ test!(update_ambiguous {
         "#)
         .file("src/lib.rs", "")
     }).unwrap();
-    let foo2 = git_repo("foo2", |project| {
+    let foo2 = git::new("foo2", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -1364,7 +1302,7 @@ test!(update_ambiguous {
         "#)
         .file("src/lib.rs", "")
     }).unwrap();
-    let bar = git_repo("bar", |project| {
+    let bar = git::new("bar", |project| {
         project.file("Cargo.toml", &format!(r#"
             [package]
             name = "bar"
@@ -1405,7 +1343,7 @@ following:
 });
 
 test!(update_one_dep_in_repo_with_many_deps {
-    let foo = git_repo("foo", |project| {
+    let foo = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -1445,7 +1383,7 @@ Updating git repository `{}`
 });
 
 test!(switch_deps_does_not_update_transitive {
-    let transitive = git_repo("transitive", |project| {
+    let transitive = git::new("transitive", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "transitive"
@@ -1454,7 +1392,7 @@ test!(switch_deps_does_not_update_transitive {
         "#)
         .file("src/lib.rs", "")
     }).unwrap();
-    let dep1 = git_repo("dep1", |project| {
+    let dep1 = git::new("dep1", |project| {
         project.file("Cargo.toml", &format!(r#"
             [package]
             name = "dep"
@@ -1466,7 +1404,7 @@ test!(switch_deps_does_not_update_transitive {
         "#, transitive.url()))
         .file("src/lib.rs", "")
     }).unwrap();
-    let dep2 = git_repo("dep2", |project| {
+    let dep2 = git::new("dep2", |project| {
         project.file("Cargo.toml", &format!(r#"
             [package]
             name = "dep"
@@ -1522,7 +1460,7 @@ Updating git repository `{}`
 });
 
 test!(update_one_source_updates_all_packages_in_that_git_source {
-    let dep = git_repo("dep", |project| {
+    let dep = git::new("dep", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "dep"
@@ -1564,8 +1502,8 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
     File::create(&dep.root().join("src/lib.rs")).unwrap().write_all(br#"
         pub fn bar() -> i32 { 2 }
     "#).unwrap();
-    add(&repo);
-    commit(&repo);
+    git::add(&repo);
+    git::commit(&repo);
 
     assert_that(p.cargo("update").arg("-p").arg("dep"),
                 execs().with_status(0));
@@ -1577,7 +1515,7 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
 });
 
 test!(switch_sources {
-    let a1 = git_repo("a1", |project| {
+    let a1 = git::new("a1", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "a"
@@ -1586,7 +1524,7 @@ test!(switch_sources {
         "#)
         .file("src/lib.rs", "")
     }).unwrap();
-    let a2 = git_repo("a2", |project| {
+    let a2 = git::new("a2", |project| {
         project.file("Cargo.toml", r#"
             [package]
             name = "a"
@@ -1647,7 +1585,7 @@ test!(switch_sources {
 
 test!(dont_require_submodules_are_checked_out {
     let project = project("foo");
-    let git1 = git_repo("dep1", |p| {
+    let git1 = git::new("dep1", |p| {
         p.file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -1659,12 +1597,12 @@ test!(dont_require_submodules_are_checked_out {
         .file("src/lib.rs", "")
         .file("a/foo", "")
     }).unwrap();
-    let git2 = git_repo("dep2", |p| p).unwrap();
+    let git2 = git::new("dep2", |p| p).unwrap();
 
     let repo = git2::Repository::open(&git1.root()).unwrap();
     let url = path2url(git2.root()).to_string();
-    add_submodule(&repo, &url, &Path::new("a/submodule"));
-    commit(&repo);
+    git::add_submodule(&repo, &url, &Path::new("a/submodule"));
+    git::commit(&repo);
 
     git2::Repository::init(&project.root()).unwrap();
     let url = path2url(git1.root()).to_string();
@@ -1676,7 +1614,7 @@ test!(dont_require_submodules_are_checked_out {
 });
 
 test!(doctest_same_name {
-    let a2 = git_repo("a2", |p| {
+    let a2 = git::new("a2", |p| {
         p.file("Cargo.toml", r#"
             [project]
             name = "a"
@@ -1686,7 +1624,7 @@ test!(doctest_same_name {
         .file("src/lib.rs", "pub fn a2() {}")
     }).unwrap();
 
-    let a1 = git_repo("a1", |p| {
+    let a1 = git::new("a1", |p| {
         p.file("Cargo.toml", &format!(r#"
             [project]
             name = "a"
