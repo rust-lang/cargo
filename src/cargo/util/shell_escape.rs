@@ -8,21 +8,74 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 pub use self::windows::shell_escape;
 
 
+#[cfg(any(test, target_os = "windows"))]
 mod windows {
     use std::borrow::Cow;
 
+    static NEED_QUOTING: &'static str = r#" ""#;
+    const ESCAPE_CHAR: char = '\\';
+    const QUOTE_CHAR: char = '"';
+    const BACKSLASH: char = '\\';
+    const SLASH: char = '/';
+
+    /// Escape characters that may have special meaning in a shell,
+    /// including spaces.
+    ///
+    /// Escape double quotes and spaces by wrapping the string in double quotes.
+    ///
+    /// Turn all backslashes into forward slashes.
     pub fn shell_escape(s: Cow<str>) -> Cow<str> {
-        panic!()
+        // check if string needs to be escaped
+        let mut needs_quoting = false;
+        let mut needs_slashes = false;
+        for ch in s.chars() {
+            if NEED_QUOTING.contains(ch) {
+                needs_quoting = true;
+            } else if ch == BACKSLASH {
+                needs_slashes = true;
+            }
+        }
+        if !needs_quoting && !needs_slashes {
+            return s
+        }
+        let mut es = String::with_capacity(s.len());
+        if needs_quoting {
+            es.push(QUOTE_CHAR);
+        }
+        for ch in s.chars() {
+            match ch {
+                BACKSLASH => { es.push(SLASH); continue }
+                QUOTE_CHAR => es.push(ESCAPE_CHAR),
+                _ => {}
+            }
+            es.push(ch)
+        }
+        if needs_quoting {
+            es.push(QUOTE_CHAR);
+        }
+        es.into()
+    }
+
+    #[test]
+    fn test_shell_escape() {
+        assert_eq!(shell_escape("--aaa=bbb-ccc".into()), "--aaa=bbb-ccc");
+        assert_eq!(shell_escape("linker=gcc -L/foo -Wl,bar".into()),
+                                r#""linker=gcc -L/foo -Wl,bar""#);
+        assert_eq!(shell_escape(r#"--features="default""#.into()),
+                                r#""--features=\"default\"""#);
+        assert_eq!(shell_escape(r#"\path\to\my documents\"#.into()),
+                                r#""/path/to/my documents/""#);
     }
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(not(target_os = "windows"))]
 pub use self::other::shell_escape;
 
+#[cfg(any(test, not(target_os = "windows")))]
 mod other {
     use std::borrow::Cow;
 
