@@ -1,13 +1,14 @@
 use std::fs::File;
 use std::io::Cursor;
 use std::io::prelude::*;
+use std::path::Path;
 
 use cargo::util::process;
 use flate2::read::GzDecoder;
 use git2;
 use tar::Archive;
 
-use support::{project, execs, cargo_dir, paths, git};
+use support::{project, execs, cargo_dir, paths, git, path2url};
 use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
 use hamcrest::{assert_that, existing_file};
 
@@ -281,4 +282,37 @@ test!(package_new_git_repo {
 {archiving} [..]
 {archiving} [..]
 ", packaging = PACKAGING, archiving = ARCHIVING)));
+});
+
+test!(package_git_submodule {
+    use std::str::from_utf8;
+
+    let project = git::new("foo", |project| {
+        project.file("Cargo.toml", r#"
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = ["foo@example.com"]
+                    license = "MIT"
+                    description = "foo"
+                    repository = "foo"
+                "#)
+                .file("src/lib.rs", "pub fn foo() {}")
+    }).unwrap();
+    let library = git::new("bar", |library| {
+        library.file("Makefile", "all:")
+    }).unwrap();
+
+    let repository = git2::Repository::open(&project.root()).unwrap();
+    let url = path2url(library.root()).to_string();
+    git::add_submodule(&repository, &url, Path::new("bar"));
+    git::commit(&repository);
+
+    let repository = git2::Repository::open(&project.root().join("bar")).unwrap();
+    repository.reset(&repository.revparse_single("HEAD").unwrap(),
+                     git2::ResetType::Hard, None).unwrap();
+
+    let result = project.cargo("package").arg("--no-verify").arg("-v").exec_with_output().unwrap();
+    assert!(result.status.success());
+    assert!(from_utf8(&result.stdout).unwrap().contains(&format!("{} bar/Makefile", ARCHIVING)));
 });
