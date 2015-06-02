@@ -83,7 +83,6 @@ mod other {
 
     static SHELL_SPECIAL: &'static str = r#" \$'"`!"#;
 
-    #[cfg(not(target_os = "windows"))]
     /// Escape characters that may have special meaning in a shell,
     /// including spaces.
     pub fn shell_escape(s: Cow<str>) -> Cow<str> {
