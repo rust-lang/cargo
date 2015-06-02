@@ -34,7 +34,7 @@ with open('src/snapshots.txt') as f:
 date = snaps.keys()[0]
 triple = sys.argv[1]
 
-ts = triple.split('-', 2)
+ts = triple.split('-')
 arch = ts[0]
 
 if (arch == 'i586') or (arch == 'i386'):
