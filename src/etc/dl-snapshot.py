@@ -6,22 +6,40 @@ import sys
 import tarfile
 import shutil
 import contextlib
+import re
 
+datere = re.compile('^\d{4}-\d{2}-\d{2}')
+cksumre = re.compile('^  ([^ ]+) ([^$]+)$')
+
+current = None
+snaps = {}
 with open('src/snapshots.txt') as f:
-    lines = f.readlines()
+    for line in iter(f):
+        line = line.rstrip()
+        m = datere.match(line)
+        if m:
+            current = m.group()
+            snaps[current] = {}
+            continue
 
-date = lines[0]
-bitrig64 = lines[1]
-linux32 = lines[2]
-linux64 = lines[3]
-mac32 = lines[4]
-mac64 = lines[5]
-win32 = lines[6]
-win64 = lines[7]
+        m = cksumre.match(line)
+        if m:
+            snaps[current][m.group(1)] = m.group(2)
+            continue
+
+        # This script currently doesn't look at older snapshots, so there is
+        # no need to look past the first section.
+        break
+
+date = snaps.keys()[0]
 triple = sys.argv[1]
 
 ts = triple.split('-')
 arch = ts[0]
+
+if (arch == 'i586') or (arch == 'i386'):
+    arch = 'i686'
+
 if len(ts) == 2:
     vendor = 'unknown'
     target_os = ts[1]
@@ -29,43 +47,33 @@ else:
     vendor = ts[1]
     target_os = ts[2]
 
-intel32 = (arch == 'i686') or (arch == 'i586')
+# NB: The platform format differs from the triple format, to support
+#     bootstrapping multiple triples from the same snapshot.
+plat_arch = arch if (arch != 'i686') else 'i386'
+plat_os = target_os
+if (target_os == 'windows'):
+    plat_os = 'winnt'
+elif (target_os == 'darwin'):
+    plat_os = 'macos'
+platform = "%s-%s" % (plat_os, plat_arch)
+if platform not in snaps[date]:
+    raise Exception("no snapshot for the triple '%s'" % triple)
 
-me = None
+# Reconstitute triple with any applicable changes.  For historical reasons
+# this differs from the snapshots.txt platform name.
 if target_os == 'linux':
-    if intel32:
-        me = linux32
-        new_triple = 'i686-unknown-linux-gnu'
-    elif arch == 'x86_64':
-        me = linux64
-        new_triple = 'x86_64-unknown-linux-gnu'
+    target_os = 'linux-gnu'
 elif target_os == 'darwin':
-    if intel32:
-        me = mac32
-        new_triple = 'i686-apple-darwin'
-    elif arch == 'x86_64':
-        me = mac64
-        new_triple = 'x86_64-apple-darwin'
+    vendor = 'apple'
 elif target_os == 'windows':
-    if intel32:
-        me = win32
-        new_triple = 'i686-pc-windows-gnu'
-    elif arch == 'x86_64':
-        me = win64
-        new_triple = 'x86_64-pc-windows-gnu'
-elif target_os == 'bitrig':
-    me = bitrig64
-    new_triple = 'x86_64-unknown-bitrig'
-
-if me is None:
-    raise Exception("no snapshot for the triple: " + triple)
-
-triple = new_triple
-
-platform, hash = me.strip().split()
+    vendor = 'pc'
+    target_os = 'windows-gnu'
+triple = "%s-%s-%s" % (arch, vendor, target_os)
+hash = snaps[date][platform]
 
 tarball = 'cargo-nightly-' + triple + '.tar.gz'
-url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/' + date.strip() + '/' + tarball
+url = 'https://static-rust-lang-org.s3.amazonaws.com/cargo-dist/%s/%s' % \
+  (date.strip(), tarball)
 dl_path = "target/dl/" + tarball
 dst = "target/snapshot"
 
