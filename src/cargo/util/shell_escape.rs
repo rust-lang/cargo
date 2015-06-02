@@ -16,7 +16,7 @@ pub use self::windows::shell_escape;
 mod windows {
     use std::borrow::Cow;
 
-    static NEED_QUOTING: &'static str = r#" ""#;
+    const SPACE: char = ' ';
     const ESCAPE_CHAR: char = '\\';
     const QUOTE_CHAR: char = '"';
     const BACKSLASH: char = '\\';
@@ -30,20 +30,22 @@ mod windows {
     /// Turn all backslashes into forward slashes.
     pub fn shell_escape(s: Cow<str>) -> Cow<str> {
         // check if string needs to be escaped
-        let mut needs_quoting = false;
-        let mut needs_slashes = false;
+        let mut has_spaces = false;
+        let mut has_backslashes = false;
+        let mut has_quotes = false;
         for ch in s.chars() {
-            if NEED_QUOTING.contains(ch) {
-                needs_quoting = true;
-            } else if ch == BACKSLASH {
-                needs_slashes = true;
+            match ch {
+                QUOTE_CHAR => has_quotes = true,
+                SPACE => has_spaces = true,
+                BACKSLASH => has_backslashes = true,
+                _ => {}
             }
         }
-        if !needs_quoting && !needs_slashes {
+        if !has_spaces && !has_backslashes && !has_quotes {
             return s
         }
         let mut es = String::with_capacity(s.len());
-        if needs_quoting {
+        if has_spaces {
             es.push(QUOTE_CHAR);
         }
         for ch in s.chars() {
@@ -54,7 +56,7 @@ mod windows {
             }
             es.push(ch)
         }
-        if needs_quoting {
+        if has_spaces {
             es.push(QUOTE_CHAR);
         }
         es.into()
@@ -66,7 +68,7 @@ mod windows {
         assert_eq!(shell_escape("linker=gcc -L/foo -Wl,bar".into()),
                                 r#""linker=gcc -L/foo -Wl,bar""#);
         assert_eq!(shell_escape(r#"--features="default""#.into()),
-                                r#""--features=\"default\"""#);
+                                r#"--features=\"default\""#);
         assert_eq!(shell_escape(r#"\path\to\my documents\"#.into()),
                                 r#""/path/to/my documents/""#);
     }
