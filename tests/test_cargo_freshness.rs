@@ -1,5 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::thread;
 
 use support::{project, execs, path2url};
 use support::COMPILING;
@@ -66,6 +67,7 @@ test!(modify_only_some_files {
 ", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
+    thread::sleep_ms(1000);
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -73,12 +75,8 @@ test!(modify_only_some_files {
     let bin = p.root().join("src/b.rs");
 
     File::create(&lib).unwrap().write_all(b"invalid rust code").unwrap();
-    lib.move_into_the_past().unwrap();
-    p.root().move_into_the_past().unwrap();
-
     File::create(&bin).unwrap().write_all(b"fn foo() {}").unwrap();
-    // p.root().move_into_the_past().unwrap();
-    // p.root().join("target").move_into_the_past().unwrap();
+    lib.move_into_the_past().unwrap();
 
     // Make sure the binary is rebuilt, not the lib
     assert_that(p.cargo("build")
