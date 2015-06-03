@@ -31,7 +31,7 @@ with open('src/snapshots.txt') as f:
         # no need to look past the first section.
         break
 
-date = snaps.keys()[0]
+date = current
 triple = sys.argv[1]
 
 ts = triple.split('-')
