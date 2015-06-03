@@ -158,6 +158,29 @@ Caused by:
 "))
 });
 
+test!(cargo_compile_with_forbidden_bin_target_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = "build"
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs()
+                .with_status(101)
+                .with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  the binary target name `build` is forbidden
+"))
+});
+
 test!(cargo_compile_with_invalid_lib_target_name {
     let p = project("foo")
         .file("Cargo.toml", r#"
