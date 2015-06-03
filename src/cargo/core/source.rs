@@ -72,6 +72,7 @@ pub struct SourceId {
 #[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
     url: Url,
+    canonical_url: Url,
     kind: Kind,
     // e.g. the exact git revision of the specified branch for a Git Source
     precise: Option<String>
@@ -82,6 +83,7 @@ impl SourceId {
         SourceId {
             inner: Arc::new(SourceIdInner {
                 kind: kind,
+                canonical_url: git::canonicalize_url(&url),
                 url: url,
                 precise: None,
             }),
@@ -245,13 +247,23 @@ impl PartialEq for SourceId {
 
 impl PartialOrd for SourceId {
     fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
-        self.to_string().partial_cmp(&other.to_string())
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
-        self.to_string().cmp(&other.to_string())
+        match self.inner.kind.cmp(&other.inner.kind) {
+            Ordering::Equal => {}
+            ord => return ord,
+        }
+        if let Kind::Git(..) = self.inner.kind {
+            match self.inner.precise.cmp(&other.inner.precise) {
+                Ordering::Equal => {}
+                ord => return ord,
+            }
+        }
+        self.inner.url.cmp(&other.inner.url)
     }
 }
 
@@ -305,10 +317,9 @@ impl PartialEq for SourceIdInner {
         if self.kind != other.kind { return false }
         if self.url == other.url { return true }
 
-        match (&self.kind, &other.kind, &self.url, &other.url) {
-            (&Kind::Git(ref ref1), &Kind::Git(ref ref2), u1, u2) => {
-                ref1 == ref2 &&
-                git::canonicalize_url(u1) == git::canonicalize_url(u2)
+        match (&self.kind, &other.kind) {
+            (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
+                ref1 == ref2 && self.canonical_url == other.canonical_url
             }
             _ => false,
         }
@@ -319,8 +330,8 @@ impl hash::Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match *self.inner {
-            SourceIdInner { kind: Kind::Git(..), ref url, .. } => {
-                git::canonicalize_url(url).hash(into)
+            SourceIdInner { kind: Kind::Git(..), ref canonical_url, .. } => {
+                canonical_url.hash(into)
             }
             _ => self.inner.url.hash(into),
         }

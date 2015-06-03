@@ -117,6 +117,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
         let _p = profile::start("preparing build directories");
         try!(cx.prepare(pkg, targets));
         prepare_init(&mut cx, pkg, &mut queue, &mut HashSet::new());
+        custom_build::build_map(&mut cx, targets);
     }
 
     // Build up a list of pending jobs, each of which represent compiling a
@@ -187,7 +188,6 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
                      cx: &mut Context<'a, 'cfg>,
                      jobs: &mut JobQueue<'a>) -> CargoResult<()> {
     debug!("compile_pkg; pkg={}", pkg);
-    let profiling_marker = profile::start(format!("preparing: {}", pkg));
 
     // For each target/profile run the compiler or rustdoc accordingly. After
     // having done so we enqueue the job in the right portion of the dependency
@@ -200,6 +200,8 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             continue
         }
 
+        let profiling_marker = profile::start(format!("preparing: {}/{}",
+                                                      pkg, target.name()));
         let work = if profile.doc {
             let rustdoc = try!(rustdoc(pkg, target, profile, cx));
             vec![(rustdoc, Kind::Target)]
@@ -231,6 +233,12 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
                 (false, false, _) => jobs.queue(pkg, Stage::Binaries),
             };
             dst.push((Job::new(dirty, fresh), freshness));
+        }
+        drop(profiling_marker);
+
+        // Be sure to compile all dependencies of this target as well.
+        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
+            try!(compile(&[(target, p)], pkg, cx, jobs));
         }
 
         // If this is a custom build command, we need to not only build the
@@ -280,15 +288,6 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             jobs.queue(pkg, Stage::BuildCustomBuild).pop();
         }
     }
-    drop(profiling_marker);
-
-    // Be sure to compile all dependencies of this target as well. Don't recurse
-    // if we've already recursed, however.
-    for &(target, profile) in targets {
-        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
-            try!(compile(&[(target, p)], pkg, cx, jobs));
-        }
-    }
 
     Ok(())
 }
@@ -332,7 +331,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
     let rustcs = try!(prepare_rustc(package, target, profile, crate_types,
                                     cx, req));
 
-    let plugin_deps = crawl_build_deps(cx, package, target, profile, Kind::Host);
+    let plugin_deps = load_build_deps(cx, package, profile, Kind::Host);
 
     return rustcs.into_iter().map(|(mut rustc, kind)| {
         let name = package.name().to_string();
@@ -352,8 +351,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         let build_state = cx.build_state.clone();
         let current_id = package.package_id().clone();
         let plugin_deps = plugin_deps.clone();
-        let mut native_lib_deps = crawl_build_deps(cx, package, target,
-                                                   profile, kind);
+        let mut native_lib_deps = load_build_deps(cx, package, profile, kind);
         if package.has_custom_build() && !target.is_custom_build() {
             native_lib_deps.insert(0, current_id.clone());
         }
@@ -453,35 +451,16 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
     }
 }
 
-fn crawl_build_deps<'a>(cx: &'a Context,
-                        pkg: &'a Package,
-                        target: &Target,
-                        profile: &Profile,
-                        kind: Kind) -> Vec<PackageId> {
-    let mut deps = HashSet::new();
-    visit(cx, pkg, target, profile, kind, &mut HashSet::new(), &mut deps);
-    let mut ret: Vec<_> = deps.into_iter().collect();
-    ret.sort();
-    return ret;
-
-    fn visit<'a>(cx: &'a Context,
-                 pkg: &'a Package, target: &Target, profile: &Profile,
-                 kind: Kind,
-                 visiting: &mut HashSet<&'a PackageId>,
-                 libs: &mut HashSet<PackageId>) {
-        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
-            if !target.linkable() { continue }
-            let req = cx.get_requirement(pkg, target);
-            if !req.includes(kind) { continue }
-            if !visiting.insert(pkg.package_id()) { continue }
-
-            if pkg.has_custom_build() {
-                libs.insert(pkg.package_id().clone());
-            }
-            visit(cx, pkg, target, p, kind, visiting, libs);
-            visiting.remove(&pkg.package_id());
-        }
-    }
+fn load_build_deps(cx: &Context, pkg: &Package, profile: &Profile,
+                   kind: Kind) -> Vec<PackageId> {
+    let pkg = cx.get_package(pkg.package_id());
+    let deps = match cx.build_scripts.get(&(pkg.package_id(), kind)) {
+        Some(a) => a,
+        None => return Vec::new(),
+    };
+    deps.iter().filter(|&&(_, ref dep_profile)| profile == dep_profile)
+        .map(|&(x, _)| x.clone())
+        .collect()
 }
 
 // For all plugin dependencies, add their -L paths (now calculated and

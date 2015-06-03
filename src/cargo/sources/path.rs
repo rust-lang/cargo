@@ -4,13 +4,14 @@ use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
+use filetime::FileTime;
 use git2;
 use glob::Pattern;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
 use util::{self, CargoResult, internal, internal_error, human, ChainError};
-use util::{MTime, Config};
+use util::Config;
 
 pub struct PathSource<'cfg> {
     id: SourceId,
@@ -308,14 +309,16 @@ impl<'cfg> Source for PathSource<'cfg> {
             return Err(internal_error("BUG: source was not updated", ""));
         }
 
-        let mut max = MTime::zero();
+        let mut max = FileTime::zero();
         for file in try!(self.list_files(pkg)).iter() {
             // An fs::stat error here is either because path is a
             // broken symlink, a permissions error, or a race
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = MTime::of(&file).unwrap_or(MTime::zero());
+            let mtime = fs::metadata(file).map(|meta| {
+                FileTime::from_last_modification_time(&meta)
+            }).unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
             max = cmp::max(max, mtime);
         }

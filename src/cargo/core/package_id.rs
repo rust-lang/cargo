@@ -59,7 +59,7 @@ impl Decodable for PackageId {
 impl Hash for PackageId {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
         self.inner.name.hash(state);
-        self.inner.version.to_string().hash(state);
+        self.inner.version.hash(state);
         self.inner.source_id.hash(state);
     }
 }
