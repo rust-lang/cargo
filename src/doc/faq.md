@@ -49,17 +49,6 @@ languages include:
   down fast. Also remember that not everybody has a high-speed,
   low-latency Internet connection.
 
-# Why build crates.io before Rust 1.0?
-
-One of Rust's greatest strengths is its thriving community, and Cargo is a key
-tool in helping it grow even further. A central repository like crates.io has
-always been part of Cargo's vision and by building it before Rust 1.0 we're able
-to flesh out bugs and streamline the experience for new 1.0 users.
-
-Crates may have difficulty publishing to the registry in the interim due to the
-language changing, invalidating all previously published versions. This is a
-transitionary pain which will not exist once Rust 1.0 is released.
-
 # Will Cargo work with C code (or other languages)?
 
 Yes!
