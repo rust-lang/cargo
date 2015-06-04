@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
-use core::MultiShell;
+use core::{MultiShell, Package};
 use ops;
 use util::{CargoResult, ChainError, internal, human};
 
@@ -30,6 +30,7 @@ pub struct Config {
     cwd: PathBuf,
     rustc: PathBuf,
     rustdoc: PathBuf,
+    target_dir: Option<PathBuf>,
 }
 
 impl Config {
@@ -51,13 +52,12 @@ impl Config {
             values_loaded: Cell::new(false),
             rustc: PathBuf::from("rustc"),
             rustdoc: PathBuf::from("rustdoc"),
+            target_dir: None,
         };
 
-        cfg.rustc = try!(cfg.get_tool("rustc"));
-        cfg.rustdoc = try!(cfg.get_tool("rustdoc"));
-        let (rustc_version, rustc_host) = try!(ops::rustc_version(cfg.rustc()));
-        cfg.rustc_version = rustc_version;
-        cfg.rustc_host = rustc_host;
+        try!(cfg.scrape_tool_config());
+        try!(cfg.scrape_rustc_version());
+        try!(cfg.scrape_target_dir_config());
 
         Ok(cfg)
     }
@@ -107,6 +107,12 @@ impl Config {
     }
 
     pub fn cwd(&self) -> &Path { &self.cwd }
+
+    pub fn target_dir(&self, pkg: &Package) -> PathBuf {
+        self.target_dir.clone().unwrap_or_else(|| {
+            pkg.root().join("target")
+        })
+    }
 
     pub fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
         let vals = try!(self.values());
@@ -203,6 +209,32 @@ impl Config {
             CV::Table(map, _) => map,
             _ => unreachable!(),
         };
+        Ok(())
+    }
+
+    fn scrape_tool_config(&mut self) -> CargoResult<()> {
+        self.rustc = try!(self.get_tool("rustc"));
+        self.rustdoc = try!(self.get_tool("rustdoc"));
+        Ok(())
+    }
+
+    fn scrape_rustc_version(&mut self) -> CargoResult<()> {
+        let (rustc_version, rustc_host) = try!(ops::rustc_version(&self.rustc));
+        self.rustc_version = rustc_version;
+        self.rustc_host = rustc_host;
+        Ok(())
+    }
+
+    fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
+        if let Some((dir, dir2)) = try!(self.get_string("build.target-dir")) {
+            let mut path = PathBuf::from(dir2);
+            path.pop();
+            path.pop();
+            path.push(dir);
+            self.target_dir = Some(path);
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+            self.target_dir = Some(self.cwd.join(dir));
+        }
         Ok(())
     }
 

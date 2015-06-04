@@ -50,6 +50,7 @@ use std::io;
 use std::path::{PathBuf, Path};
 
 use core::Package;
+use util::Config;
 use util::hex::short_hash;
 
 pub struct Layout {
@@ -67,8 +68,9 @@ pub struct LayoutProxy<'a> {
 }
 
 impl Layout {
-    pub fn new(pkg: &Package, triple: Option<&str>, dest: &str) -> Layout {
-        let mut path = pkg.absolute_target_dir();
+    pub fn new(config: &Config, pkg: &Package, triple: Option<&str>,
+               dest: &str) -> Layout {
+        let mut path = config.target_dir(pkg);
         // Flexible target specifications often point at filenames, so interpret
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.

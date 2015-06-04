@@ -76,13 +76,8 @@ impl Package {
     pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
     pub fn root(&self) -> &Path { self.manifest_path.parent().unwrap() }
     pub fn summary(&self) -> &Summary { self.manifest.summary() }
-    pub fn target_dir(&self) -> &Path { self.manifest.target_dir() }
     pub fn targets(&self) -> &[Target] { self.manifest().targets() }
     pub fn version(&self) -> &Version { self.package_id().version() }
-
-    pub fn absolute_target_dir(&self) -> PathBuf {
-        self.root().join(self.target_dir())
-    }
 
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())

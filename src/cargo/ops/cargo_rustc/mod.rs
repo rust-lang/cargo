@@ -100,9 +100,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
     } else {
         deps.iter().find(|p| p.package_id() == resolve.root()).unwrap()
     };
-    let host_layout = Layout::new(root, None, &dest);
+    let host_layout = Layout::new(config, root, None, &dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
-        layout::Layout::new(root, Some(&target), &dest)
+        layout::Layout::new(config, root, Some(&target), &dest)
     });
 
     let mut cx = try!(Context::new(resolve, sources, deps, config,
@@ -514,20 +514,19 @@ fn prepare_rustc(package: &Package, target: &Target, profile: &Profile,
 fn rustdoc(package: &Package, target: &Target, profile: &Profile,
            cx: &mut Context) -> CargoResult<Work> {
     let kind = Kind::Target;
-    let mut doc_dir = cx.get_package(cx.resolve.root()).absolute_target_dir();
     let mut rustdoc = try!(process(CommandType::Rustdoc, package, target, cx));
     rustdoc.arg(&root_path(cx, package, target))
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&target.crate_name());
 
+    let mut doc_dir = cx.config.target_dir(cx.get_package(cx.resolve.root()));
     if let Some(target) = cx.requested_target() {
         rustdoc.arg("--target").arg(target);
         doc_dir.push(target);
     }
 
     doc_dir.push("doc");
-
-    rustdoc.arg("-o").arg(&doc_dir);
+    rustdoc.arg("-o").arg(doc_dir);
 
     match cx.resolve.features(package.package_id()) {
         Some(features) => {

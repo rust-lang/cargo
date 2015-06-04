@@ -49,7 +49,8 @@ pub fn package(manifest_path: &Path,
     }
 
     let filename = format!("package/{}-{}.crate", pkg.name(), pkg.version());
-    let dst = pkg.absolute_target_dir().join(&filename);
+    let target_dir = config.target_dir(&pkg);
+    let dst = target_dir.join(&filename);
     if fs::metadata(&dst).is_ok() { return Ok(Some(dst)) }
 
     let mut bomb = Bomb { path: Some(dst.clone()) };
@@ -174,7 +175,6 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     });
     let mut new_manifest = pkg.manifest().clone();
     new_manifest.set_summary(new_summary.override_id(new_pkgid));
-    new_manifest.set_target_dir(dst.join("target"));
     let new_pkg = Package::new(new_manifest, &manifest_path, &new_src);
 
     // Now that we've rewritten all our path dependencies, compile it!

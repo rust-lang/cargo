@@ -14,8 +14,6 @@ use util::{CargoResult, human};
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
-    target_dir: PathBuf,
-    doc_dir: PathBuf,
     links: Option<String>,
     warnings: Vec<String>,
     exclude: Vec<String>,
@@ -51,8 +49,6 @@ pub struct SerializedManifest {
     version: String,
     dependencies: Vec<SerializedDependency>,
     targets: Vec<Target>,
-    target_dir: String,
-    doc_dir: String,
 }
 
 impl Encodable for Manifest {
@@ -64,8 +60,6 @@ impl Encodable for Manifest {
                 SerializedDependency::from_dependency(d)
             }).collect(),
             targets: self.targets.clone(),
-            target_dir: self.target_dir.display().to_string(),
-            doc_dir: self.doc_dir.display().to_string(),
         }.encode(s)
     }
 }
@@ -181,7 +175,6 @@ impl Encodable for Target {
 
 impl Manifest {
     pub fn new(summary: Summary, targets: Vec<Target>,
-               target_dir: PathBuf, doc_dir: PathBuf,
                exclude: Vec<String>,
                include: Vec<String>,
                links: Option<String>,
@@ -190,8 +183,6 @@ impl Manifest {
         Manifest {
             summary: summary,
             targets: targets,
-            target_dir: target_dir,
-            doc_dir: doc_dir,
             warnings: Vec::new(),
             exclude: exclude,
             include: include,
@@ -202,14 +193,12 @@ impl Manifest {
     }
 
     pub fn dependencies(&self) -> &[Dependency] { self.summary.dependencies() }
-    pub fn doc_dir(&self) -> &Path { &self.doc_dir }
     pub fn exclude(&self) -> &[String] { &self.exclude }
     pub fn include(&self) -> &[String] { &self.include }
     pub fn metadata(&self) -> &ManifestMetadata { &self.metadata }
     pub fn name(&self) -> &str { self.package_id().name() }
     pub fn package_id(&self) -> &PackageId { self.summary.package_id() }
     pub fn summary(&self) -> &Summary { &self.summary }
-    pub fn target_dir(&self) -> &Path { &self.target_dir }
     pub fn targets(&self) -> &[Target] { &self.targets }
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn warnings(&self) -> &[String] { &self.warnings }
@@ -224,10 +213,6 @@ impl Manifest {
 
     pub fn set_summary(&mut self, summary: Summary) {
         self.summary = summary;
-    }
-
-    pub fn set_target_dir(&mut self, target_dir: PathBuf) {
-        self.target_dir = target_dir;
     }
 }
 
