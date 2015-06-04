@@ -173,7 +173,7 @@ along with the defaults for each profile.
 # The development profile, used for `cargo build`
 [profile.dev]
 opt-level = 0  # Controls the --opt-level the compiler builds with
-debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
+debug = true   # Controls whether the compiler passes `-g`
 rpath = false  # Controls whether the compiler passes `-C rpath`
 lto = false    # Controls `-C lto` for binaries and staticlibs
 debug-assertions = true  # Controls whether debug assertions are enabled
