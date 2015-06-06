@@ -38,13 +38,13 @@ pub fn run_tests(manifest_path: &Path,
         let mut p = try!(compile.rustdoc_process(&compile.package));
         p.arg("--test").arg(lib)
          .arg("--crate-name").arg(&crate_name)
-         .arg("-L").arg(&{
-             let mut arg = OsString::from("dependency=");
-             arg.push(&compile.deps_output);
-             arg
-         })
          .cwd(compile.package.root());
 
+        for &rust_dep in &[&compile.deps_output, &compile.root_output] {
+            let mut arg = OsString::from("dependency=");
+            arg.push(rust_dep);
+            p.arg("-L").arg(arg);
+        }
         for native_dep in compile.native_dirs.values() {
             p.arg("-L").arg(native_dep);
         }

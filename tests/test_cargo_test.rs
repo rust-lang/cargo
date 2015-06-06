@@ -1582,3 +1582,51 @@ test!(dylib_doctest2 {
     assert_that(p.cargo_process("test"),
                 execs().with_stdout(""));
 });
+
+test!(cyclic_dev_dep_doc_test {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dev-dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", r#"
+            //! ```
+            //! extern crate bar;
+            //! ```
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = { path = ".." }
+        "#)
+        .file("bar/src/lib.rs", r#"
+            extern crate foo;
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{compiling} bar v0.0.1 ([..])
+{running} target[..]foo[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 1 test
+test _0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
+});
