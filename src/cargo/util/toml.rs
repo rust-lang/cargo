@@ -423,6 +423,15 @@ impl TomlManifest {
             None => inferred_bin_targets(&project.name, layout)
         };
 
+        let blacklist = vec!["build", "deps", "examples", "native"];
+
+        for bin in bins.iter() {
+            if blacklist.iter().find(|&x| *x == bin.name) != None {
+                return Err(human(&format!("the binary target name `{}` is forbidden", 
+                                          bin.name)));
+            }
+        }
+
         let examples = match self.example {
             Some(ref examples) => examples.clone(),
             None => inferred_example_targets(layout),
