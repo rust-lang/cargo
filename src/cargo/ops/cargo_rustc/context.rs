@@ -275,7 +275,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // Make sure that the name of this test executable doesn't
             // conflict with a library that has the same name and is
             // being tested
-            let mut metadata = pkg.package_id().generate_metadata();
+            let mut metadata = pkg.generate_metadata();
             metadata.mix(&format!("bin-{}", target.name()));
             Some(metadata)
         } else if pkg.package_id() == self.resolve.root() && !profile.test {

@@ -4,14 +4,7 @@ use std::slice;
 use std::path::{Path, PathBuf};
 use semver::Version;
 
-use core::{
-    Dependency,
-    Manifest,
-    PackageId,
-    Registry,
-    Target,
-    Summary,
-};
+use core::{Dependency, Manifest, PackageId, Registry, Target, Summary, Metadata};
 use core::dependency::SerializedDependency;
 use util::{CargoResult, graph};
 use rustc_serialize::{Encoder,Encodable};
@@ -78,6 +71,10 @@ impl Package {
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
     }
+
+    pub fn generate_metadata(&self) -> Metadata {
+        self.package_id().generate_metadata(self.root())
+    }
 }
 
 impl fmt::Display for Package {
@@ -96,7 +93,15 @@ impl Eq for Package {}
 
 impl hash::Hash for Package {
     fn hash<H: hash::Hasher>(&self, into: &mut H) {
-        self.package_id().hash(into)
+        // We want to be sure that a path-based package showing up at the same
+        // location always has the same hash. To that effect we don't hash the
+        // vanilla package ID if we're a path, but instead feed in our own root
+        // path.
+        if self.package_id().source_id().is_path() {
+            (0, self.root(), self.name(), self.package_id().version()).hash(into)
+        } else {
+            (1, self.package_id()).hash(into)
+        }
     }
 }
 

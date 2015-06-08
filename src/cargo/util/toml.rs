@@ -380,7 +380,7 @@ impl TomlManifest {
         }
 
         let pkgid = try!(project.to_package_id(source_id));
-        let metadata = pkgid.generate_metadata();
+        let metadata = pkgid.generate_metadata(&layout.root);
 
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
@@ -427,8 +427,8 @@ impl TomlManifest {
 
         for bin in bins.iter() {
             if blacklist.iter().find(|&x| *x == bin.name) != None {
-                return Err(human(&format!("the binary target name `{}` is forbidden", 
-                                          bin.name)));
+                return Err(human(&format!("the binary target name `{}` is \
+                                           forbidden", bin.name)));
             }
         }
 

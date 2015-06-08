@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fmt::{self, Formatter};
 use std::hash::Hash;
 use std::hash;
+use std::path::Path;
 use std::sync::Arc;
 
 use regex::Regex;
@@ -135,10 +136,13 @@ impl PackageId {
     pub fn version(&self) -> &semver::Version { &self.inner.version }
     pub fn source_id(&self) -> &SourceId { &self.inner.source_id }
 
-    pub fn generate_metadata(&self) -> Metadata {
-        let metadata = short_hash(
-            &(&self.inner.name, self.inner.version.to_string(),
-              &self.inner.source_id));
+    pub fn generate_metadata(&self, source_root: &Path) -> Metadata {
+        // See comments in Package::hash for why we have this test
+        let metadata = if self.inner.source_id.is_path() {
+            short_hash(&(0, &self.inner.name, &self.inner.version, source_root))
+        } else {
+            short_hash(&(1, self))
+        };
         let extra_filename = format!("-{}", metadata);
 
         Metadata { metadata: metadata, extra_filename: extra_filename }

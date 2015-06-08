@@ -130,7 +130,7 @@ impl Layout {
     }
 
     fn pkg_dir(&self, pkg: &Package) -> String {
-        format!("{}-{}", pkg.name(), short_hash(pkg.package_id()))
+        format!("{}-{}", pkg.name(), short_hash(pkg))
     }
 }
 
