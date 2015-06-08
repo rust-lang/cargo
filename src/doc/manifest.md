@@ -40,7 +40,7 @@ build = "build.rs"
 
 ## The `exclude` and `include` Fields (optional)
 
-You can explicitly specify to Cargo that a set of globs should be ignored or
+You can explicitly specify to Cargo that a set of [globs][globs] should be ignored or
 included for the purposes of packaging and rebuilding a package. The globs
 specified in the `exclude` field identify a set of files that are not included
 when a package is published as well as ignored for the purposes of detecting
@@ -65,6 +65,8 @@ include = ["src/**/*", "Cargo.toml"]
 The options are mutually exclusive: setting `include` will override an
 `exclude`. Note that `include` must be an exhaustive list of files as otherwise
 necessary source files may not be included.
+
+[globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
 
 ## Package metadata
 
