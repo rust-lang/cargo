@@ -19,6 +19,13 @@ impl Registry for Vec<Summary> {
     }
 }
 
+impl Registry for Vec<Package> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        Ok(self.iter().filter(|pkg| dep.matches(pkg.summary()))
+               .map(|pkg| pkg.summary().clone()).collect())
+    }
+}
+
 /// This structure represents a registry of known packages. It internally
 /// contains a number of `Box<Source>` instances which are used to load a
 /// `Package` from.

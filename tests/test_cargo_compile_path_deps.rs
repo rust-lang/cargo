@@ -749,3 +749,47 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", COMPILING, p.url(), COMPILING, p.url())));
 });
+
+test!(custom_target_no_rebuild {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            a = { path = "../a" }
+        "#)
+        .file("b/src/lib.rs", "");
+    p.build();
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} a v0.5.0 ([..])
+{compiling} foo v0.5.0 ([..])
+", compiling = COMPILING)));
+
+    assert_that(p.cargo("build")
+                 .arg("--manifest-path=b/Cargo.toml")
+                 .env("CARGO_TARGET_DIR", "target"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} b v0.5.0 ([..])
+", compiling = COMPILING)));
+});
