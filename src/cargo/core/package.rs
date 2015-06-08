@@ -15,7 +15,7 @@ use core::{
 use core::dependency::SerializedDependency;
 use util::{CargoResult, graph};
 use rustc_serialize::{Encoder,Encodable};
-use core::source::{SourceId, Source};
+use core::source::Source;
 
 /// Informations about a package that is available somewhere in the file system.
 ///
@@ -27,8 +27,6 @@ pub struct Package {
     manifest: Manifest,
     // The root of the package
     manifest_path: PathBuf,
-    // Where this package came from
-    source_id: SourceId,
 }
 
 #[derive(RustcEncodable)]
@@ -60,12 +58,10 @@ impl Encodable for Package {
 
 impl Package {
     pub fn new(manifest: Manifest,
-               manifest_path: &Path,
-               source_id: &SourceId) -> Package {
+               manifest_path: &Path) -> Package {
         Package {
             manifest: manifest,
             manifest_path: manifest_path.to_path_buf(),
-            source_id: source_id.clone(),
         }
     }
 

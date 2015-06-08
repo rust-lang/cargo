@@ -12,7 +12,7 @@ use url::Url;
 use core::{Summary, Package, PackageId, Registry, Dependency};
 use sources::{PathSource, GitSource, RegistrySource};
 use sources::git;
-use util::{human, Config, CargoResult, CargoError, ToUrl};
+use util::{human, Config, CargoResult, ToUrl};
 
 /// A Source finds and downloads remote packages based on names and
 /// versions.
@@ -60,8 +60,6 @@ pub enum GitReference {
     Branch(String),
     Rev(String),
 }
-
-type Error = Box<CargoError + Send>;
 
 /// Unique identifier for a source of packages.
 #[derive(Clone, Eq, Debug)]

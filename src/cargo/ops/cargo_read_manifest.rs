@@ -30,7 +30,7 @@ pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
     let (manifest, nested) =
         try!(read_manifest(&data, layout, source_id, config));
 
-    Ok((Package::new(manifest, path, source_id), nested))
+    Ok((Package::new(manifest, path), nested))
 }
 
 pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)

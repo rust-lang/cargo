@@ -175,7 +175,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     });
     let mut new_manifest = pkg.manifest().clone();
     new_manifest.set_summary(new_summary.override_id(new_pkgid));
-    let new_pkg = Package::new(new_manifest, &manifest_path, &new_src);
+    let new_pkg = Package::new(new_manifest, &manifest_path);
 
     // Now that we've rewritten all our path dependencies, compile it!
     try!(ops::compile_pkg(&new_pkg, None, &ops::CompileOptions {
