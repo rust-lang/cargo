@@ -59,7 +59,7 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
-    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
+    fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
         } else if self.id.is_path() && self.id.precise().is_some() {
@@ -272,10 +272,7 @@ impl<'cfg> Debug for PathSource<'cfg> {
 
 impl<'cfg> Registry for PathSource<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let mut summaries: Vec<Summary> = self.packages.iter()
-                                              .map(|p| p.summary().clone())
-                                              .collect();
-        summaries.query(dep)
+        self.packages.query(dep)
     }
 }
 
