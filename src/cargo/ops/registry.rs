@@ -30,7 +30,13 @@ pub fn publish(manifest_path: &Path,
                config: &Config,
                token: Option<String>,
                index: Option<String>,
-               verify: bool) -> CargoResult<()> {
+               verify: bool,
+               dry: bool) -> CargoResult<()> {
+    if !verify && dry {
+        return Err(human("cannot specify both no verify and dry run \
+                          simultaneously"))
+    }
+
     let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
     try!(src.update());
@@ -45,8 +51,13 @@ pub fn publish(manifest_path: &Path,
                                     false, true)).unwrap();
 
     // Upload said tarball to the specified destination
+    // However, do not upload if performing a dry run
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
-    try!(transmit(&pkg, &tarball, &mut registry));
+    if !dry {
+        try!(transmit(&pkg, &tarball, &mut registry));
+    } else {
+        try!(config.shell().warn("Aborting upload due to dry run"));
+    }
 
     Ok(())
 }
