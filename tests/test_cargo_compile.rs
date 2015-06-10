@@ -1886,3 +1886,18 @@ test!(custom_target_dir {
     assert_that(&p.root().join("target/debug").join(&exe_name),
                 existing_file());
 });
+
+test!(rustc_no_trans {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
+                execs().with_status(0));
+});

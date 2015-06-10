@@ -66,7 +66,8 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         }
     }
 
-    Ok(prepare(is_fresh && !missing_outputs, loc, fingerprint))
+    let allow_failure = profile.rustc_args.is_some();
+    Ok(prepare(is_fresh && !missing_outputs, allow_failure, loc, fingerprint))
 }
 
 /// A fingerprint can be considered to be a "short string" representing the
@@ -256,7 +257,7 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind)
 
     let is_fresh = try!(is_fresh(&loc, &new_fingerprint));
 
-    Ok(prepare(is_fresh, loc, new_fingerprint))
+    Ok(prepare(is_fresh, false, loc, new_fingerprint))
 }
 
 /// Prepare work for when a package starts to build
@@ -284,13 +285,19 @@ pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
 /// Given the data to build and write a fingerprint, generate some Work
 /// instances to actually perform the necessary work.
 fn prepare(is_fresh: bool,
+           allow_failure: bool,
            loc: PathBuf,
            fingerprint: Fingerprint) -> Preparation {
     let write_fingerprint = Work::new(move |_| {
         debug!("write fingerprint: {}", loc.display());
-        let fingerprint = try!(fingerprint.resolve(true).chain_error(|| {
+        let fingerprint = fingerprint.resolve(true).chain_error(|| {
             internal("failed to resolve a pending fingerprint")
-        }));
+        });
+        let fingerprint = match fingerprint {
+            Ok(f) => f,
+            Err(..) if allow_failure => return Ok(()),
+            Err(e) => return Err(e),
+        };
         let mut f = try!(File::create(&loc));
         try!(f.write_all(fingerprint.as_bytes()));
         Ok(())
