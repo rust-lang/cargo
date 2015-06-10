@@ -451,16 +451,12 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
     }
 }
 
-fn load_build_deps(cx: &Context, pkg: &Package, profile: &Profile,
-                   kind: Kind) -> Vec<PackageId> {
+fn load_build_deps(cx: &Context, pkg: &Package,
+                   profile: &Profile, kind: Kind) -> Vec<PackageId> {
     let pkg = cx.get_package(pkg.package_id());
-    let deps = match cx.build_scripts.get(&(pkg.package_id(), kind)) {
-        Some(a) => a,
-        None => return Vec::new(),
-    };
-    deps.iter().filter(|&&(_, ref dep_profile)| profile == dep_profile)
-        .map(|&(x, _)| x.clone())
-        .collect()
+    cx.build_scripts.get(&(pkg.package_id(), kind, profile)).map(|deps| {
+        deps.iter().map(|&d| d.clone()).collect::<Vec<_>>()
+    }).unwrap_or(Vec::new())
 }
 
 // For all plugin dependencies, add their -L paths (now calculated and

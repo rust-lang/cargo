@@ -347,7 +347,8 @@ impl BuildOutput {
 ///
 /// The given set of targets to this function is the initial set of
 /// targets/profiles which are being built.
-pub fn build_map(cx: &mut Context, targets: &[(&Target, &Profile)]) {
+pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
+                           targets: &[(&Target, &'b Profile)]) {
     let mut ret = HashMap::new();
     let pkg = cx.get_package(cx.resolve.root());
     for &(target, profile) in targets {
@@ -356,32 +357,32 @@ pub fn build_map(cx: &mut Context, targets: &[(&Target, &Profile)]) {
     }
 
     // Make the output a little more deterministic by sorting all dependencies
-    for (&(id, kind), slot) in ret.iter_mut() {
-        slot.sort_by(|&(p1, _), &(p2, _)| p1.cmp(p2));
+    for (&(id, kind, _), slot) in ret.iter_mut() {
+        slot.sort();
         slot.dedup();
         debug!("script deps: {}/{:?} => {:?}", id, kind,
-               slot.iter().map(|&(s, _)| s.to_string()).collect::<Vec<_>>());
+               slot.iter().map(|s| s.to_string()).collect::<Vec<_>>());
     }
     cx.build_scripts = ret;
 
     // Recursive function to build up the map we're constructing. This function
     // memoizes all of its return values as it goes along.
-    fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<(&'b PackageId, Kind),
-                                                Vec<(&'b PackageId, Profile)>>,
+    fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<(&'b PackageId, Kind, &'b Profile),
+                                                Vec<&'b PackageId>>,
                            kind: Kind,
                            pkg: &'b Package,
                            target: &Target,
-                           profile: &Profile,
+                           profile: &'b Profile,
                            cx: &Context<'b, 'cfg>)
-                           -> &'a [(&'b PackageId, Profile)] {
+                           -> &'a [&'b PackageId] {
         // If this target has crossed into "host-land" we need to change the
         // kind that we're compiling for, and otherwise just do a quick
         // pre-flight check to see if we've already calculated the set of
         // dependencies.
         let kind = if target.for_host() {Kind::Host} else {kind};
         let id = pkg.package_id();
-        if out.contains_key(&(id, kind)) {
-            return &out[&(id, kind)]
+        if out.contains_key(&(id, kind, profile)) {
+            return &out[&(id, kind, profile)]
         }
 
         // This loop is both the recursive and additive portion of this
@@ -409,13 +410,13 @@ pub fn build_map(cx: &mut Context, targets: &[(&Target, &Profile)]) {
 
             if target.linkable() && kind == dep_kind {
                 if pkg.has_custom_build() {
-                    ret.push((pkg.package_id(), profile.clone()));
+                    ret.push(pkg.package_id());
                 }
                 ret.extend(dep_scripts.iter().cloned());
             }
         }
 
-        let prev = out.entry((id, kind)).or_insert(Vec::new());
+        let prev = out.entry((id, kind, profile)).or_insert(Vec::new());
         prev.extend(ret);
         return prev
     }
