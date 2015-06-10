@@ -51,13 +51,8 @@ pub fn publish(manifest_path: &Path,
                                     false, true)).unwrap();
 
     // Upload said tarball to the specified destination
-    // However, do not upload if performing a dry run
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
-    if !dry {
-        try!(transmit(&pkg, &tarball, &mut registry));
-    } else {
-        try!(config.shell().warn("Aborting upload due to dry run"));
-    }
+    try!(transmit(config, &pkg, &tarball, &mut registry, dry));
 
     Ok(())
 }
@@ -83,8 +78,11 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
     Ok(())
 }
 
-fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
-            -> CargoResult<()> {
+fn transmit(config: &Config,
+            pkg: &Package,
+            tarball: &Path,
+            registry: &mut Registry,
+            dry: bool) -> CargoResult<()> {
     let deps = pkg.dependencies().iter().map(|dep| {
         NewCrateDependency {
             optional: dep.is_optional(),
@@ -127,6 +125,13 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         }
         None => {}
     }
+
+    // Do not upload if performing a dry run
+    if dry {
+        try!(config.shell().warn("Aborting upload due to dry run"));
+        return Ok(());
+    }
+
     registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
