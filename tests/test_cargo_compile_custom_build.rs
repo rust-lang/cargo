@@ -1300,3 +1300,59 @@ test!(cfg_override {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(flags_go_into_tests {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("tests/foo.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            a = { path = "../a" }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=test");
+            }
+        "#);
+
+    assert_that(p.cargo_process("test").arg("-v").arg("--test=foo"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} a v0.5.0 ([..]
+{running} `rustc a[..]build.rs [..]`
+{running} `[..]build-script-build[..]`
+{running} `rustc a[..]src[..]lib.rs [..] -L test[..]`
+{compiling} b v0.5.0 ([..]
+{running} `rustc b[..]src[..]lib.rs [..] -L test[..]`
+{compiling} foo v0.5.0 ([..]
+{running} `rustc src[..]lib.rs [..] -L test[..]`
+{running} `rustc tests[..]foo.rs [..] -L test[..]`
+{running} `[..]foo-[..]`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING)));
+});
