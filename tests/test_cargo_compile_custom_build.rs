@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{COMPILING, RUNNING, DOCTEST};
+use support::{COMPILING, RUNNING, DOCTEST, FRESH};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that};
 
@@ -1355,4 +1355,17 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING)));
+
+    assert_that(p.cargo("test").arg("-v").arg("-pb").arg("--lib"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} b v0.5.0 ([..]
+{running} `rustc b[..]src[..]lib.rs [..] -L test[..]`
+{fresh} a v0.5.0 ([..]
+{running} `[..]b-[..]`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, fresh = FRESH)));
 });
