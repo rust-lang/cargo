@@ -179,6 +179,8 @@ debug = true   # Controls whether the compiler passes `-g`
 rpath = false  # Controls whether the compiler passes `-C rpath`
 lto = false    # Controls `-C lto` for binaries and staticlibs
 debug-assertions = true  # Controls whether debug assertions are enabled
+codegen-units = 1 # Controls whether the compiler passes `-C codegen-units`
+                  # `codegen-units` is ignored when `lto = true`
 
 # The release profile, used for `cargo build --release`
 [profile.release]
@@ -187,6 +189,7 @@ debug = false
 rpath = false
 lto = false
 debug-assertions = false
+codegen-units = 1
 
 # The testing profile, used for `cargo test`
 [profile.test]
@@ -195,6 +198,7 @@ debug = true
 rpath = false
 lto = false
 debug-assertions = true
+codegen-units = 1
 
 # The benchmarking profile, used for `cargo bench`
 [profile.bench]
@@ -203,6 +207,7 @@ debug = false
 rpath = false
 lto = false
 debug-assertions = false
+codegen-units = 1
 
 # The documentation profile, used for `cargo doc`
 [profile.doc]
@@ -211,6 +216,7 @@ debug = true
 rpath = false
 lto = false
 debug-assertions = true
+codegen-units = 1
 ```
 
 # The `[features]` Section
