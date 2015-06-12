@@ -20,7 +20,7 @@ pub use self::cargo_package::package;
 pub use self::registry::{publish, registry_configuration, RegistryConfig};
 pub use self::registry::{registry_login, search, http_proxy_exists, http_handle};
 pub use self::registry::{modify_owners, yank, OwnersOptions};
-pub use self::cargo_fetch::{fetch};
+pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{resolve_pkg, resolve_with_previous};
 

@@ -161,7 +161,7 @@ pub fn compile_pkg<'a>(package: &Package,
         let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
             r.clone()
         }).collect();
-        let packages = try!(registry.get(&req).chain_error(|| {
+        let packages = try!(registry.get(&req, 0).chain_error(|| {
             human("Unable to get packages from source")
         }));
 

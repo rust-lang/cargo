@@ -85,7 +85,8 @@ impl<'cfg> PackageRegistry<'cfg> {
         }
     }
 
-    pub fn get(&mut self, package_ids: &[PackageId]) -> CargoResult<Vec<Package>> {
+    pub fn get(&mut self, package_ids: &[PackageId], num_tries: u32)
+                -> CargoResult<Vec<Package>> {
         trace!("getting packages; sources={}", self.sources.len());
 
         // TODO: Only call source with package ID if the package came from the
@@ -93,7 +94,15 @@ impl<'cfg> PackageRegistry<'cfg> {
         let mut ret = Vec::new();
 
         for (_, source) in self.sources.sources_mut() {
-            try!(source.download(package_ids));
+            let mut tries_left = num_tries;
+            loop {
+                match source.download(package_ids) {
+                    Ok(_) => { break; },
+                    Err(e) => { if tries_left == 0 { return Err(e); } },
+                }
+                tries_left -= 1;
+            }
+
             let packages = try!(source.get(package_ids));
 
             ret.extend(packages.into_iter());
