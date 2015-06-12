@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use core::{Package,Manifest,SourceId};
+use core::{Package, Manifest, SourceId, PackageId};
 use util::{self, CargoResult, human, Config, ChainError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
@@ -35,7 +35,7 @@ pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
 
 pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
                      -> CargoResult<Vec<Package>> {
-    let mut all_packages = HashSet::new();
+    let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
 
     trace!("looking for root package: {}, source_id={}", path.display(), source_id);
@@ -69,7 +69,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     if all_packages.is_empty() {
         Err(human(format!("Could not find Cargo.toml in `{}`", path.display())))
     } else {
-        Ok(all_packages.into_iter().collect())
+        Ok(all_packages.into_iter().map(|(_, v)| v).collect())
     }
 }
 
@@ -103,7 +103,7 @@ fn has_manifest(path: &Path) -> bool {
 }
 
 fn read_nested_packages(path: &Path,
-                        all_packages: &mut HashSet<Package>,
+                        all_packages: &mut HashMap<PackageId, Package>,
                         source_id: &SourceId,
                         config: &Config,
                         visited: &mut HashSet<PathBuf>) -> CargoResult<()> {
@@ -112,7 +112,7 @@ fn read_nested_packages(path: &Path,
     let manifest = try!(find_project_manifest_exact(path, "Cargo.toml"));
 
     let (pkg, nested) = try!(read_package(&manifest, source_id, config));
-    all_packages.insert(pkg);
+    all_packages.insert(pkg.package_id().clone(), pkg);
 
     // Registry sources are not allowed to have `path=` dependencies because
     // they're all translated to actual registry dependencies.

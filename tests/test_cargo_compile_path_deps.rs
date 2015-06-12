@@ -793,3 +793,44 @@ test!(custom_target_no_rebuild {
 {compiling} b v0.5.0 ([..])
 ", compiling = COMPILING)));
 });
+
+test!(override_and_depend {
+    let p = project("foo")
+        .file("a/a1/Cargo.toml", r#"
+            [project]
+            name = "a1"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            a2 = { path = "../a2" }
+        "#)
+        .file("a/a1/src/lib.rs", "")
+        .file("a/a2/Cargo.toml", r#"
+            [project]
+            name = "a2"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("a/a2/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            a1 = { path = "../a/a1" }
+            a2 = { path = "../a/a2" }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("b/.cargo/config", r#"
+            paths = ["../a"]
+        "#);
+    p.build();
+    assert_that(p.cargo("build").cwd(p.root().join("b")),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} a2 v0.5.0 ([..])
+{compiling} a1 v0.5.0 ([..])
+{compiling} b v0.5.0 ([..])
+", compiling = COMPILING)));
+});
