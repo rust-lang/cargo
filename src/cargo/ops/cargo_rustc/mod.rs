@@ -117,7 +117,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
         let _p = profile::start("preparing build directories");
         try!(cx.prepare(pkg, targets));
         prepare_init(&mut cx, pkg, &mut queue, &mut HashSet::new());
-        custom_build::build_map(&mut cx, targets);
+        custom_build::build_map(&mut cx, pkg, targets);
     }
 
     // Build up a list of pending jobs, each of which represent compiling a

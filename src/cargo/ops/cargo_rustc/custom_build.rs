@@ -348,9 +348,9 @@ impl BuildOutput {
 /// The given set of targets to this function is the initial set of
 /// targets/profiles which are being built.
 pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
+                           pkg: &'b Package,
                            targets: &[(&Target, &'b Profile)]) {
     let mut ret = HashMap::new();
-    let pkg = cx.get_package(cx.resolve.root());
     for &(target, profile) in targets {
         build(&mut ret, Kind::Target, pkg, target, profile, cx);
         build(&mut ret, Kind::Host, pkg, target, profile, cx);
