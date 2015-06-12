@@ -341,6 +341,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         if !show_warnings {
             rustc.arg("-Awarnings");
         }
+        let has_custom_args = profile.rustc_args.is_some();
         let exec_engine = cx.exec_engine.clone();
 
         let filenames = try!(cx.target_filenames(package, target, profile,
@@ -407,16 +408,20 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
                 let src = dst.with_file_name(dst.file_name().unwrap()
                                                 .to_str().unwrap()
                                                 .replace(&real_name, &crate_name));
-                try!(fs::rename(&src, &dst).chain_error(|| {
-                    internal(format!("could not rename crate {:?}", src))
-                }));
+                if !has_custom_args || fs::metadata(&src).is_ok() {
+                    try!(fs::rename(&src, &dst).chain_error(|| {
+                        internal(format!("could not rename crate {:?}", src))
+                    }));
+                }
             }
 
-            try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
-                internal(format!("could not rename dep info: {:?}",
-                              rustc_dep_info_loc))
-            }));
-            try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
+            if !has_custom_args || fs::metadata(&rustc_dep_info_loc).is_ok() {
+                try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
+                    internal(format!("could not rename dep info: {:?}",
+                                  rustc_dep_info_loc))
+                }));
+                try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
+            }
 
             Ok(())
 
