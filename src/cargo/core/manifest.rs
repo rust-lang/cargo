@@ -116,6 +116,7 @@ pub struct Profile {
     pub rpath: bool,
     pub test: bool,
     pub doc: bool,
+    pub no_stack_check: bool,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -456,6 +457,7 @@ impl Default for Profile {
             rpath: false,
             test: false,
             doc: false,
+            no_stack_check: false,
         }
     }
 }
