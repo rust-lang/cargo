@@ -206,7 +206,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-p,--package)'{-p=,--package=}'[package to update]:packages:__get_package_names' \
-                    '--precise=[update single dependency to PRECISE]: :_test_names' \
+                    '--precise=[update single dependency to PRECISE]: :' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
