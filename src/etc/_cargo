@@ -270,23 +270,10 @@ _describe 'command' commands
 }
 
 
+#FIXME: Disabled until fixed
 #gets package names from the manifest file
-_get_package_names(){
-local manifest=$(_locate_manifest)
-local -a packages;packages=()
-if ![[ $manifest ]]; then
-    return 0
-fi
-
-while read line
-do
-    if [[ $line =~ '^.*dependencies' ]]; then
-        regexp-replace line '^.*dependencies\.|\]' ''
-        packages+=$line
-    fi
-    last_line=$line
-done < $manifest
-_describe 'packages' packages
+_get_package_names()
+{
 }
 
 #TODO:see if it makes sense to have 'locate-project' to have non-json output.
