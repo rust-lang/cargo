@@ -289,13 +289,6 @@ done < $manifest
 _describe 'packages' packages
 }
 
-#TODO:parse Cargo.toml for benchmark names
-_benchmark_names(){
-local -a benchmarks;benchmarks=(
-)
-_describe 'tests' tests
-}
-
 #TODO:see if it makes sense to have 'locate-project' to have non-json output.
 #strips package name from json stuff
 _locate_manifest(){
@@ -347,5 +340,12 @@ _test_names()
 {
     _get_names_from_array "test"
 }
+
+#Gets the bench names from the manifest file
+_benchmark_names()
+{
+    _get_names_from_array "bench"
+}
+
 
 _cargo
