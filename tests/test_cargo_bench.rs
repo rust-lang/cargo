@@ -9,6 +9,8 @@ use cargo::util::process;
 fn setup() {}
 
 test!(cargo_bench_simple {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
@@ -40,7 +42,7 @@ test!(cargo_bench_simple {
 {} target[..]release[..]foo-[..]
 
 running 1 test
-test bench_hello ... bench:         0 ns/iter (+/- 0)
+test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -50,6 +52,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(bench_tarname {
+    if !::is_nightly() { return }
+
     let prj = project("foo")
         .file("Cargo.toml" , r#"
             [package]
@@ -71,7 +75,7 @@ test!(bench_tarname {
 {running} target[..]release[..]bin2[..]
 
 running 1 test
-test run2 ... bench:         0 ns/iter (+/- 0)
+test run2 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -85,6 +89,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(cargo_bench_verbose {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
@@ -101,7 +107,7 @@ test!(cargo_bench_verbose {
 {running} `[..]target[..]release[..]foo-[..] hello --bench`
 
 running 1 test
-test bench_hello ... bench:         0 ns/iter (+/- 0)
+test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -110,6 +116,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(many_similar_names {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -145,6 +153,8 @@ test!(many_similar_names {
 });
 
 test!(cargo_bench_failing_test {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
@@ -187,6 +197,8 @@ thread '<main>' panicked at 'assertion failed: \
 });
 
 test!(bench_with_lib_dep {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -229,14 +241,14 @@ test!(bench_with_lib_dep {
 {running} target[..]release[..]baz-[..]
 
 running 1 test
-test bin_bench ... bench:         0 ns/iter (+/- 0)
+test bin_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test lib_bench ... bench:         0 ns/iter (+/- 0)
+test lib_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -245,6 +257,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(bench_with_deep_lib_dep {
+    if !::is_nightly() { return }
+
     let p = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -290,7 +304,7 @@ test!(bench_with_deep_lib_dep {
 {running} target[..]
 
 running 1 test
-test bar_bench ... bench:         0 ns/iter (+/- 0)
+test bar_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -300,6 +314,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(external_bench_explicit {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -334,14 +350,14 @@ test!(external_bench_explicit {
 {running} target[..]release[..]bench-[..]
 
 running 1 test
-test external_bench ... bench:         0 ns/iter (+/- 0)
+test external_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test internal_bench ... bench:         0 ns/iter (+/- 0)
+test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -350,6 +366,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(external_bench_implicit {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -381,14 +399,14 @@ test!(external_bench_implicit {
 {running} target[..]release[..]external-[..]
 
 running 1 test
-test external_bench ... bench:         0 ns/iter (+/- 0)
+test external_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test internal_bench ... bench:         0 ns/iter (+/- 0)
+test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -397,6 +415,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(dont_run_examples {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -414,6 +434,8 @@ test!(dont_run_examples {
 });
 
 test!(pass_through_command_line {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -436,7 +458,7 @@ test!(pass_through_command_line {
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test bar ... bench:         0 ns/iter (+/- 0)
+test bar ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -450,7 +472,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -460,6 +482,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 // Regression test for running cargo-bench twice with
 // tests in an rlib
 test!(cargo_bench_twice {
+    if !::is_nightly() { return }
+
     let p = project("test_twice")
         .file("Cargo.toml", &basic_lib_manifest("test_twice"))
         .file("src/test_twice.rs", r#"
@@ -481,6 +505,8 @@ test!(cargo_bench_twice {
 });
 
 test!(lib_bin_same_name {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -513,14 +539,14 @@ test!(lib_bin_same_name {
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test [..] ... bench:         0 ns/iter (+/- 0)
+test [..] ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test [..] ... bench:         0 ns/iter (+/- 0)
+test [..] ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -529,6 +555,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(lib_with_standard_name {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -564,14 +592,14 @@ test!(lib_with_standard_name {
 {running} target[..]release[..]bench-[..]
 
 running 1 test
-test bench ... bench:         0 ns/iter (+/- 0)
+test bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} target[..]release[..]syntax-[..]
 
 running 1 test
-test foo_bench ... bench:         0 ns/iter (+/- 0)
+test foo_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -581,6 +609,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(lib_with_standard_name2 {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -614,7 +644,7 @@ test!(lib_with_standard_name2 {
 {running} target[..]release[..]syntax-[..]
 
 running 1 test
-test bench ... bench:         0 ns/iter (+/- 0)
+test bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -623,42 +653,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        dir = p.url())));
 });
 
-test!(bin_there_for_integration {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/main.rs", "
-            #![feature(test)]
-            extern crate test;
-            fn main() { panic!(); }
-            #[bench] fn main_bench(_b: &mut test::Bencher) {}
-        ")
-        .file("benches/foo.rs", r#"
-            #![feature(test)]
-            extern crate test;
-            use std::process::Command;
-            #[bench]
-            fn bench_bench(_b: &mut test::Bencher) {
-                let status = Command::new("target/release/foo").status().unwrap();
-                assert_eq!(status.code(), Some(101));
-            }
-        "#);
-
-    let output = p.cargo_process("bench").arg("-v").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(output.contains("main_bench ... bench:         0 ns/iter (+/- 0)"),
-                            "no main_bench\n{}",
-                            output);
-    assert!(output.contains("bench_bench ... bench:         0 ns/iter (+/- 0)"),
-                            "no bench_bench\n{}",
-                            output);
-});
-
 test!(bench_dylib {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -717,14 +714,14 @@ test!(bench_dylib {
 {running} [..]target[..]release[..]bench-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} [..]target[..]release[..]foo-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -740,14 +737,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 {running} [..]target[..]release[..]bench-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} [..]target[..]release[..]foo-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -757,6 +754,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(bench_twice_with_build_cmd {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -780,7 +779,7 @@ test!(bench_twice_with_build_cmd {
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -794,7 +793,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 {running} target[..]release[..]foo-[..]
 
 running 1 test
-test foo ... bench:         0 ns/iter (+/- 0)
+test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -803,6 +802,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(bench_with_examples {
+    if !::is_nightly() { return }
+
     let p = project("testbench")
         .file("Cargo.toml", r#"
             [package]
@@ -864,14 +865,14 @@ test!(bench_with_examples {
 {running} `{dir}[..]target[..]release[..]testb1-[..] --bench`
 
 running 1 test
-test bench_bench2 ... bench:         0 ns/iter (+/- 0)
+test bench_bench2 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 {running} `{dir}[..]target[..]release[..]testbench-[..] --bench`
 
 running 1 test
-test bench_bench1 ... bench:         0 ns/iter (+/- 0)
+test bench_bench1 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -883,6 +884,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 });
 
 test!(test_a_bench {
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]

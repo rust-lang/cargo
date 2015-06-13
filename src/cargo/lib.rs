@@ -1,5 +1,4 @@
 #![deny(unused)]
-#![feature(file_type, dir_entry_ext)]
 #![cfg_attr(test, deny(warnings))]
 
 #[cfg(test)] extern crate hamcrest;

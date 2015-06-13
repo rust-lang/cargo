@@ -99,6 +99,7 @@ test!(simple_deps {
 
 test!(plugin_deps {
     if disabled() { return }
+    if !::is_nightly() { return }
 
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -175,6 +176,7 @@ test!(plugin_deps {
 
 test!(plugin_to_the_max {
     if disabled() { return }
+    if !::is_nightly() { return }
 
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -298,6 +300,7 @@ test!(linker_and_ar {
 
 test!(plugin_with_extra_dylib_dep {
     if disabled() { return }
+    if !::is_nightly() { return }
 
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -453,7 +456,6 @@ test!(cross_with_a_build_script {
             build = 'build.rs'
         "#)
         .file("build.rs", &format!(r#"
-            #![feature(convert)]
             use std::env;
             use std::path::PathBuf;
             fn main() {{

@@ -4,6 +4,7 @@ use std::env;
 use tempdir::TempDir;
 
 use support::{execs, paths, cargo_dir};
+use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 use cargo::util::{process, ProcessBuilder};
@@ -203,7 +204,7 @@ test!(author_prefers_cargo {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["new-foo <new-bar>"]"#));
-    assert!(!root.join("foo/.gitignore").exists());
+    assert!(!root.join("foo/.gitignore").c_exists());
 });
 
 test!(git_prefers_command_line {
@@ -221,7 +222,7 @@ test!(git_prefers_command_line {
                                     .cwd(td.path())
                                     .env("USER", "foo"),
                 execs().with_status(0));
-    assert!(td.path().join("foo/.gitignore").exists());
+    assert!(td.path().join("foo/.gitignore").c_exists());
 });
 
 test!(subpackage_no_git {

@@ -1,15 +1,17 @@
-#![feature(fs, fs_ext, path_ext, fs_time, fs_walk)]
-
-extern crate rustc_serialize;
+extern crate bufstream;
 extern crate cargo;
+extern crate filetime;
 extern crate flate2;
 extern crate git2;
-extern crate bufstream;
 extern crate hamcrest;
+extern crate libc;
+extern crate rustc_serialize;
 extern crate tar;
+extern crate tempdir;
 extern crate term;
 extern crate url;
-extern crate tempdir;
+#[cfg(windows)] extern crate kernel32;
+#[cfg(windows)] extern crate winapi;
 
 #[macro_use]
 extern crate log;
@@ -57,4 +59,9 @@ mod test_shell;
 
 fn rustc_host() -> String {
     cargo::ops::rustc_version("rustc").unwrap().1
+}
+
+fn is_nightly() -> bool {
+    let version_info = cargo::ops::rustc_version("rustc").unwrap().0;
+    version_info.contains("-nightly") || version_info.contains("-dev")
 }
