@@ -1,4 +1,5 @@
 #compdef cargo
+
 typeset -A opt_args
 autoload -U regexp-replace
 
@@ -206,7 +207,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-p,--package)'{-p=,--package=}'[package to update]:packages:__get_package_names' \
-                    '--precise=[update single dependency to PRECISE]: :_test_names' \
+                    '--precise=[update single dependency to PRECISE]: :' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
@@ -269,30 +270,10 @@ _describe 'command' commands
 }
 
 
+#FIXME: Disabled until fixed
 #gets package names from the manifest file
-_get_package_names(){
-local manifest=$(_locate_manifest)
-local -a packages;packages=()
-if ![[ $manifest ]]; then
-    return 0
-fi
-
-while read line
-do
-    if [[ $line =~ '^.*dependencies' ]]; then
-        regexp-replace line '^.*dependencies\.|\]' ''
-        packages+=$line
-    fi
-    last_line=$line
-done < $manifest
-_describe 'packages' packages
-}
-
-#TODO:parse Cargo.toml for benchmark names
-_benchmark_names(){
-local -a benchmarks;benchmarks=(
-)
-_describe 'tests' tests
+_get_package_names()
+{
 }
 
 #TODO:see if it makes sense to have 'locate-project' to have non-json output.
@@ -303,26 +284,55 @@ regexp-replace manifest '\{"root":"|"\}' ''
 echo $manifest
 }
 
-#gets test names from the manifest file
-_test_names(){
-local -a filelist;
-local manifest=$(_locate_manifest)
-if ![[ $manifest ]]; then
-    return 0
-fi
-
-local last_line
-local -a tests;
-tests=()
-while read line
-do
-    if [[ $last_line == '[[test]]' ]]; then
-        regexp-replace line '^.*name *= *|"' ""
-        tests+=$line
+# Extracts the values of "name" from the array given in $1 and shows them as 
+# command line options for completion
+_get_names_from_array()
+{
+    local -a filelist;
+    local manifest=$(_locate_manifest)
+    if ! [[ $manifest ]]; then
+        return 0
     fi
-    last_line=$line
-done < $manifest
-_describe 'tests' tests
+
+    local last_line
+    local -a names;
+    local in_block=false
+    local block_name=$1
+    names=()
+    while read line
+    do
+        if [[ $last_line == "[[$block_name]]" ]]; then
+            in_block=true
+        else 
+            if [[ $last_line =~ '.*\[\[.*' ]]; then
+                in_block=false
+            fi
+        fi
+
+        if [[ $in_block == true ]]; then
+            if [[ $line =~ '.*name.*=' ]]; then
+                regexp-replace line '^.*name *= *|"' ""
+                names+=$line
+            fi
+        fi 
+
+        last_line=$line
+    done < $manifest
+    _describe $block_name names
+
 }
+
+#Gets the test names from the manifest file
+_test_names()
+{
+    _get_names_from_array "test"
+}
+
+#Gets the bench names from the manifest file
+_benchmark_names()
+{
+    _get_names_from_array "bench"
+}
+
 
 _cargo
