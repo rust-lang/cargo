@@ -695,3 +695,49 @@ test!(no_rebuild_when_frobbing_default_feature {
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 });
+
+test!(unions_work_with_no_default_features {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate a;
+            pub fn foo() { a::a(); }
+        "#)
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            a = { path = "../a", features = [], default-features = false }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            default = ["f1"]
+            f1 = []
+        "#)
+        .file("a/src/lib.rs", r#"
+            #[cfg(feature = "f1")]
+            pub fn a() {}
+        "#);
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+});

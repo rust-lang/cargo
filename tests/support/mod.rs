@@ -134,7 +134,9 @@ impl ProjectBuilder {
 
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
         let mut p = process(program).unwrap();
-        p.cwd(&self.root()).env("HOME", &paths::home());
+        p.cwd(&self.root())
+         .env("HOME", &paths::home())
+         .env_remove("CARGO_HOME");
         return p;
     }
 

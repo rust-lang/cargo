@@ -234,12 +234,14 @@ fn flag_activated(cx: &mut Context,
         }
         Method::Everything => return false,
     };
+
+    let has_default_feature = summary.features().contains_key("default");
     match cx.resolve.features(id) {
         Some(prev) => {
             features.iter().all(|f| prev.contains(f)) &&
-                (!use_default || prev.contains("default"))
+                (!use_default || prev.contains("default") || !has_default_feature)
         }
-        None => features.len() == 0,
+        None => features.len() == 0 && (!use_default || !has_default_feature)
     }
 }
 
