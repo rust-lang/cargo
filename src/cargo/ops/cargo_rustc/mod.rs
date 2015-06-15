@@ -603,7 +603,7 @@ fn build_base_args(cx: &Context,
                    crate_types: &[&str]) {
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo, debug_assertions,
-        rpath, test, doc: _doc,
+        rpath, test, doc: _doc, no_stack_check,
     } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
@@ -627,6 +627,10 @@ fn build_base_args(cx: &Context,
 
     if opt_level != 0 {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
+    }
+
+    if no_stack_check {
+        cmd.arg("-C").arg("no-stack-check");
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
