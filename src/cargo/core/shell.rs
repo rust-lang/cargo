@@ -17,7 +17,7 @@ pub struct ShellConfig {
 
 enum AdequateTerminal {
     NoColor(Box<Write + Send>),
-    Colored(Box<Terminal<UghWhyIsThisNecessary> + Send>)
+    Colored(Box<Terminal<Output=UghWhyIsThisNecessary> + Send>)
 }
 
 pub struct Shell {
