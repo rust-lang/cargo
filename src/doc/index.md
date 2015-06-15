@@ -2,18 +2,18 @@
 
 # Installing
 
-The easiest way to get Cargo is to get the Rust nightly build by using
-the `rustup` script:
+The easiest way to get Cargo is to get the current stable release of Rust by
+using the `rustup` script:
 
 ```shell
-$ curl -sS https://static.rust-lang.org/rustup.sh | sudo bash
+$ curl -sSf https://static.rust-lang.org/rustup.sh | sh
 ```
 
-This will get you the latest Rust nightly for your platform along with
-the latest Cargo. You should run this script almost every day to get the latest updates.
+This will get you the current stable release of Rust for your platform along
+with the latest Cargo.
 
-If you are on Windows, you can directly download the latest 32bit ([Rust](https://static.rust-lang.org/dist/rust-nightly-i686-pc-windows-gnu.exe)
-and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz)) or 64bit ([Rust](https://static.rust-lang.org/dist/rust-nightly-x86_64-pc-windows-gnu.exe) and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz)) nightlies.
+If you are on Windows, you can directly download the latest 32bit ([Rust](https://static.rust-lang.org/dist/rust-1.0.0-i686-pc-windows-gnu.msi)
+and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz)) or 64bit ([Rust](https://static.rust-lang.org/dist/rust-1.0.0-x86_64-pc-windows-gnu.msi) and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz)) Rust stable releases or Cargo nightlies.
 
 Alternatively, you can build Cargo from source.
 

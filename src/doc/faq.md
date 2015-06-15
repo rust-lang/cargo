@@ -9,13 +9,6 @@ We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
 even when people use the registry as the primary source of packages.
 
-At the moment, the Rust team is still making regular changes to the
-language, and the Rust project recommends using nightly builds. This
-means that for now, package authors make regular changes in order to
-track the latest Rust. This makes downloading the latest `master` from
-Github the best approach to getting packages at the current point in the
-community's lifecycle.
-
 # Why build crates.io rather than use Github as a registry?
 
 We think that it's very important to support multiple ways to download
