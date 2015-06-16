@@ -350,16 +350,24 @@ portable, and standardized. For example, the build script could be written as:
 ```rust,ignore
 // build.rs
 
-// Bring in a dependency on an externally maintained `cc` package which manages
+// Bring in a dependency on an externally maintained `gcc` package which manages
 // invoking the C compiler.
-extern crate cc;
+extern crate gcc;
 
 fn main() {
-    cc::compile_library("libhello.a", &["src/hello.c"]).unwrap();
+    gcc::compile_library("libhello.a", &["src/hello.c"]).unwrap();
 }
 ```
 
-This example is a little hand-wavy, but we can assume that the `cc` crate
+The `gcc` package becomes available to the build script by adding the following
+to Cargo.toml:
+
+```
+[build-dependencies]
+gcc = "*"
+```
+
+This example is a little hand-wavy, but we can assume that the `gcc` crate
 performs tasks such as:
 
 * It invokes the appropriate compiler (MSVC for windows, `gcc` for MinGW, `cc`
