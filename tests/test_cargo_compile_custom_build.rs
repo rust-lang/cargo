@@ -24,9 +24,8 @@ test!(custom_build_script_failed {
             fn main() {}
         "#)
         .file("build.rs", r#"
-            #![feature(exit_status)]
             fn main() {
-                std::env::set_exit_status(101);
+                std::process::exit(101);
             }
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
@@ -891,7 +890,6 @@ test!(code_generation {
             }
         "#)
         .file("build.rs", r#"
-            #![feature(convert)]
             use std::env;
             use std::fs::File;
             use std::io::prelude::*;
@@ -1059,7 +1057,6 @@ test!(test_a_lib_with_a_build_command {
             }
         "#)
         .file("build.rs", r#"
-            #![feature(convert)]
             use std::env;
             use std::io::prelude::*;
             use std::fs::File;
@@ -1153,7 +1150,6 @@ test!(build_script_with_dynamic_native_dependency {
             build = "build.rs"
         "#)
         .file("bar/build.rs", r#"
-            #![feature(convert)]
             use std::env;
             use std::path::PathBuf;
 

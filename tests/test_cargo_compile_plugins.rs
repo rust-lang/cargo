@@ -9,6 +9,8 @@ fn setup() {
 }
 
 test!(plugin_to_the_max {
+    if !::is_nightly() { return }
+
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -84,6 +86,8 @@ test!(plugin_to_the_max {
 });
 
 test!(plugin_with_dynamic_native_dependency {
+    if !::is_nightly() { return }
+
     let build = project("builder")
         .file("Cargo.toml", r#"
             [package]

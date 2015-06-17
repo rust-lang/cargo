@@ -60,8 +60,7 @@ test!(exit_code {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            #![feature(exit_status)]
-            fn main() { std::env::set_exit_status(2); }
+            fn main() { std::process::exit(2); }
         "#);
 
     assert_that(p.cargo_process("run"),

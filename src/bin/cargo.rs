@@ -1,5 +1,3 @@
-#![cfg_attr(unix, feature(fs_ext))]
-
 extern crate cargo;
 extern crate env_logger;
 extern crate git2_curl;

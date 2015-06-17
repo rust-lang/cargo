@@ -191,7 +191,7 @@ impl ProjectBuilder {
     }
 
     fn rm_root(&self) -> Result<(), String> {
-        if self.root.exists() {
+        if self.root.c_exists() {
             rmdir_recursive(&self.root)
         } else {
             Ok(())

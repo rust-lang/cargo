@@ -1206,7 +1206,6 @@ test!(example_dev_dep {
             authors = []
         "#)
         .file("bar/src/lib.rs", r#"
-            #![feature(macro_rules)]
             // make sure this file takes awhile to compile
             macro_rules! f0( () => (1) );
             macro_rules! f1( () => ({(f0!()) + (f0!())}) );
