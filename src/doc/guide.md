@@ -20,8 +20,8 @@ To accomplish this goal, Cargo does four things:
 You can convert an existing Rust project to use Cargo. You'll have to create a
 `Cargo.toml` file with all of your dependencies, and move your source files and
 test files into the places where Cargo expects them to be. See the [manifest
-description](manifest.html) and the "Cargo Conventions" section below for more
-details.
+description](manifest.html) and the [Project Layout](#project-layout) section
+below for more details.
 
 # Creating A New Project
 
@@ -199,17 +199,46 @@ source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b4
 Now, if `color-rs` gets updated, we will still build with the same revision, until
 we choose to `cargo update` again.
 
-# Cargo Conventions
+# Project Layout
 
-Cargo uses conventions to make it easy to dive into a new Cargo project. Here
-are the conventions that Cargo uses:
+Cargo uses conventions for file placement to make it easy to dive into a new
+Cargo project. 
 
-* `Cargo.toml` and `Cargo.lock` are stored in the root of your project.
-* Source code goes in the `src` directory.
-* External tests go in the `tests` directory.
-* The default executable file is `src/main.rs`.
-* Other executables can be placed in `src/bin/*.rs`.
-* The default library file is `src/lib.rs`.
+`Cargo.toml` is kept in the root directory, as is `Cargo.lock`.
+
+If your project is an executable, name the main source file `src/main.rs`. If it
+is a library, name the main source file `src/lib.rs`. Cargo can create either of
+these automatically with `cargo new --bin` or `cargo new`.
+
+## Optional Components
+
+ * `src/bin/`: Other executables, to be built by default with 
+    `cargo build`
+ * `examples/`: Examples of usage, built with `cargo test` or `cargo build 
+    --example NAME`
+ * `tests/`: Integration tests, built and run with `cargo test`
+ * `benches/`: Benchmarks, built and run with `cargo bench`
+ 
+These are explained in more detail in the [manifest
+description](manifest.html#examples), but for now, here is an example directory
+layout:
+
+```notrust
+Cargo.toml
+Cargo.lock
+▾ src/          # directory containing source files
+  lib.rs        # the main entry point for libraries and packages
+  main.rs       # the default file for a project producing an executable
+  *.rs          # other modules
+  ▾ bin/        # (optional) directory containing executables
+    *.rs
+▾ examples/     # (optional) examples of library usage
+  *.rs
+▾ tests/        # (optional) integration tests
+  *.rs
+▾ benches/      # (optional) benchmarks
+  *.rs
+```
 
 # Cargo.toml vs Cargo.lock
 
