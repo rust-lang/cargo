@@ -20,8 +20,8 @@ To accomplish this goal, Cargo does four things:
 You can convert an existing Rust project to use Cargo. You'll have to create a
 `Cargo.toml` file with all of your dependencies, and move your source files and
 test files into the places where Cargo expects them to be. See the [manifest
-description](manifest.html) and the "Cargo Conventions" section below for more
-details.
+description](manifest.html) and the [Project Layout](#project-layout) section
+below for more details.
 
 # Creating A New Project
 
@@ -199,17 +199,22 @@ source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b4
 Now, if `color-rs` gets updated, we will still build with the same revision, until
 we choose to `cargo update` again.
 
-# Cargo Conventions
+# Project Layout
 
-Cargo uses conventions to make it easy to dive into a new Cargo project. Here
-are the conventions that Cargo uses:
+Cargo uses conventions for file placement to make it easy to dive into a new
+Cargo project. Here the conventions that Cargo uses:
 
 * `Cargo.toml` and `Cargo.lock` are stored in the root of your project.
 * Source code goes in the `src` directory.
-* External tests go in the `tests` directory.
+* The default library file is `src/lib.rs`.
 * The default executable file is `src/main.rs`.
 * Other executables can be placed in `src/bin/*.rs`.
-* The default library file is `src/lib.rs`.
+* External tests go in the `tests` directory.
+* Example executable files go in the `examples` directory.
+* Benchmarks go in the `examples` directory.
+
+These are explained in more detail in the [manifest
+description](manifest.html#the-project-layout).
 
 # Cargo.toml vs Cargo.lock
 
