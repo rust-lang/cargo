@@ -17,7 +17,7 @@ pub struct ShellConfig {
 
 enum AdequateTerminal {
     NoColor(Box<Write + Send>),
-    Colored(Box<Terminal<UghWhyIsThisNecessary> + Send>)
+    Colored(Box<Terminal<Output=Box<Write + Send>> + Send>)
 }
 
 pub struct Shell {
@@ -29,10 +29,6 @@ pub struct MultiShell {
     out: Shell,
     err: Shell,
     verbose: bool
-}
-
-struct UghWhyIsThisNecessary {
-    inner: Box<Write + Send>,
 }
 
 impl MultiShell {
@@ -91,7 +87,6 @@ impl MultiShell {
 
 impl Shell {
     pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
-        let out = UghWhyIsThisNecessary { inner: out };
         if config.tty && config.color {
             let term = TerminfoTerminal::new(out);
             term.map(|t| Shell {
@@ -101,7 +96,7 @@ impl Shell {
                 Shell { terminal: NoColor(Box::new(io::stderr())), config: config }
             })
         } else {
-            Shell { terminal: NoColor(out.inner), config: config }
+            Shell { terminal: NoColor(out), config: config }
         }
     }
 
@@ -184,14 +179,5 @@ impl Write for Shell {
             Colored(ref mut c) => c.flush(),
             NoColor(ref mut n) => n.flush()
         }
-    }
-}
-
-impl Write for UghWhyIsThisNecessary {
-    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        self.inner.write(bytes)
-    }
-    fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
     }
 }
