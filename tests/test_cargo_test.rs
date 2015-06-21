@@ -683,6 +683,44 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
                        dir = p.url())));
 });
 
+test!(lib_without_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            test = false
+            doctest = false
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ");
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} syntax v0.0.1 ({dir})
+{running} target[..]syntax-[..]
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, dir = p.url())));
+});
+
 test!(bin_there_for_integration {
     let p = project("foo")
         .file("Cargo.toml", r#"
