@@ -211,7 +211,7 @@ Cargo project. Here the conventions that Cargo uses:
 * Other executables can be placed in `src/bin/*.rs`.
 * External tests go in the `tests` directory.
 * Example executable files go in the `examples` directory.
-* Benchmarks go in the `examples` directory.
+* Benchmarks go in the `benches` directory.
 
 These are explained in more detail in the [manifest
 description](manifest.html#the-project-layout).
