@@ -20,48 +20,56 @@ if [ "${TRAVIS}" = "true" ] && [ "${target}" = "unknown-linux-gnu" ]; then
     sudo apt-get install g++-multilib lib32stdc++6
 fi
 
-url=https://static-rust-lang-org.s3.amazonaws.com/dist/`cat src/rustversion.txt`
+url=https://static.rust-lang.org/dist/`cat src/rustversion.txt`
 
-# Install both 64 and 32 bit libraries. Apparently travis barfs if you try to
-# just install the right ones? This should enable cross compilation in the
-# future anyway.
+# On unix hosts install both 32 and 64-bit libraries, but respect BITS to
+# determine what arch should be used by default. On windows we don't use 32/64
+# libraries, but instead we install msvc as an alternate architecture.
 if [ -z "${windows}" ]; then
-    rm -rf rustc *.tar.gz
-    curl -O $url/rustc-nightly-i686-$target.tar.gz
-    curl -O $url/rustc-nightly-x86_64-$target.tar.gz
-    tar xfz rustc-nightly-i686-$target.tar.gz
-    tar xfz rustc-nightly-x86_64-$target.tar.gz
-
     if [ "${BITS}" = "32" ]; then
-        src=x86_64
-        dst=i686
+        cargo_extra=x86_64-$target
+        cargo_host=i686-$target
     else
-        src=i686
-        dst=x86_64
+        cargo_extra=i686-$target
+        cargo_host=x86_64-$target
     fi
-    cp -r rustc-nightly-$src-$target/rustc/lib/rustlib/$src-$target \
-          rustc-nightly-$dst-$target/rustc/lib/rustlib
-    (cd rustc-nightly-$dst-$target && \
-     find rustc/lib/rustlib/$src-$target/lib -type f | \
-     sed 's/^rustc\//file:/' >> rustc/manifest.in)
-
-    ./rustc-nightly-$dst-$target/install.sh --prefix=rustc
-    rm -rf rustc-nightly-$src-$target
-    rm -rf rustc-nightly-$dst-$target
-    rm -f rustc-nightly-i686-$target.tar.gz
-    rm -f rustc-nightly-x86_64-$target.tar.gz
+    libdir=lib
 else
-    rm -rf rustc *.exe *.tar.gz
-    if [ "${BITS}" = "64" ]; then
-        triple=x86_64-pc-windows-gnu
+    if [ "${BITS}" = "32" ]; then
+        cargo_host=i686-pc-windows-gnu
+    elif [ "${MSVC}" = "1" ]; then
+        cargo_host=x86_64-pc-windows-msvc
     else
-        triple=i686-pc-windows-gnu
+        cargo_host=x86_64-pc-windows-gnu
+        cargo_extra=x86_64-pc-windows-msvc
     fi
-    curl -O $url/rustc-nightly-$triple.tar.gz
-    tar xfz rustc-nightly-$triple.tar.gz
-    ./rustc-nightly-$triple/install.sh --prefix=rustc
-    rm -rf rustc-nightly-$triple
-    rm -f rustc-nightly-$triple.tar.gz
+    libdir=bin
 fi
+
+rm -rf rustc *.tar.gz
+curl -O $url/rustc-nightly-$cargo_host.tar.gz
+tar xfz rustc-nightly-$cargo_host.tar.gz
+
+if [ ! -z "${cargo_extra}" ]; then
+    curl -O $url/rustc-nightly-$cargo_extra.tar.gz
+    tar xfz rustc-nightly-$cargo_extra.tar.gz
+
+    cp -r rustc-nightly-$cargo_extra/rustc/$libdir/rustlib/$cargo_extra \
+          rustc-nightly-$cargo_host/rustc/$libdir/rustlib
+    cp -r rustc-nightly-$cargo_extra/rustc/$libdir/rustlib/$cargo_extra/bin \
+          rustc-nightly-$cargo_host/rustc/$libdir/rustlib/$cargo_host
+    (cd rustc-nightly-$cargo_host && \
+     find rustc/$libdir/rustlib/$cargo_extra -type f | \
+     sed 's/^rustc\//file:/' >> rustc/manifest.in)
+    (cd rustc-nightly-$cargo_host && \
+     find rustc/$libdir/rustlib/$cargo_host/bin -type f | \
+     sed 's/^rustc\//file:/' >> rustc/manifest.in)
+    rm -rf rustc-nightly-$cargo_extra
+    rm -f rustc-nightly-$cargo_extra.tar.gz
+fi
+
+./rustc-nightly-$cargo_host/install.sh --prefix=rustc
+rm -rf rustc-nightly-$cargo_host
+rm -f rustc-nightly-$cargo_host.tar.gz
 
 set +x

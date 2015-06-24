@@ -369,6 +369,52 @@ if [ "$CFG_SRC_DIR" != "$CFG_BUILD_DIR" ]; then
     err "cargo does not currently support an out-of-tree build dir"
 fi
 
+for i in $CFG_TARGET
+do
+    case $i in
+        x86_64-*-msvc)
+            # Use the REG program to figure out where VS is installed
+            # We need to figure out where cl.exe and link.exe are, so we do some
+            # munging and some probing here. We also look for the default
+            # INCLUDE and LIB variables for MSVC so we can set those in the
+            # build system as well.
+            install=$(reg QUERY \
+                       'HKLM\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\12.0' \
+                       -v InstallDir)
+            need_ok "couldn't find visual studio install root"
+            CFG_MSVC_ROOT=$(echo "$install" | grep InstallDir | sed 's/.*REG_SZ[ ]*//')
+            CFG_MSVC_ROOT=$(dirname "$CFG_MSVC_ROOT")
+            CFG_MSVC_ROOT=$(dirname "$CFG_MSVC_ROOT")
+            CFG_MSVC_BIN="${CFG_MSVC_ROOT}/VC/bin/amd64"
+            CFG_MSVC_CL="${CFG_MSVC_BIN}/cl.exe"
+            CFG_MSVC_LIB="${CFG_MSVC_BIN}/lib.exe"
+            CFG_MSVC_LINK="${CFG_MSVC_BIN}/link.exe"
+
+            vcvarsall="${CFG_MSVC_ROOT}/VC/vcvarsall.bat"
+            CFG_MSVC_INCLUDE_PATH=$(cmd /c "\"$vcvarsall\" amd64 && cmd /c echo %INCLUDE%")
+            need_ok "failed to learn about MSVC's INCLUDE"
+            CFG_MSVC_LIB_PATH=$(cmd /c "\"$vcvarsall\" amd64 && cmd /c echo %LIB%")
+            need_ok "failed to learn about MSVC's LIB"
+            CFG_MSVC_WINDOWS_SDK_DIR=$(cmd /c \
+                "\"$vcvarsall\" amd64 && cmd /c echo %WindowsSdkDir%")
+            need_ok "failed to learn about MSVC's WindowsSdkDir"
+            export CFG_MSVC_WINDOWS_SDK_DIR="${CFG_MSVC_WINDOWS_SDK_DIR}bin/x64"
+
+            putvar CFG_MSVC_ROOT
+            putvar CFG_MSVC_BIN
+            putvar CFG_MSVC_CL
+            putvar CFG_MSVC_LIB
+            putvar CFG_MSVC_LINK
+            putvar CFG_MSVC_INCLUDE_PATH
+            putvar CFG_MSVC_LIB_PATH
+            putvar CFG_MSVC_WINDOWS_SDK_DIR
+            ;;
+
+        *)
+            ;;
+    esac
+done
+
 if [ ! -z "$CFG_ENABLE_NIGHTLY" ]; then
     if [ ! -f .cargo/config ]; then
         mkdir -p .cargo
