@@ -1,12 +1,13 @@
 use std::env;
-use std::fs::{self, File};
+use std::fs::{self, File, DirEntry, OpenOptions};
 use std::io::prelude::*;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf, Component};
 
 use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
+use git2::Repository;
 
 use term::color::BLACK;
 
@@ -14,6 +15,7 @@ use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
 use util::Config;
 
 use toml;
+use mustache;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
@@ -23,6 +25,7 @@ pub struct NewOptions<'a> {
     pub bin: bool,
     pub path: &'a str,
     pub name: Option<&'a str>,
+    pub template: Option<&'a str>,
 }
 
 impl Decodable for VersionControl {
@@ -147,28 +150,122 @@ fn mk(config: &Config, path: &Path, name: &str,
         (None, None, name, None) => name,
     };
 
-    try!(file(&path.join("Cargo.toml"), format!(
-r#"[package]
-name = "{}"
-version = "0.1.0"
-authors = [{}]
-"#, name, toml::Value::String(author)).as_bytes()));
-
-    try!(fs::create_dir(&path.join("src")));
-
-    if opts.bin {
-        try!(file(&path.join("src/main.rs"), b"\
-fn main() {
-    println!(\"Hello, world!\");
-}
-"));
-    } else {
-        try!(file(&path.join("src/lib.rs"), b"\
-#[test]
-fn it_works() {
-}
-"));
+    // find template base dir
+    let template_dir = config.template_path();
+    if fs::metadata(&template_dir).is_err() {
+        try!(fs::create_dir(&template_dir));
     }
+
+    // create lib & bin templates if not already present.
+    let lib_template = template_dir.join("lib");
+    let bin_template = template_dir.join("bin");
+
+    try!(create_bin_template(&bin_template));
+    try!(create_lib_template(&lib_template));
+
+    let template = match opts.template {
+        // given template is a remote git repository & needs to be cloned
+        // This will be cloned to .cargo/templates/<repo_name> where <repo_name>
+        // is the last component of the given URL. For example:
+        //
+        //      http://github.com/rust-lang/some-template
+        //      <repo_name> = some-template
+        Some(template) if template.starts_with("http") ||
+                          template.starts_with("git@") => {
+            let path = PathBuf::from(template);
+
+            let repo_name = match path.components().last().unwrap() {
+                Component::Normal(p) => p,
+                _ => {
+                    return Err(human(format!("Could not determine repository name from: {}", path.display())))
+                }
+            };
+            let template_path = template_dir.join(repo_name);
+
+            match Repository::clone(template, &*template_path) {
+                Ok(_) => {},
+                Err(e) => {
+                    return Err(human(format!("Failed to clone repository: {} - {}", path.display(), e)))
+                }
+            };
+
+            template_path
+        }
+
+        // given template is assumed to already be present on the users system
+        // in .cargo/templates/<name>.
+        Some(template) => { template_dir.join(template) }
+
+        // no template given, use either "lib" or "bin" templates depending on the
+        // presence of the --bin flag.
+        None => { if opts.bin { bin_template } else { lib_template } }
+    };
+
+    // make sure that the template exists
+    if fs::metadata(&template).is_err() {
+        return Err(human(format!("Template `{}` not found", template.display())))
+    }
+
+    // contruct the mapping used to populate the template
+    // if in the future we want to make more varaibles available in
+    // the templates, this would be the place to do it.
+    let data = mustache::MapBuilder::new()
+        .insert_str("name", name)
+        .insert_str("authors", toml::Value::String(author))
+        .build();
+
+
+    // For every file found inside the given template directory, compile it as a mustache
+    // template and render it with the above data to a new file inside the target directory
+    try!(walk_template_dir(&template, &mut |entry| {
+        let path = entry.path();
+        let entry_str = path.to_str().unwrap();
+        let template_str = template.to_str().unwrap();
+
+        // the path we have here is the absolute path to the file in the template directory
+        // we need to trim this down to be just the path from the root of the template.
+        // For example:
+        //    /home/user/.cargo/templates/foo/Cargo.toml => Cargo.toml
+        //    /home/user/.cargo/templates/foo/src/main.rs => src/main.rs
+        let mut file_name = entry_str.replace(template_str, "");
+        if file_name.starts_with("/") {
+            file_name.remove(0);
+        }
+
+        let template = match mustache::compile_path(&path) {
+            Ok(template) => template,
+            Err(e) => panic!("Problem generating template {} - {:?}", path.display(), e)
+        };
+        let mut new_path = PathBuf::from(name).join(file_name);
+
+        // file_name could now refer to a file inside a directory which doesn't yet exist
+        // to figure out if this is the case, get all the components in the file_name and check
+        // how many there are. Files in the root of the new project direcotory will have two
+        // components, anything more than that means the file is in a sub-directory, so we need
+        // to create it.
+        {
+            let components  = new_path.components().collect::<Vec<_>>();
+            if components.len() > 2 {
+                if let Some(p) = new_path.parent() {
+                    if fs::metadata(&p).is_err() {
+                        let _ = fs::create_dir_all(&p);
+                    }
+                }
+            }
+        }
+
+        // if the template file has the ".mustache" extension, remove that to get the correct
+        // name for the generated file
+        if let Some(ext) = new_path.clone().extension() {
+            if ext.to_str().unwrap() == "mustache" {
+                new_path.set_extension("");
+            }
+        }
+
+        // create the new file & render the template to it
+        let mut file = OpenOptions::new().write(true).create(true).open(&new_path).unwrap();
+        template.render_data(&mut file, &data);
+    }));
 
     Ok(())
 }
@@ -218,6 +315,94 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         version_control: vcs,
     })
 }
+
+/// Recursively list directory contents under `dir`, only visiting files.
+///
+/// This will also filter out files & files types which we don't want to
+/// try generate templates for. Image files, for instance.
+///
+/// It also filters out certain files & file types, as we don't want t
+///
+/// We use this instead of std::fs::walk_dir as it is marked as unstable for now
+///
+/// This is a modified version of the example at:
+///    http://doc.rust-lang.org/std/fs/fn.read_dir.html
+fn walk_template_dir(dir: &Path, cb: &mut FnMut(DirEntry)) -> CargoResult<()> {
+    let attr = try!(fs::metadata(&dir));
+
+    let ignore_files = vec!(".gitignore");
+    let ignore_types = vec!("png", "jpg", "gif");
+
+    if attr.is_dir() {
+        for entry in try!(fs::read_dir(dir)) {
+            let entry = try!(entry);
+            let attr = try!(fs::metadata(&entry.path()));
+            if attr.is_dir() {
+                if !&entry.path().to_str().unwrap().contains(".git") {
+                    try!(walk_template_dir(&entry.path(), cb));
+                }
+            } else {
+                if let &Some(extension) = &entry.path().extension() {
+                    if ignore_types.contains(&extension.to_str().unwrap()) {
+                        continue
+                    }
+                }
+                if let &Some(file_name) = &entry.path().file_name() {
+                    if ignore_files.contains(&file_name.to_str().unwrap()) {
+                        continue
+                    }
+                }
+                cb(entry);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Create a generic template
+///
+/// This consists of a Cargo.toml, and a src directory.
+fn create_generic_template(path: &PathBuf) -> CargoResult<()> {
+    match fs::metadata(&path) {
+        Ok(_) => {}
+        Err(_) => { try!(fs::create_dir(&path)); }
+    }
+    match fs::metadata(&path.join("src")) {
+        Ok(_) => {}
+        Err(_) => { try!(fs::create_dir(&path.join("src"))); }
+    }
+    try!(file(&path.join("Cargo.toml"), b"\
+[package]
+name = \"{{name}}\"
+version = \"0.1.0\"
+authors = [{{{authors}}}]
+"));
+    Ok(())
+}
+
+/// Create a new "lib" project
+fn create_lib_template(path: &PathBuf) -> CargoResult<()> {
+    try!(create_generic_template(&path));
+    try!(file(&path.join("src/lib.rs"), b"\
+#[test]
+fn it_works() {
+}
+"));
+    Ok(())
+}
+
+/// Create a new "bin" project
+fn create_bin_template(path: &PathBuf) -> CargoResult<()> {
+    try!(create_generic_template(&path));
+    try!(file(&path.join("src/main.rs"), b"\
+fn main() {
+    println!(\"Hello, world!\");
+}
+"));
+
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {

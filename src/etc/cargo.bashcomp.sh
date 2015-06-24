@@ -24,7 +24,7 @@ _cargo()
 	local opt__git_checkout="$opt_common --reference= --url="
 	local opt__locate_project="$opt_mani -h --help"
 	local opt__login="$opt_common --host"
-	local opt__new="$opt_common --vcs --bin --name"
+	local opt__new="$opt_common --vcs --bin --name --template"
 	local opt__owner="$opt_common -a --add -r --remove -l --list --index --token"
 	local opt__pkgid="${opt__fetch}"
 	local opt__publish="$opt_common $opt_mani --host --token --no-verify"

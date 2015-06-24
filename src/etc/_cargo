@@ -126,6 +126,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--hg[initialize new mercurial repo]' \
                     '--no-git[no new git repo]' \
+                    '--template[template from which to scaffold your project]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
@@ -284,7 +285,7 @@ regexp-replace manifest '\{"root":"|"\}' ''
 echo $manifest
 }
 
-# Extracts the values of "name" from the array given in $1 and shows them as 
+# Extracts the values of "name" from the array given in $1 and shows them as
 # command line options for completion
 _get_names_from_array()
 {
@@ -303,7 +304,7 @@ _get_names_from_array()
     do
         if [[ $last_line == "[[$block_name]]" ]]; then
             in_block=true
-        else 
+        else
             if [[ $last_line =~ '.*\[\[.*' ]]; then
                 in_block=false
             fi
@@ -314,7 +315,7 @@ _get_names_from_array()
                 regexp-replace line '^.*name *= *|"' ""
                 names+=$line
             fi
-        fi 
+        fi
 
         last_line=$line
     done < $manifest
