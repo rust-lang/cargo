@@ -153,6 +153,9 @@ impl<'cfg> PathSource<'cfg> {
         });
         let mut opts = git2::StatusOptions::new();
         opts.include_untracked(true);
+        if let Some(suffix) = util::without_prefix(pkg_path, &root) {
+            opts.pathspec(suffix);
+        }
         let statuses = try!(repo.statuses(Some(&mut opts)));
         let untracked = statuses.iter().map(|entry| {
             (join(&root, entry.path_bytes()), None)
