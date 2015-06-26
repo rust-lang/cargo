@@ -154,6 +154,7 @@ test!(many_similar_names {
 
 test!(cargo_bench_failing_test {
     if !::is_nightly() { return }
+    if !::can_panic() { return }
 
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))

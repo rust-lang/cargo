@@ -164,6 +164,8 @@ test!(many_similar_names {
 });
 
 test!(cargo_test_failing_test {
+    if !::can_panic() { return }
+
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
@@ -690,7 +692,7 @@ test!(bin_there_for_integration {
             authors = []
         "#)
         .file("src/main.rs", "
-            fn main() { panic!(); }
+            fn main() { std::process::exit(101); }
             #[test] fn main_test() {}
         ")
         .file("tests/foo.rs", r#"
