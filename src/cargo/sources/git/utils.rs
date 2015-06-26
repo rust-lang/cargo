@@ -146,7 +146,7 @@ impl GitRemote {
         fetch(dst, &url, refspec)
     }
 
-    pub fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
+    fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
         let url = self.url.to_string();
         if fs::metadata(&dst).is_ok() {
             try!(fs::remove_dir_all(dst));
@@ -159,7 +159,7 @@ impl GitRemote {
 }
 
 impl GitDatabase {
-    pub fn path<'a>(&'a self) -> &'a Path {
+    fn path<'a>(&'a self) -> &'a Path {
         &self.path
     }
 
