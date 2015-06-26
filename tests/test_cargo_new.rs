@@ -169,6 +169,22 @@ test!(finds_author_username {
     assert!(contents.contains(r#"authors = ["foo"]"#));
 });
 
+test!(finds_author_email {
+    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
+    // the hierarchy
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("foo")
+                                    .env("USER", "bar")
+                                    .env("EMAIL", "baz")
+                                    .cwd(td.path().clone()),
+                execs().with_status(0));
+
+    let toml = td.path().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
+});
+
 test!(finds_author_git {
     my_process("git").args(&["config", "--global", "user.name", "bar"])
                      .exec().unwrap();
