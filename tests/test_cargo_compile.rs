@@ -722,24 +722,12 @@ test!(many_crate_types_old_style_lib_location {
         .file("src/foo.rs", r#"
             pub fn foo() {}
         "#);
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0));
+    assert_that(p.cargo_process("build"), execs().with_status(0));
 
-    let files = fs::read_dir(&p.root().join("target/debug")).unwrap();
-    let mut files: Vec<String> = files.map(|e| e.unwrap().path()).filter_map(|f| {
-        match f.file_name().unwrap().to_str().unwrap() {
-            "build" | "examples" | "deps" => None,
-            s if s.contains("fingerprint") || s.contains("dSYM") => None,
-            s => Some(s.to_string())
-        }
-    }).collect();
-    files.sort();
-    let file0 = &files[0];
-    let file1 = &files[1];
-    println!("{} {}", file0, file1);
-    assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
-    assert!(file0.ends_with(env::consts::DLL_SUFFIX) ||
-            file1.ends_with(env::consts::DLL_SUFFIX));
+    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    let fname = format!("{}foo{}", env::consts::DLL_PREFIX,
+                        env::consts::DLL_SUFFIX);
+    assert_that(&p.root().join("target/debug").join(&fname), existing_file());
 });
 
 test!(many_crate_types_correct {
@@ -763,21 +751,10 @@ test!(many_crate_types_correct {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 
-    let files = fs::read_dir(&p.root().join("target/debug")).unwrap();
-    let mut files: Vec<String> = files.map(|f| f.unwrap().path()).filter_map(|f| {
-        match f.file_name().unwrap().to_str().unwrap() {
-            "build" | "examples" | "deps" => None,
-            s if s.contains("fingerprint") || s.contains("dSYM") => None,
-            s => Some(s.to_string())
-        }
-    }).collect();
-    files.sort();
-    let file0 = &files[0];
-    let file1 = &files[1];
-    println!("{} {}", file0, file1);
-    assert!(file0.ends_with(".rlib") || file1.ends_with(".rlib"));
-    assert!(file0.ends_with(env::consts::DLL_SUFFIX) ||
-            file1.ends_with(env::consts::DLL_SUFFIX));
+    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    let fname = format!("{}foo{}", env::consts::DLL_PREFIX,
+                        env::consts::DLL_SUFFIX);
+    assert_that(&p.root().join("target/debug").join(&fname), existing_file());
 });
 
 test!(unused_keys {

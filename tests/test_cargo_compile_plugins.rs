@@ -218,7 +218,9 @@ test!(doctest_a_plugin {
             name = "bar"
             plugin = true
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#);
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));

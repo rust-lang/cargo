@@ -65,3 +65,8 @@ fn is_nightly() -> bool {
     let version_info = cargo::ops::rustc_version("rustc").unwrap().0;
     version_info.contains("-nightly") || version_info.contains("-dev")
 }
+
+fn can_panic() -> bool {
+    let host = cargo::ops::rustc_version("rustc").unwrap().1;
+    !host.contains("msvc")
+}
