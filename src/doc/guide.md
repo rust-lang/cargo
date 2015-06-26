@@ -202,7 +202,7 @@ we choose to `cargo update` again.
 # Project Layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
-Cargo project. Here the conventions that Cargo uses:
+Cargo project:
 
 * `Cargo.toml` and `Cargo.lock` are stored in the root of your project.
 * Source code goes in the `src` directory.
