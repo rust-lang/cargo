@@ -184,9 +184,9 @@ test!(finds_author_git {
 });
 
 test!(author_prefers_cargo {
-    my_process("git").args(&["config", "--global", "user.name", "bar"])
+    my_process("git").args(&["config", "--global", "user.name", "foo"])
                      .exec().unwrap();
-    my_process("git").args(&["config", "--global", "user.email", "baz"])
+    my_process("git").args(&["config", "--global", "user.email", "bar"])
                      .exec().unwrap();
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
