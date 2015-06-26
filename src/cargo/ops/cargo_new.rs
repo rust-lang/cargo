@@ -188,7 +188,8 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
                                       user, please set ${}", username_var)))
         }
     };
-    let email = git_config.and_then(|g| g.get_string("user.email").ok());
+    let email = git_config.and_then(|g| g.get_string("user.email").ok())
+                          .or_else(|| env::var("EMAIL").ok());
 
     let name = name.trim().to_string();
     let email = email.map(|s| s.trim().to_string());

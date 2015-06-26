@@ -42,7 +42,7 @@ paths = ["/path/to/override"]
 [cargo-new]
 # This is your name/email to place in the `authors` section of a new Cargo.toml
 # that is generated. If not present, then `git` will be probed, and if that is
-# not present then `$USER` will be used (with no email).
+# not present then `$USER` and `$EMAIL` will be used.
 name = "..."
 email = "..."
 
