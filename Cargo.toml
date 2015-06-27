@@ -38,7 +38,7 @@ winapi = "0.1"
 
 [dependencies.file-lock]
 git = "https://github.com/Byron/file-lock"
-branch = "api-adjustment"
+branch = "cargo-adjustments"
 
 [dev-dependencies]
 tempdir = "0.3"
