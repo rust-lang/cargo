@@ -174,7 +174,7 @@ use url::Url;
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::{Dependency, Kind};
 use sources::{PathSource, git};
-use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
+use util::{CargoResult, Config, internal, ChainError, ToUrl, human, CargoLock};
 use util::{hex, Sha256};
 use ops;
 
@@ -278,6 +278,12 @@ impl<'cfg> RegistrySource<'cfg> {
     /// initialize a fresh new directory and git checkout. No remotes will be
     /// configured by default.
     fn open(&self) -> CargoResult<git2::Repository> {
+        let mut fl = CargoLock::new(self.config.home().join(".registry-open-or-init.lock"), 
+                                    self.config);
+
+        try!(fl.lock().chain_error(|| {
+            human("Failed to lock registry for opening or initialization")
+        }));
         match git2::Repository::open(&self.checkout_path) {
             Ok(repo) => return Ok(repo),
             Err(..) => {}
@@ -302,37 +308,76 @@ impl<'cfg> RegistrySource<'cfg> {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let dst = self.cache_path.join(&filename);
         if fs::metadata(&dst).is_ok() { return Ok(dst) }
-        try!(self.config.shell().status("Downloading", pkg));
 
         try!(fs::create_dir_all(dst.parent().unwrap()));
         let expected_hash = try!(self.hash(pkg));
-        let handle = match self.handle {
-            Some(ref mut handle) => handle,
-            None => {
-                self.handle = Some(try!(ops::http_handle(self.config)));
-                self.handle.as_mut().unwrap()
+
+        let mut lfp = dst.parent().unwrap().to_path_buf();
+        lfp.set_file_name(format!(".{}.lock", filename));
+        let mut fl = CargoLock::new(lfp, self.config);
+
+        try!(fl.lock().chain_error(|| {
+            human(format!("Failed to lock download for crate {}", pkg))
+        }));
+
+        if let Ok(mut file) = fs::File::open(&dst) {
+            // somebody downloaded the file for us - we just verify it is what 
+            // we expect it to be. Otherwise we fail.
+            // In any case, we drop the lock now to allow others to do the same
+            // we do right now.
+            drop(fl);
+
+            try!(self.config.shell().status("Verifying", pkg));
+            let actual = {
+                // TODO: don't load it into memory. Ideally, Sha256 would support
+                // `Write` so io::copy() can be used
+                let mut buf = Vec::<u8>::new();
+                try!(file.read_to_end(&mut buf));
+                drop(file);
+
+                let mut state = Sha256::new();
+                state.update(&buf);
+                state.finish()
+            };
+
+            if actual.to_hex() != expected_hash {
+                return Err(human(format!("Failed to verify the checksum of `{}`\
+                                          at '{}'",
+                                         pkg, dst.display())))
             }
-        };
-        // TODO: don't download into memory (curl-rust doesn't expose it)
-        let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
-        if resp.get_code() != 200 && resp.get_code() != 0 {
-            return Err(internal(format!("Failed to get 200 response from {}\n{}",
-                                        url, resp)))
-        }
 
-        // Verify what we just downloaded
-        let actual = {
-            let mut state = Sha256::new();
-            state.update(resp.get_body());
-            state.finish()
-        };
-        if actual.to_hex() != expected_hash {
-            return Err(human(format!("Failed to verify the checksum of `{}`",
-                                     pkg)))
-        }
+            Ok(dst)
+        } else {
+            try!(self.config.shell().status("Downloading", pkg));
 
-        try!(try!(File::create(&dst)).write_all(resp.get_body()));
-        Ok(dst)
+            let handle = match self.handle {
+                Some(ref mut handle) => handle,
+                None => {
+                    self.handle = Some(try!(ops::http_handle(self.config)));
+                    self.handle.as_mut().unwrap()
+                }
+            };
+            // TODO: don't download into memory (curl-rust doesn't expose it)
+            let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
+            if resp.get_code() != 200 && resp.get_code() != 0 {
+                return Err(internal(format!("Failed to get 200 response from {}\n{}",
+                                            url, resp)))
+            }
+
+            // Verify what we just downloaded
+            let actual = {
+                let mut state = Sha256::new();
+                state.update(resp.get_body());
+                state.finish()
+            };
+            if actual.to_hex() != expected_hash {
+                return Err(human(format!("Failed to verify the checksum of `{}`",
+                                         pkg)))
+            }
+
+            try!(try!(File::create(&dst)).write_all(resp.get_body()));
+            Ok(dst)
+        }
     }
 
     /// Return the hash listed for a specified PackageId.
@@ -449,9 +494,18 @@ impl<'cfg> RegistrySource<'cfg> {
     fn do_update(&mut self) -> CargoResult<()> {
         if self.updated { return Ok(()) }
 
+        let repo = try!(self.open());
+
+        let mut fl = CargoLock::new(self.checkout_path.join(".registry-update.lock"), 
+                                    self.config);
+
+        try!(fl.lock().chain_error(|| {
+            human("Failed to lock registry for update")
+        }));
+
+        // TODO(ST): Try to determine if we have waited or if the repo has just been updated
         try!(self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.url())));
-        let repo = try!(self.open());
 
         // git fetch origin
         let url = self.source_id.url().to_string();

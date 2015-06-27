@@ -36,6 +36,10 @@ toml = "0.1"
 url = "0.2"
 winapi = "0.1"
 
+[dependencies.file-lock]
+git = "https://github.com/Byron/file-lock"
+branch = "cargo-adjustments"
+
 [dev-dependencies]
 tempdir = "0.3"
 hamcrest = { git = "https://github.com/carllerche/hamcrest-rust.git" }

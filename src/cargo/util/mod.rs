@@ -15,6 +15,7 @@ pub use self::to_url::ToUrl;
 pub use self::to_semver::ToSemver;
 pub use self::vcs::{GitRepo, HgRepo};
 pub use self::sha256::Sha256;
+pub use self::lock::CargoLock;
 
 pub mod config;
 pub mod errors;
@@ -28,6 +29,7 @@ pub mod to_semver;
 pub mod to_url;
 pub mod toml;
 pub mod lev_distance;
+mod lock;
 mod dependency_queue;
 mod sha256;
 mod vcs;
