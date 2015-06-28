@@ -5,7 +5,7 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 use threadpool::ThreadPool;
 use term::color::YELLOW;
 
-use core::{Package, PackageId, Resolve, PackageSet};
+use core::{Package, PackageId, Resolve, PackageSet, Target};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, Dependency, profile, CargoLock, human, ChainError, short_hash};
 
@@ -19,7 +19,7 @@ use super::job::Job;
 pub struct JobQueue<'a> {
     pool: ThreadPool,
     queue: DependencyQueue<(&'a PackageId, Stage),
-                           (&'a Package, Vec<(Job, Freshness)>)>,
+                           (&'a Package, Vec<(Job, Freshness, Option<Target>)>)>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
     resolve: &'a Resolve,
@@ -81,7 +81,7 @@ impl<'a> JobQueue<'a> {
     }
 
     pub fn queue(&mut self, pkg: &'a Package, stage: Stage)
-                 -> &mut Vec<(Job, Freshness)> {
+                 -> &mut Vec<(Job, Freshness, Option<Target>)> {
         self.pkgids.insert(pkg.package_id());
         &mut self.queue.queue(&(self.resolve, self.packages), Fresh,
                               (pkg.package_id(), stage),
@@ -149,7 +149,7 @@ impl<'a> JobQueue<'a> {
     /// freshness of all upstream dependencies. This function will schedule all
     /// work in `jobs` to be executed.
     fn run(&mut self, pkg: &'a Package, stage: Stage, fresh: Freshness,
-           jobs: Vec<(Job, Freshness)>, config: &Config) -> CargoResult<()> {
+           jobs: Vec<(Job, Freshness, Option<Target>)>, config: &Config) -> CargoResult<()> {
         let njobs = jobs.len();
         let amt = if njobs == 0 {1} else {njobs as u32};
         let id = pkg.package_id().clone();
@@ -164,16 +164,18 @@ impl<'a> JobQueue<'a> {
         });
 
         let lock_kind = try!(CargoLock::lock_kind(config));
-        let lock_path = config.target_dir(pkg).join("locks").join(&format!("{}-{}-{}.{:?}.lock", 
-                                                                            pkg.name(),
-                                                                            pkg.version(),
-                                                                            short_hash(&pkg),
-                                                                            stage));
 
         let mut total_fresh = fresh;
         let mut running = Vec::new();
         debug!("start {:?} at {:?} for {}", total_fresh, stage, pkg);
-        for (job, job_freshness) in jobs.into_iter() {
+        for (job, job_freshness, target) in jobs.into_iter() {
+            let lock_path = config.target_dir(pkg)
+                                  .join("locks").join(&format!("{}-{}-{}-{}.{:?}.lock", 
+                                                                pkg.name(),
+                                                                pkg.version(),
+                                                                short_hash(&pkg),
+                                                                short_hash(&target),
+                                                                stage));
             debug!("job: {:?} ({:?})", job_freshness, total_fresh);
             let fresh = job_freshness.combine(fresh);
             total_fresh = total_fresh.combine(fresh);
@@ -185,7 +187,8 @@ impl<'a> JobQueue<'a> {
             self.pool.execute(move|| {
                 let mut fl = CargoLock::new(lock_path, lock_kind);
                 let lock = fl.lock().chain_error(|| {
-                    human(format!("Failed to lock {} at stage '{:?}'", id, stage))
+                    human(format!("Failed to lock {} at stage '{:?}'", 
+                                   id, stage))
                 });
 
                 my_tx.send((id, stage, fresh, lock.and_then(|_| { 

@@ -23,6 +23,7 @@ extern crate time;
 extern crate toml;
 extern crate url;
 extern crate file_lock;
+extern crate errno;
 
 use std::env;
 use std::error::Error;

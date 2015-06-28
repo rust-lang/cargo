@@ -1,5 +1,8 @@
 use file_lock::{FileLock, AccessMode, ParseError};
 use file_lock::flock::Error as FileLockError;
+use file_lock::lock::Error as LockError;
+use errno;
+use libc;
 
 use std::path::PathBuf;
 use std::fs;
@@ -85,6 +88,26 @@ impl CargoLock {
             }
         }
         debug!("About to acquire file lock: '{}'", self.inner.path().display());
-        Ok(try!(self.inner.any_lock(self.kind.clone())))
+        // TODO(ST): This evil hack will just retry until we have the lock or 
+        //           fail with an error that is no "Deadlock avoided".
+        //           When there is high intra-process contention thanks to threads,
+        //           this issue occours even though I would hope that we don't try to 
+        //           to have multiple threads obtain a lock on the same lock file.
+        //           However, apparently this does happen.
+        //           Even if it does I don't understand why this is a deadlock for him.
+        //           The good news is that building now works in my manual tests.
+        loop {
+            match self.inner.any_lock(self.kind.clone()) {
+                Err(FileLockError::LockError(
+                        LockError::Errno(
+                            errno::Errno(libc::consts::os::posix88::EDEADLK)))) 
+                    => { 
+                        sleep_ms(100);
+                        continue
+                },
+                Err(any_err) => return Err(any_err.into()),
+                Ok(()) => return Ok(())
+            }
+        }
     }
 }

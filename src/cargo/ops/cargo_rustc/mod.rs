@@ -232,7 +232,7 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
                 }
                 (false, false, _) => jobs.queue(pkg, Stage::Binaries),
             };
-            dst.push((Job::new(dirty, fresh), freshness));
+            dst.push((Job::new(dirty, fresh), freshness, Some(target.clone())));
         }
         drop(profiling_marker);
 
@@ -279,7 +279,7 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             let (dirty, fresh, freshness) =
                 try!(custom_build::prepare(pkg, target, req, cx));
             let run_custom = jobs.queue(pkg, Stage::RunCustomBuild);
-            run_custom.push((Job::new(dirty, fresh), freshness));
+            run_custom.push((Job::new(dirty, fresh), freshness, Some(target.clone())));
         }
 
         // If we didn't actually run the custom build command, then there's no
@@ -319,9 +319,9 @@ fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     if cx.requested_target().is_some() {
         let (plugin1, plugin2) = fingerprint::prepare_init(cx, pkg,
                                                            Kind::Host);
-        init.push((Job::new(plugin1, plugin2), Fresh));
+        init.push((Job::new(plugin1, plugin2), Fresh, None));
     }
-    init.push((Job::new(target1, target2), Fresh));
+    init.push((Job::new(target1, target2), Fresh, None));
 }
 
 fn rustc(package: &Package, target: &Target, profile: &Profile,

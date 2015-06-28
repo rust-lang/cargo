@@ -35,6 +35,7 @@ time = "0.1"
 toml = "0.1"
 url = "0.2"
 winapi = "0.1"
+errno = "0.1.2"
 
 [dependencies.file-lock]
 git = "https://github.com/Byron/file-lock"
