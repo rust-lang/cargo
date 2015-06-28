@@ -107,7 +107,7 @@ dependencies = [
 [[package]]
 name = "file-lock"
 version = "0.0.16"
-source = "git+https://github.com/Byron/file-lock?branch=cargo-adjustments#b940b1d98fe874a51249efa437f6eac3ba16e10c"
+source = "git+https://github.com/Byron/file-lock?branch=cargo-adjustments#eaff0d3b74e55df69893a95802eacf3c7fe196a5"
 dependencies = [
  "gcc 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
