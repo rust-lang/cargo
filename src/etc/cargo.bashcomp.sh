@@ -8,6 +8,8 @@ _cargo()
 
 	cmd=${words[1]}
 
+	local commands=$(cargo --list | tail -n +2)
+
 	local opt_common='-h --help -v --verbose'
 	local opt_pkg='-p --package'
 	local opt_feat='--features --no-default-features'
@@ -21,7 +23,7 @@ _cargo()
 	local opt__doc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --open --no-deps"
 	local opt__fetch="$opt_common $opt_mani"
 	local opt__generate_lockfile="${opt__fetch}"
-	local opt__git_checkout="$opt_common --reference= --url="
+	local opt__git_checkout="$opt_common --reference --url"
 	local opt__locate_project="$opt_mani -h --help"
 	local opt__login="$opt_common --host"
 	local opt__new="$opt_common --vcs --bin --name"
@@ -30,6 +32,8 @@ _cargo()
 	local opt__publish="$opt_common $opt_mani --host --token --no-verify"
 	local opt__read_manifest="${opt__fetch}"
 	local opt__run="$opt_common $opt_feat $opt_mani $opt_jobs --target --bin --example --release"
+	local opt__rustc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --release"
+	local opt__search="$opt_common --host"
 	local opt__test="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run --release"
 	local opt__update="$opt_common $opt_pkg $opt_mani --aggressive --precise"
 	local opt__package="$opt_common $opt_mani -l --list --no-verify --no-metadata"
@@ -41,7 +45,7 @@ _cargo()
 		if [[ "$cur" == -* ]]; then
 			COMPREPLY=( $( compgen -W "${opt___nocmd}" -- "$cur" ) )
 		else
-			COMPREPLY=( $( compgen -W "$(cargo --list | tail -n +2)" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
 		fi
 	elif [[ $cword -ge 2 ]]; then
 		case "${prev}" in
@@ -50,6 +54,9 @@ _cargo()
 				;;
 			--example)
 				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
+				;;
+			help)
+				COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
 				;;
 			*)
 				local opt_var=opt__${cmd//-/_}
