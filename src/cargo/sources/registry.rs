@@ -279,7 +279,7 @@ impl<'cfg> RegistrySource<'cfg> {
     /// configured by default.
     fn open(&self) -> CargoResult<git2::Repository> {
         let mut fl = CargoLock::new(self.config.home().join(".registry-open-or-init.lock"), 
-                                    self.config);
+                                    try!(CargoLock::lock_kind(self.config)));
 
         try!(fl.lock().chain_error(|| {
             human("Failed to lock registry for opening or initialization")
@@ -314,7 +314,7 @@ impl<'cfg> RegistrySource<'cfg> {
 
         let mut lfp = dst.parent().unwrap().to_path_buf();
         lfp.set_file_name(format!(".{}.lock", filename));
-        let mut fl = CargoLock::new(lfp, self.config);
+        let mut fl = CargoLock::new(lfp, try!(CargoLock::lock_kind(self.config)));
 
         try!(fl.lock().chain_error(|| {
             human(format!("Failed to lock download for crate {}", pkg))
@@ -496,7 +496,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let repo = try!(self.open());
 
         let mut fl = CargoLock::new(self.checkout_path.join(".registry-update.lock"), 
-                                    self.config);
+                                    try!(CargoLock::lock_kind(self.config)));
 
         try!(fl.lock().chain_error(|| {
             human("Failed to lock registry for update")
