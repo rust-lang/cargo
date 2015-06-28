@@ -7,7 +7,7 @@ dependencies = [
  "curl 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.67 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "file-lock 0.0.16 (git+https://github.com/Byron/file-lock?branch=api-adjustment)",
+ "file-lock 0.0.16 (git+https://github.com/Byron/file-lock?branch=cargo-adjustments)",
  "filetime 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -96,7 +96,7 @@ dependencies = [
 [[package]]
 name = "file-lock"
 version = "0.0.16"
-source = "git+https://github.com/Byron/file-lock?branch=api-adjustment#2c1b709c3439b4947fccbeb90ff055f4d6dde81a"
+source = "git+https://github.com/Byron/file-lock?branch=cargo-adjustments#b940b1d98fe874a51249efa437f6eac3ba16e10c"
 dependencies = [
  "gcc 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",

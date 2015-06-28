@@ -43,18 +43,17 @@ impl<'cfg> CargoLock<'cfg> {
 
     pub fn lock(&mut self) -> CargoResult<()> {
         const CONFIG_KEY: &'static str = "build.lock-kind";
-        let kind_string = try!(self.config.get_string(CONFIG_KEY))
-                                                  .map(|t| t.0)
-                                                  .unwrap_or_else(|| LockKind::NonBlocking
-                                                                                .as_ref()
-                                                                                .to_owned());
-        let kind: LockKind = match kind_string.parse() {
-            Ok(kind) => kind,
-            Err(_) => return Err(human(format!("Failed to parse value '{}' at configuration key \
-                                               '{}'. Must be one of '{}' and '{}'", 
-                                               kind_string, CONFIG_KEY,
-                                               LockKind::NonBlocking.as_ref(), 
-                                               LockKind::Blocking.as_ref())))
+        let kind = match try!(self.config.get_string(CONFIG_KEY)).map(|t| t.0) {
+            None => LockKind::NonBlocking,
+            Some(kind_string) => match kind_string.parse() {
+                Ok(kind) => kind,
+                Err(_) => return Err(human(format!("Failed to parse value '{}' at \
+                                                   configuration key '{}'.\
+                                                   Must be one of '{}' and '{}'",
+                                                   kind_string, CONFIG_KEY,
+                                                   LockKind::NonBlocking.as_ref(), 
+                                                   LockKind::Blocking.as_ref())))
+            }
         };
         // NOTE(ST): This could fail if cargo is run concurrently for the first time
         // The only way to prevent it would be to take a lock in a directory which exists.
