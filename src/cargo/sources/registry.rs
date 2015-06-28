@@ -502,7 +502,8 @@ impl<'cfg> RegistrySource<'cfg> {
             human("Failed to lock registry for update")
         }));
 
-        // TODO(ST): Try to determine if we have waited or if the repo has just been updated
+        // NOTE(ST): The repo might just have been updated by a collaborative process. We will
+        //           just do it again, which is fast and save.
         try!(self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.url())));
 
