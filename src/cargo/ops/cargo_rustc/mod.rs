@@ -376,6 +376,17 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         let cwd = cx.config.cwd().to_path_buf();
 
         Ok((Work::new(move |desc_tx| {
+            // Check if all the files exist. If so, another collaborating process will have 
+            // created them. Note that we only get to do this if we either waited on the lock
+            // or got it ourselves without waiting. In the latter case, we wouldn't have to do
+            // anything, but can't differentiate one case from the other.
+            // TODO(ST): is there a way to verify the contents of the files is valid ?
+            //           If the previous operation that left them there aborted, this might just
+            //           not be the case
+            if filenames.iter().all(|filename| fs::metadata(&root.join(filename)).is_ok()) {
+                return Ok(())
+            }
+
             debug!("about to run: {}", rustc);
 
             // Only at runtime have we discovered what the extra -L and -l

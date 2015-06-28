@@ -7,7 +7,7 @@ use term::color::YELLOW;
 
 use core::{Package, PackageId, Resolve, PackageSet};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, Dependency, profile};
+use util::{CargoResult, Dependency, profile, CargoLock, human, ChainError, short_hash};
 
 use super::job::Job;
 
@@ -112,7 +112,7 @@ impl<'a> JobQueue<'a> {
 
             // Now that all possible work has been scheduled, wait for a piece
             // of work to finish. If any package fails to build then we stop
-            // scheduling work as quickly as possibly.
+            // scheduling work as quickly as possible.
             let (id, stage, fresh, result) = self.rx.recv().unwrap();
             info!("  end: {} {:?}", id, stage);
             let id = *self.pkgids.iter().find(|&k| *k == &id).unwrap();
@@ -163,6 +163,13 @@ impl<'a> JobQueue<'a> {
             fresh: fresh,
         });
 
+        let lock_kind = try!(CargoLock::lock_kind(config));
+        let lock_path = config.target_dir(pkg).join("locks").join(&format!("{}-{}-{}.{:?}.lock", 
+                                                                            pkg.name(),
+                                                                            pkg.version(),
+                                                                            short_hash(&pkg),
+                                                                            stage));
+
         let mut total_fresh = fresh;
         let mut running = Vec::new();
         debug!("start {:?} at {:?} for {}", total_fresh, stage, pkg);
@@ -173,8 +180,19 @@ impl<'a> JobQueue<'a> {
             let my_tx = self.tx.clone();
             let id = id.clone();
             let (desc_tx, desc_rx) = channel();
+            let lock_kind = lock_kind.clone();
+            let lock_path = lock_path.clone();
             self.pool.execute(move|| {
-                my_tx.send((id, stage, fresh, job.run(fresh, desc_tx))).unwrap();
+                let mut fl = CargoLock::new(lock_path, lock_kind);
+                let lock = fl.lock().chain_error(|| {
+                    human(format!("Failed to lock {} at stage '{:?}'", id, stage))
+                });
+
+                my_tx.send((id, stage, fresh, lock.and_then(|_| { 
+                                let r = job.run(fresh, desc_tx);
+                                drop(fl);
+                                r
+                            }))).unwrap();
             });
             // only the first message of each job is processed
             match desc_rx.recv() {
