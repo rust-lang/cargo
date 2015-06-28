@@ -327,7 +327,6 @@ impl<'cfg> RegistrySource<'cfg> {
             // we do right now.
             drop(fl);
 
-            try!(self.config.shell().status("Verifying", pkg));
             let actual = {
                 // TODO: don't load it into memory. Ideally, Sha256 would support
                 // `Write` so io::copy() can be used
