@@ -21,7 +21,9 @@ impl From<ParseError> for Box<CargoError> {
     }
 }
 
-impl CargoError for FileLockError {}
+impl CargoError for FileLockError {
+    fn is_human(&self) -> bool { true }
+}
 impl CargoError for ParseError {}
 
 pub struct CargoLock {
@@ -82,6 +84,7 @@ impl CargoLock {
                 }
             }
         }
+        debug!("About to acquire file lock: '{}'", self.inner.path().display());
         Ok(try!(self.inner.any_lock(self.kind.clone())))
     }
 }
