@@ -50,7 +50,7 @@ use std::io;
 use std::path::{PathBuf, Path};
 
 use core::Package;
-use util::Config;
+use util::{Config, CargoLock, LockKind};
 use util::hex::short_hash;
 
 pub struct Layout {
@@ -60,6 +60,7 @@ pub struct Layout {
     build: PathBuf,
     fingerprint: PathBuf,
     examples: PathBuf,
+    lock_kind: Option<LockKind>
 }
 
 pub struct LayoutProxy<'a> {
@@ -78,7 +79,14 @@ impl Layout {
             path.push(Path::new(triple).file_stem().unwrap());
         }
         path.push(dest);
-        Layout::at(path)
+
+        let mut l = Layout::at(path);
+        // Ignore errors here as we cannot return it. I
+        match CargoLock::lock_kind(config) {
+            Ok(kind) => { l.lock_kind = Some(kind); },
+            Err(err) => debug!("Layout::new(): {}", err),
+        }
+        l
     }
 
     pub fn at(root: PathBuf) -> Layout {
@@ -89,10 +97,22 @@ impl Layout {
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
             root: root,
+            lock_kind: None,
         }
     }
 
     pub fn prepare(&mut self) -> io::Result<()> {
+
+        let mut fl = CargoLock::new(self.root.join(".layout-init.lock"), 
+                                    self.lock_kind.clone()
+                                                  .expect("Must not call prepare() if Layout was \
+                                                           instantiated with at()"));
+
+        // Too low-level to provide detailed lock information. If it doesn't work,
+        // we will resort to the previous, racy behaviour which should only possibly fail
+        // during fs::create_dir_all()
+        fl.lock().ok();
+
         if fs::metadata(&self.root).is_err() {
             try!(fs::create_dir_all(&self.root));
         }

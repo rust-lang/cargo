@@ -729,7 +729,7 @@ test!(many_crate_types_old_style_lib_location {
     let mut files: Vec<String> = files.map(|e| e.unwrap().path()).filter_map(|f| {
         match f.file_name().unwrap().to_str().unwrap() {
             "build" | "examples" | "deps" => None,
-            s if s.contains("fingerprint") || s.contains("dSYM") => None,
+            s if s.contains("fingerprint") || s.contains("dSYM") || s.ends_with(".lock") => None,
             s => Some(s.to_string())
         }
     }).collect();
@@ -767,7 +767,7 @@ test!(many_crate_types_correct {
     let mut files: Vec<String> = files.map(|f| f.unwrap().path()).filter_map(|f| {
         match f.file_name().unwrap().to_str().unwrap() {
             "build" | "examples" | "deps" => None,
-            s if s.contains("fingerprint") || s.contains("dSYM") => None,
+            s if s.contains("fingerprint") || s.contains("dSYM") || s.ends_with(".lock") => None,
             s => Some(s.to_string())
         }
     }).collect();
