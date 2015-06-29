@@ -177,7 +177,8 @@ fn mk(config: &Config, path: &Path, name: &str,
             let repo_name = match path.components().last().unwrap() {
                 Component::Normal(p) => p,
                 _ => {
-                    return Err(human(format!("Could not determine repository name from: {}", path.display())))
+                    return Err(human(format!(
+                        "Could not determine repository name from: {}", path.display())))
                 }
             };
             let template_path = template_dir.join(repo_name);
@@ -185,7 +186,8 @@ fn mk(config: &Config, path: &Path, name: &str,
             match Repository::clone(template, &*template_path) {
                 Ok(_) => {},
                 Err(e) => {
-                    return Err(human(format!("Failed to clone repository: {} - {}", path.display(), e)))
+                    return Err(human(format!(
+                        "Failed to clone repository: {} - {}", path.display(), e)))
                 }
             };
 
