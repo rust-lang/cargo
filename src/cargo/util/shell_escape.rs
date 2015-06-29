@@ -8,12 +8,17 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[cfg(target_os = "windows")]
-pub use self::windows::shell_escape;
+use std::borrow::Cow;
 
+pub fn escape(s: Cow<str>) -> Cow<str> {
+    if cfg!(unix) {
+        unix::escape(s)
+    } else {
+        windows::escape(s)
+    }
+}
 
-#[cfg(any(test, target_os = "windows"))]
-mod windows {
+pub mod windows {
     use std::borrow::Cow;
 
     const SPACE: char = ' ';
@@ -28,7 +33,7 @@ mod windows {
     /// Escape double quotes and spaces by wrapping the string in double quotes.
     ///
     /// Turn all backslashes into forward slashes.
-    pub fn shell_escape(s: Cow<str>) -> Cow<str> {
+    pub fn escape(s: Cow<str>) -> Cow<str> {
         // check if string needs to be escaped
         let mut has_spaces = false;
         let mut has_backslashes = false;
@@ -63,29 +68,25 @@ mod windows {
     }
 
     #[test]
-    fn test_shell_escape() {
-        assert_eq!(shell_escape("--aaa=bbb-ccc".into()), "--aaa=bbb-ccc");
-        assert_eq!(shell_escape("linker=gcc -L/foo -Wl,bar".into()),
-                                r#""linker=gcc -L/foo -Wl,bar""#);
-        assert_eq!(shell_escape(r#"--features="default""#.into()),
-                                r#"--features=\"default\""#);
-        assert_eq!(shell_escape(r#"\path\to\my documents\"#.into()),
-                                r#""/path/to/my documents/""#);
+    fn test_escape() {
+        assert_eq!(escape("--aaa=bbb-ccc".into()), "--aaa=bbb-ccc");
+        assert_eq!(escape("linker=gcc -L/foo -Wl,bar".into()),
+                          r#""linker=gcc -L/foo -Wl,bar""#);
+        assert_eq!(escape(r#"--features="default""#.into()),
+                          r#"--features=\"default\""#);
+        assert_eq!(escape(r#"\path\to\my documents\"#.into()),
+                          r#""/path/to/my documents/""#);
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-pub use self::other::shell_escape;
-
-#[cfg(any(test, not(target_os = "windows")))]
-mod other {
+pub mod unix {
     use std::borrow::Cow;
 
-    static SHELL_SPECIAL: &'static str = r#" \$'"`!"#;
+    const SHELL_SPECIAL: &'static str = r#" \$'"`!"#;
 
     /// Escape characters that may have special meaning in a shell,
     /// including spaces.
-    pub fn shell_escape(s: Cow<str>) -> Cow<str> {
+    pub fn escape(s: Cow<str>) -> Cow<str> {
         let escape_char = '\\';
         // check if string needs to be escaped
         let clean = SHELL_SPECIAL.chars().all(|sp_char| !s.contains(sp_char));
@@ -103,13 +104,13 @@ mod other {
     }
 
     #[test]
-    fn test_shell_escape() {
-        assert_eq!(shell_escape("--aaa=bbb-ccc".into()), "--aaa=bbb-ccc");
-        assert_eq!(shell_escape("linker=gcc -L/foo -Wl,bar".into()),
-                                r#"linker=gcc\ -L/foo\ -Wl,bar"#);
-        assert_eq!(shell_escape(r#"--features="default""#.into()),
-                                r#"--features=\"default\""#);
-        assert_eq!(shell_escape(r#"'!\$`\\\n "#.into()),
-                                r#"\'\!\\\$\`\\\\\\n\ "#);
+    fn test_escape() {
+        assert_eq!(escape("--aaa=bbb-ccc".into()), "--aaa=bbb-ccc");
+        assert_eq!(escape("linker=gcc -L/foo -Wl,bar".into()),
+                          r#"linker=gcc\ -L/foo\ -Wl,bar"#);
+        assert_eq!(escape(r#"--features="default""#.into()),
+                          r#"--features=\"default\""#);
+        assert_eq!(escape(r#"'!\$`\\\n "#.into()),
+                          r#"\'\!\\\$\`\\\\\\n\ "#);
     }
 }
