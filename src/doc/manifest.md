@@ -128,6 +128,18 @@ git = "https://github.com/wycats/hammer.rs"
 
 [dependencies.color]
 git = "https://github.com/bjz/color-rs"
+
+[dependencies.geometry]
+path = "crates/geometry"
+```
+
+You may prefer to use TOML's inline table syntax:
+
+```toml
+[dependencies]
+hammer = { version = "0.5.0", git = "https://github.com/wycats/hammer.rs" }
+color = { git = "https://github.com/bjz/color-rs" }
+geometry = { path = "crates/geometry" }
 ```
 
 You can specify the source of a dependency in one of two ways at the moment:
@@ -152,11 +164,31 @@ Platform-specific dependencies take the same format, but are listed under the
 `target.$triple` section:
 
 ```toml
-[target.x86_64-unknown-linux-gnu.dependencies]
-openssl = "1.0.1"
-
 [target.x86_64-pc-windows-gnu.dependencies]
 winhttp = "0.4.0"
+
+[target.i686-unknown-linux-gnu.dependencies]
+openssl = "1.0.1"
+native = { path = "native/i686" }
+
+[target.x86_64-unknown-linux-gnu.dependencies]
+openssl = "1.0.1"
+native = { path = "native/x86_64" }
+```
+
+If you're using a target file, quote the full path and file name:
+
+```toml
+[target."x86_64/windows.json".dependencies]
+winhttp = "0.4.0"
+
+[target."i686/linux.json".dependencies]
+openssl = "1.0.1"
+native = { path = "native/i686" }
+
+[target."x86_64/linux.json".dependencies]
+openssl = "1.0.1"
+native = { path = "native/x86_64" }
 ```
 
 # The `[profile.*]` Sections
