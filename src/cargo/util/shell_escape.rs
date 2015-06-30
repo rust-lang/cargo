@@ -9,9 +9,12 @@
 // except according to those terms.
 
 use std::borrow::Cow;
+use std::env;
 
 pub fn escape(s: Cow<str>) -> Cow<str> {
     if cfg!(unix) {
+        unix::escape(s)
+    } else if env::var("MSYSTEM").is_ok() {
         unix::escape(s)
     } else {
         windows::escape(s)
@@ -20,50 +23,50 @@ pub fn escape(s: Cow<str>) -> Cow<str> {
 
 pub mod windows {
     use std::borrow::Cow;
+    use std::iter::repeat;
 
-    const SPACE: char = ' ';
-    const ESCAPE_CHAR: char = '\\';
-    const QUOTE_CHAR: char = '"';
-    const BACKSLASH: char = '\\';
-    const SLASH: char = '/';
-
-    /// Escape characters that may have special meaning in a shell,
-    /// including spaces.
+    /// Escape for the windows cmd.exe shell, for more info see this url:
     ///
-    /// Escape double quotes and spaces by wrapping the string in double quotes.
-    ///
-    /// Turn all backslashes into forward slashes.
+    /// http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23
+    ///                      /everyone-quotes-arguments-the-wrong-way.aspx
     pub fn escape(s: Cow<str>) -> Cow<str> {
-        // check if string needs to be escaped
-        let mut has_spaces = false;
-        let mut has_backslashes = false;
-        let mut has_quotes = false;
+        let mut needs_escape = false;
         for ch in s.chars() {
             match ch {
-                QUOTE_CHAR => has_quotes = true,
-                SPACE => has_spaces = true,
-                BACKSLASH => has_backslashes = true,
+                '"' | '\t' | '\n' | ' ' => needs_escape = true,
                 _ => {}
             }
         }
-        if !has_spaces && !has_backslashes && !has_quotes {
+        if !needs_escape {
             return s
         }
         let mut es = String::with_capacity(s.len());
-        if has_spaces {
-            es.push(QUOTE_CHAR);
-        }
-        for ch in s.chars() {
-            match ch {
-                BACKSLASH => { es.push(SLASH); continue }
-                QUOTE_CHAR => es.push(ESCAPE_CHAR),
-                _ => {}
+        es.push('"');
+        let mut chars = s.chars().peekable();
+        loop {
+            let mut nslashes = 0;
+            while let Some(&'\\') = chars.peek() {
+                chars.next();
+                nslashes += 1;
             }
-            es.push(ch)
+
+            match chars.next() {
+                Some('"') => {
+                    es.extend(repeat('\\').take(nslashes * 2 + 1));
+                    es.push('"');
+                }
+                Some(c) => {
+                    es.extend(repeat('\\').take(nslashes));
+                    es.push(c);
+                }
+                None => {
+                    es.extend(repeat('\\').take(nslashes * 2));
+                    break;
+                }
+            }
+
         }
-        if has_spaces {
-            es.push(QUOTE_CHAR);
-        }
+        es.push('"');
         es.into()
     }
 
@@ -73,9 +76,9 @@ pub mod windows {
         assert_eq!(escape("linker=gcc -L/foo -Wl,bar".into()),
                           r#""linker=gcc -L/foo -Wl,bar""#);
         assert_eq!(escape(r#"--features="default""#.into()),
-                          r#"--features=\"default\""#);
+                          r#""--features=\"default\"""#);
         assert_eq!(escape(r#"\path\to\my documents\"#.into()),
-                          r#""/path/to/my documents/""#);
+                          r#""\path\to\my documents\\""#);
     }
 }
 

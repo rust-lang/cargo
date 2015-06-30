@@ -136,7 +136,8 @@ impl ProjectBuilder {
         let mut p = process(program).unwrap();
         p.cwd(&self.root())
          .env("HOME", &paths::home())
-         .env_remove("CARGO_HOME");
+         .env_remove("CARGO_HOME")  // make sure we don't pick up an outer one
+         .env_remove("MSYSTEM");    // assume cmd.exe everywhere on windows
         return p;
     }
 
