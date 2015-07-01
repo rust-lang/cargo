@@ -18,6 +18,7 @@ struct Options {
     flag_test: Vec<String>,
     flag_bench: Vec<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_release: bool,
 }
 
@@ -43,6 +44,7 @@ Options:
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to build tests for
     -v, --verbose            Use verbose output
+    -q, --quiet              No output printed to stdout
 
 All of the trailing arguments are passed to the test binaries generated for
 filtering tests and generally providing options configuring how they run. For
@@ -63,7 +65,7 @@ Compilation can be configured via the `test` profile in the manifest.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,

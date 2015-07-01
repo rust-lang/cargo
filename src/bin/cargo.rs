@@ -20,6 +20,7 @@ use cargo::util::{CliError, CliResult, lev_distance, Config};
 struct Flags {
     flag_list: bool,
     flag_verbose: bool,
+    flag_quiet: bool,
     arg_command: String,
     arg_args: Vec<String>,
 }
@@ -36,6 +37,7 @@ Options:
     -V, --version    Print version info and exit
     --list           List installed commands
     -v, --verbose    Use verbose output
+    -q, --quiet             No output printed to stdout
 
 Some common cargo commands are:
     build       Compile the current project
@@ -89,7 +91,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    config.shell().set_verbose(flags.flag_verbose);
+    try!(config.shell().set_verbosity(flags.flag_verbose, flags.flag_quiet));
 
     init_git_transports(config);
 

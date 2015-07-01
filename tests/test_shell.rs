@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 use term::{Terminal, TerminfoTerminal, color};
 use hamcrest::{assert_that};
 
-use cargo::core::shell::{Shell,ShellConfig};
+use cargo::core::shell::{Shell, ShellConfig};
+use cargo::core::shell::Verbosity::{Verbose, Quiet};
 
 use support::{Tap, shell_writes};
 
@@ -21,7 +22,7 @@ impl Write for Sink {
 }
 
 test!(non_tty {
-    let config = ShellConfig { color: true, verbose: true, tty: false };
+    let config = ShellConfig { color: true, verbosity: Verbose, tty: false };
     let a = Arc::new(Mutex::new(Vec::new()));
 
     Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
@@ -33,7 +34,7 @@ test!(non_tty {
 });
 
 test!(color_explicitly_disabled {
-    let config = ShellConfig { color: false, verbose: true, tty: true };
+    let config = ShellConfig { color: false, verbosity: Verbose, tty: true };
     let a = Arc::new(Mutex::new(Vec::new()));
 
     Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
@@ -47,7 +48,7 @@ test!(colored_shell {
     let term = TerminfoTerminal::new(Vec::new());
     if term.is_none() { return }
 
-    let config = ShellConfig { color: true, verbose: true, tty: true };
+    let config = ShellConfig { color: true, verbosity: Verbose, tty: true };
     let a = Arc::new(Mutex::new(Vec::new()));
 
     Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
@@ -57,6 +58,19 @@ test!(colored_shell {
     assert_that(&buf[..],
                 shell_writes(colored_output("Hey Alex\n",
                                             color::RED).unwrap()));
+});
+
+test!(quiet_shell {
+    let config = ShellConfig { color: true, verbosity: Quiet, tty: true };
+    let a = Arc::new(Mutex::new(Vec::new()));
+
+    Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
+        shell.say("Should be suppressed", color::BLACK).unwrap();
+    });
+
+    let buf = a.lock().unwrap().clone();
+    assert_that(&buf[..],
+                shell_writes(""));
 });
 
 fn colored_output(string: &str, color: color::Color) -> io::Result<String> {

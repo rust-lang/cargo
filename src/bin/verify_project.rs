@@ -13,6 +13,7 @@ pub type Error = HashMap<String, String>;
 struct Flags {
     flag_manifest_path: String,
     flag_verbose: bool,
+    flag_quiet: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -24,10 +25,11 @@ Options:
     -h, --help              Print this message
     --manifest-path PATH    Path to the manifest to verify
     -v, --verbose           Use verbose output
+    -q, --quiet             No output printed to stdout
 ";
 
 pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
-    config.shell().set_verbose(args.flag_verbose);
+    try!(config.shell().set_verbosity(args.flag_verbose, args.flag_quiet));
 
     let mut contents = String::new();
     let file = File::open(&args.flag_manifest_path);

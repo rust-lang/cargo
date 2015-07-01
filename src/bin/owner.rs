@@ -9,6 +9,7 @@ struct Options {
     flag_remove: Option<Vec<String>>,
     flag_index: Option<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_list: bool,
 }
 
@@ -26,6 +27,7 @@ Options:
     --index INDEX           Registry index to modify owners for
     --token TOKEN           API token to use when authenticating
     -v, --verbose           Use verbose output
+    -q, --quiet             No output printed to stdout
 
 This command will modify the owners for a package on the specified registry (or
 default). Note that owners of a package can upload new versions, yank old
@@ -33,7 +35,7 @@ versions, and also modify the set of owners, so take caution!
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,

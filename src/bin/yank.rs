@@ -8,6 +8,7 @@ struct Options {
     flag_vers: Option<String>,
     flag_index: Option<String>,
     flag_verbose: bool,
+    flag_quiet: bool,
     flag_undo: bool,
 }
 
@@ -24,6 +25,7 @@ Options:
     --index INDEX           Registry index to yank from
     --token TOKEN           API token to use when authenticating
     -v, --verbose           Use verbose output
+    -q, --quiet             No output printed to stdout
 
 The yank command removes a previously pushed crate's version from the server's
 index. This command does not delete any data, and the crate will still be
@@ -35,7 +37,7 @@ crates to be locked to any yanked version.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    config.shell().set_verbose(options.flag_verbose);
+    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     try!(ops::yank(config,
                    options.arg_crate,
                    options.flag_vers,
