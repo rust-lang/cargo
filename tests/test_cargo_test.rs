@@ -1631,3 +1631,29 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
 });
+
+test!(dev_dep_with_build_script {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dev-dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/foo.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main() {}");
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0));
+});
