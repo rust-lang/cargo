@@ -64,6 +64,10 @@ impl Config {
 
     pub fn home(&self) -> &Path { &self.home_path }
 
+    pub fn template_path(&self) -> PathBuf {
+        self.home_path.join("templates")
+    }
+
     pub fn git_db_path(&self) -> PathBuf {
         self.home_path.join("git").join("db")
     }

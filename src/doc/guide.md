@@ -35,6 +35,9 @@ We're passing `--bin` because we're making a binary program: if we
 were making a library, we'd leave it off. If you'd like to not initialize a new
 git repository as well (the default), you can also pass `--vcs none`.
 
+You can also use your own template to scaffold cargo projects! See the
+[Templates](#templates) section for more details.
+
 Let's check out what Cargo has generated for us:
 
 ```shell
@@ -439,3 +442,62 @@ To test your project on Travis-CI, here is a sample `.travis.yml` file:
 ```
 language: rust
 ```
+
+# Templates
+
+Cargo uses the mustache library to compile the templates used to scaffold
+projects. By default, there are only two templates available, `bin` and `lib`.
+These are used by cargo to create the standard project structure.
+
+You can also specify other templates from which to scaffold your project. The
+`--template` argument to `cargo new` accepts either a template name that you
+have downloaded on your system, or a URL to a remote Git repository containing
+the project template.
+
+```
+# use the mytemplate template which is located in .cargo/templates/mytemplate
+$ cargo new myproj --template mytemplate
+
+# download the template called mytemplate from your github package
+$ cargo new myproj --template http://github.com/you/mytemplate
+```
+
+## Creating new templates
+
+A cargo template is just a folder containing one or more files. Usually, there
+is a `Cargo.toml` and a `src` directory. Each file in the template directory
+will be treated as a mustache template. This means you can use mustache
+variables wherever you want dynamic content, and cargo will render the proper
+values. Let's create a simple example. Create a new folder called `mytemplate`.
+Add the following files:
+
+```toml
+# Cargo.toml
+[project]
+name = "{{name}}"
+version = "0.1.0"
+authors = [{{{authors}}}]
+```
+
+```rust
+// src/main.rs
+fn main() {
+    prinln!("This is the {{name}} project!");
+}
+```
+
+Upload this to a public git repository and anyone can now use it to start their
+projects with this command:
+
+```
+$ cargo new proj --template http://your/project/repo
+```
+
+## Available variables
+
+The variables available for use are:
+
+- name: the name of the project
+- authors: the toml formatted name of the project author
+
+In the future, more variables may be added. Suggestions welcome!

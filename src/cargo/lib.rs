@@ -22,6 +22,7 @@ extern crate threadpool;
 extern crate time;
 extern crate toml;
 extern crate url;
+extern crate mustache;
 
 use std::env;
 use std::error::Error;
