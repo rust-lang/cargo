@@ -458,11 +458,7 @@ impl TomlManifest {
                 for target in benches {
                     try!(validate_bench_name(target));
                 }
-                if benches.is_empty() {
-                    inferred_bench_targets(layout)
-                } else {
-                    benches.clone()
-                }
+                benches.clone()
             }
             None => inferred_bench_targets(layout)
         };
@@ -590,21 +586,39 @@ fn validate_binary_name(target: &TomlTarget) -> CargoResult<()> {
 
 fn validate_example_name(target: &TomlTarget) -> CargoResult<()> {
     match target.name {
-        Some(_) => Ok(()),
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("example target names cannot be empty")))
+            } else {
+                Ok(())
+            }
+        },
         None => Err(human(format!("example target example.name is required")))
     }
 }
 
 fn validate_test_name(target: &TomlTarget) -> CargoResult<()> {
     match target.name {
-        Some(_) => Ok(()),
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("test target names cannot be empty")))
+            } else {
+                Ok(())
+            }
+        },
         None => Err(human(format!("test target test.name is required")))
     }
 }
 
 fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
     match target.name {
-        Some(_) => Ok(()),
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("bench target names cannot be empty")))
+            } else {
+                Ok(())
+            }
+        },
         None => Err(human(format!("bench target bench.name is required")))
     }
 }
