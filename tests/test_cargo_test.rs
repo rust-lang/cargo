@@ -683,6 +683,210 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
                        dir = p.url())));
 });
 
+test!(lib_without_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            test = false
+            doctest = false
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ");
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} syntax v0.0.1 ({dir})
+{running} target[..]syntax-[..]
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, dir = p.url())));
+});
+
+test!(bin_without_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            test = false
+            doctest = false
+
+            [[bin]]
+            path = "src/main.rs"
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ");
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(101)
+                       .with_stderr(&format!("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  binary target bin.name is required")));
+});
+
+test!(bench_without_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            test = false
+            doctest = false
+
+            [[bench]]
+            path = "src/bench.rs"
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ")
+        .file("src/bench.rs", "
+            #![feature(test)]
+            extern crate syntax;
+            extern crate test;
+
+            #[bench]
+            fn external_bench(_b: &mut test::Bencher) {}
+        ");
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(101)
+                       .with_stderr(&format!("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  bench target bench.name is required")));
+});
+
+test!(test_without_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            test = false
+            doctest = false
+
+            [[test]]
+            path = "src/test.rs"
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn foo() {}
+            pub fn get_hello() -> &'static str { "Hello" }
+        "#)
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ")
+        .file("src/test.rs", r#"
+            extern crate syntax;
+
+            #[test]
+            fn external_test() { assert_eq!(syntax::get_hello(), "Hello") }
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(101)
+                       .with_stderr(&format!("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  test target test.name is required")));
+});
+
+test!(example_without_name {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "syntax"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            test = false
+            doctest = false
+
+            [[example]]
+            path = "examples/example.rs"
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("src/main.rs", "
+            extern crate syntax;
+
+            fn main() {}
+
+            #[test]
+            fn test() { syntax::foo() }
+        ")
+        .file("examples/example.rs", r#"
+            extern crate syntax;
+
+            fn main() {
+                println!("example1");
+            }
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(101)
+                       .with_stderr(&format!("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  example target example.name is required")));
+});
+
 test!(bin_there_for_integration {
     let p = project("foo")
         .file("Cargo.toml", r#"

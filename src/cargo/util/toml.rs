@@ -302,7 +302,7 @@ struct Context<'a, 'b> {
 fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
     layout.lib.as_ref().map(|lib| {
         TomlTarget {
-            name: name.to_string(),
+            name: Some(name.to_string()),
             path: Some(PathValue::Path(lib.clone())),
             .. TomlTarget::new()
         }
@@ -320,7 +320,7 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
 
         name.map(|name| {
             TomlTarget {
-                name: name,
+                name: Some(name),
                 path: Some(PathValue::Path(bin.clone())),
                 .. TomlTarget::new()
             }
@@ -332,7 +332,7 @@ fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
     layout.examples.iter().filter_map(|ex| {
         ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
-                name: name.to_string(),
+                name: Some(name.to_string()),
                 path: Some(PathValue::Path(ex.clone())),
                 .. TomlTarget::new()
             }
@@ -344,7 +344,7 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
     layout.tests.iter().filter_map(|ex| {
         ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
-                name: name.to_string(),
+                name: Some(name.to_string()),
                 path: Some(PathValue::Path(ex.clone())),
                 .. TomlTarget::new()
             }
@@ -356,7 +356,7 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
     layout.benches.iter().filter_map(|ex| {
         ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
-                name: name.to_string(),
+                name: Some(name.to_string()),
                 path: Some(PathValue::Path(ex.clone())),
                 .. TomlTarget::new()
             }
@@ -389,14 +389,15 @@ impl TomlManifest {
         let lib = match self.lib {
             Some(ref lib) => {
                 try!(validate_library_name(lib));
-                Some(if layout.lib.is_some() && lib.path.is_none() {
+                Some(
                     TomlTarget {
-                        path: layout.lib.as_ref().map(|p| PathValue::Path(p.clone())),
-                        .. lib.clone()
+                        name: lib.name.clone().or(Some(project.name.clone())),
+                        path: lib.path.clone().or(
+                            layout.lib.as_ref().map(|p| PathValue::Path(p.clone()))
+                        ),
+                        ..lib.clone()
                     }
-                } else {
-                    lib.clone()
-                })
+                )
             }
             None => inferred_lib_target(&project.name, layout),
         };
@@ -426,28 +427,40 @@ impl TomlManifest {
         let blacklist = vec!["build", "deps", "examples", "native"];
 
         for bin in bins.iter() {
-            if blacklist.iter().find(|&x| *x == bin.name) != None {
+            if blacklist.iter().find(|&x| *x == bin.name()) != None {
                 return Err(human(&format!("the binary target name `{}` is \
-                                           forbidden", bin.name)));
+                                           forbidden", bin.name())));
             }
         }
 
         let examples = match self.example {
-            Some(ref examples) => examples.clone(),
-            None => inferred_example_targets(layout),
+            Some(ref examples) => {
+                for target in examples {
+                    try!(validate_example_name(target));
+                }
+                examples.clone()
+            }
+            None => inferred_example_targets(layout)
         };
 
         let tests = match self.test {
-            Some(ref tests) => tests.clone(),
-            None => inferred_test_targets(layout),
+            Some(ref tests) => {
+                for target in tests {
+                    try!(validate_test_name(target));
+                }
+                tests.clone()
+            }
+            None => inferred_test_targets(layout)
         };
 
-        let benches = if self.bench.is_none() || self.bench.as_ref().unwrap().is_empty() {
-            inferred_bench_targets(layout)
-        } else {
-            self.bench.as_ref().unwrap().iter().map(|t| {
-                t.clone()
-            }).collect()
+        let benches = match self.bench {
+            Some(ref benches) => {
+                for target in benches {
+                    try!(validate_bench_name(target));
+                }
+                benches.clone()
+            }
+            None => inferred_bench_targets(layout)
         };
 
         // processing the custom build script
@@ -543,21 +556,70 @@ impl TomlManifest {
 }
 
 fn validate_library_name(target: &TomlTarget) -> CargoResult<()> {
-    if target.name.trim().is_empty() {
-        Err(human(format!("library target names cannot be empty.")))
-    } else if target.name.contains("-") {
-        Err(human(format!("library target names cannot contain hyphens: {}",
-                          target.name)))
-    } else {
-        Ok(())
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("library target names cannot be empty.")))
+            } else if name.contains("-") {
+                Err(human(format!("library target names cannot contain hyphens: {}",
+                                  name)))
+            } else {
+                Ok(())
+            }
+        },
+        None => Ok(())
     }
 }
 
 fn validate_binary_name(target: &TomlTarget) -> CargoResult<()> {
-    if target.name.trim().is_empty() {
-        Err(human(format!("binary target names cannot be empty.")))
-    } else {
-        Ok(())
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("binary target names cannot be empty.")))
+            } else {
+                Ok(())
+            }
+        },
+        None => Err(human(format!("binary target bin.name is required")))
+    }
+}
+
+fn validate_example_name(target: &TomlTarget) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("example target names cannot be empty")))
+            } else {
+                Ok(())
+            }
+        },
+        None => Err(human(format!("example target example.name is required")))
+    }
+}
+
+fn validate_test_name(target: &TomlTarget) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("test target names cannot be empty")))
+            } else {
+                Ok(())
+            }
+        },
+        None => Err(human(format!("test target test.name is required")))
+    }
+}
+
+fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                Err(human(format!("bench target names cannot be empty")))
+            } else {
+                Ok(())
+            }
+        },
+        None => Err(human(format!("bench target bench.name is required")))
     }
 }
 
@@ -615,7 +677,7 @@ fn process_dependencies<F>(cx: &mut Context,
 
 #[derive(RustcDecodable, Debug, Clone)]
 struct TomlTarget {
-    name: String,
+    name: Option<String>,
     crate_type: Option<Vec<String>>,
     path: Option<PathValue>,
     test: Option<bool>,
@@ -643,7 +705,7 @@ struct TomlPlatform {
 impl TomlTarget {
     fn new() -> TomlTarget {
         TomlTarget {
-            name: String::new(),
+            name: None,
             crate_type: None,
             path: None,
             test: None,
@@ -652,6 +714,13 @@ impl TomlTarget {
             doc: None,
             plugin: None,
             harness: None,
+        }
+    }
+
+    fn name(&self) -> String {
+        match self.name {
+            Some(ref name) => name.clone(),
+            None => panic!("target name is required")
         }
     }
 }
@@ -694,7 +763,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
     fn lib_target(dst: &mut Vec<Target>, l: &TomlLibTarget,
                   metadata: &Metadata) {
         let path = l.path.clone().unwrap_or_else(|| {
-            PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name)))
+            PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
         });
         let crate_types = l.crate_type.clone().and_then(|kinds| {
             kinds.iter().map(|s| LibKind::from_str(s))
@@ -703,7 +772,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
             vec![if l.plugin == Some(true) {LibKind::Dylib} else {LibKind::Lib}]
         });
 
-        let mut target = Target::lib_target(&l.name, crate_types.clone(),
+        let mut target = Target::lib_target(&l.name(), crate_types.clone(),
                                             &path.to_path(),
                                             metadata.clone());
         configure(l, &mut target);
@@ -716,7 +785,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
             let path = bin.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(bin))
             });
-            let mut target = Target::bin_target(&bin.name, &path.to_path(),
+            let mut target = Target::bin_target(&bin.name(), &path.to_path(),
                                                 None);
             configure(bin, &mut target);
             dst.push(target);
@@ -738,7 +807,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
                 PathValue::Path(default(ex))
             });
 
-            let mut target = Target::example_target(&ex.name, &path.to_path());
+            let mut target = Target::example_target(&ex.name(), &path.to_path());
             configure(ex, &mut target);
             dst.push(target);
         }
@@ -754,9 +823,9 @@ fn normalize(lib: &Option<TomlLibTarget>,
 
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
-            metadata.mix(&format!("test-{}", test.name));
+            metadata.mix(&format!("test-{}", test.name()));
 
-            let mut target = Target::test_target(&test.name, &path.to_path(),
+            let mut target = Target::test_target(&test.name(), &path.to_path(),
                                                  metadata);
             configure(test, &mut target);
             dst.push(target);
@@ -773,9 +842,9 @@ fn normalize(lib: &Option<TomlLibTarget>,
 
             // make sure this metadata is different from any same-named libs.
             let mut metadata = metadata.clone();
-            metadata.mix(&format!("bench-{}", bench.name));
+            metadata.mix(&format!("bench-{}", bench.name()));
 
-            let mut target = Target::bench_target(&bench.name,
+            let mut target = Target::bench_target(&bench.name(),
                                                   &path.to_path(),
                                                   metadata);
             configure(bench, &mut target);
@@ -789,11 +858,11 @@ fn normalize(lib: &Option<TomlLibTarget>,
         lib_target(&mut ret, lib, metadata);
         bin_targets(&mut ret, bins,
                     &mut |bin| Path::new("src").join("bin")
-                                   .join(&format!("{}.rs", bin.name)));
+                                   .join(&format!("{}.rs", bin.name())));
     } else if bins.len() > 0 {
         bin_targets(&mut ret, bins,
                     &mut |bin| Path::new("src")
-                                    .join(&format!("{}.rs", bin.name)));
+                                    .join(&format!("{}.rs", bin.name())));
     }
 
     if let Some(custom_build) = custom_build {
@@ -802,21 +871,21 @@ fn normalize(lib: &Option<TomlLibTarget>,
 
     example_targets(&mut ret, examples,
                     &mut |ex| Path::new("examples")
-                                   .join(&format!("{}.rs", ex.name)));
+                                   .join(&format!("{}.rs", ex.name())));
 
     test_targets(&mut ret, tests, metadata, &mut |test| {
-        if test.name == "test" {
+        if test.name() == "test" {
             Path::new("src").join("test.rs")
         } else {
-            Path::new("tests").join(&format!("{}.rs", test.name))
+            Path::new("tests").join(&format!("{}.rs", test.name()))
         }
     });
 
     bench_targets(&mut ret, benches, metadata, &mut |bench| {
-        if bench.name == "bench" {
+        if bench.name() == "bench" {
             Path::new("src").join("bench.rs")
         } else {
-            Path::new("benches").join(&format!("{}.rs", bench.name))
+            Path::new("benches").join(&format!("{}.rs", bench.name()))
         }
     });
 
