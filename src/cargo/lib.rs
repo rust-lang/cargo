@@ -37,7 +37,8 @@ use core::{Shell, MultiShell, ShellConfig, Verbosity};
 use core::shell::Verbosity::{Verbose};
 use term::color::{BLACK, RED};
 
-pub use util::{CargoError, CliError, CliResult, human, Config, ChainError};
+pub use util::{CargoError, CliError, CliResult, human, Config, ChainError, 
+               CargoLock, LockKind};
 
 pub mod core;
 pub mod ops;
@@ -104,7 +105,16 @@ fn process<V, F>(mut callback: F)
                 human(format!("invalid unicode in argument: {:?}", s))
             })
         }).collect());
-        callback(&args, config.as_ref().unwrap())
+
+        let config_ref = config.as_ref().unwrap();
+        let mut fl = CargoLock::new(config_ref.home().join(".global-lock"), 
+                                    try!(CargoLock::lock_kind(config_ref)));
+
+        try!(fl.lock().chain_error(|| {
+            human("Failed to obtain global cargo lock")
+        }));
+
+        callback(&args, config_ref)
     })();
     let mut verbose_shell = shell(Verbose);
     let mut shell = config.as_ref().map(|s| s.shell());

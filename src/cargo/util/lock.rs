@@ -38,6 +38,7 @@ pub struct CargoLock {
 impl CargoLock {
 
     pub fn lock_kind(config: &Config) -> CargoResult<LockKind> {
+        // TODO(ST): rename config key to something more suitable
         const CONFIG_KEY: &'static str = "build.lock-kind";
         match try!(config.get_string(CONFIG_KEY)).map(|t| t.0) {
             None => Ok(LockKind::NonBlocking),
