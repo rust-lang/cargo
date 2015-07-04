@@ -213,15 +213,21 @@ install-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 	$$(PKGDIR_$(1))/install.sh \
 		--prefix="$$(CFG_PREFIX)" \
 		--destdir="$$(DESTDIR)" $$(MAYBE_DISABLE_VERIFY)
+
+uninstall-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
+	$$(PKGDIR_$(1))/install.sh \
+		--uninstall
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
 
 dist: $(foreach target,$(CFG_TARGET),dist-$(target))
 distcheck: $(foreach target,$(CFG_TARGET),distcheck-$(target))
 install: $(foreach target,$(CFG_TARGET),install-$(target))
+uninstall: $(foreach target,$(CFG_TARGET), uninstall-$(target))
+
 
 # Setup phony tasks
-.PHONY: all clean clean-all dist distcheck install test test-unit style
+.PHONY: all clean clean-all dist distcheck install uninstall test test-unit style
 
 # Disable unnecessary built-in rules
 .SUFFIXES:
