@@ -53,6 +53,32 @@ test!(build_with_no_lib {
                        .with_stderr("no library targets found"));
 });
 
+test!(build_global_lock {
+    
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "foo"
+            version = "0.0.1"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("src/lib.rs", r#" "#);
+
+    p.build();
+    
+    let mut bg_process = p.cargo("build");
+    let fg_process = bg_process.clone();
+    let mut bg_process_handle = bg_process.build_command().spawn().unwrap();
+
+    assert_eq!(fg_process.build_command().output().unwrap().status.code().unwrap(), 101);
+    assert!(bg_process_handle.wait().unwrap().success());
+});
+
+
 test!(build_with_relative_cargo_home_path {
     let p = project("foo")
         .file("Cargo.toml", r#"

@@ -22,7 +22,6 @@ extern crate threadpool;
 extern crate time;
 extern crate toml;
 extern crate url;
-extern crate errno;
 extern crate file_lock;
 
 use std::env;
@@ -37,8 +36,7 @@ use core::{Shell, MultiShell, ShellConfig, Verbosity};
 use core::shell::Verbosity::{Verbose};
 use term::color::{BLACK, RED};
 
-pub use util::{CargoError, CliError, CliResult, human, Config, ChainError, 
-               CargoLock, LockKind};
+pub use util::{CargoError, CliError, CliResult, human, Config, ChainError};
 
 pub mod core;
 pub mod ops;
@@ -105,16 +103,7 @@ fn process<V, F>(mut callback: F)
                 human(format!("invalid unicode in argument: {:?}", s))
             })
         }).collect());
-
-        let config_ref = config.as_ref().unwrap();
-        let mut fl = CargoLock::new(config_ref.home().join(".global-lock"), 
-                                    try!(CargoLock::lock_kind(config_ref)));
-
-        try!(fl.lock().chain_error(|| {
-            human("Failed to obtain global cargo lock")
-        }));
-
-        callback(&args, config_ref)
+        callback(&args, config.as_ref().unwrap())
     })();
     let mut verbose_shell = shell(Verbose);
     let mut shell = config.as_ref().map(|s| s.shell());

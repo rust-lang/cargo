@@ -7,7 +7,6 @@ dependencies = [
  "curl 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.67 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "errno 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "file-lock 0.0.16 (git+https://github.com/Byron/file-lock?branch=cargo-adjustments)",
  "filetime 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
