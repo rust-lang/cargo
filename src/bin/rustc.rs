@@ -43,7 +43,7 @@ Options:
     --features FEATURES      Features to compile for the package
     --no-default-features    Do not compile default features for the package
     --target TRIPLE          Target triple which compiles will be for
-    --manifest-path PATH     Path to the manifest to fetch depednencies for
+    --manifest-path PATH     Path to the manifest to fetch dependencies for
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
 
