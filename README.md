@@ -37,7 +37,6 @@ Cargo requires the following tools and packages to build:
 * `cmake`
 * `pkg-config`
 * OpenSSL headers (`libssl-dev` package on ubuntu)
-* libgit2
 
 Cargo can then be compiled like many other standard unix-like projects:
 
