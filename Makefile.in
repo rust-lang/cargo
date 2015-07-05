@@ -216,6 +216,8 @@ install-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 
 uninstall-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 	$$(PKGDIR_$(1))/install.sh \
+		--prefix="$$(CFG_PREFIX)" \
+		--destdir="$$(DESTDIR)" \
 		--uninstall
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
