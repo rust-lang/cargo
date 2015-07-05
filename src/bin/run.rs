@@ -36,12 +36,12 @@ Options:
     -v, --verbose           Use verbose output
     -q, --quiet             No output printed to stdout
 
-If neither `--bin` or `--example` are given, then if the project only has one
+If neither `--bin` nor `--example` are given, then if the project only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
 and `--example` specifies the example target to run. At most one of `--bin` or
 `--example` can be provided.
 
-All of the trailing arguments are passed as to the binary to run.
+All of the trailing arguments are passed to the binary to run.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
