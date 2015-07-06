@@ -375,6 +375,10 @@ This array should be filled with directories that contain a `Cargo.toml`. In
 this instance, we're just adding `conduit`, so it will be the only one that's
 overridden.
 
+Note: using a local configuration to override paths will only work for crates
+that have been published to crates.io.  You cannot use this feature to tell Cargo
+how to find local unpublished crates.
+
 More information about local configuration can be found in the [configuration
 documentation](config.html).
 
