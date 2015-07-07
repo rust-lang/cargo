@@ -1,12 +1,9 @@
-import distutils.spawn
+import download
 import hashlib
 import os
-import subprocess
-import sys
-import tarfile
-import shutil
-import contextlib
 import re
+import shutil
+import sys
 
 datere = re.compile('^\d{4}-\d{2}-\d{2}')
 cksumre = re.compile('^  ([^ ]+) ([^$]+)$')
@@ -91,21 +88,9 @@ if os.path.exists(dl_path):
         exists = True
 
 if not exists:
-    ret = subprocess.call(["curl", "-o", dl_path, url])
-    if ret != 0:
-        raise Exception("failed to fetch url")
+    download.get(url, dl_path)
     h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
     if h != hash:
         raise Exception("failed to verify the checksum of the snapshot")
 
-with contextlib.closing(tarfile.open(dl_path)) as tar:
-    for p in tar.getnames():
-        name = p.replace("cargo-nightly-" + triple + "/", "", 1)
-        fp = os.path.join(dst, name)
-        print("extracting " + p)
-        tar.extract(p, dst)
-        tp = os.path.join(dst, p)
-        if os.path.isdir(tp) and os.path.exists(fp):
-            continue
-        shutil.move(tp, fp)
-shutil.rmtree(os.path.join(dst, 'cargo-nightly-' + triple))
+download.unpack(dl_path, dst)
