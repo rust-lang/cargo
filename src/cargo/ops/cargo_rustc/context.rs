@@ -36,7 +36,7 @@ pub struct Context<'a, 'cfg: 'a> {
                               Fingerprint>,
     pub compiled: HashSet<(&'a PackageId, &'a Target, &'a Profile)>,
     pub build_config: BuildConfig,
-    pub build_scripts: HashMap<(&'a PackageId, Kind, &'a Profile),
+    pub build_scripts: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
                                Vec<&'a PackageId>>,
 
     host: Layout,
