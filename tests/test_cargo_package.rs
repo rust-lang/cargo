@@ -316,3 +316,56 @@ test!(package_git_submodule {
     assert!(result.status.success());
     assert!(from_utf8(&result.stdout).unwrap().contains(&format!("{} bar/Makefile", ARCHIVING)));
 });
+
+test!(ignore_nested {
+    let cargo_toml = r#"
+            [project]
+            name = "nested"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "nested"
+        "#;
+    let main_rs = r#"
+            fn main() { println!("hello"); }
+        "#;
+    let p = project("nested")
+        .file("Cargo.toml", cargo_toml)
+        .file("src/main.rs", main_rs)
+        // If a project happens to contain a copy of itself, we should
+        // ignore it.
+        .file("a_dir/nested/Cargo.toml", cargo_toml)
+        .file("a_dir/nested/src/main.rs", main_rs);
+
+    assert_that(p.cargo_process("package"),
+                execs().with_status(0).with_stdout(&format!("\
+{packaging} nested v0.0.1 ({dir})
+{verifying} nested v0.0.1 ({dir})
+{compiling} nested v0.0.1 ({dir}[..])
+",
+        packaging = PACKAGING,
+        verifying = VERIFYING,
+        compiling = COMPILING,
+        dir = p.url())));
+    assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
+    assert_that(p.cargo("package").arg("-l"),
+                execs().with_status(0).with_stdout("\
+Cargo.toml
+src[..]main.rs
+"));
+    assert_that(p.cargo("package"),
+                execs().with_status(0).with_stdout(""));
+
+    let f = File::open(&p.root().join("target/package/nested-0.0.1.crate")).unwrap();
+    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let ar = Archive::new(Cursor::new(contents));
+    for f in ar.files().unwrap() {
+        let f = f.unwrap();
+        let fname = f.filename_bytes();
+        assert!(fname == b"nested-0.0.1/Cargo.toml" ||
+                fname == b"nested-0.0.1/src/main.rs",
+                "unexpected filename: {:?}", f.filename())
+    }
+});
