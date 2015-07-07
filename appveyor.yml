@@ -1,0 +1,19 @@
+environment:
+  matrix:
+  - MSVC: 1
+    BITS: 64
+    TARGET: x86_64-pc-windows-msvc
+
+install:
+  - python src/etc/install-deps.py
+  - python src/etc/dl-snapshot.py %TARGET%
+  - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64
+  - SET PATH=%PATH%;%cd%/rustc/bin
+  - SET PATH=%PATH%;%cd%/target/snapshot/cargo/bin
+  - rustc -V
+  - cargo -V
+
+build: false
+
+test_script:
+  - cargo test

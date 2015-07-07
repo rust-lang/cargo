@@ -1,25 +1,27 @@
 language: rust
+sudo: false
 install:
-  - sh ./.travis.install.deps.sh
+  - python src/etc/install-deps.py
 script:
-  - ./configure --local-rust-root=`pwd`/rustc
+  - ./configure --local-rust-root=`pwd`/rustc --prefix=$HOME/cargo-install
   - make
   - make test
   - make distcheck
   - make doc
-  - sudo make install
-  - sudo make uninstall
+  - make install
+  - make uninstall
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
   [ $(uname -s) = Linux ] &&
-  sudo pip install ghp-import &&
-  ghp-import -n target/doc &&
-  git push -f https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+  pip install ghp-import --user $USER &&
+  $HOME/.local/bin/ghp-import -n target/doc &&
+  git push -qf https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
   global:
     - secure: scGpeetUfba5RWyuS4yt10bPoFAI9wpHEReIFqEx7eH5vr2Anajk6+70jW6GdrWVdUvdINiArlQ3An2DeB9vEUWcBjw8WvuPtOH0tDMoSsuVloPlFD8yn1Ac0Bx9getAO5ofxqtoNg+OV4MDVuGabEesqAOWqURNrBC7XK+ntC8=
     - RUST_TEST_THREADS=1
+
 os:
   - linux
   - osx
@@ -27,3 +29,9 @@ os:
 branches:
   only:
     - master
+
+addons:
+  apt:
+    packages:
+    - g++-multilib
+    - lib32stdc++6

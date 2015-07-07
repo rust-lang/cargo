@@ -1,21 +1,16 @@
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
-Learn more at http://doc.crates.io/.
+Learn more at http://doc.crates.io/
 
-## Installing cargo from nightlies
+## Installing Cargo
 
-Cargo has nightlies available for use. The cargo source is not always guaranteed
-to compile on rust master as it may lag behind by a day or two. Nightlies,
-however, will run regardless of this fact!
+Cargo is distributed by default with Rust, so if you've got `rustc` installed
+locally you probably also have `cargo` installed locally.
 
-```sh
-triple=x86_64-unknown-linux-gnu
-curl -O https://static.rust-lang.org/cargo-dist/cargo-nightly-$triple.tar.gz
-tar xf cargo-nightly-$triple.tar.gz
-./cargo-nightly-$triple/install.sh
-```
-
-Nightlies are available for the following triples:
+If, however, you would like to install Cargo from the nightly binaries that are
+generated, you may also do so! Note that these nightlies are not official
+binaries, so they are only provided in one format with one installation method.
+Each tarball below contains a top-level `install.sh` script to install Cargo.
 
 * [`x86_64-unknown-linux-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-unknown-linux-gnu.tar.gz)
 * [`i686-unknown-linux-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-unknown-linux-gnu.tar.gz)
@@ -23,28 +18,27 @@ Nightlies are available for the following triples:
 * [`i686-apple-darwin`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-apple-darwin.tar.gz)
 * [`x86_64-pc-windows-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz)
 * [`i686-pc-windows-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz)
+* [`x86_64-pc-windows-msvc`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-msvc.tar.gz)
 
-Note that if you're using the windows snapshot you will need Mingw-w64 installed
-as well as MSYS. The installation script needs to be run inside the MSYS shell.
+Note that if you're on Windows you will have to run the `install.sh` script from
+inside an MSYS shell, likely from a MinGW-64 installation.
 
-## Compiling cargo
+## Compiling from Source
 
 Cargo requires the following tools and packages to build:
 
 * `rustc`
 * `python`
-* `curl`
+* `curl` (on Unix)
 * `cmake`
-* `pkg-config`
-* OpenSSL headers (`libssl-dev` package on ubuntu)
+* OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
 
 Cargo can then be compiled like many other standard unix-like projects:
 
 ```sh
 git clone https://github.com/rust-lang/cargo
 cd cargo
-git submodule update --init
-./.travis.install.deps.sh
+python src/etc/install-deps.py
 ./configure --local-rust-root="$PWD"/rustc
 make
 make install
@@ -60,7 +54,9 @@ $ ./configure --target=i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
 
 ## Adding new subcommands to Cargo
 
-Cargo is designed to be extensible with new subcommands without having to modify Cargo itself. See [the Wiki page][third-party-subcommands] for more details and a list of known community-developed subcommands.
+Cargo is designed to be extensible with new subcommands without having to modify
+Cargo itself. See [the Wiki page][third-party-subcommands] for more details and
+a list of known community-developed subcommands.
 
 [third-party-subcommands]: https://github.com/rust-lang/cargo/wiki/Third-party-cargo-subcommands
 

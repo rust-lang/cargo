@@ -261,10 +261,10 @@ need_cmd uname
 need_cmd date
 need_cmd tr
 need_cmd sed
-need_cmd file
 need_cmd cmake
-need_cmd pkg-config
-need_cmd curl
+if [ "${OS}" != "Windows_NT" ]; then
+    need_cmd curl
+fi
 
 CFG_SRC_DIR="$(cd $(dirname $0) && pwd)/"
 CFG_BUILD_DIR="$(pwd)/"
