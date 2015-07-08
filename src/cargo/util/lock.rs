@@ -1,31 +1,13 @@
-use file_lock::filename::{Mode, ParseError};
+use file_lock::filename::Mode;
 use file_lock::filename::Lock as FileLock;
-use file_lock::filename::Error as FileLockError;
 
 use std::path::PathBuf;
 use std::fs;
 use std::thread::sleep_ms;
 
-use util::{CargoError, CargoResult, caused_human};
+use util::{CargoResult, caused_human};
 
 pub use file_lock::filename::Kind as LockKind;
-
-impl From<FileLockError> for Box<CargoError> {
-    fn from(t: FileLockError) -> Self {
-        Box::new(t)
-    }
-}
-
-impl From<ParseError> for Box<CargoError> {
-    fn from(t: ParseError) -> Self {
-        Box::new(t)
-    }
-}
-
-impl CargoError for FileLockError {
-    fn is_human(&self) -> bool { true }
-}
-impl CargoError for ParseError {}
 
 pub struct CargoLock {
     inner: FileLock,
