@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::fs;
 use std::thread::sleep_ms;
 
-use util::{Config, CargoError, CargoResult, human, caused_human};
+use util::{CargoError, CargoResult, caused_human};
 
 pub use file_lock::filename::Kind as LockKind;
 
@@ -28,43 +28,17 @@ impl CargoError for FileLockError {
 impl CargoError for ParseError {}
 
 pub struct CargoLock {
-    kind: LockKind, 
     inner: FileLock,
 }
 
 impl CargoLock {
-
-    pub fn lock_kind(config: &Config) -> CargoResult<LockKind> {
-        // TODO(ST): rename config key to something more suitable
-        const CONFIG_KEY: &'static str = "build.lock-kind";
-        match try!(config.get_string(CONFIG_KEY)).map(|t| t.0) {
-            None => Ok(LockKind::NonBlocking),
-            Some(kind_string) => match kind_string.parse() {
-                Ok(kind) => Ok(kind),
-                Err(_) => Err(human(format!("Failed to parse value '{}' at configuration key \
-                                            '{}'. Must be one of '{}' and '{}'",
-                                            kind_string, CONFIG_KEY,
-                                            LockKind::NonBlocking.as_ref(), 
-                                            LockKind::Blocking.as_ref())))
-            }
-        }
-    }
-
-    pub fn new(path: PathBuf, kind: LockKind) -> CargoLock {
+    pub fn new(path: PathBuf) -> CargoLock {
         CargoLock {
-            kind: kind,
             inner: FileLock::new(path, Mode::Write)
         }
     }
 
-    pub fn new_shared(path: PathBuf, kind: LockKind) -> CargoLock {
-        CargoLock {
-            kind: kind,
-            inner: FileLock::new(path, Mode::Read)
-        }
-    }
-
-    pub fn lock(&mut self) -> CargoResult<()> {
+    pub fn lock(&mut self, kind: LockKind) -> CargoResult<()> {
         // NOTE(ST): This could fail if cargo is run concurrently for the first time
         // The only way to prevent it would be to take a lock in a directory which exists.
         // This is why we don't try! here, but hope the directory exists when we 
@@ -87,6 +61,6 @@ impl CargoLock {
             }
         }
         debug!("About to acquire file lock: '{}'", self.inner.path().display());
-        Ok(try!(self.inner.any_lock(self.kind.clone())))
+        Ok(try!(self.inner.any_lock(kind)))
     }
 }
