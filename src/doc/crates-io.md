@@ -31,20 +31,21 @@ glob = "0.0.3"
 num = "0.0.4"
 ```
 
-The string value for each key in this table is a [semver](http://semver.org/)
-version requirement. The exact syntax can be found in the
-[rust-lang/semver](https://github.com/rust-lang/semver) repository, and many of
-the requirement strings can also be found documented [with
-npm](https://www.npmjs.org/doc/misc/semver.html).
+The string value for each key in this table is a [semver][semver] version
+requirement.
 
-**Caret requirements** allow SemVer compatible updates to a specified version,
-`0.1` and `0.2` are not considered compatible, but `1.0` and `1.1` are for
-example. If no operator is specified, this is the default requirement (e.g.
-`1.3` is the same as `^1.3`).
+[semver]: http://doc.rust-lang.org/semver/semver/#requirements
 
-`0.0.x` is not considered compatible with any other version.
-Missing minor and patch versions are desugared to `0` but allow flexibility for
-that value.
+**Caret requirements** allow SemVer compatible updates to a specified version.
+
+`^1.2.3` is an example of a caret requirement.
+
+When considering ‘compatible’ versions, `0.1` and `0.2` are not considered
+compatible, but `1.0` and `1.1` are for example. If no operator is specified,
+this is the default requirement (e.g. `1.3` is the same as `^1.3`).
+
+`0.0.x` is not considered compatible with any other version. Missing minor and
+patch versions are desugared to `0` but allow flexibility for that value.
 
 ```notrust
 ^1.2.3 := >=1.2.3 <2.0.0
@@ -54,7 +55,9 @@ that value.
 ^0 := >=0.0.0 <1.0.0
 ```
 
-**Tilde requirements** specify a minimal version with some updates:
+**Tilde requirements** specify a minimal version with some ability to update.
+
+`~1.2.3` is an example of a tilde requirement.
 
 ```notrust
 ~1.2.3 := >=1.2.3 <1.3.0
@@ -62,8 +65,9 @@ that value.
 ~1 := >=1.0.0 <2.0.0
 ```
 
-**Wildcard requirements** allows parsing of version requirements of the formats
-`*`, `x.*` and `x.y.*`.
+**Wildcard requirements** allow for any version where the wildcard is positioned.
+
+`*`, `1.*` and `1.2.*` are examples of wildcard requirements.
 
 ```notrust
 * := >=0.0.0
@@ -73,6 +77,8 @@ that value.
 
 **Inequality requirements** allow manually specifying a version range or an
 exact version to depend on.
+
+Here are some examples of wildcard requirements:
 
 ```notrust
 >= 1.2.0
