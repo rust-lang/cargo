@@ -149,7 +149,8 @@ pub fn compile_pkg<'a>(package: &Package,
         let platform = target.as_ref().map(|e| &e[..]).or(Some(&rustc_host[..]));
 
         let method = Method::Required{
-            dev_deps: true, // TODO: remove this option?
+            dev_deps: options.mode == CompileMode::Test ||
+                options.mode == CompileMode::Bench,
             features: &features,
             uses_default_features: !no_default_features,
             target_platform: platform};
