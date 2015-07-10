@@ -741,3 +741,42 @@ test!(unions_work_with_no_default_features {
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 });
+
+test!(dev_dependencies_doesnt_leak_features {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+
+            [dev-dependencies.a]
+            path = "a"
+            features = ["badfeature"]
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate a;
+            pub fn foo() { a::a(); }
+        "#)
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            badfeature = []
+        "#)
+        .file("a/src/lib.rs", r#"
+            #[cfg(feature = "badfeature")]
+            pub fn a() { panic!(); }
+
+            #[cfg(not(feature = "badfeature"))]
+            pub fn a() { }
+        "#);
+
+    assert_that(p.cargo("run"), execs().with_status(0));
+});
