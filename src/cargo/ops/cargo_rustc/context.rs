@@ -263,11 +263,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Get the metadata for a target in a specific profile
     pub fn target_metadata(&self, pkg: &Package, target: &Target,
                            profile: &Profile) -> Option<Metadata> {
-        let metadata = target.metadata();
+        // When using Cargo to bootstrap the Rust compiler, we need to
+        // make sure that the stage1 and stage2 packages have different
+        // metadata. Otherwise rustc will complain about having multiple
+        // candidates of the same crate.
+        let metadata = target.metadata().map(|m| m.clone())
+            .map(|mut m| {
+                m.mix(&self.config.rustc());
+                m
+            });
         if target.is_lib() && profile.test {
             // Libs and their tests are built in parallel, so we need to make
             // sure that their metadata is different.
-            metadata.map(|m| m.clone()).map(|mut m| {
+            metadata.map(|mut m| {
                 m.mix(&"test");
                 m
             })
@@ -285,7 +293,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // file names like `target/debug/libfoo.{a,so,rlib}` and such.
             None
         } else {
-            metadata.map(|m| m.clone())
+            metadata
         }
     }
 
