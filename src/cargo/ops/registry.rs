@@ -30,7 +30,13 @@ pub fn publish(manifest_path: &Path,
                config: &Config,
                token: Option<String>,
                index: Option<String>,
-               verify: bool) -> CargoResult<()> {
+               verify: bool,
+               dry: bool) -> CargoResult<()> {
+    if !verify && dry {
+        return Err(human("cannot specify both no verify and dry run \
+                          simultaneously"))
+    }
+
     let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
     try!(src.update());
@@ -46,7 +52,7 @@ pub fn publish(manifest_path: &Path,
 
     // Upload said tarball to the specified destination
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
-    try!(transmit(&pkg, &tarball, &mut registry));
+    try!(transmit(config, &pkg, &tarball, &mut registry, dry));
 
     Ok(())
 }
@@ -72,8 +78,11 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
     Ok(())
 }
 
-fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
-            -> CargoResult<()> {
+fn transmit(config: &Config,
+            pkg: &Package,
+            tarball: &Path,
+            registry: &mut Registry,
+            dry: bool) -> CargoResult<()> {
     let deps = pkg.dependencies().iter().map(|dep| {
         NewCrateDependency {
             optional: dep.is_optional(),
@@ -116,6 +125,13 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         }
         None => {}
     }
+
+    // Do not upload if performing a dry run
+    if dry {
+        try!(config.shell().warn("Aborting upload due to dry run"));
+        return Ok(());
+    }
+
     registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
