@@ -319,6 +319,7 @@ impl Execs {
                        "stderr", &actual.stdout)
     }
 
+    #[allow(deprecated)] // connect => join in 1.3
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
                  description: &str, extra: &[u8]) -> ham::MatchResult {
         match expected.map(|s| &s[..]) {

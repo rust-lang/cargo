@@ -25,7 +25,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 
     pub fn link(&mut self, node: N, child: N) {
-        self.nodes.entry(node).or_insert(HashSet::new()).insert(child);
+        self.nodes.entry(node).or_insert_with(|| HashSet::new()).insert(child);
     }
 
     pub fn get_nodes(&self) -> &HashMap<N, HashSet<N>> {

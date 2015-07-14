@@ -117,6 +117,7 @@ pub fn publish(file: &str, line: &str) {
                 &[&parent]).unwrap();
 }
 
+#[allow(deprecated)] // connect => join in 1.3
 pub fn pkg(name: &str, vers: &str, deps: &[(&str, &str, &str)], cksum: &str,
            yanked: bool) -> String {
     let deps = deps.iter().map(|&(a, b, c)| dep(a, b, c)).collect::<Vec<String>>();

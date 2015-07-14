@@ -249,6 +249,7 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
 }
 
 impl fmt::Display for Error {
+    #[allow(deprecated)] // connect => join in 1.3
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::NonUtf8Body => write!(f, "response body was not utf-8"),
