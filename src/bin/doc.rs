@@ -15,14 +15,14 @@ struct Options {
     flag_release: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
 Build a package's documentation
 
 Usage:
-    cargo doc [options]
+    cargo doc [options] [-p SPEC --package SPEC]...
 
 Options:
     -h, --help               Print this message
@@ -62,7 +62,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: options.flag_package.as_ref().map(|s| &s[..]),
+            spec: &options.flag_package,
             exec_engine: None,
             filter: ops::CompileFilter::Everything,
             release: options.flag_release,

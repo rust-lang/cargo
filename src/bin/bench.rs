@@ -5,7 +5,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 #[derive(RustcDecodable)]
 struct Options {
     flag_no_run: bool,
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,
@@ -26,7 +26,7 @@ pub const USAGE: &'static str = "
 Execute all benchmarks of a local package
 
 Usage:
-    cargo bench [options] [--] [<args>...]
+    cargo bench [options] [-p SPEC --package SPEC]... [--] [<args>...]
 
 Options:
     -h, --help               Print this message
@@ -75,7 +75,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             target: options.flag_target.as_ref().map(|s| &s[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: options.flag_package.as_ref().map(|s| &s[..]),
+            spec: &options.flag_package,
             exec_engine: None,
             release: true,
             mode: ops::CompileMode::Bench,

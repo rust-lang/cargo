@@ -432,3 +432,48 @@ test!(doc_release {
 {running} `rustdoc src[..]lib.rs [..]`
 ", compiling = COMPILING, running = RUNNING)));
 });
+
+test!(doc_multiple_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+
+            [dependencies.baz]
+            path = "baz"
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate bar;
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("baz/src/lib.rs", r#"
+            pub fn baz() {}
+        "#);
+
+    assert_that(p.cargo_process("doc").arg("-p").arg("bar").arg("-p").arg("baz"),
+                execs().with_status(0));
+
+    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
+    assert_that(&p.root().join("target/doc/baz/index.html"), existing_file());
+});
