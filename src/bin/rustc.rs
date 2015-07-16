@@ -8,7 +8,7 @@ use cargo::util::{CliResult, CliError, Config};
 #[derive(RustcDecodable)]
 struct Options {
     arg_opts: Option<Vec<String>>,
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,
@@ -29,7 +29,7 @@ pub const USAGE: &'static str = "
 Compile a package and all of its dependencies
 
 Usage:
-    cargo rustc [options] [--] [<opts>...]
+    cargo rustc [options] [-p SPEC --package SPEC]... [--] [<opts>...]
 
 Options:
     -h, --help               Print this message
@@ -75,7 +75,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
-        spec: options.flag_package.as_ref().map(|s| &s[..]),
+        spec: &options.flag_package,
         exec_engine: None,
         mode: ops::CompileMode::Build,
         release: options.flag_release,

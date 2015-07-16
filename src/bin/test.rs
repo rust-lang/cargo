@@ -10,7 +10,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_no_run: bool,
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
     flag_target: Option<String>,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -28,7 +28,7 @@ pub const USAGE: &'static str = "
 Execute all unit and integration tests of a local package
 
 Usage:
-    cargo test [options] [--] [<args>...]
+    cargo test [options] [-p SPEC --package SPEC]... [--] [<args>...]
 
 Options:
     -h, --help               Print this message
@@ -81,7 +81,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             target: options.flag_target.as_ref().map(|s| &s[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: options.flag_package.as_ref().map(|s| &s[..]),
+            spec: &options.flag_package,
             exec_engine: None,
             release: options.flag_release,
             mode: ops::CompileMode::Test,

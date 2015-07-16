@@ -59,7 +59,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                config: &'cfg Config,
                host: Layout,
                target_layout: Option<Layout>,
-               root_pkg: &Package,
                build_config: BuildConfig,
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
@@ -90,7 +89,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             host_dylib: host_dylib,
             host_exe: host_exe,
             requirements: HashMap::new(),
-            compilation: Compilation::new(root_pkg, config),
+            compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config, deps)),
             build_config: build_config,
             exec_engine: engine,

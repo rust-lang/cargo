@@ -49,7 +49,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     let profiles = Profiles::default();
     let cx = try!(Context::new(&resolve, &srcs, &pkgs, opts.config,
                                Layout::at(target_dir),
-                               None, &pkg, BuildConfig::default(),
+                               None, BuildConfig::default(),
                                &profiles));
 
     // And finally, clean everything out!

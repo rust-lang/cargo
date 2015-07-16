@@ -54,8 +54,9 @@ pub struct TargetConfig {
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
-                                     pkg: &'a Package,
+pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
+                                                           Vec<(&Target,
+                                                                &'a Profile)>)],
                                      deps: &'a PackageSet,
                                      resolve: &'a Resolve,
                                      sources: &'a SourceMap<'cfg>,
@@ -63,89 +64,97 @@ pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
                                      build_config: BuildConfig,
                                      profiles: &'a Profiles)
                                      -> CargoResult<Compilation<'cfg>> {
-    if targets.is_empty() {
-        return Ok(Compilation::new(pkg, config))
-    }
 
-    debug!("compile_targets: {}", pkg);
+    debug!("compile_targets: {}", pkg_targets.iter().map(|&(ref p, _)| p.name())
+                                                    .collect::<Vec<_>>().join(", "));
 
     try!(links::validate(deps));
 
     let dest = if build_config.release {"release"} else {"debug"};
-    let root = if resolve.root() == pkg.package_id() {
-        pkg
-    } else {
-        deps.iter().find(|p| p.package_id() == resolve.root()).unwrap()
-    };
+    let root = deps.iter().find(|p| p.package_id() == resolve.root()).unwrap();
     let host_layout = Layout::new(config, root, None, &dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
         layout::Layout::new(config, root, Some(&target), &dest)
     });
 
     let mut cx = try!(Context::new(resolve, sources, deps, config,
-                                   host_layout, target_layout, pkg,
+                                   host_layout, target_layout,
                                    build_config, profiles));
 
     let mut queue = JobQueue::new(cx.resolve, deps, cx.jobs());
 
-    // Prep the context's build requirements and see the job graph for all
-    // packages initially.
     {
         let _p = profile::start("preparing build directories");
-        try!(cx.prepare(pkg, targets));
-        prepare_init(&mut cx, pkg, &mut queue, &mut HashSet::new());
-        custom_build::build_map(&mut cx, pkg, targets);
+        // Prep the context's build requirements and see the job graph for all
+        // packages initially.
+        for &(pkg, ref targets) in pkg_targets {
+            try!(cx.prepare(pkg, targets));
+            prepare_init(&mut cx, pkg, &mut queue, &mut HashSet::new());
+            custom_build::build_map(&mut cx, pkg, targets);
+        }
     }
 
-    // Build up a list of pending jobs, each of which represent compiling a
-    // particular package. No actual work is executed as part of this, that's
-    // all done next as part of the `execute` function which will run
-    // everything in order with proper parallelism.
-    try!(compile(targets, pkg, &mut cx, &mut queue));
+    for &(pkg, ref targets) in pkg_targets {
+        // Build up a list of pending jobs, each of which represent
+        // compiling a particular package. No actual work is executed as
+        // part of this, that's all done next as part of the `execute`
+        // function which will run everything in order with proper
+        // parallelism.
+        try!(compile(targets, pkg, &mut cx, &mut queue));
+    }
 
     // Now that we've figured out everything that we're going to do, do it!
     try!(queue.execute(cx.config));
 
-    let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
-                    .display().to_string();
-    cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
+    for &(pkg, ref targets) in pkg_targets.iter() {
+        let out_dir = cx.layout(pkg, Kind::Target).build_out(pkg)
+                        .display().to_string();
+        cx.compilation.extra_env.insert("OUT_DIR".to_string(), out_dir);
 
-    for &(target, profile) in targets {
-        let kind = Kind::from(target);
-        for filename in try!(cx.target_filenames(pkg, target, profile,
-                                                 kind)).iter() {
-            let dst = cx.out_dir(pkg, kind, target).join(filename);
-            if profile.test {
-                cx.compilation.tests.push((target.name().to_string(), dst));
-            } else if target.is_bin() || target.is_example() {
-                cx.compilation.binaries.push(dst);
-            } else if target.is_lib() {
-                let pkgid = pkg.package_id().clone();
-                cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
-                  .push((target.clone(), dst));
-            }
-            if !target.is_lib() { continue }
+        let mut tests = vec![];
 
-            // Include immediate lib deps as well
-            for dep in cx.dep_targets(pkg, target, kind, profile) {
-                let (pkg, target, profile) = dep;
-                let pkgid = pkg.package_id();
+        for &(target, profile) in targets {
+            let kind = Kind::from(target);
+            for filename in try!(cx.target_filenames(pkg, target, profile,
+                                                     kind)).iter() {
+                let dst = cx.out_dir(pkg, kind, target).join(filename);
+                if profile.test {
+                    tests.push((target.name().to_string(), dst));
+                } else if target.is_bin() || target.is_example() {
+                    cx.compilation.binaries.push(dst);
+                } else if target.is_lib() {
+                    let pkgid = pkg.package_id().clone();
+                    cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
+                      .push((target.clone(), dst));
+                }
                 if !target.is_lib() { continue }
-                if profile.doc { continue }
-                if cx.compilation.libraries.contains_key(&pkgid) { continue }
 
-                let kind = kind.for_target(target);
-                let v = try!(cx.target_filenames(pkg, target, profile, kind));
-                let v = v.into_iter().map(|f| {
-                    (target.clone(), cx.out_dir(pkg, kind, target).join(f))
-                }).collect::<Vec<_>>();
-                cx.compilation.libraries.insert(pkgid.clone(), v);
+                // Include immediate lib deps as well
+                for dep in &cx.dep_targets(pkg, target, kind, profile) {
+                    let (pkg, target, profile) = *dep;
+                    let pkgid = pkg.package_id();
+                    if !target.is_lib() { continue }
+                    if profile.doc { continue }
+                    if cx.compilation.libraries.contains_key(&pkgid) {
+                        continue
+                    }
+
+                    let kind = kind.for_target(target);
+                    let v =
+                        try!(cx.target_filenames(pkg, target, profile, kind));
+                    let v = v.into_iter().map(|f| {
+                        (target.clone(), cx.out_dir(pkg, kind, target).join(f))
+                    }).collect::<Vec<_>>();
+                    cx.compilation.libraries.insert(pkgid.clone(), v);
+                }
             }
         }
-    }
 
-    if let Some(feats) = cx.resolve.features(pkg.package_id()) {
-        cx.compilation.features.extend(feats.iter().cloned());
+        cx.compilation.tests.push((pkg.clone(), tests));
+
+        if let Some(feats) = cx.resolve.features(pkg.package_id()) {
+            cx.compilation.features.extend(feats.iter().cloned());
+        }
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
@@ -199,18 +208,17 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             });
 
             // Figure out what stage this work will go into
-            let dst = match (target.is_lib(),
+            let stage = match (target.is_lib(),
                              profile.test,
                              target.is_custom_build()) {
-                (_, _, true) => jobs.queue(pkg, Stage::BuildCustomBuild),
-                (true, true, _) => jobs.queue(pkg, Stage::LibraryTests),
-                (false, true, _) => jobs.queue(pkg, Stage::BinaryTests),
-                (true, false, _) => jobs.queue(pkg, Stage::Libraries),
-                (false, false, _) if !target.is_bin() => {
-                    jobs.queue(pkg, Stage::BinaryTests)
-                }
-                (false, false, _) => jobs.queue(pkg, Stage::Binaries),
+                (_, _, true) => Stage::BuildCustomBuild,
+                (true, true, _) => Stage::LibraryTests,
+                (false, true, _) => Stage::BinaryTests,
+                (true, false, _) => Stage::Libraries,
+                (false, false, _) if !target.is_bin() => Stage::BinaryTests,
+                (false, false, _) => Stage::Binaries,
             };
+            let dst = jobs.queue(pkg, stage);
             dst.push((Job::new(dirty, fresh), freshness));
 
         }

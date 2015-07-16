@@ -28,7 +28,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target};
+use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
 use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
@@ -47,7 +47,7 @@ pub struct CompileOptions<'a> {
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
     /// Root package to build (if None it's the current one)
-    pub spec: Option<&'a str>,
+    pub spec: &'a [String],
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter<'a>,
@@ -95,10 +95,10 @@ pub fn compile<'a>(manifest_path: &Path,
     compile_pkg(&package, options)
 }
 
-pub fn compile_pkg<'a>(package: &Package,
+pub fn compile_pkg<'a>(root_package: &Package,
                        options: &CompileOptions<'a>)
                        -> CargoResult<ops::Compilation<'a>> {
-    let CompileOptions { config, jobs, target, spec, features,
+    let CompileOptions { config, jobs, target, ref spec, features,
                          no_default_features, release, mode,
                          ref filter, ref exec_engine,
                          ref target_rustc_args } = *options;
@@ -108,7 +108,7 @@ pub fn compile_pkg<'a>(package: &Package,
         s.split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
-    if spec.is_some() && (no_default_features || features.len() > 0) {
+    if spec.len() > 0 && (no_default_features || features.len() > 0) {
         return Err(human("features cannot be modified when the main package \
                           is not being built"))
     }
@@ -116,14 +116,20 @@ pub fn compile_pkg<'a>(package: &Package,
         return Err(human("jobs must be at least 1"))
     }
 
-    let override_ids = try!(source_ids_from_config(config, package.root()));
-
     let (packages, resolve_with_overrides, sources) = {
-        let mut registry = PackageRegistry::new(config);
+        let override_ids =
+            try!(source_ids_from_config(options.config, root_package.root()));
+        let mut registry = PackageRegistry::new(options.config);
+        if let Some(source) = source {
+            registry.preload(root_package.package_id().source_id(), source);
+        } else {
+            try!(registry.add_sources(&[root_package.package_id().source_id()
+                                                    .clone()]));
+        }
 
-        // First, resolve the package's *listed* dependencies, as well as
+        // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = try!(ops::resolve_pkg(&mut registry, package));
+        let resolve = try!(ops::resolve_pkg(&mut registry, root_package));
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -132,48 +138,82 @@ pub fn compile_pkg<'a>(package: &Package,
 
         try!(registry.add_overrides(override_ids));
 
-        let method = Method::Required {
+        let method = Method::Required{
             dev_deps: true, // TODO: remove this option?
             features: &features,
-            uses_default_features: !no_default_features,
+            uses_default_features: !options.no_default_features,
         };
 
         let resolved_with_overrides =
-                try!(ops::resolve_with_previous(&mut registry, package, method,
+                try!(ops::resolve_with_previous(&mut registry, root_package, method,
                                                 Some(&resolve), None));
 
-        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides, &mut registry));
+        let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
+            r.clone()
+        }).collect();
+        let packages = try!(registry.get(&req).chain_error(|| {
+            human("Unable to get packages from source")
+        }));
 
         (packages, resolved_with_overrides, registry.move_sources())
     };
 
-    let pkgid = match spec {
-        Some(spec) => try!(resolve_with_overrides.query(spec)),
-        None => package.package_id(),
-    };
-    let to_build = packages.iter().find(|p| p.package_id() == pkgid).unwrap();
-    let targets = try!(generate_targets(to_build, mode, filter, release));
-
-    let target_with_args = match *target_rustc_args {
-        Some(args) if targets.len() == 1 => {
-            let (target, profile) = targets[0];
-            let mut profile = profile.clone();
-            profile.rustc_args = Some(args.to_vec());
-            Some((target, profile))
-        }
-        Some(_) => {
-            return Err(human("extra arguments to `rustc` can only be passed to \
-                              one target, consider filtering\nthe package by \
-                              passing e.g. `--lib` or `--bin NAME` to specify \
-                              a single target"))
-        }
-        None => None,
+    let mut invalid_spec = vec![];
+    let pkgids = if spec.len() > 0 {
+        spec.iter().filter_map(|p| {
+            match resolve_with_overrides.query(&p) {
+                Ok(p) => Some(p),
+                Err(..) => { invalid_spec.push(p.to_string()); None }
+            }
+        }).collect::<Vec<_>>()
+    } else {
+        vec![root_package.package_id()]
     };
 
-    let targets = target_with_args.as_ref().map(|&(t, ref p)| vec![(t, p)])
-                                           .unwrap_or(targets);
+    /*
+    if spec.len() > 0 && invalid_spec.len() > 0 {
+        return Err(human(format!("could not find package matching spec `{}`",
+                                 invalid_spec.join(", "))));
+    } */
 
-    let ret = {
+    let to_builds = packages.iter().filter(|p|
+        pkgids.iter().find(|&op| *op == p.package_id()).is_some()
+    ).collect::<Vec<&Package>>();
+
+    let mut twas = &mut vec![];
+    let mut package_targets = vec![];
+
+    for &to_build in to_builds.iter() {
+        let targets = try!(generate_targets(to_build, mode, filter, release));
+
+        match *target_rustc_args {
+            Some(args) if targets.len() == 1 => {
+                let (target, profile) = targets[0];
+                let mut profile = profile.clone();
+                profile.rustc_args = Some(args.to_vec());
+                twas.push((target, profile));
+            }
+            Some(_) => {
+                return Err(human("extra arguments to `rustc` can only be \
+                                  passed to one target, consider \
+                                  filtering\nthe package by passing e.g. \
+                                  `--lib` or `--bin NAME` to specify \
+                                  a single target"))
+            }
+            None => package_targets.push((to_build, targets)),
+        };
+        
+    }
+
+    for targets in twas {
+        let (target, ref profile) = *targets;
+        for &to_build in to_builds.iter() {
+            package_targets.push((to_build, vec![(target, profile)]));
+        }
+    }
+
+
+    let mut ret = {
         let _p = profile::start("compiling");
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();
@@ -182,14 +222,17 @@ pub fn compile_pkg<'a>(package: &Package,
             build_config.doc_all = deps;
         }
 
-        try!(ops::compile_targets(&targets, to_build,
+        try!(ops::compile_targets(&package_targets,
                                   &PackageSet::new(&packages),
                                   &resolve_with_overrides,
                                   &sources,
                                   config,
                                   build_config,
-                                  to_build.manifest().profiles()))
+                                  root_package.manifest().profiles(),
+                                  ))
     };
+
+    ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
 
     return Ok(ret);
 }
