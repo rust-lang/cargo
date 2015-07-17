@@ -351,7 +351,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|d| {
-
                 // If this target is a build command, then we only want build
                 // dependencies, otherwise we want everything *other than* build
                 // dependencies.
@@ -364,7 +363,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                     target.is_example() ||
                                     profile.test;
 
-                is_correct_dep && is_actual_dep
+                // If the dependency is optional, then we're only activating it
+                // if the corresponding feature was activated
+                let activated = !d.is_optional() ||
+                                self.resolve.features(pkg.package_id()).map(|f| {
+                                    f.contains(d.name())
+                                }).unwrap_or(false);
+
+                is_correct_dep && is_actual_dep && activated
             })
         }).filter_map(|pkg| {
             pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
