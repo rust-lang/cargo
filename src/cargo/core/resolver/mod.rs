@@ -182,7 +182,7 @@ fn activate(mut cx: Box<Context>,
 
     // Next, transform all dependencies into a list of possible candidates which
     // can satisfy that dependency.
-    let mut deps = try!(deps.into_iter().map(|(_dep_name, (dep, features))| {
+    let mut deps = try!(deps.into_iter().map(|(dep, features)| {
         let mut candidates = try!(registry.query(dep));
         // When we attempt versions for a package, we'll want to start at the
         // maximum version and work our way down.
@@ -430,8 +430,7 @@ fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
 
 fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
                         method: Method)
-                        -> CargoResult<HashMap<&'a str,
-                                               (&'a Dependency, Vec<String>)>> {
+                        -> CargoResult<Vec<(&'a Dependency, Vec<String>)>> {
     let dev_deps = match method {
         Method::Everything => true,
         Method::Required { dev_deps, .. } => dev_deps,
@@ -452,7 +451,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
     });
 
     let (mut feature_deps, used_features) = try!(build_features(parent, method));
-    let mut ret = HashMap::new();
+    let mut ret = Vec::new();
 
     // Next, sanitize all requested features by whitelisting all the requested
     // features that correspond to optional dependencies
@@ -461,7 +460,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
         if dep.is_optional() && !feature_deps.contains_key(dep.name()) {
             continue
         }
-        let mut base = feature_deps.remove(dep.name()).unwrap_or(vec![]);
+        let mut base = feature_deps.remove(dep.name()).unwrap_or(Vec::new());
         for feature in dep.features().iter() {
             base.push(feature.clone());
             if feature.contains("/") {
@@ -471,7 +470,7 @@ fn resolve_features<'a>(cx: &mut Context, parent: &'a Summary,
                                          feature)));
             }
         }
-        ret.insert(dep.name(), (dep, base));
+        ret.push((dep, base));
     }
 
     // All features can only point to optional dependencies, in which case they
