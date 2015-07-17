@@ -11,6 +11,7 @@ pub struct TestOptions<'a> {
     pub no_run: bool,
 }
 
+#[allow(deprecated)] // connect => join in 1.3
 pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<ProcessError>> {

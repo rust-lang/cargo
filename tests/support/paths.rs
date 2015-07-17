@@ -13,12 +13,21 @@ static NEXT_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 thread_local!(static TASK_ID: usize = NEXT_ID.fetch_add(1, Ordering::SeqCst));
 
 pub fn root() -> PathBuf {
-    env::current_exe().unwrap()
-                  .parent().unwrap() // chop off exe name
-                  .parent().unwrap() // chop off 'debug'
-                  .parent().unwrap() // chop off target
-                  .join(CARGO_INTEGRATION_TEST_DIR)
-                  .join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
+    let mut path = env::current_exe().unwrap();
+    path.pop(); // chop off exe name
+    path.pop(); // chop off 'debug'
+
+    // If `cargo test` is run manually then our path looks like
+    // `target/debug/foo`, in which case our `path` is already pointing at
+    // `target`. If, however, `cargo test --target $target` is used then the
+    // output is `target/$target/debug/foo`, so our path is pointing at
+    // `target/$target`. Here we conditionally pop the `$target` name.
+    if path.file_name().and_then(|s| s.to_str()) != Some("target") {
+        path.pop();
+    }
+
+    path.join(CARGO_INTEGRATION_TEST_DIR)
+        .join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
 }
 
 pub fn home() -> PathBuf {

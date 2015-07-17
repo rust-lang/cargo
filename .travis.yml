@@ -1,9 +1,11 @@
 language: rust
+rust:
+  - stable
+  - beta
+  - nightly
 sudo: false
-install:
-  - python src/etc/install-deps.py
 script:
-  - ./configure --local-rust-root=`pwd`/rustc --prefix=$HOME/cargo-install
+  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests
   - make
   - make test
   - make distcheck
