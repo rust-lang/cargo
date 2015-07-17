@@ -293,7 +293,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             try!(config.shell().status("Owner", format!("removing `{:?}` from `{}`",
                                                         v, name)));
             try!(registry.remove_owners(&name, &v).map_err(|e| {
-                human(format!("failed to add owners: {}", e))
+                human(format!("failed to remove owners: {}", e))
             }));
         }
         None => {}
