@@ -8,6 +8,7 @@ use term::{Terminal, TerminfoTerminal, color};
 
 use self::AdequateTerminal::{NoColor, Colored};
 use self::Verbosity::{Verbose, Normal, Quiet};
+use self::ColorConfig::{Auto, Always, Never};
 
 use util::errors::{human, CargoResult};
 
@@ -18,10 +19,16 @@ pub enum Verbosity {
     Quiet
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum ColorConfig {
+    Auto,
+    Always,
+    Never
+}
+
 #[derive(Clone, Copy)]
 pub struct ShellConfig {
-    pub color: bool,
-    pub verbosity: Verbosity,
+    pub color_config: ColorConfig,
     pub tty: bool
 }
 
@@ -115,6 +122,21 @@ impl MultiShell {
         }
     }
 
+    pub fn set_color_config(&mut self, color: Option<&str>) -> CargoResult<()> {
+        self.out.set_color_config(match color {
+            Some("auto") => Auto,
+            Some("always") => Always,
+            Some("never") => Never,
+
+            None => Auto,
+
+            Some(arg) => return Err(human(format!("argument for --color must be auto, always, or \
+                                                   never, but found `{}`",
+                                                  arg))),
+        });
+        Ok(())
+    }
+
     pub fn get_verbose(&self) -> Verbosity {
         self.verbosity
     }
@@ -122,7 +144,9 @@ impl MultiShell {
 
 impl Shell {
     pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
-        if config.tty && config.color {
+        // Check for cfg!(windows) as colored output on Windows can only be supported when a tty is
+        // present.
+        if !cfg!(windows) || config.tty {
             let term = TerminfoTerminal::new(out);
             term.map(|t| Shell {
                 terminal: Colored(Box::new(t)),
@@ -135,36 +159,17 @@ impl Shell {
         }
     }
 
-    pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>
-        where F: FnMut(&mut Shell) -> io::Result<()>
-    {
-        match self.config.verbosity {
-            Verbose => return callback(self),
-            _ => Ok(())
-        }
-    }
-
-    pub fn concise<F>(&mut self, mut callback: F) -> io::Result<()>
-        where F: FnMut(&mut Shell) -> io::Result<()>
-    {
-        match self.config.verbosity {
-            Verbose => Ok(()),
-            _ => return callback(self)
-        }
+    pub fn set_color_config(&mut self, color_config: ColorConfig) {
+        self.config.color_config = color_config;
     }
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
-        match self.config.verbosity {
-            Quiet => Ok(()),
-            _ => {
-                try!(self.reset());
-                if color != BLACK { try!(self.fg(color)); }
-                try!(write!(self, "{}\n", message.to_string()));
-                try!(self.reset());
-                try!(self.flush());
-                Ok(())
-            },
-        }
+        try!(self.reset());
+        if color != BLACK { try!(self.fg(color)); }
+        try!(write!(self, "{}\n", message.to_string()));
+        try!(self.reset());
+        try!(self.flush());
+        Ok(())
     }
 
     pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)
@@ -182,31 +187,44 @@ impl Shell {
     }
 
     fn fg(&mut self, color: color::Color) -> io::Result<bool> {
+        let colored = self.colored();
+
         match self.terminal {
-            Colored(ref mut c) => c.fg(color),
-            NoColor(_) => Ok(false)
+            Colored(ref mut c) if colored => c.fg(color),
+            _ => Ok(false)
         }
     }
 
     fn attr(&mut self, attr: Attr) -> io::Result<bool> {
+        let colored = self.colored();
+
         match self.terminal {
-            Colored(ref mut c) => c.attr(attr),
-            NoColor(_) => Ok(false)
+            Colored(ref mut c) if colored => c.attr(attr),
+            _ => Ok(false)
         }
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
+        let colored = self.colored();
+
         match self.terminal {
-            Colored(ref c) => c.supports_attr(attr),
-            NoColor(_) => false
+            Colored(ref c) if colored => c.supports_attr(attr),
+            _ => false
         }
     }
 
     fn reset(&mut self) -> io::Result<()> {
+        let colored = self.colored();
+
         match self.terminal {
-            Colored(ref mut c) => c.reset().map(|_| ()),
-            NoColor(_) => Ok(())
+            Colored(ref mut c) if colored => c.reset().map(|_| ()),
+            _ => Ok(())
         }
+    }
+
+    fn colored(&self) -> bool {
+        self.config.tty && Auto == self.config.color_config
+            || Always == self.config.color_config
     }
 }
 

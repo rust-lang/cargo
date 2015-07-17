@@ -9,6 +9,7 @@ struct Options {
     flag_index: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
     flag_undo: bool,
 }
 
@@ -19,13 +20,14 @@ Usage:
     cargo yank [options] [<crate>]
 
 Options:
-    -h, --help              Print this message
-    --vers VERSION          The version to yank or un-yank
-    --undo                  Undo a yank, putting a version back into the index
-    --index INDEX           Registry index to yank from
-    --token TOKEN           API token to use when authenticating
-    -v, --verbose           Use verbose output
-    -q, --quiet             No output printed to stdout
+    -h, --help          Print this message
+    --vers VERSION      The version to yank or un-yank
+    --undo              Undo a yank, putting a version back into the index
+    --index INDEX       Registry index to yank from
+    --token TOKEN       API token to use when authenticating
+    -v, --verbose       Use verbose output
+    -q, --quiet         No output printed to stdout
+    --color WHEN        Coloring: auto, always, never
 
 The yank command removes a previously pushed crate's version from the server's
 index. This command does not delete any data, and the crate will still be
@@ -38,6 +40,7 @@ crates to be locked to any yanked version.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
+    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
     try!(ops::yank(config,
                    options.arg_crate,
                    options.flag_vers,

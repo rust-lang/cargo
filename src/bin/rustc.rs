@@ -16,6 +16,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
     flag_release: bool,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -46,6 +47,7 @@ Options:
     --manifest-path PATH     Path to the manifest to fetch dependencies for
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
+    --color WHEN             Coloring: auto, always, never
 
 The specified target for the current package (or package specified by SPEC if
 provided) will be compiled along with all of its dependencies. The specified
@@ -63,6 +65,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-rustc; args={:?}",
            env::args().collect::<Vec<_>>());
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
+    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 

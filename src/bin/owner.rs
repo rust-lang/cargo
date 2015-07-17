@@ -10,6 +10,7 @@ struct Options {
     flag_index: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
     flag_list: bool,
 }
 
@@ -20,14 +21,15 @@ Usage:
     cargo owner [options] [<crate>]
 
 Options:
-    -h, --help              Print this message
-    -a, --add LOGIN         Login of a user to add as an owner
-    -r, --remove LOGIN      Login of a user to remove as an owner
-    -l, --list              List owners of a crate
-    --index INDEX           Registry index to modify owners for
-    --token TOKEN           API token to use when authenticating
-    -v, --verbose           Use verbose output
-    -q, --quiet             No output printed to stdout
+    -h, --help               Print this message
+    -a, --add LOGIN          Login of a user to add as an owner
+    -r, --remove LOGIN       Login of a user to remove as an owner
+    -l, --list               List owners of a crate
+    --index INDEX            Registry index to modify owners for
+    --token TOKEN            API token to use when authenticating
+    -v, --verbose            Use verbose output
+    -q, --quiet              No output printed to stdout
+    --color WHEN             Coloring: auto, always, never
 
 This command will modify the owners for a package on the specified registry (or
 default). Note that owners of a package can upload new versions, yank old
@@ -36,6 +38,7 @@ versions, and also modify the set of owners, so take caution!
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
+    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,
