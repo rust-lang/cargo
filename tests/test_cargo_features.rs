@@ -741,3 +741,31 @@ test!(unions_work_with_no_default_features {
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 });
+
+test!(optional_and_dev_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name    = "test"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = { path = "foo", optional = true }
+            [dev-dependencies]
+            foo = { path = "foo" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} test v0.1.0 ([..])
+", compiling = COMPILING)));
+});
