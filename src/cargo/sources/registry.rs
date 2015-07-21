@@ -438,6 +438,13 @@ impl<'cfg> RegistrySource<'cfg> {
             _ => Kind::Normal,
         };
 
+        // Unfortunately older versions of cargo and/or the registry ended up
+        // publishing lots of entries where the features array contained the
+        // empty feature, "", inside. This confuses the resolution process much
+        // later on and these features aren't actually valid, so filter them all
+        // out here.
+        let features = features.into_iter().filter(|s| !s.is_empty()).collect();
+
         Ok(dep.set_optional(optional)
               .set_default_features(default_features)
               .set_features(features)

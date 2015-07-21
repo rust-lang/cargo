@@ -523,7 +523,7 @@ fn build_features(s: &Summary, method: Method)
                                  &mut visited));
             }
         }
-        Method::Required{features: requested_features, ..} =>  {
+        Method::Required { features: requested_features, .. } =>  {
             for feat in requested_features.iter() {
                 try!(add_feature(s, feat, &mut deps, &mut used, &mut visited));
             }
@@ -683,8 +683,8 @@ impl Context {
             }
         });
 
-        let (mut feature_deps, used_features) =
-            try!(build_features(parent, method));
+        let (mut feature_deps, used_features) = try!(build_features(parent,
+                                                                    method));
         let mut ret = Vec::new();
 
         // Next, sanitize all requested features by whitelisting all the
@@ -726,8 +726,8 @@ impl Context {
         if used_features.len() > 0 {
             let pkgid = parent.package_id();
             self.resolve.features.entry(pkgid.clone())
-              .or_insert(HashSet::new())
-              .extend(used_features);
+                .or_insert(HashSet::new())
+                .extend(used_features);
         }
 
         Ok(ret)
