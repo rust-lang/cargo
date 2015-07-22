@@ -5,14 +5,14 @@ import subprocess
 import sys
 import tarfile
 
-def get(url, path):
+def get(url, path, quiet=False):
     # see http://serverfault.com/questions/301128/how-to-download
     if sys.platform == 'win32':
         run(["PowerShell.exe", "/nologo", "-Command",
              "(New-Object System.Net.WebClient).DownloadFile('" + url +
-                "', '" + path + "')"])
+                "', '" + path + "')"], quiet=quiet)
     else:
-        run(["curl", "-o", path, url])
+        run(["curl", "-o", path, url], quiet=quiet)
 
 def unpack(tarball, dst, quiet=False):
     if quiet:
