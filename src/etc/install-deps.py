@@ -28,6 +28,7 @@ elif sys.platform == 'win32':
     libdir = 'bin'
     if os.environ.get('MSVC') == '1':
         host = host_bits + '-pc-windows-msvc'
+        extra = extra_bits + '-pc-windows-msvc'
     else:
         host = host_bits + '-pc-windows-gnu'
 else:

@@ -864,6 +864,11 @@ Caused by:
 });
 
 test!(lto_build {
+    // FIXME: currently this hits a linker bug on 32-bit MSVC
+    if cfg!(all(target_env = "msvc", target_pointer_width = "32")) {
+        return
+    }
+
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
