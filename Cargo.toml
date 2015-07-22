@@ -34,7 +34,7 @@ threadpool = "0.1"
 time = "0.1"
 toml = "0.1"
 url = "0.2"
-winapi = "0.1"
+winapi = "0.2"
 
 [dev-dependencies]
 tempdir = "0.3"
