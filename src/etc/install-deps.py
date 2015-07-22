@@ -15,6 +15,7 @@ else:
     extra_bits = 'i686'
 
 extra = None
+libdir = 'lib'
 
 # Figure out our target triple
 if sys.platform == 'linux' or sys.platform == 'linux2':
@@ -24,6 +25,7 @@ elif sys.platform == 'darwin':
     host = host_bits + '-apple-darwin'
     extra = extra_bits + '-apple-darwin'
 elif sys.platform == 'win32':
+    libdir = 'bin'
     if os.environ.get('MSVC') == '1':
         host = host_bits + '-pc-windows-msvc'
     else:
@@ -51,7 +53,7 @@ def install_via_tarballs():
         folder = extra_fname.replace(".tar.gz", "")
         with contextlib.closing(tarfile.open(extra_fname)) as tar:
             for p in tar.getnames():
-                if not "rustc/lib/rustlib/" + extra in p:
+                if not "rustc/" + libdir + "/rustlib/" + extra in p:
                     continue
                 name = p.replace(folder + "/", "", 1)
                 dst = "rustc-install/" + name
