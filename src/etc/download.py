@@ -31,8 +31,19 @@ def unpack(tarball, dst, quiet=False):
             shutil.move(tp, fp)
     shutil.rmtree(os.path.join(dst, fname))
 
-def run(args):
-    print("running: " + ' '.join(args))
-    ret = subprocess.call(args)
-    if ret != 0:
-        raise Exception("failed to fetch url: " + url)
+def run(args, quiet=False):
+    if not quiet:
+        print("running: " + ' '.join(args))
+    sys.stdout.flush()
+    # Use Popen here instead of call() as it apparently allows powershell on
+    # Windows to not lock up waiting for input presumably.
+    ret = subprocess.Popen(args,
+                           stdin = subprocess.PIPE,
+                           stdout = subprocess.PIPE,
+                           stderr = subprocess.PIPE)
+    out, err = ret.communicate()
+    code = ret.wait()
+    if code != 0:
+        print("stdout: \n\n" + out)
+        print("stderr: \n\n" + err)
+        raise Exception("failed to fetch url")
