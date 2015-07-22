@@ -49,7 +49,6 @@ def install_via_tarballs():
         extra_fname = 'rustc-nightly-' + extra + '.tar.gz'
         print("adding target libs for " + extra)
         download.get(url + '/' + extra_fname, extra_fname)
-        manifest = open("rustc-install/rustc/manifest.in", "a")
         folder = extra_fname.replace(".tar.gz", "")
         with contextlib.closing(tarfile.open(extra_fname)) as tar:
             for p in tar.getnames():
@@ -62,8 +61,6 @@ def install_via_tarballs():
                 if os.path.isdir(tp) and os.path.exists(dst):
                     continue
                 shutil.move(tp, dst)
-                if not os.path.isdir(dst):
-                    manifest.write(p.replace(folder + "/rustc/", "file:") + "\n")
         shutil.rmtree("rustc-install/" + folder)
         os.remove(extra_fname)
 
