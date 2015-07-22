@@ -56,7 +56,7 @@ def install_via_tarballs():
                     continue
                 name = p.replace(folder + "/", "", 1)
                 dst = "rustc-install/" + name
-                f = tar.extract(p, "rustc-install")
+                tar.extract(p, "rustc-install")
                 tp = os.path.join("rustc-install", p)
                 if os.path.isdir(tp) and os.path.exists(dst):
                     continue
