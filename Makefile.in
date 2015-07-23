@@ -58,19 +58,6 @@ BIN_TARGETS := cargo
 BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
 BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
 
-ifdef CFG_MSVC_INCLUDE_PATH
-export INCLUDE := $(CFG_MSVC_INCLUDE_PATH)
-endif
-ifdef CFG_MSVC_LIB_PATH
-export LIB := $(CFG_MSVC_LIB_PATH)
-endif
-ifdef CFG_MSVC_BIN
-export PATH := $(CFG_MSVC_BIN):$(PATH)
-endif
-ifdef CFG_MSVC_WINDOWS_SDK_DIR
-export PATH := $(CFG_MSVC_WINDOWS_SDK_DIR):$(PATH)
-endif
-
 define DIST_TARGET
 ifdef CFG_ENABLE_OPTIMIZE
 TARGET_$(1) = $$(TARGET_ROOT)/$(1)/release

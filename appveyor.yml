@@ -1,4 +1,5 @@
 environment:
+  CFG_DISABLE_CROSS_TESTS: 1
   matrix:
   - MSVC: 1
     BITS: 64
