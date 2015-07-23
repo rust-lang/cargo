@@ -645,9 +645,7 @@ impl Context {
         let deps = try!(self.resolve_features(parent, method));
 
         // Record the optimization level for this package.
-        //println!("about to record optimzation level for {:?}...", parent.package_id());
         if let Method::Required{opt_level: Some(opt_level), ..} = method {
-            //println!("recording optimization level {}!", opt_level);
             match self.resolve.opt_levels.entry(parent.package_id().clone()) {
                 Entry::Occupied(mut entry) => {
                     let max_opt_level = cmp::max(*entry.get(), opt_level);
@@ -657,8 +655,6 @@ impl Context {
                     entry.insert(opt_level);
                 }
             }
-        } else {
-            //println!("no optimization level present!");
         }
 
         // Next, transform all dependencies into a list of possible candidates
