@@ -73,6 +73,7 @@ impl EncodableResolve {
             graph: g,
             root: try!(self.root.to_package_id(default)),
             features: HashMap::new(),
+            opt_levels: HashMap::new(),
             metadata: self.metadata.clone(),
         })
     }

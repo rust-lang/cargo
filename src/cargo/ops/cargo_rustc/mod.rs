@@ -626,6 +626,7 @@ fn build_base_args(cx: &Context,
         cmd.arg("-C").arg("prefer-dynamic");
     }
 
+    let opt_level = cx.resolve.opt_level(pkg.package_id()).unwrap_or(opt_level);
     if opt_level != 0 {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
