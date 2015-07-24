@@ -1,6 +1,6 @@
 use std::collections::{HashSet, HashMap};
 use std::env;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::prelude::*;
 use std::path::{self, Path, PathBuf};
@@ -47,8 +47,8 @@ pub struct BuildConfig {
 
 #[derive(Clone, Default)]
 pub struct TargetConfig {
-    pub ar: Option<String>,
-    pub linker: Option<String>,
+    pub ar: Option<PathBuf>,
+    pub linker: Option<PathBuf>,
     pub overrides: HashMap<String, BuildOutput>,
 }
 
@@ -687,9 +687,11 @@ fn build_base_args(cx: &Context,
 fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) {
     fn opt(cmd: &mut CommandPrototype, key: &str, prefix: &str,
-           val: Option<&str>)  {
+           val: Option<&OsStr>)  {
         if let Some(val) = val {
-            cmd.arg(key).arg(&format!("{}{}", prefix, val));
+            let mut joined = OsString::from(prefix);
+            joined.push(val);
+            cmd.arg(key).arg(joined);
         }
     }
 
@@ -697,11 +699,11 @@ fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
     cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
-        opt(cmd, "--target", "", cx.requested_target());
+        opt(cmd, "--target", "", cx.requested_target().map(|s| s.as_ref()));
     }
 
-    opt(cmd, "-C", "ar=", cx.ar(kind));
-    opt(cmd, "-C", "linker=", cx.linker(kind));
+    opt(cmd, "-C", "ar=", cx.ar(kind).map(|s| s.as_ref()));
+    opt(cmd, "-C", "linker=", cx.linker(kind).map(|s| s.as_ref()));
 }
 
 fn build_deps_args(cmd: &mut CommandPrototype,
