@@ -1654,3 +1654,73 @@ test!(doctest_same_name {
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(lints_are_suppressed {
+    let a = git::new("a", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            use std::option;
+        ")
+    }).unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = {{ git = '{}' }}
+        "#, a.url()))
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stdout(&format!("\
+{updating} git repository `[..]`
+{compiling} a v0.5.0 ([..])
+{compiling} foo v0.0.1 ([..])
+", compiling = COMPILING, updating = UPDATING)));
+});
+
+test!(denied_lints_are_allowed {
+    let enabled = super::RUSTC.with(|r| r.cap_lints);
+    if !enabled { return }
+
+    let a = git::new("a", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "
+            #![deny(warnings)]
+            use std::option;
+        ")
+    }).unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = {{ git = '{}' }}
+        "#, a.url()))
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stdout(&format!("\
+{updating} git repository `[..]`
+{compiling} a v0.5.0 ([..])
+{compiling} foo v0.0.1 ([..])
+", compiling = COMPILING, updating = UPDATING)));
+});

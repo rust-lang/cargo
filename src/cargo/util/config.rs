@@ -12,8 +12,7 @@ use std::path::{Path, PathBuf};
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::{MultiShell, Package};
-use ops;
-use util::{CargoResult, ChainError, internal, human};
+use util::{CargoResult, ChainError, Rustc, internal, human};
 
 use util::toml as cargo_toml;
 
@@ -22,9 +21,7 @@ use self::ConfigValue as CV;
 pub struct Config {
     home_path: PathBuf,
     shell: RefCell<MultiShell>,
-    rustc_version: String,
-    /// The current host and default target of rustc
-    rustc_host: String,
+    rustc_info: Rustc,
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
     cwd: PathBuf,
@@ -45,8 +42,7 @@ impl Config {
                       This probably means that $HOME was not set.")
             })),
             shell: RefCell::new(shell),
-            rustc_version: String::new(),
-            rustc_host: String::new(),
+            rustc_info: Rustc::blank(),
             cwd: cwd,
             values: RefCell::new(HashMap::new()),
             values_loaded: Cell::new(false),
@@ -92,11 +88,7 @@ impl Config {
 
     pub fn rustdoc(&self) -> &Path { &self.rustdoc }
 
-    /// Return the output of `rustc -v verbose`
-    pub fn rustc_version(&self) -> &str { &self.rustc_version }
-
-    /// Return the host platform and default target of rustc
-    pub fn rustc_host(&self) -> &str { &self.rustc_host }
+    pub fn rustc_info(&self) -> &Rustc { &self.rustc_info }
 
     pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
         if !self.values_loaded.get() {
@@ -219,9 +211,7 @@ impl Config {
     }
 
     fn scrape_rustc_version(&mut self) -> CargoResult<()> {
-        let (rustc_version, rustc_host) = try!(ops::rustc_version(&self.rustc));
-        self.rustc_version = rustc_version;
-        self.rustc_host = rustc_host;
+        self.rustc_info = try!(Rustc::new(&self.rustc));
         Ok(())
     }
 
