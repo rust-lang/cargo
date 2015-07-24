@@ -4,6 +4,13 @@ version = "0.4.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
+license = "MIT/Apache-2.0"
+homepage = "https://crates.io"
+repository = "https://github.com/rust-lang/cargo"
+documentation = "http://doc.crates.io"
+description = """
+Cargo, a package manager for Rust.
+"""
 
 [lib]
 name = "cargo"
@@ -25,7 +32,7 @@ libgit2-sys = "0.2"
 log = "0.3"
 num_cpus = "0.2"
 regex = "0.1"
-registry = { path = "src/registry" }
+crates-io = { path = "src/crates-io", version = "0.1" }
 rustc-serialize = "0.3"
 semver = "0.1"
 tar = { version = "0.2", features = ["nightly"] }
@@ -38,7 +45,7 @@ winapi = "0.2"
 
 [dev-dependencies]
 tempdir = "0.3"
-hamcrest = { git = "https://github.com/carllerche/hamcrest-rust.git" }
+hamcrest = "0.1"
 bufstream = "0.1"
 filetime = "0.1"
 

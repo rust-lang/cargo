@@ -3,6 +3,7 @@
 
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
+extern crate crates_io as registry;
 extern crate curl;
 extern crate docopt;
 extern crate filetime;
@@ -13,7 +14,6 @@ extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;
 extern crate regex;
-extern crate registry;
 extern crate rustc_serialize;
 extern crate semver;
 extern crate tar;

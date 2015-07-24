@@ -133,7 +133,11 @@ ASSETS := CNAME images/noise.png images/forkme.png images/Cargo-Logo-Small.png \
 	images/search.png
 
 doc: $(foreach doc,$(DOCS),target/doc/$(doc).html) \
-	$(foreach asset,$(ASSETS),target/doc/$(asset))
+	$(foreach asset,$(ASSETS),target/doc/$(asset)) \
+	target/doc/cargo/index.html
+
+target/doc/cargo/index.html:
+	$(CARGO) doc --no-deps
 
 $(DOC_DIR)/%.html: src/doc/%.md src/doc/header.html src/doc/footer.html
 	@mkdir -p $(@D)
