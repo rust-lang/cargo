@@ -144,11 +144,6 @@ pub fn to_manifest(contents: &[u8],
                     })
                 }
             }
-            toml::Value::Array(ref arr) => {
-                for v in arr.iter() {
-                    add_unused_keys(m, v, key.clone());
-                }
-            }
             _ => m.add_warning(format!("unused manifest key: {}", key)),
         }
     }
