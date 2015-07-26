@@ -3,12 +3,13 @@ pub use self::imp::Sha256;
 // Someone upstream will link to OpenSSL, so we don't need to explicitly
 // link to it ourselves. Hence we pick up Sha256 digests from OpenSSL
 #[cfg(not(windows))]
+#[allow(bad_style)]
 mod imp {
     use libc;
 
-    #[repr(C)] struct EVP_MD_CTX;
-    #[repr(C)] struct EVP_MD;
-    #[repr(C)] struct ENGINE;
+    enum EVP_MD_CTX {}
+    enum EVP_MD {}
+    enum ENGINE {}
 
     extern {
         fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX,
