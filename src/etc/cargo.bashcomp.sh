@@ -8,7 +8,6 @@ _cargo()
 
 	cmd=${words[1]}
 
-	local commands=$(cargo --list | tail -n +2)
 	local vcs='git hg none'
 
 	local opt_help='-h --help'
@@ -49,7 +48,7 @@ _cargo()
 		if [[ "$cur" == -* ]]; then
 			COMPREPLY=( $( compgen -W "${opt___nocmd}" -- "$cur" ) )
 		else
-			COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
 		fi
 	elif [[ $cword -ge 2 ]]; then
 		case "${prev}" in
@@ -63,7 +62,7 @@ _cargo()
 				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
 				;;
 			help)
-				COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
+				COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
 				;;
 			*)
 				local opt_var=opt__${cmd//-/_}
@@ -77,6 +76,8 @@ _cargo()
 	return 0
 } &&
 complete -F _cargo cargo
+
+__cargo_commands=$(cargo --list | tail -n +2)
 
 _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
