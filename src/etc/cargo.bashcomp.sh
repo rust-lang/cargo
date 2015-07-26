@@ -8,9 +8,12 @@ _cargo()
 
 	cmd=${words[1]}
 
-	local commands=$(cargo --list | tail -n +2)
+	local vcs='git hg none'
 
-	local opt_common='-h --help -v --verbose'
+	local opt_help='-h --help'
+	local opt_verbose='-v --verbose'
+	local opt_quiet='-q --quiet'
+	local opt_common="$opt_help $opt_verbose $opt_quiet"
 	local opt_pkg='-p --package'
 	local opt_feat='--features --no-default-features'
 	local opt_mani='--manifest-path'
@@ -30,7 +33,7 @@ _cargo()
 	local opt__owner="$opt_common -a --add -r --remove -l --list --index --token"
 	local opt__pkgid="${opt__fetch}"
 	local opt__publish="$opt_common $opt_mani --host --token --no-verify"
-	local opt__read_manifest="${opt__fetch}"
+	local opt__read_manifest="$opt_help $opt_verbose $opt_mani"
 	local opt__run="$opt_common $opt_feat $opt_mani $opt_jobs --target --bin --example --release"
 	local opt__rustc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --release"
 	local opt__search="$opt_common --host"
@@ -38,17 +41,20 @@ _cargo()
 	local opt__update="$opt_common $opt_pkg $opt_mani --aggressive --precise"
 	local opt__package="$opt_common $opt_mani -l --list --no-verify --no-metadata"
 	local opt__verify_project="${opt__fetch}"
-	local opt__version="$opt_common"
+	local opt__version="$opt_help $opt_verbose"
 	local opt__yank="$opt_common --vers --undo --index --token"
 
 	if [[ $cword -eq 1 ]]; then
 		if [[ "$cur" == -* ]]; then
 			COMPREPLY=( $( compgen -W "${opt___nocmd}" -- "$cur" ) )
 		else
-			COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
 		fi
 	elif [[ $cword -ge 2 ]]; then
 		case "${prev}" in
+			--vcs)
+				COMPREPLY=( $( compgen -W "$vcs" -- "$cur" ) )
+				;;
 			--manifest-path)
 				_filedir toml
 				;;
@@ -56,7 +62,7 @@ _cargo()
 				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
 				;;
 			help)
-				COMPREPLY=( $( compgen -W "$commands" -- "$cur" ) )
+				COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
 				;;
 			*)
 				local opt_var=opt__${cmd//-/_}
@@ -70,6 +76,8 @@ _cargo()
 	return 0
 } &&
 complete -F _cargo cargo
+
+__cargo_commands=$(cargo --list | tail -n +2)
 
 _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
