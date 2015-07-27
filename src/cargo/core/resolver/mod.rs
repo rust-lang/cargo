@@ -92,7 +92,6 @@
 //! dependency graph (one of the largest known ones), so hopefully it'll work
 //! for a bit longer as well!
 
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::fmt;
@@ -232,7 +231,7 @@ impl fmt::Debug for Resolve {
 struct Context {
     activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
     resolve: Resolve,
-    visited: Rc<RefCell<HashSet<PackageId>>>,
+    visited: HashSet<PackageId>,
 }
 
 /// Builds the list of all packages required to build the first argument.
@@ -244,7 +243,7 @@ pub fn resolve(summary: &Summary, method: Method,
     let cx = Box::new(Context {
         resolve: Resolve::new(summary.package_id().clone()),
         activations: HashMap::new(),
-        visited: Rc::new(RefCell::new(HashSet::new())),
+        visited: HashSet::new(),
     });
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
     match try!(activate(cx, registry, &summary, method, &mut |cx, _| Ok(Ok(cx)))) {
@@ -271,14 +270,14 @@ fn activate(mut cx: Box<Context>,
     // Dependency graphs are required to be a DAG, so we keep a set of
     // packages we're visiting and bail if we hit a dupe.
     let id = parent.package_id();
-    if !cx.visited.borrow_mut().insert(id.clone()) {
+    if !cx.visited.insert(id.clone()) {
         return Err(human(format!("cyclic package dependency: package `{}` \
                                   depends on itself", id)))
     }
 
     // If we're already activated, then that was easy!
     if cx.flag_activated(parent, &method) {
-        cx.visited.borrow_mut().remove(id);
+        cx.visited.remove(id);
         return finished(cx, registry)
     }
     debug!("activating {}", parent.package_id());
@@ -292,8 +291,8 @@ fn activate(mut cx: Box<Context>,
     };
 
     activate_deps(cx, registry, parent, platform, deps.iter(), 0,
-                  &mut |cx, registry| {
-        cx.visited.borrow_mut().remove(parent.package_id());
+                  &mut |mut cx, registry| {
+        cx.visited.remove(id);
         finished(cx, registry)
     })
 }
@@ -373,7 +372,7 @@ fn activate_deps<'a>(cx: Box<Context>,
         // If we hit an intransitive dependency then clear out the visitation
         // list as we can't induce a cycle through transitive dependencies.
         if !dep.is_transitive() {
-            my_cx.visited.borrow_mut().clear();
+            my_cx.visited.clear();
         }
         let my_cx = try!(activate(my_cx, registry, candidate, method,
                                   &mut |cx, registry| {
