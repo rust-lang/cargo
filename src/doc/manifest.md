@@ -24,6 +24,9 @@ basic rules:
   `pub` structs, traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
+For more on versions, see [this
+documentation][crates-io.html#using-crates.io-based-crates].
+
 ## The `build` Field (optional)
 
 This field specifies a file in the repository which is a [build
