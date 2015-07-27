@@ -89,16 +89,8 @@ target-dir = "target"  # path of where to place all generated artifacts
 
 # Environment Variables
 
-Cargo recognizes a few global environment variables to configure how it runs:
+Cargo recognizes a few global [environment variables][env] to configure itself.
+Settings specified via config files take precedence over those specified via
+environment variables.
 
-* `CARGO_HOME` - Cargo maintains a local cache of the registry index and of git
-  checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
-  this variable overrides the location of this directory.
-* `RUSTC` - Instead of running `rustc`, Cargo will execute this specified
-  compiler instead.
-* `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
-  `rustdoc` instance instead.
-* `CARGO_TARGET_DIR` - Location of where to place all generated artifacts,
-  relative to the current working directory.
-
-Settings specified via config files take precedence over those specified via environment variables.
+[env]: environment-variables.html
