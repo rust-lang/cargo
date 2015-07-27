@@ -409,12 +409,9 @@ fn scrape_target_config(config: &Config, triple: &str)
                         -> CargoResult<ops::TargetConfig> {
 
     let key = format!("target.{}", triple);
-    let ar = try!(config.get_string(&format!("{}.ar", key)));
-    let linker = try!(config.get_string(&format!("{}.linker", key)));
-
     let mut ret = ops::TargetConfig {
-        ar: ar.map(|p| p.0),
-        linker: linker.map(|p| p.0),
+        ar: try!(config.get_path(&format!("{}.ar", key))),
+        linker: try!(config.get_path(&format!("{}.linker", key))),
         overrides: HashMap::new(),
     };
     let table = match try!(config.get_table(&key)) {

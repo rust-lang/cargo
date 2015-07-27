@@ -154,6 +154,22 @@ impl Config {
         }
     }
 
+    pub fn get_path(&self, key: &str) -> CargoResult<Option<PathBuf>> {
+        if let Some((specified_path, path_to_config)) = try!(self.get_string(&key)) {
+            if specified_path.contains("/") || (cfg!(windows) && specified_path.contains("\\")) {
+                // An absolute or a relative path
+                let prefix_path = path_to_config.parent().unwrap().parent().unwrap();
+                // Joining an absolute path to any path results in the given absolute path
+                Ok(Some(prefix_path.join(specified_path)))
+            } else {
+                // A pathless name
+                Ok(Some(PathBuf::from(specified_path)))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn get_list(&self, key: &str) -> CargoResult<Option<(Vec<(String, PathBuf)>, PathBuf)>> {
         match try!(self.get(key)) {
             Some(CV::List(i, path)) => Ok(Some((i, path))),
@@ -240,16 +256,8 @@ impl Config {
 
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         let var = format!("build.{}", tool);
-        if let Some((tool, path)) = try!(self.get_string(&var)) {
-            // If this tool has a path separator in it, calculate the path
-            // relative to the config file (specified by `path`). To do that we
-            // chop off the `.cargo/config` at the end of the path and then join
-            // on the tool.
-            if tool.contains("/") || (cfg!(windows) && tool.contains("\\")) {
-                let path = path.parent().unwrap().parent().unwrap();
-                return Ok(path.join(tool))
-            }
-            return Ok(PathBuf::from(tool))
+        if let Some(tool_path) = try!(self.get_path(&var)) {
+            return Ok(tool_path);
         }
 
         let var = tool.chars().flat_map(|c| c.to_uppercase()).collect::<String>();
