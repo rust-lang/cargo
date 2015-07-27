@@ -328,8 +328,8 @@ name = "conduit-static"
 version = "0.1.0"
 authors = ["Yehuda Katz <wycats@example.com>"]
 
-[dependencies.conduit]
-git = "https://github.com/conduit-rust/conduit.git"
+[dependencies]
+conduit = "0.7"
 ```
 
 You check out a local copy of `conduit`, let's say in your `~/src` directory:
@@ -373,10 +373,10 @@ paths = ["/path/to/project/conduit"]
 
 This array should be filled with directories that contain a `Cargo.toml`. In
 this instance, we're just adding `conduit`, so it will be the only one that's
-overridden.
+overridden. This path must be an absolute path.
 
 Note: using a local configuration to override paths will only work for crates
-that have been published to crates.io.  You cannot use this feature to tell Cargo
+that have been published to crates.io. You cannot use this feature to tell Cargo
 how to find local unpublished crates.
 
 More information about local configuration can be found in the [configuration
