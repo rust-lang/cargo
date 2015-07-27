@@ -22,7 +22,6 @@ after_success: |
 env:
   global:
     - secure: scGpeetUfba5RWyuS4yt10bPoFAI9wpHEReIFqEx7eH5vr2Anajk6+70jW6GdrWVdUvdINiArlQ3An2DeB9vEUWcBjw8WvuPtOH0tDMoSsuVloPlFD8yn1Ac0Bx9getAO5ofxqtoNg+OV4MDVuGabEesqAOWqURNrBC7XK+ntC8=
-    - RUST_TEST_THREADS=1
 
 os:
   - linux
