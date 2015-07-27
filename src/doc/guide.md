@@ -408,6 +408,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 Of course, if your project has tests, you'll see more output, with the
 correct number of tests.
 
+You can also run a specific test by passing a filter:
+
+<pre><code class="language-shell"><span class="gp">$</span> cargo test foo
+</code></pre>
+
+This will run any test with `foo` in its name.
+
 `cargo test` runs additional tests as well. For example, it will compile any
 examples, you’ve included, and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
