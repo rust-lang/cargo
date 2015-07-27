@@ -408,6 +408,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 Of course, if your project has tests, you'll see more output, with the
 correct number of tests.
 
+`cargo test` runs additional tests as well. For example, it will compile any
+examples, you’ve included, and will also test the examples in your
+documentation. Please see the [testing guide][testing] in the Rust
+documentation for more details.
+
+[testing]: https://doc.rust-lang.org/book/testing.html
+
 # Path Dependencies
 
 Over time our `hello_world` project has grown significantly in size! It's gotten
