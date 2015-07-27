@@ -16,6 +16,7 @@ pub struct Dependency {
     optional: bool,
     default_features: bool,
     features: Vec<String>,
+    opt_level: Option<u32>,
 
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
@@ -59,6 +60,7 @@ impl Dependency {
             default_features: true,
             specified_req: None,
             only_for_platform: None,
+            opt_level: None,
         }
     }
 
@@ -111,6 +113,12 @@ impl Dependency {
         self
     }
 
+    /// Set the minimum optimization level for this dependency
+    pub fn set_opt_level(mut self, opt_level: u32) -> Dependency {
+        self.opt_level = Some(opt_level);
+        self
+    }
+
     pub fn set_only_for_platform(mut self, platform: Option<String>)
                                  -> Dependency {
         self.only_for_platform = platform;
@@ -140,6 +148,8 @@ impl Dependency {
     pub fn uses_default_features(&self) -> bool { self.default_features }
     /// Returns the list of features that are requested by the dependency.
     pub fn features(&self) -> &[String] { &self.features }
+    /// Returns the optimization level requested for this dependency.
+    pub fn opt_level(&self) -> Option<u32> { self.opt_level }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {

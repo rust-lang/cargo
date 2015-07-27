@@ -148,11 +148,14 @@ pub fn compile_pkg<'a>(package: &Package,
 
         let platform = target.as_ref().map(|e| &e[..]).or(Some(&rustc_host[..]));
 
+        // We specify no optimization level here because at the top level
+        // the user can already effectively specify that via the profile.
         let method = Method::Required{
             dev_deps: true, // TODO: remove this option?
             features: &features,
             uses_default_features: !no_default_features,
-            target_platform: platform};
+            target_platform: platform,
+            opt_level: None};
 
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, package, method,

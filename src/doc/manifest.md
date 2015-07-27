@@ -191,6 +191,20 @@ openssl = "1.0.1"
 native = { path = "native/x86_64" }
 ```
 
+Sometimes, you may wish a dependency to be compiled at a minimum optimization
+level. This is useful if you strongly suspect you will not need to debug the
+dependency itself. To use this feature, specify an `opt_level` key in the
+dependency table as follows:
+
+```toml
+[dependencies.hammer]
+version = "0.5.0"
+opt_level = 2
+```
+
+If multiple crates specify different optimization levels for the same
+dependency, Cargo chooses the highest level of optimization.
+
 # The `[profile.*]` Sections
 
 Cargo supports custom configuration of how rustc is invoked through **profiles**
@@ -506,3 +520,4 @@ crate-type = ["dylib"]
 The available options are `dylib`, `rlib`, and `staticlib`. You should only use
 this option in a project. Cargo will always compile **packages** (dependencies)
 based on the requirements of the project that includes them.
+

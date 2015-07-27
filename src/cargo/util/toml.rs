@@ -206,6 +206,7 @@ pub struct DetailedTomlDependency {
     features: Option<Vec<String>>,
     optional: Option<bool>,
     default_features: Option<bool>,
+    opt_level: Option<u32>,
 }
 
 #[derive(RustcDecodable)]
@@ -665,10 +666,13 @@ fn process_dependencies<F>(cx: &mut Context,
                                          details.version.as_ref()
                                                 .map(|v| &v[..]),
                                          &new_source_id));
-        let dep = f(dep)
+        let mut dep = f(dep)
                      .set_features(details.features.unwrap_or(Vec::new()))
                      .set_default_features(details.default_features.unwrap_or(true))
                      .set_optional(details.optional.unwrap_or(false));
+        if let Some(opt_level) = details.opt_level {
+            dep = dep.set_opt_level(opt_level)
+        }
         cx.deps.push(dep);
     }
 

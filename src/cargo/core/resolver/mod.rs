@@ -93,8 +93,9 @@
 //! for a bit longer as well!
 
 use std::cell::RefCell;
+use std::cmp;
 use std::collections::HashSet;
-use std::collections::hash_map::HashMap;
+use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
 use std::rc::Rc;
 use std::slice;
@@ -120,6 +121,7 @@ mod encode;
 pub struct Resolve {
     graph: Graph<PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
+    opt_levels: HashMap<PackageId, u32>,
     root: PackageId,
     metadata: Option<Metadata>,
 }
@@ -132,6 +134,7 @@ pub enum Method<'a> {
         features: &'a [String],
         uses_default_features: bool,
         target_platform: Option<&'a str>,
+        opt_level: Option<u32>,
     },
 }
 
@@ -149,7 +152,13 @@ impl Resolve {
     fn new(root: PackageId) -> Resolve {
         let mut g = Graph::new();
         g.add(root.clone(), &[]);
-        Resolve { graph: g, root: root, features: HashMap::new(), metadata: None }
+        Resolve {
+            graph: g,
+            root: root,
+            features: HashMap::new(),
+            opt_levels: HashMap::new(),
+            metadata: None,
+        }
     }
 
     pub fn copy_metadata(&mut self, other: &Resolve) {
@@ -214,6 +223,10 @@ impl Resolve {
 
     pub fn features(&self, pkg: &PackageId) -> Option<&HashSet<String>> {
         self.features.get(pkg)
+    }
+
+    pub fn opt_level(&self, pkg: &PackageId) -> Option<u32> {
+        self.opt_levels.get(pkg).map(|opt_level| *opt_level)
     }
 }
 
@@ -329,6 +342,7 @@ fn activate_deps<'a>(cx: Box<Context>,
         features: features,
         uses_default_features: dep.uses_default_features(),
         target_platform: platform,
+        opt_level: dep.opt_level(),
     };
 
     let prev_active = cx.prev_active(dep);
@@ -629,6 +643,19 @@ impl Context {
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
         let deps = try!(self.resolve_features(parent, method));
+
+        // Record the optimization level for this package.
+        if let Method::Required{opt_level: Some(opt_level), ..} = method {
+            match self.resolve.opt_levels.entry(parent.package_id().clone()) {
+                Entry::Occupied(mut entry) => {
+                    let max_opt_level = cmp::max(*entry.get(), opt_level);
+                    entry.insert(max_opt_level);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(opt_level);
+                }
+            }
+        }
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
