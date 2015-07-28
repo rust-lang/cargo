@@ -6,7 +6,7 @@ dependencies = [
  "bufstream 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "crates-io 0.1.0",
  "curl 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "docopt 0.6.67 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.6.69 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "filetime 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "docopt"
-version = "0.6.67"
+version = "0.6.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "regex 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
