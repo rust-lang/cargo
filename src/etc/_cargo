@@ -290,7 +290,7 @@ _get_names_from_array()
 {
     local -a filelist;
     local manifest=$(_locate_manifest)
-    if ! [[ $manifest ]]; then
+    if [[ -z $manifest ]]; then
         return 0
     fi
 
