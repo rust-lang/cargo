@@ -48,6 +48,7 @@ tempdir = "0.3"
 hamcrest = "0.1"
 bufstream = "0.1"
 filetime = "0.1"
+utime = "0.1"
 
 [[bin]]
 name = "cargo"

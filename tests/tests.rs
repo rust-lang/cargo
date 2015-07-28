@@ -10,6 +10,7 @@ extern crate tar;
 extern crate tempdir;
 extern crate term;
 extern crate url;
+extern crate utime;
 #[cfg(windows)] extern crate kernel32;
 #[cfg(windows)] extern crate winapi;
 
