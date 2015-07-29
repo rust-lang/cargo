@@ -168,12 +168,11 @@ impl CargoPathExt for Path {
             };
 
             fn to_filetime(seconds: u64) -> FILETIME {
-                // FILETIME is a count of 100ns intervals, and there are 10^7 of
-                // these in a second
-                let seconds = seconds * 10_000_000;
+                // FILETIME is a count of 100ns intervals since January 1, 1601 (UTC).
+                let intervals = seconds * 10_000_000 + 116444736000000000;
                 FILETIME {
-                    dwLowDateTime: seconds as DWORD,
-                    dwHighDateTime: (seconds >> 32) as DWORD,
+                    dwLowDateTime: intervals as DWORD,
+                    dwHighDateTime: (intervals >> 32) as DWORD,
                 }
             }
         }
