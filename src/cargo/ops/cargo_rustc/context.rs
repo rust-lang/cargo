@@ -1,8 +1,8 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashSet, HashMap};
+use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
-use std::path::PathBuf;
 
 use regex::Regex;
 
@@ -36,7 +36,7 @@ pub struct Context<'a, 'cfg: 'a> {
                               Fingerprint>,
     pub compiled: HashSet<(&'a PackageId, &'a Target, &'a Profile)>,
     pub build_config: BuildConfig,
-    pub build_scripts: HashMap<(&'a PackageId, Kind, &'a Profile),
+    pub build_scripts: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
                                Vec<&'a PackageId>>,
 
     host: Layout,
@@ -351,7 +351,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|d| {
-
                 // If this target is a build command, then we only want build
                 // dependencies, otherwise we want everything *other than* build
                 // dependencies.
@@ -364,7 +363,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                     target.is_example() ||
                                     profile.test;
 
-                is_correct_dep && is_actual_dep
+                // If the dependency is optional, then we're only activating it
+                // if the corresponding feature was activated
+                let activated = !d.is_optional() ||
+                                self.resolve.features(pkg.package_id()).map(|f| {
+                                    f.contains(d.name())
+                                }).unwrap_or(false);
+
+                is_correct_dep && is_actual_dep && activated
             })
         }).filter_map(|pkg| {
             pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
@@ -445,13 +451,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Get the user-specified linker for a particular host or target
-    pub fn linker(&self, kind: Kind) -> Option<&str> {
-        self.target_config(kind).linker.as_ref().map(|s| &s[..])
+    pub fn linker(&self, kind: Kind) -> Option<&Path> {
+        self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
     }
 
     /// Get the user-specified `ar` program for a particular host or target
-    pub fn ar(&self, kind: Kind) -> Option<&str> {
-        self.target_config(kind).ar.as_ref().map(|s| &s[..])
+    pub fn ar(&self, kind: Kind) -> Option<&Path> {
+        self.target_config(kind).ar.as_ref().map(|s| s.as_ref())
     }
 
     /// Get the target configuration for a particular host or target

@@ -18,13 +18,30 @@ fn disabled() -> bool {
     // Right now the windows bots cannot cross compile due to the mingw setup,
     // so we disable ourselves on all but macos/linux setups where the rustc
     // install script ensures we have both architectures
-    return !cfg!(target_os = "macos") && !cfg!(target_os = "linux");
+    !(cfg!(target_os = "macos") ||
+      cfg!(target_os = "linux") ||
+      cfg!(target_env = "msvc"))
 }
 
-fn alternate() -> &'static str {
-    match env::consts::OS {
-        "linux" => "i686-unknown-linux-gnu",
-        "macos" => "i686-apple-darwin",
+fn alternate() -> String {
+    let platform = match env::consts::OS {
+        "linux" => "unknown-linux-gnu",
+        "macos" => "apple-darwin",
+        "windows" => "pc-windows-msvc",
+        _ => unreachable!(),
+    };
+    let arch = match env::consts::ARCH {
+        "x86" => "x86_64",
+        "x86_64" => "i686",
+        _ => unreachable!(),
+    };
+    format!("{}-{}", arch, platform)
+}
+
+fn alternate_arch() -> &'static str {
+    match env::consts::ARCH {
+        "x86" => "x86_64",
+        "x86_64" => "x86",
         _ => unreachable!(),
     }
 }
@@ -45,19 +62,19 @@ test!(simple_cross {
                 assert_eq!(std::env::var("TARGET").unwrap(), "{}");
             }}
         "#, alternate()))
-        .file("src/main.rs", r#"
+        .file("src/main.rs", &format!(r#"
             use std::env;
-            fn main() {
-                assert_eq!(env::consts::ARCH, "x86");
-            }
-        "#);
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+        "#, alternate_arch()));
 
     let target = alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(target),
+    assert_that(p.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
-    assert_that(&p.target_bin(target, "foo"), existing_file());
+    assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(target, "foo")).unwrap(),
+    assert_that(process(&p.target_bin(&target, "foo")).unwrap(),
                 execs().with_status(0));
 });
 
@@ -89,11 +106,11 @@ test!(simple_deps {
     p2.build();
 
     let target = alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(target),
+    assert_that(p.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
-    assert_that(&p.target_bin(target, "foo"), existing_file());
+    assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(target, "foo")).unwrap(),
+    assert_that(process(&p.target_bin(&target, "foo")).unwrap(),
                 execs().with_status(0));
 });
 
@@ -166,11 +183,11 @@ test!(plugin_deps {
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(target),
+    assert_that(foo.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
-    assert_that(&foo.target_bin(target, "foo"), existing_file());
+    assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&foo.target_bin(target, "foo")).unwrap(),
+    assert_that(process(&foo.target_bin(&target, "foo")).unwrap(),
                 execs().with_status(0));
 });
 
@@ -247,15 +264,15 @@ test!(plugin_to_the_max {
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(target).arg("-v"),
+    assert_that(foo.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     println!("second");
     assert_that(foo.cargo("build").arg("-v")
-                   .arg("--target").arg(target),
+                   .arg("--target").arg(&target),
                 execs().with_status(0));
-    assert_that(&foo.target_bin(target, "foo"), existing_file());
+    assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&foo.target_bin(target, "foo")).unwrap(),
+    assert_that(process(&foo.target_bin(&target, "foo")).unwrap(),
                 execs().with_status(0));
 });
 
@@ -270,19 +287,19 @@ test!(linker_and_ar {
             linker = "my-linker-tool"
         "#, target))
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/foo.rs", &format!(r#"
             use std::env;
-            fn main() {
-                assert_eq!(env::consts::ARCH, "x86");
-            }
-        "#);
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+        "#, alternate_arch()));
 
-    assert_that(p.cargo_process("build").arg("--target").arg(target)
+    assert_that(p.cargo_process("build").arg("--target").arg(&target)
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stdout(&format!("\
 {compiling} foo v0.5.0 ({url})
-{running} `rustc src/foo.rs --crate-name foo --crate-type bin -g \
+{running} `rustc src[..]foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target}[..]debug \
     --emit=dep-info,link \
     --target {target} \
@@ -361,7 +378,7 @@ test!(plugin_with_extra_dylib_dep {
     baz.build();
 
     let target = alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(target),
+    assert_that(foo.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
 });
 
@@ -378,22 +395,22 @@ test!(cross_tests {
             [[bin]]
             name = "bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs", &format!(r#"
             extern crate foo;
             use std::env;
-            fn main() {
-                assert_eq!(env::consts::ARCH, "x86");
-            }
-            #[test] fn test() { main() }
-        "#)
-        .file("src/lib.rs", r#"
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+            #[test] fn test() {{ main() }}
+        "#, alternate_arch()))
+        .file("src/lib.rs", &format!(r#"
             use std::env;
-            pub fn foo() { assert_eq!(env::consts::ARCH, "x86"); }
-            #[test] fn test_foo() { foo() }
-        "#);
+            pub fn foo() {{ assert_eq!(env::consts::ARCH, "{}"); }}
+            #[test] fn test_foo() {{ foo() }}
+        "#, alternate_arch()));
 
     let target = alternate();
-    assert_that(p.cargo_process("test").arg("--target").arg(target),
+    assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stdout(&format!("\
 {compiling} foo v0.0.0 ({foo})
@@ -431,15 +448,15 @@ test!(simple_cargo_run {
             version = "0.0.0"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs", &format!(r#"
             use std::env;
-            fn main() {
-                assert_eq!(env::consts::ARCH, "x86");
-            }
-        "#);
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+        "#, alternate_arch()));
 
     let target = alternate();
-    assert_that(p.cargo_process("run").arg("--target").arg(target),
+    assert_that(p.cargo_process("run").arg("--target").arg(&target),
                 execs().with_status(0));
 });
 
@@ -549,7 +566,7 @@ test!(build_script_needed_for_host_and_target {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d1 v0.0.0 (file://{dir})
+{compiling} d1 v0.0.0 ({url})
 {running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
@@ -557,16 +574,17 @@ test!(build_script_needed_for_host_and_target {
            -L /path/to/{target}`
 {running} `rustc d1[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
-{compiling} d2 v0.0.0 (file://{dir})
+{compiling} d2 v0.0.0 ({url})
 {running} `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
-{compiling} foo v0.0.0 (file://{dir})
+{compiling} foo v0.0.0 ({url})
 {running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..] \
            -L /path/to/{host}`
 {running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
 {running} `rustc src[..]main.rs [..] --target {target} [..] \
            -L /path/to/{target}`
 ", compiling = COMPILING, running = RUNNING, target = target, host = host,
+   url = p.url(),
    dir = p.root().display())));
 });
 
@@ -641,8 +659,8 @@ test!(build_script_only_host {
             use std::env;
 
             fn main() {
-                assert!(env::var("OUT_DIR").unwrap()
-                                             .contains("target/debug/build/d1-"),
+                assert!(env::var("OUT_DIR").unwrap().replace("\\", "/")
+                                           .contains("target/debug/build/d1-"),
                         "bad: {:?}", env::var("OUT_DIR"));
             }
         "#);

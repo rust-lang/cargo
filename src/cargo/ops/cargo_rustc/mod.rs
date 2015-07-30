@@ -1,6 +1,6 @@
 use std::collections::{HashSet, HashMap};
 use std::env;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::prelude::*;
 use std::path::{self, Path, PathBuf};
@@ -47,8 +47,8 @@ pub struct BuildConfig {
 
 #[derive(Clone, Default)]
 pub struct TargetConfig {
-    pub ar: Option<String>,
-    pub linker: Option<String>,
+    pub ar: Option<PathBuf>,
+    pub linker: Option<PathBuf>,
     pub overrides: HashMap<String, BuildOutput>,
 }
 
@@ -331,7 +331,7 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
     let rustcs = try!(prepare_rustc(package, target, profile, crate_types,
                                     cx, req));
 
-    let plugin_deps = load_build_deps(cx, package, profile, Kind::Host);
+    let plugin_deps = load_build_deps(cx, package, target, profile, Kind::Host);
 
     return rustcs.into_iter().map(|(mut rustc, kind)| {
         let name = package.name().to_string();
@@ -352,7 +352,8 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
         let build_state = cx.build_state.clone();
         let current_id = package.package_id().clone();
         let plugin_deps = plugin_deps.clone();
-        let mut native_lib_deps = load_build_deps(cx, package, profile, kind);
+        let mut native_lib_deps = load_build_deps(cx, package, target, profile,
+                                                  kind);
         if package.has_custom_build() && !target.is_custom_build() {
             native_lib_deps.insert(0, current_id.clone());
         }
@@ -384,9 +385,9 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
             // dynamic library load path as a plugin's dynamic library may be
             // located somewhere in there.
             let build_state = build_state.outputs.lock().unwrap();
-            add_native_deps(&mut rustc, &*build_state, native_lib_deps,
+            add_native_deps(&mut rustc, &build_state, native_lib_deps,
                             kind, pass_l_flag, &current_id);
-            try!(add_plugin_deps(&mut rustc, &*build_state, plugin_deps));
+            try!(add_plugin_deps(&mut rustc, &build_state, plugin_deps));
             drop(build_state);
 
             // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
@@ -456,10 +457,10 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
     }
 }
 
-fn load_build_deps(cx: &Context, pkg: &Package,
+fn load_build_deps(cx: &Context, pkg: &Package, target: &Target,
                    profile: &Profile, kind: Kind) -> Vec<PackageId> {
     let pkg = cx.get_package(pkg.package_id());
-    cx.build_scripts.get(&(pkg.package_id(), kind, profile)).map(|deps| {
+    cx.build_scripts.get(&(pkg.package_id(), target, profile, kind)).map(|deps| {
         deps.iter().map(|&d| d.clone()).collect::<Vec<_>>()
     }).unwrap_or(Vec::new())
 }
@@ -686,9 +687,11 @@ fn build_base_args(cx: &Context,
 fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
                      target: &Target, kind: Kind) {
     fn opt(cmd: &mut CommandPrototype, key: &str, prefix: &str,
-           val: Option<&str>)  {
+           val: Option<&OsStr>)  {
         if let Some(val) = val {
-            cmd.arg(key).arg(&format!("{}{}", prefix, val));
+            let mut joined = OsString::from(prefix);
+            joined.push(val);
+            cmd.arg(key).arg(joined);
         }
     }
 
@@ -696,11 +699,11 @@ fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, pkg: &Package,
     cmd.arg("--emit=dep-info,link");
 
     if kind == Kind::Target {
-        opt(cmd, "--target", "", cx.requested_target());
+        opt(cmd, "--target", "", cx.requested_target().map(|s| s.as_ref()));
     }
 
-    opt(cmd, "-C", "ar=", cx.ar(kind));
-    opt(cmd, "-C", "linker=", cx.linker(kind));
+    opt(cmd, "-C", "ar=", cx.ar(kind).map(|s| s.as_ref()));
+    opt(cmd, "-C", "linker=", cx.linker(kind).map(|s| s.as_ref()));
 }
 
 fn build_deps_args(cmd: &mut CommandPrototype,

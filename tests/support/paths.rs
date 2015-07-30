@@ -6,19 +6,28 @@ use std::path::{Path, PathBuf};
 use std::sync::{Once, ONCE_INIT};
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
-use filetime::FileTime;
+use filetime::{self, FileTime};
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
 static NEXT_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 thread_local!(static TASK_ID: usize = NEXT_ID.fetch_add(1, Ordering::SeqCst));
 
 pub fn root() -> PathBuf {
-    env::current_exe().unwrap()
-                  .parent().unwrap() // chop off exe name
-                  .parent().unwrap() // chop off 'debug'
-                  .parent().unwrap() // chop off target
-                  .join(CARGO_INTEGRATION_TEST_DIR)
-                  .join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
+    let mut path = env::current_exe().unwrap();
+    path.pop(); // chop off exe name
+    path.pop(); // chop off 'debug'
+
+    // If `cargo test` is run manually then our path looks like
+    // `target/debug/foo`, in which case our `path` is already pointing at
+    // `target`. If, however, `cargo test --target $target` is used then the
+    // output is `target/$target/debug/foo`, so our path is pointing at
+    // `target/$target`. Here we conditionally pop the `$target` name.
+    if path.file_name().and_then(|s| s.to_str()) != Some("target") {
+        path.pop();
+    }
+
+    path.join(CARGO_INTEGRATION_TEST_DIR)
+        .join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
 }
 
 pub fn home() -> PathBuf {
@@ -101,72 +110,20 @@ impl CargoPathExt for Path {
             let stat = try!(path.c_metadata());
 
             let mtime = FileTime::from_last_modification_time(&stat);
-            let newtime = mtime.seconds() - 3600;
+            let newtime = mtime.seconds_relative_to_1970() - 3600;
+            let nanos = mtime.nanoseconds();
+            let newtime = FileTime::from_seconds_since_1970(newtime, nanos);
 
             // Sadly change_file_times has a failure mode where a readonly file
             // cannot have its times changed on windows.
-            match set_file_times(path, newtime, newtime) {
+            match filetime::set_file_times(path, newtime, newtime) {
                 Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => {}
                 e => return e,
             }
             let mut perms = stat.permissions();
             perms.set_readonly(false);
             try!(fs::set_permissions(path, perms));
-            set_file_times(path, newtime, newtime)
-        }
-
-        #[cfg(unix)]
-        fn set_file_times(p: &Path, atime: u64, mtime: u64) -> io::Result<()> {
-            use std::os::unix::prelude::*;
-            use std::ffi::CString;
-            use libc::{timeval, time_t, c_char, c_int};
-
-            let p = try!(CString::new(p.as_os_str().as_bytes()));
-            let atime = timeval { tv_sec: atime as time_t, tv_usec: 0, };
-            let mtime = timeval { tv_sec: mtime as time_t, tv_usec: 0, };
-            let times = [atime, mtime];
-            extern {
-                fn utimes(name: *const c_char, times: *const timeval) -> c_int;
-            }
-            unsafe {
-                if utimes(p.as_ptr(), times.as_ptr()) == 0 {
-                    Ok(())
-                } else {
-                    Err(io::Error::last_os_error())
-                }
-            }
-        }
-
-        #[cfg(windows)]
-        fn set_file_times(p: &Path, atime: u64, mtime: u64) -> io::Result<()> {
-            use std::fs::OpenOptions;
-            use std::os::windows::prelude::*;
-            use winapi::{FILETIME, DWORD};
-            use kernel32;
-
-            let f = try!(OpenOptions::new().write(true).open(p));
-            let atime = to_filetime(atime);
-            let mtime = to_filetime(mtime);
-            return unsafe {
-                let ret = kernel32::SetFileTime(f.as_raw_handle() as *mut _,
-                                                0 as *const _,
-                                                &atime, &mtime);
-                if ret != 0 {
-                    Ok(())
-                } else {
-                    Err(io::Error::last_os_error())
-                }
-            };
-
-            fn to_filetime(seconds: u64) -> FILETIME {
-                // FILETIME is a count of 100ns intervals, and there are 10^7 of
-                // these in a second
-                let seconds = seconds * 10_000_000;
-                FILETIME {
-                    dwLowDateTime: seconds as DWORD,
-                    dwHighDateTime: (seconds >> 32) as DWORD,
-                }
-            }
+            filetime::set_file_times(path, newtime, newtime)
         }
     }
 

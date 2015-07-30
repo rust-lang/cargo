@@ -69,6 +69,7 @@ pub fn package(manifest_path: &Path,
 
 // check that the package has some piece of metadata that a human can
 // use to tell what the package is about.
+#[allow(deprecated)] // connect => join in 1.3
 fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
     let md = pkg.manifest().metadata();
 

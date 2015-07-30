@@ -349,3 +349,23 @@ fn resolving_cycle() {
         dep_req("foo", "1"),
     ], &mut reg);
 }
+
+#[test]
+fn hard_equality() {
+    extern crate env_logger;
+    let mut reg = registry(vec!(
+        pkg!(("foo", "1.0.1")),
+        pkg!(("foo", "1.0.0")),
+
+        pkg!(("bar", "1.0.0") => [dep_req("foo", "1.0.0")]),
+    ));
+
+    let res = resolve(pkg_id("root"), vec![
+        dep_req("bar", "1"),
+        dep_req("foo", "=1.0.0"),
+    ], &mut reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "1.0.0")])));
+}

@@ -1,0 +1,17 @@
+[package]
+name = "crates-io"
+version = "0.1.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+license = "MIT/Apache-2.0"
+repository = "https://github.com/rust-lang/cargo"
+description = """
+Helpers for interacting with crates.io
+"""
+
+[lib]
+name = "crates_io"
+path = "lib.rs"
+
+[dependencies]
+curl = "0.2"
+rustc-serialize = "0.3"

@@ -103,7 +103,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
     let id = pkg.package_id().clone();
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                build_output.clone());
-    let plugin_deps = super::load_build_deps(cx, pkg, profile, Kind::Host);
+    let plugin_deps = super::load_build_deps(cx, pkg, target, profile,
+                                             Kind::Host);
 
     try!(fs::create_dir_all(&cx.layout(pkg, Kind::Target).build(pkg)));
     try!(fs::create_dir_all(&cx.layout(pkg, Kind::Host).build(pkg)));
@@ -349,7 +350,7 @@ impl BuildOutput {
 /// targets/profiles which are being built.
 pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
                            pkg: &'b Package,
-                           targets: &[(&Target, &'b Profile)]) {
+                           targets: &[(&'b Target, &'b Profile)]) {
     let mut ret = HashMap::new();
     for &(target, profile) in targets {
         build(&mut ret, Kind::Target, pkg, target, profile, cx);
@@ -357,21 +358,22 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
     }
 
     // Make the output a little more deterministic by sorting all dependencies
-    for (&(id, kind, _), slot) in ret.iter_mut() {
+    for (&(id, target, _, kind), slot) in ret.iter_mut() {
         slot.sort();
         slot.dedup();
-        debug!("script deps: {}/{:?} => {:?}", id, kind,
+        debug!("script deps: {}/{}/{:?} => {:?}", id, target.name(), kind,
                slot.iter().map(|s| s.to_string()).collect::<Vec<_>>());
     }
     cx.build_scripts = ret;
 
     // Recursive function to build up the map we're constructing. This function
     // memoizes all of its return values as it goes along.
-    fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<(&'b PackageId, Kind, &'b Profile),
+    fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<(&'b PackageId, &'b Target,
+                                                 &'b Profile, Kind),
                                                 Vec<&'b PackageId>>,
                            kind: Kind,
                            pkg: &'b Package,
-                           target: &Target,
+                           target: &'b Target,
                            profile: &'b Profile,
                            cx: &Context<'b, 'cfg>)
                            -> &'a [&'b PackageId] {
@@ -381,8 +383,8 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         // dependencies.
         let kind = if target.for_host() {Kind::Host} else {kind};
         let id = pkg.package_id();
-        if out.contains_key(&(id, kind, profile)) {
-            return &out[&(id, kind, profile)]
+        if out.contains_key(&(id, target, profile, kind)) {
+            return &out[&(id, target, profile, kind)]
         }
 
         // This loop is both the recursive and additive portion of this
@@ -416,7 +418,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
             }
         }
 
-        let prev = out.entry((id, kind, profile)).or_insert(Vec::new());
+        let prev = out.entry((id, target, profile, kind)).or_insert(Vec::new());
         prev.extend(ret);
         return prev
     }

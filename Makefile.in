@@ -17,10 +17,15 @@ else
 CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)
 CFG_PACKAGE_VERS=$(CFG_RELEASE)
 endif
+CFG_BUILD_DATE = $(shell date +%F)
+
+ifeq ($(wildcard .git),)
+CFG_VERSION = $(CFG_RELEASE) (built $(CFG_BUILD_DATE))
+else
 CFG_VER_DATE = $(shell git log -1 --date=short --pretty=format:'%cd')
 CFG_VER_HASH = $(shell git rev-parse --short HEAD)
-CFG_BUILD_DATE = $(shell date +%F)
 CFG_VERSION = $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE)) (built $(CFG_BUILD_DATE))
+endif
 PKG_NAME = cargo-$(CFG_PACKAGE_VERS)
 
 ifdef CFG_DISABLE_VERIFY_INSTALL
@@ -52,19 +57,6 @@ TARGET_ROOT = target
 BIN_TARGETS := cargo
 BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
 BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
-
-ifdef CFG_MSVC_INCLUDE_PATH
-export INCLUDE := $(CFG_MSVC_INCLUDE_PATH)
-endif
-ifdef CFG_MSVC_LIB_PATH
-export LIB := $(CFG_MSVC_LIB_PATH)
-endif
-ifdef CFG_MSVC_BIN
-export PATH := $(CFG_MSVC_BIN):$(PATH)
-endif
-ifdef CFG_MSVC_WINDOWS_SDK_DIR
-export PATH := $(CFG_MSVC_WINDOWS_SDK_DIR):$(PATH)
-endif
 
 define DIST_TARGET
 ifdef CFG_ENABLE_OPTIMIZE
@@ -141,7 +133,11 @@ ASSETS := CNAME images/noise.png images/forkme.png images/Cargo-Logo-Small.png \
 	images/search.png
 
 doc: $(foreach doc,$(DOCS),target/doc/$(doc).html) \
-	$(foreach asset,$(ASSETS),target/doc/$(asset))
+	$(foreach asset,$(ASSETS),target/doc/$(asset)) \
+	target/doc/cargo/index.html
+
+target/doc/cargo/index.html:
+	$(CARGO) doc --no-deps
 
 $(DOC_DIR)/%.html: src/doc/%.md src/doc/header.html src/doc/footer.html
 	@mkdir -p $(@D)
@@ -213,15 +209,23 @@ install-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
 	$$(PKGDIR_$(1))/install.sh \
 		--prefix="$$(CFG_PREFIX)" \
 		--destdir="$$(DESTDIR)" $$(MAYBE_DISABLE_VERIFY)
+
+uninstall-$(1): $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz
+	$$(PKGDIR_$(1))/install.sh \
+		--prefix="$$(CFG_PREFIX)" \
+		--destdir="$$(DESTDIR)" \
+		--uninstall
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call DO_DIST_TARGET,$(target))))
 
 dist: $(foreach target,$(CFG_TARGET),dist-$(target))
 distcheck: $(foreach target,$(CFG_TARGET),distcheck-$(target))
 install: $(foreach target,$(CFG_TARGET),install-$(target))
+uninstall: $(foreach target,$(CFG_TARGET), uninstall-$(target))
+
 
 # Setup phony tasks
-.PHONY: all clean clean-all dist distcheck install test test-unit style
+.PHONY: all clean clean-all dist distcheck install uninstall test test-unit style
 
 # Disable unnecessary built-in rules
 .SUFFIXES:

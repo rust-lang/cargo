@@ -328,8 +328,8 @@ name = "conduit-static"
 version = "0.1.0"
 authors = ["Yehuda Katz <wycats@example.com>"]
 
-[dependencies.conduit]
-git = "https://github.com/conduit-rust/conduit.git"
+[dependencies]
+conduit = "0.7"
 ```
 
 You check out a local copy of `conduit`, let's say in your `~/src` directory:
@@ -373,7 +373,11 @@ paths = ["/path/to/project/conduit"]
 
 This array should be filled with directories that contain a `Cargo.toml`. In
 this instance, we're just adding `conduit`, so it will be the only one that's
-overridden.
+overridden. This path must be an absolute path.
+
+Note: using a local configuration to override paths will only work for crates
+that have been published to crates.io. You cannot use this feature to tell Cargo
+how to find local unpublished crates.
 
 More information about local configuration can be found in the [configuration
 documentation](config.html).
@@ -403,6 +407,20 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 Of course, if your project has tests, you'll see more output, with the
 correct number of tests.
+
+You can also run a specific test by passing a filter:
+
+<pre><code class="language-shell"><span class="gp">$</span> cargo test foo
+</code></pre>
+
+This will run any test with `foo` in its name.
+
+`cargo test` runs additional tests as well. For example, it will compile any
+examples, you’ve included, and will also test the examples in your
+documentation. Please see the [testing guide][testing] in the Rust
+documentation for more details.
+
+[testing]: https://doc.rust-lang.org/book/testing.html
 
 # Path Dependencies
 

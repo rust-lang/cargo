@@ -771,3 +771,37 @@ test!(update_transitive_dependency {
 {compiling} foo v0.5.0 ([..])
 ", downloading = DOWNLOADING, compiling = COMPILING)));
 });
+
+test!(update_backtracking_ok {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            webdriver = "0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("webdriver", "0.1.0", &[("hyper", "0.6", "normal")]);
+    r::mock_pkg("hyper", "0.6.5", &[("openssl", "0.1", "normal"),
+                                    ("cookie", "0.1", "normal")]);
+    r::mock_pkg("cookie", "0.1.0", &[("openssl", "0.1", "normal")]);
+    r::mock_pkg("openssl", "0.1.0", &[]);
+
+    assert_that(p.cargo("generate-lockfile"),
+                execs().with_status(0));
+
+    r::mock_pkg("openssl", "0.1.1", &[]);
+    r::mock_pkg("hyper", "0.6.6", &[("openssl", "0.1.1", "normal"),
+                                    ("cookie", "0.1.0", "normal")]);
+
+    assert_that(p.cargo("update").arg("-p").arg("hyper"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{updating} registry `[..]`
+", updating = UPDATING)));
+});
