@@ -96,7 +96,7 @@
 //! each of which has many sub-folders with two letters. At the end of all these
 //! are the actual crate files themselves.
 //!
-//! The purpose of this layou tis to hopefully cut down on `ls` sizes as well as
+//! The purpose of this layout is to hopefully cut down on `ls` sizes as well as
 //! efficient lookup based on the crate name itself.
 //!
 //! ## Crate files
