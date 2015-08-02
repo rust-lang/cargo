@@ -144,18 +144,22 @@ impl MultiShell {
 
 impl Shell {
     pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
-        // Check for cfg!(windows) as colored output on Windows can only be supported when a tty is
-        // present.
-        if !cfg!(windows) || config.tty {
-            let term = TerminfoTerminal::new(out);
-            term.map(|t| Shell {
-                terminal: Colored(Box::new(t)),
-                config: config
-            }).unwrap_or_else(|| {
+        match ::term::terminfo::TermInfo::from_env() {
+            Ok(ti) => {
+                // Color output is possible.
+                Shell {
+                    terminal: Colored(Box::new(TerminfoTerminal::new_with_terminfo(out, ti))),
+                    config: config
+                }
+            }
+            _ if config.tty => {
+                // Color output is expected but not available, fall back to stderr.
                 Shell { terminal: NoColor(Box::new(io::stderr())), config: config }
-            })
-        } else {
-            Shell { terminal: NoColor(out), config: config }
+            }
+            _ => {
+                // No color output.
+                Shell { terminal: NoColor(out), config: config }
+            }
         }
     }
 
