@@ -210,7 +210,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     // This function is used to transform a summary to another locked summary if
-    // possible. This is where the the concept of a lockfile comes into play.
+    // possible. This is where the concept of a lockfile comes into play.
     //
     // If a summary points at a package id which was previously locked, then we
     // override the summary's id itself as well as all dependencies to be
