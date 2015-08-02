@@ -36,3 +36,7 @@ addons:
     packages:
     - g++-multilib
     - lib32stdc++6
+
+cache:
+  directories:
+    - $HOME/.cargo
