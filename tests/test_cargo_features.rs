@@ -769,3 +769,41 @@ test!(optional_and_dev_dep {
 {compiling} test v0.1.0 ([..])
 ", compiling = COMPILING)));
 });
+
+test!(activating_feature_activates_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name    = "test"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = { path = "foo", optional = true }
+
+            [features]
+            a = ["foo/a"]
+        "#)
+        .file("src/lib.rs", "
+            extern crate foo;
+            pub fn bar() {
+                foo::bar();
+            }
+        ")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            a = []
+        "#)
+        .file("foo/src/lib.rs", r#"
+            #[cfg(feature = "a")]
+            pub fn bar() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("--features").arg("a").arg("-v"),
+                execs().with_status(0));
+});
