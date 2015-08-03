@@ -112,13 +112,13 @@ impl GitRemote {
         let repo = match git2::Repository::open(into) {
             Ok(repo) => {
                 try!(self.fetch_into(&repo).chain_error(|| {
-                    internal(format!("failed to fetch into {}", into.display()))
+                    human(format!("failed to fetch into {}", into.display()))
                 }));
                 repo
             }
             Err(..) => {
                 try!(self.clone_into(into).chain_error(|| {
-                    internal(format!("failed to clone into: {}", into.display()))
+                    human(format!("failed to clone into: {}", into.display()))
                 }))
             }
         };
@@ -365,11 +365,21 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     //
     // * After the above two have failed, we just kinda grapple attempting to
     //   return *something*.
+    //
+    // Note that we keep track of the number of times we've called this callback
+    // because libgit2 will repeatedly give us credentials until we give it a
+    // reason to not do so. If we've been called once and our credentials failed
+    // then we'll be called again, and in this case we assume that the reason
+    // was because the credentials were wrong.
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
-    let mut cred_error = false;
-    let ret = f(&mut |url, username, allowed| {
-        let creds = if allowed.contains(git2::SSH_KEY) ||
+    let mut called = 0;
+    let res = f(&mut |url, username, allowed| {
+        called += 1;
+        if called >= 2 {
+            return Err(git2::Error::from_str("no authentication available"))
+        }
+        if allowed.contains(git2::SSH_KEY) ||
                        allowed.contains(git2::USERNAME) {
             let user = username.map(|s| s.to_string())
                                .or_else(|| cred_helper.username.clone())
@@ -385,16 +395,14 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
             git2::Cred::default()
         } else {
             Err(git2::Error::from_str("no authentication available"))
-        };
-        cred_error = creds.is_err();
-        creds
+        }
     });
-    if cred_error {
-        ret.chain_error(|| {
-            human("Failed to authenticate when downloading repository")
+    if called > 0 {
+        res.chain_error(|| {
+            human("failed to authenticate when downloading repository")
         })
     } else {
-        ret
+        res
     }
 }
 
@@ -404,11 +412,12 @@ pub fn fetch(repo: &git2::Repository, url: &str,
 
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new();
-        cb.credentials(|a, b, c| f(a, b, c));
-        let mut remote = try!(repo.remote_anonymous(&url, Some(refspec)));
-        try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        remote.set_callbacks(cb);
-        try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None));
+        cb.credentials(f);
+        let mut remote = try!(repo.remote_anonymous(&url));
+        let mut opts = git2::FetchOptions::new();
+        opts.remote_callbacks(cb)
+            .download_tags(git2::AutotagOption::All);
+        try!(remote.fetch(&[refspec], Some(&mut opts), None));
         Ok(())
     })
 }

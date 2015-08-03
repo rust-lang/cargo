@@ -80,10 +80,11 @@ test!(simple {
     let ar = Archive::new(inner);
     for file in ar.files().unwrap() {
         let file = file.unwrap();
-        let fname = file.filename_bytes();
+        let fname = file.header().path_bytes();
+        let fname = &*fname;
         assert!(fname == b"foo-0.0.1/Cargo.toml" ||
                 fname == b"foo-0.0.1/src/main.rs",
-                "unexpected filename: {:?}", file.filename())
+                "unexpected filename: {:?}", file.header().path());
     }
 });
 

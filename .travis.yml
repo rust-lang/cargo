@@ -33,6 +33,9 @@ branches:
 
 addons:
   apt:
+    sources:
+      - kalakris-cmake
     packages:
-    - g++-multilib
-    - lib32stdc++6
+      - cmake
+      - g++-multilib
+      - lib32stdc++6

@@ -57,10 +57,11 @@ src[..]main.rs
     let ar = Archive::new(Cursor::new(contents));
     for f in ar.files().unwrap() {
         let f = f.unwrap();
-        let fname = f.filename_bytes();
+        let fname = f.header().path_bytes();
+        let fname = &*fname;
         assert!(fname == b"foo-0.0.1/Cargo.toml" ||
                 fname == b"foo-0.0.1/src/main.rs",
-                "unexpected filename: {:?}", f.filename())
+                "unexpected filename: {:?}", f.header().path())
     }
 });
 
@@ -363,9 +364,10 @@ src[..]main.rs
     let ar = Archive::new(Cursor::new(contents));
     for f in ar.files().unwrap() {
         let f = f.unwrap();
-        let fname = f.filename_bytes();
+        let fname = f.header().path_bytes();
+        let fname = &*fname;
         assert!(fname == b"nested-0.0.1/Cargo.toml" ||
                 fname == b"nested-0.0.1/src/main.rs",
-                "unexpected filename: {:?}", f.filename())
+                "unexpected filename: {:?}", f.header().path())
     }
 });

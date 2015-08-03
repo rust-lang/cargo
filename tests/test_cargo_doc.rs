@@ -266,6 +266,8 @@ test!(doc_same_name {
 test!(doc_target {
     const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
 
+    if !::is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -274,8 +276,8 @@ test!(doc_target {
             authors = []
         "#)
         .file("src/lib.rs", r#"
-            #![feature(no_std)]
-            #![no_std]
+            #![feature(no_core)]
+            #![no_core]
 
             extern {
                 pub static A: u32;
