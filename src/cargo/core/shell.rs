@@ -144,6 +144,10 @@ impl MultiShell {
 
 impl Shell {
     pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
+        // Match from_env() to determine if creation of a TerminfoTerminal is possible regardless
+        // of the tty status. --color options are parsed after Shell creation so always try to
+        // create a terminal that supports color output. Fall back to a no-color terminal or write
+        // output to stderr if a tty is present and color output is not possible.
         match ::term::terminfo::TermInfo::from_env() {
             Ok(ti) => {
                 // Color output is possible.
