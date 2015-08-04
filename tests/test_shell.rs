@@ -28,7 +28,18 @@ test!(non_tty {
     Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
+    let buf = a.lock().unwrap().clone();
+    assert_that(&buf[..], shell_writes("Hey Alex\n"));
+});
 
+test!(no_term {
+    let config = ShellConfig { color_config: Always, tty: false };
+    let a = Arc::new(Mutex::new(Vec::new()));
+
+    ::std::env::remove_var("TERM");
+    Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
+        shell.say("Hey Alex", color::RED).unwrap();
+    });
     let buf = a.lock().unwrap().clone();
     assert_that(&buf[..], shell_writes("Hey Alex\n"));
 });
