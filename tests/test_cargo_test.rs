@@ -495,10 +495,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        doctest = DOCTEST,
                        dir = p.url())));
 
-    assert_that(p.cargo_process("test").arg("foo"),
+    assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
 running 1 test
@@ -513,9 +512,8 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
-                       doctest = DOCTEST,
-                       dir = p.url())));
+                       running = RUNNING,
+                       doctest = DOCTEST)));
 });
 
 // Regression test for running cargo-test twice with
