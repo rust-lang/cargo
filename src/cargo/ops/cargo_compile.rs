@@ -126,7 +126,6 @@ pub fn compile_pkg<'a>(package: &Package,
     let override_ids = try!(source_ids_from_config(config, package.root()));
 
     let (packages, resolve_with_overrides, sources) = {
-        let rustc_host = config.rustc_host().to_string();
         let mut registry = PackageRegistry::new(config);
         if let Some(source) = source {
             registry.preload(package.package_id().source_id(), source);
@@ -146,13 +145,14 @@ pub fn compile_pkg<'a>(package: &Package,
 
         try!(registry.add_overrides(override_ids));
 
-        let platform = target.as_ref().map(|e| &e[..]).or(Some(&rustc_host[..]));
+        let platform = target.as_ref().unwrap_or(&config.rustc_info().host);
 
-        let method = Method::Required{
+        let method = Method::Required {
             dev_deps: true, // TODO: remove this option?
             features: &features,
             uses_default_features: !no_default_features,
-            target_platform: platform};
+            target_platform: Some(&platform[..]),
+        };
 
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, package, method,
@@ -397,7 +397,7 @@ fn scrape_build_config(config: &Config,
         requested_target: target.clone(),
         ..Default::default()
     };
-    base.host = try!(scrape_target_config(config, config.rustc_host()));
+    base.host = try!(scrape_target_config(config, &config.rustc_info().host));
     base.target = match target.as_ref() {
         Some(triple) => try!(scrape_target_config(config, &triple)),
         None => base.host.clone(),

@@ -70,7 +70,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         } else {
             try!(Context::filename_parts(None, config))
         };
-        let target_triple = target.unwrap_or(config.rustc_host()).to_string();
+        let target_triple = target.unwrap_or_else(|| {
+            &config.rustc_info().host[..]
+        }).to_string();
         let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
             Arc::new(Box::new(ProcessEngine))
         });
@@ -244,9 +246,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
         let (triple, pair) = if kind == Kind::Host {
-            (self.config.rustc_host(), &self.host_dylib)
+            (&self.config.rustc_info().host, &self.host_dylib)
         } else {
-            (&self.target_triple[..], &self.target_dylib)
+            (&self.target_triple, &self.target_dylib)
         };
         match *pair {
             None => return Err(human(format!("dylib outputs are not supported \
