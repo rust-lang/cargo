@@ -11,8 +11,9 @@ Usage:
     cargo version [options]
 
 Options:
-    -h, --help              Print this message
-    -v, --verbose           Use verbose output
+    -h, --help               Print this message
+    -v, --verbose            Use verbose output
+    --color WHEN             Coloring: auto, always, never
 ";
 
 pub fn execute(_: Options, _: &Config) -> CliResult<Option<()>> {

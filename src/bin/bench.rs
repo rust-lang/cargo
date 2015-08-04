@@ -13,6 +13,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
     flag_lib: bool,
     flag_bin: Vec<String>,
     flag_example: Vec<String>,
@@ -43,6 +44,7 @@ Options:
     --manifest-path PATH     Path to the manifest to build benchmarks for
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
+    --color WHEN             Coloring: auto, always, never
 
 All of the trailing arguments are passed to the benchmark binaries generated
 for filtering benchmarks and generally providing options configuring how they
@@ -62,6 +64,7 @@ Compilation can be customized with the `bench` profile in the manifest.
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
+    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,

@@ -13,6 +13,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
     flag_release: bool,
     arg_args: Vec<String>,
 }
@@ -35,6 +36,7 @@ Options:
     --manifest-path PATH    Path to the manifest to execute
     -v, --verbose           Use verbose output
     -q, --quiet             No output printed to stdout
+    --color WHEN            Coloring: auto, always, never
 
 If neither `--bin` nor `--example` are given, then if the project only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
@@ -46,6 +48,7 @@ All of the trailing arguments are passed to the binary to run.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
+    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
