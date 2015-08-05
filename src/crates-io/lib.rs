@@ -77,7 +77,7 @@ pub struct NewCrateDependency {
 pub struct User {
     pub id: u32,
     pub login: String,
-    pub avatar: String,
+    pub avatar: Option<String>,
     pub email: Option<String>,
     pub name: Option<String>,
 }
