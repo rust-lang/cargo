@@ -13,7 +13,8 @@ _cargo()
 	local opt_help='-h --help'
 	local opt_verbose='-v --verbose'
 	local opt_quiet='-q --quiet'
-	local opt_common="$opt_help $opt_verbose $opt_quiet"
+	local opt_color='--color'
+	local opt_common="$opt_help $opt_verbose $opt_quiet $opt_color"
 	local opt_pkg='-p --package'
 	local opt_feat='--features --no-default-features'
 	local opt_mani='--manifest-path'

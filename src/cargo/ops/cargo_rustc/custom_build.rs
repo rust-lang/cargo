@@ -63,13 +63,13 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
      .env("CARGO_MANIFEST_DIR", pkg.root())
      .env("NUM_JOBS", &cx.jobs().to_string())
      .env("TARGET", &match kind {
-         Kind::Host => cx.config.rustc_host(),
+         Kind::Host => &cx.config.rustc_info().host[..],
          Kind::Target => cx.target_triple(),
      })
      .env("DEBUG", &profile.debuginfo.to_string())
      .env("OPT_LEVEL", &profile.opt_level.to_string())
      .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
-     .env("HOST", &cx.config.rustc_host());
+     .env("HOST", &cx.config.rustc_info().host);
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.

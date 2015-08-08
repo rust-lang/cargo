@@ -556,6 +556,7 @@ fn build_features(s: &Summary, method: Method)
         match parts.next() {
             Some(feat) => {
                 let package = feat_or_package;
+                used.insert(package.to_string());
                 deps.entry(package.to_string())
                     .or_insert(Vec::new())
                     .push(feat.to_string());

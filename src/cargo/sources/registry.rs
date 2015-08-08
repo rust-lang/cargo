@@ -96,7 +96,7 @@
 //! each of which has many sub-folders with two letters. At the end of all these
 //! are the actual crate files themselves.
 //!
-//! The purpose of this layou tis to hopefully cut down on `ls` sizes as well as
+//! The purpose of this layout is to hopefully cut down on `ls` sizes as well as
 //! efficient lookup based on the crate name itself.
 //!
 //! ## Crate files
@@ -521,7 +521,7 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
 impl<'cfg> Source for RegistrySource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         // If we have an imprecise version then we don't know what we're going
-        // to look for, so we always atempt to perform an update here.
+        // to look for, so we always attempt to perform an update here.
         //
         // If we have a precise version, then we'll update lazily during the
         // querying phase. Note that precise in this case is only

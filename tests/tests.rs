@@ -16,6 +16,8 @@ extern crate url;
 #[macro_use]
 extern crate log;
 
+use cargo::util::Rustc;
+
 mod support;
 macro_rules! test {
     ($name:ident $expr:expr) => (
@@ -58,16 +60,19 @@ mod test_cargo_tool_paths;
 mod test_cargo_version;
 mod test_shell;
 
+thread_local!(static RUSTC: Rustc = Rustc::new("rustc").unwrap());
+
 fn rustc_host() -> String {
-    cargo::ops::rustc_version("rustc").unwrap().1
+    RUSTC.with(|r| r.host.clone())
 }
 
 fn is_nightly() -> bool {
-    let version_info = cargo::ops::rustc_version("rustc").unwrap().0;
-    version_info.contains("-nightly") || version_info.contains("-dev")
+    RUSTC.with(|r| {
+        r.verbose_version.contains("-nightly") ||
+            r.verbose_version.contains("-dev")
+    })
 }
 
 fn can_panic() -> bool {
-    let host = cargo::ops::rustc_version("rustc").unwrap().1;
-    !host.contains("msvc")
+    RUSTC.with(|r| !r.host.contains("msvc"))
 }

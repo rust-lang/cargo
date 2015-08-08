@@ -22,6 +22,7 @@ struct Flags {
     flag_list: bool,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
     arg_command: String,
     arg_args: Vec<String>,
 }
@@ -34,11 +35,12 @@ Usage:
     cargo [options]
 
 Options:
-    -h, --help       Display this message
-    -V, --version    Print version info and exit
-    --list           List installed commands
-    -v, --verbose    Use verbose output
-    -q, --quiet             No output printed to stdout
+    -h, --help          Display this message
+    -V, --version       Print version info and exit
+    --list              List installed commands
+    -v, --verbose       Use verbose output
+    -q, --quiet         No output printed to stdout
+    --color WHEN        Coloring: auto, always, never
 
 Some common cargo commands are:
     build       Compile the current project
@@ -99,6 +101,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     }));
 
     try!(config.shell().set_verbosity(flags.flag_verbose, flags.flag_quiet));
+    try!(config.shell().set_color_config(flags.flag_color.as_ref().map(|s| &s[..])));
 
     init_git_transports(config);
 

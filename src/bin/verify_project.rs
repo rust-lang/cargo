@@ -14,6 +14,7 @@ struct Flags {
     flag_manifest_path: String,
     flag_verbose: bool,
     flag_quiet: bool,
+    flag_color: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -26,10 +27,12 @@ Options:
     --manifest-path PATH    Path to the manifest to verify
     -v, --verbose           Use verbose output
     -q, --quiet             No output printed to stdout
+    --color WHEN            Coloring: auto, always, never
 ";
 
 pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     try!(config.shell().set_verbosity(args.flag_verbose, args.flag_quiet));
+    try!(config.shell().set_color_config(args.flag_color.as_ref().map(|s| &s[..])));
 
     let mut contents = String::new();
     let file = File::open(&args.flag_manifest_path);

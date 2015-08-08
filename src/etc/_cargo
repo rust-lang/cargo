@@ -9,6 +9,7 @@ _arguments \
     '(- 1 *)'{-h,--help}'[show help message]' \
     '(- 1 *)'--list'[list installed commands]' \
     '(- 1 *)'{-v,--verbose}'[use verbose output]' \
+    '(- 1 *)'--color'[colorization option]' \
     '(- 1 *)'{-V,--version}'[show version information]' \
     '1: :_cargo_cmds' \
     '*:: :->args'
@@ -29,6 +30,7 @@ case $state in
                     '(-p,--package)'{-p=,--package=}'[package to run benchmarks for]:packages:_get_package_names' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             build)
@@ -42,6 +44,7 @@ case $state in
                     '--release=[build in release mode]' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             clean)
@@ -51,6 +54,7 @@ case $state in
                     '(-p,--package)'{-p=,--package=}'[package to clean]:packages:_get_package_names' \
                     '--target=[target triple(default:all)]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             config-for-key)
@@ -76,6 +80,7 @@ case $state in
                     '--no-default-features[do not build the default features]' \
                     '--open[oen docs in browser after the build]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             fetch)
@@ -83,6 +88,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             generate-lockfile)
@@ -90,6 +96,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             git-checkout)
@@ -98,6 +105,7 @@ case $state in
                     '--reference=[REF]' \
                     '--url=[URL]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             help)
@@ -117,6 +125,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--host=[Host to set the token for]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             new)
@@ -127,6 +136,7 @@ case $state in
                     '--hg[initialize new mercurial repo]' \
                     '--no-git[no new git repo]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             owner)
@@ -137,6 +147,7 @@ case $state in
                     '(-r, --remove)'{-r,--remove}'[remove owner LOGIN]' \
                     '--token[API token]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             package)
@@ -145,6 +156,7 @@ case $state in
                     '--manifest-path=[path to manifest]' \
                     '--no-verify[do not build to verify contents]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             pkgid)
@@ -152,6 +164,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             publish)
@@ -162,6 +175,7 @@ case $state in
                     '--no-verify[Do not verify tarball until before publish]' \
                     '--token[Token to use when uploading]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             read-manifest)
@@ -169,6 +183,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             run)
@@ -183,6 +198,7 @@ case $state in
                     '--release=[build in release mode]' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     '*: :_normal' \
                 ;;
 
@@ -198,6 +214,7 @@ case $state in
                     '(-p,--package)'{-p=,--package=}'[package to run tests for]:packages:_get_package_names' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     '1: :_test_names' \
                     ;;
 
@@ -209,6 +226,7 @@ case $state in
                     '(-p,--package)'{-p=,--package=}'[package to update]:packages:__get_package_names' \
                     '--precise=[update single dependency to PRECISE]: :' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             verify-project)
@@ -216,12 +234,14 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--manifest-path=[path to manifest]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             version)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     ;;
 
             yank)
@@ -231,6 +251,7 @@ case $state in
                     '--token[API token]' \
                     '--undo[undo yank]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=[colorization option]' \
                     '--vers[yank version]' \
                     ;;
         esac

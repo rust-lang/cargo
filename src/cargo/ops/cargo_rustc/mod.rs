@@ -3,7 +3,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::prelude::*;
-use std::path::{self, Path, PathBuf};
+use std::path::{self, PathBuf};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
@@ -50,29 +50,6 @@ pub struct TargetConfig {
     pub ar: Option<PathBuf>,
     pub linker: Option<PathBuf>,
     pub overrides: HashMap<String, BuildOutput>,
-}
-
-/// Run `rustc` to figure out what its current version string is.
-///
-/// The second element of the tuple returned is the target triple that rustc
-/// is a host for.
-pub fn rustc_version<P: AsRef<Path>>(rustc: P) -> CargoResult<(String, String)> {
-    let output = try!(try!(util::process(rustc.as_ref()))
-        .arg("-vV")
-        .exec_with_output());
-    let output = try!(String::from_utf8(output.stdout).map_err(|_| {
-        internal("rustc -v didn't return utf8 output")
-    }));
-    let triple = {
-        let triple = output.lines().filter(|l| {
-            l.starts_with("host: ")
-        }).map(|l| &l[6..]).next();
-        let triple = try!(triple.chain_error(|| {
-            internal("rustc -v didn't have a line for `host:`")
-        }));
-        triple.to_string()
-    };
-    Ok((output, triple))
 }
 
 // Returns a mapping of the root package plus its immediate dependencies to
@@ -336,10 +313,14 @@ fn rustc(package: &Package, target: &Target, profile: &Profile,
     return rustcs.into_iter().map(|(mut rustc, kind)| {
         let name = package.name().to_string();
         let is_path_source = package.package_id().source_id().is_path();
-        let show_warnings = package.package_id() == cx.resolve.root() ||
-                            is_path_source;
-        if !show_warnings {
-            rustc.arg("-Awarnings");
+        let allow_warnings = package.package_id() == cx.resolve.root() ||
+                             is_path_source;
+        if !allow_warnings {
+            if cx.config.rustc_info().cap_lints {
+                rustc.arg("--cap-lints").arg("allow");
+            } else {
+                rustc.arg("-Awarnings");
+            }
         }
         let has_custom_args = profile.rustc_args.is_some();
         let exec_engine = cx.exec_engine.clone();
