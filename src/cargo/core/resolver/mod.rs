@@ -110,6 +110,14 @@ pub use self::encode::Metadata;
 
 mod encode;
 
+macro_rules! trace {
+    ($($e:tt)*) => (
+        if cfg!(debug_assertions) {
+            debug!($($e)*);
+        }
+    )
+}
+
 /// Represents a fully resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
 ///
@@ -280,7 +288,7 @@ fn activate(mut cx: Box<Context>,
         cx.visited.remove(id);
         return finished(cx, registry)
     }
-    debug!("activating {}", parent.package_id());
+    trace!("activating {}", parent.package_id());
 
     let deps = try!(cx.build_deps(registry, parent, method));
 
