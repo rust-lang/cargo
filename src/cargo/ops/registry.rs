@@ -278,7 +278,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     match opts.to_add {
         Some(ref v) => {
             let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-            try!(config.shell().status("Owner", format!("adding `{:#?}` to `{}`",
+            try!(config.shell().status("Owner", format!("adding `{:?}` to `{}`",
                                                         v, name)));
             try!(registry.add_owners(&name, &v).map_err(|e| {
                 human(format!("failed to add owners: {}", e))
