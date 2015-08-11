@@ -799,6 +799,27 @@ test!(unused_keys {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr("unused manifest key: lib.build\n"));
+
+    let mut p = project("bar");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [lib]
+
+            name = "foo"
+            some_key = [1, 2, 3]
+        "#)
+        .file("src/foo.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr("unused manifest key: lib.some_key\n"));
 });
 
 test!(self_dependency {
