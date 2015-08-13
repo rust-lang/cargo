@@ -214,3 +214,28 @@ Caused by:
   expected a section for the key `root`
 "));
 });
+
+test!(bad_git_dependency {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies]
+        foo = { git = "file:.." }
+    "#)
+    .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+Unable to update file:///
+
+Caused by:
+  failed to clone into: [..]
+
+Caused by:
+  [7] 'file:///' is not a valid local file URI
+"));
+});
