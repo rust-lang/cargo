@@ -82,8 +82,8 @@ all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
 define CARGO_TARGET
 cargo-$(1): $$(CARGO)
-	"$$(CFG_RUSTC)" -V
-	"$$(CARGO)" --version
+	$$(CFG_RUSTC) -V
+	$$(CARGO) --version
 	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(VERBOSE_FLAG) $$(ARGS)
 
 test-unit-$(1): $$(CARGO)
@@ -141,7 +141,7 @@ target/doc/cargo/index.html:
 
 $(DOC_DIR)/%.html: src/doc/%.md src/doc/header.html src/doc/footer.html
 	@mkdir -p $(@D)
-	"$(CFG_RUSTDOC)" $< -o $(@D) $(DOC_OPTS)
+	$(CFG_RUSTDOC) $< -o $(@D) $(DOC_OPTS)
 
 $(DOC_DIR)/%: src/doc/%
 	@mkdir -p $(@D)
