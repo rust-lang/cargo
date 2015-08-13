@@ -281,7 +281,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             try!(config.shell().status("Owner", format!("adding {:?} to crate {}",
                                                         v, name)));
             try!(registry.add_owners(&name, &v).map_err(|e| {
-                human(format!("failed to add owners: {}", e))
+                human(format!("failed to add owners to crate {}: {}", name, e))
             }));
         }
         None => {}
@@ -293,7 +293,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             try!(config.shell().status("Owner", format!("removing {:?} from crate {}",
                                                         v, name)));
             try!(registry.remove_owners(&name, &v).map_err(|e| {
-                human(format!("failed to remove owners: {}", e))
+                human(format!("failed to remove owners from crate {}: {}", name, e))
             }));
         }
         None => {}
@@ -301,7 +301,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     if opts.list {
         let owners = try!(registry.list_owners(&name).map_err(|e| {
-            human(format!("failed to list owners: {}", e))
+            human(format!("failed to list owners of crate {}: {}", name, e))
         }));
         for owner in owners.iter() {
             print!("{}", owner.login);
