@@ -1780,7 +1780,8 @@ test!(rustc_env_var {
 Could not execute process `rustc-that-does-not-exist -vV` ([..])
 
 Caused by:
-[..]".to_string() + if cfg!(windows) {"\n[..]\n"} else {"\n"}));
+[..]
+"));
     assert_that(&p.bin("a"), is_not(existing_file()));
 });
 

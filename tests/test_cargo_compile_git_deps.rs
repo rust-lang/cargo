@@ -921,11 +921,12 @@ test!(dep_with_changed_submodule {
     sub.sync().unwrap();
     {
         let subrepo = sub.open().unwrap();
+        subrepo.remote_add_fetch("origin",
+                                 "refs/heads/*:refs/heads/*").unwrap();
+        subrepo.remote_set_url("origin",
+                               &git_project3.url().to_string()).unwrap();
         let mut origin = subrepo.find_remote("origin").unwrap();
-        origin.set_url(&git_project3.url().to_string()).unwrap();
-        origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();;
-        origin.fetch(&[], None).unwrap();
-        origin.save().unwrap();
+        origin.fetch(&[], None, None).unwrap();
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();
         subrepo.reset(&obj, git2::ResetType::Hard, None).unwrap();

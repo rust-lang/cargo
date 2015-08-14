@@ -136,7 +136,7 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
         }));
         let path = format!("{}-{}{}{}", pkg.name(), pkg.version(),
                            path::MAIN_SEPARATOR, relative);
-        try!(ar.append(&path, &mut file).chain_error(|| {
+        try!(ar.append_file(&path, &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
