@@ -318,14 +318,14 @@ fn activate(mut cx: Box<Context>,
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph the `finished` callback is invoked with the current state
 /// of the world.
-fn activate_deps<'a>(cx: Box<Context>,
-                     registry: &mut Registry,
-                     parent: &Summary,
-                     platform: Option<&'a str>,
-                     mut deps: slice::Iter<'a, DepInfo>,
-                     cur: usize,
-                     finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
-                     -> ResolveResult {
+fn activate_deps(cx: Box<Context>,
+                 registry: &mut Registry,
+                 parent: &Summary,
+                 platform: Option<&str>,
+                 mut deps: slice::Iter<DepInfo>,
+                 cur: usize,
+                 finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
+                 -> ResolveResult {
     let &(dep, ref candidates, ref features) = match deps.next() {
         Some(info) => info,
         None => return finished(cx, registry),
