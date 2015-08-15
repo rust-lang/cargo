@@ -79,7 +79,7 @@ impl LibKind {
             "rlib" => Ok(LibKind::Rlib),
             "dylib" => Ok(LibKind::Dylib),
             "staticlib" => Ok(LibKind::StaticLib),
-            _ => Err(human(format!("{} was not one of lib|rlib|dylib|staticlib",
+            _ => Err(human(format!("crate-type \"{}\" was not one of lib|rlib|dylib|staticlib",
                                    string)))
         }
     }
