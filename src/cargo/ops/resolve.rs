@@ -103,7 +103,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => summary,
     };
 
-    let mut resolved = try!(resolver::resolve(&summary, method, registry));
+    let mut resolved = try!(resolver::resolve(&summary, &method, registry));
     match previous {
         Some(r) => resolved.copy_metadata(r),
         None => {}

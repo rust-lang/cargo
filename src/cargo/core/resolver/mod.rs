@@ -243,7 +243,7 @@ struct Context {
 }
 
 /// Builds the list of all packages required to build the first argument.
-pub fn resolve(summary: &Summary, method: Method,
+pub fn resolve(summary: &Summary, method: &Method,
                registry: &mut Registry) -> CargoResult<Resolve> {
     trace!("resolve; summary={}", summary.package_id());
     let summary = Rc::new(summary.clone());
@@ -272,7 +272,7 @@ pub fn resolve(summary: &Summary, method: Method,
 fn activate(mut cx: Box<Context>,
             registry: &mut Registry,
             parent: &Rc<Summary>,
-            method: Method,
+            method: &Method,
             finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
             -> ResolveResult {
     // Dependency graphs are required to be a DAG, so we keep a set of
@@ -284,7 +284,7 @@ fn activate(mut cx: Box<Context>,
     }
 
     // If we're already activated, then that was easy!
-    if cx.flag_activated(parent, &method) {
+    if cx.flag_activated(parent, method) {
         cx.visited.remove(id);
         return finished(cx, registry)
     }
@@ -293,7 +293,7 @@ fn activate(mut cx: Box<Context>,
     let deps = try!(cx.build_deps(registry, parent, method));
 
     // Extracting the platform request.
-    let platform = match method {
+    let platform = match *method {
         Method::Required { target_platform, .. } => target_platform,
         Method::Everything => None,
     };
@@ -382,7 +382,7 @@ fn activate_deps<'a>(cx: Box<Context>,
         if !dep.is_transitive() {
             my_cx.visited.clear();
         }
-        let my_cx = try!(activate(my_cx, registry, candidate, method,
+        let my_cx = try!(activate(my_cx, registry, candidate, &method,
                                   &mut |cx, registry| {
             activate_deps(cx, registry, parent, platform, deps.clone(), cur + 1,
                           finished)
@@ -515,12 +515,12 @@ fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
 // The all used features set is the set of features which this local package had
 // enabled, which is later used when compiling to instruct the code what
 // features were enabled.
-fn build_features(s: &Summary, method: Method)
+fn build_features(s: &Summary, method: &Method)
                   -> CargoResult<(HashMap<String, Vec<String>>, HashSet<String>)> {
     let mut deps = HashMap::new();
     let mut used = HashSet::new();
     let mut visited = HashSet::new();
-    match method {
+    match *method {
         Method::Everything => {
             for key in s.features().keys() {
                 try!(add_feature(s, key, &mut deps, &mut used, &mut visited));
@@ -536,7 +536,7 @@ fn build_features(s: &Summary, method: Method)
             }
         }
     }
-    match method {
+    match *method {
         Method::Everything |
         Method::Required { uses_default_features: true, .. } => {
             if s.features().get("default").is_some() {
@@ -632,7 +632,7 @@ impl Context {
     #[inline(never)] // see notes at the top of the module
     fn build_deps<'a>(&mut self, registry: &mut Registry,
                       parent: &'a Summary,
-                      method: Method) -> CargoResult<Vec<DepInfo<'a>>> {
+                      method: &Method) -> CargoResult<Vec<DepInfo<'a>>> {
         // First, figure out our set of dependencies based on the requsted set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
@@ -669,9 +669,9 @@ impl Context {
     }
 
     #[allow(deprecated)] // connect => join in 1.3
-    fn resolve_features<'a>(&mut self, parent: &'a Summary, method: Method)
+    fn resolve_features<'a>(&mut self, parent: &'a Summary, method: &Method)
             -> CargoResult<Vec<(&'a Dependency, Vec<String>)>> {
-        let dev_deps = match method {
+        let dev_deps = match *method {
             Method::Everything => true,
             Method::Required { dev_deps, .. } => dev_deps,
         };
@@ -683,7 +683,7 @@ impl Context {
         // Second, ignoring dependencies that should not be compiled for this
         // platform
         let deps = deps.filter(|d| {
-            match method {
+            match *method {
                 Method::Required{target_platform: Some(ref platform), ..} => {
                     d.is_active_for_platform(platform)
                 },
