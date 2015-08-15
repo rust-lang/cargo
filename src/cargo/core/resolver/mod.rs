@@ -248,13 +248,23 @@ pub fn resolve(summary: &Summary, method: &Method,
     trace!("resolve; summary={}", summary.package_id());
     let summary = Rc::new(summary.clone());
 
-    let cx = Box::new(Context {
+    let mut cx = Box::new(Context {
         resolve: Resolve::new(summary.package_id().clone()),
         activations: HashMap::new(),
         visited: HashSet::new(),
     });
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
-    match try!(activate(cx, registry, &summary, method, &mut |cx, _| Ok(Ok(cx)))) {
+    let (id, children, platform) =
+        match try!(activate(&mut cx, registry, &summary, method)) {
+             ActivateResult::AlreadyActivated => panic!("Top package started activated?"),
+             ActivateResult::CheckChildren{id, children, platform} => (id, children, platform),
+         };
+    match try!(activate_deps(cx, registry, &summary, platform, children.iter(), 0,
+                             &mut |mut cx, _| {
+                                 cx.visited.remove(id);
+                                 assert!(cx.visited.is_empty());
+                                 Ok(Ok(cx))
+                             })) {
         Ok(cx) => {
             debug!("resolved: {:?}", cx.resolve);
             Ok(cx.resolve)
@@ -263,18 +273,26 @@ pub fn resolve(summary: &Summary, method: &Method,
     }
 }
 
+enum ActivateResult<'a> {
+    AlreadyActivated,
+    CheckChildren {
+        id: &'a PackageId,
+        children: Vec<DepInfo<'a>>,
+        platform: Option<&'a str>,
+    },
+}
+
 /// Attempts to activate the summary `parent` in the context `cx`.
 ///
 /// This function will pull dependency summaries from the registry provided, and
 /// the dependencies of the package will be determined by the `method` provided.
 /// Once the resolution of this package has finished **entirely**, the current
 /// context will be passed to the `finished` callback provided.
-fn activate(mut cx: Box<Context>,
-            registry: &mut Registry,
-            parent: &Rc<Summary>,
-            method: &Method,
-            finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
-            -> ResolveResult {
+fn activate<'a>(cx: &mut Box<Context>,
+                registry: &mut Registry,
+                parent: &'a Rc<Summary>,
+                method: &'a Method<'a>)
+                -> CargoResult<ActivateResult<'a>> {
     // Dependency graphs are required to be a DAG, so we keep a set of
     // packages we're visiting and bail if we hit a dupe.
     let id = parent.package_id();
@@ -286,7 +304,7 @@ fn activate(mut cx: Box<Context>,
     // If we're already activated, then that was easy!
     if cx.flag_activated(parent, method) {
         cx.visited.remove(id);
-        return finished(cx, registry)
+        return Ok(ActivateResult::AlreadyActivated);
     }
     trace!("activating {}", parent.package_id());
 
@@ -298,11 +316,7 @@ fn activate(mut cx: Box<Context>,
         Method::Everything => None,
     };
 
-    activate_deps(cx, registry, parent, platform, deps.iter(), 0,
-                  &mut |mut cx, registry| {
-        cx.visited.remove(id);
-        finished(cx, registry)
-    })
+    Ok(ActivateResult::CheckChildren{id: id, children: deps, platform: platform})
 }
 
 /// Activates the dependencies for a package, one by one in turn.
@@ -383,13 +397,23 @@ fn activate_deps(cx: Box<Context>,
         if !dep.is_transitive() {
             my_cx.visited.clear();
         }
-        let my_cx: CargoResult<Box<Context>> =
-            try!(activate(my_cx, registry, candidate, &method,
-                          &mut |cx, registry| {
-            activate_deps(cx, registry, parent, platform, deps.clone(), cur + 1,
-                          finished)
-        }));
-        match my_cx {
+        let result: ResolveResult =
+            match try!(activate(&mut my_cx, registry, candidate, &method)) {
+                ActivateResult::AlreadyActivated => {
+                    activate_deps(my_cx, registry, parent, platform, deps.clone(), cur + 1,
+                                  finished)
+                }
+                ActivateResult::CheckChildren{id, children, platform} => {
+                    activate_deps(my_cx, registry, candidate, platform, children.iter(), 0,
+                                  &mut |mut cx, registry| {
+                                      cx.visited.remove(id);
+                                      activate_deps(cx, registry, parent, platform, deps.clone(),
+                                                    cur + 1, finished)
+
+                                  })
+                }
+            };
+        match try!(result) {
             Ok(cx) => return Ok(Ok(cx)),
             Err(e) => { last_err = Some(e); }
         }
