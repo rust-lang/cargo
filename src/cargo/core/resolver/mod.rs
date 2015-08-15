@@ -398,8 +398,8 @@ fn activate_deps<'a>(cx: Box<Context>,
 
     // Oh well, we couldn't activate any of the candidates, so we just can't
     // activate this dependency at all
-    Ok(activation_error(&cx, registry, last_err, parent, dep, prev_active,
-                        &candidates))
+    Ok(Err(activation_error(&cx, registry, last_err, parent, dep, prev_active,
+                            &candidates)))
 }
 
 #[inline(never)] // see notes at the top of the module
@@ -410,9 +410,9 @@ fn activation_error(cx: &Context,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Rc<Summary>],
-                    candidates: &[Rc<Summary>]) -> CargoResult<Box<Context>> {
+                    candidates: &[Rc<Summary>]) -> Box<CargoError> {
     match err {
-        Some(e) => return Err(e),
+        Some(e) => return e,
         None => {}
     }
     if candidates.len() > 0 {
@@ -447,7 +447,7 @@ fn activation_error(cx: &Context,
                                         .collect::<Vec<_>>()
                                         .connect(", ")));
 
-        return Err(human(msg))
+        return human(msg)
     }
 
     // Once we're all the way down here, we're definitely lost in the
@@ -467,7 +467,10 @@ fn activation_error(cx: &Context,
     let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
     let new_dep = dep.clone().set_version_req(all_req);
-    let mut candidates: Vec<Summary> = try!(registry.query(&new_dep));
+    let mut candidates: Vec<Summary> = match registry.query(&new_dep) {
+        Ok(candidates) => candidates,
+        Err(e) => return e,
+    };
     candidates.sort_by(|a, b| {
         b.version().cmp(a.version())
     });
@@ -492,7 +495,7 @@ fn activation_error(cx: &Context,
                       a path dependency's locked version");
 
     }
-    Err(human(msg))
+    human(msg)
 }
 
 // Returns if `a` and `b` are compatible in the semver sense. This is a
