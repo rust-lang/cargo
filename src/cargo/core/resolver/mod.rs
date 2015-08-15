@@ -397,19 +397,20 @@ fn activate_deps(cx: Box<Context>,
         if !dep.is_transitive() {
             my_cx.visited.clear();
         }
+        let activate_result = try!(activate(&mut my_cx, registry, candidate, &method));
+        let activate_siblings = &mut |cx:Box<Context>, registry:&mut Registry| {
+            activate_deps(cx, registry, parent, platform, deps.clone(), cur + 1, finished)
+        };
         let result: ResolveResult =
-            match try!(activate(&mut my_cx, registry, candidate, &method)) {
+            match activate_result {
                 ActivateResult::AlreadyActivated => {
-                    activate_deps(my_cx, registry, parent, platform, deps.clone(), cur + 1,
-                                  finished)
+                    activate_siblings(my_cx, registry)
                 }
                 ActivateResult::CheckChildren{id, children, platform} => {
                     activate_deps(my_cx, registry, candidate, platform, children.iter(), 0,
                                   &mut |mut cx, registry| {
                                       cx.visited.remove(id);
-                                      activate_deps(cx, registry, parent, platform, deps.clone(),
-                                                    cur + 1, finished)
-
+                                      activate_siblings(cx, registry)
                                   })
                 }
             };
