@@ -338,7 +338,7 @@ fn activate_deps<'a>(cx: Box<Context>,
         target_platform: platform,
     };
 
-    let prev_active = cx.prev_active(dep);
+    let prev_active: &[Rc<Summary>] = cx.prev_active(dep);
     trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
            candidates.len());
     trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
@@ -371,6 +371,7 @@ fn activate_deps<'a>(cx: Box<Context>,
     // each one in turn.
     let mut last_err = None;
     for candidate in my_candidates {
+        let candidate: &Rc<Summary> = candidate;
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.version());
         let mut my_cx = cx.clone();
@@ -382,8 +383,9 @@ fn activate_deps<'a>(cx: Box<Context>,
         if !dep.is_transitive() {
             my_cx.visited.clear();
         }
-        let my_cx = try!(activate(my_cx, registry, candidate, &method,
-                                  &mut |cx, registry| {
+        let my_cx: CargoResult<Box<Context>> =
+            try!(activate(my_cx, registry, candidate, &method,
+                          &mut |cx, registry| {
             activate_deps(cx, registry, parent, platform, deps.clone(), cur + 1,
                           finished)
         }));
@@ -465,7 +467,7 @@ fn activation_error(cx: &Context,
     let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
     let new_dep = dep.clone().set_version_req(all_req);
-    let mut candidates = try!(registry.query(&new_dep));
+    let mut candidates: Vec<Summary> = try!(registry.query(&new_dep));
     candidates.sort_by(|a, b| {
         b.version().cmp(a.version())
     });
@@ -636,11 +638,12 @@ impl Context {
         // First, figure out our set of dependencies based on the requsted set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let deps = try!(self.resolve_features(parent, method));
+        let deps: Vec<(&'a Dependency, Vec<String>)> =
+            try!(self.resolve_features(parent, method));
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
-        let mut deps = try!(deps.into_iter().map(|(dep, features)| {
+        let mut deps: Vec<DepInfo<'a>> = try!(deps.into_iter().map(|(dep, features)| {
             let mut candidates = try!(registry.query(dep));
             // When we attempt versions for a package, we'll want to start at
             // the maximum version and work our way down.
