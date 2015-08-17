@@ -40,7 +40,7 @@ test!(http_auth_offered {
         assert_eq!(req, vec![
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.23.0)",
+            "User-Agent: git/1.0 (libgit2 0.22.0)",
         ].into_iter().map(|s| s.to_string()).collect());
         drop(s);
 
@@ -55,7 +55,7 @@ test!(http_auth_offered {
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Authorization: Basic Zm9vOmJhcg==",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.23.0)",
+            "User-Agent: git/1.0 (libgit2 0.22.0)",
         ].into_iter().map(|s| s.to_string()).collect());
     });
 
@@ -155,8 +155,6 @@ Caused by:
         addr = addr,
         errmsg = if cfg!(windows) {
             "[[..]] failed to send request: [..]\n"
-        } else if cfg!(target_os = "macos") {
-            "[[..]] unexpected return value from ssl handshake [..]"
         } else {
             "[[..]] SSL error: [..]"
         })));
