@@ -116,6 +116,7 @@ pub struct Profile {
     pub rpath: bool,
     pub test: bool,
     pub doc: bool,
+    pub relocation_model: Option<String>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -456,6 +457,7 @@ impl Default for Profile {
             rpath: false,
             test: false,
             doc: false,
+            relocation_model: None,
         }
     }
 }

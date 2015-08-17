@@ -585,7 +585,7 @@ fn build_base_args(cx: &Context,
                    crate_types: &[&str]) {
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo, debug_assertions,
-        rpath, test, doc: _doc,
+        rpath, test, doc: _doc, ref relocation_model,
     } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
@@ -661,6 +661,13 @@ fn build_base_args(cx: &Context,
 
     if rpath {
         cmd.arg("-C").arg("rpath");
+    }
+
+    match *relocation_model {
+        Some(ref model) => {
+            cmd.arg("-C").arg(&format!("relocation-model={}", model));
+        }
+        None => {}
     }
 }
 

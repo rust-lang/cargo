@@ -242,6 +242,7 @@ pub struct TomlProfile {
     debug: Option<bool>,
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
+    relocation_model: Option<String>,
 }
 
 #[derive(RustcDecodable)]
@@ -909,7 +910,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath
+            opt_level, lto, codegen_units, debug, debug_assertions, rpath, ref relocation_model,
         } = match toml {
             Some(toml) => toml,
             None => return profile,
@@ -924,6 +925,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             rpath: rpath.unwrap_or(profile.rpath),
             test: profile.test,
             doc: profile.doc,
+            relocation_model: relocation_model.clone(),
         }
     }
 }
