@@ -39,7 +39,7 @@ Cargo can then be compiled like many other standard unix-like projects:
 git clone https://github.com/rust-lang/cargo
 cd cargo
 git submodule update --init
-python src/etc/install-deps.py
+python -B src/etc/install-deps.py
 ./configure --local-rust-root="$PWD"/rustc
 make
 make install
