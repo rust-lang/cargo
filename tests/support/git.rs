@@ -97,9 +97,10 @@ pub fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
     let path = path.to_str().unwrap().replace(r"\", "/");
     let mut s = repo.submodule(url, Path::new(&path), false).unwrap();
     let subrepo = s.open().unwrap();
-    subrepo.remote_add_fetch("origin", "refs/heads/*:refs/heads/*").unwrap();
     let mut origin = subrepo.find_remote("origin").unwrap();
-    origin.fetch(&[], None, None).unwrap();
+    origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();
+    origin.fetch(&[], None).unwrap();
+    origin.save().unwrap();
     subrepo.checkout_head(None).unwrap();
     s.add_finalize().unwrap();
     return s;
