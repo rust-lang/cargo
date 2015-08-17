@@ -62,10 +62,10 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     fs::create_dir_all(dst.parent().unwrap()).unwrap();
     let f = File::create(&dst).unwrap();
     let a = Archive::new(GzEncoder::new(f, Default));
-    a.append(&format!("{}-{}/Cargo.toml", name, version),
-             &mut File::open(&p.root().join("Cargo.toml")).unwrap()).unwrap();
-    a.append(&format!("{}-{}/src/lib.rs", name, version),
-             &mut File::open(&p.root().join("src/lib.rs")).unwrap()).unwrap();
+    a.append_file(&format!("{}-{}/Cargo.toml", name, version),
+                  &mut File::open(&p.root().join("Cargo.toml")).unwrap()).unwrap();
+    a.append_file(&format!("{}-{}/src/lib.rs", name, version),
+                  &mut File::open(&p.root().join("src/lib.rs")).unwrap()).unwrap();
     a.finish().unwrap();
 }
 

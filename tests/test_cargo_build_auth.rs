@@ -93,7 +93,7 @@ test!(http_auth_offered {
         "#, addr.port()))
         .file("src/main.rs", "");
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stdout(&format!("\
 {updating} git repository `http://{addr}/foo/bar`
 ",
@@ -107,7 +107,9 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  [..] status code: 401
+  failed to authenticate when downloading repository
+
+To learn more, run the command again with --verbose.
 ",
         addr = addr)));
 
@@ -152,8 +154,7 @@ Caused by:
 ",
         addr = addr,
         errmsg = if cfg!(windows) {
-            "[[..]] failed to send request: The connection with the server \
-             was terminated abnormally\n"
+            "[[..]] failed to send request: [..]\n"
         } else {
             "[[..]] SSL error: [..]"
         })));

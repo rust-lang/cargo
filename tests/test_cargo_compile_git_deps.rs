@@ -926,6 +926,7 @@ test!(dep_with_changed_submodule {
         origin.add_fetch("refs/heads/*:refs/heads/*").unwrap();;
         origin.fetch(&[], None).unwrap();
         origin.save().unwrap();
+
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();
         subrepo.reset(&obj, git2::ResetType::Hard, None).unwrap();

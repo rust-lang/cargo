@@ -36,6 +36,7 @@ pub enum Error {
     Unauthorized,
     TokenMissing,
     Io(io::Error),
+    NotFound,
 }
 
 #[derive(RustcDecodable)]
@@ -231,6 +232,7 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
         0 => {} // file upload url sometimes
         200 => {}
         403 => return Err(Error::Unauthorized),
+        404 => return Err(Error::NotFound),
         _ => return Err(Error::NotOkResponse(response))
     }
 
@@ -263,6 +265,7 @@ impl fmt::Display for Error {
             Error::Unauthorized => write!(f, "unauthorized API access"),
             Error::TokenMissing => write!(f, "no upload token found, please run `cargo login`"),
             Error::Io(ref e) => write!(f, "io error: {}", e),
+            Error::NotFound => write!(f, "cannot find crate"),
         }
     }
 }

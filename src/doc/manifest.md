@@ -25,7 +25,7 @@ basic rules:
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
 For more on versions, see [this
-documentation][crates-io.html#using-crates.io-based-crates].
+documentation](crates-io.html#using-crates.io-based-crates).
 
 ## The `build` Field (optional)
 

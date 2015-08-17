@@ -24,7 +24,7 @@ install:
 build: false
 
 test_script:
-  - cargo test
+  - cargo test -- --nocapture
 
 branches:
   only:

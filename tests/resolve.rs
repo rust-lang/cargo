@@ -16,7 +16,7 @@ fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
                         -> CargoResult<Vec<PackageId>> {
     let summary = Summary::new(pkg, deps, HashMap::new()).unwrap();
     let method = Method::Everything;
-    Ok(try!(resolver::resolve(&summary, method, registry)).iter().map(|p| {
+    Ok(try!(resolver::resolve(&summary, &method, registry)).iter().map(|p| {
         p.clone()
     }).collect())
 }
