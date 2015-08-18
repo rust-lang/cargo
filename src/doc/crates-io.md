@@ -196,22 +196,6 @@ Management of crates is primarily done through the command line `cargo` tool
 rather than the crates.io web interface. For this, there are a few subcommands
 to manage a crate.
 
-## `cargo owner`
-
-A crate is often developed by more than one person, or the primary maintainer
-may change over time! The owner of a crate is the only person allowed to publish
-new versions of the crate, but an owner may designate additional owners. Using
-this subcommand, an owner allows others to publish new versions, as well as to
-manage the list of owners themselves:
-
-```notrust
-$ cargo owner --add my-buddy
-$ cargo owner --remove my-buddy
-```
-
-The owner IDs given to these commands must be GitHub user names. In order to be
-added, an owner must have also logged into crates.io previously.
-
 ## `cargo yank`
 
 Occasions may arise where you publish a version of a crate that actually ends up
@@ -235,3 +219,86 @@ not change over time, and allowing deletion of a version would go against this
 goal. Essentially a yank means that all projects with a `Cargo.lock` will not
 break, while any future `Cargo.lock` files generated will not list the yanked
 version.
+
+## `cargo owner`
+
+A crate is often developed by more than one person, or the primary maintainer
+may change over time! The owner of a crate is the only person allowed to publish
+new versions of the crate, but an owner may designate additional owners.
+
+```notrust
+$ cargo owner --add my-buddy
+$ cargo owner --remove my-buddy
+$ cargo owner --add github:rust-lang:owners
+$ cargo owner --remove github:rust-lang:owners
+```
+
+The owner IDs given to these commands must be GitHub user names or Github teams.
+
+If a user name is given to `--add`, that user becomes a "named" owner, with
+full rights to the crate. In addition to being able to publish or yank versions
+of the crate, they have the ability to add or remove owners, *including* the
+owner that made *them* an owner. Needless to say, you shouldn't make people you
+don't fully trust into a named owner. In order to become a named owner, a user
+must have logged into crates.io previously.
+
+If a team name is given to `--add`, that team becomes a "team" owner, with
+restricted right to the crate. While they have permission to publish or yank
+versions of the crate, they *do not* have the ability to add or remove owners.
+In addition to being more convenient for managing groups of owners, teams are
+just a bit more secure against owners becoming malicious.
+
+The syntax for teams is currently `github:org:team` (see examples above).
+In order to add a team as an owner one must be a member of that team. No
+such restriction applies to removing a team as an owner.
+
+## Github Permissions
+
+Team membership is not something Github provides simple public access to, and it
+is likely for you to encounter the following message when working with them:
+
+> It looks like you don't have permission to query a necessary property from
+Github to complete this request. You may need to re-authenticate on crates.io
+to grant permission to read github org memberships. Just go to
+https://crates.io/login
+
+This is basically a catch-all for "you tried to query a team, and one of the
+five levels of membership access control denied this". That is not an
+exaggeration. Github's support for team access control is Enterprise Grade.
+
+The most likely cause of this is simply that you last logged in before this
+feature was added. We originally requested *no* permissions from Github when
+authenticating users, because we didn't actually ever use the user's token for
+anything other than logging them in. However to query team membership on your
+behalf, we now require
+[the `read:org` scope](https://developer.github.com/v3/oauth/#scopes).
+
+You are free to deny us this scope, and everything that worked before teams
+were introduced will keep working. However you will never be able to add a team
+as an owner, or publish a crate as a team owner. If you ever attempt to do this,
+you will get the error above. You may also see this error if you ever try to
+publish a crate that you don't own at all, but otherwise happens to have a team.
+
+If you ever change your mind, or just aren't sure if crates.io has sufficient
+permission, you can always go to https://crates.io/login, which will prompt you
+for permission if crates.io doesn't have all the scopes it would like to.
+
+An additional barrier to querying github is that the organization may be
+actively denying third party access. To check this, you can go to:
+
+    https://github.com/organizations/:org/settings/oauth_application_policy
+
+where `:org` is the name of the organization (e.g. rust-lang). You may see
+something like:
+
+![Organization Access Control](images/org-level-acl.png)
+
+Where you may choose to explicitly remove crates.io from your organization's
+blacklist, or simply press the "Remove Restrictions" button to allow all third
+party applications to access this data.
+
+Alternatively, when crates.io requested the `read:org` scope, you could have
+explicitly whitelisted crates.io querying the org in question by pressing
+the "Grant Access" button next to its name:
+
+![Authentication Access Control](images/auth-level-acl.png)

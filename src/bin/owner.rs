@@ -22,8 +22,8 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -a, --add LOGIN          Login of a user to add as an owner
-    -r, --remove LOGIN       Login of a user to remove as an owner
+    -a, --add LOGIN          Name of a user or team to add as an owner
+    -r, --remove LOGIN       Name of a user or team to remove as an owner
     -l, --list               List owners of a crate
     --index INDEX            Registry index to modify owners for
     --token TOKEN            API token to use when authenticating
@@ -33,7 +33,11 @@ Options:
 
 This command will modify the owners for a package on the specified registry (or
 default). Note that owners of a package can upload new versions, yank old
-versions, and also modify the set of owners, so take caution!
+versions. Explicitly named owners can also modify the set of owners, so take
+caution!
+
+See http://doc.crates.io/crates-io.html#cargo-owner for detailed documentation
+and troubleshooting.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
