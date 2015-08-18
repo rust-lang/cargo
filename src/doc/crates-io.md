@@ -286,7 +286,7 @@ for permission if crates.io doesn't have all the scopes it would like to.
 An additional barrier to querying github is that the organization may be
 actively denying third party access. To check this, you can go to:
 
-https://github.com/organizations/:org/settings/oauth_application_policy
+    https://github.com/organizations/:org/settings/oauth_application_policy
 
 where `:org` is the name of the organization (e.g. rust-lang). You may see
 something like:
