@@ -369,6 +369,7 @@ impl TomlManifest {
                        config: &Config)
         -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec!();
+        let mut warnings = vec!();
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
         let project = try!(project.chain_error(|| {
@@ -473,7 +474,8 @@ impl TomlManifest {
                                 &examples,
                                 &tests,
                                 &benches,
-                                &metadata);
+                                &metadata,
+                                &mut warnings);
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -549,6 +551,9 @@ impl TomlManifest {
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("warning: only one of `license` or \
                                                    `license-file` is necessary"));
+        }
+        for warning in warnings {
+            manifest.add_warning(warning.clone());
         }
 
         Ok((manifest, nested_paths))
@@ -749,7 +754,8 @@ fn normalize(lib: &Option<TomlLibTarget>,
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget],
-             metadata: &Metadata) -> Vec<Target> {
+             metadata: &Metadata,
+             warnings: &mut Vec<String>) -> Vec<Target> {
     fn configure(toml: &TomlTarget, target: &mut Target) {
         let t2 = target.clone();
         target.set_tested(toml.test.unwrap_or(t2.tested()))
@@ -760,19 +766,32 @@ fn normalize(lib: &Option<TomlLibTarget>,
               .set_for_host(toml.plugin.unwrap_or(t2.for_host()));
     }
 
-    fn lib_target(dst: &mut Vec<Target>, l: &TomlLibTarget,
-                  metadata: &Metadata) {
-        let path = l.path.clone().unwrap_or_else(|| {
+    fn lib_target(dst: &mut Vec<Target>,
+                  l: &TomlLibTarget,
+                  metadata: &Metadata,
+                  warnings: &mut Vec<String>) {
+        let path = l.path.clone().unwrap_or(
             PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
-        });
-        let crate_types = l.crate_type.clone().and_then(|kinds| {
-            kinds.iter().map(|s| LibKind::from_str(s))
-                 .collect::<CargoResult<_>>().ok()
-        }).unwrap_or_else(|| {
-            vec![if l.plugin == Some(true) {LibKind::Dylib} else {LibKind::Lib}]
-        });
+        );
+        let crate_types = match l.crate_type.clone() {
+            Some(kinds) => {
+                // For now, merely warn about invalid crate types.
+                // In the future, it might be nice to make them errors.
+                kinds.iter().filter_map(|s| {
+                    let kind = LibKind::from_str(s);
+                    if let Err(ref error) = kind {
+                        warnings.push(format!("warning: {}", error))
+                    }
+                    kind.ok()
+                }).collect()
+            }
+            None => {
+                vec![ if l.plugin == Some(true) {LibKind::Dylib}
+                      else {LibKind::Lib} ]
+            }
+        };
 
-        let mut target = Target::lib_target(&l.name(), crate_types.clone(),
+        let mut target = Target::lib_target(&l.name(), crate_types,
                                             &path.to_path(),
                                             metadata.clone());
         configure(l, &mut target);
@@ -855,7 +874,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
     let mut ret = Vec::new();
 
     if let Some(ref lib) = *lib {
-        lib_target(&mut ret, lib, metadata);
+        lib_target(&mut ret, lib, metadata, warnings);
         bin_targets(&mut ret, bins,
                     &mut |bin| Path::new("src").join("bin")
                                    .join(&format!("{}.rs", bin.name())));

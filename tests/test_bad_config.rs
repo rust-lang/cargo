@@ -239,3 +239,22 @@ Caused by:
   [7] 'file:///' is not a valid local file URI
 "));
 });
+
+test!(bad_crate_type {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [lib]
+        crate-type = ["bad_type", "rlib"]
+    "#)
+    .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr("\
+warning: crate-type \"bad_type\" was not one of lib|rlib|dylib|staticlib
+"));
+});
