@@ -283,3 +283,7 @@ ul.dropdown.open {
     display: inline-block;
     position: relative;
 }
+
+p > img {
+    max-width: 100%;
+}
