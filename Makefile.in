@@ -130,7 +130,7 @@ DOC_OPTS := --markdown-no-toc \
 ASSETS := CNAME images/noise.png images/forkme.png images/Cargo-Logo-Small.png \
 	stylesheets/all.css stylesheets/normalize.css javascripts/prism.js \
 	javascripts/all.js stylesheets/prism.css images/circle-with-i.png \
-	images/search.png
+	images/search.png images/org-level-acl.png images/auth-level-acl.png
 
 doc: $(foreach doc,$(DOCS),target/doc/$(doc).html) \
 	$(foreach asset,$(ASSETS),target/doc/$(asset)) \
