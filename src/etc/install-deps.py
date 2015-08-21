@@ -37,6 +37,7 @@ else:
 rust_date = open('src/rustversion.txt').read().strip()
 url = 'https://static.rust-lang.org/dist/' + rust_date
 
+
 def install_via_tarballs():
     if os.path.isdir("rustc-install"):
         shutil.rmtree("rustc-install")
@@ -46,7 +47,7 @@ def install_via_tarballs():
     download.unpack(host_fname, "rustc-install", quiet=True)
     os.remove(host_fname)
 
-    if extra != None:
+    if extra is not None:
         extra_fname = 'rustc-nightly-' + extra + '.tar.gz'
         print("adding target libs for " + extra)
         download.get(url + '/' + extra_fname, extra_fname)

@@ -1,6 +1,5 @@
 # When updating snapshots, run this file and pipe it into `src/snapshots.txt`
 import os
-import subprocess
 import sys
 import hashlib
 import download
@@ -27,6 +26,6 @@ for platform in sorted(snaps):
     tarball = 'cargo-nightly-' + triple + '.tar.gz'
     url = 'https://static.rust-lang.org/cargo-dist/' + date + '/' + tarball
     dl_path = "target/dl/" + tarball
-    download.get(url, dl_path, quiet = True)
+    download.get(url, dl_path, quiet=True)
     h = hashlib.sha1(open(dl_path, 'rb').read()).hexdigest()
     print('  ' + platform + ' ' + h)
