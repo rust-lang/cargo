@@ -101,17 +101,6 @@ Once you're ready for release, you can use `cargo build --release` to compile yo
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
 
-## Adding a dependency
-
-It's quite simple to add a dependency. Simply add it to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-time = "0.1.12"
-```
-
-Re-run `cargo build` to download the dependencies and build your source with the new dependencies.
-
 # Working on an existing Cargo project
 
 If you download an existing project that uses Cargo, it's really easy
@@ -136,68 +125,74 @@ project.
 
 To depend on a library, add it to your `Cargo.toml`.
 
+## Adding a dependency
+
+It's quite simple to add a dependency. Simply add it to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+time = "0.1.12"
+```
+
+Re-run `cargo build` to download the dependencies and build your source with the new dependencies.
+
+
 ```toml
 [package]
 name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
-[dependencies.color]
-git = "https://github.com/bjz/color-rs.git"
+[dependencies]
+regex = "0.1.41"
 ```
 
-You added the `color` library, which provides simple conversions
-between different color types.
+You added the `regex` library, which provides support for regular expressions.
 
 Now, you can pull in that library using `extern crate` in
 `main.rs`.
 
 ```
-extern crate color;
+extern crate regex;
 
-use color::{Rgb, ToHsv};
+use regex::Regex;
 
 fn main() {
-    println!("Converting RGB to HSV!");
-    let red = Rgb::new(255u8, 0, 0);
-    println!("HSV: {:?}", red.to_hsv::<f32>());
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+    println!("Did our date match? {}", re.is_match("2014-01-01"));
 }
 ```
 
-Let's tell Cargo to fetch this new dependency and update the `Cargo.lock`:
+The next time we build, Cargo will fetch this new dependency, all of its
+dependencies, compile them all, and update the `Cargo.lock`:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo update -p color
-<span style="font-weight: bold" class="s1">    Updating</span> git repository `https://github.com/bjz/color-rs.git`</code></pre>
+<pre><code class="language-shell"><span class="gp">$</span> cargo build
+<span style="font-weight: bold" class="s1">    Updating</span> registry `https://github.com/rust-lang/crates.io-index`
+<span style="font-weight: bold" class="s1"> Downloading</span> memchr v0.1.5
+<span style="font-weight: bold" class="s1"> Downloading</span> libc v0.1.10
+<span style="font-weight: bold" class="s1"> Downloading</span> regex-synatx v0.2.1
+<span style="font-weight: bold" class="s1"> Downloading</span> memchr v0.1.5
+<span style="font-weight: bold" class="s1"> Downloading</span> aho-corasick v0.3.0
+<span style="font-weight: bold" class="s1"> Downloading</span> regex v0.1.41
+<span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
+<span style="font-weight: bold" class="s1">   Compiling</span> libc v0.1.10
+<span style="font-weight: bold" class="s1">   Compiling</span> regex-synatx v0.2.1
+<span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
+<span style="font-weight: bold" class="s1">   Compiling</span> aho-corasick v0.3.0
+<span style="font-weight: bold" class="s1">   Compiling</span> regex v0.1.41
+<span style="font-weight: bold" class="s1">   Compiling</span> foo v0.1.0 (file:///path/to/project/hello_world)
 
-Compile it:
+Run it:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo run
-<span style="font-weight: bold" class="s1">   Compiling</span> color v0.1.0 (https://github.com/bjz/color-rs.git#bf739419)
-<span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
-Converting RGB to HSV!
-HSV: HSV { h: 0, s: 1, v: 1 }</code></pre>
+Did our date match? true</code></pre>
 
-We just specified a `git` repository for our dependency, but our `Cargo.lock`
-contains the exact information about which revision we used:
+Our `Cargo.lock` contains the exact information about which revision of all of
+these dependencies we used.
 
-```toml
-[root]
-name = "hello_world"
-version = "0.1.0"
-dependencies = [
- "color 0.1.0 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)",
-]
-
-[[package]]
-name = "color"
-version = "0.1.0"
-source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98"
-
-```
-
-Now, if `color-rs` gets updated, we will still build with the same revision, until
-we choose to `cargo update` again.
+Now, if `regex` gets updated, we will still build with the same revision, until
+we choose to `cargo update`.
 
 # Project Layout
 
