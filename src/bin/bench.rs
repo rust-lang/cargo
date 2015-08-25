@@ -33,8 +33,8 @@ Options:
     --lib                    Benchmark only this package's library
     --bin NAME               Benchmark only the specified binary
     --example NAME           Benchmark only the specified example
-    --test NAME              Benchmark only the specified test
-    --bench NAME             Benchmark only the specified bench
+    --test NAME              Benchmark only the specified test target
+    --bench NAME             Benchmark only the specified bench target
     --no-run                 Compile, but don't run benchmarks
     -p SPEC, --package SPEC  Package to run benchmarks for
     -j N, --jobs N           The number of jobs to run in parallel

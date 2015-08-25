@@ -37,8 +37,8 @@ Options:
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
     --example NAME           Build only the specified example
-    --test NAME              Build only the specified test
-    --bench NAME             Build only the specified benchmark
+    --test NAME              Build only the specified test target
+    --bench NAME             Build only the specified benchmark target
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
