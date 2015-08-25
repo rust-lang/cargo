@@ -180,7 +180,7 @@ dependencies, compile them all, and update the `Cargo.lock`:
 <span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
 <span style="font-weight: bold" class="s1">   Compiling</span> aho-corasick v0.3.0
 <span style="font-weight: bold" class="s1">   Compiling</span> regex v0.1.41
-<span style="font-weight: bold" class="s1">   Compiling</span> foo v0.1.0 (file:///path/to/project/hello_world)
+<span style="font-weight: bold" class="s1">   Compiling</span> foo v0.1.0 (file:///path/to/project/hello_world)</code></pre>
 
 Run it:
 
