@@ -96,7 +96,6 @@ use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::rc::Rc;
-use std::slice;
 use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
@@ -150,7 +149,7 @@ type ResolveResult = CargoResult<CargoResult<Box<Context>>>;
 // Information about the dependencies for a crate, a tuple of:
 //
 // (dependency info, candidates, features activated)
-type DepInfo<'a> = (&'a Dependency, Vec<Rc<Summary>>, Vec<String>);
+type DepInfo = (Rc<Dependency>, Vec<Rc<Summary>>, Vec<String>);
 
 impl Resolve {
     fn new(root: PackageId) -> Resolve {
@@ -246,77 +245,60 @@ struct Context {
 pub fn resolve(summary: &Summary, method: &Method,
                registry: &mut Registry) -> CargoResult<Resolve> {
     trace!("resolve; summary={}", summary.package_id());
-    let summary = Rc::new(summary.clone());
 
-    let mut cx = Box::new(Context {
+    let cx = Box::new(Context {
         resolve: Resolve::new(summary.package_id().clone()),
         activations: HashMap::new(),
         visited: HashSet::new(),
     });
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
-    let (id, children, platform) =
-        match try!(activate(&mut cx, registry, &summary, method)) {
-             ActivateResult::AlreadyActivated => panic!("Top package started activated?"),
-             ActivateResult::CheckChildren{id, children, platform} => (id, children, platform),
-         };
-    match try!(activate_deps(cx, registry, &summary, platform, children.iter(), 0,
-                             &mut |mut cx, _| {
-                                 cx.visited.remove(id);
-                                 assert!(cx.visited.is_empty());
-                                 Ok(Ok(cx))
-                             })) {
-        Ok(cx) => {
-            debug!("resolved: {:?}", cx.resolve);
-            Ok(cx.resolve)
+    activate_deps_loop(cx, registry, &Rc::new(summary.clone()), method)
+}
+
+#[derive(Clone)]
+struct RcVecIter<Elem> {
+    vec: Rc<Vec<Elem>>,
+    next_index: usize,
+}
+
+impl<Elem> RcVecIter<Elem> {
+    fn new(vec: Vec<Elem>) -> RcVecIter<Elem> {
+        RcVecIter {
+            vec: Rc::new(vec),
+            next_index: 0
         }
-        Err(e) => Err(e),
+    }
+    fn next(&mut self) -> Option<(usize, &Elem)> {
+        match self.vec.get(self.next_index) {
+            None => None,
+            Some(val) => {
+                let index = self.next_index;
+                self.next_index += 1;
+                Some((index, val))
+            }
+        }
     }
 }
 
-enum ActivateResult<'a> {
-    AlreadyActivated,
-    CheckChildren {
-        id: &'a PackageId,
-        children: Vec<DepInfo<'a>>,
-        platform: Option<&'a str>,
-    },
+#[derive(Clone)]
+struct DepsFrame {
+    parent: Rc<Summary>,
+    remaining_siblings: RcVecIter<DepInfo>,
+    platform: Option<String>,
+    id: PackageId,
 }
+type RemainingDeps = Vec<DepsFrame>;
 
-/// Attempts to activate the summary `parent` in the context `cx`.
-///
-/// This function will pull dependency summaries from the registry provided, and
-/// the dependencies of the package will be determined by the `method` provided.
-/// Once the resolution of this package has finished **entirely**, the current
-/// context will be passed to the `finished` callback provided.
-fn activate<'a>(cx: &mut Box<Context>,
-                registry: &mut Registry,
-                parent: &'a Rc<Summary>,
-                method: &'a Method<'a>)
-                -> CargoResult<ActivateResult<'a>> {
-    // Dependency graphs are required to be a DAG, so we keep a set of
-    // packages we're visiting and bail if we hit a dupe.
-    let id = parent.package_id();
-    if !cx.visited.insert(id.clone()) {
-        return Err(human(format!("cyclic package dependency: package `{}` \
-                                  depends on itself", id)))
-    }
-
-    // If we're already activated, then that was easy!
-    if cx.flag_activated(parent, method) {
-        cx.visited.remove(id);
-        return Ok(ActivateResult::AlreadyActivated);
-    }
-    trace!("activating {}", parent.package_id());
-
-    let deps = try!(cx.build_deps(registry, parent, method));
-
-    // Extracting the platform request.
-    let platform = match *method {
-        Method::Required { target_platform, .. } => target_platform,
-        Method::Everything => None,
-    };
-
-    Ok(ActivateResult::CheckChildren{id: id, children: deps, platform: platform})
+struct BacktrackFrame {
+    context_backup: Context,
+    deps_backup: RemainingDeps,
+    remaining_candidates: RcVecIter<Rc<Summary>>,
+    // For building an activation error:
+    parent: Rc<Summary>,
+    cur: usize,
+    dep: Rc<Dependency>,
+    prev_active: Vec<Rc<Summary>>,
+    all_candidates: Vec<Rc<Summary>>,
 }
 
 /// Activates the dependencies for a package, one by one in turn.
@@ -332,27 +314,77 @@ fn activate<'a>(cx: &mut Box<Context>,
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph the `finished` callback is invoked with the current state
 /// of the world.
-fn activate_deps(cx: Box<Context>,
-                 registry: &mut Registry,
-                 parent: &Summary,
-                 platform: Option<&str>,
-                 mut deps: slice::Iter<DepInfo>,
-                 cur: usize,
-                 finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
-                 -> ResolveResult {
-    let &(dep, ref candidates, ref features) = match deps.next() {
-        Some(info) => info,
-        None => return finished(cx, registry),
-    };
+fn activate_deps_loop(mut cx: Box<Context>,
+                      registry: &mut Registry,
+                      top: &Rc<Summary>,
+                      top_method: Method) -> CargoResult<Resolve> {
+    let mut backtrack_stack: Vec<BacktrackFrame> = Vec::new();
+
+    let (id, children, platform) =
+        match try!(activate(&mut cx, registry, top, top_method)) {
+             ActivateResult::AlreadyActivated => panic!("Top package started activated?"),
+             ActivateResult::CheckChildren{id, children, platform} => (id, children, platform),
+         };
+    let mut remaining_deps = vec![DepsFrame{
+        parent: top.clone(),
+        remaining_siblings: RcVecIter::new(children),
+        platform: platform.map(|s| s.to_string()),
+        id: id.clone(),
+    }];
+    loop {
+        let result: ActivateDepsStepResult =
+            try!(activate_deps_step(&mut cx, registry,
+                                    &mut remaining_deps, &mut backtrack_stack));
+        match result {
+            ActivateDepsStepResult::Done => break,
+            ActivateDepsStepResult::Continue => {}
+            ActivateDepsStepResult::Pop => { /* Popped by activate_deps_step(). */ }
+            ActivateDepsStepResult::Push(frame) => {remaining_deps.push(frame); }
+        }
+    }
+    debug!("resolved: {:?}", cx.resolve);
+    Ok(cx.resolve)
+}
+
+enum ActivateDepsStepResult {
+    Done,
+    Continue,
+    Pop,
+    Push(DepsFrame),
+}
+
+fn activate_deps_step(cx: &mut Context, registry: &mut Registry,
+                      remaining_deps: &mut Vec<DepsFrame>,
+                      backtrack_stack: &mut Vec<BacktrackFrame>)
+                      -> CargoResult<ActivateDepsStepResult> {
+    let (parent, platform, cur, dep, candidates, features) =
+        match remaining_deps.pop() {
+            None => return Ok(ActivateDepsStepResult::Done),
+            Some(mut deps_frame) => {
+                let info =
+                    match deps_frame.remaining_siblings.next() {
+                        Some((cur, &(ref dep, ref candidates, ref features))) =>
+                            (deps_frame.parent.clone(), deps_frame.platform.clone(),
+                             cur, dep.clone(),
+                             candidates.clone(), features.clone()),
+                        None => {
+                            cx.visited.remove(&deps_frame.id);
+                            return Ok(ActivateDepsStepResult::Pop);
+                        }
+                    };
+                remaining_deps.push(deps_frame);
+                info
+            }
+        };
 
     let method = Method::Required {
         dev_deps: false,
-        features: features,
+        features: &features,
         uses_default_features: dep.uses_default_features(),
-        target_platform: platform,
+        target_platform: platform.as_ref().map(|p| p as &str),
     };
 
-    let prev_active: &[Rc<Summary>] = cx.prev_active(dep);
+    let prev_active: Vec<Rc<Summary>> = cx.prev_active(&dep).to_vec();
     trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
            candidates.len());
     trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
@@ -364,12 +396,12 @@ fn activate_deps(cx: Box<Context>,
     // incompatible with all other activated versions. Note that we define
     // "compatible" here in terms of the semver sense where if the left-most
     // nonzero digit is the same they're considered compatible.
-    let my_candidates = candidates.iter().filter(|&b| {
+    let my_candidates: Vec<Rc<Summary>> = candidates.iter().filter(|&b| {
         prev_active.iter().any(|a| a == b) ||
             prev_active.iter().all(|a| {
                 !compatible(a.version(), b.version())
             })
-    });
+    }).cloned().collect();
 
     // Alright, for each candidate that's gotten this far, it meets the
     // following requirements:
@@ -383,48 +415,128 @@ fn activate_deps(cx: Box<Context>,
     // This means that we're going to attempt to activate each candidate in
     // turn. We could possibly fail to activate each candidate, so we try
     // each one in turn.
-    let mut last_err = None;
-    for candidate in my_candidates {
-        let candidate: &Rc<Summary> = candidate;
-        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
-               candidate.version());
-        let mut my_cx = cx.clone();
-        my_cx.resolve.graph.link(parent.package_id().clone(),
-                                 candidate.package_id().clone());
-
-        // If we hit an intransitive dependency then clear out the visitation
-        // list as we can't induce a cycle through transitive dependencies.
-        if !dep.is_transitive() {
-            my_cx.visited.clear();
+    let remaining_candidates = RcVecIter::new(my_candidates);
+    let candidate: Rc<Summary> = match remaining_candidates.clone().next() {
+        Some((_, candidate)) => {
+            let candidate_clone = candidate.clone();
+            backtrack_stack.push(BacktrackFrame {
+                context_backup: cx.clone(),
+                deps_backup: remaining_deps.clone(),
+                remaining_candidates: remaining_candidates,
+                parent: parent.clone(),
+                cur: cur,
+                dep: dep.clone(),
+                prev_active: prev_active,
+                all_candidates: candidates.clone(),
+            });
+            candidate_clone
         }
-        let activate_result = try!(activate(&mut my_cx, registry, candidate, &method));
-        let activate_siblings = &mut |cx:Box<Context>, registry:&mut Registry| {
-            activate_deps(cx, registry, parent, platform, deps.clone(), cur + 1, finished)
-        };
-        let result: ResolveResult =
-            match activate_result {
-                ActivateResult::AlreadyActivated => {
-                    activate_siblings(my_cx, registry)
-                }
-                ActivateResult::CheckChildren{id, children, platform} => {
-                    activate_deps(my_cx, registry, candidate, platform, children.iter(), 0,
-                                  &mut |mut cx, registry| {
-                                      cx.visited.remove(id);
-                                      activate_siblings(cx, registry)
-                                  })
-                }
-            };
-        match try!(result) {
-            Ok(cx) => return Ok(Ok(cx)),
-            Err(e) => { last_err = Some(e); }
+        None => {
+            trace!("{}[{}]>{} -- None", parent.name(), cur, dep.name());
+            let last_err = activation_error(&cx, registry, None, &parent, &dep,
+                                            &prev_active, &candidates);
+            try!(find_candidate(backtrack_stack, cx, remaining_deps,
+                                registry, last_err))
+        }
+    };
+
+    trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
+           candidate.version());
+    cx.resolve.graph.link(parent.package_id().clone(),
+                          candidate.package_id().clone());
+
+    // If we hit an intransitive dependency then clear out the visitation
+    // list as we can't induce a cycle through transitive dependencies.
+    if !dep.is_transitive() {
+        cx.visited.clear();
+    }
+    let activate_result = try!(activate(cx, registry, &candidate, method));
+    match activate_result {
+        ActivateResult::AlreadyActivated => {
+            return Ok(ActivateDepsStepResult::Continue);
+        }
+        ActivateResult::CheckChildren{id, children, platform} => {
+            return Ok(ActivateDepsStepResult::Push(DepsFrame{
+                parent: candidate.clone(),
+                remaining_siblings: RcVecIter::new(children),
+                platform: platform.map(|s| s.to_string()),
+                id: id.clone(),
+            }));
         }
     }
-    trace!("{}[{}]>{} -- {:?}", parent.name(), cur, dep.name(), last_err);
+}
 
-    // Oh well, we couldn't activate any of the candidates, so we just can't
-    // activate this dependency at all
-    Ok(Err(activation_error(&cx, registry, last_err, parent, dep, prev_active,
-                            &candidates)))
+fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
+                  cx: &mut Context, remaining_deps: &mut RemainingDeps,
+                  registry: &mut Registry,
+                  mut last_err: Box<CargoError>) -> CargoResult<Rc<Summary>> {
+    while let Some(mut frame) = backtrack_stack.pop() {
+        let maybe_candidate = match frame.remaining_candidates.next() {
+            None => {
+                trace!("{}[{}]>{} -- {:?}", frame.parent.name(), frame.cur, frame.dep.name(),
+                       Some(&last_err));
+                last_err = activation_error(cx, registry, Some(last_err), &frame.parent, &frame.dep,
+                                            &frame.prev_active, &frame.all_candidates);
+                None
+            }
+            Some((_, candidate)) => {
+                *cx = frame.context_backup.clone();
+                *remaining_deps = frame.deps_backup.clone();
+                Some(candidate.clone())
+            }
+        };
+        if let Some(candidate) = maybe_candidate {
+            backtrack_stack.push(frame);
+            return Ok(candidate);
+        }
+    }
+    return Err(last_err);
+}
+
+enum ActivateResult<'a> {
+    AlreadyActivated,
+    CheckChildren {
+        id: &'a PackageId,
+        children: Vec<DepInfo>,
+        platform: Option<&'a str>,
+    },
+}
+
+/// Attempts to activate the summary `parent` in the context `cx`.
+///
+/// This function will pull dependency summaries from the registry provided, and
+/// the dependencies of the package will be determined by the `method` provided.
+/// Once the resolution of this package has finished **entirely**, the current
+/// context will be passed to the `finished` callback provided.
+fn activate<'a>(cx: &mut Context,
+                registry: &mut Registry,
+                parent: &'a Rc<Summary>,
+                method: Method<'a>)
+                -> CargoResult<ActivateResult<'a>> {
+    // Dependency graphs are required to be a DAG, so we keep a set of
+    // packages we're visiting and bail if we hit a dupe.
+    let id = parent.package_id();
+    if !cx.visited.insert(id.clone()) {
+        return Err(human(format!("cyclic package dependency: package `{}` \
+                                  depends on itself", id)))
+    }
+
+    // If we're already activated, then that was easy!
+    if cx.flag_activated(parent, &method) {
+        cx.visited.remove(&id);
+        return Ok(ActivateResult::AlreadyActivated);
+    }
+    trace!("activating {}", parent.package_id());
+
+    let deps = try!(cx.build_deps(registry, parent, method));
+
+    // Extracting the platform request.
+    let platform = match method {
+        Method::Required { target_platform, .. } => target_platform,
+        Method::Everything => None,
+    };
+
+    Ok(ActivateResult::CheckChildren{id: id, children: deps, platform: platform})
 }
 
 #[inline(never)] // see notes at the top of the module
@@ -660,19 +772,19 @@ impl Context {
     }
 
     #[inline(never)] // see notes at the top of the module
-    fn build_deps<'a>(&mut self, registry: &mut Registry,
-                      parent: &'a Summary,
-                      method: &Method) -> CargoResult<Vec<DepInfo<'a>>> {
+    fn build_deps(&mut self, registry: &mut Registry,
+                  parent: &Summary,
+                  method: &Method) -> CargoResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requsted set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let deps: Vec<(&'a Dependency, Vec<String>)> =
+        let deps: Vec<(Rc<Dependency>, Vec<String>)> =
             try!(self.resolve_features(parent, method));
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
-        let mut deps: Vec<DepInfo<'a>> = try!(deps.into_iter().map(|(dep, features)| {
-            let mut candidates = try!(registry.query(dep));
+        let mut deps: Vec<DepInfo> = try!(deps.into_iter().map(|(dep, features)| {
+            let mut candidates = try!(registry.query(&dep));
             // When we attempt versions for a package, we'll want to start at
             // the maximum version and work our way down.
             candidates.sort_by(|a, b| {
@@ -680,7 +792,7 @@ impl Context {
             });
             let candidates = candidates.into_iter().map(Rc::new).collect();
             Ok((dep, candidates, features))
-        }).collect::<CargoResult<Vec<DepInfo<'a>>>>());
+        }).collect::<CargoResult<Vec<DepInfo>>>());
 
         // When we recurse, attempt to resolve dependencies with fewer
         // candidates before recursing on dependencies with more candidates.
@@ -700,9 +812,9 @@ impl Context {
     }
 
     #[allow(deprecated)] // connect => join in 1.3
-    fn resolve_features<'a>(&mut self, parent: &'a Summary, method: &Method)
-            -> CargoResult<Vec<(&'a Dependency, Vec<String>)>> {
-        let dev_deps = match *method {
+    fn resolve_features(&mut self, parent: &Summary, method: &Method)
+            -> CargoResult<Vec<(Rc<Dependency>, Vec<String>)>> {
+        let dev_deps = match method {
             Method::Everything => true,
             Method::Required { dev_deps, .. } => dev_deps,
         };
@@ -743,7 +855,7 @@ impl Context {
                                              feature)));
                 }
             }
-            ret.push((dep, base));
+            ret.push((Rc::new(dep.clone()), base));
         }
 
         // All features can only point to optional dependencies, in which case
