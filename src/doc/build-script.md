@@ -35,39 +35,12 @@ the build command works.
 ## Inputs to the Build Script
 
 When the build script is run, there are a number of inputs to the build script,
-all passed in the form of environment variables:
+all passed in the form of [environment variables][env].
 
-* `OUT_DIR` - the folder in which all output should be placed. This folder is
-              inside the build directory for the package being built, and it is
-              unique for the package in question.
-* `TARGET` - the target triple that is being compiled for. Native code should be
-             compiled for this triple. Some more information about target
-             triples can be found in [clang's own documentation][clang].
-* `HOST` - the host triple of the rust compiler.
-* `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
-               be useful to pass a `-j` parameter to a system like `make`.
-* `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
-                         being built (the package containing the build
-                         script). Also note that this is the value of the
-                         current working directory of the build script when it
-                         starts.
-* `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
-                         profile currently being built.
-* `PROFILE` - name of the profile currently being built (see
-              [profiles][profile]).
-* `CARGO_FEATURE_<name>` - For each activated feature of the package being
-                           built, this environment variable will be present
-                           where `<name>` is the name of the feature uppercased
-                           and having `-` translated to `_`.
-* `DEP_<name>_<key>` - For more information about this set of environment
-                       variables, see the section below about [`links`][links].
+In addition to environment variables, the build script's current directory is
+the source directory of the build script's package.
 
-In addition to the above environment variables, the build script's current
-directory is the source directory of the build script's package.
-
-[profile]: manifest.html#the-[profile.*]-sections
-[links]: #the-links-manifest-key
-[clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[env]: environment-variables.html
 
 ## Outputs of the Build Script
 
