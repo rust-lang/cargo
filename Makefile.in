@@ -119,7 +119,8 @@ clean:
 
 # === Documentation
 
-DOCS := index faq config guide manifest build-script pkgid-spec crates-io
+DOCS := index faq config guide manifest build-script pkgid-spec crates-io \
+	environment-variables
 DOC_DIR := target/doc
 DOC_OPTS := --markdown-no-toc \
 		--markdown-css stylesheets/normalize.css \
