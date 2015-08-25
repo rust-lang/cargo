@@ -34,8 +34,8 @@ Options:
     --lib                    Test only this package's library
     --bin NAME               Test only the specified binary
     --example NAME           Test only the specified example
-    --test NAME              Test only the specified integration test
-    --bench NAME             Test only the specified benchmark
+    --test NAME              Test only the specified integration test target
+    --bench NAME             Test only the specified benchmark target
     --no-run                 Compile, but don't run tests
     -p SPEC, --package SPEC  Package to run tests for
     -j N, --jobs N           The number of jobs to run in parallel
