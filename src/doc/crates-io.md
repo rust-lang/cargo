@@ -90,6 +90,15 @@ Here are some examples of wildcard requirements:
 Multiple version requirements can also be separated with a comma, e.g. `>= 1.2,
 < 1.5`.
 
+# Pre-1.0 versions
+
+While SemVer says that there is no compatibility before 1.0.0, many programmers
+treat a `0.x.y` release in the same way as a `1.x.y` release: that is, `y` is
+incremented for bugfixes, and `x` is incremented for new features.
+
+As such, Cargo considers a `0.x.y` and `0.x.z` version, where `z > y`, to be
+compatible.
+
 # Publishing crates
 
 Ok, now that we've got a crate which is using dependencies from crates.io,
