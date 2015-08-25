@@ -128,6 +128,13 @@ In other words, libraries specify semver requirements for their dependencies but
 cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
 
+# Can libraries use `*` as a version for their dependencies?
+
+While they _can_, strictly speaking, they should not. A version requirement
+of `*` says “This will work with every version ever,” which is never going
+to be true. Libraries should always specifiy the range that they do work with,
+even if it’s something as general as “every 1.x.y version.”
+
 # Why `Cargo.toml`?
 
 As one of the most frequent interactions with Cargo, the question of why the
