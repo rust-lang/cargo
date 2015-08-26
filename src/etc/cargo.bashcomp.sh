@@ -103,6 +103,7 @@ _get_targets(){
 	local TARGETS=()
 	local FIND_PATHS=( "/" )
 	local CURRENT_PATH=$(_locate_manifest)
+	local FIND_PATH LINES LINE
 	while [[ "$CURRENT_PATH" != "/" ]]; do
 	    FIND_PATHS+=( "$CURRENT_PATH" )
 	    CURRENT_PATH=$(dirname $CURRENT_PATH)
