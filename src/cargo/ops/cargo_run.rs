@@ -48,7 +48,9 @@ pub fn run(manifest_path: &Path,
     let compile = try!(ops::compile(manifest_path, options));
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(&exe, config.cwd()) {
-        Some(path) => path,
+        Some(path) => if path.as_os_str() == path.file_name().unwrap() { &**exe } 
+                      else { path }, // workaround for being able to use
+                                     // `cargo run` from the executable path itself
         None => &**exe,
     };
     let mut process = try!(compile.target_process(exe, &root))
