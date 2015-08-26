@@ -100,7 +100,12 @@ _get_examples(){
 }
 
 _get_targets(){
-	local CURRENT_PATH=$(_locate_manifest)
+	local CURRENT_PATH
+	if [ `uname -o` == "Cygwin" -a -f "$PWD"/Cargo.toml ]; then
+		CURRENT_PATH=$PWD
+	else
+		CURRENT_PATH=$(_locate_manifest)
+	fi
 	if [[ -z "$CURRENT_PATH" ]]; then
 		return 1
 	fi
