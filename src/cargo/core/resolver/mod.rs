@@ -42,55 +42,9 @@
 //! data that we're processing is proportional to the size of the dependency
 //! graph, which can often be quite large (e.g. take a look at Servo). To make
 //! matters worse the DFS algorithm we're implemented is inherently quite
-//! inefficient and recursive. When we add the requirement of backtracking on
-//! top it means that we're implementing something that's very recursive and
-//! probably shouldn't be allocating all over the place.
-//!
-//! Once we've avoided too many unnecessary allocations, however (e.g. using
-//! references, using reference counting, etc), it turns out that the
-//! performance in this module largely comes down to stack sizes due to the
-//! recursive nature of the implementation.
-//!
-//! ### Small Stack Sizes (e.g. y u inline(never))
-//!
-//! One of the most important optimizations in this module right now is the
-//! attempt to minimize the stack space taken up by the `activate` and
-//! `activate_deps` functions. These two functions are mutually recursive in a
-//! CPS fashion.
-//!
-//! The recursion depth, if I'm getting this right, is something along the order
-//! of O(E) where E is the number of edges in the dependency graph, and that's
-//! on the order of O(N^2) where N is the number of crates in the graph. As a
-//! result we need to watch our stack size!
-//!
-//! Currently rustc is not great at producing small stacks because of landing
-//! pads and filling drop, so the first attempt at making small stacks is having
-//! literally small functions with very few owned values on the stack. This is
-//! also why there are many #[inline(never)] annotations in this module. By
-//! preventing these functions from being inlined we can make sure that these
-//! stack sizes stay small as the number of locals are under control.
-//!
-//! Another hazard when watching out for small stacks is passing around large
-//! structures by value. For example the `Context` below is a relatively large
-//! struct, so we always place it behind a `Box` to ensure the size at runtime
-//! is just a word (e.g. very easy to pass around).
-//!
-//! Combined together these tricks (plus a very recent version of LLVM) allow us
-//! to have a relatively small stack footprint for this implementation. Possible
-//! future optimizations include:
-//!
-//! * Turn off landing pads for all of Cargo
-//! * Wait for dynamic drop
-//! * Use a manual stack instead of the OS stack (I suspect this will be super
-//!   painful to implement)
-//! * Spawn a new thread with a very large stack (this is what the compiler
-//!   does)
-//! * Implement a form of segmented stacks where we manually check the stack
-//!   limit every so often.
-//!
-//! For now the current implementation of this module gets us past Servo's
-//! dependency graph (one of the largest known ones), so hopefully it'll work
-//! for a bit longer as well!
+//! inefficient. When we add the requirement of backtracking on top it means
+//! that we're implementing something that probably shouldn't be allocating all
+//! over the place.
 
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
@@ -260,8 +214,8 @@ pub fn resolve(summary: &Summary, method: &Method,
 ///
 /// This function will pull dependency summaries from the registry provided, and
 /// the dependencies of the package will be determined by the `method` provided.
-/// Once the resolution of this package has finished **entirely**, the current
-/// context will be passed to the `finished` callback provided.
+/// If `parent` was activated, this function returns the dependency frame to
+/// iterate through next.
 fn activate(cx: &mut Context,
             registry: &mut Registry,
             parent: Rc<Summary>,
@@ -344,19 +298,11 @@ struct BacktrackFrame {
     all_candidates: Vec<Rc<Summary>>,
 }
 
-/// Activates the dependencies for a package, one by one in turn.
-///
-/// This function will attempt to activate all possible candidates for each
-/// dependency of the package specified by `parent`. The `deps` iterator
-/// provided is an iterator over all dependencies where each element yielded
-/// informs us what the candidates are for the dependency in question.
-///
-/// The `platform` argument is the target platform that the dependencies are
-/// being activated for.
+/// Recursively activates the dependencies for `top`, in depth-first order,
+/// backtracking across possible candidates for each dependency as necessary.
 ///
 /// If all dependencies can be activated and resolved to a version in the
-/// dependency graph the `finished` callback is invoked with the current state
-/// of the world.
+/// dependency graph, cx.resolve is returned.
 fn activate_deps_loop(mut cx: Context,
                       registry: &mut Registry,
                       top: Rc<Summary>,
@@ -366,6 +312,7 @@ fn activate_deps_loop(mut cx: Context,
     remaining_deps.extend(
         try!(activate(&mut cx, registry, top, &top_method)));
     loop {
+        // Retrieves the next dependency to try, from `remaining_deps`.
         let (parent, platform, cur, dep, candidates, features) =
             match remaining_deps.pop() {
                 None => break,
@@ -429,6 +376,8 @@ fn activate_deps_loop(mut cx: Context,
             remaining_candidates.next().map(|(_, candidate)| candidate.clone());
         let candidate: Rc<Summary> = match maybe_candidate {
             Some(candidate) => {
+                // We have a candidate. Add an entry to the `backtrack_stack` so
+                // we can try the next one if this one fails.
                 backtrack_stack.push(BacktrackFrame {
                     context_backup: cx.clone(),
                     deps_backup: remaining_deps.clone(),
@@ -442,6 +391,10 @@ fn activate_deps_loop(mut cx: Context,
                 candidate
             }
             None => {
+                // This dependency has no valid candidate. Backtrack until we
+                // find a dependency that does have a candidate to try, and try
+                // to activate that one.  This resets the `remaining_deps` to
+                // their state at the found level of the `backtrack_stack`.
                 trace!("{}[{}]>{} -- None", parent.name(), cur, dep.name());
                 let last_err = activation_error(&cx, registry, None, &parent, &dep,
                                                 &prev_active, &candidates);
@@ -467,6 +420,10 @@ fn activate_deps_loop(mut cx: Context,
     Ok(cx.resolve)
 }
 
+// Searches up `backtrack_stack` until it finds a dependency with remaining
+// candidates. Resets `cx` and `remaining_deps` to that level and returns the
+// next candidate. If all candidates have been exhausted, returns an activation
+// error.
 fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
                   cx: &mut Context, remaining_deps: &mut RemainingDeps,
                   registry: &mut Registry,
@@ -494,7 +451,6 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
     return Err(last_err);
 }
 
-#[inline(never)] // see notes at the top of the module
 #[allow(deprecated)] // connect => join in 1.3
 fn activation_error(cx: &Context,
                     registry: &mut Registry,
@@ -695,7 +651,6 @@ impl Context {
     // Activate this summary by inserting it into our list of known activations.
     //
     // Returns if this summary with the given method is already activated.
-    #[inline(never)] // see notes at the top of the module
     fn flag_activated(&mut self,
                       summary: &Rc<Summary>,
                       method: &Method) -> bool {
@@ -726,7 +681,6 @@ impl Context {
         }
     }
 
-    #[inline(never)] // see notes at the top of the module
     fn build_deps(&mut self, registry: &mut Registry,
                   parent: &Summary,
                   method: &Method) -> CargoResult<Vec<DepInfo>> {
@@ -749,10 +703,10 @@ impl Context {
             Ok((dep, candidates, features))
         }).collect::<CargoResult<Vec<DepInfo>>>());
 
-        // When we recurse, attempt to resolve dependencies with fewer
-        // candidates before recursing on dependencies with more candidates.
-        // This way if the dependency with only one candidate can't be resolved
-        // we don't have to do a bunch of work before we figure that out.
+        // Attempt to resolve dependencies with fewer candidates before trying
+        // dependencies with more candidates.  This way if the dependency with
+        // only one candidate can't be resolved we don't have to do a bunch of
+        // work before we figure that out.
         deps.sort_by(|&(_, ref a, _), &(_, ref b, _)| {
             a.len().cmp(&b.len())
         });
@@ -760,7 +714,6 @@ impl Context {
         Ok(deps)
     }
 
-    #[inline(never)] // see notes at the top of the module
     fn prev_active(&self, dep: &Dependency) -> &[Rc<Summary>] {
         let key = (dep.name().to_string(), dep.source_id().clone());
         self.activations.get(&key).map(|v| &v[..]).unwrap_or(&[])
