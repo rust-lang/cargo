@@ -100,9 +100,12 @@ _get_examples(){
 }
 
 _get_targets(){
+	local CURRENT_PATH=$(_locate_manifest)
+	if [[ -z "$CURRENT_PATH" ]]; then
+		return 1
+	fi
 	local TARGETS=()
 	local FIND_PATHS=( "/" )
-	local CURRENT_PATH=$(_locate_manifest)
 	local FIND_PATH LINES LINE
 	while [[ "$CURRENT_PATH" != "/" ]]; do
 	    FIND_PATHS+=( "$CURRENT_PATH" )
