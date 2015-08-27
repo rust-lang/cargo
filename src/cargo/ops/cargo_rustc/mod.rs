@@ -585,7 +585,7 @@ fn build_base_args(cx: &Context,
                    crate_types: &[&str]) {
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo, debug_assertions,
-        rpath, test, doc: _doc,
+        ref log_level, rpath, test, doc: _doc,
     } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
@@ -636,6 +636,10 @@ fn build_base_args(cx: &Context,
         cmd.args(&["-C", "debug-assertions=on"]);
     } else if !debug_assertions && opt_level == 0 {
         cmd.args(&["-C", "debug-assertions=off"]);
+    }
+
+    if let &Some(ref level) = log_level {
+        cmd.arg("--cfg").arg(format!("log_level=\"{}\"", level));
     }
 
     if test && target.harness() {

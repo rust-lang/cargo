@@ -113,6 +113,7 @@ pub struct Profile {
     pub rustc_args: Option<Vec<String>>,
     pub debuginfo: bool,
     pub debug_assertions: bool,
+    pub log_level: Option<String>,
     pub rpath: bool,
     pub test: bool,
     pub doc: bool,
@@ -418,6 +419,7 @@ impl Profile {
         Profile {
             opt_level: 3,
             debuginfo: false,
+            log_level: Some("info".to_owned()),
             ..Profile::default()
         }
     }
@@ -453,6 +455,7 @@ impl Default for Profile {
             rustc_args: None,
             debuginfo: false,
             debug_assertions: false,
+            log_level: None,
             rpath: false,
             test: false,
             doc: false,
