@@ -9,6 +9,7 @@ use util::{self, CargoResult, ProcessError};
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
     pub no_run: bool,
+    pub no_fail_fast: bool,
 }
 
 #[allow(deprecated)] // connect => join in 1.3
@@ -116,6 +117,7 @@ fn build_and_run<'a>(manifest_path: &Path,
     compile.tests.sort();
 
     let cwd = config.cwd();
+    let mut errors = Vec::new();
     for &(_, ref exe) in &compile.tests {
         let to_display = match util::without_prefix(exe, &cwd) {
             Some(path) => path,
@@ -131,9 +133,20 @@ fn build_and_run<'a>(manifest_path: &Path,
         }));
         match ExecEngine::exec(&mut ProcessEngine, cmd) {
             Ok(()) => {}
-            Err(e) => return Ok(Err(e))
+            Err(e) => {
+                errors.push(e);
+                if !options.no_fail_fast {
+                    break
+                }
+            }
         }
     }
+    if errors.is_empty() {
+        Ok(Ok(compile))
+    } else {
+        // errors.len() can be > 1, if --no-fail-fast is present.
+        // It would be cleaner to return the list of errors instead of just the last one.
+        Ok(Err(errors.pop().unwrap()))
+    }
 
-    Ok(Ok(compile))
 }
