@@ -16,6 +16,9 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
 * `CARGO_HOME` - Cargo maintains a local cache of the registry index and of git
   checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
   this variable overrides the location of this directory.
+* `CARGO_PROFILE` - If this is set to a positive integer *N*, Cargo will record
+  timing data as it runs.  When it exits, it will print this data as a profile
+  *N* levels deep.
 * `CARGO_TARGET_DIR` - Location of where to place all generated artifacts,
   relative to the current working directory.
 * `RUSTC` - Instead of running `rustc`, Cargo will execute this specified
@@ -25,7 +28,6 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
 
 # Environment variables Cargo sets for build scripts
 
-* `CARGO_PROFILE` - either `debug` or `release`.
 * `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
                          being built (the package containing the build
                          script). Also note that this is the value of the
