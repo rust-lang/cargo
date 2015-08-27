@@ -224,6 +224,7 @@ debug = false
 rpath = false
 lto = false
 debug-assertions = false
+log-level = info # Controls the `log_level` cfg variable (used by crate `log`)
 codegen-units = 1
 
 # The testing profile, used for `cargo test`
@@ -242,6 +243,7 @@ debug = false
 rpath = false
 lto = false
 debug-assertions = false
+log-level = info
 codegen-units = 1
 
 # The documentation profile, used for `cargo doc`

@@ -241,6 +241,7 @@ pub struct TomlProfile {
     codegen_units: Option<u32>,
     debug: Option<bool>,
     debug_assertions: Option<bool>,
+    log_level: Option<String>,
     rpath: Option<bool>,
 }
 
@@ -928,7 +929,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath
+            opt_level, lto, codegen_units, debug, debug_assertions, ref log_level, rpath
         } = match toml {
             Some(toml) => toml,
             None => return profile,
@@ -940,6 +941,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             rustc_args: None,
             debuginfo: debug.unwrap_or(profile.debuginfo),
             debug_assertions: debug_assertions.unwrap_or(profile.debug_assertions),
+            log_level: log_level.clone().or(profile.log_level),
             rpath: rpath.unwrap_or(profile.rpath),
             test: profile.test,
             doc: profile.doc,

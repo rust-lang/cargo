@@ -21,6 +21,7 @@ test!(profile_overrides {
             [profile.dev]
             opt-level = 1
             debug = false
+            log-level = "warn"
             rpath = true
         "#)
         .file("src/lib.rs", "");
@@ -30,6 +31,7 @@ test!(profile_overrides {
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -C debug-assertions=on \
+        --cfg log_level=\\\"warn\\\" \
         -C rpath \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
@@ -83,6 +85,7 @@ test!(top_level_overrides_deps {
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
+        --cfg log_level=\\\"info\\\" \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
@@ -93,6 +96,7 @@ test!(top_level_overrides_deps {
 {running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
+        --cfg log_level=\\\"info\\\" \
         --out-dir {dir}{sep}target{sep}release \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release \

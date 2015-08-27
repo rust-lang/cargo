@@ -888,6 +888,7 @@ test!(lto_build {
 {running} `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
+        --cfg log_level=\\\"info\\\" \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
@@ -941,6 +942,7 @@ test!(verbose_release_build {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
+        --cfg log_level=\\\"info\\\" \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
@@ -984,6 +986,7 @@ test!(verbose_release_build_deps {
 {running} `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
+        --cfg log_level=\\\"info\\\" \
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir {dir}[..]target[..]release[..]deps \
@@ -993,6 +996,7 @@ test!(verbose_release_build_deps {
 {compiling} test v0.0.0 ({url})
 {running} `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
+        --cfg log_level=\\\"info\\\" \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
@@ -1118,6 +1122,43 @@ test!(release_build_ndebug {
                 execs().with_status(0));
     assert_that(process(&p.release_bin("foo")).unwrap(),
                 execs().with_stdout("fast\n"));
+});
+
+test!(standard_build_no_log_level {
+    let p = project("world")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", r#"
+            fn main() {
+                if cfg!(log_level="info") {
+                    println!("quiet")
+                } else {
+                    println!("noisy")
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("noisy\n"));
+});
+
+test!(release_build_log_level {
+    let p = project("world")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", r#"
+            fn main() {
+                if cfg!(log_level="info") {
+                    println!("quiet")
+                } else {
+                    println!("noisy")
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("--release"),
+                execs().with_status(0));
+    assert_that(process(&p.release_bin("foo")).unwrap(),
+                execs().with_stdout("quiet\n"));
 });
 
 test!(inferred_main_bin {

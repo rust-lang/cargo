@@ -311,6 +311,7 @@ test!(example_with_release_flag {
 {compiling} bar v0.0.1 ({url})
 {running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
+        --cfg log_level=\\\"info\\\" \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
@@ -320,6 +321,7 @@ test!(example_with_release_flag {
 {compiling} foo v0.0.1 ({url})
 {running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
+        --cfg log_level=\\\"info\\\" \
         --out-dir {dir}{sep}target{sep}release{sep}examples \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release \
