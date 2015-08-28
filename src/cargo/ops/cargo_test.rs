@@ -102,7 +102,10 @@ pub fn run_tests(manifest_path: &Path,
     } else if process_errors.len() == 1 {
         Ok(Some(process_errors.pop().unwrap()))
     } else {
-        let err = process_error("Multiple tests failed", None, process_errors[0].exit.as_ref(), process_errors[0].output.as_ref());
+        let err = process_error("Multiple tests failed",
+                                None,
+                                process_errors[0].exit.as_ref(),
+                                process_errors[0].output.as_ref());
         Ok(Some(err))
     }
 
@@ -165,7 +168,10 @@ fn build_and_run<'a>(manifest_path: &Path,
         Ok((compile, Some(errors.pop().unwrap())))
     } else {
         // Multiple tests failed => Create a more generic error
-        let err = process_error("Multiple tests failed", None, errors[0].exit.as_ref(), errors[0].output.as_ref());
+        let err = process_error("Multiple tests failed",
+                                None,
+                                errors[0].exit.as_ref(),
+                                errors[0].output.as_ref());
         Ok((compile, Some(err)))
     }
 }
