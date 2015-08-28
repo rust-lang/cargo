@@ -1855,3 +1855,82 @@ test!(dev_dep_with_build_script {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
 });
+
+test!(no_fail_fast {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+        pub fn add_one(x: i32) -> i32{
+            x + 1
+        }
+
+        /// ```rust
+        /// use foo::sub_one;
+        /// assert_eq!(sub_one(101), 100);
+        /// ```
+        pub fn sub_one(x: i32) -> i32{
+            x - 1
+        }
+        "#)
+        .file("tests/test_add_one.rs", r#"
+        extern crate foo;
+        use foo::*;
+
+        #[test]
+        fn add_one_test() {
+            assert_eq!(add_one(1), 2);
+        }
+
+        #[test]
+        fn fail_add_one_test() {
+            assert_eq!(add_one(1), 1);
+        }
+        "#)
+        .file("tests/test_sub_one.rs", r#"
+        extern crate foo;
+        use foo::*;
+
+        #[test]
+        fn sub_one_test() {
+            assert_eq!(sub_one(1), 0);
+        }
+        "#);
+    assert_that(p.cargo_process("test").arg("--no-fail-fast"),
+                execs().with_status(101).with_stdout(format!("\
+{compiling} foo v0.0.1 ([..])
+{running} target[..]foo[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]test_add_one[..]
+
+running 2 tests
+[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]
+failures:
+ fail_add_one_test
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured
+
+{running} target[..]test_sub_one[..]
+
+running 1 test
+test sub_one_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 1 test
+test sub_one_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
+});
