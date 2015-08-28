@@ -4,7 +4,7 @@ use std::path::Path;
 use core::Source;
 use sources::PathSource;
 use ops::{self, ExecEngine, ProcessEngine, Compilation};
-use util::{self, CargoResult, ProcessError};
+use util::{self, CargoResult, ProcessError, process_error};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -17,11 +17,12 @@ pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.compile_opts.config;
-    let compile = match try!(build_and_run(manifest_path, options, test_args)) {
-        Ok(compile) => compile,
-        Err(e) => return Ok(Some(e)),
-    };
+    let (compile, error) = try!(build_and_run(manifest_path, options, test_args));
 
+    // If we have an error and want to fail fast, return
+    if error.is_some() && !options.no_fail_fast {
+        return Ok(error)
+    }
     // If a specific test was requested or we're not running any tests at all,
     // don't run any doc tests.
     if let ops::CompileFilter::Only { .. } = options.compile_opts.filter {
@@ -35,6 +36,10 @@ pub fn run_tests(manifest_path: &Path,
                       .filter(|t| t.doctested())
                       .map(|t| (t.src_path(), t.name(), t.crate_name()));
 
+    let mut process_errors = match error {
+        None => Vec::new(),
+        Some(err) => vec![err],
+    };
     for (lib, name, crate_name) in libs {
         try!(config.shell().status("Doc-tests", name));
         let mut p = try!(compile.rustdoc_process(&compile.package));
@@ -85,13 +90,22 @@ pub fn run_tests(manifest_path: &Path,
         try!(config.shell().verbose(|shell| {
             shell.status("Running", p.to_string())
         }));
-        match ExecEngine::exec(&mut ProcessEngine, p) {
-            Ok(()) => {}
-            Err(e) => return Ok(Some(e)),
+        if let Err(e) = ExecEngine::exec(&mut ProcessEngine, p) {
+            process_errors.push(e);
+            if !options.no_fail_fast {
+                break
+            }
         }
     }
+    if process_errors.is_empty() {
+        Ok(None)
+    } else if process_errors.len() == 1 {
+        Ok(Some(process_errors.pop().unwrap()))
+    } else {
+        let err = process_error("Multiple tests failed", None, process_errors[0].exit.as_ref(), process_errors[0].output.as_ref());
+        Ok(Some(err))
+    }
 
-    Ok(None)
 }
 
 pub fn run_benches(manifest_path: &Path,
@@ -100,20 +114,25 @@ pub fn run_benches(manifest_path: &Path,
     let mut args = args.to_vec();
     args.push("--bench".to_string());
 
-    Ok(try!(build_and_run(manifest_path, options, &args)).err())
+    match try!(build_and_run(manifest_path, options, &args)).1 {
+        Some(err) => Ok(Some(err)),
+        None => Ok(None)
+    }
 }
 
+// This function always has to return the Compilation, regardless of errors.
+// Otherwise --no-fail-fast is not possible.
 fn build_and_run<'a>(manifest_path: &Path,
                      options: &TestOptions<'a>,
                      test_args: &[String])
-                     -> CargoResult<Result<Compilation<'a>, ProcessError>> {
+                     -> CargoResult<(Compilation<'a>, Option<ProcessError>)> {
     let config = options.compile_opts.config;
     let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                                config));
     try!(source.update());
 
     let mut compile = try!(ops::compile(manifest_path, &options.compile_opts));
-    if options.no_run { return Ok(Ok(compile)) }
+    if options.no_run { return Ok((compile, None)) }
     compile.tests.sort();
 
     let cwd = config.cwd();
@@ -131,22 +150,22 @@ fn build_and_run<'a>(manifest_path: &Path,
         try!(config.shell().verbose(|shell| {
             shell.status("Running", cmd.to_string())
         }));
-        match ExecEngine::exec(&mut ProcessEngine, cmd) {
-            Ok(()) => {}
-            Err(e) => {
-                errors.push(e);
-                if !options.no_fail_fast {
-                    break
-                }
+
+        if let Err(e) = ExecEngine::exec(&mut ProcessEngine, cmd) {
+            errors.push(e);
+            if !options.no_fail_fast {
+                break
             }
         }
     }
     if errors.is_empty() {
-        Ok(Ok(compile))
+        Ok((compile, None))
+    } else if errors.len() == 1 {
+        // Just one error occured => we can return it.
+        Ok((compile, Some(errors.pop().unwrap())))
     } else {
-        // errors.len() can be > 1, if --no-fail-fast is present.
-        // It would be cleaner to return the list of errors instead of just the last one.
-        Ok(Err(errors.pop().unwrap()))
+        // Multiple tests failed => Create a more generic error
+        let err = process_error("Multiple tests failed", None, errors[0].exit.as_ref(), errors[0].output.as_ref());
+        Ok((compile, Some(err)))
     }
-
 }
