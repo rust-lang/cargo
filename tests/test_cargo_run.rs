@@ -461,3 +461,27 @@ test!(dashes_are_forwarded {
     assert_that(p.cargo_process("run").arg("--").arg("a").arg("--").arg("b"),
                 execs().with_status(0));
 });
+
+test!(run_from_executable_folder {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+
+    let cwd = p.root().join("target").join("debug");
+    p.cargo_process("build").exec_with_output().unwrap();
+
+    assert_that(p.cargo("run").cwd(cwd), 
+                execs().with_status(0).with_stdout(&format!("\
+{running} `./foo`
+hello
+",
+        running = RUNNING
+        )));
+});
