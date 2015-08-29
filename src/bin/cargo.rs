@@ -87,6 +87,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(owner);
     $mac!(package);
     $mac!(pkgid);
+    $mac!(print_source_root);
     $mac!(publish);
     $mac!(read_manifest);
     $mac!(run);
