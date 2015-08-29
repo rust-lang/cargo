@@ -479,9 +479,10 @@ test!(run_from_executable_folder {
 
     assert_that(p.cargo("run").cwd(cwd), 
                 execs().with_status(0).with_stdout(&format!("\
-{running} `./foo`
+{running} `.{sep}foo[..]`
 hello
 ",
-        running = RUNNING
+        running = RUNNING,
+        sep = SEP
         )));
 });
