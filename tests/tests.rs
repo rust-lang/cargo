@@ -51,12 +51,14 @@ mod test_cargo_new;
 mod test_cargo_package;
 mod test_cargo_profiles;
 mod test_cargo_publish;
+mod test_cargo_read_manifest;
 mod test_cargo_registry;
 mod test_cargo_run;
 mod test_cargo_rustc;
 mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_tool_paths;
+mod test_cargo_verify_project;
 mod test_cargo_version;
 mod test_shell;
 
