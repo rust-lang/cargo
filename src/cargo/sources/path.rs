@@ -255,11 +255,16 @@ impl<'cfg> PathSource<'cfg> {
         }
         for dir in try!(fs::read_dir(path)) {
             let dir = try!(dir).path();
-            match (is_root, dir.file_name().and_then(|s| s.to_str())) {
-                (_,    Some(".git")) |
-                (true, Some("target")) |
-                (true, Some("Cargo.lock")) => continue,
-                _ => {}
+            let name = dir.file_name().and_then(|s| s.to_str());
+            // Skip dotfile directories
+            if name.map(|s| s.starts_with(".")) == Some(true) {
+                continue
+            } else if is_root {
+                // Skip cargo artifacts
+                match name {
+                    Some("target") | Some("Cargo.lock") => continue,
+                    _ => {}
+                }
             }
             try!(PathSource::walk(&dir, ret, false, filter));
         }
