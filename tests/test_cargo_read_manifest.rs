@@ -51,8 +51,8 @@ test!(cargo_read_manifest_path_to_cargo_toml_parent_relative {
     assert_that(p.cargo_process("read-manifest")
                  .arg("--manifest-path").arg("foo")
                  .cwd(p.root().parent().unwrap()),
-                execs().with_status(0)
-                       .with_stdout(read_manifest_output()));
+                execs().with_status(101)
+                       .with_stderr("the manifest-path must be a path to a Cargo.toml file"));
 });
 
 test!(cargo_read_manifest_path_to_cargo_toml_parent_absolute {
@@ -63,8 +63,8 @@ test!(cargo_read_manifest_path_to_cargo_toml_parent_absolute {
     assert_that(p.cargo_process("read-manifest")
                  .arg("--manifest-path").arg(p.root())
                  .cwd(p.root().parent().unwrap()),
-                execs().with_status(0)
-                       .with_stdout(read_manifest_output()));
+                execs().with_status(101)
+                       .with_stderr("the manifest-path must be a path to a Cargo.toml file"));
 });
 
 test!(cargo_read_manifest_cwd {

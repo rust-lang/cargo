@@ -1,6 +1,5 @@
 use std::env;
 use std::error::Error;
-use std::path::PathBuf;
 
 use cargo::core::{Package, Source};
 use cargo::util::{CliResult, CliError, Config};
@@ -30,20 +29,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> 
            env::args().collect::<Vec<_>>());
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
-    // Accept paths to directories containing Cargo.toml for backwards compatibility.
-    let root = match options.flag_manifest_path {
-        Some(path) => {
-            let mut path = PathBuf::from(path);
-            if !path.ends_with("Cargo.toml") {
-                path.push("Cargo.toml");
-            }
-            Some(path.display().to_string())
-        },
-        None => None,
-    };
-    let root = try!(find_root_manifest_for_cwd(root));
-
-    debug!("read-manifest; manifest-path={}", root.display());
+    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
 
     let mut source = try!(PathSource::for_path(root.parent().unwrap(), config).map_err(|e| {
         CliError::new(e.description(), 1)

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process;
@@ -36,6 +37,14 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
 
     let mut contents = String::new();
     let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());
+
+    if !filename.ends_with("Cargo.toml") {
+        fail("invalid", "the manifest-path must be a path to a Cargo.toml file")
+    }
+    if !fs::metadata(&filename).is_ok() {
+        fail("invalid", &format!("manifest path `{}` does not exist", filename))
+    }
+
     let file = File::open(&filename);
     match file.and_then(|mut f| f.read_to_string(&mut contents)) {
         Ok(_) => {},
