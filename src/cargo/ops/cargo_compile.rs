@@ -145,13 +145,10 @@ pub fn compile_pkg<'a>(package: &Package,
 
         try!(registry.add_overrides(override_ids));
 
-        let platform = target.as_ref().unwrap_or(&config.rustc_info().host);
-
         let method = Method::Required {
             dev_deps: true, // TODO: remove this option?
             features: &features,
             uses_default_features: !no_default_features,
-            target_platform: Some(&platform[..]),
         };
 
         let resolved_with_overrides =

@@ -152,15 +152,6 @@ impl Dependency {
             (self.only_match_name || (self.req.matches(id.version()) &&
                                       &self.source_id == id.source_id()))
     }
-
-    /// Returns true if the dependency should be built for this platform.
-    pub fn is_active_for_platform(&self, platform: &str) -> bool {
-        match self.only_for_platform {
-            None => true,
-            Some(ref p) if *p == platform => true,
-            _ => false
-        }
-    }
 }
 
 #[derive(PartialEq,Clone,RustcEncodable)]
