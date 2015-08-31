@@ -124,6 +124,9 @@ depends on `libfoo`, then if `libfoo` generates `key=value` as part of its
 metadata, then the build script of `libbar` will have the environment variables
 `DEP_FOO_KEY=value`.
 
+Make sure to add `extern crate libfoo;` to your `lib.rs` or `main.rs`, otherwise the
+libraries provided by the `*-sys` package will not be linked.
+
 Note that metadata is only passed to immediate dependents, not transitive
 dependents. The motivation for this metadata passing is outlined in the linking
 to system libraries case study below.
