@@ -4,7 +4,7 @@ use std::path::Path;
 use core::Source;
 use sources::PathSource;
 use ops::{self, ExecEngine, ProcessEngine, Compilation};
-use util::{self, CargoResult, ProcessError, process_error};
+use util::{self, CargoResult, CargoError, internal};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -15,7 +15,7 @@ pub struct TestOptions<'a> {
 #[allow(deprecated)] // connect => join in 1.3
 pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
-                 test_args: &[String]) -> CargoResult<Option<ProcessError>> {
+                 test_args: &[String]) -> CargoResult<Option<Box<CargoError>>> {
     let config = options.compile_opts.config;
     let (compile, error) = try!(build_and_run(manifest_path, options, test_args));
 
@@ -36,7 +36,7 @@ pub fn run_tests(manifest_path: &Path,
                       .filter(|t| t.doctested())
                       .map(|t| (t.src_path(), t.name(), t.crate_name()));
 
-    let mut process_errors = match error {
+    let mut errors = match error {
         None => Vec::new(),
         Some(err) => vec![err],
     };
@@ -91,21 +91,18 @@ pub fn run_tests(manifest_path: &Path,
             shell.status("Running", p.to_string())
         }));
         if let Err(e) = ExecEngine::exec(&mut ProcessEngine, p) {
-            process_errors.push(e);
+            errors.push(Box::new(e));
             if !options.no_fail_fast {
                 break
             }
         }
     }
-    if process_errors.is_empty() {
+    if errors.is_empty() {
         Ok(None)
-    } else if process_errors.len() == 1 {
-        Ok(Some(process_errors.pop().unwrap()))
+    } else if errors.len() == 1 {
+        Ok(Some(errors.pop().unwrap()))
     } else {
-        let err = process_error("Multiple tests failed",
-                                None,
-                                process_errors[0].exit.as_ref(),
-                                process_errors[0].output.as_ref());
+        let err = internal("Multiple tests failed");
         Ok(Some(err))
     }
 
@@ -113,7 +110,7 @@ pub fn run_tests(manifest_path: &Path,
 
 pub fn run_benches(manifest_path: &Path,
                    options: &TestOptions,
-                   args: &[String]) -> CargoResult<Option<ProcessError>> {
+                   args: &[String]) -> CargoResult<Option<Box<CargoError>>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());
 
@@ -128,7 +125,7 @@ pub fn run_benches(manifest_path: &Path,
 fn build_and_run<'a>(manifest_path: &Path,
                      options: &TestOptions<'a>,
                      test_args: &[String])
-                     -> CargoResult<(Compilation<'a>, Option<ProcessError>)> {
+                     -> CargoResult<(Compilation<'a>, Option<Box<CargoError>>)> {
     let config = options.compile_opts.config;
     let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                                config));
@@ -165,13 +162,10 @@ fn build_and_run<'a>(manifest_path: &Path,
         Ok((compile, None))
     } else if errors.len() == 1 {
         // Just one error occured => we can return it.
-        Ok((compile, Some(errors.pop().unwrap())))
+        Ok((compile, Some(Box::new(errors.pop().unwrap()))))
     } else {
         // Multiple tests failed => Create a more generic error
-        let err = process_error("Multiple tests failed",
-                                None,
-                                errors[0].exit.as_ref(),
-                                errors[0].output.as_ref());
+        let err = internal("Multiple tests failed");
         Ok((compile, Some(err)))
     }
 }

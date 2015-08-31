@@ -101,10 +101,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     match err {
         None => Ok(None),
         Some(err) => {
-            Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new("", i),
-                None => CliError::from_error(Human(err), 101)
-            })
+            Err(CliError::from_error(Human(err), 101))
         }
     }
 }

@@ -192,7 +192,7 @@ test bench_hello ... ",
 thread '<main>' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
-
+[..]
 ")
               .with_status(101));
 });
