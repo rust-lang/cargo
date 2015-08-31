@@ -74,5 +74,5 @@ fn is_nightly() -> bool {
 }
 
 fn can_panic() -> bool {
-    RUSTC.with(|r| !r.host.contains("msvc"))
+    RUSTC.with(|r| !(r.host.contains("msvc") && !r.host.contains("x86_64")))
 }

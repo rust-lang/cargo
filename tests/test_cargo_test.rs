@@ -1857,6 +1857,7 @@ test!(dev_dep_with_build_script {
 });
 
 test!(no_fail_fast {
+    if !::can_panic() { return }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
