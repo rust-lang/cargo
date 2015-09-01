@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 
+use cargo::util::important_paths::{find_root_manifest_for_cwd};
 use cargo::util::{CliResult, Config};
 use rustc_serialize::json;
 use toml;
@@ -11,7 +12,7 @@ pub type Error = HashMap<String, String>;
 
 #[derive(RustcDecodable)]
 struct Flags {
-    flag_manifest_path: String,
+    flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
@@ -19,7 +20,7 @@ struct Flags {
 
 pub const USAGE: &'static str = "
 Usage:
-    cargo verify-project [options] --manifest-path PATH
+    cargo verify-project [options]
     cargo verify-project -h | --help
 
 Options:
@@ -35,7 +36,13 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     try!(config.shell().set_color_config(args.flag_color.as_ref().map(|s| &s[..])));
 
     let mut contents = String::new();
-    let file = File::open(&args.flag_manifest_path);
+    let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());
+    let filename = match find_root_manifest_for_cwd(Some(filename)) {
+        Ok(manifest_path) => manifest_path,
+        Err(e) => fail("invalid", &e.to_string()),
+    };
+
+    let file = File::open(&filename);
     match file.and_then(|mut f| f.read_to_string(&mut contents)) {
         Ok(_) => {},
         Err(e) => fail("invalid", &format!("error reading file: {}", e))
