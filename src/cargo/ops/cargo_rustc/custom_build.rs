@@ -91,7 +91,8 @@ pub fn prepare(pkg: &Package, target: &Target, req: Platform,
         let not_custom = pkg.targets().iter().find(|t| {
             !t.is_custom_build()
         }).unwrap();
-        cx.dep_targets(pkg, not_custom, profile).iter().filter_map(|&(pkg, t, _)| {
+        cx.dep_targets(pkg, not_custom, kind, profile).iter()
+                                                      .filter_map(|&(pkg, t, _)| {
             if !t.linkable() { return None }
             pkg.manifest().links().map(|links| {
                 (links.to_string(), pkg.package_id().clone())
@@ -381,7 +382,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         // kind that we're compiling for, and otherwise just do a quick
         // pre-flight check to see if we've already calculated the set of
         // dependencies.
-        let kind = if target.for_host() {Kind::Host} else {kind};
+        let kind = kind.for_target(target);
         let id = pkg.package_id();
         if out.contains_key(&(id, target, profile, kind)) {
             return &out[&(id, target, profile, kind)]
@@ -398,7 +399,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         // linkable to us (e.g. not a binary) and it's for the same original
         // `kind`.
         let mut ret = Vec::new();
-        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
+        for (pkg, target, p) in cx.dep_targets(pkg, target, kind, profile) {
             let req = cx.get_requirement(pkg, target);
 
             let dep_kind = if req.includes(kind) {

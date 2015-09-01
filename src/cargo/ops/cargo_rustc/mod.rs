@@ -127,8 +127,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(targets: &[(&'a Target, &'a Profile)],
             if !target.is_lib() { continue }
 
             // Include immediate lib deps as well
-            for dep in cx.dep_targets(pkg, target, profile).iter() {
-                let (pkg, target, profile) = *dep;
+            for dep in cx.dep_targets(pkg, target, kind, profile) {
+                let (pkg, target, profile) = dep;
                 let pkgid = pkg.package_id();
                 if !target.is_lib() { continue }
                 if profile.doc { continue }
@@ -187,7 +187,9 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             try!(rustc(pkg, target, profile, cx, req))
         };
 
-        for (work, kind) in work.into_iter() {
+        let kinds = work.iter().map(|&(_, kind)| kind).collect::<Vec<_>>();
+
+        for (work, kind) in work {
             let (freshness, dirty, fresh) =
                 try!(fingerprint::prepare_target(cx, pkg, target, profile, kind));
 
@@ -210,12 +212,15 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
                 (false, false, _) => jobs.queue(pkg, Stage::Binaries),
             };
             dst.push((Job::new(dirty, fresh), freshness));
+
         }
         drop(profiling_marker);
 
         // Be sure to compile all dependencies of this target as well.
-        for &(pkg, target, p) in cx.dep_targets(pkg, target, profile).iter() {
-            try!(compile(&[(target, p)], pkg, cx, jobs));
+        for kind in kinds {
+            for (pkg, target, p) in cx.dep_targets(pkg, target, kind, profile) {
+                try!(compile(&[(target, p)], pkg, cx, jobs));
+            }
         }
 
         // If this is a custom build command, we need to not only build the
@@ -710,7 +715,7 @@ fn build_deps_args(cmd: &mut CommandPrototype,
         cmd.env("OUT_DIR", &layout.build_out(package));
     }
 
-    for &(pkg, target, p) in cx.dep_targets(package, target, profile).iter() {
+    for (pkg, target, p) in cx.dep_targets(package, target, kind, profile) {
         if target.linkable() {
             try!(link_to(cmd, pkg, target, p, cx, kind));
         }

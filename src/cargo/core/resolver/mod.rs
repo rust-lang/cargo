@@ -138,7 +138,6 @@ pub enum Method<'a> {
         dev_deps: bool,
         features: &'a [String],
         uses_default_features: bool,
-        target_platform: Option<&'a str>,
     },
 }
 
@@ -292,14 +291,7 @@ fn activate(mut cx: Box<Context>,
 
     let deps = try!(cx.build_deps(registry, parent, method));
 
-    // Extracting the platform request.
-    let platform = match *method {
-        Method::Required { target_platform, .. } => target_platform,
-        Method::Everything => None,
-    };
-
-    activate_deps(cx, registry, parent, platform, deps.iter(), 0,
-                  &mut |mut cx, registry| {
+    activate_deps(cx, registry, parent, deps.iter(), 0, &mut |mut cx, registry| {
         cx.visited.remove(id);
         finished(cx, registry)
     })
@@ -312,16 +304,12 @@ fn activate(mut cx: Box<Context>,
 /// provided is an iterator over all dependencies where each element yielded
 /// informs us what the candidates are for the dependency in question.
 ///
-/// The `platform` argument is the target platform that the dependencies are
-/// being activated for.
-///
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph the `finished` callback is invoked with the current state
 /// of the world.
 fn activate_deps<'a>(cx: Box<Context>,
                      registry: &mut Registry,
                      parent: &Summary,
-                     platform: Option<&'a str>,
                      mut deps: slice::Iter<'a, DepInfo>,
                      cur: usize,
                      finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
@@ -335,7 +323,6 @@ fn activate_deps<'a>(cx: Box<Context>,
         dev_deps: false,
         features: features,
         uses_default_features: dep.uses_default_features(),
-        target_platform: platform,
     };
 
     let prev_active = cx.prev_active(dep);
@@ -384,8 +371,7 @@ fn activate_deps<'a>(cx: Box<Context>,
         }
         let my_cx = try!(activate(my_cx, registry, candidate, &method,
                                   &mut |cx, registry| {
-            activate_deps(cx, registry, parent, platform, deps.clone(), cur + 1,
-                          finished)
+            activate_deps(cx, registry, parent, deps.clone(), cur + 1, finished)
         }));
         match my_cx {
             Ok(cx) => return Ok(Ok(cx)),
@@ -679,17 +665,6 @@ impl Context {
         // First, filter by dev-dependencies
         let deps = parent.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
-
-        // Second, ignoring dependencies that should not be compiled for this
-        // platform
-        let deps = deps.filter(|d| {
-            match *method {
-                Method::Required{target_platform: Some(ref platform), ..} => {
-                    d.is_active_for_platform(platform)
-                },
-                _ => true
-            }
-        });
 
         let (mut feature_deps, used_features) = try!(build_features(parent,
                                                                     method));
