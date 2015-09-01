@@ -291,7 +291,7 @@ fn activate_deps_loop(mut cx: Context,
     remaining_deps.extend(try!(activate(&mut cx, registry, top, &top_method)));
     loop {
         // Retrieves the next dependency to try, from `remaining_deps`.
-        let (parent, cur, dep, candidates, features) =
+        let (mut parent, mut cur, mut dep, candidates, features) =
             match remaining_deps.pop() {
                 None => break,
                 Some(mut deps_frame) => {
@@ -372,6 +372,7 @@ fn activate_deps_loop(mut cx: Context,
                 let last_err = activation_error(&cx, registry, None, &parent, &dep,
                                                 &prev_active, &candidates);
                 try!(find_candidate(&mut backtrack_stack, &mut cx, &mut remaining_deps,
+                                    &mut parent, &mut cur, &mut dep,
                                     registry, last_err))
             }
         };
@@ -398,6 +399,7 @@ fn activate_deps_loop(mut cx: Context,
 // error.
 fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
                   cx: &mut Context, remaining_deps: &mut Vec<DepsFrame>,
+                  parent: &mut Rc<Summary>, cur: &mut usize, dep: &mut Rc<Dependency>,
                   registry: &mut Registry,
                   mut last_err: Box<CargoError>) -> CargoResult<Rc<Summary>> {
     while let Some(mut frame) = backtrack_stack.pop() {
@@ -411,6 +413,9 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
             Some((_, candidate)) => {
                 *cx = frame.context_backup.clone();
                 *remaining_deps = frame.deps_backup.clone();
+                *parent = frame.parent.clone();
+                *cur = frame.cur;
+                *dep = frame.dep.clone();
                 backtrack_stack.push(frame);
                 return Ok(candidate);
             }
