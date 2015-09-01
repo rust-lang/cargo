@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 
+use cargo::util::important_paths::{find_root_manifest_for_cwd};
 use cargo::util::{CliResult, Config};
 use rustc_serialize::json;
 use toml;
@@ -37,13 +37,10 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
 
     let mut contents = String::new();
     let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());
-
-    if !filename.ends_with("Cargo.toml") {
-        fail("invalid", "the manifest-path must be a path to a Cargo.toml file")
-    }
-    if !fs::metadata(&filename).is_ok() {
-        fail("invalid", &format!("manifest path `{}` does not exist", filename))
-    }
+    let filename = match find_root_manifest_for_cwd(Some(filename)) {
+        Ok(manifest_path) => manifest_path,
+        Err(e) => fail("invalid", &e.to_string()),
+    };
 
     let file = File::open(&filename);
     match file.and_then(|mut f| f.read_to_string(&mut contents)) {
