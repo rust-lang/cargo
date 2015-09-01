@@ -761,7 +761,7 @@ test!(build_cmd_with_a_build_cmd {
     -L [..]target[..]deps -L [..]target[..]deps`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc build.rs --crate-name build_script_build --crate-type bin \
-    -C prefer-dynamic -g \
+    -g \
     --out-dir [..]build[..]foo-[..] --emit=dep-info,link \
     -L [..]target[..]debug -L [..]target[..]deps \
     --extern a=[..]liba-[..].rlib`
@@ -1109,6 +1109,7 @@ test!(build_script_with_dynamic_native_dependency {
             [lib]
             name = "builder"
             crate-type = ["dylib"]
+            plugin = true
         "#)
         .file("src/lib.rs", r#"
             #[no_mangle]
