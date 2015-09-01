@@ -49,6 +49,7 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::fmt;
+use std::ops::Range;
 use std::rc::Rc;
 use semver;
 
@@ -62,14 +63,6 @@ pub use self::encode::{EncodableResolve, EncodableDependency, EncodablePackageId
 pub use self::encode::Metadata;
 
 mod encode;
-
-macro_rules! trace {
-    ($($e:tt)*) => (
-        if cfg!(debug_assertions) {
-            debug!($($e)*);
-        }
-    )
-}
 
 /// Represents a fully resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
@@ -197,7 +190,7 @@ struct Context {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summary: &Summary, method: &Method,
                registry: &mut Registry) -> CargoResult<Resolve> {
-    trace!("resolve; summary={}", summary.package_id());
+    debug!("resolve; summary={}", summary.package_id());
     let summary = Rc::new(summary.clone());
 
     let cx = Context {
@@ -233,7 +226,7 @@ fn activate(cx: &mut Context,
         cx.visited.remove(&id);
         return Ok(None);
     }
-    trace!("activating {}", parent.package_id());
+    debug!("activating {}", parent.package_id());
 
     let deps = try!(cx.build_deps(registry, &parent, method));
 
@@ -247,25 +240,21 @@ fn activate(cx: &mut Context,
 #[derive(Clone)]
 struct RcVecIter<Elem> {
     vec: Rc<Vec<Elem>>,
-    next_index: usize,
+    rest: Range<usize>,
 }
 
 impl<Elem> RcVecIter<Elem> {
     fn new(vec: Vec<Elem>) -> RcVecIter<Elem> {
         RcVecIter {
+            rest: 0..vec.len(),
             vec: Rc::new(vec),
-            next_index: 0
         }
     }
-    fn next(&mut self) -> Option<(usize, &Elem)> {
-        match self.vec.get(self.next_index) {
-            None => None,
-            Some(val) => {
-                let index = self.next_index;
-                self.next_index += 1;
-                Some((index, val))
-            }
-        }
+}
+impl<Elem> Iterator for RcVecIter<Elem> where Elem: Clone {
+    type Item = (usize, Elem);
+    fn next(&mut self) -> Option<(usize, Elem)> {
+        self.rest.next().and_then(|i| self.vec.get(i).map(|val| (i, val.clone())))
     }
 }
 
@@ -275,11 +264,10 @@ struct DepsFrame {
     remaining_siblings: RcVecIter<DepInfo>,
     id: PackageId,
 }
-type RemainingDeps = Vec<DepsFrame>;
 
 struct BacktrackFrame {
     context_backup: Context,
-    deps_backup: RemainingDeps,
+    deps_backup: Vec<DepsFrame>,
     remaining_candidates: RcVecIter<Rc<Summary>>,
     // For building an activation error:
     parent: Rc<Summary>,
@@ -299,27 +287,25 @@ fn activate_deps_loop(mut cx: Context,
                       top: Rc<Summary>,
                       top_method: &Method) -> CargoResult<Resolve> {
     let mut backtrack_stack: Vec<BacktrackFrame> = Vec::new();
-    let mut remaining_deps: RemainingDeps = Vec::new();
-    remaining_deps.extend(
-        try!(activate(&mut cx, registry, top, &top_method)));
+    let mut remaining_deps: Vec<DepsFrame> = Vec::new();
+    remaining_deps.extend(try!(activate(&mut cx, registry, top, &top_method)));
     loop {
         // Retrieves the next dependency to try, from `remaining_deps`.
         let (parent, cur, dep, candidates, features) =
             match remaining_deps.pop() {
                 None => break,
                 Some(mut deps_frame) => {
-                    let info =
-                        match deps_frame.remaining_siblings.next() {
-                            Some((cur, &(ref dep, ref candidates, ref features))) =>
-                                (deps_frame.parent.clone(), cur, dep.clone(),
-                                 candidates.clone(), features.clone()),
-                            None => {
-                                cx.visited.remove(&deps_frame.id);
-                                continue;
-                            }
-                        };
-                    remaining_deps.push(deps_frame);
-                    info
+                    match deps_frame.remaining_siblings.next() {
+                        Some((cur, (dep, candidates, features))) => {
+                            let parent = deps_frame.parent.clone();
+                            remaining_deps.push(deps_frame);
+                            (parent, cur, dep, candidates, features)
+                        }
+                        None => {
+                            cx.visited.remove(&deps_frame.id);
+                            continue
+                        }
+                    }
                 }
             };
 
@@ -330,9 +316,9 @@ fn activate_deps_loop(mut cx: Context,
         };
 
         let prev_active: Vec<Rc<Summary>> = cx.prev_active(&dep).to_vec();
-        trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
+        debug!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
                candidates.len());
-        trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
+        debug!("{}[{}]>{} {} prev activations", parent.name(), cur,
                dep.name(), prev_active.len());
 
         // Filter the set of candidates based on the previously activated
@@ -361,10 +347,8 @@ fn activate_deps_loop(mut cx: Context,
         // turn. We could possibly fail to activate each candidate, so we try
         // each one in turn.
         let mut remaining_candidates = RcVecIter::new(my_candidates);
-        let maybe_candidate =
-            remaining_candidates.next().map(|(_, candidate)| candidate.clone());
-        let candidate: Rc<Summary> = match maybe_candidate {
-            Some(candidate) => {
+        let candidate: Rc<Summary> = match remaining_candidates.next() {
+            Some((_, candidate)) => {
                 // We have a candidate. Add an entry to the `backtrack_stack` so
                 // we can try the next one if this one fails.
                 backtrack_stack.push(BacktrackFrame {
@@ -384,7 +368,7 @@ fn activate_deps_loop(mut cx: Context,
                 // find a dependency that does have a candidate to try, and try
                 // to activate that one.  This resets the `remaining_deps` to
                 // their state at the found level of the `backtrack_stack`.
-                trace!("{}[{}]>{} -- None", parent.name(), cur, dep.name());
+                debug!("{}[{}]>{} -- None", parent.name(), cur, dep.name());
                 let last_err = activation_error(&cx, registry, None, &parent, &dep,
                                                 &prev_active, &candidates);
                 try!(find_candidate(&mut backtrack_stack, &mut cx, &mut remaining_deps,
@@ -392,7 +376,7 @@ fn activate_deps_loop(mut cx: Context,
             }
         };
 
-        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
+        debug!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.version());
         cx.resolve.graph.link(parent.package_id().clone(),
                               candidate.package_id().clone());
@@ -402,8 +386,7 @@ fn activate_deps_loop(mut cx: Context,
         if !dep.is_transitive() {
             cx.visited.clear();
         }
-        remaining_deps.extend(
-            try!(activate(&mut cx, registry, candidate, &method)));
+        remaining_deps.extend(try!(activate(&mut cx, registry, candidate, &method)));
     }
     debug!("resolved: {:?}", cx.resolve);
     Ok(cx.resolve)
@@ -414,28 +397,24 @@ fn activate_deps_loop(mut cx: Context,
 // next candidate. If all candidates have been exhausted, returns an activation
 // error.
 fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
-                  cx: &mut Context, remaining_deps: &mut RemainingDeps,
+                  cx: &mut Context, remaining_deps: &mut Vec<DepsFrame>,
                   registry: &mut Registry,
                   mut last_err: Box<CargoError>) -> CargoResult<Rc<Summary>> {
     while let Some(mut frame) = backtrack_stack.pop() {
-        let maybe_candidate = match frame.remaining_candidates.next() {
+        match frame.remaining_candidates.next() {
             None => {
-                trace!("{}[{}]>{} -- {:?}", frame.parent.name(), frame.cur, frame.dep.name(),
+                debug!("{}[{}]>{} -- {:?}", frame.parent.name(), frame.cur, frame.dep.name(),
                        Some(&last_err));
                 last_err = activation_error(cx, registry, Some(last_err), &frame.parent, &frame.dep,
                                             &frame.prev_active, &frame.all_candidates);
-                None
             }
             Some((_, candidate)) => {
                 *cx = frame.context_backup.clone();
                 *remaining_deps = frame.deps_backup.clone();
-                Some(candidate.clone())
+                backtrack_stack.push(frame);
+                return Ok(candidate);
             }
         };
-        if let Some(candidate) = maybe_candidate {
-            backtrack_stack.push(frame);
-            return Ok(candidate);
-        }
     }
     return Err(last_err);
 }
