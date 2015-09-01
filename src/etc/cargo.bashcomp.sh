@@ -62,6 +62,9 @@ _cargo()
 			--example)
 				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
 				;;
+			--target)
+				COMPREPLY=( $( compgen -W "$(_get_targets)" -- "$cur" ) )
+				;;
 			help)
 				COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
 				;;
@@ -94,5 +97,33 @@ _get_examples(){
 	if [[ "${names[@]}" != "*" ]]; then
 		echo "${names[@]}"
 	fi
+}
+
+_get_targets(){
+	local CURRENT_PATH
+	if [ `uname -o` == "Cygwin" -a -f "$PWD"/Cargo.toml ]; then
+		CURRENT_PATH=$PWD
+	else
+		CURRENT_PATH=$(_locate_manifest)
+	fi
+	if [[ -z "$CURRENT_PATH" ]]; then
+		return 1
+	fi
+	local TARGETS=()
+	local FIND_PATHS=( "/" )
+	local FIND_PATH LINES LINE
+	while [[ "$CURRENT_PATH" != "/" ]]; do
+	    FIND_PATHS+=( "$CURRENT_PATH" )
+	    CURRENT_PATH=$(dirname $CURRENT_PATH)
+	done
+	for FIND_PATH in ${FIND_PATHS[@]}; do
+	    if [[ -f "$FIND_PATH"/.cargo/config ]]; then
+		LINES=( `grep "$FIND_PATH"/.cargo/config -e "^\[target\."` )
+		for LINE in ${LINES[@]}; do
+		    TARGETS+=(`sed 's/^\[target\.\(.*\)\]$/\1/' <<< $LINE`)
+		done
+	    fi
+	done
+	echo "${TARGETS[@]}"
 }
 # vim:ft=sh

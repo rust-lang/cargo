@@ -48,8 +48,10 @@ pub fn run(manifest_path: &Path,
     let compile = try!(ops::compile(manifest_path, options));
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(&exe, config.cwd()) {
-        Some(path) => path,
-        None => &**exe,
+        Some(path) if path.file_name() == Some(path.as_os_str())
+                   => Path::new(".").join(path).to_path_buf(),
+        Some(path) => path.to_path_buf(),
+        None => exe.to_path_buf(),
     };
     let mut process = try!(compile.target_process(exe, &root))
                                   .into_process_builder();

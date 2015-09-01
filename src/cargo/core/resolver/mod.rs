@@ -91,7 +91,6 @@ pub enum Method<'a> {
         dev_deps: bool,
         features: &'a [String],
         uses_default_features: bool,
-        target_platform: Option<&'a str>,
     },
 }
 
@@ -238,16 +237,9 @@ fn activate(cx: &mut Context,
 
     let deps = try!(cx.build_deps(registry, &parent, method));
 
-    // Extracting the platform request.
-    let platform = match *method {
-        Method::Required { target_platform, .. } => target_platform,
-        Method::Everything => None,
-    };
-
     Ok(Some(DepsFrame{
         parent: parent,
         remaining_siblings: RcVecIter::new(deps),
-        platform: platform.map(|s| s.to_string()),
         id: id,
     }))
 }
@@ -281,7 +273,6 @@ impl<Elem> RcVecIter<Elem> {
 struct DepsFrame {
     parent: Rc<Summary>,
     remaining_siblings: RcVecIter<DepInfo>,
-    platform: Option<String>,
     id: PackageId,
 }
 type RemainingDeps = Vec<DepsFrame>;
@@ -313,15 +304,14 @@ fn activate_deps_loop(mut cx: Context,
         try!(activate(&mut cx, registry, top, &top_method)));
     loop {
         // Retrieves the next dependency to try, from `remaining_deps`.
-        let (parent, platform, cur, dep, candidates, features) =
+        let (parent, cur, dep, candidates, features) =
             match remaining_deps.pop() {
                 None => break,
                 Some(mut deps_frame) => {
                     let info =
                         match deps_frame.remaining_siblings.next() {
                             Some((cur, &(ref dep, ref candidates, ref features))) =>
-                                (deps_frame.parent.clone(), deps_frame.platform.clone(),
-                                 cur, dep.clone(),
+                                (deps_frame.parent.clone(), cur, dep.clone(),
                                  candidates.clone(), features.clone()),
                             None => {
                                 cx.visited.remove(&deps_frame.id);
@@ -337,7 +327,6 @@ fn activate_deps_loop(mut cx: Context,
             dev_deps: false,
             features: &features,
             uses_default_features: dep.uses_default_features(),
-            target_platform: platform.as_ref().map(|p| p as &str),
         };
 
         let prev_active: Vec<Rc<Summary>> = cx.prev_active(&dep).to_vec();
@@ -730,17 +719,6 @@ impl Context {
         // First, filter by dev-dependencies
         let deps = parent.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
-
-        // Second, ignoring dependencies that should not be compiled for this
-        // platform
-        let deps = deps.filter(|d| {
-            match *method {
-                Method::Required{target_platform: Some(ref platform), ..} => {
-                    d.is_active_for_platform(platform)
-                },
-                _ => true
-            }
-        });
 
         let (mut feature_deps, used_features) = try!(build_features(parent,
                                                                     method));

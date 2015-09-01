@@ -162,7 +162,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         for &(target, profile) in targets {
-            self.build_requirements(pkg, target, profile, Platform::Target);
+            self.build_requirements(pkg, target, profile, Kind::from(target));
         }
 
         let jobs = self.jobs();
@@ -177,8 +177,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
-                          profile: &Profile, req: Platform) {
-        let req = if target.for_host() {Platform::Plugin} else {req};
+                          profile: &Profile, kind: Kind) {
+        let req = if kind == Kind::Host { Platform::Plugin } else { Platform::Target };
+
         match self.requirements.entry((pkg.package_id(), target.name())) {
             Occupied(mut entry) => match (*entry.get(), req) {
                 (Platform::Plugin, Platform::Plugin) |
@@ -191,15 +192,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Vacant(entry) => { entry.insert(req); }
         };
 
-        for &(pkg, dep, profile) in self.dep_targets(pkg, target, profile).iter() {
-            self.build_requirements(pkg, dep, profile, req);
+        for (pkg, dep, profile) in self.dep_targets(pkg, target, kind, profile) {
+            self.build_requirements(pkg, dep, profile, kind.for_target(dep));
         }
 
         match pkg.targets().iter().find(|t| t.is_custom_build()) {
             Some(custom_build) => {
                 let profile = self.build_script_profile(pkg.package_id());
-                self.build_requirements(pkg, custom_build, profile,
-                                        Platform::Plugin);
+                self.build_requirements(pkg, custom_build, profile, Kind::Host);
             }
             None => {}
         }
@@ -339,7 +339,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, pkg: &Package, target: &Target,
+    pub fn dep_targets(&self, pkg: &Package, target: &Target, kind: Kind,
                        profile: &Profile)
                        -> Vec<(&'a Package, &'a Target, &'a Profile)> {
         if profile.doc {
@@ -365,6 +365,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                     target.is_example() ||
                                     profile.test;
 
+                // If this dependency is only available for certain platforms,
+                // make sure we're only enabling it for that platform.
+                let is_platform_same = match (d.only_for_platform(), kind) {
+                    (Some(ref platform), Kind::Host) => {
+                        *platform == self.config.rustc_info().host
+                    },
+                    (Some(ref platform), Kind::Target) => {
+                        *platform == self.target_triple
+                    },
+                    (None, _) => true
+                };
+
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
                 let activated = !d.is_optional() ||
@@ -372,7 +384,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                     f.contains(d.name())
                                 }).unwrap_or(false);
 
-                is_correct_dep && is_actual_dep && activated
+                is_correct_dep && is_actual_dep && is_platform_same && activated
             })
         }).filter_map(|pkg| {
             pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
@@ -508,14 +520,6 @@ impl Platform {
             (Platform::Target, Kind::Target) |
             (Platform::Plugin, Kind::Host) => true,
             _ => false,
-        }
-    }
-
-    pub fn each_kind<F>(self, mut f: F) where F: FnMut(Kind) {
-        match self {
-            Platform::Target => f(Kind::Target),
-            Platform::Plugin => f(Kind::Host),
-            Platform::PluginAndTarget => { f(Kind::Target); f(Kind::Host); }
         }
     }
 }
