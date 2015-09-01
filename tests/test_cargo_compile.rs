@@ -1828,6 +1828,24 @@ test!(ignore_dotfile {
                 execs().with_status(0));
 });
 
+test!(ignore_dotdirs {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/bin/a.rs", "fn main() {}")
+        .file(".git/Cargo.toml", "")
+        .file(".pc/dummy-fix.patch/Cargo.toml", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+});
+
+
 test!(custom_target_dir {
     let p = project("foo")
         .file("Cargo.toml", r#"
