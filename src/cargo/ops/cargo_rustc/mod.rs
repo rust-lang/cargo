@@ -605,7 +605,7 @@ fn build_base_args(cx: &Context,
         cmd.arg("--crate-type").arg(crate_type);
     }
 
-    let prefer_dynamic = target.for_host() ||
+    let prefer_dynamic = (target.for_host() && !target.is_custom_build()) ||
                          (crate_types.contains(&"dylib") &&
                           pkg.package_id() != cx.resolve.root());
     if prefer_dynamic {
