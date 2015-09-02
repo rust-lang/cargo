@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir};
-use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
+use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING};
 use support::paths::{self, CargoPathExt};
 use support::registry as r;
 use support::git;
@@ -476,6 +476,7 @@ test!(update_lockfile {
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
+{updating} bar v0.0.1 (registry file://[..]) -> v0.0.2
 ", updating = UPDATING)));
 
     println!("0.0.2 build");
@@ -492,6 +493,7 @@ test!(update_lockfile {
                  .arg("-p").arg("bar"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
+{updating} bar v0.0.2 (registry file://[..]) -> v0.0.3
 ", updating = UPDATING)));
 
     println!("0.0.3 build");
@@ -502,6 +504,27 @@ test!(update_lockfile {
 {compiling} foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url())));
+
+   println!("new dependencies update");
+   r::mock_pkg("bar", "0.0.4", &[("spam", "0.2.5", "")]);
+   r::mock_pkg("spam", "0.2.5", &[]);
+   assert_that(p.cargo("update")
+                .arg("-p").arg("bar"),
+               execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{updating} bar v0.0.3 (registry file://[..]) -> v0.0.4
+{adding} spam v0.2.5 (registry file://[..])
+", updating = UPDATING, adding = ADDING)));
+
+   println!("new dependencies update");
+   r::mock_pkg("bar", "0.0.5", &[]);
+   assert_that(p.cargo("update")
+                .arg("-p").arg("bar"),
+               execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{updating} bar v0.0.4 (registry file://[..]) -> v0.0.5
+{removing} spam v0.2.5 (registry file://[..])
+", updating = UPDATING, removing = REMOVING)));
 });
 
 test!(dev_dependency_not_used {
@@ -760,6 +783,7 @@ test!(update_transitive_dependency {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {updating} registry `[..]`
+{updating} b v0.1.0 (registry [..]) -> v0.1.1
 ", updating = UPDATING)));
 
     assert_that(p.cargo("build"),
