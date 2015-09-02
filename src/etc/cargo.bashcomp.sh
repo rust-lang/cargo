@@ -81,7 +81,7 @@ _cargo()
 } &&
 complete -F _cargo cargo
 
-__cargo_commands=$(cargo --list | tail -n +2)
+__cargo_commands=$(cargo --list 2>/dev/null | tail -n +2)
 
 _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
