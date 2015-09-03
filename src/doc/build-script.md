@@ -329,7 +329,7 @@ portable, and standardized. For example, the build script could be written as:
 extern crate gcc;
 
 fn main() {
-    gcc::compile_library("libhello.a", &["src/hello.c"]).unwrap();
+    gcc::compile_library("libhello.a", &["src/hello.c"]);
 }
 ```
 
