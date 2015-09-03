@@ -48,6 +48,48 @@ pub fn publish(manifest_path: &Path,
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
     try!(transmit(&pkg, &tarball, &mut registry));
 
+    // Git tag the package release
+    // should not error if fails though so not try?
+    try!(tag_package_release(manifest_path.parent().unwrap(), &pkg));
+
+    Ok(())
+}
+
+fn tag_package_release(package_root_path: &Path,
+                       package: &Package) -> CargoResult<()> {
+    let version_string = package.version().to_string();
+
+    if let Ok(repo) = git2::Repository::discover(package_root_path) {
+        // todo check if the root path of this repo is actually
+        // equal to package_root_path, else we might override
+        // some other packages version
+        // i.e. repo.workdir() == package_root_path
+
+        // This tags HEAD
+        // git tag -a -m "Version #{version}" #{version_tag}
+        let signature = try!(repo.signature());
+        let head = try!(repo.head());
+        if !head.is_branch() {
+            // throw a fit
+        }
+        let object = try!(repo.find_object(head.target().unwrap(), Some(git2::ObjectType::Commit)));
+        let message = format!("Version {}",  version_string);
+        try!(repo.tag(&version_string, &object, &signature, &message, false));
+
+        // This pushes to origin, would be nicer if we could just find
+        // the remote that git itself would pick
+        // git push
+        let mut remote = try!(repo.find_remote("origin"));
+
+        // would be nicer if git2 could generate the refspecs for us
+        // let current_branch = head.symbolic_target().unwrap();
+        // let refspec_branch = format!("{}:{}",current_branch, current_branch);
+        // let refspec_tags = format!("refs/tags/{}:refs/tags/{}", version_string, version_string);
+        // try!(remote.push([refspec_branch, refspec_tags]));
+        try!(remote.push());
+    } else {
+        // return error..
+    }
     Ok(())
 }
 
