@@ -7,7 +7,7 @@ use std::sync::Arc;
 use regex::Regex;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
-use core::{TargetKind, LibKind, Profiles, Metadata};
+use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
 use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
@@ -343,7 +343,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                        profile: &Profile)
                        -> Vec<(&'a Package, &'a Target, &'a Profile)> {
         if profile.doc {
-            return self.doc_deps(pkg, target);
+            return self.doc_deps(pkg, target, kind);
         }
         let deps = match self.resolve.deps(pkg.package_id()) {
             None => return Vec::new(),
@@ -367,15 +367,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
                 // If this dependency is only available for certain platforms,
                 // make sure we're only enabling it for that platform.
-                let is_platform_same = match (d.only_for_platform(), kind) {
-                    (Some(ref platform), Kind::Host) => {
-                        *platform == self.config.rustc_info().host
-                    },
-                    (Some(ref platform), Kind::Target) => {
-                        *platform == self.target_triple
-                    },
-                    (None, _) => true
-                };
+                let is_platform_same = self.dep_platform_activated(d, kind);
 
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
@@ -418,16 +410,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the dependencies necessary to document a package
-    fn doc_deps(&self, pkg: &Package, target: &Target)
+    fn doc_deps(&self, pkg: &Package, target: &Target, kind: Kind)
                 -> Vec<(&'a Package, &'a Target, &'a Profile)> {
         let pkg = self.get_package(pkg.package_id());
         let deps = self.resolve.deps(pkg.package_id()).into_iter();
         let deps = deps.flat_map(|a| a).map(|id| {
             self.get_package(id)
         }).filter(|dep| {
-            pkg.dependencies().iter().find(|d| {
+            let dep = pkg.dependencies().iter().find(|d| {
                 d.name() == dep.name()
-            }).unwrap().is_transitive()
+            }).unwrap();
+            dep.is_transitive() && self.dep_platform_activated(dep, kind)
         }).filter_map(|dep| {
             dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
         });
@@ -455,6 +448,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         return ret
+    }
+
+    fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
+        // If this dependency is only available for certain platforms,
+        // make sure we're only enabling it for that platform.
+        match (dep.only_for_platform(), kind) {
+            (Some(ref platform), Kind::Host) => {
+                *platform == self.config.rustc_info().host
+            },
+            (Some(ref platform), Kind::Target) => {
+                *platform == self.target_triple
+            },
+            (None, _) => true
+        }
     }
 
     /// Gets a package for the given package id.

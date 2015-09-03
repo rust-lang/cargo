@@ -289,3 +289,27 @@ test!(doc_target {
     assert_that(&p.root().join(&format!("target/{}/doc", TARGET)), existing_dir());
     assert_that(&p.root().join(&format!("target/{}/doc/foo/index.html", TARGET)), existing_file());
 });
+
+test!(target_specific_not_documented {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [target.foo.dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "not rust");
+
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+});
