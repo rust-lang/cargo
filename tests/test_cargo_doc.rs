@@ -313,3 +313,37 @@ test!(target_specific_not_documented {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
 });
+
+test!(target_specific_documented {
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [target.foo.dependencies]
+            a = {{ path = "a" }}
+            [target.{}.dependencies]
+            a = {{ path = "a" }}
+        "#, ::rustc_host()))
+        .file("src/lib.rs", "
+            extern crate a;
+
+            /// test
+            pub fn foo() {}
+        ")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "
+            /// test
+            pub fn foo() {}
+        ");
+
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+});
