@@ -417,10 +417,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let deps = deps.flat_map(|a| a).map(|id| {
             self.get_package(id)
         }).filter(|dep| {
-            let dep = pkg.dependencies().iter().find(|d| {
+            pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
-            }).unwrap();
-            dep.is_transitive() && self.dep_platform_activated(dep, kind)
+            }).any(|dep| {
+                dep.is_transitive() && self.dep_platform_activated(dep, kind)
+            })
         }).filter_map(|dep| {
             dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
         });
