@@ -84,9 +84,9 @@ fn tag_package_release(package_root_path: &Path,
         // would be nicer if git2 could generate the refspecs for us
         // let current_branch = head.symbolic_target().unwrap();
         // let refspec_branch = format!("{}:{}",current_branch, current_branch);
-        // let refspec_tags = format!("refs/tags/{}:refs/tags/{}", version_string, version_string);
-        // try!(remote.push([refspec_branch, refspec_tags]));
-        try!(remote.push());
+        let refspec_tags = format!("refs/tags/{}:refs/tags/{}", version_string, version_string);
+        try!(remote.push(&[],None));
+        try!(remote.push(&[&refspec_tags],None));
     } else {
         // return error..
     }
