@@ -28,13 +28,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Source, PackageSet, Package, Target, PackageId};
 use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
 use sources::{PathSource};
 use util::config::{ConfigValue, Config};
-use util::{CargoResult, internal, human, ChainError, profile};
+use util::{CargoResult, human, ChainError, profile};
 
 /// Contains informations about how a package should be compiled.
 pub struct CompileOptions<'a> {
@@ -123,7 +123,7 @@ pub fn compile_pkg<'a>(package: &Package,
         return Err(human("jobs must be at least 1"))
     }
 
-    let override_ids = try!(source_ids_from_config(config, package.root()));
+    let override_ids = try!(ops::source_ids_from_config(config, package.root()));
 
     let (packages, resolve_with_overrides, sources) = {
         let mut registry = PackageRegistry::new(config);
@@ -334,33 +334,6 @@ fn generate_targets<'a>(pkg: &'a Package,
             Ok(targets)
         }
     };
-}
-
-/// Read the `paths` configuration variable to discover all path overrides that
-/// have been configured.
-fn source_ids_from_config(config: &Config, cur_path: &Path)
-                          -> CargoResult<Vec<SourceId>> {
-
-    let configs = try!(config.values());
-    debug!("loaded config; configs={:?}", configs);
-    let config_paths = match configs.get("paths") {
-        Some(cfg) => cfg,
-        None => return Ok(Vec::new())
-    };
-    let paths = try!(config_paths.list().chain_error(|| {
-        internal("invalid configuration for the key `paths`")
-    }));
-
-    paths.iter().map(|&(ref s, ref p)| {
-        // The path listed next to the string is the config file in which the
-        // key was located, so we want to pop off the `.cargo/config` component
-        // to get the directory containing the `.cargo` folder.
-        p.parent().unwrap().parent().unwrap().join(s)
-    }).filter(|p| {
-        // Make sure we don't override the local package, even if it's in the
-        // list of override paths.
-        cur_path != &**p
-    }).map(|p| SourceId::for_path(&p)).collect()
 }
 
 /// Parse all config files to learn about build configuration. Currently
