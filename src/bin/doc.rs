@@ -12,6 +12,7 @@ struct Options {
     flag_no_deps: bool,
     flag_open: bool,
     flag_verbose: bool,
+    flag_release: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
     flag_package: Option<String>,
@@ -29,6 +30,7 @@ Options:
     -p SPEC, --package SPEC  Package to document
     --no-deps                Don't build documentation for dependencies
     -j N, --jobs N           The number of jobs to run in parallel
+    --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
     --target TRIPLE          Build for the target triple
@@ -63,7 +65,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             spec: options.flag_package.as_ref().map(|s| &s[..]),
             exec_engine: None,
             filter: ops::CompileFilter::Everything,
-            release: false,
+            release: options.flag_release,
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
             },
