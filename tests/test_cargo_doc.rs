@@ -348,6 +348,37 @@ test!(target_specific_documented {
                 execs().with_status(0));
 });
 
+test!(no_document_build_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [build-dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "
+            pub fn foo() {}
+        ")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "
+            /// ```
+            /// ☃
+            /// ```
+            pub fn foo() {}
+        ");
+
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+});
+
 test!(doc_release {
     let p = project("foo")
         .file("Cargo.toml", r#"
