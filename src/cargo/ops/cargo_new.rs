@@ -118,7 +118,7 @@ fn mk(config: &Config, path: &Path, name: &str,
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
         (None, None, false) => VersionControl::Git,
         (None, Some(option), false) => option,
-        (Some(option), _, false) => option,
+        (Some(option), _, _) => option,
         (_, _, true) => VersionControl::NoVcs,
     };
 
