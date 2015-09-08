@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles};
-use util::{self, CargoResult, human, caused_human};
+use util::{self, CargoResult, human};
 use util::{Config, internal, ChainError, Fresh, profile, join_paths};
 
 use self::job::{Job, Work};
@@ -533,31 +533,15 @@ fn rustdoc(package: &Package, target: &Target, profile: &Profile,
 
     trace!("commands={}", rustdoc);
 
-    let primary = package.package_id() == cx.resolve.root();
     let name = package.name().to_string();
     let desc = rustdoc.to_string();
     let exec_engine = cx.exec_engine.clone();
 
     Ok(Work::new(move |desc_tx| {
         desc_tx.send(desc).unwrap();
-        if primary {
-            try!(exec_engine.exec(rustdoc).chain_error(|| {
-                human(format!("Could not document `{}`.", name))
-            }))
-        } else {
-            try!(exec_engine.exec_with_output(rustdoc).and(Ok(())).map_err(|err| {
-                match err.exit {
-                    Some(..) => {
-                        caused_human(format!("Could not document `{}`.",
-                                             name), err)
-                    }
-                    None => {
-                        caused_human("Failed to run rustdoc", err)
-                    }
-                }
-            }))
-        }
-        Ok(())
+        exec_engine.exec(rustdoc).chain_error(|| {
+            human(format!("Could not document `{}`.", name))
+        })
     }))
 }
 
