@@ -49,6 +49,8 @@ test!(simple {
         "#)
         .file("src/main.rs", "fn main() {}");
 
+    repo(p.root().as_path());
+
     assert_that(p.cargo_process("publish").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `{reg}`
