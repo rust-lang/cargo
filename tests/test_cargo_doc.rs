@@ -1,5 +1,5 @@
 use support::{project, execs, path2url};
-use support::COMPILING;
+use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -346,4 +346,24 @@ test!(target_specific_documented {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
+});
+
+test!(doc_release {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--release"),
+                execs().with_status(0));
+    assert_that(p.cargo("doc").arg("--release").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} foo v0.0.1 ([..])
+{running} `rustdoc src[..]lib.rs [..]`
+", compiling = COMPILING, running = RUNNING)));
 });
