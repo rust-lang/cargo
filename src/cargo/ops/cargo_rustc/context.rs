@@ -8,6 +8,7 @@ use regex::Regex;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
+use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
@@ -420,7 +421,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {
-                dep.is_transitive() && self.dep_platform_activated(dep, kind)
+                match dep.kind() {
+                    DepKind::Normal => self.dep_platform_activated(dep, kind),
+                    _ => false,
+                }
             })
         }).filter_map(|dep| {
             dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
