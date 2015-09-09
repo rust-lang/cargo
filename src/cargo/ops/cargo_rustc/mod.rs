@@ -525,6 +525,10 @@ fn rustdoc(package: &Package, target: &Target, profile: &Profile,
         None => {}
     }
 
+    if let Some(ref args) = profile.rustdoc_args {
+        rustdoc.args(args);
+    }
+
     try!(build_deps_args(&mut rustdoc, target, profile, package, cx, kind));
 
     if package.has_custom_build() {
@@ -573,9 +577,9 @@ fn build_base_args(cx: &Context,
                    profile: &Profile,
                    crate_types: &[&str]) {
     let Profile {
-        opt_level, lto, codegen_units, ref rustc_args, debuginfo, debug_assertions,
-        rpath, test, doc: _doc,
-    } = *profile;
+        opt_level, lto, codegen_units, ref rustc_args,
+        rustdoc_args: _, debuginfo, debug_assertions, rpath,
+        test, doc: _doc } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
     cmd.cwd(cx.config.cwd());

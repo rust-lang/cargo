@@ -4,6 +4,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
 struct Options {
+    arg_opts: Option<Vec<String>>,
     flag_target: Option<String>,
     flag_features: Vec<String>,
     flag_jobs: Option<u32>,
@@ -22,7 +23,7 @@ pub const USAGE: &'static str = "
 Build a package's documentation
 
 Usage:
-    cargo doc [options]
+    cargo rustdoc [options] [--] [<opts>...]
 
 Options:
     -h, --help               Print this message
@@ -41,6 +42,9 @@ Options:
 
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
+
+The specified <opts>... will all be passed to rustdoc for the main package and
+all of its dependencies.
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be documented. If it is not given, then the
@@ -69,8 +73,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
             },
+            extra_rustdoc_args: options.arg_opts.as_ref().map(|a| &a[..]),
             target_rustc_args: None,
-            extra_rustdoc_args: None,
         },
     };
 
