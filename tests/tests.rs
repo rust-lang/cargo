@@ -50,6 +50,7 @@ mod test_cargo_freshness;
 mod test_cargo_generate_lockfile;
 mod test_cargo_new;
 mod test_cargo_package;
+mod test_cargo_print_source_root;
 mod test_cargo_profiles;
 mod test_cargo_publish;
 mod test_cargo_read_manifest;

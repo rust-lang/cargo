@@ -158,6 +158,22 @@ test!(pkgid_dir_to_nonexistent_cargo_toml {
     assert_cargo_toml_doesnt_exist("pkgid", "foo/bar/baz/Cargo.toml");
 });
 
+test!(print_source_root_dir_containing_cargo_toml {
+    assert_not_a_cargo_toml("print-source-root", "foo");
+});
+
+test!(print_source_root_dir_plus_file {
+    assert_not_a_cargo_toml("print-source-root", "foo/bar");
+});
+
+test!(print_source_root_dir_plus_path {
+    assert_not_a_cargo_toml("print-source-root", "foo/bar/baz");
+});
+
+test!(print_source_root_dir_to_nonexistent_cargo_toml {
+    assert_cargo_toml_doesnt_exist("print-source-root", "foo/bar/baz/Cargo.toml");
+});
+
 test!(publish_dir_containing_cargo_toml {
     assert_not_a_cargo_toml("publish", "foo");
 });
