@@ -81,6 +81,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(read_manifest);
     $mac!(run);
     $mac!(rustc);
+    $mac!(rustdoc);
     $mac!(search);
     $mac!(test);
     $mac!(uninstall);

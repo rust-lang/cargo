@@ -395,6 +395,10 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
     }
 
+    if let Some(ref args) = profile.rustdoc_args {
+        rustdoc.args(args);
+    }
+
     try!(build_deps_args(&mut rustdoc, cx, unit));
 
     if unit.pkg.has_custom_build() {
@@ -448,6 +452,7 @@ fn build_base_args(cx: &Context,
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
+        rustdoc_args: _,
     } = *unit.profile;
     assert!(!run_custom_build);
 

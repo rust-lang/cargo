@@ -57,6 +57,8 @@ pub struct CompileOptions<'a> {
     pub release: bool,
     /// Mode for this compile.
     pub mode: CompileMode,
+    /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
+    pub extra_rustdoc_args: Vec<String>,
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<&'a [String]>,
@@ -145,6 +147,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
     let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
                          ref filter, ref exec_engine,
+                         ref extra_rustdoc_args,
                          ref target_rustc_args } = *options;
 
     let target = target.map(|s| s.to_string());
@@ -223,6 +226,24 @@ pub fn compile_pkg<'a>(root_package: &Package,
     }
 
     let mut ret = {
+    let mut target_with_rustdoc = None;
+    if !extra_rustdoc_args.is_empty() {
+        let mut target_with_rustdoc_inner = Vec::new();
+        for &(target, profile) in &targets {
+            if profile.doc {
+                let mut profile = profile.clone();
+                profile.rustdoc_args = Some(extra_rustdoc_args.clone());
+                target_with_rustdoc_inner.push((target, profile));
+            }
+        }
+        target_with_rustdoc = Some(target_with_rustdoc_inner);
+    };
+
+    let targets = target_with_rustdoc.as_ref().map_or(targets,
+                                             |o| o.into_iter()
+                                                  .map(|&(t, ref p)| (t, p))
+                                                  .collect());
+    let ret = {
         let _p = profile::start("compiling");
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();
