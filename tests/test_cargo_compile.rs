@@ -1508,7 +1508,7 @@ test!(cargo_platform_specific_dependency {
                 execs().with_status(0));
 
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
 });
 
