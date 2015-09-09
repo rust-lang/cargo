@@ -4,6 +4,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
 struct Options {
+    arg_opts: Vec<String>,
     flag_target: Option<String>,
     flag_features: Vec<String>,
     flag_jobs: Option<u32>,
@@ -15,32 +16,39 @@ struct Options {
     flag_release: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
-    flag_package: Vec<String>,
+    flag_package: Option<String>,
 }
 
 pub const USAGE: &'static str = "
-Build a package's documentation
+Build a package's documentation, using specified custom flags.
 
 Usage:
-    cargo doc [options]
+    cargo rustdoc [options] [--] [<opts>...]
 
 Options:
-    -h, --help                   Print this message
-    --open                       Opens the docs in a browser after the operation
-    -p SPEC, --package SPEC ...  Package to document
-    --no-deps                    Don't build documentation for dependencies
-    -j N, --jobs N               The number of jobs to run in parallel
-    --release                    Build artifacts in release mode, with optimizations
-    --features FEATURES          Space-separated list of features to also build
-    --no-default-features        Do not build the `default` feature
-    --target TRIPLE              Build for the target triple
-    --manifest-path PATH         Path to the manifest to document
-    -v, --verbose                Use verbose output
-    -q, --quiet                  No output printed to stdout
-    --color WHEN                 Coloring: auto, always, never
+    -h, --help               Print this message
+    --open                   Opens the docs in a browser after the operation
+    -p SPEC, --package SPEC  Package to document
+    --no-deps                Don't build documentation for dependencies
+    -j N, --jobs N           The number of jobs to run in parallel
+    --release                Build artifacts in release mode, with optimizations
+    --features FEATURES      Space-separated list of features to also build
+    --no-default-features    Do not build the `default` feature
+    --target TRIPLE          Build for the target triple
+    --manifest-path PATH     Path to the manifest to document
+    -v, --verbose            Use verbose output
+    -q, --quiet              No output printed to stdout
+    --color WHEN             Coloring: auto, always, never
 
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
+
+The specified target for the current package (or package specified by SPEC if
+provided) will be documented along with all of its dependencies. The specified
+<opts>... will all be passed to the final rustdoc invocation, not any of the
+dependencies. Note that rustdoc will still unconditionally receive
+arguments such as -L, --extern, and --crate-type, and the specified <opts>...
+will simply be added to the rustdoc invocation.
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be documented. If it is not given, then the
@@ -62,21 +70,19 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: &options.flag_package,
+            spec: options.flag_package.as_ref().map(|s| &s[..]),
             exec_engine: None,
             filter: ops::CompileFilter::Everything,
             release: options.flag_release,
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
             },
+            extra_rustdoc_args: options.arg_opts,
             target_rustc_args: None,
-            extra_rustdoc_args: Vec::new(),
         },
     };
 
-    try!(ops::doc(&root, &mut doc_opts).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    }));
+    try!(ops::doc(&root, &mut doc_opts).map_err(|err| CliError::from_boxed(err, 101)));
 
     Ok(None)
 }

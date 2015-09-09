@@ -941,6 +941,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             lto: lto.unwrap_or(profile.lto),
             codegen_units: codegen_units,
             rustc_args: None,
+            rustdoc_args: None,
             debuginfo: debug.unwrap_or(profile.debuginfo),
             debug_assertions: debug_assertions.unwrap_or(profile.debug_assertions),
             rpath: rpath.unwrap_or(profile.rpath),

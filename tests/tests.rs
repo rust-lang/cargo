@@ -57,6 +57,7 @@ mod test_cargo_read_manifest;
 mod test_cargo_registry;
 mod test_cargo_run;
 mod test_cargo_rustc;
+mod test_cargo_rustdoc;
 mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_tool_paths;
