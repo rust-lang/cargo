@@ -1,3 +1,5 @@
+use std::str;
+
 use support::{project, execs, path2url};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
@@ -312,6 +314,38 @@ test!(target_specific_not_documented {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
+});
+
+test!(output_not_captured {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "
+            /// ```
+            /// ☃
+            /// ```
+            pub fn foo() {}
+        ");
+
+    let output = p.cargo_process("doc").exec_with_output().err().unwrap()
+                                                          .output.unwrap();
+    let stderr = str::from_utf8(&output.stderr).unwrap();
+    assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
+    assert!(stderr.contains("unknown start of token"), "no message\n{}", stderr);
 });
 
 test!(target_specific_documented {
