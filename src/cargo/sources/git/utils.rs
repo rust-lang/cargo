@@ -1,6 +1,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::fs;
+use std::fs::{self, File};
 
 use rustc_serialize::{Encodable, Encoder};
 use url::Url;
@@ -267,7 +267,10 @@ impl<'a> GitCheckout<'a> {
 
     fn is_fresh(&self) -> bool {
         match self.repo.revparse_single("HEAD") {
-            Ok(head) => head.id().to_string() == self.revision.to_string(),
+            Ok(ref head) if head.id() == self.revision.0 => {
+                // See comments in reset() for why we check this
+                fs::metadata(self.location.join(".cargo-ok")).is_ok()
+            }
             _ => false,
         }
     }
@@ -282,9 +285,20 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn reset(&self) -> CargoResult<()> {
+        // If we're interrupted while performing this reset (e.g. we die because
+        // of a signal) Cargo needs to be sure to try to check out this repo
+        // again on the next go-round.
+        //
+        // To enable this we have a dummy file in our checkout, .cargo-ok, which
+        // if present means that the repo has been successfully reset and is
+        // ready to go. Hence if we start to do a reset, we make sure this file
+        // *doesn't* exist, and then once we're done we create the file.
+        let ok_file = self.location.join(".cargo-ok");
+        let _ = fs::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
         let object = try!(self.repo.find_object(self.revision.0, None));
         try!(self.repo.reset(&object, git2::ResetType::Hard, None));
+        try!(File::create(ok_file));
         Ok(())
     }
 
