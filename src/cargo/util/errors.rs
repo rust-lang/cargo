@@ -132,6 +132,50 @@ impl fmt::Debug for ProcessError {
 }
 
 // =============================================================================
+// Cargo test errors.
+
+/// Error when testcases fail
+pub struct CargoTestError {
+    pub desc: String,
+    pub exit: Option<ExitStatus>,
+    cause: Option<io::Error>,
+}
+
+impl fmt::Display for CargoTestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.desc, f)
+    }
+}
+
+impl fmt::Debug for CargoTestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+impl Error for CargoTestError {
+    fn description(&self) -> &str { &self.desc }
+    #[allow(trivial_casts)]
+    fn cause(&self) -> Option<&Error> {
+        self.cause.as_ref().map(|s| s as &Error)
+    }
+}
+
+#[allow(deprecated)] // connect => join in 1.3
+impl<'a> From<&'a [ProcessError]> for CargoTestError {
+    fn from(errors: &[ProcessError]) -> Self {
+        if errors.len() == 0 { panic!("Cannot create CargoTestError from empty Vec") }
+        let desc = errors.iter().map(|error| error.desc.clone()).collect::<Vec<String>>().connect("\n");
+        CargoTestError {
+            desc: desc,
+            exit: errors[0].exit,
+            cause: None,
+        }
+    }
+}
+
+
+// =============================================================================
 // Concrete errors
 
 struct ConcreteCargoError {
@@ -274,6 +318,7 @@ impl CargoError for git2::Error {}
 impl CargoError for json::DecoderError {}
 impl CargoError for curl::ErrCode {}
 impl CargoError for ProcessError {}
+impl CargoError for CargoTestError {}
 impl CargoError for CliError {}
 impl CargoError for toml::Error {}
 impl CargoError for toml::DecodeError {}

@@ -2,7 +2,7 @@ pub use self::config::Config;
 pub use self::dependency_queue::Dependency;
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
 pub use self::errors::{CargoResult, CargoError, ChainError, CliResult};
-pub use self::errors::{CliError, ProcessError};
+pub use self::errors::{CliError, ProcessError, CargoTestError};
 pub use self::errors::{Human, caused_human};
 pub use self::errors::{process_error, internal_error, internal, human};
 pub use self::graph::Graph;
