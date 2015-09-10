@@ -10,7 +10,7 @@ use url::Url;
 use support::{project, execs};
 use support::{UPDATING, PACKAGING, UPLOADING};
 use support::paths;
-use support::git::repo;
+use support::git::{repo};
 
 use hamcrest::assert_that;
 
@@ -49,9 +49,10 @@ test!(simple {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    repo(p.root().as_path());
+    p.build();
+    repo(p.root().as_path()).build();
 
-    assert_that(p.cargo_process("publish").arg("--no-verify"),
+    assert_that(p.cargo("publish").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `{reg}`
 {packaging} foo v0.0.1 ({dir})

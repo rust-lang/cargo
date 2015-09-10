@@ -50,13 +50,14 @@ pub fn publish(manifest_path: &Path,
 
     // Git tag the package release
     // should not error if fails though so not try?
-    try!(tag_package_release(manifest_path.parent().unwrap(), &pkg));
+    try!(tag_package_release(manifest_path.parent().unwrap(), &pkg, config));
 
     Ok(())
 }
 
 fn tag_package_release(package_root_path: &Path,
-                       package: &Package) -> CargoResult<()> {
+                       package: &Package,
+                       config: &Config,) -> CargoResult<()> {
     let version_string = package.version().to_string();
 
     if let Ok(repo) = git2::Repository::discover(package_root_path) {
@@ -69,7 +70,9 @@ fn tag_package_release(package_root_path: &Path,
         // git tag -a -m "Version #{version}" #{version_tag}
         let signature = try!(repo.signature());
         let head = try!(repo.head());
+
         if !head.is_branch() {
+            println!("On a branch!");
             // throw a fit
         }
         let object = try!(repo.find_object(head.target().unwrap(), Some(git2::ObjectType::Commit)));
@@ -79,16 +82,22 @@ fn tag_package_release(package_root_path: &Path,
         // This pushes to origin, would be nicer if we could just find
         // the remote that git itself would pick
         // git push
-        let mut remote = try!(repo.find_remote("origin"));
+        match repo.find_remote("origin") {
+            Err(_) => try!(config.shell().warn("No git remote configured.")),
+            Ok(mut remote) => {
+                // would be nicer if git2 could generate the refspecs for us
+                // let current_branch = head.symbolic_target().unwrap();
+                // let refspec_branch = format!("{}:{}",current_branch, current_branch);
+                let refspec_tags = format!("refs/tags/{}:refs/tags/{}", version_string, version_string);
+                if let Err(e) = remote.push(&[],None).and_then(|_| remote.push(&[&refspec_tags],None) ) {
+                    try!(config.shell().warn(
+                        &format!("warning: Failed to push git tags with message {}.", e)));
+                }
+            }
+        };
 
-        // would be nicer if git2 could generate the refspecs for us
-        // let current_branch = head.symbolic_target().unwrap();
-        // let refspec_branch = format!("{}:{}",current_branch, current_branch);
-        let refspec_tags = format!("refs/tags/{}:refs/tags/{}", version_string, version_string);
-        try!(remote.push(&[],None));
-        try!(remote.push(&[&refspec_tags],None));
     } else {
-        // return error..
+        try!(config.shell().warn("warning: Not in a git repository."));
     }
     Ok(())
 }
