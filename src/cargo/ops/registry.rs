@@ -39,6 +39,9 @@ pub fn publish(manifest_path: &Path,
     let (mut registry, reg_id) = try!(registry(config, token, index));
     try!(verify_dependencies(&pkg, &reg_id));
 
+    // Tag the package release in the version control system
+    try!(tag_package_release(manifest_path.parent().unwrap(), &pkg, config));
+
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
     let tarball = try!(ops::package(manifest_path, config, verify,
@@ -47,10 +50,6 @@ pub fn publish(manifest_path: &Path,
     // Upload said tarball to the specified destination
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
     try!(transmit(&pkg, &tarball, &mut registry));
-
-    // Git tag the package release
-    // should not error if fails though so not try?
-    try!(tag_package_release(manifest_path.parent().unwrap(), &pkg, config));
 
     Ok(())
 }
@@ -61,20 +60,24 @@ fn tag_package_release(package_root_path: &Path,
     let version_string = package.version().to_string();
 
     if let Ok(repo) = git2::Repository::discover(package_root_path) {
-        // todo check if the root path of this repo is actually
-        // equal to package_root_path, else we might override
-        // some other packages version
-        // i.e. repo.workdir() == package_root_path
+        if repo.workdir().unwrap() != package_root_path {
+            return Ok(());
+        }
 
-        // This tags HEAD
         // git tag -a -m "Version #{version}" #{version_tag}
         let signature = try!(repo.signature());
         let head = try!(repo.head());
 
-        if !head.is_branch() {
-            println!("On a branch!");
-            // throw a fit
+        // Check status of workdir for unpushed/uncommited changes
+        let statuses = try!(repo.statuses(None));
+        if statuses.iter().any(|e| !e.status().contains(git2::STATUS_CURRENT)) {
+            return Err(human("Uncommitted or unpushed changes in working directory."));
         }
+
+        if !head.is_branch() {
+            return Err(human("No branch is currently checked out."));
+        }
+
         let object = try!(repo.find_object(head.target().unwrap(), Some(git2::ObjectType::Commit)));
         let message = format!("Version {}",  version_string);
         try!(repo.tag(&version_string, &object, &signature, &message, false));
@@ -96,8 +99,6 @@ fn tag_package_release(package_root_path: &Path,
             }
         };
 
-    } else {
-        try!(config.shell().warn("warning: Not in a git repository."));
     }
     Ok(())
 }
