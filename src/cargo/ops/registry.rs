@@ -82,7 +82,7 @@ fn tag_package_release(package_root_path: &Path,
         let message = format!("Version {}",  version_string);
         try!(repo.tag(&version_string, &object, &signature, &message, false));
 
-        let branch = try!(git2::Branch::wrap(head));
+        let branch = git2::Branch::wrap(head);
         let branch_name = try!(branch.name()).unwrap();
         let remote_config = format!("branch.{}.remote", branch_name);
 
