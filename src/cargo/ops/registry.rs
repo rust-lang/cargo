@@ -64,7 +64,6 @@ fn tag_package_release(package_root_path: &Path,
             return Ok(());
         }
 
-        // git tag -a -m "Version #{version}" #{version_tag}
         let signature = try!(repo.signature());
         let head = try!(repo.head());
 
@@ -78,19 +77,21 @@ fn tag_package_release(package_root_path: &Path,
             return Err(human("No branch is currently checked out."));
         }
 
+        // git tag -a -m "Version #{version}" #{version_tag}
         let object = try!(repo.find_object(head.target().unwrap(), Some(git2::ObjectType::Commit)));
         let message = format!("Version {}",  version_string);
         try!(repo.tag(&version_string, &object, &signature, &message, false));
 
-        // This pushes to origin, would be nicer if we could just find
-        // the remote that git itself would pick
-        // git push
-        match repo.find_remote("origin") {
-            Err(_) => try!(config.shell().warn("No git remote configured.")),
-            Ok(mut remote) => {
-                // would be nicer if git2 could generate the refspecs for us
-                // let current_branch = head.symbolic_target().unwrap();
-                // let refspec_branch = format!("{}:{}",current_branch, current_branch);
+        let branch = try!(git2::Branch::wrap(head));
+        let branch_name = try!(branch.name()).unwrap();
+        let remote_config = format!("branch.{}.remote", branch_name);
+
+        // git push && git push --tags
+        match repo.config().unwrap().get_str(&remote_config) {
+            Err(_) => try!(config.shell().warn(format!("No git remote configured. (Branch: {})", branch_name))),
+            Ok(remote_name) => {
+                let mut remote = try!(repo.find_remote(remote_name));
+
                 let refspec_tags = format!("refs/tags/{}:refs/tags/{}", version_string, version_string);
                 if let Err(e) = remote.push(&[],None).and_then(|_| remote.push(&[&refspec_tags],None) ) {
                     try!(config.shell().warn(
