@@ -28,25 +28,25 @@ pub const USAGE: &'static str = "
 Compile a local package and all of its dependencies
 
 Usage:
-    cargo build [options] [-p SPEC --package SPEC]...
+    cargo build [options]
 
 Options:
-    -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to build
-    -j N, --jobs N           The number of jobs to run in parallel
-    --lib                    Build only this package's library
-    --bin NAME               Build only the specified binary
-    --example NAME           Build only the specified example
-    --test NAME              Build only the specified test target
-    --bench NAME             Build only the specified benchmark target
-    --release                Build artifacts in release mode, with optimizations
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --manifest-path PATH     Path to the manifest to compile
-    -v, --verbose            Use verbose output
-    -q, --quiet              No output printed to stdout
-    --color WHEN             Coloring: auto, always, never
+    -h, --help                   Print this message
+    -p SPEC, --package SPEC ...  Package to build
+    -j N, --jobs N               The number of jobs to run in parallel
+    --lib                        Build only this package's library
+    --bin NAME                   Build only the specified binary
+    --example NAME               Build only the specified example
+    --test NAME                  Build only the specified test target
+    --bench NAME                 Build only the specified benchmark target
+    --release                    Build artifacts in release mode, with optimizations
+    --features FEATURES          Space-separated list of features to also build
+    --no-default-features        Do not build the `default` feature
+    --target TRIPLE              Build for the target triple
+    --manifest-path PATH         Path to the manifest to compile
+    -v, --verbose                Use verbose output
+    -q, --quiet                  No output printed to stdout
+    --color WHEN                 Coloring: auto, always, never
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the

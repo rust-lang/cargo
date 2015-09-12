@@ -54,6 +54,7 @@ pub struct TargetConfig {
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
+#[allow(deprecated)] // connect => join in 1.3
 pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
                                                            Vec<(&Target,
                                                                 &'a Profile)>)],
@@ -66,7 +67,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
                                      -> CargoResult<Compilation<'cfg>> {
 
     debug!("compile_targets: {}", pkg_targets.iter().map(|&(ref p, _)| p.name())
-                                                    .collect::<Vec<_>>().join(", "));
+                                                    .collect::<Vec<_>>().connect(", "));
 
     try!(links::validate(deps));
 

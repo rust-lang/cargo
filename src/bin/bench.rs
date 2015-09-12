@@ -26,25 +26,25 @@ pub const USAGE: &'static str = "
 Execute all benchmarks of a local package
 
 Usage:
-    cargo bench [options] [-p SPEC --package SPEC]... [--] [<args>...]
+    cargo bench [options] [--] [<args>...]
 
 Options:
-    -h, --help               Print this message
-    --lib                    Benchmark only this package's library
-    --bin NAME               Benchmark only the specified binary
-    --example NAME           Benchmark only the specified example
-    --test NAME              Benchmark only the specified test target
-    --bench NAME             Benchmark only the specified bench target
-    --no-run                 Compile, but don't run benchmarks
-    -p SPEC, --package SPEC  Package to run benchmarks for
-    -j N, --jobs N           The number of jobs to run in parallel
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --manifest-path PATH     Path to the manifest to build benchmarks for
-    -v, --verbose            Use verbose output
-    -q, --quiet              No output printed to stdout
-    --color WHEN             Coloring: auto, always, never
+    -h, --help                   Print this message
+    --lib                        Benchmark only this package's library
+    --bin NAME                   Benchmark only the specified binary
+    --example NAME               Benchmark only the specified example
+    --test NAME                  Benchmark only the specified test target
+    --bench NAME                 Benchmark only the specified bench target
+    --no-run                     Compile, but don't run benchmarks
+    -p SPEC, --package SPEC ...  Package to run benchmarks for
+    -j N, --jobs N               The number of jobs to run in parallel
+    --features FEATURES          Space-separated list of features to also build
+    --no-default-features        Do not build the `default` feature
+    --target TRIPLE              Build for the target triple
+    --manifest-path PATH         Path to the manifest to build benchmarks for
+    -v, --verbose                Use verbose output
+    -q, --quiet                  No output printed to stdout
+    --color WHEN                 Coloring: auto, always, never
 
 All of the trailing arguments are passed to the benchmark binaries generated
 for filtering benchmarks and generally providing options configuring how they

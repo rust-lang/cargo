@@ -62,7 +62,10 @@ fn compile_tests<'a>(manifest_path: &Path,
                      options: &TestOptions<'a>)
                      -> CargoResult<Compilation<'a>> {
     let mut compilation = try!(ops::compile(manifest_path, &options.compile_opts));
-    compilation.tests.sort();
+    compilation.tests.iter_mut()
+                     .map(|&mut (_, ref mut tests)|
+                          tests.sort_by(|&(ref n1, _), &(ref n2, _)| n1.cmp(n2)))
+                     .collect::<Vec<_>>();
     Ok(compilation)
 }
 
@@ -76,24 +79,26 @@ fn run_unit_tests(options: &TestOptions,
 
     let mut errors = Vec::new();
 
-    for &(_, ref exe) in &compilation.tests {
-        let to_display = match util::without_prefix(exe, &cwd) {
-            Some(path) => path,
-            None => &**exe,
-        };
-        let mut cmd = try!(compilation.target_process(exe, &compilation.package));
-        cmd.args(test_args);
-        try!(config.shell().concise(|shell| {
-            shell.status("Running", to_display.display().to_string())
-        }));
-        try!(config.shell().verbose(|shell| {
-            shell.status("Running", cmd.to_string())
-        }));
+    for &(ref pkg, ref tests) in &compilation.tests {
+        for &(_, ref exe) in tests {
+            let to_display = match util::without_prefix(exe, &cwd) {
+                Some(path) => path,
+                None => &**exe,
+            };
+            let mut cmd = try!(compilation.target_process(exe, pkg));
+            cmd.args(test_args);
+            try!(config.shell().concise(|shell| {
+                shell.status("Running", to_display.display().to_string())
+            }));
+            try!(config.shell().verbose(|shell| {
+                shell.status("Running", cmd.to_string())
+            }));
 
-        if let Err(e) = ExecEngine::exec(&mut ProcessEngine, cmd) {
-            errors.push(e);
-            if !options.no_fail_fast {
-                break
+            if let Err(e) = ExecEngine::exec(&mut ProcessEngine, cmd) {
+                errors.push(e);
+                if !options.no_fail_fast {
+                    break
+                }
             }
         }
     }
@@ -107,15 +112,20 @@ fn run_doc_tests(options: &TestOptions,
                  -> CargoResult<Vec<ProcessError>> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
-    let libs = compilation.package.targets().iter()
-                    .filter(|t| t.doctested())
-                    .map(|t| (t.src_path(), t.name(), t.crate_name()));
-    for (lib, name, crate_name) in libs {
+
+    let mut libs = vec![];
+    for package in compilation.to_doc_test.iter() {
+        libs.extend(package.targets().iter()
+                      .filter(|t| t.doctested())
+                      .map(|t| (package, t.src_path(), t.name(), t.crate_name())));
+    }
+
+    for (package, lib, name, crate_name) in libs {
         try!(config.shell().status("Doc-tests", name));
-        let mut p = try!(compilation.rustdoc_process(&compilation.package));
+        let mut p = try!(compilation.rustdoc_process(package));
         p.arg("--test").arg(lib)
          .arg("--crate-name").arg(&crate_name)
-         .cwd(compilation.package.root());
+         .cwd(package.root());
 
         for &rust_dep in &[&compilation.deps_output, &compilation.root_output] {
             let mut arg = OsString::from("dependency=");
@@ -168,45 +178,4 @@ fn run_doc_tests(options: &TestOptions,
         }
     }
     Ok(errors)
-}
-
-fn build_and_run<'a>(manifest_path: &Path,
-                     options: &TestOptions<'a>,
-                     test_args: &[String])
-                     -> CargoResult<Result<Compilation<'a>, ProcessError>> {
-    let config = options.compile_opts.config;
-    let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
-                                               config));
-    try!(source.update());
-
-    let mut compile = try!(ops::compile(manifest_path, &options.compile_opts));
-    if options.no_run { return Ok(Ok(compile)) }
-    compile.tests.iter_mut()
-                 .map(|&mut (_, ref mut tests)|
-                      tests.sort_by(|&(ref n1, _), &(ref n2, _)| n1.cmp(n2)))
-                 .collect::<Vec<_>>();
-
-    let cwd = config.cwd();
-    for &(ref pkg, ref tests) in &compile.tests {
-        for &(_, ref exe) in tests {
-            let to_display = match util::without_prefix(exe, &cwd) {
-                Some(path) => path,
-                None => &**exe,
-            };
-            let mut cmd = try!(compile.target_process(exe, pkg));
-            cmd.args(test_args);
-            try!(config.shell().concise(|shell| {
-                shell.status("Running", to_display.display().to_string())
-            }));
-            try!(config.shell().verbose(|shell| {
-                shell.status("Running", cmd.to_string())
-            }));
-            match ExecEngine::exec(&mut ProcessEngine, cmd) {
-                Ok(()) => {}
-                Err(e) => return Ok(Err(e))
-            }
-        }
-    }
-
-    Ok(Ok(compile))
 }
