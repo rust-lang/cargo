@@ -55,7 +55,6 @@ impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
 }
 
 impl<T, E: CargoError + 'static> ChainError<T> for Result<T, E> {
-    #[allow(trivial_casts)]
     fn chain_error<E2: 'static, C>(self, callback: C) -> CargoResult<T>
                          where E2: CargoError, C: FnOnce() -> E2 {
         self.map_err(move |err| {
@@ -114,7 +113,6 @@ pub struct ProcessError {
 
 impl Error for ProcessError {
     fn description(&self) -> &str { &self.desc }
-    #[allow(trivial_casts)]
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|s| s as &Error)
     }
@@ -138,7 +136,24 @@ impl fmt::Debug for ProcessError {
 pub struct CargoTestError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
-    cause: Option<io::Error>,
+    pub causes: Vec<ProcessError>,
+}
+
+impl CargoTestError {
+    #[allow(deprecated)] // connect => join in 1.3
+    pub fn new(errors: Vec<ProcessError>) -> Self {
+        if errors.len() == 0 {
+            panic!("Cannot create CargoTestError from empty Vec")
+        }
+        let desc = errors.iter().map(|error| error.desc.clone())
+                                .collect::<Vec<String>>()
+                                .connect("\n");
+        CargoTestError {
+            desc: desc,
+            exit: errors[0].exit,
+            causes: errors,
+        }
+    }
 }
 
 impl fmt::Display for CargoTestError {
@@ -155,22 +170,8 @@ impl fmt::Debug for CargoTestError {
 
 impl Error for CargoTestError {
     fn description(&self) -> &str { &self.desc }
-    #[allow(trivial_casts)]
     fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|s| s as &Error)
-    }
-}
-
-#[allow(deprecated)] // connect => join in 1.3
-impl<'a> From<&'a [ProcessError]> for CargoTestError {
-    fn from(errors: &[ProcessError]) -> Self {
-        if errors.len() == 0 { panic!("Cannot create CargoTestError from empty Vec") }
-        let desc = errors.iter().map(|error| error.desc.clone()).collect::<Vec<String>>().connect("\n");
-        CargoTestError {
-            desc: desc,
-            exit: errors[0].exit,
-            cause: None,
-        }
+        self.causes.get(0).map(|s| s as &Error)
     }
 }
 

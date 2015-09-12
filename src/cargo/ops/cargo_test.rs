@@ -27,7 +27,7 @@ pub fn run_tests(manifest_path: &Path,
 
     // If we have an error and want to fail fast, return
     if errors.len() > 0 && !options.no_fail_fast {
-        return Ok(Some(CargoTestError::from(&errors[..])))
+        return Ok(Some(CargoTestError::new(errors)))
     }
 
     // If a specific test was requested or we're not running any tests at all,
@@ -35,7 +35,7 @@ pub fn run_tests(manifest_path: &Path,
     if let ops::CompileFilter::Only { .. } = options.compile_opts.filter {
         match errors.len() {
             0 => return Ok(None),
-            _ => return Ok(Some(CargoTestError::from(&errors[..])))
+            _ => return Ok(Some(CargoTestError::new(errors)))
         }
     }
 
@@ -43,7 +43,7 @@ pub fn run_tests(manifest_path: &Path,
     if errors.len() == 0 {
         Ok(None)
     } else {
-        Ok(Some(CargoTestError::from(&errors[..])))
+        Ok(Some(CargoTestError::new(errors)))
     }
 }
 
@@ -56,7 +56,7 @@ pub fn run_benches(manifest_path: &Path,
     let errors = try!(run_unit_tests(options, &args, &compilation));
     match errors.len() {
         0 => Ok(None),
-        _ => Ok(Some(CargoTestError::from(&errors[..]))),
+        _ => Ok(Some(CargoTestError::new(errors))),
     }
 }
 
