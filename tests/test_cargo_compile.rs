@@ -1927,8 +1927,6 @@ test!(rustc_no_trans {
 });
 
 test!(build_multiple_packages {
-
-
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -1969,7 +1967,9 @@ test!(build_multiple_packages {
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }");
     p.build();
 
-    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2").arg("-p").arg("foo"), execs());
+    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2")
+                                        .arg("-p").arg("foo"),
+                execs());
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(process(&p.bin("foo")).unwrap(),

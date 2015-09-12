@@ -269,7 +269,8 @@ pub struct Execs {
     expect_stdout: Option<String>,
     expect_stdin: Option<String>,
     expect_stderr: Option<String>,
-    expect_exit_code: Option<i32>
+    expect_exit_code: Option<i32>,
+    expect_stdout_contains: Vec<String>
 }
 
 impl Execs {
@@ -286,6 +287,11 @@ impl Execs {
 
     pub fn with_status(mut self, expected: i32) -> Execs {
         self.expect_exit_code = Some(expected);
+        self
+    }
+
+    pub fn with_stdout_contains<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_stdout_contains.push(expected.to_string());
         self
     }
 
@@ -312,11 +318,47 @@ impl Execs {
     fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
         self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
                        "stdout", &actual.stderr)
+            .and(self.match_contains(self.expect_stdout_contains.as_ref(),
+                 &actual.stdout, "stdout"))
     }
 
     fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
         self.match_std(self.expect_stderr.as_ref(), &actual.stderr,
                        "stderr", &actual.stdout)
+    }
+
+    #[allow(deprecated)] // connect => join in 1.3
+    fn match_contains(&self, expect: &[String], actual: &[u8],
+                      description: &str) -> ham::MatchResult {
+        for s in expect {
+            let a: Vec<&str> = match str::from_utf8(actual) {
+                Err(..) => return Err(format!("{} was not utf8 encoded",
+                                           description)),
+                Ok(actual) => actual.lines().collect(),
+            };
+            let e: Vec<&str> = s.lines().collect();
+
+            let first = e.first().unwrap();
+            let mut ai = a.iter();
+            match ai.position(|s| lines_match(first, s)) {
+                Some(_) => {
+                    let match_count = ai.zip(e.iter().skip(1))
+                                        .take_while(|&(a, e)| lines_match(a, e)).count();
+                    if match_count != (e.len() - 1) {
+                        return ham::expect(false,
+                                           format!("expected: {}\n\
+                                                    actual: {}",
+                                                    e.connect("\n"),
+                                                    a.iter().take(e.len()).map(|&s| s)
+                                                     .collect::<Vec<_>>().connect("\n")));
+                    }
+                },
+                None => {
+                    return ham::expect(false, format!("no match"));
+                }
+            };
+        }
+        ham::expect(true, format!("OK"))
     }
 
     #[allow(deprecated)] // connect => join in 1.3
@@ -446,7 +488,8 @@ pub fn execs() -> Execs {
         expect_stdout: None,
         expect_stderr: None,
         expect_stdin: None,
-        expect_exit_code: None
+        expect_exit_code: None,
+        expect_stdout_contains: vec![]
     }
 }
 
