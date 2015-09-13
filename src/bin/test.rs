@@ -21,6 +21,7 @@ struct Options {
     flag_quiet: bool,
     flag_color: Option<String>,
     flag_release: bool,
+    flag_no_fail_fast: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -47,6 +48,7 @@ Options:
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
+    --no-fail-fast           Run all tests regardless of failure
 
 All of the trailing arguments are passed to the test binaries generated for
 filtering tests and generally providing options configuring how they run. For
@@ -72,6 +74,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
+        no_fail_fast: options.flag_no_fail_fast,
         compile_opts: ops::CompileOptions {
             config: config,
             jobs: options.flag_jobs,
