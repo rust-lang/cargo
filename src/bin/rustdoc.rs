@@ -44,9 +44,9 @@ By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
 
 The specified target for the current package (or package specified by SPEC if
-provided) will be compiled along with all of its dependencies. The specified
+provided) will be documented along with all of its dependencies. The specified
 <opts>... will all be passed to the final rustdoc invocation, not any of the
-dependencies. Note that the compiler will still unconditionally receive
+dependencies. Note that rustdoc will still unconditionally receive
 arguments such as -L, --extern, and --crate-type, and the specified <opts>...
 will simply be added to the compiler invocation.
 
@@ -86,9 +86,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    try!(ops::doc(&root, &mut doc_opts).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    }));
+    try!(ops::doc(&root, &mut doc_opts).map_err(|err| CliError::from_boxed(err, 101)));
 
     Ok(None)
 }

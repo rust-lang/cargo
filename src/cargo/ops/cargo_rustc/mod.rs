@@ -579,7 +579,8 @@ fn build_base_args(cx: &Context,
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args,
         rustdoc_args: _, debuginfo, debug_assertions, rpath,
-        test, doc: _doc } = *profile;
+        test, doc: _doc
+    } = *profile;
 
     // Move to cwd so the root_path() passed below is actually correct
     cmd.cwd(cx.config.cwd());
