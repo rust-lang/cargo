@@ -58,7 +58,7 @@ pub struct CompileOptions<'a> {
     /// Mode for this compile.
     pub mode: CompileMode,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
-    pub extra_rustdoc_args: Option<&'a [String]>,
+    pub extra_rustdoc_args: Vec<String>,
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<&'a [String]>,
@@ -177,12 +177,20 @@ pub fn compile_pkg<'a>(package: &Package,
                                            .unwrap_or(targets);
 
     let mut target_with_rustdoc = None;
-    if let Some(args) = *extra_rustdoc_args {
+    if !extra_rustdoc_args.is_empty() {
         let mut target_with_rustdoc_inner = Vec::new();
+        if targets.len() > 1 {
+            return Err(human("extra arguments to `rustdoc` can only be passed to \
+                  one target, consider filtering\nthe package by \
+                  passing e.g. `--lib` or `--bin NAME` to specify \
+                  a single target"));
+        }
         for &(target, profile) in &targets {
-            let mut profile = profile.clone();
-            profile.rustdoc_args = Some(args.to_vec());
-            target_with_rustdoc_inner.push((target, profile));
+            if profile.doc {
+                let mut profile = profile.clone();
+                profile.rustdoc_args = Some(extra_rustdoc_args.clone());
+                target_with_rustdoc_inner.push((target, profile));
+            }
         }
         target_with_rustdoc = Some(target_with_rustdoc_inner);
     };

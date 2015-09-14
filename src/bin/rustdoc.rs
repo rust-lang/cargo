@@ -20,7 +20,7 @@ struct Options {
 }
 
 pub const USAGE: &'static str = "
-Build a package's documentation
+Build a package's documentation, using specified custom flags.
 
 Usage:
     cargo rustdoc [options] [--] [<opts>...]
@@ -43,8 +43,16 @@ Options:
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
 
-The specified <opts>... will all be passed to rustdoc for the main package and
-all of its dependencies.
+The specified target for the current package (or package specified by SPEC if
+provided) will be compiled along with all of its dependencies. The specified
+<opts>... will all be passed to the final rustdoc invocation, not any of the
+dependencies. Note that the compiler will still unconditionally receive
+arguments such as -L, --extern, and --crate-type, and the specified <opts>...
+will simply be added to the compiler invocation.
+
+This command requires that only one target is being compiled. If more than one
+target is available for the current package the filters of --lib, --bin, etc,
+must be used to select which target is compiled.
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be documented. If it is not given, then the
@@ -73,7 +81,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
             },
-            extra_rustdoc_args: options.arg_opts.as_ref().map(|a| &a[..]),
+            extra_rustdoc_args: options.arg_opts.unwrap_or(vec![]),
             target_rustc_args: None,
         },
     };

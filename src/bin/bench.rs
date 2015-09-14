@@ -84,7 +84,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                             &options.flag_test,
                                             &options.flag_example,
                                             &options.flag_bench),
-            extra_rustdoc_args: None,
+            extra_rustdoc_args: vec![],
             target_rustc_args: None,
         },
     };
