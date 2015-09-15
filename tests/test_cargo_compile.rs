@@ -1983,3 +1983,41 @@ test!(build_multiple_packages {
     assert_that(process(&p.build_dir().join("debug").join("deps").join("d2")).unwrap(),
                 execs().with_stdout("d2"));
 });
+
+test!(invalid_spec {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+
+            [[bin]]
+                name = "foo"
+        "#)
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+                name = "d1"
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }");
+    p.build();
+
+    assert_that(p.cargo_process("build").arg("-p").arg("notAValidDep"),
+                execs().with_status(101).with_stderr(
+                    "could not find package matching spec `notAValidDep`".to_string()));
+
+    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
+                execs().with_status(101).with_stderr(
+                    "could not find package matching spec `notAValidDep`".to_string()));
+
+});

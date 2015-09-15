@@ -33,7 +33,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         None => return Err(human("A Cargo.lock must exist before cleaning"))
     };
 
-     // Create a compilation context to have access to information like target
+    // Create a compilation context to have access to information like target
     // filenames and such
     let srcs = SourceMap::new();
     let pkgs = PackageSet::new(&[]);

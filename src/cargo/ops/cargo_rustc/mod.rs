@@ -52,12 +52,11 @@ pub struct TargetConfig {
     pub overrides: HashMap<String, BuildOutput>,
 }
 
+pub type PackagesToBuild<'a> = [(&'a Package,Vec<(&'a Target,&'a Profile)>)];
+
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-#[allow(deprecated)] // connect => join in 1.3
-pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
-                                                           Vec<(&Target,
-                                                                &'a Profile)>)],
+pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
                                      deps: &'a PackageSet,
                                      resolve: &'a Resolve,
                                      sources: &'a SourceMap<'cfg>,
@@ -65,9 +64,6 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
                                      build_config: BuildConfig,
                                      profiles: &'a Profiles)
                                      -> CargoResult<Compilation<'cfg>> {
-
-    debug!("compile_targets: {}", pkg_targets.iter().map(|&(ref p, _)| p.name())
-                                                    .collect::<Vec<_>>().connect(", "));
 
     try!(links::validate(deps));
 
@@ -88,11 +84,14 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
         let _p = profile::start("preparing build directories");
         // Prep the context's build requirements and see the job graph for all
         // packages initially.
-        for &(pkg, ref targets) in pkg_targets {
-            try!(cx.prepare(pkg, targets));
-            prepare_init(&mut cx, pkg, &mut queue, &mut HashSet::new());
-            custom_build::build_map(&mut cx, pkg, targets);
+
+
+        try!(cx.prepare(root, pkg_targets));
+        let mut visited = HashSet::new();
+        for &(pkg, _) in pkg_targets {
+            prepare_init(&mut cx, pkg, &mut queue, &mut visited);
         }
+        custom_build::build_map(&mut cx, pkg_targets);
     }
 
     for &(pkg, ref targets) in pkg_targets {
@@ -141,8 +140,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
                     }
 
                     let kind = kind.for_target(target);
-                    let v =
-                        try!(cx.target_filenames(pkg, target, profile, kind));
+                    let v = try!(cx.target_filenames(pkg, target, profile, kind));
                     let v = v.into_iter().map(|f| {
                         (target.clone(), cx.out_dir(pkg, kind, target).join(f))
                     }).collect::<Vec<_>>();
@@ -153,9 +151,10 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a [(&Package,
 
         cx.compilation.tests.push((pkg.clone(), tests));
 
-        if let Some(feats) = cx.resolve.features(pkg.package_id()) {
-            cx.compilation.features.extend(feats.iter().cloned());
-        }
+    }
+
+    if let Some(feats) = cx.resolve.features(root.package_id()) {
+        cx.compilation.features.extend(feats.iter().cloned());
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
@@ -209,17 +208,18 @@ fn compile<'a, 'cfg>(targets: &[(&'a Target, &'a Profile)],
             });
 
             // Figure out what stage this work will go into
-            let stage = match (target.is_lib(),
+            let dst = match (target.is_lib(),
                              profile.test,
                              target.is_custom_build()) {
-                (_, _, true) => Stage::BuildCustomBuild,
-                (true, true, _) => Stage::LibraryTests,
-                (false, true, _) => Stage::BinaryTests,
-                (true, false, _) => Stage::Libraries,
-                (false, false, _) if !target.is_bin() => Stage::BinaryTests,
-                (false, false, _) => Stage::Binaries,
+                (_, _, true) => jobs.queue(pkg, Stage::BuildCustomBuild),
+                (true, true, _) => jobs.queue(pkg, Stage::LibraryTests),
+                (false, true, _) => jobs.queue(pkg, Stage::BinaryTests),
+                (true, false, _) => jobs.queue(pkg, Stage::Libraries),
+                (false, false, _) if !target.is_bin() => {
+                    jobs.queue(pkg, Stage::BinaryTests)
+                }
+                (false, false, _) => jobs.queue(pkg, Stage::Binaries),
             };
-            let dst = jobs.queue(pkg, stage);
             dst.push((Job::new(dirty, fresh), freshness));
 
         }

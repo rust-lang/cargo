@@ -8,11 +8,12 @@ use std::sync::Mutex;
 use core::{Package, Target, PackageId, PackageSet, Profile};
 use util::{CargoResult, human, Human};
 use util::{internal, ChainError, profile};
+use util::Freshness;
 
 use super::job::Work;
 use super::{fingerprint, process, Kind, Context, Platform};
 use super::CommandType;
-use util::Freshness;
+use super::PackagesToBuild;
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug)]
@@ -350,12 +351,13 @@ impl BuildOutput {
 /// The given set of targets to this function is the initial set of
 /// targets/profiles which are being built.
 pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
-                           pkg: &'b Package,
-                           targets: &[(&'b Target, &'b Profile)]) {
+                           pkgs: &'b PackagesToBuild<'b>) {
     let mut ret = HashMap::new();
-    for &(target, profile) in targets {
-        build(&mut ret, Kind::Target, pkg, target, profile, cx);
-        build(&mut ret, Kind::Host, pkg, target, profile, cx);
+    for &(pkg, ref targets) in pkgs {
+        for &(target, profile) in targets {
+            build(&mut ret, Kind::Target, pkg, target, profile, cx);
+            build(&mut ret, Kind::Host, pkg, target, profile, cx);
+        }
     }
 
     // Make the output a little more deterministic by sorting all dependencies

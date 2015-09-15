@@ -111,7 +111,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.sources
     }
 
-    fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
+    fn ensure_loaded(&mut self, namespace: &SourceId, kind: Kind) -> CargoResult<()> {
         match self.source_ids.get(namespace) {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
@@ -143,13 +143,13 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
         }
 
-        try!(self.load(namespace, Kind::Normal));
+        try!(self.load(namespace, kind));
         Ok(())
     }
 
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, Kind::Locked));
+            try!(self.ensure_loaded(id, Kind::Locked));
         }
         Ok(())
     }
@@ -288,7 +288,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
         let ret = if overrides.len() == 0 {
             // Ensure the requested source_id is loaded
-            try!(self.ensure_loaded(dep.source_id()));
+            try!(self.ensure_loaded(dep.source_id(), Kind::Normal));
             let mut ret = Vec::new();
             for (id, src) in self.sources.sources_mut() {
                 if id == dep.source_id() {

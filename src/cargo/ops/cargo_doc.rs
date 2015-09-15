@@ -39,11 +39,12 @@ pub fn doc(manifest_path: &Path,
     try!(ops::compile(manifest_path, &options.compile_opts));
 
     if options.open_result {
-        let name = if options.compile_opts.spec.len() > 0{
-            // TODO
-            try!(PackageIdSpec::parse(options.compile_opts.spec.first()
-                                      .unwrap())).name().replace("-", "_")
-                                      .to_string()
+        let name = if options.compile_opts.spec.len() > 1 {
+            return Err(human("Passing multiple packages and `open` is not \
+                              supported"))
+        } else if options.compile_opts.spec.len() == 1 {
+            try!(PackageIdSpec::parse(&options.compile_opts.spec[0]))
+                                             .name().replace("-", "_").to_string()
         } else {
             match lib_names.iter().chain(bin_names.iter()).nth(0) {
                 Some(s) => s.to_string(),
