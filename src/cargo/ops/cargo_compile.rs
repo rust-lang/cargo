@@ -28,7 +28,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Source, SourceId, PackageSet, Package, Target};
 use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
@@ -95,10 +95,11 @@ pub fn compile<'a>(manifest_path: &Path,
     compile_pkg(&package, options)
 }
 
+#[allow(deprecated)] // connect => join in 1.3
 pub fn compile_pkg<'a>(root_package: &Package,
                        options: &CompileOptions<'a>)
                        -> CargoResult<ops::Compilation<'a>> {
-    let CompileOptions { config, jobs, target, ref spec, features,
+    let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
                          ref filter, ref exec_engine,
                          ref target_rustc_args } = *options;
@@ -116,16 +117,10 @@ pub fn compile_pkg<'a>(root_package: &Package,
         return Err(human("jobs must be at least 1"))
     }
 
+    let override_ids = try!(source_ids_from_config(options.config, root_package.root()));
+
     let (packages, resolve_with_overrides, sources) = {
-        let override_ids =
-            try!(source_ids_from_config(options.config, root_package.root()));
         let mut registry = PackageRegistry::new(options.config);
-        if let Some(source) = source {
-            registry.preload(root_package.package_id().source_id(), source);
-        } else {
-            try!(registry.add_sources(&[root_package.package_id().source_id()
-                                                    .clone()]));
-        }
 
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
@@ -141,19 +136,14 @@ pub fn compile_pkg<'a>(root_package: &Package,
         let method = Method::Required{
             dev_deps: true, // TODO: remove this option?
             features: &features,
-            uses_default_features: !options.no_default_features,
+            uses_default_features: !no_default_features,
         };
 
         let resolved_with_overrides =
                 try!(ops::resolve_with_previous(&mut registry, root_package, method,
                                                 Some(&resolve), None));
 
-        let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
-            r.clone()
-        }).collect();
-        let packages = try!(registry.get(&req).chain_error(|| {
-            human("Unable to get packages from source")
-        }));
+        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides, &mut registry));
 
         (packages, resolved_with_overrides, registry.move_sources())
     };
@@ -170,48 +160,51 @@ pub fn compile_pkg<'a>(root_package: &Package,
         vec![root_package.package_id()]
     };
 
-    /*
     if spec.len() > 0 && invalid_spec.len() > 0 {
         return Err(human(format!("could not find package matching spec `{}`",
-                                 invalid_spec.join(", "))));
-    } */
-
-    let to_builds = packages.iter().filter(|p|
-        pkgids.iter().find(|&op| *op == p.package_id()).is_some()
-    ).collect::<Vec<&Package>>();
-
-    let mut twas = &mut vec![];
-    let mut package_targets = vec![];
-
-    for &to_build in to_builds.iter() {
-        let targets = try!(generate_targets(to_build, mode, filter, release));
-
-        match *target_rustc_args {
-            Some(args) if targets.len() == 1 => {
-                let (target, profile) = targets[0];
-                let mut profile = profile.clone();
-                profile.rustc_args = Some(args.to_vec());
-                twas.push((target, profile));
-            }
-            Some(_) => {
-                return Err(human("extra arguments to `rustc` can only be \
-                                  passed to one target, consider \
-                                  filtering\nthe package by passing e.g. \
-                                  `--lib` or `--bin NAME` to specify \
-                                  a single target"))
-            }
-            None => package_targets.push((to_build, targets)),
-        };
-        
+                                 invalid_spec.connect(", "))));
     }
 
-    for targets in twas {
-        let (target, ref profile) = *targets;
+    let to_builds = packages.iter().filter(|p| pkgids.contains(&p.package_id()))
+                            .collect::<Vec<_>>();
+
+    let mut general_targets = Vec::new();
+    let mut package_targets = Vec::new();
+
+    match *target_rustc_args {
+        Some(args) => {
+            if to_builds.len() == 1 {
+                let targets = try!(generate_targets(to_builds[0], mode, filter, release));
+                if targets.len() == 1 {
+                    let (target, profile) = targets[0];
+                    let mut profile = profile.clone();
+                    profile.rustc_args = Some(args.to_vec());
+                    general_targets.push((target, profile));
+                } else {
+                    return Err(human("extra arguments to `rustc` can only be \
+                                      passed to one target, consider \
+                                      filtering\nthe package by passing e.g. \
+                                      `--lib` or `--bin NAME` to specify \
+                                      a single target"))
+
+                }
+            } else {
+                panic!("`rustc` should not accept multiple `-p` flags")
+            }
+        }
+        None => {
+            for &to_build in to_builds.iter() {
+                let targets = try!(generate_targets(to_build, mode, filter, release));
+                package_targets.push((to_build, targets));
+            }
+        }
+    };
+
+    for &(target, ref profile) in &general_targets {
         for &to_build in to_builds.iter() {
             package_targets.push((to_build, vec![(target, profile)]));
         }
     }
-
 
     let mut ret = {
         let _p = profile::start("compiling");

@@ -1,8 +1,7 @@
 use std::path::MAIN_SEPARATOR as SEP;
 use support::{execs, project};
 use support::{COMPILING, RUNNING};
-use hamcrest::{assert_that, existing_file};
-use cargo::util::process;
+use hamcrest::{assert_that};
 
 
 fn setup() {
@@ -299,7 +298,7 @@ test!(build_only_bar_dependency {
                 url = foo.url())));
 });
 
-test!(build_multiple_dependencies {
+test!(fail_with_multiple_packages {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -317,6 +316,7 @@ test!(build_multiple_dependencies {
             fn main() {}
         "#);
     foo.build();
+
     let bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -329,8 +329,8 @@ test!(build_multiple_dependencies {
                 if cfg!(flag = "1") { println!("Yeah from bar!"); }
             }
         "#);
-
     bar.build();
+
     let baz = project("baz")
         .file("Cargo.toml", r#"
             [package]
@@ -345,21 +345,11 @@ test!(build_multiple_dependencies {
         "#);
     baz.build();
 
-    assert_that(foo.cargo_process("rustc").arg("-v").arg("-p").arg("bar")
-                .arg("-p").arg("baz").arg("--").arg("--cfg").arg("flag=\"1\""),
-                execs()
-                .with_status(0));
+    assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
+                                          .arg("-p").arg("baz"),
+                execs().with_status(1).with_stderr("\
+Invalid arguments.
 
-    let bar_bin = &foo.build_dir().join("debug").join("deps").join("bar");
-    assert_that(bar_bin, existing_file());
-
-    assert_that(
-      process(bar_bin).unwrap(),
-      execs().with_stdout("Yeah from bar!\n"));
-
-    let baz_bin = &foo.build_dir().join("debug").join("deps").join("baz");
-    assert_that(bar_bin, existing_file());
-    assert_that(
-      process(baz_bin).unwrap(),
-      execs().with_stdout("Yeah from baz!\n"));
+Usage:
+    cargo rustc [options] [--] [<opts>...]".to_string()));
 });
