@@ -6,7 +6,7 @@ use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
 struct Options {
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
@@ -21,13 +21,13 @@ Usage:
     cargo clean [options]
 
 Options:
-    -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to clean artifacts for
-    --manifest-path PATH     Path to the manifest to the package to clean
-    --target TRIPLE          Target triple to clean output for (default all)
-    -v, --verbose            Use verbose output
-    -q, --quiet              No output printed to stdout
-    --color WHEN             Coloring: auto, always, never
+    -h, --help                   Print this message
+    -p SPEC, --package SPEC ...  Package to clean artifacts for
+    --manifest-path PATH         Path to the manifest to the package to clean
+    --target TRIPLE              Target triple to clean output for (default all)
+    -v, --verbose                Use verbose output
+    -q, --quiet                  No output printed to stdout
+    --color WHEN                 Coloring: auto, always, never
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package's artifacts should be cleaned out. If it is not
@@ -43,7 +43,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
     let opts = ops::CleanOptions {
         config: config,
-        spec: options.flag_package.as_ref().map(|s| &s[..]),
+        spec: &options.flag_package,
         target: options.flag_target.as_ref().map(|s| &s[..]),
     };
     ops::clean(&root, &opts).map(|_| None).map_err(|err| {
