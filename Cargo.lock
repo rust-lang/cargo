@@ -1,6 +1,6 @@
 [root]
 name = "cargo"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "advapi32-sys 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bufstream 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
