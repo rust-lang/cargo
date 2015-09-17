@@ -95,7 +95,7 @@ type ResolveResult = CargoResult<CargoResult<Box<Context>>>;
 // Information about the dependencies for a crate, a tuple of:
 //
 // (dependency info, candidates, features activated)
-type DepInfo = (Rc<Dependency>, Vec<Rc<Summary>>, Vec<String>);
+type DepInfo = (Dependency, Vec<Rc<Summary>>, Vec<String>);
 
 impl Resolve {
     fn new(root: PackageId) -> Resolve {
@@ -275,7 +275,7 @@ struct BacktrackFrame {
     deps_backup: Vec<DepsFrame>,
     remaining_candidates: RcVecIter<Rc<Summary>>,
     parent: Rc<Summary>,
-    dep: Rc<Dependency>,
+    dep: Dependency,
 }
 
 /// Recursively activates the dependencies for `top`, in depth-first order,
@@ -402,7 +402,7 @@ fn activate_deps_loop(mut cx: Context,
 fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
                   cx: &mut Context, remaining_deps: &mut Vec<DepsFrame>,
                   parent: &mut Rc<Summary>, cur: &mut usize,
-                  dep: &mut Rc<Dependency>) -> Option<Rc<Summary>> {
+                  dep: &mut Dependency) -> Option<Rc<Summary>> {
     while let Some(mut frame) = backtrack_stack.pop() {
         if let Some((_, candidate)) = frame.remaining_candidates.next() {
             *cx = frame.context_backup.clone();
@@ -475,7 +475,7 @@ fn activation_error(cx: &Context,
                       dep.version_req());
     let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
-    let new_dep = dep.clone().set_version_req(all_req);
+    let new_dep = dep.clone_inner().set_version_req(all_req).into_dependency();
     let mut candidates = match registry.query(&new_dep) {
         Ok(candidates) => candidates,
         Err(e) => return e,
@@ -681,7 +681,7 @@ impl Context {
 
     #[allow(deprecated)] // connect => join in 1.3
     fn resolve_features(&mut self, parent: &Summary, method: &Method)
-            -> CargoResult<Vec<(Rc<Dependency>, Vec<String>)>> {
+            -> CargoResult<Vec<(Dependency, Vec<String>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
             Method::Required { dev_deps, .. } => dev_deps,
@@ -712,7 +712,7 @@ impl Context {
                                              feature)));
                 }
             }
-            ret.push((Rc::new(dep.clone()), base));
+            ret.push((dep.clone(), base));
         }
 
         // All features can only point to optional dependencies, in which case

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use hamcrest::{assert_that, equal_to, contains};
 
 use cargo::core::source::{SourceId, GitReference};
-use cargo::core::dependency::Kind::Development;
+use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
 use cargo::core::resolver::{self, Method};
@@ -106,6 +106,9 @@ fn dep_loc(name: &str, location: &str) -> Dependency {
     let source_id = SourceId::for_git(&url, master);
     Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
 }
+fn dep_kind(name: &str, kind: Kind) -> Dependency {
+    dep(name).clone_inner().set_kind(kind).into_dependency()
+}
 
 fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
     pkgs
@@ -192,14 +195,14 @@ fn test_resolving_with_same_name() {
 #[test]
 fn test_resolving_with_dev_deps() {
     let mut reg = registry(vec!(
-        pkg!("foo" => ["bar", dep("baz").set_kind(Development)]),
-        pkg!("baz" => ["bat", dep("bam").set_kind(Development)]),
+        pkg!("foo" => ["bar", dep_kind("baz", Development)]),
+        pkg!("baz" => ["bat", dep_kind("bam", Development)]),
         pkg!("bar"),
         pkg!("bat")
     ));
 
     let res = resolve(pkg_id("root"),
-                      vec![dep("foo"), dep("baz").set_kind(Development)],
+                      vec![dep("foo"), dep_kind("baz", Development)],
                       &mut reg).unwrap();
 
     assert_that(&res, contains(names(&["root", "foo", "bar", "baz"])));

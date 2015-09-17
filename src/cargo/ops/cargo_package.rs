@@ -172,7 +172,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     let new_pkgid = try!(PackageId::new(pkg.name(), pkg.version(), &new_src));
     let new_summary = pkg.summary().clone().map_dependencies(|d| {
         if !d.source_id().is_path() { return d }
-        d.set_source_id(registry.clone())
+        d.clone_inner().set_source_id(registry.clone()).into_dependency()
     });
     let mut new_manifest = pkg.manifest().clone();
     new_manifest.set_summary(new_summary.override_id(new_pkgid));
