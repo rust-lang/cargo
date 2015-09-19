@@ -33,7 +33,6 @@ pub fn publish(manifest_path: &Path,
                verify: bool) -> CargoResult<()> {
     let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
-    try!(src.update());
     let pkg = try!(src.root_package());
 
     let (mut registry, reg_id) = try!(registry(config, token, index));
@@ -266,7 +265,6 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
             let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                     config));
-            try!(src.update());
             let pkg = try!(src.root_package());
             pkg.name().to_string()
         }
@@ -329,7 +327,6 @@ pub fn yank(config: &Config,
             let manifest_path = try!(find_root_manifest_for_cwd(None));
             let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                     config));
-            try!(src.update());
             let pkg = try!(src.root_package());
             pkg.name().to_string()
         }

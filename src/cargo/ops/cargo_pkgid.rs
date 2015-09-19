@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use ops;
-use core::{Source, PackageIdSpec};
+use core::{PackageIdSpec};
 use sources::{PathSource};
 use util::{CargoResult, human, Config};
 
@@ -10,7 +10,6 @@ pub fn pkgid(manifest_path: &Path,
              config: &Config) -> CargoResult<PackageIdSpec> {
     let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                                config));
-    try!(source.update());
     let package = try!(source.root_package());
 
     let lockfile = package.root().join("Cargo.lock");

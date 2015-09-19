@@ -19,7 +19,6 @@ pub struct CleanOptions<'a> {
 pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             opts.config));
-    try!(src.update());
     let root = try!(src.root_package());
     let target_dir = opts.config.target_dir(&root);
 

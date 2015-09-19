@@ -10,7 +10,6 @@ use util::{CargoResult, Config, human, ChainError};
 pub fn fetch(manifest_path: &Path, config: &Config) -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                config));
-    try!(source.update());
     let package = try!(source.root_package());
 
     let mut registry = PackageRegistry::new(config);

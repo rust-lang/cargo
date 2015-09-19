@@ -3,7 +3,7 @@ use std::path::Path;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{Source, Resolve, SourceId};
+use core::{Resolve, SourceId};
 use core::resolver::Method;
 use ops;
 use sources::{PathSource};
@@ -21,7 +21,6 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
                          -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                config));
-    try!(source.update());
     let package = try!(source.root_package());
     let mut registry = PackageRegistry::new(config);
     registry.preload(package.package_id().source_id(), Box::new(source));
@@ -36,7 +35,6 @@ pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                opts.config));
-    try!(source.update());
     let package = try!(source.root_package());
 
     let previous_resolve = match try!(ops::load_pkg_lockfile(&package)) {
