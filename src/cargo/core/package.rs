@@ -4,12 +4,12 @@ use std::slice;
 use std::path::{Path, PathBuf};
 use semver::Version;
 
-use core::{Dependency, Manifest, PackageId, Registry, Target, Summary, Metadata};
+use core::{Dependency, Manifest, PackageId, SourceId, Registry, Target, Summary, Metadata};
+use ops;
 use core::dependency::SerializedDependency;
 use util::{CargoResult, graph, Config};
 use rustc_serialize::{Encoder,Encodable};
 use core::source::Source;
-use sources::PathSource;
 
 /// Informations about a package that is available somewhere in the file system.
 ///
@@ -60,9 +60,11 @@ impl Package {
     }
 
     pub fn for_path(manifest_path: &Path, config: &Config) -> CargoResult<Package> {
-        let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                                   config));
-        source.root_package()
+        let path = manifest_path.parent().unwrap();
+        let source_id = try!(SourceId::for_path(path));
+        let (pkg, _) = try!(ops::read_package(&manifest_path, &source_id,
+                                              config));
+        Ok(pkg)
     }
 
     pub fn dependencies(&self) -> &[Dependency] { self.manifest.dependencies() }
