@@ -6,31 +6,6 @@ use hamcrest::assert_that;
 
 fn setup() {}
 
-test!(ignores_carriage_return {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#)
-        .file("src/main.rs", r#"
-            mod a; fn main() {}
-        "#)
-        .file("src/a.rs", "");
-
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0));
-
-    let lockfile = p.root().join("Cargo.lock");
-    let mut lock = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock).unwrap();
-    let lock = lock.replace("\n", "\r\n");
-    File::create(&lockfile).unwrap().write_all(lock.as_bytes()).unwrap();
-    assert_that(p.cargo("build"),
-                execs().with_status(0));
-});
-
 test!(adding_and_removing_packages {
     let p = project("foo")
         .file("Cargo.toml", r#"
