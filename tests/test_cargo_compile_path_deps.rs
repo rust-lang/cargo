@@ -513,8 +513,12 @@ test!(error_message_for_missing_manifest {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("Could not find `Cargo.toml` in `{}`\n",
-                                      p.root().join("src").join("bar").display())));
+                .with_stderr(&format!("\
+Unable to update file://[..]
+
+Caused by:
+  Could not find `Cargo.toml` in `{}`
+", p.root().join("src").join("bar").display())));
 
 });
 
