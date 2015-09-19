@@ -6,9 +6,10 @@ use semver::Version;
 
 use core::{Dependency, Manifest, PackageId, Registry, Target, Summary, Metadata};
 use core::dependency::SerializedDependency;
-use util::{CargoResult, graph};
+use util::{CargoResult, graph, Config};
 use rustc_serialize::{Encoder,Encodable};
 use core::source::Source;
+use sources::PathSource;
 
 /// Informations about a package that is available somewhere in the file system.
 ///
@@ -56,6 +57,12 @@ impl Package {
             manifest: manifest,
             manifest_path: manifest_path.to_path_buf(),
         }
+    }
+
+    pub fn for_path(manifest_path: &Path, config: &Config) -> CargoResult<Package> {
+        let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
+                                                   config));
+        source.root_package()
     }
 
     pub fn dependencies(&self) -> &[Dependency] { self.manifest.dependencies() }

@@ -2,15 +2,13 @@ use std::path::Path;
 
 use ops::{self, ExecEngine, CompileFilter};
 use util::{self, CargoResult, human, process, ProcessError};
-use sources::PathSource;
+use core::Package;
 
 pub fn run(manifest_path: &Path,
            options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.config;
-    let mut src = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
-                                            config));
-    let root = try!(src.root_package());
+    let root = try!(Package::for_path(manifest_path, config));
 
     let mut bins = root.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
