@@ -3,10 +3,9 @@ use std::path::Path;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{Resolve, SourceId};
+use core::{Resolve, SourceId, Package};
 use core::resolver::Method;
 use ops;
-use sources::{PathSource};
 use util::config::{Config};
 use util::{CargoResult, human};
 
@@ -19,11 +18,8 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(manifest_path: &Path, config: &Config)
                          -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                               config));
-    let package = try!(source.root_package());
+    let package = try!(Package::for_path(manifest_path, config));
     let mut registry = PackageRegistry::new(config);
-    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
                                                   None, None));
@@ -33,9 +29,7 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
 
 pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                               opts.config));
-    let package = try!(source.root_package());
+    let package = try!(Package::for_path(manifest_path, opts.config));
 
     let previous_resolve = match try!(ops::load_pkg_lockfile(&package)) {
         Some(resolve) => resolve,
@@ -83,7 +77,6 @@ pub fn update_lockfile(manifest_path: &Path,
         None => to_avoid.extend(previous_resolve.iter()),
     }
 
-    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_with_previous(&mut registry,
                                                   &package,
                                                   Method::Everything,
