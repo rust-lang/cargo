@@ -650,8 +650,6 @@ consider running `cargo update` to update a path dependency's locked version
 "));
 });
 
-// test!(compiling_project_with_invalid_manifest)
-
 test!(crate_version_env_vars {
     let p = project("foo")
         .file("Cargo.toml", r#"
