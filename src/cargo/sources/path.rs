@@ -46,12 +46,10 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
-    pub fn root_package(&self) -> CargoResult<Package> {
+    pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
-        if !self.updated {
-            return Err(internal("source has not been updated"))
-        }
+        try!(self.update());
 
         match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),

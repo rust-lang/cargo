@@ -6,7 +6,7 @@ use tar::Archive;
 use flate2::{GzBuilder, Compression};
 use flate2::read::GzDecoder;
 
-use core::{Source, SourceId, Package, PackageId};
+use core::{SourceId, Package, PackageId};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config};
 use ops;
@@ -29,7 +29,6 @@ pub fn package(manifest_path: &Path,
                metadata: bool) -> CargoResult<Option<PathBuf>> {
     let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
-    try!(src.update());
     let pkg = try!(src.root_package());
 
     if metadata {

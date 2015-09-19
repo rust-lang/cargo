@@ -2,7 +2,6 @@ use std::path::Path;
 
 use ops::{self, ExecEngine, CompileFilter};
 use util::{self, CargoResult, human, process, ProcessError};
-use core::source::Source;
 use sources::PathSource;
 
 pub fn run(manifest_path: &Path,
@@ -11,7 +10,6 @@ pub fn run(manifest_path: &Path,
     let config = options.config;
     let mut src = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
                                             config));
-    try!(src.update());
     let root = try!(src.root_package());
 
     let mut bins = root.manifest().targets().iter().filter(|a| {

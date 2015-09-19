@@ -4,7 +4,6 @@ use std::path::Path;
 use std::process::Command;
 
 use core::PackageIdSpec;
-use core::source::Source;
 use ops;
 use sources::PathSource;
 use util::{CargoResult, human};
@@ -18,7 +17,6 @@ pub fn doc(manifest_path: &Path,
            options: &DocOptions) -> CargoResult<()> {
     let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                options.compile_opts.config));
-    try!(source.update());
     let package = try!(source.root_package());
 
     let mut lib_names = HashSet::new();

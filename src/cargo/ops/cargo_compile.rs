@@ -89,8 +89,6 @@ pub fn compile<'a>(manifest_path: &Path,
 
     let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                                options.config));
-    try!(source.update());
-
     // TODO: Move this into PathSource
     let package = try!(source.root_package());
     debug!("loaded package; package={}", package);
