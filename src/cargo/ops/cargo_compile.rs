@@ -36,7 +36,7 @@ use sources::{PathSource};
 use util::config::{ConfigValue, Config};
 use util::{CargoResult, internal, human, ChainError, profile};
 
-/// Contains informations about how a package should be compiled.
+/// Contains information about how a package should be compiled.
 pub struct CompileOptions<'a> {
     pub config: &'a Config,
     /// Number of concurrent jobs to use.
