@@ -79,7 +79,7 @@ impl<'cfg> PathSource<'cfg> {
 
     /// List all files relevant to building this package inside this source.
     ///
-    /// This function will use the appropriate methods to determine what is the
+    /// This function will use the appropriate methods to determine the
     /// set of files underneath this source's directory which are relevant for
     /// building `pkg`.
     ///
@@ -115,7 +115,7 @@ impl<'cfg> PathSource<'cfg> {
         // We check all packages in this source that are ancestors of the
         // specified package (including the same package) to see if they're at
         // the root of the git repository. This isn't always true, but it'll get
-        // us there most of the time!.
+        // us there most of the time!
         let repo = self.packages.iter()
                        .map(|pkg| pkg.root())
                        .filter(|path| root.starts_with(path))
@@ -139,11 +139,11 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut ret = Vec::new();
 
-        // We use information from the git repository to guide use in traversing
+        // We use information from the git repository to guide us in traversing
         // its tree. The primary purpose of this is to take advantage of the
         // .gitignore and auto-ignore files that don't matter.
         //
-        // Here we're also careful to look at both tracked an untracked files as
+        // Here we're also careful to look at both tracked and untracked files as
         // the untracked files are often part of a build and may become relevant
         // as part of a future commit.
         let index_files = index.iter().map(|entry| {

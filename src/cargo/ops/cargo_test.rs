@@ -1,8 +1,6 @@
 use std::ffi::{OsString, OsStr};
 use std::path::Path;
 
-use core::Source;
-use sources::PathSource;
 use ops::{self, ExecEngine, ProcessEngine, Compilation};
 use util::{self, CargoResult, CargoTestError, ProcessError};
 
@@ -63,11 +61,6 @@ pub fn run_benches(manifest_path: &Path,
 fn compile_tests<'a>(manifest_path: &Path,
                      options: &TestOptions<'a>)
                      -> CargoResult<Compilation<'a>> {
-    let config = options.compile_opts.config;
-    let mut source = try!(PathSource::for_path(&manifest_path.parent().unwrap(),
-                                               config));
-    try!(source.update());
-
     let mut compilation = try!(ops::compile(manifest_path, &options.compile_opts));
     compilation.tests.sort();
     Ok(compilation)

@@ -10,9 +10,9 @@ use util::{CargoResult, graph};
 use rustc_serialize::{Encoder,Encodable};
 use core::source::Source;
 
-/// Informations about a package that is available somewhere in the file system.
+/// Information about a package that is available somewhere in the file system.
 ///
-/// A package is a `Cargo.toml` file, plus all the files that are part of it.
+/// A package is a `Cargo.toml` file plus all the files that are part of it.
 // TODO: Is manifest_path a relic?
 #[derive(Clone, Debug)]
 pub struct Package {
