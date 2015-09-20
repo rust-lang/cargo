@@ -28,7 +28,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Source, SourceId, PackageSet, Package, Target};
 use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
@@ -142,12 +142,7 @@ pub fn compile_pkg<'a>(package: &Package,
                 try!(ops::resolve_with_previous(&mut registry, package, method,
                                                 Some(&resolve), None));
 
-        let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
-            r.clone()
-        }).collect();
-        let packages = try!(registry.get(&req).chain_error(|| {
-            human("Unable to get packages from source")
-        }));
+        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides, &mut registry));
 
         (packages, resolved_with_overrides, registry.move_sources())
     };
