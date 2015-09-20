@@ -162,10 +162,10 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     // implicitly converted to registry-based dependencies, so we rewrite those
     // dependencies here.
     //
-    // We also be sure to point all paths at `dst` instead of the previous
-    // location that the package was original read from. In locking the
+    // We also make sure to point all paths at `dst` instead of the previous
+    // location that the package was originally read from. In locking the
     // `SourceId` we're telling it that the corresponding `PathSource` will be
-    // considered updated and won't actually read any packages.
+    // considered updated and we won't actually read any packages.
     let registry = try!(SourceId::for_central(config));
     let precise = Some("locked".to_string());
     let new_src = try!(SourceId::for_path(&dst)).with_precise(precise);
