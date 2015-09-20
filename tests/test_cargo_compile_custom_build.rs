@@ -699,7 +699,7 @@ test!(build_deps_not_for_normal {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr("\
-[..]lib.rs[..] error: can't find crate for `aaaaa`
+[..]lib.rs[..] error: can't find crate for `aaaaa`[..]
 [..]lib.rs[..] extern crate aaaaa;
 [..]           ^~~~~~~~~~~~~~~~~~~
 error: aborting due to previous error
