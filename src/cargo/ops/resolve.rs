@@ -9,7 +9,7 @@ use util::CargoResult;
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
 ///
-/// This function will also generate a write the result of resolution as a new
+/// This function will also write the result of resolution as a new
 /// lockfile.
 pub fn resolve_pkg(registry: &mut PackageRegistry, package: &Package)
                    -> CargoResult<Resolve> {
@@ -73,7 +73,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             // 2. The specified package's summary will have its dependencies
             //    modified to their precise variants. This will instruct the
             //    first step of the resolution process to not query for ranges
-            //    but rather precise dependency versions.
+            //    but rather for precise dependency versions.
             //
             //    This process must handle altered dependencies, however, as
             //    it's possible for a manifest to change over time to have

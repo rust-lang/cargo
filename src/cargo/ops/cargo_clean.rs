@@ -23,7 +23,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     let root = try!(src.root_package());
     let target_dir = opts.config.target_dir(&root);
 
-    // If we have a spec, then we need to delete some package,s otherwise, just
+    // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
     let spec = match opts.spec {
         Some(spec) => spec,
