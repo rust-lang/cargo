@@ -290,25 +290,33 @@ fn activate_deps_loop(mut cx: Context,
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = Vec::new();
     remaining_deps.extend(try!(activate(&mut cx, registry, top, &top_method)));
-    loop {
-        // Retrieves the next dependency to try, from `remaining_deps`.
-        let frame = match remaining_deps.pop() {
-            None => break,
-            Some(mut deps_frame) => {
-                match deps_frame.remaining_siblings.next() {
-                    None => {
-                        cx.visited.remove(&deps_frame.id);
-                        continue
-                    }
-                    Some((cur, (dep, candidates, features))) => {
-                        let parent = deps_frame.parent.clone();
-                        remaining_deps.push(deps_frame);
-                        (parent, cur, dep, candidates, features)
-                    }
-                }
+
+    // Main resolution loop, this is the workhorse of the resolution algorithm.
+    //
+    // You'll note that a few stacks are maintained on the side, which might
+    // seem odd when this algorithm looks like it could be implemented
+    // recursively. While correct, this is implemented iteratively to avoid
+    // blowing the stack (the recusion depth is proportional to the size of the
+    // input).
+    //
+    // The general sketch of this loop is to run until there are no dependencies
+    // left to activate, and for each dependency to attempt to activate all of
+    // its own dependencies in turn. The `backtrack_stack` is a side table of
+    // backtracking states where if we hit an error we can return to in order to
+    // attempt to continue resolving.
+    while let Some(mut deps_frame) = remaining_deps.pop() {
+        let frame = match deps_frame.remaining_siblings.next() {
+            Some(sibling) => {
+                let parent = deps_frame.parent.clone();
+                remaining_deps.push(deps_frame);
+                (parent, sibling)
+            }
+            None => {
+                cx.visited.remove(&deps_frame.id);
+                continue
             }
         };
-        let (mut parent, mut cur, mut dep, candidates, features) = frame;
+        let (mut parent, (mut cur, (mut dep, candidates, features))) = frame;
         assert!(!remaining_deps.is_empty());
 
         let method = Method::Required {
@@ -370,7 +378,8 @@ fn activate_deps_loop(mut cx: Context,
                 // find a dependency that does have a candidate to try, and try
                 // to activate that one.  This resets the `remaining_deps` to
                 // their state at the found level of the `backtrack_stack`.
-                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
+                trace!("{}[{}]>{} -- no candidates", parent.name(), cur,
+                       dep.name());
                 match find_candidate(&mut backtrack_stack, &mut cx,
                                      &mut remaining_deps, &mut parent, &mut cur,
                                      &mut dep) {
@@ -415,10 +424,10 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
             *cur = remaining_deps.last().unwrap().remaining_siblings.cur_index();
             *dep = frame.dep.clone();
             backtrack_stack.push(frame);
-            return Some(candidate);
+            return Some(candidate)
         }
     }
-    return None;
+    return None
 }
 
 #[allow(deprecated)] // connect => join in 1.3
