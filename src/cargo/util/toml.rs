@@ -10,7 +10,8 @@ use semver;
 use rustc_serialize::{Decodable, Decoder};
 
 use core::{SourceId, Profiles};
-use core::{Summary, Manifest, Target, Dependency, PackageId, GitReference};
+use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId,
+           GitReference};
 use core::dependency::Kind;
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
@@ -631,7 +632,7 @@ fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
 fn process_dependencies<F>(cx: &mut Context,
                            new_deps: Option<&HashMap<String, TomlDependency>>,
                            mut f: F) -> CargoResult<()>
-    where F: FnMut(Dependency) -> Dependency
+    where F: FnMut(DependencyInner) -> DependencyInner
 {
     let dependencies = match new_deps {
         Some(ref dependencies) => dependencies,
@@ -666,14 +667,15 @@ fn process_dependencies<F>(cx: &mut Context,
             }
         }.unwrap_or(try!(SourceId::for_central(cx.config)));
 
-        let dep = try!(Dependency::parse(&n,
-                                         details.version.as_ref()
-                                                .map(|v| &v[..]),
-                                         &new_source_id));
+        let dep = try!(DependencyInner::parse(&n,
+                                              details.version.as_ref()
+                                                  .map(|v| &v[..]),
+                                              &new_source_id));
         let dep = f(dep)
                      .set_features(details.features.unwrap_or(Vec::new()))
                      .set_default_features(details.default_features.unwrap_or(true))
-                     .set_optional(details.optional.unwrap_or(false));
+                     .set_optional(details.optional.unwrap_or(false))
+                     .into_dependency();
         cx.deps.push(dep);
     }
 
