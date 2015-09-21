@@ -172,7 +172,7 @@ use tar::Archive;
 use url::Url;
 
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
-use core::dependency::{Dependency, Kind};
+use core::dependency::{Dependency, DependencyInner, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
 use util::{hex, Sha256};
@@ -430,8 +430,8 @@ impl<'cfg> RegistrySource<'cfg> {
             name, req, features, optional, default_features, target, kind
         } = dep;
 
-        let dep = try!(Dependency::parse(&name, Some(&req),
-                                         &self.source_id));
+        let dep = try!(DependencyInner::parse(&name, Some(&req),
+                                              &self.source_id));
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,
@@ -449,7 +449,8 @@ impl<'cfg> RegistrySource<'cfg> {
               .set_default_features(default_features)
               .set_features(features)
               .set_only_for_platform(target)
-              .set_kind(kind))
+              .set_kind(kind)
+              .into_dependency())
     }
 
     /// Actually perform network operations to update the registry

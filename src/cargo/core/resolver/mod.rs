@@ -42,61 +42,15 @@
 //! data that we're processing is proportional to the size of the dependency
 //! graph, which can often be quite large (e.g. take a look at Servo). To make
 //! matters worse the DFS algorithm we're implemented is inherently quite
-//! inefficient and recursive. When we add the requirement of backtracking on
-//! top it means that we're implementing something that's very recursive and
-//! probably shouldn't be allocating all over the place.
-//!
-//! Once we've avoided too many unnecessary allocations, however (e.g. using
-//! references, using reference counting, etc), it turns out that the
-//! performance in this module largely comes down to stack sizes due to the
-//! recursive nature of the implementation.
-//!
-//! ### Small Stack Sizes (e.g. y u inline(never))
-//!
-//! One of the most important optimizations in this module right now is the
-//! attempt to minimize the stack space taken up by the `activate` and
-//! `activate_deps` functions. These two functions are mutually recursive in a
-//! CPS fashion.
-//!
-//! The recursion depth, if I'm getting this right, is something along the order
-//! of O(E) where E is the number of edges in the dependency graph, and that's
-//! on the order of O(N^2) where N is the number of crates in the graph. As a
-//! result we need to watch our stack size!
-//!
-//! Currently rustc is not great at producing small stacks because of landing
-//! pads and filling drop, so the first attempt at making small stacks is having
-//! literally small functions with very few owned values on the stack. This is
-//! also why there are many #[inline(never)] annotations in this module. By
-//! preventing these functions from being inlined we can make sure that these
-//! stack sizes stay small as the number of locals are under control.
-//!
-//! Another hazard when watching out for small stacks is passing around large
-//! structures by value. For example the `Context` below is a relatively large
-//! struct, so we always place it behind a `Box` to ensure the size at runtime
-//! is just a word (e.g. very easy to pass around).
-//!
-//! Combined together these tricks (plus a very recent version of LLVM) allow us
-//! to have a relatively small stack footprint for this implementation. Possible
-//! future optimizations include:
-//!
-//! * Turn off landing pads for all of Cargo
-//! * Wait for dynamic drop
-//! * Use a manual stack instead of the OS stack (I suspect this will be super
-//!   painful to implement)
-//! * Spawn a new thread with a very large stack (this is what the compiler
-//!   does)
-//! * Implement a form of segmented stacks where we manually check the stack
-//!   limit every so often.
-//!
-//! For now the current implementation of this module gets us past Servo's
-//! dependency graph (one of the largest known ones), so hopefully it'll work
-//! for a bit longer as well!
+//! inefficient. When we add the requirement of backtracking on top it means
+//! that we're implementing something that probably shouldn't be allocating all
+//! over the place.
 
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::fmt;
+use std::ops::Range;
 use std::rc::Rc;
-use std::slice;
 use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
@@ -109,14 +63,6 @@ pub use self::encode::{EncodableResolve, EncodableDependency, EncodablePackageId
 pub use self::encode::Metadata;
 
 mod encode;
-
-macro_rules! trace {
-    ($($e:tt)*) => (
-        if cfg!(debug_assertions) {
-            debug!($($e)*);
-        }
-    )
-}
 
 /// Represents a fully resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
@@ -149,7 +95,7 @@ type ResolveResult = CargoResult<CargoResult<Box<Context>>>;
 // Information about the dependencies for a crate, a tuple of:
 //
 // (dependency info, candidates, features activated)
-type DepInfo<'a> = (&'a Dependency, Vec<Rc<Summary>>, Vec<String>);
+type DepInfo = (Dependency, Vec<Rc<Summary>>, Vec<String>);
 
 impl Resolve {
     fn new(root: PackageId) -> Resolve {
@@ -247,158 +193,250 @@ pub fn resolve(summary: &Summary, method: &Method,
     trace!("resolve; summary={}", summary.package_id());
     let summary = Rc::new(summary.clone());
 
-    let cx = Box::new(Context {
+    let cx = Context {
         resolve: Resolve::new(summary.package_id().clone()),
         activations: HashMap::new(),
         visited: HashSet::new(),
-    });
+    };
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
-    match try!(activate(cx, registry, &summary, method, &mut |cx, _| Ok(Ok(cx)))) {
-        Ok(cx) => {
-            debug!("resolved: {:?}", cx.resolve);
-            Ok(cx.resolve)
-        }
-        Err(e) => Err(e),
-    }
+    activate_deps_loop(cx, registry, summary, method)
 }
 
 /// Attempts to activate the summary `parent` in the context `cx`.
 ///
 /// This function will pull dependency summaries from the registry provided, and
 /// the dependencies of the package will be determined by the `method` provided.
-/// Once the resolution of this package has finished **entirely**, the current
-/// context will be passed to the `finished` callback provided.
-fn activate(mut cx: Box<Context>,
+/// If `parent` was activated, this function returns the dependency frame to
+/// iterate through next.
+fn activate(cx: &mut Context,
             registry: &mut Registry,
-            parent: &Rc<Summary>,
-            method: &Method,
-            finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
-            -> ResolveResult {
+            parent: Rc<Summary>,
+            method: &Method)
+            -> CargoResult<Option<DepsFrame>> {
     // Dependency graphs are required to be a DAG, so we keep a set of
     // packages we're visiting and bail if we hit a dupe.
-    let id = parent.package_id();
+    let id = parent.package_id().clone();
     if !cx.visited.insert(id.clone()) {
         return Err(human(format!("cyclic package dependency: package `{}` \
                                   depends on itself", id)))
     }
 
     // If we're already activated, then that was easy!
-    if cx.flag_activated(parent, method) {
-        cx.visited.remove(id);
-        return finished(cx, registry)
+    if cx.flag_activated(&parent, method) {
+        cx.visited.remove(&id);
+        return Ok(None);
     }
     trace!("activating {}", parent.package_id());
 
-    let deps = try!(cx.build_deps(registry, parent, method));
+    let deps = try!(cx.build_deps(registry, &parent, method));
 
-    activate_deps(cx, registry, parent, deps.iter(), 0, &mut |mut cx, registry| {
-        cx.visited.remove(id);
-        finished(cx, registry)
-    })
+    Ok(Some(DepsFrame{
+        parent: parent,
+        remaining_siblings: RcVecIter::new(deps),
+        id: id,
+    }))
 }
 
-/// Activates the dependencies for a package, one by one in turn.
-///
-/// This function will attempt to activate all possible candidates for each
-/// dependency of the package specified by `parent`. The `deps` iterator
-/// provided is an iterator over all dependencies where each element yielded
-/// informs us what the candidates are for the dependency in question.
+#[derive(Clone)]
+struct RcVecIter<T> {
+    vec: Rc<Vec<T>>,
+    rest: Range<usize>,
+}
+
+impl<T> RcVecIter<T> {
+    fn new(vec: Vec<T>) -> RcVecIter<T> {
+        RcVecIter {
+            rest: 0..vec.len(),
+            vec: Rc::new(vec),
+        }
+    }
+    fn cur_index(&self) -> usize {
+        self.rest.start - 1
+    }
+}
+impl<T> Iterator for RcVecIter<T> where T: Clone {
+    type Item = (usize, T);
+    fn next(&mut self) -> Option<(usize, T)> {
+        self.rest.next().and_then(|i| {
+            self.vec.get(i).map(|val| (i, val.clone()))
+        })
+    }
+}
+
+#[derive(Clone)]
+struct DepsFrame {
+    parent: Rc<Summary>,
+    remaining_siblings: RcVecIter<DepInfo>,
+    id: PackageId,
+}
+
+struct BacktrackFrame {
+    context_backup: Context,
+    deps_backup: Vec<DepsFrame>,
+    remaining_candidates: RcVecIter<Rc<Summary>>,
+    parent: Rc<Summary>,
+    dep: Dependency,
+}
+
+/// Recursively activates the dependencies for `top`, in depth-first order,
+/// backtracking across possible candidates for each dependency as necessary.
 ///
 /// If all dependencies can be activated and resolved to a version in the
-/// dependency graph the `finished` callback is invoked with the current state
-/// of the world.
-fn activate_deps<'a>(cx: Box<Context>,
-                     registry: &mut Registry,
-                     parent: &Summary,
-                     mut deps: slice::Iter<'a, DepInfo>,
-                     cur: usize,
-                     finished: &mut FnMut(Box<Context>, &mut Registry) -> ResolveResult)
-                     -> ResolveResult {
-    let &(dep, ref candidates, ref features) = match deps.next() {
-        Some(info) => info,
-        None => return finished(cx, registry),
-    };
+/// dependency graph, cx.resolve is returned.
+fn activate_deps_loop(mut cx: Context,
+                      registry: &mut Registry,
+                      top: Rc<Summary>,
+                      top_method: &Method) -> CargoResult<Resolve> {
+    let mut backtrack_stack = Vec::new();
+    let mut remaining_deps = Vec::new();
+    remaining_deps.extend(try!(activate(&mut cx, registry, top, &top_method)));
 
-    let method = Method::Required {
-        dev_deps: false,
-        features: features,
-        uses_default_features: dep.uses_default_features(),
-    };
-
-    let prev_active = cx.prev_active(dep);
-    trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
-           candidates.len());
-    trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
-           dep.name(), prev_active.len());
-
-    // Filter the set of candidates based on the previously activated
-    // versions for this dependency. We can actually use a version if it
-    // precisely matches an activated version or if it is otherwise
-    // incompatible with all other activated versions. Note that we define
-    // "compatible" here in terms of the semver sense where if the left-most
-    // nonzero digit is the same they're considered compatible.
-    let my_candidates = candidates.iter().filter(|&b| {
-        prev_active.iter().any(|a| a == b) ||
-            prev_active.iter().all(|a| {
-                !compatible(a.version(), b.version())
-            })
-    });
-
-    // Alright, for each candidate that's gotten this far, it meets the
-    // following requirements:
+    // Main resolution loop, this is the workhorse of the resolution algorithm.
     //
-    // 1. The version matches the dependency requirement listed for this
-    //    package
-    // 2. There are no activated versions for this package which are
-    //    semver-compatible, or there's an activated version which is
-    //    precisely equal to `candidate`.
+    // You'll note that a few stacks are maintained on the side, which might
+    // seem odd when this algorithm looks like it could be implemented
+    // recursively. While correct, this is implemented iteratively to avoid
+    // blowing the stack (the recusion depth is proportional to the size of the
+    // input).
     //
-    // This means that we're going to attempt to activate each candidate in
-    // turn. We could possibly fail to activate each candidate, so we try
-    // each one in turn.
-    let mut last_err = None;
-    for candidate in my_candidates {
+    // The general sketch of this loop is to run until there are no dependencies
+    // left to activate, and for each dependency to attempt to activate all of
+    // its own dependencies in turn. The `backtrack_stack` is a side table of
+    // backtracking states where if we hit an error we can return to in order to
+    // attempt to continue resolving.
+    while let Some(mut deps_frame) = remaining_deps.pop() {
+        let frame = match deps_frame.remaining_siblings.next() {
+            Some(sibling) => {
+                let parent = deps_frame.parent.clone();
+                remaining_deps.push(deps_frame);
+                (parent, sibling)
+            }
+            None => {
+                cx.visited.remove(&deps_frame.id);
+                continue
+            }
+        };
+        let (mut parent, (mut cur, (mut dep, candidates, features))) = frame;
+        assert!(!remaining_deps.is_empty());
+
+        let method = Method::Required {
+            dev_deps: false,
+            features: &features,
+            uses_default_features: dep.uses_default_features(),
+        };
+
+        let my_candidates = {
+            let prev_active = cx.prev_active(&dep);
+            trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
+                   candidates.len());
+            trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
+                   dep.name(), prev_active.len());
+
+            // Filter the set of candidates based on the previously activated
+            // versions for this dependency. We can actually use a version if it
+            // precisely matches an activated version or if it is otherwise
+            // incompatible with all other activated versions. Note that we
+            // define "compatible" here in terms of the semver sense where if
+            // the left-most nonzero digit is the same they're considered
+            // compatible.
+            candidates.iter().filter(|&b| {
+                prev_active.iter().any(|a| a == b) ||
+                    prev_active.iter().all(|a| {
+                        !compatible(a.version(), b.version())
+                    })
+            }).cloned().collect()
+        };
+
+        // Alright, for each candidate that's gotten this far, it meets the
+        // following requirements:
+        //
+        // 1. The version matches the dependency requirement listed for this
+        //    package
+        // 2. There are no activated versions for this package which are
+        //    semver-compatible, or there's an activated version which is
+        //    precisely equal to `candidate`.
+        //
+        // This means that we're going to attempt to activate each candidate in
+        // turn. We could possibly fail to activate each candidate, so we try
+        // each one in turn.
+        let mut remaining_candidates = RcVecIter::new(my_candidates);
+        let candidate = match remaining_candidates.next() {
+            Some((_, candidate)) => {
+                // We have a candidate. Add an entry to the `backtrack_stack` so
+                // we can try the next one if this one fails.
+                backtrack_stack.push(BacktrackFrame {
+                    context_backup: cx.clone(),
+                    deps_backup: remaining_deps.clone(),
+                    remaining_candidates: remaining_candidates,
+                    parent: parent.clone(),
+                    dep: dep.clone(),
+                });
+                candidate
+            }
+            None => {
+                // This dependency has no valid candidate. Backtrack until we
+                // find a dependency that does have a candidate to try, and try
+                // to activate that one.  This resets the `remaining_deps` to
+                // their state at the found level of the `backtrack_stack`.
+                trace!("{}[{}]>{} -- no candidates", parent.name(), cur,
+                       dep.name());
+                match find_candidate(&mut backtrack_stack, &mut cx,
+                                     &mut remaining_deps, &mut parent, &mut cur,
+                                     &mut dep) {
+                    None => return Err(activation_error(&cx, registry, &parent,
+                                                        &dep,
+                                                        &cx.prev_active(&dep),
+                                                        &candidates)),
+                    Some(candidate) => candidate,
+                }
+            }
+        };
+
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.version());
-        let mut my_cx = cx.clone();
-        my_cx.resolve.graph.link(parent.package_id().clone(),
-                                 candidate.package_id().clone());
+        cx.resolve.graph.link(parent.package_id().clone(),
+                              candidate.package_id().clone());
 
         // If we hit an intransitive dependency then clear out the visitation
         // list as we can't induce a cycle through transitive dependencies.
         if !dep.is_transitive() {
-            my_cx.visited.clear();
+            cx.visited.clear();
         }
-        let my_cx = try!(activate(my_cx, registry, candidate, &method,
-                                  &mut |cx, registry| {
-            activate_deps(cx, registry, parent, deps.clone(), cur + 1, finished)
-        }));
-        match my_cx {
-            Ok(cx) => return Ok(Ok(cx)),
-            Err(e) => { last_err = Some(e); }
-        }
+        remaining_deps.extend(try!(activate(&mut cx, registry,
+                                            candidate, &method)));
     }
-    trace!("{}[{}]>{} -- {:?}", parent.name(), cur, dep.name(), last_err);
-
-    // Oh well, we couldn't activate any of the candidates, so we just can't
-    // activate this dependency at all
-    Ok(activation_error(&cx, registry, last_err, parent, dep, prev_active,
-                        &candidates))
+    trace!("resolved: {:?}", cx.resolve);
+    Ok(cx.resolve)
 }
 
-#[inline(never)] // see notes at the top of the module
+// Searches up `backtrack_stack` until it finds a dependency with remaining
+// candidates. Resets `cx` and `remaining_deps` to that level and returns the
+// next candidate. If all candidates have been exhausted, returns None.
+fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
+                  cx: &mut Context, remaining_deps: &mut Vec<DepsFrame>,
+                  parent: &mut Rc<Summary>, cur: &mut usize,
+                  dep: &mut Dependency) -> Option<Rc<Summary>> {
+    while let Some(mut frame) = backtrack_stack.pop() {
+        if let Some((_, candidate)) = frame.remaining_candidates.next() {
+            *cx = frame.context_backup.clone();
+            *remaining_deps = frame.deps_backup.clone();
+            *parent = frame.parent.clone();
+            *cur = remaining_deps.last().unwrap().remaining_siblings.cur_index();
+            *dep = frame.dep.clone();
+            backtrack_stack.push(frame);
+            return Some(candidate)
+        }
+    }
+    return None
+}
+
 #[allow(deprecated)] // connect => join in 1.3
 fn activation_error(cx: &Context,
                     registry: &mut Registry,
-                    err: Option<Box<CargoError>>,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Rc<Summary>],
-                    candidates: &[Rc<Summary>]) -> CargoResult<Box<Context>> {
-    match err {
-        Some(e) => return Err(e),
-        None => {}
-    }
+                    candidates: &[Rc<Summary>]) -> Box<CargoError> {
     if candidates.len() > 0 {
         let mut msg = format!("failed to select a version for `{}` \
                                (required by `{}`):\n\
@@ -431,7 +469,7 @@ fn activation_error(cx: &Context,
                                         .collect::<Vec<_>>()
                                         .connect(", ")));
 
-        return Err(human(msg))
+        return human(msg)
     }
 
     // Once we're all the way down here, we're definitely lost in the
@@ -450,8 +488,11 @@ fn activation_error(cx: &Context,
                       dep.version_req());
     let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
-    let new_dep = dep.clone().set_version_req(all_req);
-    let mut candidates = try!(registry.query(&new_dep));
+    let new_dep = dep.clone_inner().set_version_req(all_req).into_dependency();
+    let mut candidates = match registry.query(&new_dep) {
+        Ok(candidates) => candidates,
+        Err(e) => return e,
+    };
     candidates.sort_by(|a, b| {
         b.version().cmp(a.version())
     });
@@ -476,7 +517,7 @@ fn activation_error(cx: &Context,
                       a path dependency's locked version");
 
     }
-    Err(human(msg))
+    human(msg)
 }
 
 // Returns if `a` and `b` are compatible in the semver sense. This is a
@@ -584,7 +625,6 @@ impl Context {
     // Activate this summary by inserting it into our list of known activations.
     //
     // Returns if this summary with the given method is already activated.
-    #[inline(never)] // see notes at the top of the module
     fn flag_activated(&mut self,
                       summary: &Rc<Summary>,
                       method: &Method) -> bool {
@@ -615,10 +655,9 @@ impl Context {
         }
     }
 
-    #[inline(never)] // see notes at the top of the module
-    fn build_deps<'a>(&mut self, registry: &mut Registry,
-                      parent: &'a Summary,
-                      method: &Method) -> CargoResult<Vec<DepInfo<'a>>> {
+    fn build_deps(&mut self, registry: &mut Registry,
+                  parent: &Summary,
+                  method: &Method) -> CargoResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requsted set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
@@ -627,7 +666,7 @@ impl Context {
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
         let mut deps = try!(deps.into_iter().map(|(dep, features)| {
-            let mut candidates = try!(registry.query(dep));
+            let mut candidates = try!(registry.query(&dep));
             // When we attempt versions for a package, we'll want to start at
             // the maximum version and work our way down.
             candidates.sort_by(|a, b| {
@@ -635,12 +674,12 @@ impl Context {
             });
             let candidates = candidates.into_iter().map(Rc::new).collect();
             Ok((dep, candidates, features))
-        }).collect::<CargoResult<Vec<DepInfo<'a>>>>());
+        }).collect::<CargoResult<Vec<DepInfo>>>());
 
-        // When we recurse, attempt to resolve dependencies with fewer
-        // candidates before recursing on dependencies with more candidates.
-        // This way if the dependency with only one candidate can't be resolved
-        // we don't have to do a bunch of work before we figure that out.
+        // Attempt to resolve dependencies with fewer candidates before trying
+        // dependencies with more candidates.  This way if the dependency with
+        // only one candidate can't be resolved we don't have to do a bunch of
+        // work before we figure that out.
         deps.sort_by(|&(_, ref a, _), &(_, ref b, _)| {
             a.len().cmp(&b.len())
         });
@@ -648,15 +687,14 @@ impl Context {
         Ok(deps)
     }
 
-    #[inline(never)] // see notes at the top of the module
     fn prev_active(&self, dep: &Dependency) -> &[Rc<Summary>] {
         let key = (dep.name().to_string(), dep.source_id().clone());
         self.activations.get(&key).map(|v| &v[..]).unwrap_or(&[])
     }
 
     #[allow(deprecated)] // connect => join in 1.3
-    fn resolve_features<'a>(&mut self, parent: &'a Summary, method: &Method)
-            -> CargoResult<Vec<(&'a Dependency, Vec<String>)>> {
+    fn resolve_features(&mut self, parent: &Summary, method: &Method)
+            -> CargoResult<Vec<(Dependency, Vec<String>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
             Method::Required { dev_deps, .. } => dev_deps,
@@ -687,7 +725,7 @@ impl Context {
                                              feature)));
                 }
             }
-            ret.push((dep, base));
+            ret.push((dep.clone(), base));
         }
 
         // All features can only point to optional dependencies, in which case
