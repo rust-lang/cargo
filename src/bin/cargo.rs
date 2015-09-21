@@ -11,7 +11,6 @@ use std::fs;
 use std::io;
 use std::path::{PathBuf, Path};
 use std::process::Command;
-use std::thread::Builder;
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
@@ -58,18 +57,7 @@ See 'cargo help <command>' for more information on a specific command.
 
 fn main() {
     env_logger::init().unwrap();
-
-    // Right now the algorithm in cargo::core::resolve is pretty recursive and
-    // runs the risk of blowing the stack. Platforms tend to have different
-    // stack limits by default (I just witnessed 512K on OSX and 2MB on Linux)
-    // so to get a consistent experience just spawn ourselves with a large stack
-    // size.
-    let stack_size = env::var("CARGO_STACK_SIZE").ok()
-                         .and_then(|s| s.parse().ok())
-                         .unwrap_or(8 * 1024 * 1024); // 8MB
-    Builder::new().stack_size(stack_size).spawn(|| {
-        execute_main_without_stdin(execute, true, USAGE)
-    }).unwrap().join().unwrap();
+    execute_main_without_stdin(execute, true, USAGE)
 }
 
 macro_rules! each_subcommand{ ($mac:ident) => ({
