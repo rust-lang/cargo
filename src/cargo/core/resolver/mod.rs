@@ -317,24 +317,27 @@ fn activate_deps_loop(mut cx: Context,
             uses_default_features: dep.uses_default_features(),
         };
 
-        let prev_active = cx.prev_active(&dep).to_vec();
-        trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
-               candidates.len());
-        trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
-               dep.name(), prev_active.len());
+        let my_candidates = {
+            let prev_active = cx.prev_active(&dep);
+            trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
+                   candidates.len());
+            trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
+                   dep.name(), prev_active.len());
 
-        // Filter the set of candidates based on the previously activated
-        // versions for this dependency. We can actually use a version if it
-        // precisely matches an activated version or if it is otherwise
-        // incompatible with all other activated versions. Note that we define
-        // "compatible" here in terms of the semver sense where if the left-most
-        // nonzero digit is the same they're considered compatible.
-        let my_candidates = candidates.iter().filter(|&b| {
-            prev_active.iter().any(|a| a == b) ||
-                prev_active.iter().all(|a| {
-                    !compatible(a.version(), b.version())
-                })
-        }).cloned().collect();
+            // Filter the set of candidates based on the previously activated
+            // versions for this dependency. We can actually use a version if it
+            // precisely matches an activated version or if it is otherwise
+            // incompatible with all other activated versions. Note that we
+            // define "compatible" here in terms of the semver sense where if
+            // the left-most nonzero digit is the same they're considered
+            // compatible.
+            candidates.iter().filter(|&b| {
+                prev_active.iter().any(|a| a == b) ||
+                    prev_active.iter().all(|a| {
+                        !compatible(a.version(), b.version())
+                    })
+            }).cloned().collect()
+        };
 
         // Alright, for each candidate that's gotten this far, it meets the
         // following requirements:
@@ -372,7 +375,8 @@ fn activate_deps_loop(mut cx: Context,
                                      &mut remaining_deps, &mut parent, &mut cur,
                                      &mut dep) {
                     None => return Err(activation_error(&cx, registry, &parent,
-                                                        &dep, &prev_active,
+                                                        &dep,
+                                                        &cx.prev_active(&dep),
                                                         &candidates)),
                     Some(candidate) => candidate,
                 }
