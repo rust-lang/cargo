@@ -10,7 +10,7 @@ pub fn fetch(manifest_path: &Path, config: &Config) -> CargoResult<()> {
     let package = try!(Package::for_path(manifest_path, config));
     let mut registry = PackageRegistry::new(config);
     let resolve = try!(ops::resolve_pkg(&mut registry, &package));
-    let _ = get_resolved_packages(&resolve, &mut registry);
+    let _ = try!(get_resolved_packages(&resolve, &mut registry));
     Ok(())
 }
 
