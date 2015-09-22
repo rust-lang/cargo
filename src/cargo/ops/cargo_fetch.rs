@@ -18,6 +18,6 @@ pub fn get_resolved_packages(resolve: &Resolve, registry: &mut PackageRegistry)
                              -> CargoResult<Vec<Package>> {
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();
     registry.get(&ids).chain_error(|| {
-        human("Unable to get packages from source")
+        human("unable to get packages from source")
     })
 }
