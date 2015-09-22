@@ -28,11 +28,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target, PackageId};
+use core::{Source, SourceId, PackageSet, Package, Target};
 use core::{Profile, TargetKind};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
-use sources::{PathSource};
 use util::config::{ConfigValue, Config};
 use util::{CargoResult, internal, human, ChainError, profile};
 
@@ -87,22 +86,16 @@ pub fn compile<'a>(manifest_path: &Path,
                    -> CargoResult<ops::Compilation<'a>> {
     debug!("compile; manifest-path={}", manifest_path.display());
 
-    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                               options.config));
-    try!(source.update());
-
-    // TODO: Move this into PathSource
-    let package = try!(source.root_package());
+    let package = try!(Package::for_path(manifest_path, options.config));
     debug!("loaded package; package={}", package);
 
     for key in package.manifest().warnings().iter() {
         try!(options.config.shell().warn(key))
     }
-    compile_pkg(&package, Some(Box::new(source)), options)
+    compile_pkg(&package, options)
 }
 
 pub fn compile_pkg<'a>(package: &Package,
-                       source: Option<Box<Source + 'a>>,
                        options: &CompileOptions<'a>)
                        -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
@@ -127,12 +120,6 @@ pub fn compile_pkg<'a>(package: &Package,
 
     let (packages, resolve_with_overrides, sources) = {
         let mut registry = PackageRegistry::new(config);
-        if let Some(source) = source {
-            registry.preload(package.package_id().source_id(), source);
-        } else {
-            try!(registry.add_sources(&[package.package_id().source_id()
-                                               .clone()]));
-        }
 
         // First, resolve the package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
@@ -155,12 +142,7 @@ pub fn compile_pkg<'a>(package: &Package,
                 try!(ops::resolve_with_previous(&mut registry, package, method,
                                                 Some(&resolve), None));
 
-        let req: Vec<PackageId> = resolved_with_overrides.iter().map(|r| {
-            r.clone()
-        }).collect();
-        let packages = try!(registry.get(&req).chain_error(|| {
-            human("Unable to get packages from source")
-        }));
+        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides, &mut registry));
 
         (packages, resolved_with_overrides, registry.move_sources())
     };

@@ -3,10 +3,8 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use core::PackageIdSpec;
-use core::source::Source;
+use core::{Package, PackageIdSpec};
 use ops;
-use sources::PathSource;
 use util::{CargoResult, human};
 
 pub struct DocOptions<'a> {
@@ -16,10 +14,7 @@ pub struct DocOptions<'a> {
 
 pub fn doc(manifest_path: &Path,
            options: &DocOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                               options.compile_opts.config));
-    try!(source.update());
-    let package = try!(source.root_package());
+    let package = try!(Package::for_path(manifest_path, options.compile_opts.config));
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();

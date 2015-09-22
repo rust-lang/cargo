@@ -15,7 +15,7 @@ use core::{Package, SourceId};
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
-use sources::{PathSource, RegistrySource};
+use sources::{RegistrySource};
 use util::config;
 use util::{CargoResult, human, ChainError, ToUrl};
 use util::config::{Config, ConfigValue, Location};
@@ -31,10 +31,7 @@ pub fn publish(manifest_path: &Path,
                token: Option<String>,
                index: Option<String>,
                verify: bool) -> CargoResult<()> {
-    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                            config));
-    try!(src.update());
-    let pkg = try!(src.root_package());
+    let pkg = try!(Package::for_path(&manifest_path, config));
 
     let (mut registry, reg_id) = try!(registry(config, token, index));
     try!(verify_dependencies(&pkg, &reg_id));
@@ -264,10 +261,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         Some(ref name) => name.clone(),
         None => {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
-            let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                                    config));
-            try!(src.update());
-            let pkg = try!(src.root_package());
+            let pkg = try!(Package::for_path(&manifest_path, config));
             pkg.name().to_string()
         }
     };
@@ -327,10 +321,7 @@ pub fn yank(config: &Config,
         Some(name) => name,
         None => {
             let manifest_path = try!(find_root_manifest_for_cwd(None));
-            let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                                    config));
-            try!(src.update());
-            let pkg = try!(src.root_package());
+            let pkg = try!(Package::for_path(&manifest_path, config));
             pkg.name().to_string()
         }
     };

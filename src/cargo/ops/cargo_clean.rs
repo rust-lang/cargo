@@ -3,9 +3,8 @@ use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
 
-use core::{PackageSet, Profiles, Profile};
+use core::{Package, PackageSet, Profiles, Profile};
 use core::source::{Source, SourceMap};
-use sources::PathSource;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context, BuildConfig, Kind};
 
@@ -17,10 +16,7 @@ pub struct CleanOptions<'a> {
 
 /// Cleans the project from build artifacts.
 pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
-    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                            opts.config));
-    try!(src.update());
-    let root = try!(src.root_package());
+    let root = try!(Package::for_path(manifest_path, opts.config));
     let target_dir = opts.config.target_dir(&root);
 
     // If we have a spec, then we need to delete some packages, otherwise, just
