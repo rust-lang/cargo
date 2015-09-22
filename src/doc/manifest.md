@@ -258,7 +258,8 @@ codegen-units = 1
 
 Cargo supports **features** to allow expression of:
 
-* Optional dependencies, which enhance a package, but are not required
+* Conditional compilation options (usable through `cfg` attributes);
+* Optional dependencies, which enhance a package, but are not required;
 * Clusters of optional dependencies, such as "postgres", that would include the
   `postgres` package, the `postgres-macros` package, and possibly other packages
   (such as development-time mocking libraries, debugging tools, etc.)
@@ -276,6 +277,10 @@ name = "awesome"
 # Note that `session` is not a package but rather another
 # feature listed in this manifest.
 default = ["jquery", "uglifier", "session"]
+
+# A feature with no dependencies is used mainly for conditional
+# compilation, like `#[cfg(feature = "go-faster")]`.
+go-faster = []
 
 # The "secure-password" feature depends on the bcrypt package.
 # This aliasing will allow people to talk about the feature in
