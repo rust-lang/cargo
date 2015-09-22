@@ -161,7 +161,7 @@ test!(bad_cksum {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
-Unable to get packages from source
+unable to get packages from source
 
 Caused by:
   Failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
