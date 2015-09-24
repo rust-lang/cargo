@@ -1,3 +1,5 @@
+use std::env;
+
 use support::{project, execs, main_file, basic_bin_manifest};
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
@@ -74,16 +76,20 @@ test!(clean_multiple_packages {
                                         .arg("-p").arg("foo"),
                 execs().with_status(0));
 
+    let d1_path = &p.build_dir().join("debug").join("deps")
+                                .join(format!("d1{}", env::consts::EXE_SUFFIX));
+    let d2_path = &p.build_dir().join("debug").join("deps")
+                                .join(format!("d2{}", env::consts::EXE_SUFFIX));
+
+
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.build_dir().join("debug").join("deps").join("d1"), existing_file());
-    assert_that(&p.build_dir().join("debug").join("deps").join("d2"), existing_file());
+    assert_that(d1_path, existing_file());
+    assert_that(d2_path, existing_file());
 
     assert_that(p.cargo("clean").arg("-p").arg("d1").arg("-p").arg("d2")
                                 .cwd(&p.root().join("src")),
                 execs().with_status(0).with_stdout(""));
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.build_dir().join("debug").join("deps").join("d1"),
-                is_not(existing_file()));
-    assert_that(&p.build_dir().join("debug").join("deps").join("d2"),
-                is_not(existing_file()));
+    assert_that(d1_path, is_not(existing_file()));
+    assert_that(d2_path, is_not(existing_file()));
 });

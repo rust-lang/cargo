@@ -1975,12 +1975,16 @@ test!(build_multiple_packages {
     assert_that(process(&p.bin("foo")).unwrap(),
                 execs().with_stdout("i am foo\n"));
 
-    assert_that(&p.build_dir().join("debug").join("deps").join("d1"), existing_file());
-    assert_that(process(&p.build_dir().join("debug").join("deps").join("d1")).unwrap(),
-                execs().with_stdout("d1"));
+    let d1_path = &p.build_dir().join("debug").join("deps")
+                                .join(format!("d1{}", env::consts::EXE_SUFFIX));
+    let d2_path = &p.build_dir().join("debug").join("deps")
+                                .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
-    assert_that(&p.build_dir().join("debug").join("deps").join("d2"), existing_file());
-    assert_that(process(&p.build_dir().join("debug").join("deps").join("d2")).unwrap(),
+    assert_that(d1_path, existing_file());
+    assert_that(process(d1_path).unwrap(), execs().with_stdout("d1"));
+
+    assert_that(d2_path, existing_file());
+    assert_that(process(d2_path).unwrap(),
                 execs().with_stdout("d2"));
 });
 
