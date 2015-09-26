@@ -153,3 +153,26 @@ test!(rustdoc_only_bar_dependency {
             dir = foo.root().display(), url = foo.url(),
             bar_dir = bar.root().display())));
 });
+
+
+test!(rustdoc_same_name_err {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("src/lib.rs", r#" "#);
+
+    assert_that(p.cargo_process("rustdoc").arg("-v")
+                 .arg("--").arg("--no-defaults"),
+                execs()
+                .with_status(101)
+                .with_stderr("Cannot document a package where a library and a \
+                              binary have the same name. Consider renaming one \
+                              or marking the target as `doc = false`"));
+});

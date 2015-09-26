@@ -179,12 +179,6 @@ pub fn compile_pkg<'a>(package: &Package,
     let mut target_with_rustdoc = None;
     if !extra_rustdoc_args.is_empty() {
         let mut target_with_rustdoc_inner = Vec::new();
-        if targets.len() > 1 {
-            return Err(human("extra arguments to `rustdoc` can only be passed to \
-                  one target, consider filtering\nthe package by \
-                  passing e.g. `--lib` or `--bin NAME` to specify \
-                  a single target"));
-        }
         for &(target, profile) in &targets {
             if profile.doc {
                 let mut profile = profile.clone();
@@ -196,7 +190,9 @@ pub fn compile_pkg<'a>(package: &Package,
     };
 
     let targets = target_with_rustdoc.as_ref().map_or(targets,
-                                             |o| o.into_iter().map(|&(t, ref p)| (t, p)).collect());
+                                             |o| o.into_iter()
+                                                  .map(|&(t, ref p)| (t, p))
+                                                  .collect());
     let ret = {
         let _p = profile::start("compiling");
         let mut build_config = try!(scrape_build_config(config, jobs, target));
