@@ -113,6 +113,10 @@ no-exes:
 
 # === Misc
 
+Makefile config.mk: config.stamp
+config.stamp: $(CFG_SRC_DIR)configure $(CFG_SRC_DIR)Makefile.in
+	$(CFG_SRC_DIR)configure $(CFG_CONFIGURE_ARGS)
+
 clean-all: clean
 clean:
 	rm -rf $(TARGET_ROOT)
