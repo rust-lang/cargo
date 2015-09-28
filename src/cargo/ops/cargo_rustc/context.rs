@@ -324,8 +324,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 for lib in libs.iter() {
                     match *lib {
                         LibKind::Dylib => {
-                            let (prefix, suffix) = try!(self.dylib(kind));
-                            ret.push(format!("{}{}{}", prefix, stem, suffix));
+                            if let Ok((prefix, suffix)) = self.dylib(kind) {
+                                ret.push(format!("{}{}{}", prefix, stem, suffix));
+                            }
                         }
                         LibKind::Lib |
                         LibKind::Rlib => ret.push(format!("lib{}.rlib", stem)),
