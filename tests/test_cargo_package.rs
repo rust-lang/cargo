@@ -9,7 +9,8 @@ use git2;
 use tar::Archive;
 
 use support::{project, execs, cargo_dir, paths, git, path2url};
-use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
+use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING, UPDATING, DOWNLOADING};
+use support::registry as r;
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -139,6 +140,61 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         verifying = VERIFYING,
         compiling = COMPILING,
         dir = p.url())));
+});
+
+test!(wildcard_deps {
+    r::init();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            repository = "bar"
+
+            [dependencies]
+            bar = "*"
+
+            [build-dependencies]
+            baz = "*"
+
+            [dev-dependencies]
+            buz = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    r::mock_pkg("baz", "0.0.1", &[]);
+    r::mock_pkg("bar", "0.0.1", &[("baz", "0.0.1", "normal")]);
+    r::mock_pkg("buz", "0.0.1", &[("bar", "0.0.1", "normal")]);
+
+    assert_that(p.cargo_process("package"),
+                execs().with_status(0).with_stdout(&format!("\
+{packaging} foo v0.0.1 ({dir})
+{verifying} foo v0.0.1 ({dir})
+{updating} registry `{reg}`
+{downloading} [..] v0.0.1 (registry file://[..])
+{downloading} [..] v0.0.1 (registry file://[..])
+{downloading} [..] v0.0.1 (registry file://[..])
+{compiling} baz v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
+{compiling} foo v0.0.1 ({dir}[..])
+",
+        packaging = PACKAGING,
+        verifying = VERIFYING,
+        updating = UPDATING,
+        downloading = DOWNLOADING,
+        compiling = COMPILING,
+        dir = p.url(),
+        reg = r::registry()))
+                .with_stderr("\
+warning: some dependencies have wildcard (\"*\") version constraints. On December 11th, 2015, \
+crates.io will begin rejecting packages with wildcard dependency constraints. See \
+http://doc.crates.io/crates-io.html#using-crates.io-based-crates for information on version \
+constraints.
+dependencies for these crates have wildcard constraints: bar, baz"));
 });
 
 test!(package_verbose {
