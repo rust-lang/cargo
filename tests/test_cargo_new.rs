@@ -85,6 +85,7 @@ Usage:
 test!(existing {
     let dst = paths::root().join("foo");
     fs::create_dir(&dst).unwrap();
+    File::create(&dst.join("Cargo.toml")).unwrap().write_all(b"qqq").unwrap();
     assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
                        .with_stderr(format!("Destination `{}` already exists\n",
