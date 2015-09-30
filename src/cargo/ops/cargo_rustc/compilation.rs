@@ -17,7 +17,7 @@ pub struct Compilation<'cfg> {
     pub libraries: HashMap<PackageId, Vec<(Target, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
-    pub tests: Vec<(String, PathBuf)>,
+    pub tests: Vec<(Package, Vec<(String, PathBuf)>)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,
@@ -39,8 +39,7 @@ pub struct Compilation<'cfg> {
     /// be passed to future invocations of programs.
     pub extra_env: HashMap<String, String>,
 
-    /// Top-level package that was compiled
-    pub package: Package,
+    pub to_doc_test: Vec<Package>,
 
     /// Features enabled during this compilation.
     pub features: HashSet<String>,
@@ -49,7 +48,7 @@ pub struct Compilation<'cfg> {
 }
 
 impl<'cfg> Compilation<'cfg> {
-    pub fn new(pkg: &Package, config: &'cfg Config) -> Compilation<'cfg> {
+    pub fn new(config: &'cfg Config) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: HashMap::new(),  // TODO: deprecated, remove
@@ -58,7 +57,7 @@ impl<'cfg> Compilation<'cfg> {
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
-            package: pkg.clone(),
+            to_doc_test: Vec::new(),
             features: HashSet::new(),
             config: config,
         }

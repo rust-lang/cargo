@@ -1935,3 +1935,63 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
 });
+
+test!(test_multiple_packages {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+            [dependencies.d2]
+                path = "d2"
+
+            [lib]
+                name = "foo"
+                doctest = false
+        "#)
+        .file("src/lib.rs", "")
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+                name = "d1"
+                doctest = false
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+                name = "d2"
+                doctest = false
+        "#)
+        .file("d2/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
+                execs().with_status(0)
+                       .with_stdout_contains(&format!("\
+{running} target[..]debug[..]d1-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+", running = RUNNING))
+                       .with_stdout_contains(&format!("\
+{running} target[..]debug[..]d2-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+", running = RUNNING)));
+});
