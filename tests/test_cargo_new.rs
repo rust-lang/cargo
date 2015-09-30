@@ -285,3 +285,136 @@ Usage:
     cargo new [..]
 "));
 });
+
+test!(simple_lib_with_known_license {
+    assert_that(cargo_process("new").arg("foo")
+                                    .arg("--license").arg("MIT")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+    let license = paths::root().join("foo/LICENSE");
+    let toml = paths::root().join("foo/Cargo.toml");
+
+    assert_that(&paths::root().join("foo"), existing_dir());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+    assert_that(&toml, existing_file());
+    assert_that(&license, existing_file());
+
+    let mut toml_contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut toml_contents).unwrap();
+    println!("toml_contents: {}", toml_contents);
+    assert!(toml_contents.contains(r#"license = "MIT""#));
+
+    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
+                execs().with_status(0));
+});
+
+test!(simple_lib_with_known_license_case_insensitive {
+    assert_that(cargo_process("new").arg("foo")
+                                    .arg("--license").arg("mpl-2.0")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+    let license = paths::root().join("foo/LICENSE");
+    let toml = paths::root().join("foo/Cargo.toml");
+
+    assert_that(&paths::root().join("foo"), existing_dir());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+    assert_that(&toml, existing_file());
+    assert_that(&license, existing_file());
+
+    let mut toml_contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut toml_contents).unwrap();
+    println!("toml_contents: {}", toml_contents);
+    assert!(toml_contents.contains(r#"license = "MPL-2.0""#));
+
+    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
+                execs().with_status(0));
+});
+
+test!(simple_lib_with_two_known_licenses {
+    assert_that(cargo_process("new").arg("foo")
+                                    .arg("--license").arg("MIT/Apache-2.0")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+    let mit_license = paths::root().join("foo/LICENSE-MIT");
+    let apache_license = paths::root().join("foo/LICENSE-APACHE-2.0");
+    let toml = paths::root().join("foo/Cargo.toml");
+
+    assert_that(&paths::root().join("foo"), existing_dir());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+    assert_that(&toml, existing_file());
+    assert_that(&mit_license, existing_file());
+    assert_that(&apache_license, existing_file());
+
+    let mut toml_contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut toml_contents).unwrap();
+    assert!(toml_contents.contains(r#"license = "MIT/Apache-2.0""#));
+
+    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
+                execs().with_status(0));
+});
+
+test!(simple_lib_with_unknown_license {
+    assert_that(cargo_process("new").arg("foo")
+                                    .arg("--license").arg("abcd")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+
+    assert_that(&paths::root().join("foo"), existing_dir());
+    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+    assert_that(&paths::root().join("foo/LICENSE"), existing_file());
+
+    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
+                execs().with_status(0));
+});
+
+test!(license_from_config {
+    let root = paths::root();
+    fs::create_dir(&root.join(".cargo")).unwrap();
+    File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
+        [cargo-new]
+        vcs = "none"
+        name = "foo"
+        email = "bar"
+        license = "MIT"
+    "#).unwrap();
+
+    assert_that(cargo_process("new").arg("foo")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+
+    let toml = root.join("foo/Cargo.toml");
+    assert_that(&root.join("foo"), existing_dir());
+    assert_that(&toml, existing_file());
+    assert_that(&root.join("foo/LICENSE"), existing_file());
+
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"license = "MIT""#));
+});
+
+test!(license_prefers_command_line {
+    let root = paths::root();
+    fs::create_dir(&root.join(".cargo")).unwrap();
+    File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
+        [cargo-new]
+        vcs = "none"
+        name = "foo"
+        email = "bar"
+        license = "MIT"
+    "#).unwrap();
+
+    assert_that(cargo_process("new").arg("foo")
+                                    .arg("--license").arg("GPL-3.0")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+
+    let toml = root.join("foo/Cargo.toml");
+    assert_that(&root.join("foo"), existing_dir());
+    assert_that(&toml, existing_file());
+    assert_that(&root.join("foo/LICENSE"), existing_file());
+
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"license = "GPL-3.0""#));
+});
