@@ -214,7 +214,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
         target: None,
         features: &[],
         no_default_features: false,
-        spec: None,
+        spec: &[],
         filter: ops::CompileFilter::Everything,
         exec_engine: None,
         release: false,

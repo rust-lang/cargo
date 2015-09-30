@@ -11,7 +11,7 @@ use util::{CargoResult, human};
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
-    pub to_update: Option<&'a str>,
+    pub to_update: &'a [String],
     pub precise: Option<&'a str>,
     pub aggressive: bool,
 }
@@ -44,15 +44,18 @@ pub fn update_lockfile(manifest_path: &Path,
     let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
 
-    match opts.to_update {
-        Some(name) => {
+    if opts.to_update.len() == 0 {
+        to_avoid.extend(previous_resolve.iter());
+    } else {
+        let mut sources = Vec::new();
+        for name in opts.to_update {
             let dep = try!(previous_resolve.query(name));
             if opts.aggressive {
                 fill_with_deps(&previous_resolve, dep, &mut to_avoid,
                                &mut HashSet::new());
             } else {
                 to_avoid.insert(dep);
-                match opts.precise {
+                sources.push(match opts.precise {
                     Some(precise) => {
                         // TODO: see comment in `resolve.rs` as well, but this
                         //       seems like a pretty hokey reason to single out
@@ -62,19 +65,15 @@ pub fn update_lockfile(manifest_path: &Path,
                         } else {
                             precise.to_string()
                         };
-                        let precise = dep.source_id().clone()
-                                         .with_precise(Some(precise));
-                        try!(registry.add_sources(&[precise]));
+                        dep.source_id().clone().with_precise(Some(precise))
                     }
                     None => {
-                        let imprecise = dep.source_id().clone()
-                                           .with_precise(None);
-                        try!(registry.add_sources(&[imprecise]));
+                        dep.source_id().clone().with_precise(None)
                     }
-                }
+                });
             }
         }
-        None => to_avoid.extend(previous_resolve.iter()),
+        try!(registry.add_sources(&sources));
     }
 
     let resolve = try!(ops::resolve_with_previous(&mut registry,

@@ -7,7 +7,7 @@ use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,
@@ -31,22 +31,22 @@ Usage:
     cargo build [options]
 
 Options:
-    -h, --help               Print this message
-    -p SPEC, --package SPEC  Package to build
-    -j N, --jobs N           The number of jobs to run in parallel
-    --lib                    Build only this package's library
-    --bin NAME               Build only the specified binary
-    --example NAME           Build only the specified example
-    --test NAME              Build only the specified test target
-    --bench NAME             Build only the specified benchmark target
-    --release                Build artifacts in release mode, with optimizations
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --manifest-path PATH     Path to the manifest to compile
-    -v, --verbose            Use verbose output
-    -q, --quiet              No output printed to stdout
-    --color WHEN             Coloring: auto, always, never
+    -h, --help                   Print this message
+    -p SPEC, --package SPEC ...  Package to build
+    -j N, --jobs N               The number of jobs to run in parallel
+    --lib                        Build only this package's library
+    --bin NAME                   Build only the specified binary
+    --example NAME               Build only the specified example
+    --test NAME                  Build only the specified test target
+    --bench NAME                 Build only the specified benchmark target
+    --release                    Build artifacts in release mode, with optimizations
+    --features FEATURES          Space-separated list of features to also build
+    --no-default-features        Do not build the `default` feature
+    --target TRIPLE              Build for the target triple
+    --manifest-path PATH         Path to the manifest to compile
+    -v, --verbose                Use verbose output
+    -q, --quiet                  No output printed to stdout
+    --color WHEN                 Coloring: auto, always, never
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
@@ -72,7 +72,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
-        spec: options.flag_package.as_ref().map(|s| &s[..]),
+        spec: &options.flag_package,
         exec_engine: None,
         mode: ops::CompileMode::Build,
         release: options.flag_release,

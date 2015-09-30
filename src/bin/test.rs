@@ -10,7 +10,7 @@ struct Options {
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_no_run: bool,
-    flag_package: Option<String>,
+    flag_package: Vec<String>,
     flag_target: Option<String>,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -31,24 +31,24 @@ Usage:
     cargo test [options] [--] [<args>...]
 
 Options:
-    -h, --help               Print this message
-    --lib                    Test only this package's library
-    --bin NAME               Test only the specified binary
-    --example NAME           Test only the specified example
-    --test NAME              Test only the specified integration test target
-    --bench NAME             Test only the specified benchmark target
-    --no-run                 Compile, but don't run tests
-    -p SPEC, --package SPEC  Package to run tests for
-    -j N, --jobs N           The number of jobs to run in parallel
-    --release                Build artifacts in release mode, with optimizations
-    --features FEATURES      Space-separated list of features to also build
-    --no-default-features    Do not build the `default` feature
-    --target TRIPLE          Build for the target triple
-    --manifest-path PATH     Path to the manifest to build tests for
-    -v, --verbose            Use verbose output
-    -q, --quiet              No output printed to stdout
-    --color WHEN             Coloring: auto, always, never
-    --no-fail-fast           Run all tests regardless of failure
+    -h, --help                   Print this message
+    --lib                        Test only this package's library
+    --bin NAME                   Test only the specified binary
+    --example NAME               Test only the specified example
+    --test NAME                  Test only the specified integration test target
+    --bench NAME                 Test only the specified benchmark target
+    --no-run                     Compile, but don't run tests
+    -p SPEC, --package SPEC ...  Package to run tests for
+    -j N, --jobs N               The number of jobs to run in parallel
+    --release                    Build artifacts in release mode, with optimizations
+    --features FEATURES          Space-separated list of features to also build
+    --no-default-features        Do not build the `default` feature
+    --target TRIPLE              Build for the target triple
+    --manifest-path PATH         Path to the manifest to build tests for
+    -v, --verbose                Use verbose output
+    -q, --quiet                  No output printed to stdout
+    --color WHEN                 Coloring: auto, always, never
+    --no-fail-fast               Run all tests regardless of failure
 
 All of the trailing arguments are passed to the test binaries generated for
 filtering tests and generally providing options configuring how they run. For
@@ -81,7 +81,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             target: options.flag_target.as_ref().map(|s| &s[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: options.flag_package.as_ref().map(|s| &s[..]),
+            spec: &options.flag_package,
             exec_engine: None,
             release: options.flag_release,
             mode: ops::CompileMode::Test,

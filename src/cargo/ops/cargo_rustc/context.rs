@@ -18,6 +18,7 @@ use super::fingerprint::Fingerprint;
 use super::layout::{Layout, LayoutProxy};
 use super::{Kind, Compilation, BuildConfig};
 use super::{ProcessEngine, ExecEngine};
+use super::PackagesToBuild;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Platform {
@@ -59,7 +60,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                config: &'cfg Config,
                host: Layout,
                target_layout: Option<Layout>,
-               root_pkg: &Package,
                build_config: BuildConfig,
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
@@ -90,7 +90,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             host_dylib: host_dylib,
             host_exe: host_exe,
             requirements: HashMap::new(),
-            compilation: Compilation::new(root_pkg, config),
+            compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config, deps)),
             build_config: build_config,
             exec_engine: engine,
@@ -143,36 +143,35 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
-    pub fn prepare(&mut self, pkg: &'a Package,
-                   targets: &[(&'a Target, &'a Profile)])
-                   -> CargoResult<()> {
+    pub fn prepare(&mut self, root: &Package,
+                   pkgs: &'a PackagesToBuild<'a>) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
         try!(self.host.prepare().chain_error(|| {
-            internal(format!("couldn't prepare build directories for `{}`",
-                             pkg.name()))
+            internal(format!("couldn't prepare build directories"))
         }));
         match self.target {
             Some(ref mut target) => {
                 try!(target.prepare().chain_error(|| {
-                    internal(format!("couldn't prepare build directories \
-                                      for `{}`", pkg.name()))
+                    internal(format!("couldn't prepare build directories"))
                 }));
             }
             None => {}
         }
 
-        for &(target, profile) in targets {
-            self.build_requirements(pkg, target, profile, Kind::from(target));
+        for &(pkg, ref targets) in pkgs {
+            for &(target, profile) in targets {
+                self.build_requirements(pkg, target, profile, Kind::from(target));
+            }
         }
 
         let jobs = self.jobs();
         self.compilation.extra_env.insert("NUM_JOBS".to_string(),
                                           jobs.to_string());
         self.compilation.root_output =
-                self.layout(pkg, Kind::Target).proxy().dest().to_path_buf();
+                self.layout(root, Kind::Target).proxy().dest().to_path_buf();
         self.compilation.deps_output =
-                self.layout(pkg, Kind::Target).proxy().deps().to_path_buf();
+                self.layout(root, Kind::Target).proxy().deps().to_path_buf();
 
         return Ok(());
     }

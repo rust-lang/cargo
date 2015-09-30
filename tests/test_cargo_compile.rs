@@ -1925,3 +1925,103 @@ test!(rustc_no_trans {
     assert_that(p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
                 execs().with_status(0));
 });
+
+test!(build_multiple_packages {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+            [dependencies.d2]
+                path = "d2"
+
+            [[bin]]
+                name = "foo"
+        "#)
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+                name = "d1"
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }")
+        .file("d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+                name = "d2"
+                doctest = false
+        "#)
+        .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }");
+    p.build();
+
+    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2")
+                                        .arg("-p").arg("foo"),
+                execs());
+
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(process(&p.bin("foo")).unwrap(),
+                execs().with_stdout("i am foo\n"));
+
+    let d1_path = &p.build_dir().join("debug").join("deps")
+                                .join(format!("d1{}", env::consts::EXE_SUFFIX));
+    let d2_path = &p.build_dir().join("debug").join("deps")
+                                .join(format!("d2{}", env::consts::EXE_SUFFIX));
+
+    assert_that(d1_path, existing_file());
+    assert_that(process(d1_path).unwrap(), execs().with_stdout("d1"));
+
+    assert_that(d2_path, existing_file());
+    assert_that(process(d2_path).unwrap(),
+                execs().with_stdout("d2"));
+});
+
+test!(invalid_spec {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+
+            [[bin]]
+                name = "foo"
+        "#)
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+                name = "d1"
+        "#)
+        .file("d1/src/lib.rs", "")
+        .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }");
+    p.build();
+
+    assert_that(p.cargo_process("build").arg("-p").arg("notAValidDep"),
+                execs().with_status(101).with_stderr(
+                    "could not find package matching spec `notAValidDep`".to_string()));
+
+    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
+                execs().with_status(101).with_stderr(
+                    "could not find package matching spec `notAValidDep`".to_string()));
+
+});

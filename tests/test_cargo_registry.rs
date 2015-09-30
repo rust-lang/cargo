@@ -829,3 +829,63 @@ test!(update_backtracking_ok {
 {updating} registry `[..]`
 ", updating = UPDATING)));
 });
+
+test!(update_multiple_packages {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = "*"
+            b = "*"
+            c = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("a", "0.1.0", &[]);
+    r::mock_pkg("b", "0.1.0", &[]);
+    r::mock_pkg("c", "0.1.0", &[]);
+
+    assert_that(p.cargo("fetch"),
+                execs().with_status(0));
+
+    r::mock_pkg("a", "0.1.1", &[]);
+    r::mock_pkg("b", "0.1.1", &[]);
+    r::mock_pkg("c", "0.1.1", &[]);
+
+    assert_that(p.cargo("update").arg("-pa").arg("-pb"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} registry `[..]`
+{updating} a v0.1.0 (registry [..]) -> v0.1.1
+{updating} b v0.1.0 (registry [..]) -> v0.1.1
+", updating = UPDATING)));
+
+    assert_that(p.cargo("update").arg("-pb").arg("-pc"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} registry `[..]`
+{updating} c v0.1.0 (registry [..]) -> v0.1.1
+", updating = UPDATING)));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stdout_contains(format!("\
+{downloading} a v0.1.1 (registry file://[..])", downloading = DOWNLOADING))
+                       .with_stdout_contains(format!("\
+{downloading} b v0.1.1 (registry file://[..])", downloading = DOWNLOADING))
+                       .with_stdout_contains(format!("\
+{downloading} c v0.1.1 (registry file://[..])", downloading = DOWNLOADING))
+                       .with_stdout_contains(format!("\
+{compiling} a v0.1.1 (registry [..])", compiling = COMPILING))
+                       .with_stdout_contains(format!("\
+{compiling} b v0.1.1 (registry [..])", compiling = COMPILING))
+                       .with_stdout_contains(format!("\
+{compiling} c v0.1.1 (registry [..])", compiling = COMPILING))
+                       .with_stdout_contains(format!("\
+{compiling} foo v0.5.0 ([..])", compiling = COMPILING)));
+});

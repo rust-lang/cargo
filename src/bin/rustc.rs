@@ -75,7 +75,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
-        spec: options.flag_package.as_ref().map(|s| &s[..]),
+        spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
         exec_engine: None,
         mode: ops::CompileMode::Build,
         release: options.flag_release,

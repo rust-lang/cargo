@@ -922,3 +922,88 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING)));
 });
+
+test!(test_bench_multiple_packages {
+    if !::is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+
+            [dependencies.bar]
+            path = "../bar"
+
+            [dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("src/lib.rs", "");
+
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            authors = []
+            version = "0.1.0"
+
+            [[bench]]
+            name = "bbar"
+            test = true
+        "#)
+        .file("src/lib.rs", "")
+        .file("benches/bbar.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_bar(_b: &mut Bencher) {}
+        "#);
+    bar.build();
+
+    let baz = project("baz")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "baz"
+            authors = []
+            version = "0.1.0"
+
+            [[bench]]
+            name = "bbaz"
+            test = true
+        "#)
+        .file("src/lib.rs", "")
+        .file("benches/bbaz.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_baz(_b: &mut Bencher) {}
+        "#);
+    baz.build();
+
+
+    assert_that(p.cargo_process("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
+                execs().with_status(0)
+                       .with_stdout_contains(&format!("\
+{running} target[..]release[..]bbaz-[..]
+
+running 1 test
+test bench_baz ... bench:           0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+", running = RUNNING))
+                       .with_stdout_contains(&format!("\
+{running} target[..]release[..]bbar-[..]
+
+running 1 test
+test bench_bar ... bench:           0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+", running = RUNNING)));
+});
