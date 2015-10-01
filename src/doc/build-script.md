@@ -80,8 +80,8 @@ Dependencies are declared through the `build-dependencies` section of the
 manifest.
 
 ```toml
-[build-dependencies.foo]
-git = "https://github.com/your-packages/foo"
+[build-dependencies]
+foo = { git = "https://github.com/your-packages/foo" }
 ```
 
 The build script **does not** have access to the dependencies listed in the
@@ -424,11 +424,11 @@ authors = ["..."]
 links = "git2"
 build = "build.rs"
 
-[dependencies.libssh2-sys]
-git = "https://github.com/alexcrichton/ssh2-rs"
+[dependencies]
+libssh2-sys = { git = "https://github.com/alexcrichton/ssh2-rs" }
 
-[target.x86_64-unknown-linux-gnu.dependencies.openssl-sys]
-git = "https://github.com/alexcrichton/openssl-sys"
+[target.x86_64-unknown-linux-gnu.dependencies]
+openssl-sys = { git = "https://github.com/alexcrichton/openssl-sys" }
 
 # ...
 ```
