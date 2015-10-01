@@ -441,7 +441,8 @@ hello_utils = { path = "hello_utils" }
 This tells Cargo that we depend on a crate called `hello_utils` which is found
 in the `hello_utils` folder (relative to the `Cargo.toml` it's written in).
 
-And that's it! The next `cargo build` will automatically build `hello_utils` and
+We now just have to prefix the crate name in any `use` statements with `self::`,
+and that's it! The next `cargo build` will automatically build `hello_utils` and
 all of its own dependencies, and others can also start using the crate as well.
 
 ## Travis-CI
