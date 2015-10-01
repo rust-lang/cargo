@@ -233,8 +233,8 @@ name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
-[dependencies.color]
-git = "https://github.com/bjz/color-rs.git"
+[dependencies]
+color = { git = "https://github.com/bjz/color-rs.git" }
 ```
 
 This project has a single dependency, on the `color` library. We've stated in
@@ -251,9 +251,8 @@ builds. This would be bad, because we want reproducible builds.
 We could fix this problem by putting a `rev` line in our `Cargo.toml`:
 
 ```toml
-[dependencies.color]
-git = "https://github.com/bjz/color-rs.git"
-rev = "bf739419e2d31050615c1ba1a395b474269a4"
+[dependencies]
+color = { git = "https://github.com/bjz/color-rs.git", rev = "bf739419" }
 ```
 
 Now, our builds will be the same. But, there's a big drawback: now we have to
@@ -270,8 +269,8 @@ name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
-[dependencies.color]
-git = "https://github.com/bjz/color-rs.git"
+[dependencies]
+color = { git = "https://github.com/bjz/color-rs.git" }
 ```
 
 Cargo will take the latest commit, and write that information out into our
@@ -435,8 +434,8 @@ This will create a new folder `hello_utils` inside of which a `Cargo.toml` and
 up `hello_world/Cargo.toml` and add these lines:
 
 ```toml
-[dependencies.hello_utils]
-path = "hello_utils"
+[dependencies]
+hello_utils = { path = "hello_utils" }
 ```
 
 This tells Cargo that we depend on a crate called `hello_utils` which is found
