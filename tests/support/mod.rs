@@ -8,6 +8,7 @@ use std::os;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 use std::str;
+use std::usize;
 
 use url::Url;
 use hamcrest as ham;
@@ -137,6 +138,7 @@ impl ProjectBuilder {
         p.cwd(&self.root())
          .env("HOME", &paths::home())
          .env_remove("CARGO_HOME")  // make sure we don't pick up an outer one
+         .env_remove("CARGO_TARGET_DIR") // we assume 'target'
          .env_remove("MSYSTEM");    // assume cmd.exe everywhere on windows
         return p;
     }
@@ -316,99 +318,86 @@ impl Execs {
     }
 
     fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
-        self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
-                       "stdout", &actual.stderr)
-            .and(self.match_contains(self.expect_stdout_contains.as_ref(),
-                 &actual.stdout, "stdout"))
+        try!(self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
+                            "stdout", &actual.stderr, false));
+        for expect in self.expect_stdout_contains.iter() {
+            try!(self.match_std(Some(expect), &actual.stdout, "stdout",
+                                &actual.stderr, true));
+        }
+        Ok(())
     }
 
     fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
         self.match_std(self.expect_stderr.as_ref(), &actual.stderr,
-                       "stderr", &actual.stdout)
-    }
-
-    #[allow(deprecated)] // connect => join in 1.3
-    fn match_contains(&self, expect: &[String], actual: &[u8],
-                      description: &str) -> ham::MatchResult {
-        for s in expect {
-            let a: Vec<&str> = match str::from_utf8(actual) {
-                Err(..) => return Err(format!("{} was not utf8 encoded",
-                                           description)),
-                Ok(actual) => actual.lines().collect(),
-            };
-            let e: Vec<&str> = s.lines().collect();
-
-            let first = e.first().unwrap();
-            let mut ai = a.iter();
-            match ai.position(|s| lines_match(first, s)) {
-                Some(_) => {
-                    let match_count = ai.zip(e.iter().skip(1))
-                                        .take_while(|&(a, e)| lines_match(a, e)).count();
-                    if match_count != (e.len() - 1) {
-                        return ham::expect(false,
-                                           format!("expected: {}\n\
-                                                    actual: {}",
-                                                    e.connect("\n"),
-                                                    a.iter().take(e.len()).map(|&s| s)
-                                                     .collect::<Vec<_>>().connect("\n")));
-                    }
-                },
-                None => {
-                    return ham::expect(false, format!("no match"));
-                }
-            };
-        }
-        ham::expect(true, format!("OK"))
+                       "stderr", &actual.stdout, false)
     }
 
     #[allow(deprecated)] // connect => join in 1.3
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
-                 description: &str, extra: &[u8]) -> ham::MatchResult {
-        match expected.map(|s| &s[..]) {
-            None => ham::success(),
-            Some(out) => {
-                let actual = match str::from_utf8(actual) {
-                    Err(..) => return Err(format!("{} was not utf8 encoded",
-                                               description)),
-                    Ok(actual) => actual,
-                };
-                // Let's not deal with \r\n vs \n on windows...
-                let actual = actual.replace("\r", "");
-                let actual = actual.replace("\t", "<tab>");
+                 description: &str, extra: &[u8],
+                 partial: bool) -> ham::MatchResult {
+        let out = match expected {
+            Some(out) => out,
+            None => return ham::success(),
+        };
+        let actual = match str::from_utf8(actual) {
+            Err(..) => return Err(format!("{} was not utf8 encoded",
+                                       description)),
+            Ok(actual) => actual,
+        };
+        // Let's not deal with \r\n vs \n on windows...
+        let actual = actual.replace("\r", "");
+        let actual = actual.replace("\t", "<tab>");
 
-                let a = actual.lines();
-                let e = out.lines();
+        let mut a = actual.lines();
+        let e = out.lines();
 
-                let diffs = zip_all(a, e).enumerate();
-                let diffs = diffs.filter_map(|(i, (a,e))| {
-                    match (a, e) {
-                        (Some(a), Some(e)) => {
-                            if lines_match(&e, &a) {
-                                None
-                            } else {
-                                Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
-                            }
-                        },
-                        (Some(a), None) => {
-                            Some(format!("{:3} -\n    + |{}|\n", i, a))
-                        },
-                        (None, Some(e)) => {
-                            Some(format!("{:3} - |{}|\n    +\n", i, e))
-                        },
-                        (None, None) => panic!("Cannot get here")
-                    }
-                });
-
-                let diffs = diffs.collect::<Vec<String>>().connect("\n");
-
-                ham::expect(diffs.len() == 0,
-                            format!("differences:\n\
-                                    {}\n\n\
-                                    other output:\n\
-                                    `{}`", diffs,
-                                    String::from_utf8_lossy(extra)))
+        let diffs = if partial {
+            let mut min = self.diff_lines(a.clone(), e.clone(), partial);
+            while let Some(..) = a.next() {
+                let a = self.diff_lines(a.clone(), e.clone(), partial);
+                if a.len() < min.len() {
+                    min = a;
+                }
             }
-        }
+            min
+        } else {
+            self.diff_lines(a, e, partial)
+        };
+        ham::expect(diffs.len() == 0,
+                    format!("differences:\n\
+                            {}\n\n\
+                            other output:\n\
+                            `{}`", diffs.connect("\n"),
+                            String::from_utf8_lossy(extra)))
+
+    }
+
+    fn diff_lines<'a>(&self, actual: str::Lines<'a>, expected: str::Lines<'a>,
+                      partial: bool) -> Vec<String> {
+        let actual = actual.take(if partial {
+            expected.clone().count()
+        } else {
+            usize::MAX
+        });
+        zip_all(actual, expected).enumerate().filter_map(|(i, (a,e))| {
+            match (a, e) {
+                (Some(a), Some(e)) => {
+                    if lines_match(&e, &a) {
+                        None
+                    } else {
+                        Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
+                    }
+                },
+                (Some(a), None) => {
+                    Some(format!("{:3} -\n    + |{}|\n", i, a))
+                },
+                (None, Some(e)) => {
+                    Some(format!("{:3} - |{}|\n    +\n", i, e))
+                },
+                (None, None) => panic!("Cannot get here")
+            }
+        }).collect()
     }
 }
 
