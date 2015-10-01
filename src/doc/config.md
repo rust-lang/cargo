@@ -55,6 +55,18 @@ email = "..."
 # set to `none` to disable this behavior.
 vcs = "none"
 
+# By default, no license is added to a new project, but by specifying
+# one here, `cargo` will add the correct entry to `Cargo.toml`, as well as
+# a `LICENSE` file (or multiple LICENSE-* files). Currently this supports:
+#
+#   * MIT
+#   * Apache-2.0
+#   * BSD-3-Clause
+#   * MPL-2.0
+#   * GPL-3.0
+
+license = "MIT/Apache-2.0"
+
 # For the following sections, $triple refers to any valid target triple, not the
 # literal string "$triple", and it will apply whenever that target triple is
 # being compiled to.

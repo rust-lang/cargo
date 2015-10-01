@@ -146,6 +146,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
+                    '--license=[license choice]' \
                     ;;
 
             owner)
