@@ -116,52 +116,42 @@ search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
 
 
-# The `[dependencies.*]` Sections
+# The `[dependencies]` Section
 
-You list dependencies using `[dependencies.<name>]`. For example, if you
-wanted to depend on both `hammer` and `color`:
+You list dependencies using keys inside of the `[dependencies]` section. For
+example, if you wanted to depend on `hammer`, `color`, and `geometry`:
 
 ```toml
 [package]
 # ...
 
-[dependencies.hammer]
-version = "0.5.0" # optional
-git = "https://github.com/wycats/hammer.rs"
-
-[dependencies.color]
-git = "https://github.com/bjz/color-rs"
-
-[dependencies.geometry]
-path = "crates/geometry"
-```
-
-You may prefer to use TOML's inline table syntax:
-
-```toml
 [dependencies]
 hammer = { version = "0.5.0", git = "https://github.com/wycats/hammer.rs" }
 color = { git = "https://github.com/bjz/color-rs" }
 geometry = { path = "crates/geometry" }
 ```
 
-You can specify the source of a dependency in one of two ways at the moment:
+You can specify the source of a dependency in a few ways:
 
-* `git = "<git-url>"`: A git repository with a `Cargo.toml` in its root. The
-  `rev`, `tag`, and `branch` options are also recognized to use something other
-  than the `master` branch.
+* `git = "<git-url>"`: A git repository with a `Cargo.toml` inside it (not
+  necessarily at the root). The `rev`, `tag`, and `branch` options are also
+  recognized to use something other than the `master` branch.
 * `path = "<relative-path>"`: A path relative to the current `Cargo.toml`
-  with a `Cargo.toml` in its root.
+  pointing to another directory with a `Cargo.toml` and an associated package.
+* If `path` and `git` are omitted, then a dependencies will come from crates.io
+  and use the `version` key to indicate the version requirement.
 
-Dependencies from crates.io are not declared with separate sections:
+Dependencies from crates.io can also use a shorthand where just the version
+requirement is specified:
 
 ```toml
 [dependencies]
 hammer = "0.5.0"
-color = "0.6.0"
+color = "> 0.6.0, < 0.8.0"
 ```
 
-The syntax of the requirement strings is described in the [crates.io guide](crates-io.html#using-crates.io-based-crates).
+The syntax of the requirement strings is described in the [crates.io
+guide](crates-io.html#using-crates.io-based-crates).
 
 Platform-specific dependencies take the same format, but are listed under the
 `target.$triple` section:
@@ -179,7 +169,8 @@ openssl = "1.0.1"
 native = { path = "native/x86_64" }
 ```
 
-If you're using a target file, quote the full path and file name:
+If you're using a custom target specification, quote the full path and file
+name:
 
 ```toml
 [target."x86_64/windows.json".dependencies]
@@ -303,29 +294,17 @@ route-recognizer = "=2.1.0"
 # A list of all of the optional dependencies, some of which
 # are included in the above "features". They can be opted
 # into by apps.
-[dependencies.jquery]
-version = "1.0.2"
-optional = true
-
-[dependencies.uglifier]
-version = "1.5.3"
-optional = true
-
-[dependencies.bcrypt]
-version = "*"
-optional = true
-
-[dependencies.civet]
-version = "*"
-optional = true
+jquery = { version = "1.0.2", optional = true }
+uglifier = { version = "1.5.3", optional = true }
+bcrypt = { version = "*", optional = true }
+civet = { version = "*", optional = true }
 ```
 
 To use the package `awesome`:
 
 ```toml
-[dependencies.awesome]
-version = "1.3.5"
-features = ["secure-password", "civet"]
+[dependencies]
+awesome = { version = "1.3.5", features = ["secure-password", "civet"] }
 
 # do not include the default features, and optionally
 # cherry-pick individual features
@@ -396,9 +375,9 @@ In almost all cases, it is an antipattern to use these features outside of
 high-level packages that are designed for curation. If a feature is optional, it
 can almost certainly be expressed as a separate package.
 
-# The `[dev-dependencies.*]` Sections
+# The `[dev-dependencies]` Section
 
-The format of this section is equivalent to `[dependencies.*]`. Dev-dependencies
+The format of this section is equivalent to `[dependencies]`. Dev-dependencies
 are not used when compiling a package for building, but are used for compiling
 tests and benchmarks.
 
