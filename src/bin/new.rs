@@ -1,4 +1,5 @@
 use std::env;
+use std::str::{FromStr};
 
 use cargo::ops;
 use cargo::util::{CliResult, Config};
@@ -50,7 +51,22 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         bin: flag_bin,
         path: &arg_path,
         name: flag_name.as_ref().map(|s| s.as_ref()),
-        license: flag_license.map(|s| s.split("/").map(|l| From::from(l.trim())).collect()),
+        license: match flag_license {
+            Some(input) => {
+                let mut licenses: Vec<ops::License> = vec![];
+                let split = input.split("/").collect::<Vec<_>>();
+                for l in &split {
+                    let l = l.trim();
+                    licenses.push(match FromStr::from_str(l) {
+                        Ok(lic) => lic,
+                        _ => return Err(CliError::new(&format!("Unrecognised license '{}'", l),
+                                                      127)),
+                    });
+                }
+                Some(licenses)
+            },
+            None => None
+        },
     };
 
     try!(ops::new(opts, config));

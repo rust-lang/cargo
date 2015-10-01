@@ -357,15 +357,7 @@ test!(simple_lib_with_unknown_license {
     assert_that(cargo_process("new").arg("foo")
                                     .arg("--license").arg("abcd")
                                     .env("USER", "foo"),
-                execs().with_status(0));
-
-    assert_that(&paths::root().join("foo"), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-    assert_that(&paths::root().join("foo/LICENSE"), existing_file());
-
-    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
-                execs().with_status(0));
+                execs().with_status(127));
 });
 
 test!(license_from_config {

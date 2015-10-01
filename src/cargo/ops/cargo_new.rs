@@ -3,6 +3,7 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
+use std::str::{FromStr};
 
 use rustc_serialize::{Decodable, Decoder};
 
@@ -10,8 +11,8 @@ use git2::Config as GitConfig;
 
 use term::color::BLACK;
 
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
-use util::{Config, paths};
+use util::{GitRepo, HgRepo, CargoResult, CargoError, human, ChainError, internal};
+use util::Config;
 
 use toml;
 
@@ -47,7 +48,6 @@ pub enum License {
     APACHE2,
     MPL2,
     GPL3,
-    Other(String),
 }
 
 impl License {
@@ -63,21 +63,21 @@ impl License {
             License::APACHE2 => include_str!("../../../src/etc/licenses/APACHE2"),
             License::MPL2 => include_str!("../../../src/etc/licenses/MPL2"),
             License::GPL3 => include_str!("../../../src/etc/licenses/GPL3"),
-            License::Other(_) => "LICENSE TEXT HERE",
         }
     }
 }
 
-impl<S: fmt::Display + AsRef<str>> From<S> for License {
-    fn from(s: S) -> License {
-        match s.as_ref().to_lowercase().as_ref() {
+impl FromStr for License {
+    type Err = Box<CargoError>;
+    fn from_str(s: &str) -> CargoResult<License> {
+        Ok(match s.to_lowercase().as_ref() {
             "mit" => License::MIT,
             "bsd-3-clause" => License::BSD3,
             "apache-2.0" => License::APACHE2,
             "mpl-2.0" => License::MPL2,
             "gpl-3.0" => License::GPL3,
-            _ => License::Other(format!("{}", s).into()),
-        }
+            _ => return Err(internal(format!("Unknown license {}", s))),
+        })
     }
 }
 
@@ -89,16 +89,8 @@ impl fmt::Display for License {
             &License::APACHE2 => "Apache-2.0",
             &License::MPL2 => "MPL-2.0",
             &License::GPL3 => "GPL-3.0",
-            &License::Other(ref n) => &n[..],
         };
         write!(f, "{}", s)
-    }
-}
-
-impl Decodable for License {
-    fn decode<D: Decoder>(d: &mut D) -> Result<License, D::Error> {
-        let lic = try!(d.read_str());
-        Ok(From::from(lic))
     }
 }
 
@@ -320,7 +312,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
             let r = &s[..];
             let mut licenses: Vec<License> = vec![];
             for lic in r.split("/") {
-                licenses.push(From::from(lic));
+                licenses.push(try!(FromStr::from_str(lic)));
             }
             Some(licenses)
         },
