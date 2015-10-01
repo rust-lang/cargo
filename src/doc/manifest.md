@@ -153,6 +153,9 @@ You can specify the source of a dependency in one of two ways at the moment:
 * `path = "<relative-path>"`: A path relative to the current `Cargo.toml`
   with a `Cargo.toml` in its root.
 
+Note that when specifying a `path`, the crate name in any `use` statements will
+need to be prefix with `self::`.
+
 Dependencies from crates.io are not declared with separate sections:
 
 ```toml
