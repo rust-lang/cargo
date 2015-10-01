@@ -189,9 +189,9 @@ test!(cargo_test_failing_test {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
-                execs().with_stdout(format!("\
-{} foo v0.5.0 ({})
-{} target[..]foo-[..]
+                execs().with_stdout_contains(format!("\
+{compiling} foo v0.5.0 ({url})
+{running} target[..]foo-[..]
 
 running 1 test
 test test_hello ... FAILED
@@ -202,17 +202,14 @@ failures:
 <tab>thread 'test_hello' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:12
-
-
-
+", compiling = COMPILING, url = p.url(), running = RUNNING))
+                    .with_stdout_contains("\
 failures:
     test_hello
 
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
-
-",
-        COMPILING, p.url(), RUNNING))
-              .with_status(101));
+")
+                    .with_status(101));
 });
 
 test!(test_with_lib_dep {
@@ -1902,7 +1899,8 @@ test!(no_fail_fast {
         }
         "#);
     assert_that(p.cargo_process("test").arg("--no-fail-fast"),
-                execs().with_status(101).with_stdout(format!("\
+                execs().with_status(101)
+                       .with_stdout_contains(format!("\
 {compiling} foo v0.0.1 ([..])
 {running} target[..]foo[..]
 
@@ -1911,12 +1909,8 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 {running} target[..]test_add_one[..]
-
-running 2 tests
-[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]\n[..]
-failures:
- fail_add_one_test
-
+", compiling = COMPILING, running = RUNNING))
+                       .with_stdout_contains(format!("\
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured
 
 {running} target[..]test_sub_one[..]
@@ -1933,7 +1927,7 @@ test sub_one_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
+", running = RUNNING, doctest = DOCTEST)))
 });
 
 test!(test_multiple_packages {
