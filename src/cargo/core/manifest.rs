@@ -1,4 +1,5 @@
 use std::default::Default;
+use std::fmt;
 use std::path::{PathBuf, Path};
 
 use semver::Version;
@@ -116,6 +117,7 @@ pub struct Profile {
     pub rpath: bool,
     pub test: bool,
     pub doc: bool,
+    pub run_custom_build: bool,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -125,6 +127,7 @@ pub struct Profiles {
     pub test: Profile,
     pub bench: Profile,
     pub doc: Profile,
+    pub custom_build: Profile,
 }
 
 /// Informations about a binary, a library, an example, etc. that is part of the
@@ -405,6 +408,19 @@ impl Target {
     }
 }
 
+impl fmt::Display for Target {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.kind {
+            TargetKind::Lib(..) => write!(f, "Target(lib)"),
+            TargetKind::Bin => write!(f, "Target(bin: {})", self.name),
+            TargetKind::Test => write!(f, "Target(test: {})", self.name),
+            TargetKind::Bench => write!(f, "Target(bench: {})", self.name),
+            TargetKind::Example => write!(f, "Target(example: {})", self.name),
+            TargetKind::CustomBuild => write!(f, "Target(script)"),
+        }
+    }
+}
+
 impl Profile {
     pub fn default_dev() -> Profile {
         Profile {
@@ -442,6 +458,13 @@ impl Profile {
             ..Profile::default_dev()
         }
     }
+
+    pub fn default_custom_build() -> Profile {
+        Profile {
+            run_custom_build: true,
+            ..Profile::default_dev()
+        }
+    }
 }
 
 impl Default for Profile {
@@ -456,6 +479,22 @@ impl Default for Profile {
             rpath: false,
             test: false,
             doc: false,
+            run_custom_build: false,
         }
+    }
+}
+
+impl fmt::Display for Profile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.test {
+            write!(f, "Profile(test)")
+        } else if self.doc {
+            write!(f, "Profile(doc)")
+        } else if self.run_custom_build {
+            write!(f, "Profile(run)")
+        } else {
+            write!(f, "Profile(build)")
+        }
+
     }
 }

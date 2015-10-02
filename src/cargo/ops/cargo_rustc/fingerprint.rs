@@ -6,13 +6,12 @@ use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
 
-use core::{Package, Target, Profile};
+use core::{Package, TargetKind};
 use util;
 use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
 
-use super::Kind;
 use super::job::Work;
-use super::context::Context;
+use super::context::{Context, Unit};
 
 /// A tuple result of the `prepare_foo` functions in this module.
 ///
@@ -43,31 +42,29 @@ pub type Preparation = (Freshness, Work, Work);
 /// work necessary to either write the fingerprint or copy over all fresh files
 /// from the old directories to their new locations.
 pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                                pkg: &'a Package,
-                                target: &'a Target,
-                                profile: &'a Profile,
-                                kind: Kind) -> CargoResult<Preparation> {
+                                unit: &Unit<'a>) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {}",
-                                    pkg.package_id(), target.name()));
-    let new = dir(cx, pkg, kind);
-    let loc = new.join(&filename(target, profile));
+                                    unit.pkg.package_id(), unit.target.name()));
+    let new = dir(cx, unit);
+    let loc = new.join(&filename(unit));
 
-    info!("fingerprint at: {}", loc.display());
+    debug!("fingerprint at: {}", loc.display());
 
-    let mut fingerprint = try!(calculate(cx, pkg, target, profile, kind));
+    let mut fingerprint = try!(calculate(cx, unit));
     let is_fresh = try!(is_fresh(&loc, &mut fingerprint));
 
-    let root = cx.out_dir(pkg, kind, target);
+
+    let root = cx.out_dir(unit);
     let mut missing_outputs = false;
-    if !profile.doc {
-        for filename in try!(cx.target_filenames(pkg, target, profile,
-                                                 kind)).iter() {
+    if !unit.profile.doc {
+        for filename in try!(cx.target_filenames(unit)).iter() {
             missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
     }
 
-    let allow_failure = profile.rustc_args.is_some();
-    Ok(prepare(is_fresh && !missing_outputs, allow_failure, loc, fingerprint))
+    let allow_failure = unit.profile.rustc_args.is_some();
+    Ok(prepare(is_fresh && !missing_outputs,
+               allow_failure, loc, fingerprint))
 }
 
 /// A fingerprint can be considered to be a "short string" representing the
@@ -144,30 +141,23 @@ impl FingerprintInner {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies and is calculated in `calculate_target_fresh`.
-fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                       pkg: &'a Package,
-                       target: &'a Target,
-                       profile: &'a Profile,
-                       kind: Kind)
+fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                        -> CargoResult<Fingerprint> {
-    let key = (pkg.package_id(), target, profile, kind);
-    match cx.fingerprints.get(&key) {
-        Some(s) => return Ok(s.clone()),
-        None => {}
+    if let Some(s) = cx.fingerprints.get(unit) {
+        return Ok(s.clone())
     }
 
     // First, calculate all statically known "salt data" such as the profile
     // information (compiler flags), the compiler version, activated features,
     // and target configuration.
-    let features = cx.resolve.features(pkg.package_id());
+    let features = cx.resolve.features(unit.pkg.package_id());
     let features = features.map(|s| {
-        let mut v = s.iter().collect::<Vec<&String>>();
+        let mut v = s.iter().collect::<Vec<_>>();
         v.sort();
         v
     });
     let extra = util::short_hash(&(&cx.config.rustc_info().verbose_version,
-                                   target, &features, profile));
-    debug!("extra {:?} {:?} {:?} = {}", target, profile, features, extra);
+                                   unit.target, &features, unit.profile));
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
     //
@@ -176,20 +166,17 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     // elsewhere. Also skip fingerprints of binaries because they don't actually
     // induce a recompile, they're just dependencies in the sense that they need
     // to be built.
-    let deps = try!(cx.dep_targets(pkg, target, kind, profile).into_iter()
-                      .filter(|&(_, t, _)| !t.is_custom_build() && !t.is_bin())
-                      .map(|(pkg, target, profile)| {
-        let kind = match kind {
-            Kind::Host => Kind::Host,
-            Kind::Target if target.for_host() => Kind::Host,
-            Kind::Target => Kind::Target,
-        };
-        calculate(cx, pkg, target, profile, kind)
+    let deps = try!(cx.dep_targets(unit).iter().filter(|u| {
+        !u.target.is_custom_build() && !u.target.is_bin()
+    }).map(|unit| {
+        calculate(cx, unit).map(|fingerprint| {
+            fingerprint
+        })
     }).collect::<CargoResult<Vec<_>>>());
 
     // And finally, calculate what our own local fingerprint is
-    let local = if use_dep_info(pkg, profile) {
-        let dep_info = dep_info_loc(cx, pkg, target, profile, kind);
+    let local = if use_dep_info(unit) {
+        let dep_info = dep_info_loc(cx, unit);
         let mtime = try!(calculate_target_mtime(&dep_info));
 
         // if the mtime listed is not fresh, then remove the `dep_info` file to
@@ -199,7 +186,8 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         }
         LocalFingerprint::MtimeBased(mtime, dep_info)
     } else {
-        LocalFingerprint::Precalculated(try!(calculate_pkg_fingerprint(cx, pkg)))
+        LocalFingerprint::Precalculated(try!(calculate_pkg_fingerprint(cx,
+                                                                       unit.pkg)))
     };
     let fingerprint = Arc::new(FingerprintInner {
         extra: extra,
@@ -207,7 +195,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         local: local,
         resolved: Mutex::new(None),
     });
-    cx.fingerprints.insert(key, fingerprint.clone());
+    cx.fingerprints.insert(*unit, fingerprint.clone());
     Ok(fingerprint)
 }
 
@@ -216,9 +204,9 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 // git/registry source, then the mtime of files may fluctuate, but they won't
 // change so long as the source itself remains constant (which is the
 // responsibility of the source)
-fn use_dep_info(pkg: &Package, profile: &Profile) -> bool {
-    let path = pkg.summary().source_id().is_path();
-    !profile.doc && path
+fn use_dep_info(unit: &Unit) -> bool {
+    let path = unit.pkg.summary().source_id().is_path();
+    !unit.profile.doc && path
 }
 
 /// Prepare the necessary work for the fingerprint of a build command.
@@ -238,16 +226,16 @@ fn use_dep_info(pkg: &Package, profile: &Profile) -> bool {
 ///
 /// The currently implemented solution is option (1), although it is planned to
 /// migrate to option (2) in the near future.
-pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind)
+pub fn prepare_build_cmd(cx: &mut Context, unit: &Unit)
                          -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint build cmd: {}",
-                                    pkg.package_id()));
-    let new = dir(cx, pkg, kind);
+                                    unit.pkg.package_id()));
+    let new = dir(cx, unit);
     let loc = new.join("build");
 
-    info!("fingerprint at: {}", loc.display());
+    debug!("fingerprint at: {}", loc.display());
 
-    let new_fingerprint = try!(calculate_build_cmd_fingerprint(cx, pkg));
+    let new_fingerprint = try!(calculate_pkg_fingerprint(cx, unit.pkg));
     let new_fingerprint = Arc::new(FingerprintInner {
         extra: String::new(),
         deps: Vec::new(),
@@ -261,25 +249,17 @@ pub fn prepare_build_cmd(cx: &mut Context, pkg: &Package, kind: Kind)
 }
 
 /// Prepare work for when a package starts to build
-pub fn prepare_init(cx: &mut Context, pkg: &Package, kind: Kind)
-                    -> (Work, Work) {
-    let new1 = dir(cx, pkg, kind);
+pub fn prepare_init(cx: &mut Context, unit: &Unit) -> CargoResult<()> {
+    let new1 = dir(cx, unit);
     let new2 = new1.clone();
 
-    let work1 = Work::new(move |_| {
-        if fs::metadata(&new1).is_err() {
-            try!(fs::create_dir(&new1));
-        }
-        Ok(())
-    });
-    let work2 = Work::new(move |_| {
-        if fs::metadata(&new2).is_err() {
-            try!(fs::create_dir(&new2));
-        }
-        Ok(())
-    });
-
-    (work1, work2)
+    if fs::metadata(&new1).is_err() {
+        try!(fs::create_dir(&new1));
+    }
+    if fs::metadata(&new2).is_err() {
+        try!(fs::create_dir(&new2));
+    }
+    Ok(())
 }
 
 /// Given the data to build and write a fingerprint, generate some Work
@@ -307,14 +287,13 @@ fn prepare(is_fresh: bool,
 }
 
 /// Return the (old, new) location for fingerprints for a package
-pub fn dir(cx: &Context, pkg: &Package, kind: Kind) -> PathBuf {
-    cx.layout(pkg, kind).proxy().fingerprint(pkg)
+pub fn dir(cx: &Context, unit: &Unit) -> PathBuf {
+    cx.layout(unit.pkg, unit.kind).proxy().fingerprint(unit.pkg)
 }
 
 /// Returns the (old, new) location for the dep info file of a target.
-pub fn dep_info_loc(cx: &Context, pkg: &Package, target: &Target,
-                    profile: &Profile, kind: Kind) -> PathBuf {
-    dir(cx, pkg, kind).join(&format!("dep-{}", filename(target, profile)))
+pub fn dep_info_loc(cx: &Context, unit: &Unit) -> PathBuf {
+    dir(cx, unit).join(&format!("dep-{}", filename(unit)))
 }
 
 fn is_fresh(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<bool> {
@@ -382,14 +361,8 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<FileTime>> {
     Ok(Some(mtime))
 }
 
-fn calculate_build_cmd_fingerprint(cx: &Context, pkg: &Package)
-                                   -> CargoResult<String> {
-    // TODO: this should be scoped to just the `build` directory, not the entire
-    // package.
-    calculate_pkg_fingerprint(cx, pkg)
-}
-
-fn calculate_pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
+fn calculate_pkg_fingerprint(cx: &Context,
+                             pkg: &Package) -> CargoResult<String> {
     let source = cx.sources
         .get(pkg.package_id().source_id())
         .expect("BUG: Missing package source");
@@ -397,16 +370,23 @@ fn calculate_pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String>
     source.fingerprint(pkg)
 }
 
-fn filename(target: &Target, profile: &Profile) -> String {
-    let kind = if target.is_lib() {"lib"} else {"bin"};
-    let flavor = if target.is_test() || profile.test {
+fn filename(unit: &Unit) -> String {
+    let kind = match *unit.target.kind() {
+        TargetKind::Lib(..) => "lib",
+        TargetKind::Bin => "bin",
+        TargetKind::Test => "integration-test",
+        TargetKind::Example => "example",
+        TargetKind::Bench => "bench",
+        TargetKind::CustomBuild => "build-script",
+    };
+    let flavor = if unit.profile.test {
         "test-"
-    } else if profile.doc {
+    } else if unit.profile.doc {
         "doc-"
     } else {
         ""
     };
-    format!("{}{}-{}", flavor, kind, target.name())
+    format!("{}{}-{}", flavor, kind, unit.target.name())
 }
 
 // The dep-info files emitted by the compiler all have their listed paths

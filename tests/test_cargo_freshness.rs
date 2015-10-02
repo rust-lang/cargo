@@ -203,3 +203,57 @@ test!(rebuild_tests_if_lib_changes {
     assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(101));
 });
+
+test!(no_rebuild_transitive_target_deps {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+            [dev-dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("tests/foo.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [target.foo.dependencies]
+            c = { path = "../c" }
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            c = { path = "../c" }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", r#"
+            [package]
+            name = "c"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("c/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("test").arg("--no-run"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} c v0.0.1 ([..])
+{compiling} b v0.0.1 ([..])
+{compiling} foo v0.0.1 ([..])
+", compiling = COMPILING)));
+});
