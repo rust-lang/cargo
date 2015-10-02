@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::str;
@@ -7,7 +7,7 @@ use std::sync::{Mutex, Arc};
 
 use core::{PackageId, PackageSet};
 use util::{CargoResult, human, Human};
-use util::{internal, ChainError, profile};
+use util::{internal, ChainError, profile, paths};
 use util::Freshness;
 
 use super::job::Work;
@@ -174,13 +174,8 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
         let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
         build_state.insert(id, kind, parsed_output);
 
-        try!(File::create(&build_output.parent().unwrap().join("output"))
-                  .and_then(|mut f| f.write_all(output.as_bytes()))
-                  .map_err(|e| {
-            human(format!("failed to write output of custom build command: {}",
-                          e))
-        }));
-
+        try!(paths::write(&build_output.parent().unwrap().join("output"),
+                          output.as_bytes()));
         Ok(())
     });
 
@@ -198,12 +193,8 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
     let dirty = work.then(dirty);
     let fresh = Work::new(move |_tx| {
         let (id, pkg_name, build_state, build_output) = all;
-        let new_loc = build_output.parent().unwrap().join("output");
-        let mut f = try!(File::open(&new_loc).map_err(|e| {
-            human(format!("failed to read cached build command output: {}", e))
-        }));
-        let mut contents = String::new();
-        try!(f.read_to_string(&mut contents));
+        let contents = try!(paths::read(&build_output.parent().unwrap()
+                                                     .join("output")));
         let output = try!(BuildOutput::parse(&contents, &pkg_name));
         build_state.insert(id, kind, output);
         Ok(())

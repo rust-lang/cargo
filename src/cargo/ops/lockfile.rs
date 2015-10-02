@@ -6,7 +6,7 @@ use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
 
 use core::{Resolve, resolver, Package, SourceId};
-use util::{CargoResult, ChainError, human};
+use util::{CargoResult, ChainError, human, paths};
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
@@ -68,7 +68,7 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
         None => {}
     }
 
-    try!(try!(File::create(dst)).write_all(out.as_bytes()));
+    try!(paths::write(dst, out.as_bytes()));
     Ok(())
 }
 
