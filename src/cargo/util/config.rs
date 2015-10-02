@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::{MultiShell, Package};
-use util::{CargoResult, ChainError, Rustc, internal, human};
+use util::{CargoResult, ChainError, Rustc, internal, human, paths};
 
 use util::toml as cargo_toml;
 
@@ -509,11 +509,11 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
         Location::Project => unimplemented!(),
     };
     try!(fs::create_dir_all(file.parent().unwrap()));
-    let mut contents = String::new();
-    let _ = File::open(&file).and_then(|mut f| f.read_to_string(&mut contents));
+    let contents = paths::read(&file).unwrap_or(String::new());
     let mut toml = try!(cargo_toml::parse(&contents, &file));
     toml.insert(key.to_string(), value.into_toml());
-    let mut out = try!(File::create(&file));
-    try!(out.write_all(toml::Value::Table(toml).to_string().as_bytes()));
+
+    let contents = toml::Value::Table(toml).to_string();
+    try!(paths::write(&file, contents.as_bytes()));
     Ok(())
 }
