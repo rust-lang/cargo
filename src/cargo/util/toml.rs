@@ -926,6 +926,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
                      profiles.and_then(|p| p.bench.as_ref())),
         doc: merge(Profile::default_doc(),
                    profiles.and_then(|p| p.doc.as_ref())),
+        custom_build: Profile::default_custom_build(),
     };
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
@@ -945,6 +946,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             rpath: rpath.unwrap_or(profile.rpath),
             test: profile.test,
             doc: profile.doc,
+            run_custom_build: profile.run_custom_build,
         }
     }
 }
