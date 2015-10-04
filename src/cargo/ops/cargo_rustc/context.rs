@@ -33,7 +33,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compilation: Compilation<'cfg>,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
-    pub fingerprints: HashMap<Unit<'a>, Fingerprint>,
+    pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
     pub build_config: BuildConfig,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
