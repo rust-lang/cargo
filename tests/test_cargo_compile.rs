@@ -7,7 +7,7 @@ use tempdir::TempDir;
 use support::{project, execs, main_file, basic_bin_manifest};
 use support::{COMPILING, RUNNING, ProjectBuilder};
 use hamcrest::{assert_that, existing_file, is_not};
-use support::paths::CargoPathExt;
+use support::paths::{CargoPathExt,root};
 use cargo::util::process;
 
 fn setup() {
@@ -1864,6 +1864,20 @@ test!(ignore_dotdirs {
         .file(".pc/dummy-fix.patch/Cargo.toml", "");
     p.build();
 
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+});
+
+test!(dotdir_root {
+    let p = ProjectBuilder::new("foo", root().join(".foo"))
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/bin/a.rs", "fn main() {}");
+    p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 });
