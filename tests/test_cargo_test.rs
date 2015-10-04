@@ -2017,7 +2017,7 @@ test!(bin_does_not_rebuild_tests {
                 execs().with_status(0)
                        .with_stdout(&format!("\
 {compiling} foo v0.0.1 ([..])
-{running} `rustc src/main.rs [..]`
-{running} `rustc src/main.rs [..]`
+{running} `rustc src[..]main.rs [..]`
+{running} `rustc src[..]main.rs [..]`
 ", compiling = COMPILING, running = RUNNING)));
 });
