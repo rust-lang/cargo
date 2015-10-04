@@ -43,15 +43,17 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     try!(walk(path, &mut |dir| {
         trace!("looking for child package: {}", dir.display());
 
-        // Don't recurse into hidden/dot directories
-        let name = dir.file_name().and_then(|s| s.to_str());
-        if name.map(|s| s.starts_with(".")) == Some(true) {
-            return Ok(false)
-        }
+        // Don't recurse into hidden/dot directories unless we're at the toplevel
+        if dir != path {
+            let name = dir.file_name().and_then(|s| s.to_str());
+            if name.map(|s| s.starts_with(".")) == Some(true) {
+                return Ok(false)
+            }
 
-        // Don't automatically discover packages across git submodules
-        if dir != path && fs::metadata(&dir.join(".git")).is_ok() {
-            return Ok(false)
+            // Don't automatically discover packages across git submodules
+            if fs::metadata(&dir.join(".git")).is_ok() {
+                return Ok(false)
+            }
         }
 
         // Don't ever look at target directories
