@@ -338,14 +338,6 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
     for unit in units {
         build(&mut ret, cx, unit);
     }
-
-    // Make the output a little more deterministic by sorting all dependencies
-    for (_, slot) in ret.iter_mut() {
-        slot.to_link.sort_by(|a, b| a.0.cmp(&b.0));
-        slot.to_link.dedup();
-        slot.plugins.sort();
-        slot.plugins.dedup();
-    }
     cx.build_scripts.extend(ret.into_iter().map(|(k, v)| {
         (k, Arc::new(v))
     }));
