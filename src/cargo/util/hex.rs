@@ -15,8 +15,12 @@ pub fn to_hex(num: u64) -> String {
     ].to_hex()
 }
 
-pub fn short_hash<H: Hash>(hashable: &H) -> String {
+pub fn hash_u64<H: Hash>(hashable: &H) -> u64 {
     let mut hasher = SipHasher::new_with_keys(0, 0);
     hashable.hash(&mut hasher);
-    to_hex(hasher.finish())
+    hasher.finish()
+}
+
+pub fn short_hash<H: Hash>(hashable: &H) -> String {
+    to_hex(hash_u64(hashable))
 }
