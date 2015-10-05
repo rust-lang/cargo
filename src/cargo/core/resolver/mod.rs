@@ -55,7 +55,7 @@ use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use util::{CargoResult, Graph, human, ChainError, CargoError};
+use util::{CargoResult, Graph, human, CargoError};
 use util::profile;
 use util::graph::{Nodes, Edges};
 
@@ -118,54 +118,12 @@ impl Resolve {
         self.graph.edges(pkg)
     }
 
-    pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {
-        let spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
-            human(format!("invalid package id specification: `{}`", spec))
-        }));
-        let mut ids = self.iter().filter(|p| spec.matches(*p));
-        let ret = match ids.next() {
-            Some(id) => id,
-            None => return Err(human(format!("package id specification `{}` \
-                                              matched no packages", spec))),
-        };
-        return match ids.next() {
-            Some(other) => {
-                let mut msg = format!("There are multiple `{}` packages in \
-                                       your project, and the specification \
-                                       `{}` is ambiguous.\n\
-                                       Please re-run this command \
-                                       with `-p <spec>` where `<spec>` is one \
-                                       of the following:",
-                                      spec.name(), spec);
-                let mut vec = vec![ret, other];
-                vec.extend(ids);
-                minimize(&mut msg, vec, &spec);
-                Err(human(msg))
-            }
-            None => Ok(ret)
-        };
-
-        fn minimize(msg: &mut String,
-                    ids: Vec<&PackageId>,
-                    spec: &PackageIdSpec) {
-            let mut version_cnt = HashMap::new();
-            for id in ids.iter() {
-                *version_cnt.entry(id.version()).or_insert(0) += 1;
-            }
-            for id in ids.iter() {
-                if version_cnt[id.version()] == 1 {
-                    msg.push_str(&format!("\n  {}:{}", spec.name(),
-                                          id.version()));
-                } else {
-                    msg.push_str(&format!("\n  {}",
-                                          PackageIdSpec::from_package_id(*id)));
-                }
-            }
-        }
-    }
-
     pub fn features(&self, pkg: &PackageId) -> Option<&HashSet<String>> {
         self.features.get(pkg)
+    }
+
+    pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {
+        PackageIdSpec::query_str(spec, self.iter())
     }
 }
 

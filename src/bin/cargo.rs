@@ -82,6 +82,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(rustc);
     $mac!(search);
     $mac!(test);
+    $mac!(uninstall);
     $mac!(update);
     $mac!(verify_project);
     $mac!(version);
