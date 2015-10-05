@@ -92,11 +92,12 @@ pub fn compile<'a>(manifest_path: &Path,
     for key in package.manifest().warnings().iter() {
         try!(options.config.shell().warn(key))
     }
-    compile_pkg(&package, options)
+    compile_pkg(&package, None, options)
 }
 
 #[allow(deprecated)] // connect => join in 1.3
 pub fn compile_pkg<'a>(root_package: &Package,
+                       source: Option<Box<Source + 'a>>,
                        options: &CompileOptions<'a>)
                        -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
@@ -121,6 +122,10 @@ pub fn compile_pkg<'a>(root_package: &Package,
 
     let (packages, resolve_with_overrides, sources) = {
         let mut registry = PackageRegistry::new(options.config);
+
+        if let Some(source) = source {
+            registry.add_preloaded(root_package.package_id().source_id(), source);
+        }
 
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
