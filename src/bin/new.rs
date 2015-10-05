@@ -2,7 +2,7 @@ use std::env;
 use std::str::{FromStr};
 
 use cargo::ops;
-use cargo::util::{CliResult, Config};
+use cargo::util::{CliError, CliResult, Config};
 
 #[derive(RustcDecodable)]
 struct Options {

@@ -2,6 +2,7 @@ use std::env;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::io;
 use std::path::Path;
 use std::str::{FromStr};
 
@@ -10,9 +11,10 @@ use rustc_serialize::{Decodable, Decoder};
 use git2::Config as GitConfig;
 
 use term::color::BLACK;
+use time::{strftime, now};
 
 use util::{GitRepo, HgRepo, CargoResult, CargoError, human, ChainError, internal};
-use util::Config;
+use util::{Config, paths};
 
 use toml;
 
@@ -51,18 +53,24 @@ pub enum License {
 }
 
 impl License {
-    fn write_file(&self, path: &Path) -> io::Result<()> {
-        file(path, self.license_text().as_bytes())
+    fn write_file(&self, path: &Path, holders: &str) -> io::Result<()> {
+        let mut license_text: Vec<u8> = Vec::new();
+        let _ = self.license_text(&mut license_text, holders);
+        file(path, &license_text)
     }
 
-    fn license_text(&self) -> &'static str {
+    fn license_text<F: io::Write>(&self, f: &mut F, holders: &str) -> io::Result<()> {
+        let tm = now();
+        let year = strftime("%Y", &tm).unwrap();
         match *self {
             // Not sure about this, would like to make this prettier
-            License::MIT => include_str!("../../../src/etc/licenses/MIT"),
-            License::BSD3 => include_str!("../../../src/etc/licenses/BSD3"),
-            License::APACHE2 => include_str!("../../../src/etc/licenses/APACHE2"),
-            License::MPL2 => include_str!("../../../src/etc/licenses/MPL2"),
-            License::GPL3 => include_str!("../../../src/etc/licenses/GPL3"),
+            License::MIT => write!(f, include_str!("../../../src/etc/licenses/MIT"),
+                                   year = &year, holders = holders),
+            License::BSD3 => write!(f, include_str!("../../../src/etc/licenses/BSD3"),
+                                    year = &year, holders = holders),
+            License::APACHE2 => write!(f, include_str!("../../../src/etc/licenses/APACHE2")),
+            License::MPL2 => write!(f, include_str!("../../../src/etc/licenses/MPL2")),
+            License::GPL3 => write!(f, include_str!("../../../src/etc/licenses/GPL3")),
         }
     }
 }
@@ -223,18 +231,18 @@ name = "{}"
 version = "0.1.0"
 authors = [{}]
 license = "{}"
-"#, name, toml::Value::String(author), license_string).as_bytes()));
+"#, name, toml::Value::String(author.clone()), license_string).as_bytes()));
 
         // If there is more than one license, we suffix the filename
         // with the name of the license
         if license.len() > 1 {
             for l in &license {
                 let upper = format!("{}", l).to_uppercase();
-                try!(l.write_file(&path.join(format!("LICENSE-{}", upper))));
+                try!(l.write_file(&path.join(format!("LICENSE-{}", upper)), &author));
             }
         } else {
             let license = license.get(0).unwrap();
-            try!(license.write_file(&path.join("LICENSE")))
+            try!(license.write_file(&path.join("LICENSE"), &author))
         }
     } else {
         try!(file(&path.join("Cargo.toml"), format!(
@@ -244,7 +252,7 @@ version = "0.1.0"
 authors = [{}]
 
 [dependencies]
-"#, name, toml::Value::String(author)).as_bytes()));
+"#, name, toml::Value::String(author.clone())).as_bytes()));
     }
 
     try!(fs::create_dir(&path.join("src")));
