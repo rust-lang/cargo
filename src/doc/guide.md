@@ -170,13 +170,13 @@ dependencies, compile them all, and update the `Cargo.lock`:
 <span style="font-weight: bold" class="s1">    Updating</span> registry `https://github.com/rust-lang/crates.io-index`
 <span style="font-weight: bold" class="s1"> Downloading</span> memchr v0.1.5
 <span style="font-weight: bold" class="s1"> Downloading</span> libc v0.1.10
-<span style="font-weight: bold" class="s1"> Downloading</span> regex-synatx v0.2.1
+<span style="font-weight: bold" class="s1"> Downloading</span> regex-syntax v0.2.1
 <span style="font-weight: bold" class="s1"> Downloading</span> memchr v0.1.5
 <span style="font-weight: bold" class="s1"> Downloading</span> aho-corasick v0.3.0
 <span style="font-weight: bold" class="s1"> Downloading</span> regex v0.1.41
 <span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
 <span style="font-weight: bold" class="s1">   Compiling</span> libc v0.1.10
-<span style="font-weight: bold" class="s1">   Compiling</span> regex-synatx v0.2.1
+<span style="font-weight: bold" class="s1">   Compiling</span> regex-syntax v0.2.1
 <span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
 <span style="font-weight: bold" class="s1">   Compiling</span> aho-corasick v0.3.0
 <span style="font-weight: bold" class="s1">   Compiling</span> regex v0.1.41
