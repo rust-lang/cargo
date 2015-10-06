@@ -235,4 +235,3 @@ uninstall: $(foreach target,$(CFG_TARGET), uninstall-$(target))
 # Disable unnecessary built-in rules
 .SUFFIXES:
 
-
