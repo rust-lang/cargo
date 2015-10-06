@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::io::prelude::*;
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
@@ -17,6 +17,7 @@ use core::manifest::ManifestMetadata;
 use ops;
 use sources::{RegistrySource};
 use util::config;
+use util::paths;
 use util::{CargoResult, human, ChainError, ToUrl};
 use util::config::{Config, ConfigValue, Location};
 use util::important_paths::find_root_manifest_for_cwd;
@@ -92,16 +93,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         ref keywords, ref readme, ref repository, ref license, ref license_file,
     } = *manifest.metadata();
     let readme = match *readme {
-        Some(ref readme) => {
-            let path = pkg.root().join(readme);
-            let mut contents = String::new();
-            try!(File::open(&path).and_then(|mut f| {
-                f.read_to_string(&mut contents)
-            }).chain_error(|| {
-                human("failed to read the specified README")
-            }));
-            Some(contents)
-        }
+        Some(ref readme) => Some(try!(paths::read(&pkg.root().join(readme)))),
         None => None,
     };
     match *license_file {

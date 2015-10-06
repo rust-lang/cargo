@@ -17,7 +17,7 @@ pub struct Compilation<'cfg> {
     pub libraries: HashMap<PackageId, Vec<(Target, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
-    pub tests: Vec<(Package, Vec<(String, PathBuf)>)>,
+    pub tests: Vec<(Package, String, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,
@@ -37,7 +37,7 @@ pub struct Compilation<'cfg> {
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
-    pub extra_env: HashMap<String, String>,
+    pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
 
     pub to_doc_test: Vec<Package>,
 
@@ -69,7 +69,8 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustdoc_process(&self, pkg: &Package) -> CargoResult<CommandPrototype> {
+    pub fn rustdoc_process(&self, pkg: &Package)
+                           -> CargoResult<CommandPrototype> {
         self.process(CommandType::Rustdoc, pkg)
     }
 
@@ -102,8 +103,10 @@ impl<'cfg> Compilation<'cfg> {
                                                 util::dylib_path_envvar()));
         let mut cmd = try!(CommandPrototype::new(cmd, self.config));
         cmd.env(util::dylib_path_envvar(), &search_path);
-        for (k, v) in self.extra_env.iter() {
-            cmd.env(k, v);
+        if let Some(env) = self.extra_env.get(pkg.package_id()) {
+            for &(ref k, ref v) in env {
+                cmd.env(k, v);
+            }
         }
 
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())

@@ -6,7 +6,7 @@ pub use self::errors::{CliError, ProcessError, CargoTestError};
 pub use self::errors::{Human, caused_human};
 pub use self::errors::{process_error, internal_error, internal, human};
 pub use self::graph::Graph;
-pub use self::hex::{to_hex, short_hash};
+pub use self::hex::{to_hex, short_hash, hash_u64};
 pub use self::lev_distance::{lev_distance};
 pub use self::paths::{join_paths, path2bytes, bytes2path, dylib_path};
 pub use self::paths::{normalize_path, dylib_path_envvar, without_prefix};
