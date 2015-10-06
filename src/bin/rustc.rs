@@ -92,4 +92,3 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     })
 }
 
-
