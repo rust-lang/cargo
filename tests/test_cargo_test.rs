@@ -1,4 +1,7 @@
+use std::fs::File;
+use std::io::prelude::*;
 use std::str;
+use std::thread;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
 use support::{COMPILING, RUNNING, DOCTEST};
@@ -1988,4 +1991,33 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ", running = RUNNING)));
+});
+
+test!(bin_does_not_rebuild_tests {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/foo.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test").arg("-v"),
+                execs().with_status(0));
+
+    thread::sleep_ms(1000);
+    File::create(&p.root().join("src/main.rs")).unwrap()
+         .write_all(b"fn main() { 3; }").unwrap();
+
+    assert_that(p.cargo("test").arg("-v").arg("--no-run"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} foo v0.0.1 ([..])
+{running} `rustc src[..]main.rs [..]`
+{running} `rustc src[..]main.rs [..]`
+", compiling = COMPILING, running = RUNNING)));
 });

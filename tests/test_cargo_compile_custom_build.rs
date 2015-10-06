@@ -1,5 +1,4 @@
-use std::env;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::prelude::*;
 
 use support::{project, execs};
@@ -267,8 +266,10 @@ test!(overrides_and_links {
         .file("build.rs", r#"
             use std::env;
             fn main() {
-                assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
-                assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
+                assert_eq!(env::var("DEP_FOO_FOO").ok().expect("FOO missing"),
+                           "bar");
+                assert_eq!(env::var("DEP_FOO_BAR").ok().expect("BAR missing"),
+                           "baz");
             }
         "#)
         .file(".cargo/config", &format!(r#"
@@ -419,6 +420,7 @@ test!(rebuild_continues_to_pass_env_vars {
             fn main() {
                 println!("cargo:foo=bar");
                 println!("cargo:bar=baz");
+                std::thread::sleep_ms(500);
             }
         "#);
     a.build();
@@ -565,12 +567,7 @@ test!(propagation_of_l_flags {
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
-[..]
-[..]
-[..]
-[..]
-{running} `[..]a-[..]build-script-build[..]`
+                       .with_stdout_contains(&format!("\
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar -L foo`
@@ -623,12 +620,7 @@ test!(propagation_of_l_flags_new {
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
-[..]
-[..]
-[..]
-[..]
-{running} `[..]a-[..]build-script-build[..]`
+                       .with_stdout_contains(&format!("\
 {running} `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 {compiling} foo v0.5.0 (file://[..])
 {running} `rustc [..] --crate-name foo [..] -L bar -L foo`
@@ -991,7 +983,7 @@ test!(shared_dep_with_a_build_script {
             path = "../b"
         "#)
         .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -1117,15 +1109,6 @@ test!(build_script_with_dynamic_native_dependency {
         "#);
     assert_that(build.cargo_process("build"),
                 execs().with_status(0));
-    let src = build.root().join("target/debug");
-    let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
-        let lib = lib.file_name().unwrap().to_str().unwrap();
-        lib.starts_with(env::consts::DLL_PREFIX) &&
-            lib.ends_with(env::consts::DLL_SUFFIX)
-    }).unwrap();
-    let libname = lib.file_name().unwrap().to_str().unwrap();
-    let libname = &libname[env::consts::DLL_PREFIX.len()..
-                           libname.len() - env::consts::DLL_SUFFIX.len()];
 
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -1156,19 +1139,19 @@ test!(build_script_with_dynamic_native_dependency {
 
             fn main() {
                 let src = PathBuf::from(env::var("SRC").unwrap());
-                println!("cargo:rustc-flags=-L {}", src.parent().unwrap()
-                                                       .display());
+                println!("cargo:rustc-link-search={}/target/debug",
+                         src.display());
             }
         "#)
-        .file("bar/src/lib.rs", &format!(r#"
-            pub fn bar() {{
-                #[link(name = "{}")]
-                extern {{ fn foo(); }}
-                unsafe {{ foo() }}
-            }}
-        "#, libname));
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {
+                #[link(name = "builder")]
+                extern { fn foo(); }
+                unsafe { foo() }
+            }
+        "#);
 
-    assert_that(foo.cargo_process("build").env("SRC", &lib),
+    assert_that(foo.cargo_process("build").env("SRC", build.root()),
                 execs().with_status(0));
 });
 
@@ -1268,7 +1251,7 @@ test!(cfg_feedback {
                 println!("cargo:rustc-cfg=foo");
             }
         "#);
-    assert_that(build.cargo_process("build"),
+    assert_that(build.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -1355,9 +1338,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
     assert_that(p.cargo("test").arg("-v").arg("-pb").arg("--lib"),
                 execs().with_status(0).with_stdout(&format!("\
+{fresh} a v0.5.0 ([..]
 {compiling} b v0.5.0 ([..]
 {running} `rustc b[..]src[..]lib.rs [..] -L test[..]`
-{fresh} a v0.5.0 ([..]
 {running} `[..]b-[..]`
 
 running 0 tests

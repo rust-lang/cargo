@@ -1,5 +1,7 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
+use std::fs::File;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf, Component};
 
 use util::{human, internal, CargoResult, ChainError};
@@ -58,10 +60,31 @@ pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
             Some(y) => match a.next() {
                 Some(x) if x == y => continue,
                 _ => return None,
-            }, 
+            },
             None => return Some(a.as_path()),
         }
     }
+}
+
+pub fn read(path: &Path) -> CargoResult<String> {
+    (|| -> CargoResult<String> {
+        let mut ret = String::new();
+        let mut f = try!(File::open(path));
+        try!(f.read_to_string(&mut ret));
+        Ok(ret)
+    }).chain_error(|| {
+        internal(format!("failed to read `{}`", path.display()))
+    })
+}
+
+pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
+    (|| -> CargoResult<()> {
+        let mut f = try!(File::create(path));
+        try!(f.write_all(contents));
+        Ok(())
+    }).chain_error(|| {
+        internal(format!("failed to write `{}`", path.display()))
+    })
 }
 
 #[cfg(unix)]

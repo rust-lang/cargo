@@ -70,7 +70,7 @@ test!(simple_cross {
         "#, alternate_arch()));
 
     let target = alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(&target),
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
@@ -570,10 +570,8 @@ test!(build_script_needed_for_host_and_target {
 {running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
 {running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
-{running} `rustc d1[..]src[..]lib.rs [..] --target {target} [..] \
-           -L /path/to/{target}`
-{running} `rustc d1[..]src[..]lib.rs [..] \
-           -L /path/to/{host}`
+{running} `rustc d1[..]src[..]lib.rs [..]`
+{running} `rustc d1[..]src[..]lib.rs [..]`
 {compiling} d2 v0.0.0 ({url})
 {running} `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`
@@ -830,8 +828,10 @@ test!(platform_specific_variables_reflected_in_build_scripts {
                     _ => panic!("unknown platform")
                 }};
 
-                env::var(expected).unwrap();
-                env::var(not_expected).unwrap_err();
+                env::var(expected).ok()
+                    .expect(&format!("missing {{}}", expected));
+                env::var(not_expected).err()
+                    .expect(&format!("found {{}}", not_expected));
             }}
         "#, host = host, target = target))
         .file("src/lib.rs", "")

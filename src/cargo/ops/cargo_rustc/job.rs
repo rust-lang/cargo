@@ -1,4 +1,5 @@
 use std::sync::mpsc::Sender;
+use std::fmt;
 
 use util::{CargoResult, Fresh, Dirty, Freshness};
 
@@ -34,6 +35,13 @@ impl Work {
     pub fn call(self, tx: Sender<String>) -> CargoResult<()> {
         self.inner.call_box(tx)
     }
+
+    pub fn then(self, next: Work) -> Work {
+        Work::new(move |tx| {
+            try!(self.call(tx.clone()));
+            next.call(tx)
+        })
+    }
 }
 
 impl Job {
@@ -49,5 +57,11 @@ impl Job {
             Fresh => self.fresh.call(tx),
             Dirty => self.dirty.call(tx),
         }
+    }
+}
+
+impl fmt::Debug for Job {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Job {{ ... }}")
     }
 }

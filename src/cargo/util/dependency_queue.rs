@@ -10,7 +10,8 @@ use std::hash::Hash;
 
 pub use self::Freshness::{Fresh, Dirty};
 
-pub struct DependencyQueue<K, V> {
+#[derive(Debug)]
+pub struct DependencyQueue<K: Eq + Hash, V> {
     /// A list of all known keys to build.
     ///
     /// The value of the hash map is list of dependencies which still need to be

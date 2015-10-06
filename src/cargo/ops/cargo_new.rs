@@ -1,7 +1,6 @@
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::io::prelude::*;
-use std::io;
 use std::path::Path;
 
 use rustc_serialize::{Decodable, Decoder};
@@ -11,7 +10,7 @@ use git2::Config as GitConfig;
 use term::color::BLACK;
 
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
-use util::Config;
+use util::{Config, paths};
 
 use toml;
 
@@ -102,10 +101,6 @@ fn existing_vcs_repo(path: &Path) -> bool {
     GitRepo::discover(path).is_ok() || HgRepo::discover(path).is_ok()
 }
 
-fn file(p: &Path, contents: &[u8]) -> io::Result<()> {
-    try!(File::create(p)).write_all(contents)
-}
-
 fn mk(config: &Config, path: &Path, name: &str,
       opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
@@ -125,11 +120,11 @@ fn mk(config: &Config, path: &Path, name: &str,
     match vcs {
         VersionControl::Git => {
             try!(GitRepo::init(path));
-            try!(file(&path.join(".gitignore"), ignore.as_bytes()));
+            try!(paths::write(&path.join(".gitignore"), ignore.as_bytes()));
         },
         VersionControl::Hg => {
             try!(HgRepo::init(path));
-            try!(file(&path.join(".hgignore"), ignore.as_bytes()));
+            try!(paths::write(&path.join(".hgignore"), ignore.as_bytes()));
         },
         VersionControl::NoVcs => {
             try!(fs::create_dir(path));
@@ -147,7 +142,7 @@ fn mk(config: &Config, path: &Path, name: &str,
         (None, None, name, None) => name,
     };
 
-    try!(file(&path.join("Cargo.toml"), format!(
+    try!(paths::write(&path.join("Cargo.toml"), format!(
 r#"[package]
 name = "{}"
 version = "0.1.0"
@@ -157,13 +152,13 @@ authors = [{}]
     try!(fs::create_dir(&path.join("src")));
 
     if opts.bin {
-        try!(file(&path.join("src/main.rs"), b"\
+        try!(paths::write(&path.join("src/main.rs"), b"\
 fn main() {
     println!(\"Hello, world!\");
 }
 "));
     } else {
-        try!(file(&path.join("src/lib.rs"), b"\
+        try!(paths::write(&path.join("src/lib.rs"), b"\
 #[test]
 fn it_works() {
 }

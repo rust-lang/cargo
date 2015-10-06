@@ -167,7 +167,7 @@ test!(plugin_with_dynamic_native_dependency {
             }}
         "#, libname));
 
-    assert_that(foo.cargo_process("build").env("SRC", &lib),
+    assert_that(foo.cargo_process("build").env("SRC", &lib).arg("-v"),
                 execs().with_status(0));
 });
 
@@ -189,7 +189,7 @@ test!(plugin_integration {
         .file("src/lib.rs", "")
         .file("tests/it_works.rs", "");
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
 });
 

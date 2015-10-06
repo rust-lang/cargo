@@ -175,7 +175,7 @@ use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::{Dependency, DependencyInner, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
-use util::{hex, Sha256};
+use util::{hex, Sha256, paths};
 use ops;
 
 static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
@@ -265,9 +265,7 @@ impl<'cfg> RegistrySource<'cfg> {
     ///
     /// This requires that the index has been at least checked out.
     pub fn config(&self) -> CargoResult<RegistryConfig> {
-        let mut f = try!(File::open(&self.checkout_path.join("config.json")));
-        let mut contents = String::new();
-        try!(f.read_to_string(&mut contents));
+        let contents = try!(paths::read(&self.checkout_path.join("config.json")));
         let config = try!(json::decode(&contents));
         Ok(config)
     }
@@ -331,7 +329,7 @@ impl<'cfg> RegistrySource<'cfg> {
                                      pkg)))
         }
 
-        try!(try!(File::create(&dst)).write_all(resp.get_body()));
+        try!(paths::write(&dst, resp.get_body()));
         Ok(dst)
     }
 
