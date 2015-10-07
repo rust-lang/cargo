@@ -190,7 +190,7 @@ Caused by:
 
 Caused by:
   could not parse input as TOML
-[..]config:2:1 expected `=`, but found eof
+[..]config:1:2 expected `=`, but found eof
 
 "));
 });
@@ -256,5 +256,31 @@ test!(bad_crate_type {
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 warning: crate-type \"bad_type\" was not one of lib|rlib|dylib|staticlib
+"));
+});
+
+test!(malformed_override {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [target.x86_64-apple-darwin.freetype]
+        native = {
+          foo: "bar"
+        }
+    "#)
+    .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  could not parse input as TOML
+Cargo.toml:[..]
+
 "));
 });
