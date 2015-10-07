@@ -427,10 +427,11 @@ pub fn fetch(repo: &git2::Repository, url: &str,
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new();
         cb.credentials(f);
-        let mut remote = try!(repo.remote_anonymous(&url, Some(refspec)));
-        try!(remote.add_fetch("refs/tags/*:refs/tags/*"));
-        remote.set_callbacks(cb);
-        try!(remote.fetch(&["refs/tags/*:refs/tags/*", refspec], None));
+        let mut remote = try!(repo.remote_anonymous(&url));
+        let mut opts = git2::FetchOptions::new();
+        opts.remote_callbacks(cb)
+            .download_tags(git2::AutotagOption::All);
+        try!(remote.fetch(&[refspec], Some(&mut opts), None));
         Ok(())
     })
 }
