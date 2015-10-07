@@ -34,10 +34,10 @@ else
 MAYBE_DISABLE_VERIFY=
 endif
 
-ifdef CFG_ENABLE_OPTIMIZE
-OPT_FLAG=--release
-else
+ifdef CFG_DISABLE_OPTIMIZE
 OPT_FLAG=
+else
+OPT_FLAG=--release
 endif
 
 ifdef VERBOSE
