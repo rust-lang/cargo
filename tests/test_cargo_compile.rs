@@ -2039,3 +2039,16 @@ test!(invalid_spec {
                     "could not find package matching spec `notAValidDep`".to_string()));
 
 });
+
+test!(manifest_with_bom_is_ok {
+    let p = project("foo")
+        .file("Cargo.toml", "\u{FEFF}
+            [package]
+            name = \"foo\"
+            version = \"0.0.1\"
+            authors = []
+        ")
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});
