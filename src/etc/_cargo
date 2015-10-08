@@ -131,7 +131,7 @@ case $state in
             new)
                 _arguments \
                     '--bin[use binary template]' \
-                    '--vcs:initialize a new repo with a given VCS:(git hg)' \
+                    '--vcs:initialize a new repo with a given VCS:(git hg none)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=[colorization option]' \
