@@ -1349,3 +1349,65 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, fresh = FRESH)));
 });
+
+test!(diamond_passes_args_only_once {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("tests/foo.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            b = { path = "../b" }
+            c = { path = "../c" }
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+            [dependencies]
+            c = { path = "../c" }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", r#"
+            [project]
+            name = "c"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("c/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=native=test");
+            }
+        "#)
+        .file("c/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} c v0.5.0 ([..]
+{running} `rustc [..]`
+{running} `[..]`
+{running} `rustc [..]`
+{compiling} b v0.5.0 ([..]
+{running} `rustc [..]`
+{compiling} a v0.5.0 ([..]
+{running} `rustc [..]`
+{compiling} foo v0.5.0 ([..]
+{running} `[..]rlib -L native=test`
+", compiling = COMPILING, running = RUNNING)));
+});
