@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeSet};
 use std::fs;
 use std::io::prelude::*;
 use std::path::PathBuf;
@@ -35,8 +35,8 @@ pub struct BuildState {
 
 #[derive(Default)]
 pub struct BuildScripts {
-    pub to_link: Vec<(PackageId, Kind)>,
-    pub plugins: Vec<PackageId>,
+    pub to_link: BTreeSet<(PackageId, Kind)>,
+    pub plugins: BTreeSet<PackageId>,
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
@@ -354,11 +354,11 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
             return &out[unit]
         }
 
-        let mut to_link = Vec::new();
-        let mut plugins = Vec::new();
+        let mut to_link = BTreeSet::new();
+        let mut plugins = BTreeSet::new();
 
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
-            to_link.push((unit.pkg.package_id().clone(), unit.kind));
+            to_link.insert((unit.pkg.package_id().clone(), unit.kind));
         }
         for unit in cx.dep_targets(unit).iter() {
             let dep_scripts = build(out, cx, unit);
