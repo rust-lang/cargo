@@ -160,6 +160,8 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
                              pkg_name, e.desc);
             Human(e)
         }));
+        try!(paths::write(&build_output.parent().unwrap().join("output"),
+                          &output.stdout));
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it
@@ -173,9 +175,6 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
         }));
         let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
         build_state.insert(id, kind, parsed_output);
-
-        try!(paths::write(&build_output.parent().unwrap().join("output"),
-                          output.as_bytes()));
         Ok(())
     });
 
