@@ -6,7 +6,7 @@ rust:
   - nightly
 sudo: false
 script:
-  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests
+  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests --disable-optimize
   - make
   - make test
   - make distcheck
