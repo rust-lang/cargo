@@ -133,8 +133,6 @@ case $state in
                     '--bin[use binary template]' \
                     '--vcs:initialize a new repo with a given VCS:(git hg)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--hg[initialize new mercurial repo]' \
-                    '--no-git[no new git repo]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=[colorization option]' \
                     ;;
