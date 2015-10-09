@@ -23,13 +23,14 @@ case $state in
                     '--features=[space separated feature list]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
-                    '--manifest-path=[path to manifest]' \
-                    '--bench=[benchmark name]: :_benchmark_names' \
+                    "${command_scope_spec[@]}" \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-default-features[do not build the default features]' \
                     '--no-run[compile but do not run]' \
                     '(-p,--package)'{-p=,--package=}'[package to run benchmarks for]:packages:_get_package_names' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '--color=[colorization option]' \
                     ;;
 
@@ -38,12 +39,14 @@ case $state in
                     '--features=[space separated feature list]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
-                    '--manifest-path=[path to manifest]' \
+                    "${command_scope_spec[@]}" \
+                    '--manifest-path=[path to manifest]: :files -/' \
                     '--no-default-features[do not build the default features]' \
                     '(-p,--package)'{-p=,--package=}'[package to build]:packages:_get_package_names' \
                     '--release=[build in release mode]' \
                     '--target=[target triple]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '--color=[colorization option]' \
                     ;;
 
@@ -341,15 +344,6 @@ _get_names_from_array()
 
 }
 
-# Returns the shared argument style for build specifiers
-_build_scope_spec() {
-    '(--bin --example --test --lib)--bench=[benchmark name]: :_benchmark_names' \
-        '(--bench --bin --test --lib)--example=[example name]' \
-        '(--bench --example --test --lib)--bin=[binary name]' \
-        '(--bench --bin --example --test)--lib=[library name]' \
-        '(--bench --bin --example --test)--test=[test name]' \
-}
-
 #Gets the test names from the manifest file
 _test_names()
 {
@@ -361,6 +355,18 @@ _benchmark_names()
 {
     _get_names_from_array "bench"
 }
+
+# These flags are mutally exclusive specifiers for the scope of a command; as
+# they are used in multiple places without change, they are expanded into the
+# appropriate command's `_arguments` where appropriate.
+set command_scope_spec
+command_scope_spec=(
+    '(--bin --example --test --lib)--bench=[benchmark name]: :_benchmark_names'
+    '(--bench --bin --test --lib)--example=[example name]'
+    '(--bench --example --test --lib)--bin=[binary name]'
+    '(--bench --bin --example --test)--lib=[library name]'
+    '(--bench --bin --example --test)--test=[test name]'
+)
 
 
 _cargo
