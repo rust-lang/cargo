@@ -15,7 +15,7 @@ use super::{fingerprint, process, Kind, Context, Unit};
 use super::CommandType;
 
 /// Contains the parsed output of a custom build script.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag
     pub library_paths: Vec<PathBuf>,
@@ -49,6 +49,23 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
                -> CargoResult<(Work, Work, Freshness)> {
     let _p = profile::start(format!("build script prepare: {}/{}",
                                     unit.pkg, unit.target.name()));
+    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let overridden = cx.build_state.outputs.lock().unwrap().contains_key(&key);
+    let (work_dirty, work_fresh) = if overridden {
+        (Work::new(|_| Ok(())), Work::new(|_| Ok(())))
+    } else {
+        try!(build_work(cx, unit))
+    };
+
+    // Now that we've prep'd our work, build the work needed to manage the
+    // fingerprint and then start returning that upwards.
+    let (freshness, dirty, fresh) =
+            try!(fingerprint::prepare_build_cmd(cx, unit));
+
+    Ok((work_dirty.then(dirty), work_fresh.then(fresh), freshness))
+}
+
+fn build_work(cx: &mut Context, unit: &Unit) -> CargoResult<(Work, Work)> {
     let (script_output, build_output) = {
         (cx.layout(unit.pkg, Kind::Host).build(unit.pkg),
          cx.layout(unit.pkg, unit.kind).build_out(unit.pkg))
@@ -90,7 +107,7 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        cx.dep_run_custom_build(unit, true).iter().filter_map(|unit| {
+        cx.dep_run_custom_build(unit).iter().filter_map(|unit| {
             if unit.profile.run_custom_build {
                 Some((unit.pkg.manifest().links().unwrap().to_string(),
                       unit.pkg.package_id().clone()))
@@ -117,7 +134,7 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
     //
     // Note that this has to do some extra work just before running the command
     // to determine extra environment variables and such.
-    let work = Work::new(move |desc_tx| {
+    let dirty = Work::new(move |desc_tx| {
         // Make sure that OUT_DIR exists.
         //
         // If we have an old build directory, then just move it into place,
@@ -181,15 +198,6 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
     // Now that we've prepared our work-to-do, we need to prepare the fresh work
     // itself to run when we actually end up just discarding what we calculated
     // above.
-    //
-    // Note that the freshness calculation here is the build_cmd freshness, not
-    // target specific freshness. This is because we don't actually know what
-    // the inputs are to this command!
-    //
-    // Also note that a fresh build command needs to
-    let (freshness, dirty, fresh) =
-            try!(fingerprint::prepare_build_cmd(cx, unit));
-    let dirty = work.then(dirty);
     let fresh = Work::new(move |_tx| {
         let (id, pkg_name, build_state, build_output) = all;
         let contents = try!(paths::read(&build_output.parent().unwrap()
@@ -197,9 +205,9 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
         let output = try!(BuildOutput::parse(&contents, &pkg_name));
         build_state.insert(id, kind, output);
         Ok(())
-    }).then(fresh);
+    });
 
-    Ok((dirty, fresh, freshness))
+    Ok((dirty, fresh))
 }
 
 impl BuildState {
