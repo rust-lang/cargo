@@ -1,4 +1,3 @@
-use std::cmp;
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::io::prelude::*;
@@ -313,19 +312,23 @@ impl<'cfg> Source for PathSource<'cfg> {
         }
 
         let mut max = FileTime::zero();
-        for file in try!(self.list_files(pkg)).iter() {
+        let mut max_path = PathBuf::from("");
+        for file in try!(self.list_files(pkg)) {
             // An fs::stat error here is either because path is a
             // broken symlink, a permissions error, or a race
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = fs::metadata(file).map(|meta| {
+            let mtime = fs::metadata(&file).map(|meta| {
                 FileTime::from_last_modification_time(&meta)
             }).unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
-            max = cmp::max(max, mtime);
+            if mtime > max {
+                max = mtime;
+                max_path = file;
+            }
         }
         trace!("fingerprint {}: {}", self.path.display(), max);
-        Ok(max.to_string())
+        Ok(format!("{} ({})", max, max_path.display()))
     }
 }
