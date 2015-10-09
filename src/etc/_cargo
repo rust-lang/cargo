@@ -341,6 +341,15 @@ _get_names_from_array()
 
 }
 
+# Returns the shared argument style for build specifiers
+_build_scope_spec() {
+    '(--bin --example --test --lib)--bench=[benchmark name]: :_benchmark_names' \
+        '(--bench --bin --test --lib)--example=[example name]' \
+        '(--bench --example --test --lib)--bin=[binary name]' \
+        '(--bench --bin --example --test)--lib=[library name]' \
+        '(--bench --bin --example --test)--test=[test name]' \
+}
+
 #Gets the test names from the manifest file
 _test_names()
 {
