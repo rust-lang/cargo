@@ -42,7 +42,7 @@ pub struct Compilation<'cfg> {
     pub to_doc_test: Vec<Package>,
 
     /// Features enabled during this compilation.
-    pub features: HashSet<String>,
+    pub cfgs: HashSet<String>,
 
     config: &'cfg Config,
 }
@@ -58,7 +58,7 @@ impl<'cfg> Compilation<'cfg> {
             binaries: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
-            features: HashSet::new(),
+            cfgs: HashSet::new(),
             config: config,
         }
     }
