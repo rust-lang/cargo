@@ -378,7 +378,20 @@ pub fn prepare_build_cmd(cx: &mut Context, unit: &Unit)
 
     debug!("fingerprint at: {}", loc.display());
 
-    let new_fingerprint = try!(calculate_pkg_fingerprint(cx, unit.pkg));
+    // If this build script execution has been overridden, then the fingerprint
+    // is just a hash of what it was overridden with. Otherwise the fingerprint
+    // is that of the entire package itself as we just consider everything as
+    // input to the build script.
+    let new_fingerprint = {
+        let state = cx.build_state.outputs.lock().unwrap();
+        match state.get(&(unit.pkg.package_id().clone(), unit.kind)) {
+            Some(output) => {
+                format!("overridden build state with hash: {}",
+                        util::hash_u64(output))
+            }
+            None => try!(calculate_pkg_fingerprint(cx, unit.pkg)),
+        }
+    };
     let new_fingerprint = Arc::new(Fingerprint {
         rustc: 0,
         target: 0,
