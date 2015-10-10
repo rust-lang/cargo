@@ -148,11 +148,17 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
         }
     }
 
-    if let Some(feats) = cx.resolve.features(root.package_id()) {
-        cx.compilation.features.extend(feats.iter().cloned());
+    let root_pkg = root.package_id();
+    if let Some(feats) = cx.resolve.features(root_pkg) {
+        cx.compilation.cfgs.extend(feats.iter().map(|feat| {
+            format!("feature=\"{}\"", feat)
+        }));
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
+        if pkg == root_pkg {
+            cx.compilation.cfgs.extend(output.cfgs.iter().cloned());
+        }
         let any_dylib = output.library_links.iter().any(|l| {
             !l.starts_with("static=") && !l.starts_with("framework=")
         });
