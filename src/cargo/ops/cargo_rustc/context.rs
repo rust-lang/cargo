@@ -290,7 +290,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// for that package.
     pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
         if unit.profile.run_custom_build {
-            return self.dep_run_custom_build(unit, false)
+            return self.dep_run_custom_build(unit)
         } else if unit.profile.doc {
             return self.doc_deps(unit);
         }
@@ -345,12 +345,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             })
         }).collect::<Vec<_>>();
 
-        // If a target isn't actually a build script itself, then it depends on
-        // the build script if there is one.
+        // If this target is a build script, then what we've collected so far is
+        // all we need. If this isn't a build script, then it depends on the
+        // build script if there is one.
         if unit.target.is_custom_build() {
             return ret
         }
-        ret.extend(self.build_script_if_run(unit, false));
+        ret.extend(self.dep_build_script(unit));
 
         // If this target is a binary, test, example, etc, then it depends on
         // the library of the same package. The call to `resolve.deps` above
@@ -376,9 +377,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         return ret
     }
 
-    pub fn dep_run_custom_build(&self,
-                                unit: &Unit<'a>,
-                                include_overridden: bool) -> Vec<Unit<'a>> {
+    /// Returns the dependencies needed to run a build script.
+    ///
+    /// The `unit` provided must represent an execution of a build script, and
+    /// the returned set of units must all be run before `unit` is run.
+    pub fn dep_run_custom_build(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+        // If this build script's execution has been overridden then we don't
+        // actually depend on anything, we've reached the end of the dependency
+        // chain as we've got all the info we're gonna get.
+        let key = (unit.pkg.package_id().clone(), unit.kind);
+        if self.build_state.outputs.lock().unwrap().contains_key(&key) {
+            return Vec::new()
+        }
+
+        // When not overridden, then the dependencies to run a build script are:
+        //
+        // 1. Compiling the build script itself
+        // 2. For each immediate dependency of our package which has a `links`
+        //    key, the execution of that build script.
         let not_custom_build = unit.pkg.targets().iter().find(|t| {
             !t.is_custom_build()
         }).unwrap();
@@ -387,18 +403,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profile: &self.profiles.dev,
             ..*unit
         };
-        let mut ret = self.dep_targets(&tmp).iter().filter_map(|unit| {
+        self.dep_targets(&tmp).iter().filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None
             }
-            self.build_script_if_run(unit, include_overridden)
-        }).collect::<Vec<_>>();
-        ret.push(Unit {
+            self.dep_build_script(unit)
+        }).chain(Some(Unit {
             profile: self.build_script_profile(unit.pkg.package_id()),
-            kind: Kind::Host,
+            kind: Kind::Host, // build scripts always compiled for the host
             ..*unit
-        });
-        return ret
+        })).collect()
     }
 
     /// Returns the dependencies necessary to document a package
@@ -442,7 +456,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         // Be sure to build/run the build script for documented libraries as
-        ret.extend(self.build_script_if_run(unit, false));
+        ret.extend(self.dep_build_script(unit));
 
         // If we document a binary, we need the library available
         if unit.target.is_bin() {
@@ -451,28 +465,21 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         return ret
     }
 
-    /// Returns the build script for a package if that build script is actually
-    /// intended to be run for `kind` as part of this compilation.
+    /// If a build script is scheduled to be run for the package specified by
+    /// `unit`, this function will return the unit to run that build script.
     ///
-    /// Build scripts are not run if they are overridden by some global
-    /// configuration.
-    fn build_script_if_run(&self, unit: &Unit<'a>,
-                           allow_overridden: bool) -> Option<Unit<'a>> {
-        let target = match unit.pkg.targets().iter().find(|t| t.is_custom_build()) {
-            Some(t) => t,
-            None => return None,
-        };
-        let key = (unit.pkg.package_id().clone(), unit.kind);
-        if !allow_overridden &&
-           unit.pkg.manifest().links().is_some() &&
-           self.build_state.outputs.lock().unwrap().contains_key(&key) {
-            return None
-        }
-        Some(Unit {
-            pkg: unit.pkg,
-            target: target,
-            profile: &self.profiles.custom_build,
-            kind: unit.kind,
+    /// Overriding a build script simply means that the running of the build
+    /// script itself doesn't have any dependencies, so even in that case a unit
+    /// of work is still returned. `None` is only returned if the package has no
+    /// build script.
+    fn dep_build_script(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
+        unit.pkg.targets().iter().find(|t| t.is_custom_build()).map(|t| {
+            Unit {
+                pkg: unit.pkg,
+                target: t,
+                profile: &self.profiles.custom_build,
+                kind: unit.kind,
+            }
         })
     }
 

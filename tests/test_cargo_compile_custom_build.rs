@@ -1411,3 +1411,78 @@ test!(diamond_passes_args_only_once {
 {running} `[..]rlib -L native=test`
 ", compiling = COMPILING, running = RUNNING)));
 });
+
+test!(adding_an_override_invalidates {
+    let target = ::rustc_host();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=native=foo");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.5.0 ([..]
+{running} `rustc [..]`
+{running} `[..]`
+{running} `rustc [..] -L native=foo`
+", compiling = COMPILING, running = RUNNING)));
+
+    File::create(p.root().join(".cargo/config")).unwrap().write_all(format!("
+        [target.{}.foo]
+        rustc-link-search = [\"native=bar\"]
+    ", target).as_bytes()).unwrap();
+
+    assert_that(p.cargo("build").arg("-v"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.5.0 ([..]
+{running} `rustc [..] -L native=bar`
+", compiling = COMPILING, running = RUNNING)));
+});
+
+test!(changing_an_override_invalidates {
+    let target = ::rustc_host();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", &format!("
+            [target.{}.foo]
+            rustc-link-search = [\"native=foo\"]
+        ", target))
+        .file("build.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.5.0 ([..]
+{running} `rustc [..] -L native=foo`
+", compiling = COMPILING, running = RUNNING)));
+
+    File::create(p.root().join(".cargo/config")).unwrap().write_all(format!("
+        [target.{}.foo]
+        rustc-link-search = [\"native=bar\"]
+    ", target).as_bytes()).unwrap();
+
+    assert_that(p.cargo("build").arg("-v"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.5.0 ([..]
+{running} `rustc [..] -L native=bar`
+", compiling = COMPILING, running = RUNNING)));
+});
