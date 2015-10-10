@@ -477,3 +477,46 @@ test!(doc_multiple_deps {
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/baz/index.html"), existing_file());
 });
+
+test!(features {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+
+            [features]
+            foo = ["bar/bar"]
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(feature = "foo")]
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            bar = []
+        "#)
+        .file("bar/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-cfg=bar");
+            }
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #[cfg(feature = "bar")]
+            pub fn bar() {}
+        "#);
+    assert_that(p.cargo_process("doc").arg("--features").arg("foo"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
+    assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
+});
