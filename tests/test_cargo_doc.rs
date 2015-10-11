@@ -1,7 +1,7 @@
 use std::str;
 
 use support::{project, execs, path2url};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, DOCUMENTING, RUNNING};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -23,9 +23,9 @@ test!(simple {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
+[..] foo v0.0.1 ({dir})
+[..] foo v0.0.1 ({dir})
 ",
-        compiling = COMPILING,
         dir = path2url(p.root()))));
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
@@ -65,9 +65,9 @@ test!(doc_twice {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
+{documenting} foo v0.0.1 ({dir})
 ",
-        compiling = COMPILING,
+        documenting = DOCUMENTING,
         dir = path2url(p.root()))));
 
     assert_that(p.cargo("doc"),
@@ -101,10 +101,11 @@ test!(doc_deps {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+[..] bar v0.0.1 ({dir})
+[..] bar v0.0.1 ({dir})
+{documenting} foo v0.0.1 ({dir})
 ",
-        compiling = COMPILING,
+        documenting = DOCUMENTING,
         dir = path2url(p.root()))));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -148,9 +149,9 @@ test!(doc_no_deps {
     assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(&format!("\
 {compiling} bar v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir})
+{documenting} foo v0.0.1 ({dir})
 ",
-        compiling = COMPILING,
+        documenting = DOCUMENTING, compiling = COMPILING,
         dir = path2url(p.root()))));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -243,9 +244,10 @@ test!(doc_dash_p {
     assert_that(p.cargo_process("doc").arg("-p").arg("a"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} b v0.0.1 (file://[..])
-{compiling} a v0.0.1 (file://[..])
-", compiling = COMPILING)));
+[..] b v0.0.1 (file://[..])
+[..] b v0.0.1 (file://[..])
+{documenting} a v0.0.1 (file://[..])
+", documenting = DOCUMENTING)));
 });
 
 test!(doc_same_name {
@@ -428,9 +430,9 @@ test!(doc_release {
     assert_that(p.cargo("doc").arg("--release").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ([..])
+{documenting} foo v0.0.1 ([..])
 {running} `rustdoc src[..]lib.rs [..]`
-", compiling = COMPILING, running = RUNNING)));
+", documenting = DOCUMENTING, running = RUNNING)));
 });
 
 test!(doc_multiple_deps {
