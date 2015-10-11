@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{COMPILING, RUNNING, DOCTEST, FRESH};
+use support::{COMPILING, RUNNING, DOCTEST, FRESH, DOCUMENTING};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that};
 
@@ -506,9 +506,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.5.0 (file://[..])
+{documenting} foo v0.5.0 (file://[..])
 {running} `rustdoc [..]`
-", compiling = COMPILING, running = RUNNING)));
+", documenting = DOCUMENTING, running = RUNNING)));
 
     File::create(&p.root().join("src/main.rs")).unwrap()
          .write_all(b"fn main() {}").unwrap();
