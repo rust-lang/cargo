@@ -136,8 +136,8 @@ fn run_doc_tests(options: &TestOptions,
                 p.arg("--test-args").arg(&test_args.connect(" "));
             }
 
-            for feat in compilation.features.iter() {
-                p.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+            for cfg in compilation.cfgs.iter() {
+                p.arg("--cfg").arg(cfg);
             }
 
             for (_, libs) in compilation.libraries.iter() {

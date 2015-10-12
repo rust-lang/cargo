@@ -148,11 +148,17 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
         }
     }
 
-    if let Some(feats) = cx.resolve.features(root.package_id()) {
-        cx.compilation.features.extend(feats.iter().cloned());
+    let root_pkg = root.package_id();
+    if let Some(feats) = cx.resolve.features(root_pkg) {
+        cx.compilation.cfgs.extend(feats.iter().map(|feat| {
+            format!("feature=\"{}\"", feat)
+        }));
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
+        if pkg == root_pkg {
+            cx.compilation.cfgs.extend(output.cfgs.iter().cloned());
+        }
         let any_dylib = output.library_links.iter().any(|l| {
             !l.starts_with("static=") && !l.starts_with("framework=")
         });
@@ -392,11 +398,17 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     }
 
     let name = unit.pkg.name().to_string();
-    let desc = rustdoc.to_string();
+    let build_state = cx.build_state.clone();
+    let key = (unit.pkg.package_id().clone(), unit.kind);
     let exec_engine = cx.exec_engine.clone();
 
     Ok(Work::new(move |desc_tx| {
-        desc_tx.send(desc).unwrap();
+        if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
+            for cfg in output.cfgs.iter() {
+                rustdoc.arg("--cfg").arg(cfg);
+            }
+        }
+        desc_tx.send(rustdoc.to_string()).unwrap();
         exec_engine.exec(rustdoc).chain_error(|| {
             human(format!("Could not document `{}`.", name))
         })

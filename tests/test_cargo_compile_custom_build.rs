@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use support::{project, execs};
 use support::{COMPILING, RUNNING, DOCTEST, FRESH};
 use support::paths::CargoPathExt;
-use hamcrest::{assert_that};
+use hamcrest::{assert_that, existing_file, existing_dir};
 
 fn setup() {
 }
@@ -1279,6 +1279,237 @@ test!(cfg_override {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
+});
+
+test!(cfg_test {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-cfg=foo");
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            ///
+            /// ```
+            /// extern crate foo;
+            ///
+            /// fn main() {
+            ///     foo::foo()
+            /// }
+            /// ```
+            ///
+            #[cfg(foo)]
+            pub fn foo() {}
+
+            #[cfg(foo)]
+            #[test]
+            fn test_foo() {
+                foo()
+            }
+        "#)
+        .file("tests/test.rs", r#"
+            #[cfg(foo)]
+            #[test]
+            fn test_bar() {}
+        "#);
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} [..] build.rs [..]
+{running} [..]build-script-build[..]
+{running} [..] src[..]lib.rs [..] --cfg foo[..]
+{running} [..] src[..]lib.rs [..] --cfg foo[..]
+{running} [..] tests[..]test.rs [..] --cfg foo[..]
+{running} [..]foo-[..]
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} [..]test-[..]
+
+running 1 test
+test test_bar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+{running} [..] --cfg foo[..]
+
+running 1 test
+test foo_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+compiling = COMPILING, dir = p.url(), running = RUNNING, doctest = DOCTEST)));
+});
+
+test!(cfg_doc {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-cfg=foo");
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(foo)]
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("bar/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-cfg=bar");
+            }
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #[cfg(bar)]
+            pub fn bar() {}
+        "#);
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
+    assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
+});
+
+test!(cfg_override_test {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+            links = "a"
+        "#)
+        .file("build.rs", "")
+        .file(".cargo/config", &format!(r#"
+            [target.{}.a]
+            rustc-cfg = ["foo"]
+        "#, ::rustc_host()))
+        .file("src/lib.rs", r#"
+            ///
+            /// ```
+            /// extern crate foo;
+            ///
+            /// fn main() {
+            ///     foo::foo()
+            /// }
+            /// ```
+            ///
+            #[cfg(foo)]
+            pub fn foo() {}
+
+            #[cfg(foo)]
+            #[test]
+            fn test_foo() {
+                foo()
+            }
+        "#)
+        .file("tests/test.rs", r#"
+            #[cfg(foo)]
+            #[test]
+            fn test_bar() {}
+        "#);
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_stdout(format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} [..] src[..]lib.rs [..] --cfg foo[..]
+{running} [..] src[..]lib.rs [..] --cfg foo[..]
+{running} [..] tests[..]test.rs [..] --cfg foo[..]
+{running} [..]foo-[..]
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} [..]test-[..]
+
+running 1 test
+test test_bar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+{running} [..] --cfg foo[..]
+
+running 1 test
+test foo_0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+compiling = COMPILING, dir = p.url(), running = RUNNING, doctest = DOCTEST)));
+});
+
+test!(cfg_override_doc {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+            links = "a"
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file(".cargo/config", &format!(r#"
+            [target.{target}.a]
+            rustc-cfg = ["foo"]
+            [target.{target}.b]
+            rustc-cfg = ["bar"]
+        "#, target = ::rustc_host()))
+        .file("build.rs", "")
+        .file("src/lib.rs", r#"
+            #[cfg(foo)]
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+            links = "b"
+        "#)
+        .file("bar/build.rs", "")
+        .file("bar/src/lib.rs", r#"
+            #[cfg(bar)]
+            pub fn bar() {}
+        "#) ;
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
+    assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
 });
 
 test!(flags_go_into_tests {
