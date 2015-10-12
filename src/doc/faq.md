@@ -130,6 +130,9 @@ picture to decide what versions of dependencies should be used.
 
 # Can libraries use `*` as a version for their dependencies?
 
+**Starting December 11th, 2015, crates.io will begin rejecting packages with
+wildcard dependency constraints.**
+
 While they _can_, strictly speaking, they should not. A version requirement
 of `*` says “This will work with every version ever,” which is never going
 to be true. Libraries should always specifiy the range that they do work with,
