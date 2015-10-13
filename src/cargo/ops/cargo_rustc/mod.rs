@@ -380,8 +380,13 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--target").arg(target);
         doc_dir.push(target);
     }
-
     doc_dir.push("doc");
+
+    // Create the documentation directory ahead of time as rustdoc currently has
+    // a bug where concurrent invocations will race to create this directory if
+    // it doesn't already exist.
+    try!(fs::create_dir_all(&doc_dir));
+
     rustdoc.arg("-o").arg(doc_dir);
 
     if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
