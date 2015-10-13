@@ -102,7 +102,11 @@ test!(exit_code {
         "#);
 
     assert_that(p.cargo_process("run"),
-                execs().with_status(2));
+                execs().with_status(2)
+                       .with_stderr(&format!("\
+Process finished with exit status 2
+",
+        )));
 });
 
 test!(exit_code_verbose {
@@ -120,7 +124,7 @@ test!(exit_code_verbose {
     assert_that(p.cargo_process("run").arg("-v"),
                 execs().with_status(2)
                        .with_stderr(&format!("\
-Process didn't exit successfully: `target[..]foo` (exit code: 2)
+Process finished with exit status 2
 ",
         )));
 });
