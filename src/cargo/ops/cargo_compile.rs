@@ -110,6 +110,16 @@ pub fn compile_pkg<'a>(root_package: &Package,
         s.split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
+    let all_features = root_package.manifest().summary().features().get("default")
+        .map_or(features.clone(), |x| {
+            if !no_default_features {
+                features.iter().chain(x.iter()).cloned().collect()
+            } else {
+                features.clone()
+            }
+        }
+    );
+
     if spec.len() > 0 && (no_default_features || features.len() > 0) {
         return Err(human("features cannot be modified when the main package \
                           is not being built"))
@@ -361,6 +371,13 @@ fn generate_targets<'a>(pkg: &'a Package,
             Ok(targets)
         }
     };
+
+    targets.map(|x| x.iter().filter(|&&(t,_)| {
+        t.is_lib() ||
+        t.features().map_or(true, |x| {
+            x.iter().all(|f| features.contains(f))
+        })
+    }).cloned().collect())
 }
 
 /// Read the `paths` configuration variable to discover all path overrides that
