@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 
-use cargo::util::important_paths::{find_root_manifest_for_cwd};
+use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config};
 use rustc_serialize::json;
 use toml;
@@ -37,7 +37,7 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
 
     let mut contents = String::new();
     let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());
-    let filename = match find_root_manifest_for_cwd(Some(filename)) {
+    let filename = match find_root_manifest_for_wd(Some(filename), config.cwd()) {
         Ok(manifest_path) => manifest_path,
         Err(e) => fail("invalid", &e.to_string()),
     };

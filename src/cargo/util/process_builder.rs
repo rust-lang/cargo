@@ -60,7 +60,9 @@ impl ProcessBuilder {
     pub fn get_args(&self) -> &[OsString] {
         &self.args
     }
-    pub fn get_cwd(&self) -> &Path { Path::new(&self.cwd) }
+    pub fn get_cwd(&self) -> &Path {
+        Path::new(&self.cwd)
+    }
 
     pub fn get_env(&self, var: &str) -> Option<OsString> {
         self.env.get(var).cloned().or_else(|| Some(env::var_os(var)))
@@ -106,7 +108,7 @@ impl ProcessBuilder {
 
     pub fn build_command(&self) -> Command {
         let mut command = Command::new(&self.program);
-        command.current_dir(&self.cwd);
+        command.current_dir(&self.get_cwd());
         for arg in self.args.iter() {
             command.arg(arg);
         }
@@ -129,11 +131,11 @@ impl ProcessBuilder {
     }
 }
 
-pub fn process<T: AsRef<OsStr>>(cmd: T) -> CargoResult<ProcessBuilder> {
+pub fn process<T: AsRef<OsStr>, U: AsRef<OsStr>>(cmd: T, cwd: U) -> CargoResult<ProcessBuilder> {
     Ok(ProcessBuilder {
         program: cmd.as_ref().to_os_string(),
         args: Vec::new(),
-        cwd: try!(env::current_dir()).as_os_str().to_os_string(),
+        cwd: cwd.as_ref().to_os_string(),
         env: HashMap::new(),
     })
 }

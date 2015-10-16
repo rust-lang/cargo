@@ -97,7 +97,10 @@ fn process<V, F>(mut callback: F)
 {
     let mut config = None;
     let result = (|| {
-        config = Some(try!(Config::new(shell(Verbose, Auto))));
+        let cwd = try!(env::current_dir().chain_error(|| {
+            human("couldn't get the current directory of the process")
+        }));
+        config = Some(try!(Config::new(shell(Verbose, Auto), cwd)));
         let args: Vec<_> = try!(env::args_os().map(|s| {
             s.into_string().map_err(|s| {
                 human(format!("invalid unicode in argument: {:?}", s))
