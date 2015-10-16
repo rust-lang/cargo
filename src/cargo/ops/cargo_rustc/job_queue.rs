@@ -25,7 +25,8 @@ pub struct JobQueue<'a> {
     rx: Receiver<Message<'a>>,
     active: usize,
     pending: HashMap<Key<'a>, PendingBuild>,
-    printed: HashSet<&'a PackageId>,
+    compiled: HashSet<&'a PackageId>,
+    documented: HashSet<&'a PackageId>,
     counts: HashMap<&'a PackageId, usize>,
 }
 
@@ -61,7 +62,8 @@ impl<'a> JobQueue<'a> {
             rx: rx,
             active: 0,
             pending: HashMap::new(),
-            printed: HashSet::new(),
+            compiled: HashSet::new(),
+            documented: HashSet::new(),
             counts: HashMap::new(),
         }
     }
@@ -181,7 +183,7 @@ impl<'a> JobQueue<'a> {
         });
 
         // Print out some nice progress information
-        try!(self.note_working_on(config, key.pkg, fresh));
+        try!(self.note_working_on(config, &key, fresh));
 
         // only the first message of each job is processed
         if let Ok(msg) = desc_rx.recv() {
@@ -199,9 +201,10 @@ impl<'a> JobQueue<'a> {
     // In general, we try to print "Compiling" for the first nontrivial task
     // run for a package, regardless of when that is. We then don't print
     // out any more information for a package after we've printed it once.
-    fn note_working_on(&mut self, config: &Config, pkg: &'a PackageId,
+    fn note_working_on(&mut self, config: &Config, key: &Key<'a>,
                        fresh: Freshness) -> CargoResult<()> {
-        if self.printed.contains(&pkg) {
+        if (self.compiled.contains(key.pkg) && !key.profile.doc) || 
+            (self.documented.contains(key.pkg) && key.profile.doc) {
             return Ok(())
         }
 
@@ -209,12 +212,17 @@ impl<'a> JobQueue<'a> {
             // Any dirty stage which runs at least one command gets printed as
             // being a compiled package
             Dirty => {
-                self.printed.insert(pkg);
-                try!(config.shell().status("Compiling", pkg));
+                if key.profile.doc {
+                    self.documented.insert(key.pkg);
+                    try!(config.shell().status("Documenting", key.pkg));
+                } else {
+                    self.compiled.insert(key.pkg);
+                    try!(config.shell().status("Compiling", key.pkg));
+                }
             }
-            Fresh if self.counts[pkg] == 0 => {
-                self.printed.insert(pkg);
-                try!(config.shell().verbose(|c| c.status("Fresh", pkg)));
+            Fresh if self.counts[key.pkg] == 0 => {
+                self.compiled.insert(key.pkg);
+                try!(config.shell().verbose(|c| c.status("Fresh", key.pkg)));
             }
             Fresh => {}
         }
