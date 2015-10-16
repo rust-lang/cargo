@@ -1,6 +1,6 @@
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Config};
-use cargo::util::important_paths::{find_root_manifest_for_cwd};
+use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -49,7 +49,7 @@ pub fn execute(options: Options,
                config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
-    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path.clone()));
+    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd()));
 
     let spec = options.arg_spec.as_ref().map(|s| &s[..]);
     let spec = try!(ops::pkgid(&root, spec, config).map_err(|err| {

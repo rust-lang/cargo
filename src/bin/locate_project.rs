@@ -1,5 +1,5 @@
 use cargo::util::{CliResult, CliError, human, ChainError, Config};
-use cargo::util::important_paths::{find_root_manifest_for_cwd};
+use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
 struct LocateProjectFlags {
@@ -21,8 +21,8 @@ struct ProjectLocation {
 }
 
 pub fn execute(flags: LocateProjectFlags,
-               _: &Config) -> CliResult<Option<ProjectLocation>> {
-    let root = try!(find_root_manifest_for_cwd(flags.flag_manifest_path));
+               config: &Config) -> CliResult<Option<ProjectLocation>> {
+    let root = try!(find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd()));
 
     let string = try!(root.to_str()
                       .chain_error(|| human("Your project path contains \
