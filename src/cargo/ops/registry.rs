@@ -20,7 +20,7 @@ use util::config;
 use util::paths;
 use util::{CargoResult, human, ChainError, ToUrl};
 use util::config::{Config, ConfigValue, Location};
-use util::important_paths::find_root_manifest_for_cwd;
+use util::important_paths::find_root_manifest_for_wd;
 
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -252,7 +252,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let name = match opts.krate {
         Some(ref name) => name.clone(),
         None => {
-            let manifest_path = try!(find_root_manifest_for_cwd(None));
+            let manifest_path = try!(find_root_manifest_for_wd(None, config.cwd()));
             let pkg = try!(Package::for_path(&manifest_path, config));
             pkg.name().to_string()
         }
@@ -312,7 +312,7 @@ pub fn yank(config: &Config,
     let name = match krate {
         Some(name) => name,
         None => {
-            let manifest_path = try!(find_root_manifest_for_cwd(None));
+            let manifest_path = try!(find_root_manifest_for_wd(None, config.cwd()));
             let pkg = try!(Package::for_path(&manifest_path, config));
             pkg.name().to_string()
         }

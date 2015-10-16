@@ -14,8 +14,8 @@ impl Rustc {
     ///
     /// If successful this function returns a description of the compiler along
     /// with a list of its capabilities.
-    pub fn new<P: AsRef<Path>>(path: P) -> CargoResult<Rustc> {
-        let mut cmd = try!(util::process(path.as_ref()));
+    pub fn new<P: AsRef<Path>>(path: P, cwd: &Path) -> CargoResult<Rustc> {
+        let mut cmd = try!(util::process(path.as_ref(), cwd));
         cmd.arg("-vV");
 
         let mut ret = Rustc::blank();

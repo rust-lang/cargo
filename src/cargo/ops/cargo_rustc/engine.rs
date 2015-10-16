@@ -40,10 +40,10 @@ impl CommandPrototype {
                -> CargoResult<CommandPrototype> {
         Ok(CommandPrototype {
             builder: try!(match ty {
-                CommandType::Rustc => process(config.rustc()),
-                CommandType::Rustdoc => process(config.rustdoc()),
+                CommandType::Rustc => process(config.rustc(), config.cwd()),
+                CommandType::Rustdoc => process(config.rustdoc(), config.cwd()),
                 CommandType::Target(ref s) |
-                CommandType::Host(ref s) => process(s),
+                CommandType::Host(ref s) => process(s, config.cwd()),
             }),
             ty: ty,
         })

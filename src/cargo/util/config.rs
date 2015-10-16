@@ -31,11 +31,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(shell: MultiShell) -> CargoResult<Config> {
-        let cwd = try!(env::current_dir().chain_error(|| {
-            human("couldn't get the current directory of the process")
-        }));
-
+    pub fn new(shell: MultiShell, cwd: PathBuf) -> CargoResult<Config> {
         let mut cfg = Config {
             home_path: try!(homedir(cwd.as_path()).chain_error(|| {
                 human("Cargo couldn't find your home directory. \
@@ -231,7 +227,7 @@ impl Config {
     }
 
     fn scrape_rustc_version(&mut self) -> CargoResult<()> {
-        self.rustc_info = try!(Rustc::new(&self.rustc));
+        self.rustc_info = try!(Rustc::new(&self.rustc, self.cwd()));
         Ok(())
     }
 

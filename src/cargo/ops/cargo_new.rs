@@ -97,15 +97,15 @@ fn strip_rust_affixes(name: &str) -> &str {
     name
 }
 
-fn existing_vcs_repo(path: &Path) -> bool {
-    GitRepo::discover(path).is_ok() || HgRepo::discover(path).is_ok()
+fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
+    GitRepo::discover(path, cwd).is_ok() || HgRepo::discover(path, cwd).is_ok()
 }
 
 fn mk(config: &Config, path: &Path, name: &str,
       opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
     let mut ignore = "target\n".to_string();
-    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap());
+    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
     if !opts.bin {
         ignore.push_str("Cargo.lock\n");
     }
@@ -119,11 +119,11 @@ fn mk(config: &Config, path: &Path, name: &str,
 
     match vcs {
         VersionControl::Git => {
-            try!(GitRepo::init(path));
+            try!(GitRepo::init(path, config.cwd()));
             try!(paths::write(&path.join(".gitignore"), ignore.as_bytes()));
         },
         VersionControl::Hg => {
-            try!(HgRepo::init(path));
+            try!(HgRepo::init(path, config.cwd()));
             try!(paths::write(&path.join(".hgignore"), ignore.as_bytes()));
         },
         VersionControl::NoVcs => {

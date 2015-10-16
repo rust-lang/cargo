@@ -3,7 +3,7 @@ use std::error::Error;
 
 use cargo::core::{Package, Source};
 use cargo::util::{CliResult, CliError, Config};
-use cargo::util::important_paths::{find_root_manifest_for_cwd};
+use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::sources::{PathSource};
 
 #[derive(RustcDecodable)]
@@ -29,7 +29,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> 
            env::args().collect::<Vec<_>>());
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
-    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
+    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
     let mut source = try!(PathSource::for_path(root.parent().unwrap(), config).map_err(|e| {
         CliError::new(e.description(), 1)
