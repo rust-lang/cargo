@@ -1,4 +1,3 @@
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::str;
@@ -7,22 +6,24 @@ use std::sync::Arc;
 use regex::Regex;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
-use core::{TargetKind, LibKind, Profiles, Metadata};
+use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
+use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile};
 use util::human;
 
 use super::TargetConfig;
-use super::custom_build::BuildState;
+use super::custom_build::{BuildState, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::layout::{Layout, LayoutProxy};
 use super::{Kind, Compilation, BuildConfig};
 use super::{ProcessEngine, ExecEngine};
 
-#[derive(Debug, Clone, Copy)]
-pub enum Platform {
-    Target,
-    Plugin,
-    PluginAndTarget,
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+pub struct Unit<'a> {
+    pub pkg: &'a Package,
+    pub target: &'a Target,
+    pub profile: &'a Profile,
+    pub kind: Kind,
 }
 
 pub struct Context<'a, 'cfg: 'a> {
@@ -32,12 +33,10 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compilation: Compilation<'cfg>,
     pub build_state: Arc<BuildState>,
     pub exec_engine: Arc<Box<ExecEngine>>,
-    pub fingerprints: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
-                              Fingerprint>,
-    pub compiled: HashSet<(&'a PackageId, &'a Target, &'a Profile)>,
+    pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
+    pub compiled: HashSet<Unit<'a>>,
     pub build_config: BuildConfig,
-    pub build_scripts: HashMap<(&'a PackageId, &'a Target, &'a Profile, Kind),
-                               Vec<&'a PackageId>>,
+    pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
 
     host: Layout,
     target: Option<Layout>,
@@ -47,7 +46,6 @@ pub struct Context<'a, 'cfg: 'a> {
     package_set: &'a PackageSet,
     target_dylib: Option<(String, String)>,
     target_exe: String,
-    requirements: HashMap<(&'a PackageId, &'a str), Platform>,
     profiles: &'a Profiles,
 }
 
@@ -58,7 +56,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                config: &'cfg Config,
                host: Layout,
                target_layout: Option<Layout>,
-               root_pkg: &Package,
                build_config: BuildConfig,
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
@@ -88,8 +85,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             target_exe: target_exe,
             host_dylib: host_dylib,
             host_exe: host_exe,
-            requirements: HashMap::new(),
-            compilation: Compilation::new(root_pkg, config),
+            compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config, deps)),
             build_config: build_config,
             exec_engine: engine,
@@ -142,78 +138,27 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
-    pub fn prepare(&mut self, pkg: &'a Package,
-                   targets: &[(&'a Target, &'a Profile)])
-                   -> CargoResult<()> {
+    pub fn prepare(&mut self, root: &Package) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
         try!(self.host.prepare().chain_error(|| {
-            internal(format!("couldn't prepare build directories for `{}`",
-                             pkg.name()))
+            internal(format!("couldn't prepare build directories"))
         }));
         match self.target {
             Some(ref mut target) => {
                 try!(target.prepare().chain_error(|| {
-                    internal(format!("couldn't prepare build directories \
-                                      for `{}`", pkg.name()))
+                    internal(format!("couldn't prepare build directories"))
                 }));
             }
             None => {}
         }
 
-        for &(target, profile) in targets {
-            self.build_requirements(pkg, target, profile, Platform::Target);
-        }
-
-        let jobs = self.jobs();
-        self.compilation.extra_env.insert("NUM_JOBS".to_string(),
-                                          jobs.to_string());
         self.compilation.root_output =
-                self.layout(pkg, Kind::Target).proxy().dest().to_path_buf();
+                self.layout(root, Kind::Target).proxy().dest().to_path_buf();
         self.compilation.deps_output =
-                self.layout(pkg, Kind::Target).proxy().deps().to_path_buf();
+                self.layout(root, Kind::Target).proxy().deps().to_path_buf();
 
         return Ok(());
-    }
-
-    fn build_requirements(&mut self, pkg: &'a Package, target: &'a Target,
-                          profile: &Profile, req: Platform) {
-        let req = if target.for_host() {Platform::Plugin} else {req};
-        match self.requirements.entry((pkg.package_id(), target.name())) {
-            Occupied(mut entry) => match (*entry.get(), req) {
-                (Platform::Plugin, Platform::Plugin) |
-                (Platform::PluginAndTarget, Platform::Plugin) |
-                (Platform::Target, Platform::Target) |
-                (Platform::PluginAndTarget, Platform::Target) |
-                (Platform::PluginAndTarget, Platform::PluginAndTarget) => return,
-                _ => *entry.get_mut() = entry.get().combine(req),
-            },
-            Vacant(entry) => { entry.insert(req); }
-        };
-
-        for &(pkg, dep, profile) in self.dep_targets(pkg, target, profile).iter() {
-            self.build_requirements(pkg, dep, profile, req);
-        }
-
-        match pkg.targets().iter().find(|t| t.is_custom_build()) {
-            Some(custom_build) => {
-                let profile = self.build_script_profile(pkg.package_id());
-                self.build_requirements(pkg, custom_build, profile,
-                                        Platform::Plugin);
-            }
-            None => {}
-        }
-    }
-
-    pub fn get_requirement(&self, pkg: &'a Package,
-                           target: &'a Target) -> Platform {
-        let default = if target.for_host() {
-            Platform::Plugin
-        } else {
-            Platform::Target
-        };
-        self.requirements.get(&(pkg.package_id(), target.name()))
-            .map(|a| *a).unwrap_or(default)
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
@@ -221,19 +166,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let primary = pkg.package_id() == self.resolve.root();
         match kind {
             Kind::Host => LayoutProxy::new(&self.host, primary),
-            Kind::Target =>  LayoutProxy::new(self.target.as_ref()
-                                                .unwrap_or(&self.host),
-                                            primary),
+            Kind::Target => LayoutProxy::new(self.target.as_ref()
+                                                 .unwrap_or(&self.host),
+                                             primary),
         }
     }
 
     /// Returns the appropriate output directory for the specified package and
     /// target.
-    pub fn out_dir(&self, pkg: &Package, kind: Kind, target: &Target) -> PathBuf {
-        let out_dir = self.layout(pkg, kind);
-        if target.is_custom_build() {
-            out_dir.build(pkg)
-        } else if target.is_example() {
+    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
+        let out_dir = self.layout(unit.pkg, unit.kind);
+        if unit.target.is_custom_build() {
+            out_dir.build(unit.pkg)
+        } else if unit.target.is_example() {
             out_dir.examples().to_path_buf()
         } else {
             out_dir.root().to_path_buf()
@@ -263,24 +208,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Get the metadata for a target in a specific profile
-    pub fn target_metadata(&self, pkg: &Package, target: &Target,
-                           profile: &Profile) -> Option<Metadata> {
-        let metadata = target.metadata();
-        if target.is_lib() && profile.test {
+    pub fn target_metadata(&self, unit: &Unit) -> Option<Metadata> {
+        let metadata = unit.target.metadata();
+        if unit.target.is_lib() && unit.profile.test {
             // Libs and their tests are built in parallel, so we need to make
             // sure that their metadata is different.
             metadata.map(|m| m.clone()).map(|mut m| {
                 m.mix(&"test");
                 m
             })
-        } else if target.is_bin() && profile.test {
+        } else if unit.target.is_bin() && unit.profile.test {
             // Make sure that the name of this test executable doesn't
             // conflict with a library that has the same name and is
             // being tested
-            let mut metadata = pkg.generate_metadata();
-            metadata.mix(&format!("bin-{}", target.name()));
+            let mut metadata = unit.pkg.generate_metadata();
+            metadata.mix(&format!("bin-{}", unit.target.name()));
             Some(metadata)
-        } else if pkg.package_id() == self.resolve.root() && !profile.test {
+        } else if unit.pkg.package_id() == self.resolve.root() &&
+                  !unit.profile.test {
             // If we're not building a unit test then the root package never
             // needs any metadata as it's guaranteed to not conflict with any
             // other output filenames. This means that we'll have predictable
@@ -292,39 +237,43 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the file stem for a given target/profile combo
-    pub fn file_stem(&self, pkg: &Package, target: &Target,
-                     profile: &Profile) -> String {
-        match self.target_metadata(pkg, target, profile) {
-            Some(ref metadata) => format!("{}{}", target.crate_name(),
+    pub fn file_stem(&self, unit: &Unit) -> String {
+        match self.target_metadata(unit) {
+            Some(ref metadata) => format!("{}{}", unit.target.crate_name(),
                                           metadata.extra_filename),
-            None if target.allows_underscores() => target.name().to_string(),
-            None => target.crate_name().to_string(),
+            None if unit.target.allows_underscores() => {
+                unit.target.name().to_string()
+            }
+            None => unit.target.crate_name().to_string(),
         }
     }
 
     /// Return the filenames that the given target for the given profile will
     /// generate.
-    pub fn target_filenames(&self, pkg: &Package, target: &Target,
-                            profile: &Profile, kind: Kind)
-                            -> CargoResult<Vec<String>> {
-        let stem = self.file_stem(pkg, target, profile);
-        let suffix = if target.for_host() {&self.host_exe} else {&self.target_exe};
+    pub fn target_filenames(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+        let stem = self.file_stem(unit);
+        let suffix = if unit.target.for_host() {
+            &self.host_exe
+        } else {
+            &self.target_exe
+        };
 
         let mut ret = Vec::new();
-        match *target.kind() {
+        match *unit.target.kind() {
             TargetKind::Example | TargetKind::Bin | TargetKind::CustomBuild |
             TargetKind::Bench | TargetKind::Test => {
                 ret.push(format!("{}{}", stem, suffix));
             }
-            TargetKind::Lib(..) if profile.test => {
+            TargetKind::Lib(..) if unit.profile.test => {
                 ret.push(format!("{}{}", stem, suffix));
             }
             TargetKind::Lib(ref libs) => {
                 for lib in libs.iter() {
                     match *lib {
                         LibKind::Dylib => {
-                            let (prefix, suffix) = try!(self.dylib(kind));
-                            ret.push(format!("{}{}{}", prefix, stem, suffix));
+                            if let Ok((prefix, suffix)) = self.dylib(unit.kind) {
+                                ret.push(format!("{}{}{}", prefix, stem, suffix));
+                            }
                         }
                         LibKind::Lib |
                         LibKind::Rlib => ret.push(format!("lib{}.rlib", stem)),
@@ -339,83 +288,148 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, pkg: &Package, target: &Target,
-                       profile: &Profile)
-                       -> Vec<(&'a Package, &'a Target, &'a Profile)> {
-        if profile.doc {
-            return self.doc_deps(pkg, target);
+    pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+        if unit.profile.run_custom_build {
+            return self.dep_run_custom_build(unit)
+        } else if unit.profile.doc {
+            return self.doc_deps(unit);
         }
-        let deps = match self.resolve.deps(pkg.package_id()) {
-            None => return Vec::new(),
-            Some(deps) => deps,
-        };
+
+        let id = unit.pkg.package_id();
+        let deps = self.resolve.deps(id).into_iter().flat_map(|a| a);
         let mut ret = deps.map(|id| self.get_package(id)).filter(|dep| {
-            pkg.dependencies().iter().filter(|d| {
+            unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|d| {
                 // If this target is a build command, then we only want build
                 // dependencies, otherwise we want everything *other than* build
                 // dependencies.
-                let is_correct_dep = target.is_custom_build() == d.is_build();
+                if unit.target.is_custom_build() != d.is_build() {
+                    return false
+                }
 
                 // If this dependency is *not* a transitive dependency, then it
                 // only applies to test/example targets
-                let is_actual_dep = d.is_transitive() ||
-                                    target.is_test() ||
-                                    target.is_example() ||
-                                    profile.test;
+                if !d.is_transitive() && !unit.target.is_test() &&
+                   !unit.target.is_example() && !unit.profile.test {
+                    return false
+                }
+
+                // If this dependency is only available for certain platforms,
+                // make sure we're only enabling it for that platform.
+                if !self.dep_platform_activated(d, unit.kind) {
+                    return false
+                }
 
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
-                let activated = !d.is_optional() ||
-                                self.resolve.features(pkg.package_id()).map(|f| {
-                                    f.contains(d.name())
-                                }).unwrap_or(false);
+                if d.is_optional() {
+                    match self.resolve.features(id) {
+                        Some(f) if f.contains(d.name()) => {}
+                        _ => return false,
+                    }
+                }
 
-                is_correct_dep && is_actual_dep && activated
+                // If we've gotten past all that, then this dependency is
+                // actually used!
+                true
             })
         }).filter_map(|pkg| {
             pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                (pkg, t, self.lib_profile(pkg.package_id()))
+                Unit {
+                    pkg: pkg,
+                    target: t,
+                    profile: self.lib_profile(id),
+                    kind: unit.kind.for_target(t),
+                }
             })
         }).collect::<Vec<_>>();
 
-        // If a target isn't actually a build script itself, then it depends on
-        // the build script if there is one.
-        if target.is_custom_build() { return ret }
-        let pkg = self.get_package(pkg.package_id());
-        if let Some(t) = pkg.targets().iter().find(|t| t.is_custom_build()) {
-            ret.push((pkg, t, self.build_script_profile(pkg.package_id())));
+        // If this target is a build script, then what we've collected so far is
+        // all we need. If this isn't a build script, then it depends on the
+        // build script if there is one.
+        if unit.target.is_custom_build() {
+            return ret
         }
+        ret.extend(self.dep_build_script(unit));
 
         // If this target is a binary, test, example, etc, then it depends on
         // the library of the same package. The call to `resolve.deps` above
         // didn't include `pkg` in the return values, so we need to special case
         // it here and see if we need to push `(pkg, pkg_lib_target)`.
-        if target.is_lib() { return ret }
-        if let Some(t) = pkg.targets().iter().find(|t| t.linkable()) {
-            ret.push((pkg, t, self.lib_profile(pkg.package_id())));
+        if unit.target.is_lib() {
+            return ret
         }
+        ret.extend(self.maybe_lib(unit));
 
         // Integration tests/benchmarks require binaries to be built
-        if profile.test && (target.is_test() || target.is_bench()) {
-            ret.extend(pkg.targets().iter().filter(|t| t.is_bin())
-                          .map(|t| (pkg, t, self.lib_profile(pkg.package_id()))));
+        if unit.profile.test &&
+           (unit.target.is_test() || unit.target.is_bench()) {
+            ret.extend(unit.pkg.targets().iter().filter(|t| t.is_bin()).map(|t| {
+                Unit {
+                    pkg: unit.pkg,
+                    target: t,
+                    profile: self.lib_profile(id),
+                    kind: unit.kind.for_target(t),
+                }
+            }));
         }
         return ret
     }
 
+    /// Returns the dependencies needed to run a build script.
+    ///
+    /// The `unit` provided must represent an execution of a build script, and
+    /// the returned set of units must all be run before `unit` is run.
+    pub fn dep_run_custom_build(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+        // If this build script's execution has been overridden then we don't
+        // actually depend on anything, we've reached the end of the dependency
+        // chain as we've got all the info we're gonna get.
+        let key = (unit.pkg.package_id().clone(), unit.kind);
+        if self.build_state.outputs.lock().unwrap().contains_key(&key) {
+            return Vec::new()
+        }
+
+        // When not overridden, then the dependencies to run a build script are:
+        //
+        // 1. Compiling the build script itself
+        // 2. For each immediate dependency of our package which has a `links`
+        //    key, the execution of that build script.
+        let not_custom_build = unit.pkg.targets().iter().find(|t| {
+            !t.is_custom_build()
+        }).unwrap();
+        let tmp = Unit {
+            target: not_custom_build,
+            profile: &self.profiles.dev,
+            ..*unit
+        };
+        self.dep_targets(&tmp).iter().filter_map(|unit| {
+            if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
+                return None
+            }
+            self.dep_build_script(unit)
+        }).chain(Some(Unit {
+            profile: self.build_script_profile(unit.pkg.package_id()),
+            kind: Kind::Host, // build scripts always compiled for the host
+            ..*unit
+        })).collect()
+    }
+
     /// Returns the dependencies necessary to document a package
-    fn doc_deps(&self, pkg: &Package, target: &Target)
-                -> Vec<(&'a Package, &'a Target, &'a Profile)> {
-        let pkg = self.get_package(pkg.package_id());
-        let deps = self.resolve.deps(pkg.package_id()).into_iter();
+    fn doc_deps(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+        let deps = self.resolve.deps(unit.pkg.package_id()).into_iter();
         let deps = deps.flat_map(|a| a).map(|id| {
             self.get_package(id)
         }).filter(|dep| {
-            pkg.dependencies().iter().find(|d| {
+            unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
-            }).unwrap().is_transitive()
+            }).any(|dep| {
+                match dep.kind() {
+                    DepKind::Normal => self.dep_platform_activated(dep,
+                                                                   unit.kind),
+                    _ => false,
+                }
+            })
         }).filter_map(|dep| {
             dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
         });
@@ -425,24 +439,73 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // the documentation of the library being built.
         let mut ret = Vec::new();
         for (dep, lib) in deps {
-            ret.push((dep, lib, self.lib_profile(dep.package_id())));
+            ret.push(Unit {
+                pkg: dep,
+                target: lib,
+                profile: self.lib_profile(dep.package_id()),
+                kind: unit.kind.for_target(lib),
+            });
             if self.build_config.doc_all {
-                ret.push((dep, lib, &self.profiles.doc));
+                ret.push(Unit {
+                    pkg: dep,
+                    target: lib,
+                    profile: &self.profiles.doc,
+                    kind: unit.kind.for_target(lib),
+                });
             }
         }
 
         // Be sure to build/run the build script for documented libraries as
-        if let Some(t) = pkg.targets().iter().find(|t| t.is_custom_build()) {
-            ret.push((pkg, t, self.build_script_profile(pkg.package_id())));
-        }
+        ret.extend(self.dep_build_script(unit));
 
         // If we document a binary, we need the library available
-        if target.is_bin() {
-            if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
-                ret.push((pkg, t, self.lib_profile(pkg.package_id())));
-            }
+        if unit.target.is_bin() {
+            ret.extend(self.maybe_lib(unit));
         }
         return ret
+    }
+
+    /// If a build script is scheduled to be run for the package specified by
+    /// `unit`, this function will return the unit to run that build script.
+    ///
+    /// Overriding a build script simply means that the running of the build
+    /// script itself doesn't have any dependencies, so even in that case a unit
+    /// of work is still returned. `None` is only returned if the package has no
+    /// build script.
+    fn dep_build_script(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
+        unit.pkg.targets().iter().find(|t| t.is_custom_build()).map(|t| {
+            Unit {
+                pkg: unit.pkg,
+                target: t,
+                profile: &self.profiles.custom_build,
+                kind: unit.kind,
+            }
+        })
+    }
+
+    fn maybe_lib(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
+        unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
+            Unit {
+                pkg: unit.pkg,
+                target: t,
+                profile: self.lib_profile(unit.pkg.package_id()),
+                kind: unit.kind.for_target(t),
+            }
+        })
+    }
+
+    fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
+        // If this dependency is only available for certain platforms,
+        // make sure we're only enabling it for that platform.
+        match (dep.only_for_platform(), kind) {
+            (Some(ref platform), Kind::Host) => {
+                *platform == self.config.rustc_info().host
+            },
+            (Some(ref platform), Kind::Target) => {
+                *platform == self.target_triple
+            },
+            (None, _) => true
+        }
     }
 
     /// Gets a package for the given package id.
@@ -490,32 +553,5 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // TODO: should build scripts always be built with a dev
         //       profile? How is this controlled at the CLI layer?
         &self.profiles.dev
-    }
-}
-
-impl Platform {
-    pub fn combine(self, other: Platform) -> Platform {
-        match (self, other) {
-            (Platform::Target, Platform::Target) => Platform::Target,
-            (Platform::Plugin, Platform::Plugin) => Platform::Plugin,
-            _ => Platform::PluginAndTarget,
-        }
-    }
-
-    pub fn includes(self, kind: Kind) -> bool {
-        match (self, kind) {
-            (Platform::PluginAndTarget, _) |
-            (Platform::Target, Kind::Target) |
-            (Platform::Plugin, Kind::Host) => true,
-            _ => false,
-        }
-    }
-
-    pub fn each_kind<F>(self, mut f: F) where F: FnMut(Kind) {
-        match self {
-            Platform::Target => f(Kind::Target),
-            Platform::Plugin => f(Kind::Host),
-            Platform::PluginAndTarget => { f(Kind::Target); f(Kind::Host); }
-        }
     }
 }

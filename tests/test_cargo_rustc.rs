@@ -3,6 +3,7 @@ use support::{execs, project};
 use support::{COMPILING, RUNNING};
 use hamcrest::{assert_that};
 
+
 fn setup() {
 }
 
@@ -295,4 +296,60 @@ test!(build_only_bar_dependency {
 ",
                 compiling = COMPILING, running = RUNNING,
                 url = foo.url())));
+});
+
+test!(fail_with_multiple_packages {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+                path = "../bar"
+
+            [dependencies.baz]
+                path = "../baz"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    foo.build();
+
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                if cfg!(flag = "1") { println!("Yeah from bar!"); }
+            }
+        "#);
+    bar.build();
+
+    let baz = project("baz")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                if cfg!(flag = "1") { println!("Yeah from baz!"); }
+            }
+        "#);
+    baz.build();
+
+    assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
+                                          .arg("-p").arg("baz"),
+                execs().with_status(1).with_stderr("\
+Invalid arguments.
+
+Usage:
+    cargo rustc [options] [--] [<opts>...]".to_string()));
 });

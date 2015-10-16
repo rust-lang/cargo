@@ -2,11 +2,13 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 use std::path::{self, Path, PathBuf};
 
+use semver::VersionReq;
 use tar::Archive;
 use flate2::{GzBuilder, Compression};
 use flate2::read::GzDecoder;
 
-use core::{Source, SourceId, Package, PackageId};
+use core::{SourceId, Package, PackageId};
+use core::dependency::Kind;
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config};
 use ops;
@@ -29,12 +31,13 @@ pub fn package(manifest_path: &Path,
                metadata: bool) -> CargoResult<Option<PathBuf>> {
     let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
                                             config));
-    try!(src.update());
     let pkg = try!(src.root_package());
 
     if metadata {
         try!(check_metadata(&pkg, config));
     }
+
+    try!(check_dependencies(&pkg, config));
 
     if list {
         let root = pkg.root();
@@ -103,6 +106,32 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
+// Warn about wildcard deps which will soon be prohibited on crates.io
+#[allow(deprecated)] // connect => join in 1.3
+fn check_dependencies(pkg: &Package, config: &Config) -> CargoResult<()> {
+    let wildcard = VersionReq::parse("*").unwrap();
+
+    let mut wildcard_deps = vec![];
+    for dep in pkg.dependencies() {
+        if dep.kind() != Kind::Development && dep.version_req() == &wildcard {
+            wildcard_deps.push(dep.name());
+        }
+    }
+
+    if !wildcard_deps.is_empty() {
+        let deps = wildcard_deps.connect(", ");
+        try!(config.shell().warn(
+            "warning: some dependencies have wildcard (\"*\") version constraints. \
+             On December 11th, 2015, crates.io will begin rejecting packages with \
+             wildcard dependency constraints. See \
+             http://doc.crates.io/crates-io.html#using-crates.io-based-crates \
+             for information on version constraints."));
+        try!(config.shell().warn(
+            &format!("dependencies for these crates have wildcard constraints: {}", deps)));
+    }
+    Ok(())
+}
+
 fn tar(pkg: &Package, src: &PathSource, config: &Config,
        dst: &Path) -> CargoResult<()> {
 
@@ -162,30 +191,30 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     // implicitly converted to registry-based dependencies, so we rewrite those
     // dependencies here.
     //
-    // We also be sure to point all paths at `dst` instead of the previous
-    // location that the package was original read from. In locking the
+    // We also make sure to point all paths at `dst` instead of the previous
+    // location that the package was originally read from. In locking the
     // `SourceId` we're telling it that the corresponding `PathSource` will be
-    // considered updated and won't actually read any packages.
+    // considered updated and we won't actually read any packages.
     let registry = try!(SourceId::for_central(config));
     let precise = Some("locked".to_string());
     let new_src = try!(SourceId::for_path(&dst)).with_precise(precise);
     let new_pkgid = try!(PackageId::new(pkg.name(), pkg.version(), &new_src));
     let new_summary = pkg.summary().clone().map_dependencies(|d| {
         if !d.source_id().is_path() { return d }
-        d.set_source_id(registry.clone())
+        d.clone_inner().set_source_id(registry.clone()).into_dependency()
     });
     let mut new_manifest = pkg.manifest().clone();
     new_manifest.set_summary(new_summary.override_id(new_pkgid));
     let new_pkg = Package::new(new_manifest, &manifest_path);
 
     // Now that we've rewritten all our path dependencies, compile it!
-    try!(ops::compile_pkg(&new_pkg, None, &ops::CompileOptions {
+    try!(ops::compile_pkg(&new_pkg, &ops::CompileOptions {
         config: config,
         jobs: None,
         target: None,
         features: &[],
         no_default_features: false,
-        spec: None,
+        spec: &[],
         filter: ops::CompileFilter::Everything,
         exec_engine: None,
         release: false,

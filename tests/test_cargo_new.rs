@@ -257,6 +257,23 @@ test!(subpackage_no_git {
                  is_not(existing_file()));
 });
 
+test!(subpackage_git_with_vcs_arg {
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
+                execs().with_status(0));
+
+    let subpackage = paths::root().join("foo").join("components");
+    fs::create_dir(&subpackage).unwrap();
+    assert_that(cargo_process("new").arg("foo/components/subcomponent")
+                                    .arg("--vcs").arg("git")
+                                    .env("USER", "foo"),
+                execs().with_status(0));
+
+    assert_that(&paths::root().join("foo/components/subcomponent/.git"),
+                 existing_dir());
+    assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
+                 existing_file());
+});
+
 test!(unknown_flags {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
                 execs().with_status(1)

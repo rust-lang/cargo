@@ -4,6 +4,7 @@
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
 extern crate crates_io as registry;
+extern crate crossbeam;
 extern crate curl;
 extern crate docopt;
 extern crate filetime;
@@ -18,7 +19,6 @@ extern crate rustc_serialize;
 extern crate semver;
 extern crate tar;
 extern crate term;
-extern crate threadpool;
 extern crate time;
 extern crate toml;
 extern crate url;

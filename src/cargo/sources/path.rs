@@ -1,4 +1,3 @@
-use std::cmp;
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::io::prelude::*;
@@ -46,12 +45,10 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
-    pub fn root_package(&self) -> CargoResult<Package> {
+    pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
-        if !self.updated {
-            return Err(internal("source has not been updated"))
-        }
+        try!(self.update());
 
         match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),
@@ -79,7 +76,7 @@ impl<'cfg> PathSource<'cfg> {
 
     /// List all files relevant to building this package inside this source.
     ///
-    /// This function will use the appropriate methods to determine what is the
+    /// This function will use the appropriate methods to determine the
     /// set of files underneath this source's directory which are relevant for
     /// building `pkg`.
     ///
@@ -115,7 +112,7 @@ impl<'cfg> PathSource<'cfg> {
         // We check all packages in this source that are ancestors of the
         // specified package (including the same package) to see if they're at
         // the root of the git repository. This isn't always true, but it'll get
-        // us there most of the time!.
+        // us there most of the time!
         let repo = self.packages.iter()
                        .map(|pkg| pkg.root())
                        .filter(|path| root.starts_with(path))
@@ -139,11 +136,11 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut ret = Vec::new();
 
-        // We use information from the git repository to guide use in traversing
+        // We use information from the git repository to guide us in traversing
         // its tree. The primary purpose of this is to take advantage of the
         // .gitignore and auto-ignore files that don't matter.
         //
-        // Here we're also careful to look at both tracked an untracked files as
+        // Here we're also careful to look at both tracked and untracked files as
         // the untracked files are often part of a build and may become relevant
         // as part of a future commit.
         let index_files = index.iter().map(|entry| {
@@ -255,11 +252,16 @@ impl<'cfg> PathSource<'cfg> {
         }
         for dir in try!(fs::read_dir(path)) {
             let dir = try!(dir).path();
-            match (is_root, dir.file_name().and_then(|s| s.to_str())) {
-                (_,    Some(".git")) |
-                (true, Some("target")) |
-                (true, Some("Cargo.lock")) => continue,
-                _ => {}
+            let name = dir.file_name().and_then(|s| s.to_str());
+            // Skip dotfile directories
+            if name.map(|s| s.starts_with(".")) == Some(true) {
+                continue
+            } else if is_root {
+                // Skip cargo artifacts
+                match name {
+                    Some("target") | Some("Cargo.lock") => continue,
+                    _ => {}
+                }
             }
             try!(PathSource::walk(&dir, ret, false, filter));
         }
@@ -310,19 +312,23 @@ impl<'cfg> Source for PathSource<'cfg> {
         }
 
         let mut max = FileTime::zero();
-        for file in try!(self.list_files(pkg)).iter() {
+        let mut max_path = PathBuf::from("");
+        for file in try!(self.list_files(pkg)) {
             // An fs::stat error here is either because path is a
             // broken symlink, a permissions error, or a race
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = fs::metadata(file).map(|meta| {
+            let mtime = fs::metadata(&file).map(|meta| {
                 FileTime::from_last_modification_time(&meta)
             }).unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
-            max = cmp::max(max, mtime);
+            if mtime > max {
+                max = mtime;
+                max_path = file;
+            }
         }
         trace!("fingerprint {}: {}", self.path.display(), max);
-        Ok(max.to_string())
+        Ok(format!("{} ({})", max, max_path.display()))
     }
 }

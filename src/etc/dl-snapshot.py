@@ -70,7 +70,7 @@ hash = snaps[date][platform]
 
 tarball = 'cargo-nightly-' + triple + '.tar.gz'
 url = 'https://static.rust-lang.org/cargo-dist/%s/%s' % \
-  (date.strip(), tarball)
+    (date.strip(), tarball)
 dl_path = "target/dl/" + tarball
 dst = "target/snapshot"
 

@@ -4,7 +4,7 @@ use std::collections::hash_map::HashMap;
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
 
-/// Source of informations about a group of packages.
+/// Source of information about a group of packages.
 ///
 /// See also `core::Source`.
 pub trait Registry {
@@ -32,11 +32,11 @@ impl Registry for Vec<Package> {
 ///
 /// The resolution phase of Cargo uses this to drive knowledge about new
 /// packages as well as querying for lists of new packages. It is here that
-/// sources are updated and (e.g. network operations) as well as overrides are
+/// sources are updated (e.g. network operations) and overrides are
 /// handled.
 ///
 /// The general idea behind this registry is that it is centered around the
-/// `SourceMap` structure contained within which is a mapping of a `SourceId` to
+/// `SourceMap` structure, contained within which is a mapping of a `SourceId` to
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'cfg> {
@@ -111,7 +111,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.sources
     }
 
-    fn ensure_loaded(&mut self, namespace: &SourceId) -> CargoResult<()> {
+    fn ensure_loaded(&mut self, namespace: &SourceId, kind: Kind) -> CargoResult<()> {
         match self.source_ids.get(namespace) {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
@@ -143,18 +143,13 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
         }
 
-        try!(self.load(namespace, Kind::Normal));
+        try!(self.load(namespace, kind));
         Ok(())
-    }
-
-    pub fn preload(&mut self, id: &SourceId, source: Box<Source + 'cfg>) {
-        self.sources.insert(id, source);
-        self.source_ids.insert(id.clone(), (id.clone(), Kind::Locked));
     }
 
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.load(id, Kind::Locked));
+            try!(self.ensure_loaded(id, Kind::Locked));
         }
         Ok(())
     }
@@ -213,7 +208,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     // possible. This is where the concept of a lockfile comes into play.
     //
     // If a summary points at a package id which was previously locked, then we
-    // override the summary's id itself as well as all dependencies to be
+    // override the summary's id itself, as well as all dependencies, to be
     // rewritten to the locked versions. This will transform the summary's
     // source to a precise source (listed in the locked version) as well as
     // transforming all of the dependencies from range requirements on imprecise
@@ -242,7 +237,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 // one of a few cases can arise:
                 //
                 // 1. We have a lock entry for this dependency from the same
-                //    source as its listed as coming from. In this case we make
+                //    source as it's listed as coming from. In this case we make
                 //    sure to lock to precisely the given package id.
                 //
                 // 2. We have a lock entry for this dependency, but it's from a
@@ -293,7 +288,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
         let ret = if overrides.len() == 0 {
             // Ensure the requested source_id is loaded
-            try!(self.ensure_loaded(dep.source_id()));
+            try!(self.ensure_loaded(dep.source_id(), Kind::Normal));
             let mut ret = Vec::new();
             for (id, src) in self.sources.sources_mut() {
                 if id == dep.source_id() {

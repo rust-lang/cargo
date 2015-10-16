@@ -43,7 +43,9 @@ bin target it will be run. Otherwise `--bin` specifies the bin target to run,
 and `--example` specifies the example target to run. At most one of `--bin` or
 `--example` can be provided.
 
-All of the trailing arguments are passed to the binary to run.
+All of the trailing arguments are passed to the binary to run. If you're passing
+arguments to both Cargo and the binary, the ones after `--` go to the binary,
+the ones before go to Cargo.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
@@ -66,7 +68,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
-        spec: None,
+        spec: &[],
         exec_engine: None,
         release: options.flag_release,
         mode: ops::CompileMode::Build,

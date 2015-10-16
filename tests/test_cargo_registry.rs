@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use cargo::util::process;
 
 use support::{project, execs, cargo_dir};
-use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING};
+use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING};
 use support::paths::{self, CargoPathExt};
 use support::registry as r;
 use support::git;
@@ -161,7 +161,7 @@ test!(bad_cksum {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
-Unable to get packages from source
+unable to get packages from source
 
 Caused by:
   Failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
@@ -476,6 +476,7 @@ test!(update_lockfile {
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
+{updating} bar v0.0.1 (registry file://[..]) -> v0.0.2
 ", updating = UPDATING)));
 
     println!("0.0.2 build");
@@ -492,6 +493,7 @@ test!(update_lockfile {
                  .arg("-p").arg("bar"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
+{updating} bar v0.0.2 (registry file://[..]) -> v0.0.3
 ", updating = UPDATING)));
 
     println!("0.0.3 build");
@@ -502,6 +504,27 @@ test!(update_lockfile {
 {compiling} foo v0.0.1 ({dir})
 ", downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url())));
+
+   println!("new dependencies update");
+   r::mock_pkg("bar", "0.0.4", &[("spam", "0.2.5", "")]);
+   r::mock_pkg("spam", "0.2.5", &[]);
+   assert_that(p.cargo("update")
+                .arg("-p").arg("bar"),
+               execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{updating} bar v0.0.3 (registry file://[..]) -> v0.0.4
+{adding} spam v0.2.5 (registry file://[..])
+", updating = UPDATING, adding = ADDING)));
+
+   println!("new dependencies update");
+   r::mock_pkg("bar", "0.0.5", &[]);
+   assert_that(p.cargo("update")
+                .arg("-p").arg("bar"),
+               execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{updating} bar v0.0.4 (registry file://[..]) -> v0.0.5
+{removing} spam v0.2.5 (registry file://[..])
+", updating = UPDATING, removing = REMOVING)));
 });
 
 test!(dev_dependency_not_used {
@@ -760,6 +783,7 @@ test!(update_transitive_dependency {
                 execs().with_status(0)
                        .with_stdout(format!("\
 {updating} registry `[..]`
+{updating} b v0.1.0 (registry [..]) -> v0.1.1
 ", updating = UPDATING)));
 
     assert_that(p.cargo("build"),
@@ -804,4 +828,64 @@ test!(update_backtracking_ok {
                        .with_stdout(&format!("\
 {updating} registry `[..]`
 ", updating = UPDATING)));
+});
+
+test!(update_multiple_packages {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = "*"
+            b = "*"
+            c = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    r::mock_pkg("a", "0.1.0", &[]);
+    r::mock_pkg("b", "0.1.0", &[]);
+    r::mock_pkg("c", "0.1.0", &[]);
+
+    assert_that(p.cargo("fetch"),
+                execs().with_status(0));
+
+    r::mock_pkg("a", "0.1.1", &[]);
+    r::mock_pkg("b", "0.1.1", &[]);
+    r::mock_pkg("c", "0.1.1", &[]);
+
+    assert_that(p.cargo("update").arg("-pa").arg("-pb"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} registry `[..]`
+{updating} a v0.1.0 (registry [..]) -> v0.1.1
+{updating} b v0.1.0 (registry [..]) -> v0.1.1
+", updating = UPDATING)));
+
+    assert_that(p.cargo("update").arg("-pb").arg("-pc"),
+                execs().with_status(0)
+                       .with_stdout(format!("\
+{updating} registry `[..]`
+{updating} c v0.1.0 (registry [..]) -> v0.1.1
+", updating = UPDATING)));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stdout_contains(format!("\
+{downloading} a v0.1.1 (registry file://[..])", downloading = DOWNLOADING))
+                       .with_stdout_contains(format!("\
+{downloading} b v0.1.1 (registry file://[..])", downloading = DOWNLOADING))
+                       .with_stdout_contains(format!("\
+{downloading} c v0.1.1 (registry file://[..])", downloading = DOWNLOADING))
+                       .with_stdout_contains(format!("\
+{compiling} a v0.1.1 (registry [..])", compiling = COMPILING))
+                       .with_stdout_contains(format!("\
+{compiling} b v0.1.1 (registry [..])", compiling = COMPILING))
+                       .with_stdout_contains(format!("\
+{compiling} c v0.1.1 (registry [..])", compiling = COMPILING))
+                       .with_stdout_contains(format!("\
+{compiling} foo v0.5.0 ([..])", compiling = COMPILING)));
 });

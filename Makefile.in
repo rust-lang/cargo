@@ -1,4 +1,4 @@
-CFG_RELEASE_NUM=0.5.0
+CFG_RELEASE_NUM=0.6.0
 CFG_RELEASE_LABEL=
 
 include config.mk
@@ -34,10 +34,10 @@ else
 MAYBE_DISABLE_VERIFY=
 endif
 
-ifdef CFG_ENABLE_OPTIMIZE
-OPT_FLAG=--release
-else
+ifdef CFG_DISABLE_OPTIMIZE
 OPT_FLAG=
+else
+OPT_FLAG=--release
 endif
 
 ifdef VERBOSE
@@ -59,10 +59,10 @@ BIN_TARGETS := $(BIN_TARGETS:src/bin/%.rs=%)
 BIN_TARGETS := $(filter-out cargo,$(BIN_TARGETS))
 
 define DIST_TARGET
-ifdef CFG_ENABLE_OPTIMIZE
-TARGET_$(1) = $$(TARGET_ROOT)/$(1)/release
-else
+ifdef CFG_DISABLE_OPTIMIZE
 TARGET_$(1) = $$(TARGET_ROOT)/$(1)/debug
+else
+TARGET_$(1) = $$(TARGET_ROOT)/$(1)/release
 endif
 DISTDIR_$(1) = $$(TARGET_$(1))/dist
 IMGDIR_$(1) = $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1)-image
@@ -105,13 +105,18 @@ style:
 	sh tests/check-style.sh
 
 no-exes:
-	find $$(git ls-files) -perm +a+x -type f \
+	find $$(git ls-files) -type f \
+		\( -perm -u+x -or -perm -g+x -or -perm -o+x \) \
 		-not -name configure -not -name '*.sh' -not -name '*.rs' \
-		-not -wholename "*/rust-installer/*" | \
+		-not -name '*.py' -not -wholename "*/rust-installer/*" | \
 		grep '.*' \
 		&& exit 1 || exit 0
 
 # === Misc
+
+Makefile config.mk: config.stamp
+config.stamp: $(CFG_SRC_DIR)configure $(CFG_SRC_DIR)Makefile.in
+	$(CFG_SRC_DIR)configure $(CFG_CONFIGURE_ARGS)
 
 clean-all: clean
 clean:
@@ -119,7 +124,8 @@ clean:
 
 # === Documentation
 
-DOCS := index faq config guide manifest build-script pkgid-spec crates-io
+DOCS := index faq config guide manifest build-script pkgid-spec crates-io \
+	environment-variables
 DOC_DIR := target/doc
 DOC_OPTS := --markdown-no-toc \
 		--markdown-css stylesheets/normalize.css \
@@ -130,7 +136,7 @@ DOC_OPTS := --markdown-no-toc \
 ASSETS := CNAME images/noise.png images/forkme.png images/Cargo-Logo-Small.png \
 	stylesheets/all.css stylesheets/normalize.css javascripts/prism.js \
 	javascripts/all.js stylesheets/prism.css images/circle-with-i.png \
-	images/search.png
+	images/search.png images/org-level-acl.png images/auth-level-acl.png
 
 doc: $(foreach doc,$(DOCS),target/doc/$(doc).html) \
 	$(foreach asset,$(ASSETS),target/doc/$(asset)) \
@@ -229,5 +235,4 @@ uninstall: $(foreach target,$(CFG_TARGET), uninstall-$(target))
 
 # Disable unnecessary built-in rules
 .SUFFIXES:
-
 

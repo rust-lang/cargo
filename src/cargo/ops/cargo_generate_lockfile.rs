@@ -1,30 +1,25 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{Source, Resolve};
+use core::{Resolve, SourceId, Package};
 use core::resolver::Method;
 use ops;
-use sources::{PathSource};
 use util::config::{Config};
 use util::{CargoResult, human};
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
-    pub to_update: Option<&'a str>,
+    pub to_update: &'a [String],
     pub precise: Option<&'a str>,
     pub aggressive: bool,
 }
 
 pub fn generate_lockfile(manifest_path: &Path, config: &Config)
                          -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                               config));
-    try!(source.update());
-    let package = try!(source.root_package());
+    let package = try!(Package::for_path(manifest_path, config));
     let mut registry = PackageRegistry::new(config);
-    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
                                                   None, None));
@@ -34,10 +29,7 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
 
 pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
-    let mut source = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                               opts.config));
-    try!(source.update());
-    let package = try!(source.root_package());
+    let package = try!(Package::for_path(manifest_path, opts.config));
 
     let previous_resolve = match try!(ops::load_pkg_lockfile(&package)) {
         Some(resolve) => resolve,
@@ -52,15 +44,18 @@ pub fn update_lockfile(manifest_path: &Path,
     let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
 
-    match opts.to_update {
-        Some(name) => {
+    if opts.to_update.len() == 0 {
+        to_avoid.extend(previous_resolve.iter());
+    } else {
+        let mut sources = Vec::new();
+        for name in opts.to_update {
             let dep = try!(previous_resolve.query(name));
             if opts.aggressive {
                 fill_with_deps(&previous_resolve, dep, &mut to_avoid,
                                &mut HashSet::new());
             } else {
                 to_avoid.insert(dep);
-                match opts.precise {
+                sources.push(match opts.precise {
                     Some(precise) => {
                         // TODO: see comment in `resolve.rs` as well, but this
                         //       seems like a pretty hokey reason to single out
@@ -70,27 +65,49 @@ pub fn update_lockfile(manifest_path: &Path,
                         } else {
                             precise.to_string()
                         };
-                        let precise = dep.source_id().clone()
-                                         .with_precise(Some(precise));
-                        try!(registry.add_sources(&[precise]));
+                        dep.source_id().clone().with_precise(Some(precise))
                     }
                     None => {
-                        let imprecise = dep.source_id().clone()
-                                           .with_precise(None);
-                        try!(registry.add_sources(&[imprecise]));
+                        dep.source_id().clone().with_precise(None)
                     }
-                }
+                });
             }
         }
-        None => to_avoid.extend(previous_resolve.iter()),
+        try!(registry.add_sources(&sources));
     }
 
-    registry.preload(package.package_id().source_id(), Box::new(source));
     let resolve = try!(ops::resolve_with_previous(&mut registry,
                                                   &package,
                                                   Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid)));
+
+    // Summarize what is changing for the user.
+    let print_change = |status: &str, msg: String| {
+        opts.config.shell().status(status, msg)
+    };
+    for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
+        if removed.len() == 1 && added.len() == 1 {
+            if removed[0].source_id().is_git() {
+                try!(print_change("Updating", format!("{} -> #{}",
+                    removed[0],
+                    &added[0].source_id().precise().unwrap()[..8])));
+            } else {
+                try!(print_change("Updating", format!("{} -> v{}",
+                    removed[0],
+                    added[0].version())));
+            }
+        }
+        else {
+            for package in removed.iter() {
+                try!(print_change("Removing", format!("{}", package)));
+            }
+            for package in added.iter() {
+                try!(print_change("Adding", format!("{}", package)));
+            }
+        }
+    }
+
     try!(ops::write_pkg_lockfile(&package, &resolve));
     return Ok(());
 
@@ -107,5 +124,47 @@ pub fn update_lockfile(manifest_path: &Path,
             }
             None => {}
         }
+    }
+
+    fn compare_dependency_graphs<'a>(previous_resolve: &'a Resolve,
+                                     resolve: &'a Resolve) ->
+                                     Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
+        // Map (package name, package source) to (removed versions, added versions).
+        fn changes_key<'a>(dep: &'a PackageId) -> (&'a str, &'a SourceId) {
+            (dep.name(), dep.source_id())
+        }
+
+        fn vec_subtract<T>(a: &[T], b: &[T]) -> Vec<T>
+            where T: Ord + Clone {
+            let mut result = a.to_owned();
+            let mut b = b.to_owned();
+            b.sort();
+            result.retain(|x| b.binary_search(x).is_err());
+            result
+        }
+
+        let mut changes = HashMap::new();
+
+        for dep in previous_resolve.iter() {
+            changes.insert(changes_key(dep), (vec![dep], vec![]));
+        }
+        for dep in resolve.iter() {
+            let (_, ref mut added) = *changes.entry(changes_key(dep))
+                                             .or_insert_with(|| (vec![], vec![]));
+            added.push(dep);
+        }
+
+        for (_, v) in changes.iter_mut() {
+            let (ref mut old, ref mut new) = *v;
+            let removed = vec_subtract(old, new);
+            let added = vec_subtract(new, old);
+            *old = removed;
+            *new = added;
+        }
+
+        // Sort the packages by their names.
+        let mut packages: Vec<_> = changes.keys().map(|x| *x).collect();
+        packages.sort();
+        packages.iter().map(|k| changes[k].clone()).collect()
     }
 }

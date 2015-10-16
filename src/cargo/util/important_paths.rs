@@ -41,7 +41,16 @@ pub fn find_root_manifest_for_cwd(manifest_path: Option<String>)
         human("Couldn't determine the current working directory")
     }));
     match manifest_path {
-        Some(path) => Ok(cwd.join(&path)),
+        Some(path) => {
+            let absolute_path = cwd.join(&path);
+            if !absolute_path.ends_with("Cargo.toml") {
+                return Err(human("the manifest-path must be a path to a Cargo.toml file"))
+            }
+            if !fs::metadata(&absolute_path).is_ok() {
+                return Err(human(format!("manifest path `{}` does not exist", path)))
+            }
+            Ok(absolute_path)
+        },
         None => find_project_manifest(&cwd, "Cargo.toml"),
     }
 }

@@ -1,11 +1,12 @@
 language: rust
 rust:
+  - 1.2.0
   - stable
   - beta
   - nightly
 sudo: false
 script:
-  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests
+  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests --disable-optimize
   - make
   - make test
   - make distcheck

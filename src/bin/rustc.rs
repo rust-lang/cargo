@@ -38,8 +38,8 @@ Options:
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
     --example NAME           Build only the specified example
-    --test NAME              Build only the specified test
-    --bench NAME             Build only the specified benchmark
+    --test NAME              Build only the specified test target
+    --bench NAME             Build only the specified benchmark target
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Features to compile for the package
     --no-default-features    Do not compile default features for the package
@@ -75,7 +75,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         no_default_features: options.flag_no_default_features,
-        spec: options.flag_package.as_ref().map(|s| &s[..]),
+        spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
         exec_engine: None,
         mode: ops::CompileMode::Build,
         release: options.flag_release,
@@ -91,5 +91,4 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         CliError::from_boxed(err, 101)
     })
 }
-
 
