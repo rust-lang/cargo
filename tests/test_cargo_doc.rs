@@ -472,7 +472,10 @@ test!(doc_multiple_deps {
             pub fn baz() {}
         "#);
 
-    assert_that(p.cargo_process("doc").arg("-p").arg("bar").arg("-p").arg("baz"),
+    assert_that(p.cargo_process("doc")
+                  .arg("-p").arg("bar")
+                  .arg("-p").arg("baz")
+                  .arg("-v"),
                 execs().with_status(0));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
