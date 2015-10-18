@@ -25,7 +25,7 @@ basic rules:
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
 For more on versions, see [this
-documentation](crates-io.html#using-crates.io-based-crates).
+documentation](crates-io.html#using-cratesio-based-crates).
 
 ## The `build` Field (optional)
 
@@ -151,7 +151,7 @@ color = "> 0.6.0, < 0.8.0"
 ```
 
 The syntax of the requirement strings is described in the [crates.io
-guide](crates-io.html#using-crates.io-based-crates).
+guide](crates-io.html#using-cratesio-based-crates).
 
 Platform-specific dependencies take the same format, but are listed under the
 `target.$triple` section:
