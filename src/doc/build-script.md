@@ -73,6 +73,8 @@ Any other element is a user-defined metadata that will be passed to
 dependencies. More information about this can be found in the [`links`][links]
 section.
 
+[links]: #the-links-manifest-key
+
 ## Build Dependencies
 
 Build scripts are also allowed to have dependencies on other Cargo-based crates.
@@ -115,7 +117,7 @@ In other words, it's forbidden to have two packages link to the same native
 library. Note, however, that there are [conventions in place][star-sys] to
 alleviate this.
 
-[star-sys]: #*-sys-packages
+[star-sys]: #-sys-packages
 
 As mentioned above in the output format, each build script can generate an
 arbitrary set of metadata in the form of key-value pairs. This metadata is

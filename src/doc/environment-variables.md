@@ -54,7 +54,7 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
                        variables, see build script documentation about [`links`][links].
 
 [links]: build-script.html#the-links-manifest-key
-[profile]: manifest.html#the-[profile.*]-sections
+[profile]: manifest.html#the-profile-sections
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 
 # Environment variables Cargo sets for crates

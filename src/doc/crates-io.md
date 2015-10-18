@@ -34,7 +34,7 @@ num = "0.0.4"
 The string value for each key in this table is a [semver][semver] version
 requirement.
 
-[semver]: http://doc.rust-lang.org/semver/semver/#requirements
+[semver]: https://github.com/steveklabnik/semver#requirements
 
 **Caret requirements** allow SemVer compatible updates to a specified version.
 
