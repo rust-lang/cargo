@@ -55,7 +55,11 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
     }
     let p = project(name)
         .file("Cargo.toml", &manifest)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .file("src/main.rs", &format!("\
+            extern crate {};
+            fn main() {{}}
+        ", name));
     p.build();
 
     let dst = mock_archive_dst(name, version);
@@ -66,6 +70,8 @@ pub fn mock_archive(name: &str, version: &str, deps: &[(&str, &str, &str)]) {
                   &mut File::open(&p.root().join("Cargo.toml")).unwrap()).unwrap();
     a.append_file(&format!("{}-{}/src/lib.rs", name, version),
                   &mut File::open(&p.root().join("src/lib.rs")).unwrap()).unwrap();
+    a.append_file(&format!("{}-{}/src/main.rs", name, version),
+                  &mut File::open(&p.root().join("src/main.rs")).unwrap()).unwrap();
     a.finish().unwrap();
 }
 

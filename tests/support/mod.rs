@@ -563,3 +563,4 @@ pub static DOWNLOADING: &'static str = " Downloading";
 pub static UPLOADING:   &'static str = "   Uploading";
 pub static VERIFYING:   &'static str = "   Verifying";
 pub static ARCHIVING:   &'static str = "   Archiving";
+pub static INSTALLING:  &'static str = "  Installing";
