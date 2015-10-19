@@ -791,7 +791,7 @@ test!(platform_specific_dependencies_do_not_leak {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr("\
-[..] error: can't find crate for `d2`
+[..] error: can't find crate for `d2`[..]
 [..] extern crate d2;
 [..]
 error: aborting due to previous error
