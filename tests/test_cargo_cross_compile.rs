@@ -568,10 +568,10 @@ test!(build_script_needed_for_host_and_target {
                        .with_stdout_contains(&format!("\
 {compiling} d1 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
                        .with_stdout_contains(&format!("\
-{running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`", 
+{running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
     running = RUNNING, dir = p.root().display()))
                        .with_stdout_contains(&format!("\
-{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`", running = RUNNING, 
+{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`", running = RUNNING,
     dir = p.root().display()))
                        .with_stdout_contains(&format!("\
 {running} `rustc d1[..]src[..]lib.rs [..]`", running = RUNNING))
