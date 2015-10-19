@@ -69,6 +69,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(generate_lockfile);
     $mac!(git_checkout);
     $mac!(help);
+    $mac!(install);
     $mac!(locate_project);
     $mac!(login);
     $mac!(new);
@@ -81,6 +82,7 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
     $mac!(rustc);
     $mac!(search);
     $mac!(test);
+    $mac!(uninstall);
     $mac!(update);
     $mac!(verify_project);
     $mac!(version);

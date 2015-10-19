@@ -17,7 +17,9 @@ pub fn resolve_pkg(registry: &mut PackageRegistry, package: &Package)
     let resolve = try!(resolve_with_previous(registry, package,
                                              Method::Everything,
                                              prev.as_ref(), None));
-    try!(ops::write_pkg_lockfile(package, &resolve));
+    if package.package_id().source_id().is_path() {
+        try!(ops::write_pkg_lockfile(package, &resolve));
+    }
     Ok(resolve)
 }
 

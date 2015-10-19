@@ -67,6 +67,13 @@ impl<'cfg> GitSource<'cfg> {
     }
 
     pub fn url(&self) -> &Url { self.remote.url() }
+
+    pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
+        if self.path_source.is_none() {
+            try!(self.update());
+        }
+        self.path_source.as_mut().unwrap().read_packages()
+    }
 }
 
 fn ident(url: &Url) -> String {

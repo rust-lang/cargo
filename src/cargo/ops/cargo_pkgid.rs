@@ -17,7 +17,7 @@ pub fn pkgid(manifest_path: &Path,
     };
 
     let pkgid = match spec {
-        Some(spec) => try!(resolve.query(spec)),
+        Some(spec) => try!(PackageIdSpec::query_str(spec, resolve.iter())),
         None => package.package_id(),
     };
     Ok(PackageIdSpec::from_package_id(pkgid))

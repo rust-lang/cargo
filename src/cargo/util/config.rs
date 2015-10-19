@@ -27,7 +27,7 @@ pub struct Config {
     cwd: PathBuf,
     rustc: PathBuf,
     rustdoc: PathBuf,
-    target_dir: Option<PathBuf>,
+    target_dir: RefCell<Option<PathBuf>>,
 }
 
 impl Config {
@@ -48,7 +48,7 @@ impl Config {
             values_loaded: Cell::new(false),
             rustc: PathBuf::from("rustc"),
             rustdoc: PathBuf::from("rustdoc"),
-            target_dir: None,
+            target_dir: RefCell::new(None),
         };
 
         try!(cfg.scrape_tool_config());
@@ -101,9 +101,13 @@ impl Config {
     pub fn cwd(&self) -> &Path { &self.cwd }
 
     pub fn target_dir(&self, pkg: &Package) -> PathBuf {
-        self.target_dir.clone().unwrap_or_else(|| {
+        self.target_dir.borrow().clone().unwrap_or_else(|| {
             pkg.root().join("target")
         })
+    }
+
+    pub fn set_target_dir(&self, path: &Path) {
+        *self.target_dir.borrow_mut() = Some(path.to_owned());
     }
 
     pub fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
@@ -237,9 +241,9 @@ impl Config {
             path.pop();
             path.pop();
             path.push(dir);
-            self.target_dir = Some(path);
+            *self.target_dir.borrow_mut() = Some(path);
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            self.target_dir = Some(self.cwd.join(dir));
+            *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
         }
         Ok(())
     }
