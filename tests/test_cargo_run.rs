@@ -501,7 +501,7 @@ test!(run_from_executable_folder {
     let cwd = p.root().join("target").join("debug");
     p.cargo_process("build").exec_with_output().unwrap();
 
-    assert_that(p.cargo("run").cwd(cwd), 
+    assert_that(p.cargo("run").cwd(cwd),
                 execs().with_status(0).with_stdout(&format!("\
 {running} `.{sep}foo[..]`
 hello
