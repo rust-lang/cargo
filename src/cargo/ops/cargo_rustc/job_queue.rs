@@ -203,7 +203,7 @@ impl<'a> JobQueue<'a> {
     // out any more information for a package after we've printed it once.
     fn note_working_on(&mut self, config: &Config, key: &Key<'a>,
                        fresh: Freshness) -> CargoResult<()> {
-        if (self.compiled.contains(key.pkg) && !key.profile.doc) || 
+        if (self.compiled.contains(key.pkg) && !key.profile.doc) ||
             (self.documented.contains(key.pkg) && key.profile.doc) {
             return Ok(())
         }
