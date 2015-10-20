@@ -24,7 +24,7 @@
 //! * Never try to activate a crate version which is incompatible. This means we
 //!   only try crates which will actually satisfy a dependency and we won't ever
 //!   try to activate a crate that's semver compatible with something else
-//!   activatd (as we're only allowed to have one).
+//!   activated (as we're only allowed to have one).
 //! * Always try to activate the highest version crate first. The default
 //!   dependency in Cargo (e.g. when you write `foo = "0.1.2"`) is
 //!   semver-compatible, so selecting the highest version possible will allow us
