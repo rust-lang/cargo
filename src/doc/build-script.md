@@ -304,7 +304,7 @@ fn main() {
 }
 ```
 
-This build script starts out by compiling out C file into an object file (by
+This build script starts out by compiling our C file into an object file (by
 invoking `gcc`) and then converting this object file into a static library (by
 invoking `ar`). The final step is feedback to Cargo itself to say that our
 output was in `out_dir` and the compiler should link the crate to `libhello.a`
