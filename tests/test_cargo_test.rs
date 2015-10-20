@@ -2021,3 +2021,39 @@ test!(bin_does_not_rebuild_tests {
 {running} `rustc src[..]main.rs [..]`
 ", compiling = COMPILING, running = RUNNING)));
 });
+
+test!(selective_test_wonky_profile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.release]
+            opt-level = 2
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test").arg("-v").arg("--no-run").arg("--release")
+                 .arg("-p").arg("foo").arg("-p").arg("a"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} a v0.0.1 ([..])
+{running} `rustc a[..]src[..]lib.rs [..]`
+{running} `rustc a[..]src[..]lib.rs [..]`
+{compiling} foo v0.0.1 ([..])
+{running} `rustc src[..]lib.rs [..]`
+{running} `rustc src[..]lib.rs [..]`
+", compiling = COMPILING, running = RUNNING)));
+});
