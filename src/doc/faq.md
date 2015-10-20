@@ -135,7 +135,7 @@ wildcard dependency constraints.**
 
 While they _can_, strictly speaking, they should not. A version requirement
 of `*` says “This will work with every version ever,” which is never going
-to be true. Libraries should always specifiy the range that they do work with,
+to be true. Libraries should always specify the range that they do work with,
 even if it’s something as general as “every 1.x.y version.”
 
 # Why `Cargo.toml`?
