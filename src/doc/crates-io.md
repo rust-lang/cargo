@@ -78,7 +78,7 @@ patch versions are desugared to `0` but allow flexibility for that value.
 **Inequality requirements** allow manually specifying a version range or an
 exact version to depend on.
 
-Here are some examples of wildcard requirements:
+Here are some examples of inequality requirements:
 
 ```notrust
 >= 1.2.0
