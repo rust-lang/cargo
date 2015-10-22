@@ -81,7 +81,7 @@ case $state in
                     '--manifest-path=[path to manifest]' \
                     '--no-deps[do not build docs for dependencies]' \
                     '--no-default-features[do not build the default features]' \
-                    '--open[oen docs in browser after the build]' \
+                    '--open[open docs in browser after the build]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
                     ;;
