@@ -54,7 +54,7 @@ test!(build_with_no_lib {
 });
 
 test!(build_global_lock {
-    
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -69,8 +69,8 @@ test!(build_global_lock {
         .file("src/lib.rs", r#" "#);
 
     p.build();
-    
-    let mut bg_process = p.cargo("build");
+
+    let bg_process = p.cargo("build");
     let fg_process = bg_process.clone();
     let mut bg_process_handle = bg_process.build_command().spawn().unwrap();
 

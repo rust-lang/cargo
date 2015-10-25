@@ -565,25 +565,29 @@ test!(build_script_needed_for_host_and_target {
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
-{compiling} d1 v0.0.0 ({url})
-{running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`
-{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
-{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`
-{running} `rustc d1[..]src[..]lib.rs [..]`
-{running} `rustc d1[..]src[..]lib.rs [..]`
-{compiling} d2 v0.0.0 ({url})
+                       .with_stdout_contains(&format!("\
+{compiling} d1 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+                       .with_stdout_contains(&format!("\
+{running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
+    running = RUNNING, dir = p.root().display()))
+                       .with_stdout_contains(&format!("\
+{running} `{dir}[..]target[..]build[..]d1-[..]build-script-build`", running = RUNNING,
+    dir = p.root().display()))
+                       .with_stdout_contains(&format!("\
+{running} `rustc d1[..]src[..]lib.rs [..]`", running = RUNNING))
+                       .with_stdout_contains(&format!("\
+{compiling} d2 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+                       .with_stdout_contains(&format!("\
 {running} `rustc d2[..]src[..]lib.rs [..] \
-           -L /path/to/{host}`
-{compiling} foo v0.0.0 ({url})
+           -L /path/to/{host}`", running = RUNNING, host = host))
+                       .with_stdout_contains(&format!("\
+{compiling} foo v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+                       .with_stdout_contains(&format!("\
 {running} `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..] \
-           -L /path/to/{host}`
-{running} `{dir}[..]target[..]build[..]foo-[..]build-script-build`
+           -L /path/to/{host}`", running = RUNNING, dir = p.root().display(), host = host))
+                       .with_stdout_contains(&format!("\
 {running} `rustc src[..]main.rs [..] --target {target} [..] \
-           -L /path/to/{target}`
-", compiling = COMPILING, running = RUNNING, target = target, host = host,
-   url = p.url(),
-   dir = p.root().display())));
+           -L /path/to/{target}`", running = RUNNING, target = target)));
 });
 
 test!(build_deps_for_the_right_arch {
@@ -787,7 +791,7 @@ test!(platform_specific_dependencies_do_not_leak {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr("\
-[..] error: can't find crate for `d2`
+[..] error: can't find crate for `d2`[..]
 [..] extern crate d2;
 [..]
 error: aborting due to previous error

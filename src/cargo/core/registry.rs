@@ -154,6 +154,16 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(())
     }
 
+    pub fn add_preloaded(&mut self, id: &SourceId, source: Box<Source + 'cfg>) {
+        self.add_source(id, source, Kind::Locked);
+    }
+
+    fn add_source(&mut self, id: &SourceId, source: Box<Source + 'cfg>,
+                  kind: Kind) {
+        self.sources.insert(id, source);
+        self.source_ids.insert(id.clone(), (id.clone(), kind));
+    }
+
     pub fn add_overrides(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
         for id in ids.iter() {
             try!(self.load(id, Kind::Override));
@@ -183,8 +193,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
 
             // Save off the source
-            self.sources.insert(source_id, source);
-            self.source_ids.insert(source_id.clone(), (source_id.clone(), kind));
+            self.add_source(source_id, source, kind);
 
             Ok(())
         }).chain_error(|| human(format!("Unable to update {}", source_id)))

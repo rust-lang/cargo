@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, CliError, Config, Human};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -92,7 +92,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         None => Ok(None),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::from_error(err, i),
+                Some(code) => CliError::from_error(Human(err), code),
                 None => CliError::from_error(err, 101),
             })
         }

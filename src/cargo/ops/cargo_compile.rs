@@ -29,7 +29,7 @@ use std::sync::Arc;
 
 use core::registry::PackageRegistry;
 use core::{Source, SourceId, PackageSet, Package, Target};
-use core::{Profile, TargetKind};
+use core::{Profile, TargetKind, Profiles};
 use core::resolver::Method;
 use ops::{self, BuildOutput, ExecEngine};
 use util::config::{ConfigValue, Config};
@@ -92,11 +92,12 @@ pub fn compile<'a>(manifest_path: &Path,
     for key in package.manifest().warnings().iter() {
         try!(options.config.shell().warn(key))
     }
-    compile_pkg(&package, options)
+    compile_pkg(&package, None, options)
 }
 
 #[allow(deprecated)] // connect => join in 1.3
 pub fn compile_pkg<'a>(root_package: &Package,
+                       source: Option<Box<Source + 'a>>,
                        options: &CompileOptions<'a>)
                        -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
@@ -122,6 +123,10 @@ pub fn compile_pkg<'a>(root_package: &Package,
     let (packages, resolve_with_overrides, sources) = {
         let mut registry = PackageRegistry::new(options.config);
 
+        if let Some(source) = source {
+            registry.add_preloaded(root_package.package_id().source_id(), source);
+        }
+
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
         let resolve = try!(ops::resolve_pkg(&mut registry, root_package));
@@ -140,10 +145,11 @@ pub fn compile_pkg<'a>(root_package: &Package,
         };
 
         let resolved_with_overrides =
-                try!(ops::resolve_with_previous(&mut registry, root_package, method,
-                                                Some(&resolve), None));
+                try!(ops::resolve_with_previous(&mut registry, root_package,
+                                                method, Some(&resolve), None));
 
-        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides, &mut registry));
+        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides,
+                                                       &mut registry));
 
         (packages, resolved_with_overrides, registry.move_sources())
     };
@@ -171,10 +177,12 @@ pub fn compile_pkg<'a>(root_package: &Package,
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
 
+    let profiles = root_package.manifest().profiles();
     match *target_rustc_args {
         Some(args) => {
             if to_builds.len() == 1 {
-                let targets = try!(generate_targets(to_builds[0], mode, filter, release));
+                let targets = try!(generate_targets(to_builds[0], profiles,
+                                                    mode, filter, release));
                 if targets.len() == 1 {
                     let (target, profile) = targets[0];
                     let mut profile = profile.clone();
@@ -194,7 +202,8 @@ pub fn compile_pkg<'a>(root_package: &Package,
         }
         None => {
             for &to_build in to_builds.iter() {
-                let targets = try!(generate_targets(to_build, mode, filter, release));
+                let targets = try!(generate_targets(to_build, profiles, mode,
+                                                    filter, release));
                 package_targets.push((to_build, targets));
             }
         }
@@ -268,11 +277,11 @@ impl<'a> CompileFilter<'a> {
 /// Given the configuration for a build, this function will generate all
 /// target/profile combinations needed to be built.
 fn generate_targets<'a>(pkg: &'a Package,
+                        profiles: &'a Profiles,
                         mode: CompileMode,
                         filter: &CompileFilter,
                         release: bool)
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
-    let profiles = pkg.manifest().profiles();
     let build = if release {&profiles.release} else {&profiles.dev};
     let test = if release {&profiles.bench} else {&profiles.test};
     let profile = match mode {

@@ -10,7 +10,7 @@ use core::package_id::Metadata;
 use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
-/// Contains all the informations about a package, as loaded from a Cargo.toml.
+/// Contains all the information about a package, as loaded from a Cargo.toml.
 #[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
@@ -130,7 +130,7 @@ pub struct Profiles {
     pub custom_build: Profile,
 }
 
-/// Informations about a binary, a library, an example, etc. that is part of the
+/// Information about a binary, a library, an example, etc. that is part of the
 /// package.
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Target {

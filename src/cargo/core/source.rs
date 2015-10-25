@@ -129,17 +129,19 @@ impl SourceId {
                 SourceId::new(Kind::Registry, url)
                          .with_precise(Some("locked".to_string()))
             }
-            "path" => SourceId::for_path(Path::new(&url[5..])).unwrap(),
+            "path" => {
+                let url = url.to_url().unwrap();
+                SourceId::new(Kind::Path, url)
+            }
             _ => panic!("Unsupported serialized SourceId")
         }
     }
 
     pub fn to_url(&self) -> String {
         match *self.inner {
-            SourceIdInner { kind: Kind::Path, .. } => {
-                panic!("Path sources are not included in the lockfile, \
-                       so this is unimplemented")
-            },
+            SourceIdInner { kind: Kind::Path, ref url, .. } => {
+                format!("path+{}", url)
+            }
             SourceIdInner {
                 kind: Kind::Git(ref reference), ref url, ref precise, ..
             } => {

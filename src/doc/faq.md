@@ -74,7 +74,7 @@ on the platform. Cargo also supports [platform-specific
 dependencies][target-deps], and we plan to support more per-platform
 configuration in `Cargo.toml` in the future.
 
-[target-deps]: manifest.html#the-[dependencies.*]-sections
+[target-deps]: manifest.html#the-dependencies-section
 
 In the longer-term, we're looking at ways to conveniently cross-compile
 projects using Cargo.
@@ -83,7 +83,7 @@ projects using Cargo.
 
 We support environments through the use of [profiles][profile] to support:
 
-[profile]: manifest.html#the-[profile.*]-sections
+[profile]: manifest.html#the-profile-sections
 
 * environment-specific flags (like `-g --opt-level=0` for development
   and `--opt-level=3` for production).
@@ -135,7 +135,7 @@ wildcard dependency constraints.**
 
 While they _can_, strictly speaking, they should not. A version requirement
 of `*` says “This will work with every version ever,” which is never going
-to be true. Libraries should always specifiy the range that they do work with,
+to be true. Libraries should always specify the range that they do work with,
 even if it’s something as general as “every 1.x.y version.”
 
 # Why `Cargo.toml`?

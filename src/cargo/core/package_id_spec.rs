@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::fmt;
+
 use semver::Version;
 use url::{self, Url, UrlParser};
 
@@ -43,6 +45,15 @@ impl PackageIdSpec {
             version: version,
             url: None,
         })
+    }
+
+    pub fn query_str<'a, I>(spec: &str, i: I) -> CargoResult<&'a PackageId>
+        where I: IntoIterator<Item=&'a PackageId>
+    {
+        let spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
+            human(format!("invalid package id specification: `{}`", spec))
+        }));
+        spec.query(i)
     }
 
     pub fn from_package_id(package_id: &PackageId) -> PackageIdSpec {
@@ -113,6 +124,51 @@ impl PackageIdSpec {
         match self.url {
             Some(ref u) => u == package_id.source_id().url(),
             None => true
+        }
+    }
+
+    pub fn query<'a, I>(&self, i: I) -> CargoResult<&'a PackageId>
+        where I: IntoIterator<Item=&'a PackageId>
+    {
+        let mut ids = i.into_iter().filter(|p| self.matches(*p));
+        let ret = match ids.next() {
+            Some(id) => id,
+            None => return Err(human(format!("package id specification `{}` \
+                                              matched no packages", self))),
+        };
+        return match ids.next() {
+            Some(other) => {
+                let mut msg = format!("There are multiple `{}` packages in \
+                                       your project, and the specification \
+                                       `{}` is ambiguous.\n\
+                                       Please re-run this command \
+                                       with `-p <spec>` where `<spec>` is one \
+                                       of the following:",
+                                      self.name(), self);
+                let mut vec = vec![ret, other];
+                vec.extend(ids);
+                minimize(&mut msg, vec, self);
+                Err(human(msg))
+            }
+            None => Ok(ret)
+        };
+
+        fn minimize(msg: &mut String,
+                    ids: Vec<&PackageId>,
+                    spec: &PackageIdSpec) {
+            let mut version_cnt = HashMap::new();
+            for id in ids.iter() {
+                *version_cnt.entry(id.version()).or_insert(0) += 1;
+            }
+            for id in ids.iter() {
+                if version_cnt[id.version()] == 1 {
+                    msg.push_str(&format!("\n  {}:{}", spec.name(),
+                                          id.version()));
+                } else {
+                    msg.push_str(&format!("\n  {}",
+                                          PackageIdSpec::from_package_id(*id)));
+                }
+            }
         }
     }
 }

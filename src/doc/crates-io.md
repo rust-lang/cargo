@@ -34,7 +34,7 @@ num = "0.0.4"
 The string value for each key in this table is a [semver][semver] version
 requirement.
 
-[semver]: http://doc.rust-lang.org/semver/semver/#requirements
+[semver]: https://github.com/steveklabnik/semver#requirements
 
 **Caret requirements** allow SemVer compatible updates to a specified version.
 
@@ -78,7 +78,7 @@ patch versions are desugared to `0` but allow flexibility for that value.
 **Inequality requirements** allow manually specifying a version range or an
 exact version to depend on.
 
-Here are some examples of wildcard requirements:
+Here are some examples of inequality requirements:
 
 ```notrust
 >= 1.2.0

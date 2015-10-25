@@ -187,7 +187,7 @@ pub struct RegistrySource<'cfg> {
     src_path: PathBuf,
     config: &'cfg Config,
     handle: Option<http::Handle>,
-    sources: Vec<PathSource<'cfg>>,
+    sources: HashMap<PackageId, PathSource<'cfg>>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     cache: HashMap<String, Vec<(Summary, bool)>>,
     updated: bool,
@@ -239,7 +239,7 @@ impl<'cfg> RegistrySource<'cfg> {
             config: config,
             source_id: source_id.clone(),
             handle: None,
-            sources: Vec::new(),
+            sources: HashMap::new(),
             hashes: HashMap::new(),
             cache: HashMap::new(),
             updated: false,
@@ -366,7 +366,7 @@ impl<'cfg> RegistrySource<'cfg> {
     }
 
     /// Parse the on-disk metadata for the package provided
-    fn summaries(&mut self, name: &str) -> CargoResult<&Vec<(Summary, bool)>> {
+    pub fn summaries(&mut self, name: &str) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(self.cache.get(name).unwrap());
         }
@@ -537,6 +537,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         let url = try!(config.dl.to_url().map_err(internal));
         for package in packages.iter() {
             if self.source_id != *package.source_id() { continue }
+            if self.sources.contains_key(package) { continue }
 
             let mut url = url.clone();
             url.path_mut().unwrap().push(package.name().to_string());
@@ -551,14 +552,14 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             }));
             let mut src = PathSource::new(&path, &self.source_id, self.config);
             try!(src.update());
-            self.sources.push(src);
+            self.sources.insert(package.clone(), src);
         }
         Ok(())
     }
 
     fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
         let mut ret = Vec::new();
-        for src in self.sources.iter() {
+        for src in self.sources.values() {
             ret.extend(try!(src.get(packages)).into_iter());
         }
         return Ok(ret);

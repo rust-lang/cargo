@@ -102,7 +102,31 @@ test!(exit_code {
         "#);
 
     assert_that(p.cargo_process("run"),
-                execs().with_status(2));
+                execs().with_status(2)
+                       .with_stderr(&format!("\
+Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+",
+        )));
+});
+
+test!(exit_code_verbose {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { std::process::exit(2); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("-v"),
+                execs().with_status(2)
+                       .with_stderr(&format!("\
+Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+",
+        )));
 });
 
 test!(no_main_file {
@@ -477,7 +501,7 @@ test!(run_from_executable_folder {
     let cwd = p.root().join("target").join("debug");
     p.cargo_process("build").exec_with_output().unwrap();
 
-    assert_that(p.cargo("run").cwd(cwd), 
+    assert_that(p.cargo("run").cwd(cwd),
                 execs().with_status(0).with_stdout(&format!("\
 {running} `.{sep}foo[..]`
 hello
