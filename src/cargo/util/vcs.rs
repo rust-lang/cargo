@@ -19,11 +19,11 @@ impl GitRepo {
 
 impl HgRepo {
     pub fn init(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
-        try!(try!(process("hg", cwd)).arg("init").arg(path).exec());
+        try!(process("hg").cwd(cwd).arg("init").arg(path).exec());
         return Ok(HgRepo)
     }
     pub fn discover(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
-        try!(try!(process("hg", cwd)).arg("root").cwd(path).exec_with_output());
+        try!(process("hg").cwd(cwd).arg("root").cwd(path).exec_with_output());
         return Ok(HgRepo)
     }
 }

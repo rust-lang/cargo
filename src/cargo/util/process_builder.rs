@@ -5,7 +5,7 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, Output};
 
-use util::{CargoResult, ProcessError, process_error};
+use util::{ProcessError, process_error};
 use util::shell_escape::escape;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -13,7 +13,7 @@ pub struct ProcessBuilder {
     program: OsString,
     args: Vec<OsString>,
     env: HashMap<String, Option<OsString>>,
-    cwd: OsString,
+    cwd: Option<OsString>,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -42,7 +42,7 @@ impl ProcessBuilder {
     }
 
     pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut ProcessBuilder {
-        self.cwd = path.as_ref().to_os_string();
+        self.cwd = Some(path.as_ref().to_os_string());
         self
     }
 
@@ -60,8 +60,9 @@ impl ProcessBuilder {
     pub fn get_args(&self) -> &[OsString] {
         &self.args
     }
-    pub fn get_cwd(&self) -> &Path {
-        Path::new(&self.cwd)
+
+    pub fn get_cwd(&self) -> Option<&Path> {
+        self.cwd.as_ref().map(Path::new)
     }
 
     pub fn get_env(&self, var: &str) -> Option<OsString> {
@@ -108,7 +109,9 @@ impl ProcessBuilder {
 
     pub fn build_command(&self) -> Command {
         let mut command = Command::new(&self.program);
-        command.current_dir(&self.get_cwd());
+        if let Some(cwd) = self.get_cwd() {
+            command.current_dir(cwd);
+        }
         for arg in self.args.iter() {
             command.arg(arg);
         }
@@ -131,11 +134,11 @@ impl ProcessBuilder {
     }
 }
 
-pub fn process<T: AsRef<OsStr>, U: AsRef<OsStr>>(cmd: T, cwd: U) -> CargoResult<ProcessBuilder> {
-    Ok(ProcessBuilder {
+pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
+    ProcessBuilder {
         program: cmd.as_ref().to_os_string(),
         args: Vec::new(),
-        cwd: cwd.as_ref().to_os_string(),
+        cwd: None,
         env: HashMap::new(),
-    })
+    }
 }

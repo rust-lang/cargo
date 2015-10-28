@@ -100,7 +100,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// specified as well as the exe suffix
     fn filename_parts(target: Option<&str>, cfg: &Config)
                       -> CargoResult<(Option<(String, String)>, String)> {
-        let mut process = try!(util::process(cfg.rustc(), cfg.cwd()));
+        let mut process = util::process(cfg.rustc());
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--crate-type").arg("dylib")
