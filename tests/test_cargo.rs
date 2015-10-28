@@ -43,7 +43,7 @@ fn path() -> Vec<PathBuf> {
 test!(list_commands_looks_at_path {
     let proj = project("list-non-overlapping");
     let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
-    let mut pr = process(&cargo_dir().join("cargo")).unwrap();
+    let mut pr = process(&cargo_dir().join("cargo"));
     pr.cwd(&proj.root())
       .env("HOME", &paths::home());
 
@@ -58,7 +58,7 @@ test!(list_commands_looks_at_path {
 });
 
 test!(find_closest_biuld_to_build {
-    let mut pr = process(&cargo_dir().join("cargo")).unwrap();
+    let mut pr = process(&cargo_dir().join("cargo"));
     pr.arg("biuld").cwd(&paths::root()).env("HOME", &paths::home());
 
     assert_that(pr,
@@ -72,7 +72,7 @@ Did you mean `build`?
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 test!(find_closest_dont_correct_nonsense {
-    let mut pr = process(&cargo_dir().join("cargo")).unwrap();
+    let mut pr = process(&cargo_dir().join("cargo"));
     pr.arg("asdf").cwd(&paths::root()).env("HOME", &paths::home());
 
     assert_that(pr,
@@ -92,7 +92,7 @@ test!(override_cargo_home {
         git = false
     "#).unwrap();
 
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                     .arg("new").arg("foo")
                     .cwd(&paths::root())
                     .env("USER", "foo")
@@ -107,22 +107,22 @@ test!(override_cargo_home {
 });
 
 test!(cargo_help {
-    assert_that(process(&cargo_dir().join("cargo")).unwrap(),
+    assert_that(process(&cargo_dir().join("cargo")),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).unwrap().arg("help"),
+    assert_that(process(&cargo_dir().join("cargo")).arg("help"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).unwrap().arg("-h"),
+    assert_that(process(&cargo_dir().join("cargo")).arg("-h"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                        .arg("help").arg("build"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                        .arg("build").arg("-h"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                        .arg("help").arg("-h"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                        .arg("help").arg("help"),
                 execs().with_status(0));
 });

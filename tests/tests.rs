@@ -64,7 +64,7 @@ mod test_cargo_verify_project;
 mod test_cargo_version;
 mod test_shell;
 
-thread_local!(static RUSTC: Rustc = Rustc::new("rustc").unwrap());
+thread_local!(static RUSTC: Rustc = Rustc::new("rustc", &support::cwd()).unwrap());
 
 fn rustc_host() -> String {
     RUSTC.with(|r| r.host.clone())

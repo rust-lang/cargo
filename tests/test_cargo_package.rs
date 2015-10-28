@@ -217,7 +217,7 @@ test!(package_verbose {
         "#)
         .file("a/src/lib.rs", "");
     p.build();
-    let mut cargo = process(&cargo_dir().join("cargo")).unwrap();
+    let mut cargo = process(&cargo_dir().join("cargo"));
     cargo.cwd(&root).env("HOME", &paths::home());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(cargo.arg("package").arg("-v").arg("--no-verify"),
