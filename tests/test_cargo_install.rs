@@ -19,7 +19,7 @@ fn setup() {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = process(&cargo_dir().join("cargo")).unwrap();
+    let mut p = process(&cargo_dir().join("cargo"));
     p.arg(s).cwd(&paths::root())
      .env("HOME", &paths::home())
      .env_remove("CARGO_HOME");
