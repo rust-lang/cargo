@@ -301,6 +301,7 @@ from_error! {
     ProcessError,
     git2::Error,
     json::DecoderError,
+    json::EncoderError,
     curl::ErrCode,
     CliError,
     toml::Error,
@@ -317,6 +318,7 @@ impl CargoError for semver::ReqParseError {}
 impl CargoError for io::Error {}
 impl CargoError for git2::Error {}
 impl CargoError for json::DecoderError {}
+impl CargoError for json::EncoderError {}
 impl CargoError for curl::ErrCode {}
 impl CargoError for ProcessError {}
 impl CargoError for CargoTestError {}
