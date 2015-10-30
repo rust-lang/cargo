@@ -2057,3 +2057,33 @@ test!(selective_test_wonky_profile {
 {running} `rustc src[..]lib.rs [..]`
 ", compiling = COMPILING, running = RUNNING)));
 });
+
+test!(selective_test_optional_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a", optional = true }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test").arg("-v").arg("--no-run")
+                 .arg("--features").arg("a").arg("-p").arg("a"),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} a v0.0.1 ([..])
+{running} `rustc a[..]src[..]lib.rs [..]`
+{running} `rustc a[..]src[..]lib.rs [..]`
+", compiling = COMPILING, running = RUNNING)));
+});
