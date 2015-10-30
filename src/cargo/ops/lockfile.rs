@@ -68,6 +68,15 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
         None => {}
     }
 
+    // Load the original lockfile if it exists.
+    if let Ok(orig) = paths::read(dst) {
+        if out == orig {
+            // The lockfile contents haven't changed so don't rewrite it.
+            // This is helpful on read-only filesystems.
+            return Ok(())
+        }
+    }
+
     try!(paths::write(dst, out.as_bytes()));
     Ok(())
 }
