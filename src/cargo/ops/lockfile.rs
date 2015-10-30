@@ -68,8 +68,29 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
         None => {}
     }
 
+    // Load the original lockfile if it exists.
+    if let Ok(orig) = paths::read(dst) {
+        if has_crlf_line_endings(&orig) {
+            out = out.replace("\n", "\r\n");
+        }
+        if out == orig {
+            // The lockfile contents haven't changed so don't rewrite it.
+            // This is helpful on read-only filesystems.
+            return Ok(())
+        }
+    }
+
     try!(paths::write(dst, out.as_bytes()));
     Ok(())
+}
+
+fn has_crlf_line_endings(s: &str) -> bool {
+    // Only check the first line.
+    if let Some(lf) = s.find('\n') {
+        s[..lf].ends_with('\r')
+    } else {
+        false
+    }
 }
 
 fn emit_package(dep: &toml::Table, out: &mut String) {
