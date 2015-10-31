@@ -647,6 +647,17 @@ test!(update_with_shared_deps {
                  .arg("-p").arg("dep1"),
                 execs().with_stdout(""));
 
+    // Don't do anything bad on a weird --precise argument
+    println!("bar bad precise update");
+    assert_that(p.cargo("update")
+                 .arg("-p").arg("bar")
+                 .arg("--precise").arg("0.1.2"),
+                execs().with_status(101).with_stderr("\
+Unable to update [..]
+
+To learn more, run the command again with --verbose.
+"));
+
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
     println!("bar precise update");

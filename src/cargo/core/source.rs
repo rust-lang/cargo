@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::cmp::{self, Ordering};
 use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::fmt::{self, Formatter};
 use std::hash;
@@ -294,14 +294,12 @@ impl fmt::Display for SourceId {
                             ref precise, .. } => {
                 try!(write!(f, "{}{}", url, url_ref(reference)));
 
-                match *precise {
-                    Some(ref s) => {
-                        try!(write!(f, "#{}", &s[..8]));
-                    }
-                    None => {}
+                if let Some(ref s) = *precise {
+                    let len = cmp::min(s.len(), 8);
+                    try!(write!(f, "#{}", &s[..len]));
                 }
                 Ok(())
-            },
+            }
             SourceIdInner { kind: Kind::Registry, ref url, .. } => {
                 write!(f, "registry {}", url)
             }
