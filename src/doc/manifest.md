@@ -446,10 +446,11 @@ each of the test files.
 
 # Configuring a target
 
-All of the  `[[bin]]`, `[lib]`, `[[bench]]`, and `[[test]]` sections support
-similar configuration for specifying how a target should be built. The example
-below uses `[lib]`, but it also applies to all other sections as well. All
-values listed are the defaults for that option unless otherwise specified.
+All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
+sections support similar configuration for specifying how a target should be
+built. The example below uses `[lib]`, but it also applies to all other
+sections as well. All values listed are the defaults for that option unless
+otherwise specified.
 
 ```toml
 [package]
