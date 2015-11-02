@@ -424,21 +424,33 @@ your tests to protect them from bitrotting.
 
 When you run `cargo test`, Cargo will:
 
-* Compile your library's unit tests, which are in files reachable from
+* Compile and run your library's unit tests, which are in files reachable from
   `lib.rs`. Any sections marked with `#[cfg(test)]` will be included.
-* Compile your library’s documentation tests, which are embedded inside
-  of documentation blocks.
-* Compile your library's integration tests, which are located in
-  `tests`. Files in `tests` load in your library by using `extern crate
-  <library-name>` like any other code that depends on it.
+* Compile and run your library’s documentation tests, which are embedded
+  inside of documentation blocks.
+* Compile and run your library's [integration tests](#integration-tests).
 * Compile your library's examples.
+
+## Integration tests
+
+Each file in `tests/*.rs` is an integration test. When you run `cargo test`,
+Cargo will compile each of these files as a separate crate. The crate can link
+to your library by using `extern crate <library-name>`, like any other code
+that depends on it.
+
+Cargo will not automatically compile files inside subdirectories of `tests`,
+but an integration test can import modules from these directories as usual.
+For example, if you want several integration tests to share some code, you can
+put the shared code in `tests/common/mod.rs` and then put `mod common;` in
+each of the test files.
 
 # Configuring a target
 
-All of the  `[[bin]]`, `[lib]`, `[[bench]]`, and `[[test]]` sections support
-similar configuration for specifying how a target should be built. The example
-below uses `[lib]`, but it also applies to all other sections as well. All
-values listed are the defaults for that option unless otherwise specified.
+All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
+sections support similar configuration for specifying how a target should be
+built. The example below uses `[lib]`, but it also applies to all other
+sections as well. All values listed are the defaults for that option unless
+otherwise specified.
 
 ```toml
 [package]
