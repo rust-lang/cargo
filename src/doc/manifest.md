@@ -424,11 +424,11 @@ your tests to protect them from bitrotting.
 
 When you run `cargo test`, Cargo will:
 
-* Compile your library's unit tests, which are in files reachable from
+* Compile and run your library's unit tests, which are in files reachable from
   `lib.rs`. Any sections marked with `#[cfg(test)]` will be included.
-* Compile your library’s documentation tests, which are embedded inside
-  of documentation blocks.
-* Compile your library's integration tests, which are located in
+* Compile and run your library’s documentation tests, which are embedded
+  inside of documentation blocks.
+* Compile and run your library's integration tests, which are located in
   `tests`. Files in `tests` load in your library by using `extern crate
   <library-name>` like any other code that depends on it.
 * Compile your library's examples.
