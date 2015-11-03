@@ -28,9 +28,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, PackageSet, Package, Target};
+use core::{Source, SourceId, SourceMap, PackageSet, Package, Target};
 use core::{Profile, TargetKind, Profiles};
-use core::resolver::Method;
+use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
 use util::config::{ConfigValue, Config};
 use util::{CargoResult, internal, human, ChainError, profile};
@@ -95,6 +95,48 @@ pub fn compile<'a>(manifest_path: &Path,
     compile_pkg(&package, None, options)
 }
 
+pub fn resolve_dependencies<'a>(root_package: &Package,
+                                config: &'a Config,
+                                source: Option<Box<Source + 'a>>,
+                                features: Vec<String>,
+                                no_default_features: bool)
+                                -> CargoResult<(Vec<Package>, Resolve, SourceMap<'a>)> {
+
+    let override_ids = try!(source_ids_from_config(config, root_package.root()));
+
+    let mut registry = PackageRegistry::new(config);
+
+    if let Some(source) = source {
+        registry.add_preloaded(root_package.package_id().source_id(), source);
+    }
+
+    // First, resolve the root_package's *listed* dependencies, as well as
+    // downloading and updating all remotes and such.
+    let resolve = try!(ops::resolve_pkg(&mut registry, root_package));
+
+    // Second, resolve with precisely what we're doing. Filter out
+    // transitive dependencies if necessary, specify features, handle
+    // overrides, etc.
+    let _p = profile::start("resolving w/ overrides...");
+
+    try!(registry.add_overrides(override_ids));
+
+    let method = Method::Required{
+        dev_deps: true, // TODO: remove this option?
+        features: &features,
+        uses_default_features: !no_default_features,
+    };
+
+    let resolved_with_overrides =
+            try!(ops::resolve_with_previous(&mut registry, root_package,
+                                            method, Some(&resolve), None));
+
+    let packages = try!(ops::get_resolved_packages(&resolved_with_overrides,
+                                                   &mut registry));
+
+    Ok((packages, resolved_with_overrides, registry.move_sources()))
+}
+
 #[allow(deprecated)] // connect => join in 1.3
 pub fn compile_pkg<'a>(root_package: &Package,
                        source: Option<Box<Source + 'a>>,
@@ -114,40 +156,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
         return Err(human("jobs must be at least 1"))
     }
 
-    let override_ids = try!(source_ids_from_config(options.config, root_package.root()));
-
     let (packages, resolve_with_overrides, sources) = {
-        let mut registry = PackageRegistry::new(options.config);
-
-        if let Some(source) = source {
-            registry.add_preloaded(root_package.package_id().source_id(), source);
-        }
-
-        // First, resolve the root_package's *listed* dependencies, as well as
-        // downloading and updating all remotes and such.
-        let resolve = try!(ops::resolve_pkg(&mut registry, root_package));
-
-        // Second, resolve with precisely what we're doing. Filter out
-        // transitive dependencies if necessary, specify features, handle
-        // overrides, etc.
-        let _p = profile::start("resolving w/ overrides...");
-
-        try!(registry.add_overrides(override_ids));
-
-        let method = Method::Required{
-            dev_deps: true, // TODO: remove this option?
-            features: &features,
-            uses_default_features: !no_default_features,
-        };
-
-        let resolved_with_overrides =
-                try!(ops::resolve_with_previous(&mut registry, root_package,
-                                                method, Some(&resolve), None));
-
-        let packages = try!(ops::get_resolved_packages(&resolved_with_overrides,
-                                                       &mut registry));
-
-        (packages, resolved_with_overrides, registry.move_sources())
+        try!(resolve_dependencies(root_package, config, source, features,
+                                  no_default_features))
     };
 
     let mut invalid_spec = vec![];
