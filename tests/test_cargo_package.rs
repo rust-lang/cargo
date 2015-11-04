@@ -427,3 +427,27 @@ src[..]main.rs
                 "unexpected filename: {:?}", f.header().path())
     }
 });
+
+#[cfg(unix)] // windows doesn't allow these characters in filenames
+test!(package_weird_characters {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#)
+        .file("src/:foo", "");
+
+    assert_that(p.cargo_process("package"),
+                execs().with_status(101).with_stderr("\
+warning: [..]
+failed to prepare local package for uploading
+
+Caused by:
+  cannot package a filename with a special character `:`: src/:foo
+"));
+});
