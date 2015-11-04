@@ -161,6 +161,10 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 }
 
 fn find_closest(cmd: &str) -> Option<String> {
+    if cmd == "init" {
+        return Some("new .".to_string())
+    }
+
     let cmds = list_commands();
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.

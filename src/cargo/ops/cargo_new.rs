@@ -44,9 +44,41 @@ struct CargoNewConfig {
     version_control: Option<VersionControl>,
 }
 
+fn can_we_use_this_path_for_a_new_project (path: &Path) -> bool {
+    if let Some(path_metadata) = fs::metadata(&path).ok() {
+        if path_metadata.is_dir() {
+            if let Some(already_existing_files) = fs::read_dir(&path).ok() {
+                for entry in already_existing_files {
+                    if let Some(entry2) = entry.ok() {
+                        if let Some(preexisting_file) = entry2.file_name().to_str() {
+                            if preexisting_file == ".git" { continue }
+                            if preexisting_file == ".hg" { continue }
+                            if preexisting_file == ".gitignore" { continue }
+                            if preexisting_file == ".hgignore" { continue }
+                            if preexisting_file == ".svn" { continue }
+                            return false // directory with unknown file
+                        } else {
+                            return false // directory with a non-UTF8 filename
+                        }
+                    } else {
+                        return false // directory where some file can't be enumerated
+                    }
+                }
+                true // directory with only VCS-related files
+            } else {
+                false // can't enumerate files
+            }
+        } else {
+            false // not a directory
+        }
+    } else {
+        true // does not exist
+    }
+}
+
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
-    if fs::metadata(&path).is_ok() {
+    if ! can_we_use_this_path_for_a_new_project(&path) {
         return Err(human(format!("Destination `{}` already exists",
                                  path.display())))
     }
@@ -127,7 +159,9 @@ fn mk(config: &Config, path: &Path, name: &str,
             try!(paths::write(&path.join(".hgignore"), ignore.as_bytes()));
         },
         VersionControl::NoVcs => {
-            try!(fs::create_dir(path));
+            if ! fs::metadata(path).is_ok() {
+                try!(fs::create_dir(path));
+            }
         },
     };
 
