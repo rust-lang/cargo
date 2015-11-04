@@ -155,6 +155,7 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
     for file in try!(src.list_files(pkg)).iter() {
         if &**file == dst { continue }
         let relative = util::without_prefix(&file, &root).unwrap();
+        try!(check_filename(relative));
         let relative = try!(relative.to_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
@@ -222,5 +223,32 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
         target_rustc_args: None,
     }));
 
+    Ok(())
+}
+
+// It can often be the case that files of a particular name on one platform
+// can't actually be created on another platform. For example files with colons
+// in the name are allowed on Unix but not on Windows.
+//
+// To help out in situations like this, issue about weird filenames when
+// packaging as a "heads up" that something may not work on other platforms.
+fn check_filename(file: &Path) -> CargoResult<()> {
+    let name = match file.file_name() {
+        Some(name) => name,
+        None => return Ok(()),
+    };
+    let name = match name.to_str() {
+        Some(name) => name,
+        None => {
+            return Err(human(format!("path does not have a unicode filename \
+                                      which may not unpack on all platforms: {}",
+                                     file.display())))
+        }
+    };
+    let bad_chars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
+    for c in bad_chars.iter().filter(|c| name.contains(**c)) {
+        return Err(human(format!("cannot package a filename with a special \
+                                  character `{}`: {}", c, file.display())))
+    }
     Ok(())
 }
