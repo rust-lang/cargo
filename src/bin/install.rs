@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use cargo::ops;
 use cargo::core::{SourceId, GitReference};
 use cargo::util::{CliResult, Config, ToUrl, human};
@@ -112,7 +110,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         };
         SourceId::for_git(&url, gitref)
     } else if let Some(path) = options.flag_path {
-        try!(SourceId::for_path(Path::new(&path)))
+        try!(SourceId::for_path(&config.cwd().join(path)))
     } else {
         try!(SourceId::for_central(config))
     };
