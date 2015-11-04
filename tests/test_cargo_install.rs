@@ -179,6 +179,10 @@ test!(install_path {
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(cargo_process("install").arg("--path").arg(".").cwd(p.root()),
+                execs().with_status(101).with_stderr("\
+binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
+"));
 });
 
 test!(multiple_crates_error {
