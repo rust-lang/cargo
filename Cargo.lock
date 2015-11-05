@@ -6,7 +6,7 @@ dependencies = [
  "bufstream 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "crates-io 0.1.0",
  "crossbeam 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "curl 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.74 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "filetime 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -71,7 +71,7 @@ dependencies = [
 name = "crates-io"
 version = "0.1.0"
 dependencies = [
- "curl 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -82,11 +82,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "curl"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "curl-sys 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl-sys 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 0.2.37 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -94,11 +94,11 @@ dependencies = [
 
 [[package]]
 name = "curl-sys"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gcc 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -167,7 +167,7 @@ name = "git2-curl"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "curl 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 0.2.37 (registry+https://github.com/rust-lang/crates.io-index)",
