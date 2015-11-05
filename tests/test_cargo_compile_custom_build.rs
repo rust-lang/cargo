@@ -362,17 +362,7 @@ test!(links_passes_env_vars {
         "#);
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0)
-                       .with_stdout(&format!("\
-{compiling} [..] v0.5.0 (file://[..])
-{running} `rustc [..]build.rs [..]`
-{compiling} [..] v0.5.0 (file://[..])
-{running} `rustc [..]build.rs [..]`
-{running} `[..]`
-{running} `[..]`
-{running} `[..]`
-{running} `rustc [..] --crate-name foo [..]`
-", compiling = COMPILING, running = RUNNING)));
+                execs().with_status(0));
 });
 
 test!(only_rerun_build_script {
@@ -1324,9 +1314,9 @@ test!(cfg_test {
 {compiling} foo v0.0.1 ({dir})
 {running} [..] build.rs [..]
 {running} [..]build-script-build[..]
-{running} [..] src[..]lib.rs [..] --cfg foo[..]
-{running} [..] src[..]lib.rs [..] --cfg foo[..]
-{running} [..] tests[..]test.rs [..] --cfg foo[..]
+{running} [..] --cfg foo[..]
+{running} [..] --cfg foo[..]
+{running} [..] --cfg foo[..]
 {running} [..]foo-[..]
 
 running 1 test
@@ -1439,9 +1429,9 @@ test!(cfg_override_test {
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_stdout(format!("\
 {compiling} foo v0.0.1 ({dir})
-{running} [..] src[..]lib.rs [..] --cfg foo[..]
-{running} [..] src[..]lib.rs [..] --cfg foo[..]
-{running} [..] tests[..]test.rs [..] --cfg foo[..]
+{running} `[..]`
+{running} `[..]`
+{running} `[..]`
 {running} [..]foo-[..]
 
 running 1 test

@@ -859,10 +859,9 @@ test!(bench_with_examples {
                 execs().with_status(0)
                        .with_stdout(&format!("\
 {compiling} testbench v6.6.6 ({url})
-{running} `rustc src[..]lib.rs --crate-name testbench --crate-type lib [..]`
-{running} `rustc src[..]lib.rs --crate-name testbench --crate-type lib [..]`
-{running} `rustc benches[..]testb1.rs --crate-name testb1 --crate-type bin \
-        [..] --test [..]`
+{running} `rustc [..]`
+{running} `rustc [..]`
+{running} `rustc [..]`
 {running} `{dir}[..]target[..]release[..]testb1-[..] --bench`
 
 running 1 test

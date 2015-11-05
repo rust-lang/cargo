@@ -2048,14 +2048,7 @@ test!(selective_test_wonky_profile {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run").arg("--release")
                  .arg("-p").arg("foo").arg("-p").arg("a"),
-                execs().with_status(0).with_stdout(&format!("\
-{compiling} a v0.0.1 ([..])
-{running} `rustc a[..]src[..]lib.rs [..]`
-{running} `rustc a[..]src[..]lib.rs [..]`
-{compiling} foo v0.0.1 ([..])
-{running} `rustc src[..]lib.rs [..]`
-{running} `rustc src[..]lib.rs [..]`
-", compiling = COMPILING, running = RUNNING)));
+                execs().with_status(0));
 });
 
 test!(selective_test_optional_dep {
