@@ -138,6 +138,7 @@ pub struct Target {
     name: String,
     src_path: PathBuf,
     metadata: Option<Metadata>,
+    features: Option<Vec<String>>,
     tested: bool,
     benched: bool,
     doc: bool,
@@ -226,6 +227,7 @@ impl Target {
             name: String::new(),
             src_path: PathBuf::new(),
             metadata: None,
+            features: None,
             doc: false,
             doctest: false,
             harness: true,
@@ -250,12 +252,14 @@ impl Target {
     }
 
     pub fn bin_target(name: &str, src_path: &Path,
-                      metadata: Option<Metadata>) -> Target {
+                      metadata: Option<Metadata>,
+                      features: Option<Vec<String>>) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
             metadata: metadata,
+            features: features,
             doc: true,
             ..Target::blank()
         }
@@ -276,35 +280,41 @@ impl Target {
         }
     }
 
-    pub fn example_target(name: &str, src_path: &Path) -> Target {
+    pub fn example_target(name: &str, src_path: &Path,
+                          features: Option<Vec<String>>) -> Target {
         Target {
             kind: TargetKind::Example,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
+            features: features,
             benched: false,
             ..Target::blank()
         }
     }
 
     pub fn test_target(name: &str, src_path: &Path,
-                       metadata: Metadata) -> Target {
+                       metadata: Metadata,
+                       features: Option<Vec<String>>) -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
             metadata: Some(metadata),
+            features: features,
             benched: false,
             ..Target::blank()
         }
     }
 
     pub fn bench_target(name: &str, src_path: &Path,
-                        metadata: Metadata) -> Target {
+                        metadata: Metadata,
+                        features: Option<Vec<String>>) -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
             metadata: Some(metadata),
+            features: features,
             tested: false,
             ..Target::blank()
         }
@@ -314,6 +324,7 @@ impl Target {
     pub fn crate_name(&self) -> String { self.name.replace("-", "_") }
     pub fn src_path(&self) -> &Path { &self.src_path }
     pub fn metadata(&self) -> Option<&Metadata> { self.metadata.as_ref() }
+    pub fn features(&self) -> Option<&Vec<String>> { self.features.as_ref() }
     pub fn kind(&self) -> &TargetKind { &self.kind }
     pub fn tested(&self) -> bool { self.tested }
     pub fn harness(&self) -> bool { self.harness }
