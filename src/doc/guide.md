@@ -92,6 +92,8 @@ class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_w
 class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
 
+If you want to pass some arguments to your program, please use `cargo run -- first_argument second_argument`.
+
 You'll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don't have any yet, it's not very interesting.
 
