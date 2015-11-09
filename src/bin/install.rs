@@ -95,6 +95,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         filter: ops::CompileFilter::new(false, &options.flag_bin, &[],
                                         &options.flag_example, &[]),
         target_rustc_args: None,
+        target_rustdoc_args: None,
     };
 
     let source = if let Some(url) = options.flag_git {

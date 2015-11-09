@@ -70,6 +70,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                 deps: !options.flag_no_deps,
             },
             target_rustc_args: None,
+            target_rustdoc_args: None,
         },
     };
 
