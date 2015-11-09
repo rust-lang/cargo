@@ -15,6 +15,20 @@ use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, RegistrySource};
 use util::{CargoResult, ChainError, Config, human, internal};
 
+struct Paths {
+    bin: PathBuf,
+    config: PathBuf,
+}
+
+impl Paths {
+    fn from_root(root: PathBuf) -> Paths {
+        Paths {
+            bin: root.join("bin"),
+            config: root,
+        }
+    }
+}
+
 #[derive(RustcDecodable, RustcEncodable)]
 enum CrateListing {
     V1(CrateListingV1),
@@ -43,7 +57,7 @@ pub fn install(root: Option<&str>,
                vers: Option<&str>,
                opts: &ops::CompileOptions) -> CargoResult<()> {
     let config = opts.config;
-    let root = try!(resolve_root(root, config));
+    let paths = try!(resolve_paths(root, config));
     let (pkg, source) = if source_id.is_git() {
         try!(select_pkg(GitSource::new(source_id, config), source_id,
                         krate, vers, &mut |git| git.read_packages()))
@@ -61,9 +75,9 @@ pub fn install(root: Option<&str>,
                                             specify alternate source"))))
     };
 
-    let mut list = try!(read_crate_list(&root));
-    let dst = root.join("bin");
-    try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
+    let mut list = try!(read_crate_list(&paths.config));
+    let dst = &paths.bin;
+    try!(check_overwrites(dst, &pkg, &opts.filter, &list));
 
     let target_dir = config.cwd().join("target-install");
     config.set_target_dir(&target_dir);
@@ -73,7 +87,7 @@ pub fn install(root: Option<&str>,
     }));
 
     let mut t = Transaction { bins: Vec::new() };
-    try!(fs::create_dir_all(&dst));
+    try!(fs::create_dir_all(dst));
     for bin in compile.binaries.iter() {
         let dst = dst.join(bin.file_name().unwrap());
         try!(config.shell().status("Installing", dst.display()));
@@ -90,7 +104,7 @@ pub fn install(root: Option<&str>,
     }).extend(t.bins.iter().map(|t| {
         t.file_name().unwrap().to_string_lossy().into_owned()
     }));
-    try!(write_crate_list(&root, list));
+    try!(write_crate_list(&paths.config, list));
 
     t.bins.truncate(0);
 
@@ -98,7 +112,7 @@ pub fn install(root: Option<&str>,
     // able to run these commands.
     let path = env::var_os("PATH").unwrap_or(OsString::new());
     for path in env::split_paths(&path) {
-        if path == dst {
+        if &path == dst {
             return Ok(())
         }
     }
@@ -262,8 +276,8 @@ fn write_crate_list(path: &Path, listing: CrateListingV1) -> CargoResult<()> {
 }
 
 pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
-    let dst = try!(resolve_root(dst, config));
-    let list = try!(read_crate_list(&dst));
+    let paths = try!(resolve_paths(dst, config));
+    let list = try!(read_crate_list(&paths.config));
     let mut shell = config.shell();
     let out = shell.out();
     for (k, v) in list.v1.iter() {
@@ -279,8 +293,8 @@ pub fn uninstall(root: Option<&str>,
                  spec: &str,
                  bins: &[String],
                  config: &Config) -> CargoResult<()> {
-    let root = try!(resolve_root(root, config));
-    let mut metadata = try!(read_crate_list(&root));
+    let paths = try!(resolve_paths(root, config));
+    let mut metadata = try!(read_crate_list(&paths.config));
     let mut to_remove = Vec::new();
     {
         let result = try!(PackageIdSpec::query_str(spec, metadata.v1.keys()))
@@ -289,7 +303,7 @@ pub fn uninstall(root: Option<&str>,
             Entry::Occupied(e) => e,
             Entry::Vacant(..) => panic!("entry not found: {}", result),
         };
-        let dst = root.join("bin");
+        let dst = &paths.bin;
         for bin in installed.get() {
             let bin = dst.join(bin);
             if fs::metadata(&bin).is_err() {
@@ -325,7 +339,7 @@ pub fn uninstall(root: Option<&str>,
             installed.remove();
         }
     }
-    try!(write_crate_list(&root, metadata));
+    try!(write_crate_list(&paths.config, metadata));
     for bin in to_remove {
         try!(config.shell().status("Removing", bin.display()));
         try!(fs::remove_file(bin));
@@ -334,13 +348,16 @@ pub fn uninstall(root: Option<&str>,
     Ok(())
 }
 
-fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<PathBuf> {
+fn resolve_paths(flag: Option<&str>, config: &Config) -> CargoResult<Paths> {
     let config_root = try!(config.get_string("install.root"));
     Ok(flag.map(PathBuf::from).or_else(|| {
         env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from)
     }).or_else(|| {
         config_root.clone().map(|(v, _)| PathBuf::from(v))
-    }).unwrap_or_else(|| {
-        config.home().to_owned()
+    }).map(|r| Paths::from_root(r)).unwrap_or_else(|| {
+        Paths {
+            bin: config.bin_path(),
+            config: config.config_path(),
+        }
     }))
 }
