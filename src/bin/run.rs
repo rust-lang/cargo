@@ -80,7 +80,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                 bins: &bins, examples: &examples,
             }
         },
-        extra_rustdoc_args: Vec::new(),
+        target_rustdoc_args: None,
         target_rustc_args: None,
     };
 

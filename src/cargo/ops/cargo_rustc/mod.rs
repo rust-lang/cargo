@@ -395,7 +395,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
     }
 
-    if let Some(ref args) = profile.rustdoc_args {
+    if let Some(ref args) = unit.profile.rustdoc_args {
         rustdoc.args(args);
     }
 

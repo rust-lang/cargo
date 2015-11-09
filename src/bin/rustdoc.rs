@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_cwd};
 
 #[derive(RustcDecodable)]
@@ -10,13 +10,17 @@ struct Options {
     flag_jobs: Option<u32>,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
-    flag_no_deps: bool,
     flag_open: bool,
     flag_verbose: bool,
     flag_release: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
     flag_package: Option<String>,
+    flag_lib: bool,
+    flag_bin: Vec<String>,
+    flag_example: Vec<String>,
+    flag_test: Vec<String>,
+    flag_bench: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -29,8 +33,12 @@ Options:
     -h, --help               Print this message
     --open                   Opens the docs in a browser after the operation
     -p SPEC, --package SPEC  Package to document
-    --no-deps                Don't build documentation for dependencies
     -j N, --jobs N           The number of jobs to run in parallel
+    --lib                    Build only this package's library
+    --bin NAME               Build only the specified binary
+    --example NAME           Build only the specified example
+    --test NAME              Build only the specified test target
+    --bench NAME             Build only the specified benchmark target
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --no-default-features    Do not build the `default` feature
@@ -40,15 +48,12 @@ Options:
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 
-By default the documentation for the local package and all dependencies is
-built. The output is all placed in `target/doc` in rustdoc's usual format.
-
 The specified target for the current package (or package specified by SPEC if
-provided) will be documented along with all of its dependencies. The specified
-<opts>... will all be passed to the final rustdoc invocation, not any of the
-dependencies. Note that rustdoc will still unconditionally receive
-arguments such as -L, --extern, and --crate-type, and the specified <opts>...
-will simply be added to the rustdoc invocation.
+provided) will be documented with the specified <opts>... being passed to the
+final rustdoc invocation. Dependencies will not be documented as part of this
+command.  Note that rustdoc will still unconditionally receive arguments such
+as -L, --extern, and --crate-type, and the specified <opts>...  will simply be
+added to the rustdoc invocation.
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be documented. If it is not given, then the
@@ -70,19 +75,21 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
             no_default_features: options.flag_no_default_features,
-            spec: options.flag_package.as_ref().map(|s| &s[..]),
+            spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
             exec_engine: None,
-            filter: ops::CompileFilter::Everything,
             release: options.flag_release,
-            mode: ops::CompileMode::Doc {
-                deps: !options.flag_no_deps,
-            },
-            extra_rustdoc_args: options.arg_opts,
+            filter: ops::CompileFilter::new(options.flag_lib,
+                                            &options.flag_bin,
+                                            &options.flag_test,
+                                            &options.flag_example,
+                                            &options.flag_bench),
+            mode: ops::CompileMode::Doc { deps: false },
+            target_rustdoc_args: Some(&options.arg_opts),
             target_rustc_args: None,
         },
     };
 
-    try!(ops::doc(&root, &mut doc_opts).map_err(|err| CliError::from_boxed(err, 101)));
+    try!(ops::doc(&root, &mut doc_opts));
 
     Ok(None)
 }

@@ -1,6 +1,6 @@
 use std::path::MAIN_SEPARATOR as SEP;
 use support::{execs, project};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, RUNNING, DOCUMENTING};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -21,13 +21,13 @@ test!(rustdoc_simple {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} foo v0.0.1 ({url})
+{documenting} foo v0.0.1 ({url})
 {running} `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
+            running = RUNNING, documenting = DOCUMENTING, sep = SEP,
             dir = p.root().display(), url = p.url())));
 });
 
@@ -45,14 +45,14 @@ test!(rustdoc_args {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} foo v0.0.1 ({url})
+{documenting} foo v0.0.1 ({url})
 {running} `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
+            running = RUNNING, documenting = DOCUMENTING, sep = SEP,
             dir = p.root().display(), url = p.url())));
 });
 
@@ -91,11 +91,7 @@ test!(rustdoc_foo_with_bar_dependency {
                 .with_stdout(format!("\
 {compiling} bar v0.0.1 ({url})
 {running} `rustc {bar_dir}{sep}src{sep}lib.rs [..]`
-{running} `rustdoc {bar_dir}{sep}src{sep}lib.rs --crate-name bar \
-        -o {dir}{sep}target{sep}doc \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
-{compiling} foo v0.0.1 ({url})
+{documenting} foo v0.0.1 ({url})
 {running} `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
@@ -104,6 +100,7 @@ test!(rustdoc_foo_with_bar_dependency {
         --extern [..]`
 ",
             running = RUNNING, compiling = COMPILING, sep = SEP,
+            documenting = DOCUMENTING,
             dir = foo.root().display(), url = foo.url(),
             bar_dir = bar.root().display())));
 });
@@ -142,14 +139,14 @@ test!(rustdoc_only_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} bar v0.0.1 ({url})
+{documenting} bar v0.0.1 ({url})
 {running} `rustdoc {bar_dir}{sep}src{sep}lib.rs --crate-name bar \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
+            running = RUNNING, documenting = DOCUMENTING, sep = SEP,
             dir = foo.root().display(), url = foo.url(),
             bar_dir = bar.root().display())));
 });

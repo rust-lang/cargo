@@ -58,7 +58,7 @@ pub struct CompileOptions<'a> {
     /// Mode for this compile.
     pub mode: CompileMode,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
-    pub extra_rustdoc_args: Vec<String>,
+    pub target_rustdoc_args: Option<&'a [String]>,
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<&'a [String]>,
@@ -147,7 +147,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
     let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
                          ref filter, ref exec_engine,
-                         ref extra_rustdoc_args,
+                         ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
 
     let target = target.map(|s| s.to_string());
@@ -188,29 +188,44 @@ pub fn compile_pkg<'a>(root_package: &Package,
     let mut package_targets = Vec::new();
 
     let profiles = root_package.manifest().profiles();
-    match *target_rustc_args {
-        Some(args) => {
-            if to_builds.len() == 1 {
-                let targets = try!(generate_targets(to_builds[0], profiles,
-                                                    mode, filter, release));
-                if targets.len() == 1 {
-                    let (target, profile) = targets[0];
-                    let mut profile = profile.clone();
-                    profile.rustc_args = Some(args.to_vec());
-                    general_targets.push((target, profile));
-                } else {
-                    return Err(human("extra arguments to `rustc` can only be \
-                                      passed to one target, consider \
-                                      filtering\nthe package by passing e.g. \
-                                      `--lib` or `--bin NAME` to specify \
-                                      a single target"))
-
-                }
+    match (*target_rustc_args, *target_rustdoc_args) {
+        (Some(..), _) |
+        (_, Some(..)) if to_builds.len() != 1 => {
+            panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
+        }
+        (Some(args), _) => {
+            let targets = try!(generate_targets(to_builds[0], profiles,
+                                                mode, filter, release));
+            if targets.len() == 1 {
+                let (target, profile) = targets[0];
+                let mut profile = profile.clone();
+                profile.rustc_args = Some(args.to_vec());
+                general_targets.push((target, profile));
             } else {
-                panic!("`rustc` should not accept multiple `-p` flags")
+                return Err(human("extra arguments to `rustc` can only be \
+                                  passed to one target, consider \
+                                  filtering\nthe package by passing e.g. \
+                                  `--lib` or `--bin NAME` to specify \
+                                  a single target"))
             }
         }
-        None => {
+        (None, Some(args)) => {
+            let targets = try!(generate_targets(to_builds[0], profiles,
+                                                mode, filter, release));
+            if targets.len() == 1 {
+                let (target, profile) = targets[0];
+                let mut profile = profile.clone();
+                profile.rustdoc_args = Some(args.to_vec());
+                general_targets.push((target, profile));
+            } else {
+                return Err(human("extra arguments to `rustdoc` can only be \
+                                  passed to one target, consider \
+                                  filtering\nthe package by passing e.g. \
+                                  `--lib` or `--bin NAME` to specify \
+                                  a single target"))
+            }
+        }
+        (None, None) => {
             for &to_build in to_builds.iter() {
                 let targets = try!(generate_targets(to_build, profiles, mode,
                                                     filter, release));
@@ -226,24 +241,6 @@ pub fn compile_pkg<'a>(root_package: &Package,
     }
 
     let mut ret = {
-    let mut target_with_rustdoc = None;
-    if !extra_rustdoc_args.is_empty() {
-        let mut target_with_rustdoc_inner = Vec::new();
-        for &(target, profile) in &targets {
-            if profile.doc {
-                let mut profile = profile.clone();
-                profile.rustdoc_args = Some(extra_rustdoc_args.clone());
-                target_with_rustdoc_inner.push((target, profile));
-            }
-        }
-        target_with_rustdoc = Some(target_with_rustdoc_inner);
-    };
-
-    let targets = target_with_rustdoc.as_ref().map_or(targets,
-                                             |o| o.into_iter()
-                                                  .map(|&(t, ref p)| (t, p))
-                                                  .collect());
-    let ret = {
         let _p = profile::start("compiling");
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();

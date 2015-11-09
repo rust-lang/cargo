@@ -220,7 +220,7 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
         exec_engine: None,
         release: false,
         mode: ops::CompileMode::Build,
-        extra_rustdoc_args: Vec::new(),
+        target_rustdoc_args: None,
         target_rustc_args: None,
     }));
 
