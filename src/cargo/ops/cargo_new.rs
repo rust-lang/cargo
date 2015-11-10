@@ -147,6 +147,8 @@ r#"[package]
 name = "{}"
 version = "0.1.0"
 authors = [{}]
+
+[dependencies]
 "#, name, toml::Value::String(author)).as_bytes()));
 
     try!(fs::create_dir(&path.join("src")));
