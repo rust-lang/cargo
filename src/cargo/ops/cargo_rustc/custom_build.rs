@@ -1,7 +1,7 @@
 use std::collections::{HashMap, BTreeSet};
 use std::fs;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::str;
 use std::sync::{Mutex, Arc};
 
@@ -25,6 +25,8 @@ pub struct BuildOutput {
     pub cfgs: Vec<String>,
     /// Metadata to pass to the immediate dependencies
     pub metadata: Vec<(String, String)>,
+    /// Glob paths to trigger a rerun of this build script.
+    pub rerun_if_changed: Vec<String>,
 }
 
 pub type BuildMap = HashMap<(PackageId, Kind), BuildOutput>;
@@ -45,8 +47,8 @@ pub struct BuildScripts {
 /// prepare work for. If the requirement is specified as both the target and the
 /// host platforms it is assumed that the two are equal and the build script is
 /// only run once (not twice).
-pub fn prepare(cx: &mut Context, unit: &Unit)
-               -> CargoResult<(Work, Work, Freshness)> {
+pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
+                         -> CargoResult<(Work, Work, Freshness)> {
     let _p = profile::start(format!("build script prepare: {}/{}",
                                     unit.pkg, unit.target.name()));
     let key = (unit.pkg.package_id().clone(), unit.kind);
@@ -65,7 +67,8 @@ pub fn prepare(cx: &mut Context, unit: &Unit)
     Ok((work_dirty.then(dirty), work_fresh.then(fresh), freshness))
 }
 
-fn build_work(cx: &mut Context, unit: &Unit) -> CargoResult<(Work, Work)> {
+fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
+                        -> CargoResult<(Work, Work)> {
     let (script_output, build_output) = {
         (cx.layout(unit.pkg, Kind::Host).build(unit.pkg),
          cx.layout(unit.pkg, unit.kind).build_out(unit.pkg))
@@ -119,10 +122,19 @@ fn build_work(cx: &mut Context, unit: &Unit) -> CargoResult<(Work, Work)> {
     let pkg_name = unit.pkg.to_string();
     let build_state = cx.build_state.clone();
     let id = unit.pkg.package_id().clone();
+    let output_file = build_output.parent().unwrap().join("output");
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
-               build_output.clone());
+               output_file.clone());
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
+
+    // Check to see if the build script as already run, and if it has keep
+    // track of whether it has told us about some explicit dependencies
+    let prev_output = BuildOutput::parse_file(&output_file, &pkg_name).ok();
+    if let Some(ref prev) = prev_output {
+        let val = (output_file.clone(), prev.rerun_if_changed.clone());
+        cx.build_explicit_deps.insert(*unit, val);
+    }
 
     try!(fs::create_dir_all(&cx.layout(unit.pkg, Kind::Host).build(unit.pkg)));
     try!(fs::create_dir_all(&cx.layout(unit.pkg, unit.kind).build(unit.pkg)));
@@ -177,8 +189,7 @@ fn build_work(cx: &mut Context, unit: &Unit) -> CargoResult<(Work, Work)> {
                              pkg_name, e.desc);
             Human(e)
         }));
-        try!(paths::write(&build_output.parent().unwrap().join("output"),
-                          &output.stdout));
+        try!(paths::write(&output_file, &output.stdout));
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it
@@ -199,10 +210,11 @@ fn build_work(cx: &mut Context, unit: &Unit) -> CargoResult<(Work, Work)> {
     // itself to run when we actually end up just discarding what we calculated
     // above.
     let fresh = Work::new(move |_tx| {
-        let (id, pkg_name, build_state, build_output) = all;
-        let contents = try!(paths::read(&build_output.parent().unwrap()
-                                                     .join("output")));
-        let output = try!(BuildOutput::parse(&contents, &pkg_name));
+        let (id, pkg_name, build_state, output_file) = all;
+        let output = match prev_output {
+            Some(output) => output,
+            None => try!(BuildOutput::parse_file(&output_file, &pkg_name)),
+        };
         build_state.insert(id, kind, output);
         Ok(())
     });
@@ -242,6 +254,11 @@ impl BuildState {
 }
 
 impl BuildOutput {
+    pub fn parse_file(path: &Path, pkg_name: &str) -> CargoResult<BuildOutput> {
+        let contents = try!(paths::read(path));
+        BuildOutput::parse(&contents, pkg_name)
+    }
+
     // Parses the output of a script.
     // The `pkg_name` is used for error messages.
     pub fn parse(input: &str, pkg_name: &str) -> CargoResult<BuildOutput> {
@@ -249,6 +266,7 @@ impl BuildOutput {
         let mut library_links = Vec::new();
         let mut cfgs = Vec::new();
         let mut metadata = Vec::new();
+        let mut rerun_if_changed = Vec::new();
         let whence = format!("build script of `{}`", pkg_name);
 
         for line in input.lines() {
@@ -284,6 +302,7 @@ impl BuildOutput {
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
                 "rustc-cfg" => cfgs.push(value.to_string()),
+                "rerun-if-changed" => rerun_if_changed.push(value.to_string()),
                 _ => metadata.push((key.to_string(), value.to_string())),
             }
         }
@@ -293,6 +312,7 @@ impl BuildOutput {
             library_links: library_links,
             cfgs: cfgs,
             metadata: metadata,
+            rerun_if_changed: rerun_if_changed,
         })
     }
 

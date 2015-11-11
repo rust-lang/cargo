@@ -68,6 +68,12 @@ build script is for is built:
 * `rustc-cfg` indicates that the specified directive will be passed as a `--cfg`
   flag to the compiler. This is often useful for performing compile-time
   detection of various features.
+* `rerun-if-changed` is a path to a file or directory which indicates that the
+  build script should be re-run if it changes (detected by a more-recent
+  last-modified timestamp on the file). Normally build scripts are re-run if
+  any file inside the crate root changes, but this can be used to scope changes
+  to just a small set of files. If this path points to a directory the entire
+  directory will be traversed for changes.
 
 Any other element is a user-defined metadata that will be passed to
 dependencies. More information about this can be found in the [`links`][links]
