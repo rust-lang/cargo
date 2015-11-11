@@ -10,7 +10,7 @@ use tar::Archive;
 
 use support::{project, execs, cargo_dir, paths, git, path2url};
 use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING, UPDATING, DOWNLOADING};
-use support::registry as r;
+use support::registry::{self, Package};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -143,8 +143,6 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
 });
 
 test!(wildcard_deps {
-    r::init();
-
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -166,9 +164,9 @@ test!(wildcard_deps {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    r::mock_pkg("baz", "0.0.1", &[]);
-    r::mock_pkg("bar", "0.0.1", &[("baz", "0.0.1", "normal")]);
-    r::mock_pkg("buz", "0.0.1", &[("bar", "0.0.1", "normal")]);
+    Package::new("baz", "0.0.1").publish();
+    Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
+    Package::new("buz", "0.0.1").dep("bar", "0.0.1").publish();
 
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stdout(&format!("\
@@ -188,7 +186,7 @@ test!(wildcard_deps {
         downloading = DOWNLOADING,
         compiling = COMPILING,
         dir = p.url(),
-        reg = r::registry()))
+        reg = registry::registry()))
                 .with_stderr("\
 warning: some dependencies have wildcard (\"*\") version constraints. On December 11th, 2015, \
 crates.io will begin rejecting packages with wildcard dependency constraints. See \
