@@ -59,12 +59,19 @@ impl<'cfg> PathSource<'cfg> {
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
-        } else if self.id.is_path() && self.id.precise().is_some() {
+        } else if (self.id.is_path() && self.id.precise().is_some()) ||
+                  self.id.is_registry() {
             // If our source id is a path and it's listed with a precise
             // version, then it means that we're not allowed to have nested
-            // dependencies (they've been rewritten to crates.io dependencies)
-            // In this case we specifically read just one package, not a list of
-            // packages.
+            // dependencies (they've been rewritten to crates.io dependencies).
+            //
+            // If our source id is a registry dependency then crates are
+            // published one at a time so we don't recurse as well. Note that
+            // cargo by default doesn't package up nested dependencies but it
+            // may do so for custom-crafted tarballs.
+            //
+            // In these cases we specifically read just one package, not a list
+            // of packages.
             let path = self.path.join("Cargo.toml");
             let (pkg, _) = try!(ops::read_package(&path, &self.id,
                                                   self.config));
