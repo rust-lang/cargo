@@ -124,7 +124,7 @@ impl Fingerprint {
         match self.local {
             LocalFingerprint::MtimeBased(ref slot, ref path) => {
                 let mut slot = slot.0.lock().unwrap();
-                if force || slot.is_none() {
+                if force {
                     let meta = try!(fs::metadata(path).chain_error(|| {
                         internal(format!("failed to stat {:?}", path))
                     }));
@@ -316,12 +316,6 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let mtime = try!(calculate_target_mtime(&dep_info));
-
-        // if the mtime listed is not fresh, then remove the `dep_info` file to
-        // ensure that future calls to `resolve()` won't work.
-        if mtime.is_none() {
-            let _ = fs::remove_file(&dep_info);
-        }
         LocalFingerprint::MtimeBased(MtimeSlot(Mutex::new(mtime)), dep_info)
     } else {
         let fingerprint = try!(calculate_pkg_fingerprint(cx, unit.pkg));
@@ -382,14 +376,29 @@ pub fn prepare_build_cmd(cx: &mut Context, unit: &Unit)
     // is just a hash of what it was overridden with. Otherwise the fingerprint
     // is that of the entire package itself as we just consider everything as
     // input to the build script.
-    let new_fingerprint = {
+    let local = {
         let state = cx.build_state.outputs.lock().unwrap();
         match state.get(&(unit.pkg.package_id().clone(), unit.kind)) {
             Some(output) => {
-                format!("overridden build state with hash: {}",
-                        util::hash_u64(output))
+                let s = format!("overridden build state with hash: {}",
+                                util::hash_u64(output));
+                LocalFingerprint::Precalculated(s)
             }
-            None => try!(calculate_pkg_fingerprint(cx, unit.pkg)),
+            None => {
+                match cx.build_explicit_deps.get(unit) {
+                    Some(&(ref output, ref deps)) if deps.len() > 0 => {
+                        let mtime = try!(calculate_explicit_fingerprint(unit,
+                                                                        output,
+                                                                        deps));
+                        LocalFingerprint::MtimeBased(MtimeSlot(Mutex::new(mtime)),
+                                                     output.clone())
+                    }
+                    _ => {
+                        let s = try!(calculate_pkg_fingerprint(cx, unit.pkg));
+                        LocalFingerprint::Precalculated(s)
+                    }
+                }
+            }
         }
     };
     let new_fingerprint = Arc::new(Fingerprint {
@@ -398,7 +407,7 @@ pub fn prepare_build_cmd(cx: &mut Context, unit: &Unit)
         profile: 0,
         features: String::new(),
         deps: Vec::new(),
-        local: LocalFingerprint::Precalculated(new_fingerprint),
+        local: local,
         resolved: Mutex::new(None),
     });
 
@@ -546,6 +555,33 @@ fn calculate_pkg_fingerprint(cx: &Context,
         .expect("BUG: Missing package source");
 
     source.fingerprint(pkg)
+}
+
+fn calculate_explicit_fingerprint(unit: &Unit,
+                                  output: &Path,
+                                  deps: &[String])
+                                  -> CargoResult<Option<FileTime>> {
+    let meta = match fs::metadata(output) {
+        Ok(meta) => meta,
+        Err(..) => return Ok(None),
+    };
+    let mtime = FileTime::from_last_modification_time(&meta);
+
+    for path in deps.iter().map(|p| unit.pkg.root().join(p)) {
+        let meta = match fs::metadata(&path) {
+            Ok(meta) => meta,
+            Err(..) => {
+                info!("bs stale: {} -- missing", path.display());
+                return Ok(None)
+            }
+        };
+        let mtime2 = FileTime::from_last_modification_time(&meta);
+        if mtime2 > mtime {
+            info!("bs stale: {} -- {} vs {}", path.display(), mtime2, mtime);
+            return Ok(None)
+        }
+    }
+    Ok(Some(mtime))
 }
 
 fn filename(unit: &Unit) -> String {

@@ -475,6 +475,7 @@ fn scrape_target_config(config: &Config, triple: &str)
             library_links: Vec::new(),
             cfgs: Vec::new(),
             metadata: Vec::new(),
+            rerun_if_changed: Vec::new(),
         };
         let key = format!("{}.{}", key, lib_name);
         let table = try!(config.get_table(&key)).unwrap().0;
