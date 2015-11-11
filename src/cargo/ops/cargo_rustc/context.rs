@@ -31,6 +31,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub sources: &'a SourceMap<'cfg>,
     pub compilation: Compilation<'cfg>,
     pub build_state: Arc<BuildState>,
+    pub build_explicit_deps: HashMap<Unit<'a>, (PathBuf, Vec<String>)>,
     pub exec_engine: Arc<Box<ExecEngine>>,
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
@@ -92,6 +93,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profiles: profiles,
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
+            build_explicit_deps: HashMap::new(),
         })
     }
 
