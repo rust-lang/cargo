@@ -500,7 +500,9 @@ fn calculate_target_mtime(dep_info: &Path) -> CargoResult<Option<FileTime>> {
     let mut f = BufReader::new(fs_try!(File::open(dep_info)));
     // see comments in append_current_dir for where this cwd is manifested from.
     let mut cwd = Vec::new();
-    fs_try!(f.read_until(0, &mut cwd));
+    if fs_try!(f.read_until(0, &mut cwd)) == 0 {
+        return Ok(None)
+    }
     let cwd = try!(util::bytes2path(&cwd[..cwd.len()-1]));
     let line = match f.lines().next() {
         Some(Ok(line)) => line,
