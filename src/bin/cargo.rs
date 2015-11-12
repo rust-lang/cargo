@@ -290,7 +290,7 @@ fn find_command(cmd: &str) -> Option<PathBuf> {
 fn list_local_tasks_directory() -> Vec<PathBuf> {
     let mut dirs = vec![];
     if let Ok(path) = env::current_dir() {
-        dirs.push(path.join("../tasks"))
+        dirs.push(path.join("./tasks"))
     }
     dirs
 }
