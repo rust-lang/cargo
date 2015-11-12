@@ -237,6 +237,25 @@ fn list_commands() -> BTreeSet<String> {
             }
         }
     }
+    for dir in list_local_tasks_directory().iter() {
+        let entries = match fs::read_dir(dir) {
+            Ok(entries) => entries,
+            _ => continue
+        };
+        for entry in entries {
+            let entry = match entry { Ok(e) => e, Err(..) => continue };
+            let entry = entry.path();
+            let filename = match entry.file_name().and_then(|s| s.to_str()) {
+                Some(filename) => filename,
+                _ => continue
+            };
+            if filename.ends_with(env::consts::EXE_SUFFIX) &&
+               is_executable(&entry) {
+                let command = &filename[filename.len() - env::consts::EXE_SUFFIX.len()];
+                commands.insert(command.to_string());
+            }
+        }
+    }
 
     macro_rules! add_cmd{ ($cmd:ident) => ({
         commands.insert(stringify!($cmd).replace("_", "-"));
@@ -259,10 +278,21 @@ fn is_executable(path: &Path) -> bool {
 
 /// Get `Command` to run given command.
 fn find_command(cmd: &str) -> Option<PathBuf> {
-    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
+    let task = format!("{}{}", cmd, env::consts::EXE_SUFFIX);
+    let command_exe = format!("cargo-{}", task);
     let dirs = list_command_directory();
-    let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe));
+    let tasks = list_local_tasks_directory();
+    let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe))
+        .chain(tasks.iter().map(|dir| dir.join(&task)));
     command_paths.find(|path| fs::metadata(&path).is_ok())
+}
+
+fn list_local_tasks_directory() -> Vec<PathBuf> {
+    let mut dirs = vec![];
+    if let Ok(path) = env::current_dir() {
+        dirs.push(path.join("../tasks"))
+    }
+    dirs
 }
 
 /// List candidate locations where subcommands might be installed.
