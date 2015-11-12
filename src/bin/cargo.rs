@@ -251,7 +251,7 @@ fn list_commands() -> BTreeSet<String> {
             };
             if filename.ends_with(env::consts::EXE_SUFFIX) &&
                is_executable(&entry) {
-                let command = &filename[filename.len() - env::consts::EXE_SUFFIX.len()];
+                let command = &filename[..filename.len() - env::consts::EXE_SUFFIX.len()];
                 commands.insert(command.to_string());
             }
         }
