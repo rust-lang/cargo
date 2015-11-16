@@ -238,7 +238,12 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
             DoError::WithProgramUsage(ref nm, ref usgm) => {
                 if code == 1 {
                     let nflag = &nm.to_string()[15..];
-                    let nflag_end = nflag.find("\'").unwrap();
+                    let nflag_end = match nflag.find("\'") {
+                        Some(nflag_end) => nflag_end,
+                        None => {
+                            return CliError::from_error(human(e.to_string()), code)
+                        }
+                    };
                     let bad_flag = &nflag[0..nflag_end];
                     let suggest = bad_flag.trim_matches('-');
                     let msg = format!("No such option or subcommand: `{}`. \
