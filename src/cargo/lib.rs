@@ -247,7 +247,7 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                     let bad_flag = &nflag[0..nflag_end];
                     let suggest = bad_flag.trim_matches('-');
                     let msg = format!("No such option or subcommand: `{}`. \
-                                       Did you mean `{}`?\n\n {}", bad_flag, suggest, usgm);
+                                       Did you mean `{}`?\n\n{}", bad_flag, suggest, usgm);
                     return CliError::from_error(human(msg), code)
                 }
 
