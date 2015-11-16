@@ -278,7 +278,7 @@ test!(unknown_flags {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
                 execs().with_status(1)
                        .with_stderr("\
-Unknown flag: '--flag'
+No such option or subcommand: `--flag`. Did you mean `flag`?
 
 Usage:
     cargo new [..]
