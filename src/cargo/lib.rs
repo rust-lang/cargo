@@ -29,7 +29,7 @@ use std::io::prelude::*;
 use std::io;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json};
-use docopt::Docopt;
+use docopt::{Docopt, Error as DoError};
 
 use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
 use core::shell::Verbosity::{Verbose};
@@ -234,7 +234,29 @@ fn flags_from_args<'a, T>(usage: &str, args: &[String],
                                    .version(Some(version()));
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::from_error(human(e.to_string()), code)
+        match e {
+            DoError::WithProgramUsage(ref nm, ref usgm) => {
+                if code == 1 {
+                    let nflag = &nm.to_string()[15..];
+                    let nflag_end = match nflag.find("\'") {
+                        Some(nflag_end) => nflag_end,
+                        None => {
+                            return CliError::from_error(human(e.to_string()), code)
+                        }
+                    };
+                    let bad_flag = &nflag[0..nflag_end];
+                    let suggest = bad_flag.trim_matches('-');
+                    let msg = format!("No such option or subcommand: `{}`. \
+                                       Did you mean `{}`?\n\n{}", bad_flag, suggest, usgm);
+                    return CliError::from_error(human(msg), code)
+                }
+
+                CliError::from_error(human(e.to_string()), code)
+            },
+            _                                   => {
+                CliError::from_error(human(e.to_string()), code)
+            },
+        }
     })
 }
 
