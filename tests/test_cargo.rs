@@ -126,3 +126,27 @@ test!(cargo_help {
                        .arg("help").arg("help"),
                 execs().with_status(0));
 });
+
+test!(unknown_flags {
+    assert_that(process(&cargo_dir().join("cargo")).unwrap().arg("--test"),
+                execs().with_status(1)
+                       .with_stderr("\
+No such option or subcommand: `--test`. Did you mean `test`?
+
+Usage:
+    cargo <command> [<args>...]
+    cargo [options]
+"));
+});
+
+test!(unknown_options {
+    assert_that(process(&cargo_dir().join("cargo")).unwrap().arg("-t"),
+                execs().with_status(1)
+                       .with_stderr("\
+No such option or subcommand: `-t`. Did you mean `t`?
+
+Usage:
+    cargo <command> [<args>...]
+    cargo [options]
+"));
+});
