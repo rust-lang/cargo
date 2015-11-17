@@ -60,7 +60,7 @@ pub fn run(manifest_path: &Path,
             for arg in args {
                 if arg == "{}" {
                     exe_passed = true;
-                    process.arg(exe);
+                    process.arg(exe.clone());
                 }
                 else { process.arg(arg); }
             }
