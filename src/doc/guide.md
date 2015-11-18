@@ -6,18 +6,18 @@ about how to use Cargo to develop Rust projects.
 # Why Cargo exists
 
 Cargo is a tool that allows Rust projects to declare their various
-dependencies, and ensure that you'll always get a repeatable build.
+dependencies, and ensure that you’ll always get a repeatable build.
 
 To accomplish this goal, Cargo does four things:
 
 * Introduces two metadata files with various bits of project information.
-* Fetches and builds your project's dependencies.
+* Fetches and builds your project’s dependencies.
 * Invokes `rustc` or another build tool with the correct parameters to build your project.
 * Introduces conventions, making working with Rust projects easier.
 
 # Converting to Cargo
 
-You can convert an existing Rust project to use Cargo. You'll have to create a
+You can convert an existing Rust project to use Cargo. You’ll have to create a
 `Cargo.toml` file with all of your dependencies, and move your source files and
 test files into the places where Cargo expects them to be. See the [manifest
 description](manifest.html) and the [Project Layout](#project-layout) section
@@ -31,11 +31,11 @@ To start a new project with Cargo, use `cargo new`:
 $ cargo new hello_world --bin
 ```
 
-We're passing `--bin` because we're making a binary program: if we
-were making a library, we'd leave it off. If you'd like to not initialize a new
+We’re passing `--bin` because we’re making a binary program: if we
+were making a library, we’d leave it off. If you’d like to not initialize a new
 git repository as well (the default), you can also pass `--vcs none`.
 
-Let's check out what Cargo has generated for us:
+Let’s check out what Cargo has generated for us:
 
 ```shell
 $ cd hello_world
@@ -50,7 +50,7 @@ $ tree .
 
 If we had just used `cargo new hello_world` without the `--bin` flag, then the
 we would have a `lib.rs` instead of a `main.rs`. For now, however, this is all
-we need to get started. First, let's check out `Cargo.toml`:
+we need to get started. First, let’s check out `Cargo.toml`:
 
 ```toml
 [package]
@@ -62,7 +62,7 @@ authors = ["Your Name <you@example.com>"]
 This is called a **manifest**, and it contains all of the metadata that Cargo
 needs to compile your project.
 
-Here's what's in `src/main.rs`:
+Here’s what’s in `src/main.rs`:
 
 ```
 fn main() {
@@ -70,7 +70,7 @@ fn main() {
 }
 ```
 
-Cargo generated a 'hello world' for us. Let's compile it:
+Cargo generated a “hello world” for us. Let’s compile it:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build
 <span style="font-weight: bold"
@@ -93,12 +93,12 @@ class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
 
 To pass some arguments to your program, use `cargo run first_arg second_arg`.  
-If flags are being passed, use a '--' separator to tell Cargo which flags go where, like `cargo run -- --foo -b bar`.
+If flags are being passed, use a “--” separator to tell Cargo which flags go where, like `cargo run -- --foo -b bar`.
 
-You'll now notice a new file, `Cargo.lock`. It contains information about our
-dependencies. Since we don't have any yet, it's not very interesting.
+You’ll now notice a new file, `Cargo.lock`. It contains information about our
+dependencies. Since we don’t have any yet, it’s not very interesting.
 
-Once you're ready for release, you can use `cargo build --release` to compile your files with optimizations turned on:
+Once you’re ready for release, you can use `cargo build --release` to compile your files with optimizations turned on:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build --release
 <span style="font-weight: bold"
@@ -106,10 +106,10 @@ class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello
 
 # Working on an existing Cargo project
 
-If you download an existing project that uses Cargo, it's really easy
+If you download an existing project that uses Cargo, it’s really easy
 to get going.
 
-First, get the project from somewhere. In this example, we'll use `color-rs`:
+First, get the project from somewhere. In this example, we’ll use `color-rs`:
 
 ```sh
 $ git clone https://github.com/bjz/color-rs.git
@@ -130,7 +130,7 @@ To depend on a library, add it to your `Cargo.toml`.
 
 ## Adding a dependency
 
-It's quite simple to add a dependency. Simply add it to your `Cargo.toml` file:
+It’s quite simple to add a dependency. Simply add it to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -217,14 +217,14 @@ description](manifest.html#the-project-layout).
 # Cargo.toml vs Cargo.lock
 
 `Cargo.toml` and `Cargo.lock` serve two different purposes. Before we talk
-about them, here's a summary:
+about them, here’s a summary:
 
 * `Cargo.toml` is about describing your dependencies in a broad sense, and is written by you.
 * `Cargo.lock` contains exact information about your dependencies, and is maintained by Cargo.
-* If you're building a library, put `Cargo.lock` in your `.gitignore`.
-* If you're building an executable, check `Cargo.lock` into `git`.
+* If you’re building a library, put `Cargo.lock` in your `.gitignore`.
+* If you’re building an executable, check `Cargo.lock` into `git`.
 
-Let's dig in a little bit more.
+Let’s dig in a little bit more.
 
 `Cargo.toml` is a **manifest** file. In the manifest, we can specify a bunch of
 different metadata about our project. For example, we can say that we depend
@@ -240,12 +240,12 @@ authors = ["Your Name <you@example.com>"]
 color = { git = "https://github.com/bjz/color-rs.git" }
 ```
 
-This project has a single dependency, on the `color` library. We've stated in
-this case that we're relying on a particular Git repository that lives on
-GitHub. Since we haven't specified any other information, Cargo assumes that
+This project has a single dependency, on the `color` library. We’ve stated in
+this case that we’re relying on a particular Git repository that lives on
+GitHub. Since we haven’t specified any other information, Cargo assumes that
 we intend to use the latest commit on the `master` branch to build our project.
 
-Sound good? Well, there's one problem: If you build this project today, and
+Sound good? Well, there’s one problem: If you build this project today, and
 then you send a copy to me, and I build this project tomorrow, something bad
 could happen. `bjz` could update `color-rs` in the meantime, and my build would
 include this commit, while yours would not. Therefore, we would get different
@@ -258,11 +258,11 @@ We could fix this problem by putting a `rev` line in our `Cargo.toml`:
 color = { git = "https://github.com/bjz/color-rs.git", rev = "bf739419" }
 ```
 
-Now, our builds will be the same. But, there's a big drawback: now we have to
+Now, our builds will be the same. But, there’s a big drawback: now we have to
 manually think about SHA-1s every time we want to update our library. This is
 both tedious and error prone.
 
-Enter the `Cargo.lock`. Because of its existence, we don't need to manually
+Enter the `Cargo.lock`. Because of its existence, we don’t need to manually
 keep track of the exact revisions: Cargo will do it for us. When we have a
 manifest like this:
 
@@ -294,17 +294,17 @@ source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b4
 
 ```
 
-You can see that there's a lot more information here, including the exact
+You can see that there’s a lot more information here, including the exact
 revision we used to build. Now, when you give your project to someone else,
-they'll use the exact same SHA, even though we didn't specify it in our
+they’ll use the exact same SHA, even though we didn’t specify it in our
 `Cargo.toml`.
 
-When we're ready to opt in to a new version of the library, Cargo can
+When we’re ready to opt in to a new version of the library, Cargo can
 re-calculate the dependencies, and update things for us:
 
 ```shell
 $ cargo update           # updates all dependencies
-$ cargo update -p color  # updates just 'color'
+$ cargo update -p color  # updates just “color”
 ```
 
 This will write out a new `Cargo.lock` with the new version information. Note
@@ -314,10 +314,10 @@ specification.
 
 # Overriding Dependencies
 
-Sometimes, you may want to override one of Cargo's dependencies. For example,
-let's say you're working on a project, `conduit-static`, which depends on
+Sometimes, you may want to override one of Cargo’s dependencies. For example,
+let’s say you’re working on a project, `conduit-static`, which depends on
 the package `conduit`. You find a bug in `conduit`, and you want to write a
-patch. Here's what `conduit-static`'s `Cargo.toml` looks like:
+patch. Here’s what `conduit-static`’s `Cargo.toml` looks like:
 
 ```toml
 [package]
@@ -329,14 +329,14 @@ authors = ["Yehuda Katz <wycats@example.com>"]
 conduit = "0.7"
 ```
 
-You check out a local copy of `conduit`, let's say in your `~/src` directory:
+You check out a local copy of `conduit`, let’s say in your `~/src` directory:
 
 ```shell
 $ cd ~/src
 $ git clone https://github.com/conduit-rust/conduit.git
 ```
 
-You'd like to have `conduit-static` use your local version of `conduit`,
+You’d like to have `conduit-static` use your local version of `conduit`,
 rather than the one on GitHub, while you fix the bug.
 
 Cargo solves this problem by allowing you to have a local configuration
@@ -359,7 +359,7 @@ includes commonly used packages that you work on locally, and share them
 with all projects.
 
 To specify overrides, create a `.cargo/config` file in some ancestor of
-your project's directory (common places to put it is in the root of
+your project’s directory (common places to put it is in the root of
 your code directory or in your home directory).
 
 Inside that file, put this:
@@ -369,7 +369,7 @@ paths = ["/path/to/project/conduit"]
 ```
 
 This array should be filled with directories that contain a `Cargo.toml`. In
-this instance, we're just adding `conduit`, so it will be the only one that's
+this instance, we’re just adding `conduit`, so it will be the only one that’s
 overridden. This path must be an absolute path.
 
 Note: using a local configuration to override paths will only work for crates
@@ -384,7 +384,7 @@ documentation](config.html).
 Cargo can run your tests with the `cargo test` command. Cargo runs tests in two
 places: in each of your `src` files, and any tests in `tests/`. Tests
 in your `src` files should be unit tests, and tests in `tests/` should be
-integration-style tests. As such, you'll need to import your crates into
+integration-style tests. As such, you’ll need to import your crates into
 the files in `tests`.
 
 To run your tests, just run `cargo test`:
@@ -402,7 +402,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 </code></pre>
 
-Of course, if your project has tests, you'll see more output, with the
+Of course, if your project has tests, you’ll see more output, with the
 correct number of tests.
 
 You can also run a specific test by passing a filter:
@@ -421,10 +421,10 @@ documentation for more details.
 
 # Path Dependencies
 
-Over time our `hello_world` project has grown significantly in size! It's gotten
+Over time our `hello_world` project has grown significantly in size! It’s gotten
 to the point that we probably want to split out a separate crate for others to
 use. To do this Cargo supports **path dependencies** which are typically
-sub-crates that live within one repository. Let's start off by making a new
+sub-crates that live within one repository. Let’s start off by making a new
 crate inside of our `hello_world` project:
 
 ```shell
@@ -442,9 +442,9 @@ hello_utils = { path = "hello_utils" }
 ```
 
 This tells Cargo that we depend on a crate called `hello_utils` which is found
-in the `hello_utils` folder (relative to the `Cargo.toml` it's written in).
+in the `hello_utils` folder (relative to the `Cargo.toml` it’s written in).
 
-And that's it! The next `cargo build` will automatically build `hello_utils` and
+And that’s it! The next `cargo build` will automatically build `hello_utils` and
 all of its own dependencies, and others can also start using the crate as well.
 
 ## Travis-CI
