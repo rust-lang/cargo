@@ -321,7 +321,7 @@ The usage of features is subject to a few rules:
 2. With the exception of the `default` feature, all features are opt-in. To opt
    out of the default feature, use `default-features = false` and cherry-pick
    individual features.
-3. Feature groups are not allowed to cyclicly depend on one another.
+3. Feature groups are not allowed to cyclically depend on one another.
 4. Dev-dependencies cannot be optional
 5. Features groups can only reference optional dependencies
 6. When a feature is selected, Cargo will call `rustc` with
