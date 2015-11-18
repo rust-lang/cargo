@@ -1,4 +1,4 @@
-% Cargo, Rust's Package Manager
+% Cargo, Rust’s Package Manager
 
 # Installing
 
@@ -17,7 +17,7 @@ and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-window
 
 Alternatively, you can build Cargo from source.
 
-# Let's Get Started
+# Let’s Get Started
 
 To start a new project with Cargo, use `cargo new`:
 
@@ -25,10 +25,10 @@ To start a new project with Cargo, use `cargo new`:
 $ cargo new hello_world --bin
 ```
 
-We're passing `--bin` because we're making a binary program: if we
-were making a library, we'd leave it off.
+We’re passing `--bin` because we’re making a binary program: if we
+were making a library, we’d leave it off.
 
-Let's check out what Cargo has generated for us:
+Let’s check out what Cargo has generated for us:
 
 ```shell
 $ cd hello_world
@@ -41,7 +41,7 @@ $ tree .
 1 directory, 2 files
 ```
 
-This is all we need to get started. First, let's check out `Cargo.toml`:
+This is all we need to get started. First, let’s check out `Cargo.toml`:
 
 ```toml
 [package]
@@ -53,7 +53,7 @@ authors = ["Your Name <you@example.com>"]
 This is called a **manifest**, and it contains all of the metadata that Cargo
 needs to compile your project.
 
-Here's what's in `src/main.rs`:
+Here’s what’s in `src/main.rs`:
 
 ```
 fn main() {
@@ -61,7 +61,7 @@ fn main() {
 }
 ```
 
-Cargo generated a 'hello world' for us. Let's compile it:
+Cargo generated a “hello world” for us. Let’s compile it:
 
 <pre><code class="language-shell">$ cargo build
 <span style="font-weight: bold"
