@@ -1,6 +1,6 @@
 % Configuration - Cargo Documentation
 
-This document will explain how cargo's configuration system works, as well as
+This document will explain how cargo’s configuration system works, as well as
 available keys or configuration.  For configuration of a project through its
 manifest, see the [manifest format](manifest.html).
 
@@ -74,7 +74,7 @@ linker = ".."
 # Configuration keys related to the registry
 [registry]
 index = "..."   # URL of the registry index (defaults to the central repository)
-token = "..."   # Access token (found on the central repo's website)
+token = "..."   # Access token (found on the central repo’s website)
 
 [http]
 proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
