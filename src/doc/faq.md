@@ -1,6 +1,6 @@
 % Frequently Asked Questions - Cargo Documentation
 
-# Is the plan to use Github as a package repository?
+# Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use crates.io, like npm or Rubygems do with
 npmjs.org and rubygems.org.
@@ -9,10 +9,10 @@ We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
 even when people use the registry as the primary source of packages.
 
-# Why build crates.io rather than use Github as a registry?
+# Why build crates.io rather than use GitHub as a registry?
 
 We think that it’s very important to support multiple ways to download
-packages, including downloading from Github and copying packages into
+packages, including downloading from GitHub and copying packages into
 your project itself.
 
 That said, we think that crates.io offers a number of important benefits, and

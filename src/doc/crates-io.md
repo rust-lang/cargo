@@ -242,7 +242,7 @@ $ cargo owner --add github:rust-lang:owners
 $ cargo owner --remove github:rust-lang:owners
 ```
 
-The owner IDs given to these commands must be GitHub user names or Github teams.
+The owner IDs given to these commands must be GitHub user names or GitHub teams.
 
 If a user name is given to `--add`, that user becomes a “named” owner, with
 full rights to the crate. In addition to being able to publish or yank versions
@@ -261,22 +261,22 @@ The syntax for teams is currently `github:org:team` (see examples above).
 In order to add a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
-## Github Permissions
+## GitHub Permissions
 
-Team membership is not something Github provides simple public access to, and it
+Team membership is not something GitHub provides simple public access to, and it
 is likely for you to encounter the following message when working with them:
 
 > It looks like you don’t have permission to query a necessary property from
-Github to complete this request. You may need to re-authenticate on crates.io
-to grant permission to read github org memberships. Just go to
+GitHub to complete this request. You may need to re-authenticate on crates.io
+to grant permission to read GitHub org memberships. Just go to
 https://crates.io/login
 
 This is basically a catch-all for “you tried to query a team, and one of the
 five levels of membership access control denied this”. That is not an
-exaggeration. Github’s support for team access control is Enterprise Grade.
+exaggeration. GitHub’s support for team access control is Enterprise Grade.
 
 The most likely cause of this is simply that you last logged in before this
-feature was added. We originally requested *no* permissions from Github when
+feature was added. We originally requested *no* permissions from GitHub when
 authenticating users, because we didn’t actually ever use the user’s token for
 anything other than logging them in. However to query team membership on your
 behalf, we now require
@@ -292,7 +292,7 @@ If you ever change your mind, or just aren’t sure if crates.io has sufficient
 permission, you can always go to https://crates.io/login, which will prompt you
 for permission if crates.io doesn’t have all the scopes it would like to.
 
-An additional barrier to querying github is that the organization may be
+An additional barrier to querying GitHub is that the organization may be
 actively denying third party access. To check this, you can go to:
 
     https://github.com/organizations/:org/settings/oauth_application_policy
