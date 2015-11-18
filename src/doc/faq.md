@@ -1,6 +1,6 @@
 % Frequently Asked Questions - Cargo Documentation
 
-# Is the plan to use Github as a package repository?
+# Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use crates.io, like npm or Rubygems do with
 npmjs.org and rubygems.org.
@@ -9,16 +9,16 @@ We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
 even when people use the registry as the primary source of packages.
 
-# Why build crates.io rather than use Github as a registry?
+# Why build crates.io rather than use GitHub as a registry?
 
-We think that it's very important to support multiple ways to download
-packages, including downloading from Github and copying packages into
+We think that it’s very important to support multiple ways to download
+packages, including downloading from GitHub and copying packages into
 your project itself.
 
 That said, we think that crates.io offers a number of important benefits, and
 will likely become the primary way that people download packages in Cargo.
 
-For precedent, both Node.js's [npm][1] and Ruby's [bundler][2] support both a
+For precedent, both Node.js’s [npm][1] and Ruby’s [bundler][2] support both a
 central registry model as well as a Git-based model, and most packages
 are downloaded through the registry in those ecosystems, with an
 important minority of packages making use of git-based packages.
@@ -76,7 +76,7 @@ configuration in `Cargo.toml` in the future.
 
 [target-deps]: manifest.html#the-dependencies-section
 
-In the longer-term, we're looking at ways to conveniently cross-compile
+In the longer-term, we’re looking at ways to conveniently cross-compile
 projects using Cargo.
 
 # Does Cargo support environments, like `production` or `test`?
@@ -114,11 +114,11 @@ all binaries check in their `Cargo.lock`.
 
 For libraries the situation is somewhat different. A library is not only used by
 the library developers, but also any downstream consumers of the library. Users
-dependent on the library will not inspect the library's `Cargo.lock` (even if it
+dependent on the library will not inspect the library’s `Cargo.lock` (even if it
 exists). This is precisely because a library should **not** be deterministically
 recompiled for all users of the library.
 
-If a library ends up being used transitively by several dependencies, it's
+If a library ends up being used transitively by several dependencies, it’s
 likely that just a single copy of the library is desired (based on semver
 compatibility). If all libraries were to check in their `Cargo.lock`, then
 multiple copies of the library would be used, and perhaps even a version

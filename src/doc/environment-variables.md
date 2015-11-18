@@ -42,7 +42,7 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
               unique for the package in question.
 * `TARGET` - the target triple that is being compiled for. Native code should be
              compiled for this triple. Some more information about target
-             triples can be found in [clang's own documentation][clang].
+             triples can be found in [clang’s own documentation][clang].
 * `HOST` - the host triple of the rust compiler.
 * `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
                be useful to pass a `-j` parameter to a system like `make`.
