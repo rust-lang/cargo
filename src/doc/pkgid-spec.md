@@ -2,9 +2,9 @@
 
 # Package ID Specifications
 
-Subcommands of cargo frequently need to refer to a particular package within a
+Subcommands of Cargo frequently need to refer to a particular package within a
 dependency graph for various operations like updating, cleaning, building, etc.
-To solve this problem, cargo supports Package ID Specifications. A specification
+To solve this problem, Cargo supports Package ID Specifications. A specification
 is a string which is used to uniquely refer to one package within a graph of
 packages.
 
