@@ -347,10 +347,10 @@ The [`gcc` crate](https://crates.io/crates/gcc) abstracts a range of build
 script requirements for C code:
 
 * It invokes the appropriate compiler (MSVC for windows, `gcc` for MinGW, `cc`
-  for Unix platforms, etc).
+  for Unix platforms, etc.).
 * It takes the `TARGET` variable into account by passing appropriate flags to
   the compiler being used.
-* Other environment variables, such as `OPT_LEVEL`, `DEBUG`, etc, are all
+* Other environment variables, such as `OPT_LEVEL`, `DEBUG`, etc., are all
   handled automatically.
 * The stdout output and `OUT_DIR` locations are also handled by the `gcc`
   library.
