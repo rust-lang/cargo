@@ -1,6 +1,6 @@
 % Configuration - Cargo Documentation
 
-This document will explain how cargo’s configuration system works, as well as
+This document will explain how Cargo’s configuration system works, as well as
 available keys or configuration.  For configuration of a project through its
 manifest, see the [manifest format](manifest.html).
 
@@ -8,7 +8,7 @@ manifest, see the [manifest format](manifest.html).
 
 Cargo allows to have local configuration for a particular project or global
 configuration (like git). Cargo also extends this ability to a hierarchical
-strategy. If, for example, cargo were invoked in `/home/foo/bar/baz`, then the
+strategy. If, for example, Cargo were invoked in `/home/foo/bar/baz`, then the
 following configuration files would be probed for:
 
 * `/home/foo/bar/baz/.cargo/config`
@@ -59,7 +59,7 @@ vcs = "none"
 # literal string "$triple", and it will apply whenever that target triple is
 # being compiled to.
 [target]
-# For cargo builds which do not mention --target, these are the ar/linker tools
+# For Cargo builds which do not mention --target, these are the ar/linker tools
 # which are passed to rustc to use (via `-C ar=` and `-C linker=`). By default
 # these flags are not passed to the compiler.
 ar = ".."
