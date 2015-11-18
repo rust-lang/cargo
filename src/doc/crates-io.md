@@ -209,7 +209,7 @@ to manage a crate.
 
 Occasions may arise where you publish a version of a crate that actually ends up
 being broken for one reason or another (syntax error, forgot to include a file,
-etc). For situations such as this, Cargo supports a “yank” of a version of a
+etc.). For situations such as this, Cargo supports a “yank” of a version of a
 crate.
 
 ```notrust
