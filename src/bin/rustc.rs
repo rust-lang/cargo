@@ -67,7 +67,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
+                                              config.cwd()));
 
     let opts = CompileOptions {
         config: config,
