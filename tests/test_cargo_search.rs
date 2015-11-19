@@ -35,7 +35,7 @@ fn setup() {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut b = process(&cargo_dir().join("cargo")).unwrap();
+    let mut b = process(&cargo_dir().join("cargo"));
     b.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
     b
 }

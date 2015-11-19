@@ -2,7 +2,7 @@ use std::env;
 
 use cargo::ops::CompileOptions;
 use cargo::ops;
-use cargo::util::important_paths::{find_root_manifest_for_cwd};
+use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
@@ -67,7 +67,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
-    let root = try!(find_root_manifest_for_cwd(options.flag_manifest_path));
+    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
+                                              config.cwd()));
 
     let opts = CompileOptions {
         config: config,

@@ -74,7 +74,7 @@ test!(simple_cross {
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(&target, "foo")).unwrap(),
+    assert_that(process(&p.target_bin(&target, "foo")),
                 execs().with_status(0));
 });
 
@@ -110,7 +110,7 @@ test!(simple_deps {
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(&target, "foo")).unwrap(),
+    assert_that(process(&p.target_bin(&target, "foo")),
                 execs().with_status(0));
 });
 
@@ -187,7 +187,7 @@ test!(plugin_deps {
                 execs().with_status(0));
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&foo.target_bin(&target, "foo")).unwrap(),
+    assert_that(process(&foo.target_bin(&target, "foo")),
                 execs().with_status(0));
 });
 
@@ -272,7 +272,7 @@ test!(plugin_to_the_max {
                 execs().with_status(0));
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&foo.target_bin(&target, "foo")).unwrap(),
+    assert_that(process(&foo.target_bin(&target, "foo")),
                 execs().with_status(0));
 });
 

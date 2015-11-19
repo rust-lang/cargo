@@ -31,7 +31,7 @@ test!(cargo_test_simple {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
@@ -188,7 +188,7 @@ test!(cargo_test_failing_test {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),

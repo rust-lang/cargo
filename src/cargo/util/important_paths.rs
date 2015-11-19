@@ -1,7 +1,6 @@
-use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use util::{CargoResult, human, ChainError};
+use util::{CargoResult, human};
 
 /// Iteratively search for `file` in `pwd` and its parents, returning
 /// the path of the directory.
@@ -35,11 +34,8 @@ pub fn find_project_manifest(pwd: &Path, file: &str) -> CargoResult<PathBuf> {
 }
 
 /// Find the root Cargo.toml
-pub fn find_root_manifest_for_cwd(manifest_path: Option<String>)
+pub fn find_root_manifest_for_wd(manifest_path: Option<String>, cwd: &Path)
                                   -> CargoResult<PathBuf> {
-    let cwd = try!(env::current_dir().chain_error(|| {
-        human("Couldn't determine the current working directory")
-    }));
     match manifest_path {
         Some(path) => {
             let absolute_path = cwd.join(&path);
