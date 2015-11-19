@@ -1,4 +1,4 @@
-.TH CARGO "1" "September 2014" "cargo 0.0.1-pre" "User Commands"
+.TH CARGO "1" "November 2015" "cargo 0.7.0" "User Commands"
 .SH NAME
 cargo \- The Rust package manager
 .SH SYNOPSIS
@@ -44,6 +44,9 @@ Remove the target directory with build output
 \fBcargo doc\fR
 Build this project's and its dependencies' documentation
 .TP
+\fBcargo install\fR
+Install a Rust binary
+.TP
 \fBcargo new\fR
 Create a new cargo project
 .TP
@@ -61,6 +64,9 @@ Update dependencies in Cargo.lock
 .TP
 \fBcargo package\fR
 Generate a source tarball for the current package
+.TP
+\fBcargo uninstall\fR
+Remove a Rust binary
 .TP
 \fBcargo version\fR
 Print cargo's version and exit
