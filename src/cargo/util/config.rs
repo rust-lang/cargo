@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
+use core::shell::{Verbosity, ColorConfig};
 use core::{MultiShell, Package};
 use util::{CargoResult, ChainError, Rustc, internal, human, paths};
 
@@ -31,12 +32,11 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(shell: MultiShell, cwd: PathBuf) -> CargoResult<Config> {
+    pub fn new(shell: MultiShell,
+               cwd: PathBuf,
+               homedir: PathBuf) -> CargoResult<Config> {
         let mut cfg = Config {
-            home_path: try!(homedir(cwd.as_path()).chain_error(|| {
-                human("Cargo couldn't find your home directory. \
-                      This probably means that $HOME was not set.")
-            })),
+            home_path: homedir,
             shell: RefCell::new(shell),
             rustc_info: Rustc::blank(),
             cwd: cwd,
@@ -52,6 +52,18 @@ impl Config {
         try!(cfg.scrape_target_dir_config());
 
         Ok(cfg)
+    }
+
+    pub fn default() -> CargoResult<Config> {
+        let shell = ::shell(Verbosity::Verbose, ColorConfig::Auto);
+        let cwd = try!(env::current_dir().chain_error(|| {
+            human("couldn't get the current directory of the process")
+        }));
+        let homedir = try!(homedir(&cwd).chain_error(|| {
+            human("Cargo couldn't find your home directory. \
+                  This probably means that $HOME was not set.")
+        }));
+        Config::new(shell, cwd, homedir)
     }
 
     pub fn home(&self) -> &Path { &self.home_path }
@@ -227,7 +239,7 @@ impl Config {
     }
 
     fn scrape_rustc_version(&mut self) -> CargoResult<()> {
-        self.rustc_info = try!(Rustc::new(&self.rustc, self.cwd()));
+        self.rustc_info = try!(Rustc::new(&self.rustc));
         Ok(())
     }
 
