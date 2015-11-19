@@ -17,6 +17,7 @@ Remove a Rust binary
 
 Usage:
     cargo uninstall [options] <spec>
+    cargo uninstall (-h | --help)
 
 Options:
     -h, --help                Print this message
