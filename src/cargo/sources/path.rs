@@ -151,7 +151,7 @@ impl<'cfg> PathSource<'cfg> {
         // the untracked files are often part of a build and may become relevant
         // as part of a future commit.
         let index_files = index.iter().map(|entry| {
-            use libgit2_sys::git_filemode_t::GIT_FILEMODE_COMMIT;
+            use libgit2_sys::GIT_FILEMODE_COMMIT;
             let is_dir = entry.mode == GIT_FILEMODE_COMMIT as u32;
             (join(&root, &entry.path), Some(is_dir))
         });
