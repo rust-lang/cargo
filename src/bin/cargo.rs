@@ -14,7 +14,8 @@ use std::process::Command;
 
 use cargo::{execute_main_without_stdin, handle_error, shell};
 use cargo::core::MultiShell;
-use cargo::util::{CliError, CliResult, lev_distance, Config};
+use cargo::util::{CliError, CliResult, lev_distance, Config, CargoLock, LockKind, human,
+                  ChainError};
 
 #[derive(RustcDecodable)]
 struct Flags {
@@ -97,6 +98,12 @@ macro_rules! each_subcommand{ ($mac:ident) => ({
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
+    let mut fl = CargoLock::new(config.home().join(".global-lock"));
+
+    try!(fl.lock(LockKind::Blocking).chain_error(|| {
+        human("Failed to obtain global cargo lock")
+    }));
+
     try!(config.shell().set_verbosity(flags.flag_verbose, flags.flag_quiet));
     try!(config.shell().set_color_config(flags.flag_color.as_ref().map(|s| &s[..])));
 

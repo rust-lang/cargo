@@ -12,6 +12,7 @@ use curl;
 use git2;
 use toml;
 use url;
+use file_lock;
 
 pub type CargoResult<T> = Result<T, Box<CargoError>>;
 
@@ -308,10 +309,16 @@ from_error! {
     url::ParseError,
     toml::DecodeError,
     ffi::NulError,
+    file_lock::filename::Error,
+    file_lock::filename::ParseError,
 }
 
 impl<E: CargoError> From<Human<E>> for Box<CargoError> {
     fn from(t: Human<E>) -> Box<CargoError> { Box::new(t) }
+}
+
+impl CargoError for file_lock::filename::Error {
+    fn is_human(&self) -> bool { true }
 }
 
 impl CargoError for semver::ReqParseError {}
@@ -327,6 +334,7 @@ impl CargoError for toml::Error {}
 impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
 impl CargoError for ffi::NulError {}
+impl CargoError for file_lock::filename::ParseError {}
 
 // =============================================================================
 // Construction helpers
