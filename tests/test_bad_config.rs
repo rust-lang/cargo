@@ -236,7 +236,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  [7] 'file:///' is not a valid local file URI
+  [[..]] 'file:///' is not a valid local file URI
 "));
 });
 
