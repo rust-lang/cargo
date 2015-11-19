@@ -81,7 +81,7 @@ test!(color_explicitly_enabled {
 
 test!(no_term {
     // Verify that shell creation is successful when $TERM does not exist.
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                     .env_remove("TERM"),
                 execs().with_stderr(""));
 });

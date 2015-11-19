@@ -563,7 +563,7 @@ test!(dev_dependency_not_used {
 test!(login_with_no_cargo_dir {
     let home = paths::home().join("new-home");
     fs::create_dir(&home).unwrap();
-    assert_that(process(&cargo_dir().join("cargo")).unwrap()
+    assert_that(process(&cargo_dir().join("cargo"))
                        .arg("login").arg("foo").arg("-v")
                        .cwd(&paths::root())
                        .env("HOME", &home),

@@ -13,13 +13,13 @@ fn setup() {
 }
 
 fn my_process(s: &str) -> ProcessBuilder {
-    let mut p = process(s).unwrap();
+    let mut p = process(s);
     p.cwd(&paths::root()).env("HOME", &paths::home());
     return p;
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = process(&cargo_dir().join("cargo")).unwrap();
+    let mut p = process(&cargo_dir().join("cargo"));
     p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
     return p;
 }
