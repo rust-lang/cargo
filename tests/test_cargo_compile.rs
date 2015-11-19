@@ -21,7 +21,7 @@ test!(cargo_compile_simple {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("i am foo\n"));
 });
 
@@ -327,7 +327,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process(&p.bin("foo")).unwrap(),
+      process(&p.bin("foo")),
       execs().with_stdout("test passed\n"));
 });
 
@@ -385,7 +385,7 @@ test!(cargo_compile_with_nested_deps_inferred {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process(&p.bin("foo")).unwrap(),
+      process(&p.bin("foo")),
       execs().with_stdout("test passed\n"));
 });
 
@@ -443,7 +443,7 @@ test!(cargo_compile_with_nested_deps_correct_bin {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process(&p.bin("foo")).unwrap(),
+      process(&p.bin("foo")),
       execs().with_stdout("test passed\n"));
 });
 
@@ -510,7 +510,7 @@ test!(cargo_compile_with_nested_deps_shorthand {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-      process(&p.bin("foo")).unwrap(),
+      process(&p.bin("foo")),
       execs().with_stdout("test passed\n"));
 });
 
@@ -576,7 +576,7 @@ test!(cargo_compile_with_nested_deps_longhand {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("test passed\n"));
 });
 
@@ -717,7 +717,7 @@ test!(crate_version_env_vars {
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 
     println!("bin");
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
                                             p.root().display())));
 
@@ -862,7 +862,7 @@ test!(ignore_broken_symlinks {
     assert_that(p.cargo_process("build"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("i am foo\n"));
 });
 
@@ -1067,9 +1067,9 @@ test!(explicit_examples {
         "#);
 
     assert_that(p.cargo_process("test").arg("-v"), execs().with_status(0));
-    assert_that(process(&p.bin("examples/hello")).unwrap(),
+    assert_that(process(&p.bin("examples/hello")),
                         execs().with_stdout("Hello, World!\n"));
-    assert_that(process(&p.bin("examples/goodbye")).unwrap(),
+    assert_that(process(&p.bin("examples/goodbye")),
                         execs().with_stdout("Goodbye, World!\n"));
 });
 
@@ -1100,9 +1100,9 @@ test!(implicit_examples {
         "#);
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
-    assert_that(process(&p.bin("examples/hello")).unwrap(),
+    assert_that(process(&p.bin("examples/hello")),
                 execs().with_stdout("Hello, World!\n"));
-    assert_that(process(&p.bin("examples/goodbye")).unwrap(),
+    assert_that(process(&p.bin("examples/goodbye")),
                 execs().with_stdout("Goodbye, World!\n"));
 });
 
@@ -1120,7 +1120,7 @@ test!(standard_build_no_ndebug {
         "#);
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("slow\n"));
 });
 
@@ -1139,7 +1139,7 @@ test!(release_build_ndebug {
 
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
-    assert_that(process(&p.release_bin("foo")).unwrap(),
+    assert_that(process(&p.release_bin("foo")),
                 execs().with_stdout("fast\n"));
 });
 
@@ -1156,7 +1156,7 @@ test!(inferred_main_bin {
         "#);
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(process(&p.bin("foo")).unwrap(), execs().with_status(0));
+    assert_that(process(&p.bin("foo")), execs().with_status(0));
 });
 
 test!(deletion_causes_failure {
@@ -1206,7 +1206,7 @@ test!(bad_cargo_toml_in_target_dir {
         .file("target/Cargo.toml", "bad-toml");
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-    assert_that(process(&p.bin("foo")).unwrap(), execs().with_status(0));
+    assert_that(process(&p.bin("foo")), execs().with_status(0));
 });
 
 test!(lib_with_standard_name {
@@ -1597,7 +1597,7 @@ test!(cargo_platform_specific_dependency_wrong_platform {
     p.cargo_process("build").exec_with_output().unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs());
 
     let loc = p.root().join("Cargo.lock");
@@ -1986,7 +1986,7 @@ test!(build_multiple_packages {
                 execs());
 
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(process(&p.bin("foo")).unwrap(),
+    assert_that(process(&p.bin("foo")),
                 execs().with_stdout("i am foo\n"));
 
     let d1_path = &p.build_dir().join("debug").join("deps")
@@ -1995,10 +1995,10 @@ test!(build_multiple_packages {
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
     assert_that(d1_path, existing_file());
-    assert_that(process(d1_path).unwrap(), execs().with_stdout("d1"));
+    assert_that(process(d1_path), execs().with_stdout("d1"));
 
     assert_that(d2_path, existing_file());
-    assert_that(process(d2_path).unwrap(),
+    assert_that(process(d2_path),
                 execs().with_stdout("d2"));
 });
 

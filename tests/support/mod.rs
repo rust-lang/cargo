@@ -12,8 +12,9 @@ use std::usize;
 
 use url::Url;
 use hamcrest as ham;
-use cargo::util::{process,ProcessBuilder};
+use cargo::util::ProcessBuilder;
 use cargo::util::ProcessError;
+use cargo::util::process;
 
 use support::paths::CargoPathExt;
 
@@ -134,7 +135,7 @@ impl ProjectBuilder {
     }
 
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
-        let mut p = process(program).unwrap();
+        let mut p = process(program);
         p.cwd(&self.root())
          .env("HOME", &paths::home())
          .env_remove("CARGO_HOME")  // make sure we don't pick up an outer one
@@ -548,6 +549,10 @@ pub fn basic_lib_manifest(name: &str) -> String {
 
 pub fn path2url(p: PathBuf) -> Url {
     Url::from_file_path(&*p).ok().unwrap()
+}
+
+pub fn cwd() -> PathBuf {
+    env::current_dir().unwrap()
 }
 
 pub static RUNNING:     &'static str = "     Running";
