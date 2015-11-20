@@ -166,10 +166,10 @@ test!(bad_cksum {
 unable to get packages from source
 
 Caused by:
-  Failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
+  failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
 
 Caused by:
-  Failed to verify the checksum of `bad-cksum v0.0.1 (registry file://[..])`
+  failed to verify the checksum of `bad-cksum v0.0.1 (registry file://[..])`
 "));
 });
 

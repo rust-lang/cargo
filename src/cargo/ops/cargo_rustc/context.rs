@@ -9,7 +9,6 @@ use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
 use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile};
-use util::human;
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
@@ -196,8 +195,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             (&self.target_triple, &self.target_dylib)
         };
         match *pair {
-            None => return Err(human(format!("dylib outputs are not supported \
-                                              for {}", triple))),
+            None => bail!("dylib outputs are not supported for {}", triple),
             Some((ref s1, ref s2)) => Ok((s1, s2)),
         }
     }

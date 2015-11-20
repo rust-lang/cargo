@@ -47,8 +47,7 @@ struct CargoNewConfig {
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
     if fs::metadata(&path).is_ok() {
-        return Err(human(format!("Destination `{}` already exists",
-                                 path.display())))
+        bail!("destination `{}` already exists", path.display())
     }
     let name = match opts.name {
         Some(name) => name,
@@ -74,8 +73,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
-        return Err(human(&format!("Invalid character `{}` in crate name: `{}`",
-                                  c, name)));
+        bail!("Invalid character `{}` in crate name: `{}`", c, name)
     }
     mk(config, &path, name, &opts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
@@ -181,8 +179,8 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
         Some(name) => name,
         None => {
             let username_var = if cfg!(windows) {"USERNAME"} else {"USER"};
-            return Err(human(format!("could not determine the current \
-                                      user, please set ${}", username_var)))
+            bail!("could not determine the current user, please set ${}",
+                  username_var)
         }
     };
     let email = git_config.and_then(|g| g.get_string("user.email").ok())

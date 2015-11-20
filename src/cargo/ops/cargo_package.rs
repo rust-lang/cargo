@@ -136,8 +136,7 @@ fn tar(pkg: &Package, src: &PathSource, config: &Config,
        dst: &Path) -> CargoResult<()> {
 
     if fs::metadata(&dst).is_ok() {
-        return Err(human(format!("destination already exists: {}",
-                                 dst.display())))
+        bail!("destination already exists: {}", dst.display())
     }
 
     try!(fs::create_dir_all(dst.parent().unwrap()));
@@ -241,15 +240,14 @@ fn check_filename(file: &Path) -> CargoResult<()> {
     let name = match name.to_str() {
         Some(name) => name,
         None => {
-            return Err(human(format!("path does not have a unicode filename \
-                                      which may not unpack on all platforms: {}",
-                                     file.display())))
+            bail!("path does not have a unicode filename which may not unpack \
+                   on all platforms: {}", file.display())
         }
     };
     let bad_chars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
     for c in bad_chars.iter().filter(|c| name.contains(**c)) {
-        return Err(human(format!("cannot package a filename with a special \
-                                  character `{}`: {}", c, file.display())))
+        bail!("cannot package a filename with a special character `{}`: {}",
+              c, file.display())
     }
     Ok(())
 }

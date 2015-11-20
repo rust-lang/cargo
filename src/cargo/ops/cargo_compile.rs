@@ -33,7 +33,7 @@ use core::{Profile, TargetKind, Profiles};
 use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
 use util::config::{ConfigValue, Config};
-use util::{CargoResult, internal, human, ChainError, profile};
+use util::{CargoResult, internal, ChainError, profile};
 
 /// Contains information about how a package should be compiled.
 pub struct CompileOptions<'a> {
@@ -156,7 +156,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     if jobs == Some(0) {
-        return Err(human("jobs must be at least 1"))
+        bail!("jobs must be at least 1")
     }
 
     let (packages, resolve_with_overrides, sources) = {
@@ -177,8 +177,8 @@ pub fn compile_pkg<'a>(root_package: &Package,
     };
 
     if spec.len() > 0 && invalid_spec.len() > 0 {
-        return Err(human(format!("could not find package matching spec `{}`",
-                                 invalid_spec.connect(", "))));
+        bail!("could not find package matching spec `{}`",
+              invalid_spec.connect(", "))
     }
 
     let to_builds = packages.iter().filter(|p| pkgids.contains(&p.package_id()))
@@ -202,11 +202,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
                 profile.rustc_args = Some(args.to_vec());
                 general_targets.push((target, profile));
             } else {
-                return Err(human("extra arguments to `rustc` can only be \
-                                  passed to one target, consider \
-                                  filtering\nthe package by passing e.g. \
-                                  `--lib` or `--bin NAME` to specify \
-                                  a single target"))
+                bail!("extra arguments to `rustc` can only be passed to one \
+                       target, consider filtering\nthe package by passing \
+                       e.g. `--lib` or `--bin NAME` to specify a single target")
             }
         }
         (None, Some(args)) => {
@@ -218,11 +216,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
                 profile.rustdoc_args = Some(args.to_vec());
                 general_targets.push((target, profile));
             } else {
-                return Err(human("extra arguments to `rustdoc` can only be \
-                                  passed to one target, consider \
-                                  filtering\nthe package by passing e.g. \
-                                  `--lib` or `--bin NAME` to specify \
-                                  a single target"))
+                bail!("extra arguments to `rustdoc` can only be passed to one \
+                       target, consider filtering\nthe package by passing e.g. \
+                       `--lib` or `--bin NAME` to specify a single target")
             }
         }
         (None, None) => {
@@ -357,7 +353,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                 if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
                     targets.push((t, profile));
                 } else {
-                    return Err(human(format!("no library targets found")))
+                    bail!("no library targets found")
                 }
             }
 
@@ -369,9 +365,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                         });
                         let t = match target {
                             Some(t) => t,
-                            None => return Err(human(format!("no {} target \
-                                                              named `{}`",
-                                                             desc, name))),
+                            None => bail!("no {} target named `{}`", desc, name),
                         };
                         debug!("found {} `{}`", desc, name);
                         targets.push((t, profile));
@@ -429,11 +423,9 @@ fn scrape_build_config(config: &Config,
     let cfg_jobs = match try!(config.get_i64("build.jobs")) {
         Some((n, p)) => {
             if n <= 0 {
-                return Err(human(format!("build.jobs must be positive, \
-                                          but found {} in {:?}", n, p)));
+                bail!("build.jobs must be positive, but found {} in {:?}", n, p)
             } else if n >= u32::max_value() as i64 {
-                return Err(human(format!("build.jobs is too large: \
-                                          found {} in {:?}", n, p)));
+                bail!("build.jobs is too large: found {} in {:?}", n, p)
             } else {
                 Some(n as u32)
             }

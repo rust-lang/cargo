@@ -6,8 +6,8 @@ use core::registry::PackageRegistry;
 use core::{Resolve, SourceId, Package};
 use core::resolver::Method;
 use ops;
-use util::config::{Config};
-use util::{CargoResult, human};
+use util::config::Config;
+use util::CargoResult;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
@@ -33,12 +33,11 @@ pub fn update_lockfile(manifest_path: &Path,
 
     let previous_resolve = match try!(ops::load_pkg_lockfile(&package)) {
         Some(resolve) => resolve,
-        None => return Err(human("A Cargo.lock must exist before it is updated"))
+        None => bail!("a Cargo.lock must exist before it is updated")
     };
 
     if opts.aggressive && opts.precise.is_some() {
-        return Err(human("cannot specify both aggressive and precise \
-                          simultaneously"))
+        bail!("cannot specify both aggressive and precise simultaneously")
     }
 
     let mut registry = PackageRegistry::new(opts.config);

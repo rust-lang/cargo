@@ -48,7 +48,7 @@ test!(cargo_compile_with_invalid_manifest {
 failed to parse manifest at `[..]`
 
 Caused by:
-  No `package` or `project` section found.
+  no `package` or `project` section found.
 "))
 });
 
@@ -211,7 +211,7 @@ test!(cargo_compile_without_manifest {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr("\
-Could not find `Cargo.toml` in `[..]` or any parent directory
+could not find `Cargo.toml` in `[..]` or any parent directory
 "));
 });
 
