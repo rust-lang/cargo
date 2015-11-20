@@ -38,6 +38,12 @@ use term::color::{BLACK, RED};
 
 pub use util::{CargoError, CliError, CliResult, human, Config, ChainError};
 
+macro_rules! bail {
+    ($($fmt:tt)*) => (
+        return Err(::util::human(&format_args!($($fmt)*)))
+    )
+}
+
 pub mod core;
 pub mod ops;
 pub mod sources;

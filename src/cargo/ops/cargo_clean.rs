@@ -32,7 +32,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     let source_id = root.package_id().source_id();
     let resolve = match try!(ops::load_lockfile(&lockfile, source_id)) {
         Some(resolve) => resolve,
-        None => return Err(human("A Cargo.lock must exist before cleaning"))
+        None => bail!("a Cargo.lock must exist before cleaning")
     };
 
     // Create a compilation context to have access to information like target

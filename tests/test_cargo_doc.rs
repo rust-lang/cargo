@@ -206,7 +206,7 @@ test!(doc_lib_bin_same_name {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
                        .with_stderr("\
-Cannot document a package where a library and a binary have the same name. \
+cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
 "));
 });

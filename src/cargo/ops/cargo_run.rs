@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use ops::{self, ExecEngine, CompileFilter};
-use util::{self, CargoResult, human, process, ProcessError};
+use util::{self, CargoResult, process, ProcessError};
 use core::Package;
 
 pub fn run(manifest_path: &Path,
@@ -19,8 +19,7 @@ pub fn run(manifest_path: &Path,
     if bins.next().is_none() {
         match options.filter {
             CompileFilter::Everything => {
-                return Err(human("a bin target must be available for \
-                                  `cargo run`"))
+                bail!("a bin target must be available for `cargo run`")
             }
             CompileFilter::Only { .. } => {
                 // this will be verified in cargo_compile
@@ -30,13 +29,13 @@ pub fn run(manifest_path: &Path,
     if bins.next().is_some() {
         match options.filter {
             CompileFilter::Everything => {
-                return Err(human("`cargo run` requires that a project only have \
-                                  one executable; use the `--bin` option to \
-                                  specify which one to run"))
+                bail!("`cargo run` requires that a project only have one \
+                       executable; use the `--bin` option to specify which one \
+                       to run")
             }
             CompileFilter::Only { .. } => {
-                return Err(human("`cargo run` can run at most one executable, \
-                                  but multiple were specified"))
+                bail!("`cargo run` can run at most one executable, but \
+                       multiple were specified")
             }
         }
     }

@@ -169,7 +169,7 @@ test!(rustdoc_same_name_err {
                  .arg("--").arg("--no-defaults"),
                 execs()
                 .with_status(101)
-                .with_stderr("Cannot document a package where a library and a \
+                .with_stderr("cannot document a package where a library and a \
                               binary have the same name. Consider renaming one \
                               or marking the target as `doc = false`"));
 });
