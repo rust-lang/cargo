@@ -140,10 +140,9 @@ impl Config {
                     let idx = key.split('.').take(i)
                                  .fold(0, |n, s| n + s.len()) + i - 1;
                     let key_so_far = &key[..idx];
-                    return Err(human(format!("expected table for configuration \
-                                              key `{}`, but found {} in {}",
-                                             key_so_far, val.desc(),
-                                             path.display())));
+                    bail!("expected table for configuration key `{}`, \
+                           but found {} in {}",
+                          key_so_far, val.desc(), path.display())
                 }
             }
         }
@@ -343,8 +342,8 @@ impl ConfigValue {
                     Ok((key, value))
                 }).collect::<CargoResult<_>>()), path.to_path_buf()))
             }
-            v => return Err(human(format!("found TOML configuration value of \
-                                           unknown type `{}`", v.type_str())))
+            v => bail!("found TOML configuration value of unknown type `{}`",
+                       v.type_str()),
         }
     }
 

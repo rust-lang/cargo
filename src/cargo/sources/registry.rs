@@ -314,7 +314,7 @@ impl<'cfg> RegistrySource<'cfg> {
         // TODO: don't download into memory (curl-rust doesn't expose it)
         let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
         if resp.get_code() != 200 && resp.get_code() != 0 {
-            return Err(internal(format!("Failed to get 200 response from {}\n{}",
+            return Err(internal(format!("failed to get 200 response from {}\n{}",
                                         url, resp)))
         }
 
@@ -325,8 +325,7 @@ impl<'cfg> RegistrySource<'cfg> {
             state.finish()
         };
         if actual.to_hex() != expected_hash {
-            return Err(human(format!("Failed to verify the checksum of `{}`",
-                                     pkg)))
+            bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         try!(paths::write(&dst, resp.get_body()));
@@ -390,7 +389,7 @@ impl<'cfg> RegistrySource<'cfg> {
                               .map(|l| self.parse_registry_package(l))
                               .collect();
                 try!(ret.chain_error(|| {
-                    internal(format!("Failed to parse registry's information \
+                    internal(format!("failed to parse registry's information \
                                       for: {}", name))
                 }))
             }
@@ -544,11 +543,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             url.path_mut().unwrap().push(package.version().to_string());
             url.path_mut().unwrap().push("download".to_string());
             let path = try!(self.download_package(package, &url).chain_error(|| {
-                internal(format!("Failed to download package `{}` from {}",
+                internal(format!("failed to download package `{}` from {}",
                                  package, url))
             }));
             let path = try!(self.unpack_package(package, path).chain_error(|| {
-                internal(format!("Failed to unpack package `{}`", package))
+                internal(format!("failed to unpack package `{}`", package))
             }));
             let mut src = PathSource::new(&path, &self.source_id, self.config);
             try!(src.update());

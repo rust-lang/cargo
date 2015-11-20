@@ -175,8 +175,7 @@ fn activate(cx: &mut Context,
     // packages we're visiting and bail if we hit a dupe.
     let id = parent.package_id().clone();
     if !cx.visited.insert(id.clone()) {
-        return Err(human(format!("cyclic package dependency: package `{}` \
-                                  depends on itself", id)))
+        bail!("cyclic package dependency: package `{}` depends on itself", id)
     }
 
     // If we're already activated, then that was easy!
@@ -557,9 +556,8 @@ fn build_features(s: &Summary, method: &Method)
             None => {
                 let feat = feat_or_package;
                 if !visited.insert(feat.to_string()) {
-                    return Err(human(format!("Cyclic feature dependency: \
-                                              feature `{}` depends on itself",
-                                              feat)))
+                    bail!("Cyclic feature dependency: feature `{}` depends \
+                           on itself", feat)
                 }
                 used.insert(feat.to_string());
                 match s.features().get(feat) {
@@ -677,10 +675,8 @@ impl Context {
             for feature in dep.features().iter() {
                 base.push(feature.clone());
                 if feature.contains("/") {
-                    return Err(human(format!("features in dependencies \
-                                              cannot enable features in \
-                                              other dependencies: `{}`",
-                                             feature)));
+                    bail!("features in dependencies cannot enable features in \
+                           other dependencies: `{}`", feature)
                 }
             }
             ret.push((dep.clone(), base));
@@ -695,9 +691,8 @@ impl Context {
                                       .collect::<Vec<&str>>();
             if unknown.len() > 0 {
                 let features = unknown.connect(", ");
-                return Err(human(format!("Package `{}` does not have these \
-                                          features: `{}`", parent.package_id(),
-                                         features)))
+                bail!("Package `{}` does not have these features: `{}`",
+                      parent.package_id(), features)
             }
         }
 

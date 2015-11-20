@@ -269,8 +269,7 @@ impl BuildOutput {
             let (key, value) = match (key, value) {
                 (Some(a), Some(b)) => (a, b.trim_right()),
                 // line started with `cargo:` but didn't match `key=value`
-                _ => return Err(human(format!("Wrong output in {}: `{}`",
-                                              whence, line)))
+                _ => bail!("Wrong output in {}: `{}`", whence, line),
             };
 
             match key {
@@ -308,22 +307,20 @@ impl BuildOutput {
                 None => break
             };
             if flag != "-l" && flag != "-L" {
-                return Err(human(format!("Only `-l` and `-L` flags are allowed \
-                                         in {}: `{}`",
-                                         whence, value)))
+                bail!("Only `-l` and `-L` flags are allowed in {}: `{}`",
+                      whence, value)
             }
             let value = match flags_iter.next() {
                 Some(v) => v,
-                None => return Err(human(format!("Flag in rustc-flags has no \
-                                                  value in {}: `{}`",
-                                                  whence, value)))
+                None => bail!("Flag in rustc-flags has no value in {}: `{}`",
+                              whence, value)
             };
             match flag {
                 "-l" => library_links.push(value.to_string()),
                 "-L" => library_paths.push(PathBuf::from(value)),
 
                 // was already checked above
-                _ => return Err(human("only -l and -L flags are allowed"))
+                _ => bail!("only -l and -L flags are allowed")
             };
         }
         Ok((library_paths, library_links))

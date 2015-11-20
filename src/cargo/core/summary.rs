@@ -4,7 +4,7 @@ use std::mem;
 use semver::Version;
 use core::{Dependency, PackageId, SourceId};
 
-use util::{CargoResult, human};
+use util::CargoResult;
 
 /// Subset of a `Manifest`. Contains only the most important informations about
 /// a package.
@@ -23,13 +23,12 @@ impl Summary {
                features: HashMap<String, Vec<String>>) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
             if features.get(dep.name()).is_some() {
-                return Err(human(format!("Features and dependencies cannot have \
-                                          the same name: `{}`", dep.name())))
+                bail!("Features and dependencies cannot have the \
+                       same name: `{}`", dep.name())
             }
             if dep.is_optional() && !dep.is_transitive() {
-                return Err(human(format!("Dev-dependencies are not allowed \
-                                          to be optional: `{}`",
-                                          dep.name())))
+                bail!("Dev-dependencies are not allowed to be optional: `{}`",
+                      dep.name())
             }
         }
         for (feature, list) in features.iter() {
@@ -41,22 +40,18 @@ impl Summary {
                 match dependencies.iter().find(|d| d.name() == dep) {
                     Some(d) => {
                         if d.is_optional() || is_reexport { continue }
-                        return Err(human(format!("Feature `{}` depends on `{}` \
-                                                  which is not an optional \
-                                                  dependency.\nConsider adding \
-                                                  `optional = true` to the \
-                                                  dependency", feature, dep)))
+                        bail!("Feature `{}` depends on `{}` which is not an \
+                               optional dependency.\nConsider adding \
+                               `optional = true` to the dependency",
+                               feature, dep)
                     }
                     None if is_reexport => {
-                        return Err(human(format!("Feature `{}` requires `{}` \
-                                                  which is not an optional \
-                                                  dependency", feature, dep)))
+                        bail!("Feature `{}` requires `{}` which is not an \
+                               optional dependency", feature, dep)
                     }
                     None => {
-                        return Err(human(format!("Feature `{}` includes `{}` \
-                                                  which is neither a dependency \
-                                                  nor another feature",
-                                                  feature, dep)))
+                        bail!("Feature `{}` includes `{}` which is neither \
+                               a dependency nor another feature", feature, dep)
                     }
                 }
             }

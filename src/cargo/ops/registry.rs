@@ -54,17 +54,14 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if dep.specified_req().is_none() {
-                return Err(human(format!("all path dependencies must have \
-                                          a version specified when \
-                                          publishing.\n\
-                                          dependency `{}` does not specify \
-                                          a version", dep.name())))
+                bail!("all path dependencies must have a version specified \
+                       when publishing.\ndependency `{}` does not specify \
+                       a version", dep.name())
             }
         } else if dep.source_id() != registry_src {
-            return Err(human(format!("all dependencies must come from the \
-                                      same source.\ndependency `{}` comes \
-                                      from {} instead", dep.name(),
-                                     dep.source_id())))
+            bail!("all dependencies must come from the same source.\n\
+                   dependency `{}` comes from {} instead",
+                  dep.name(), dep.source_id())
         }
     }
     Ok(())
@@ -99,8 +96,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     match *license_file {
         Some(ref file) => {
             if fs::metadata(&pkg.root().join(file)).is_err() {
-                return Err(human(format!("the license file `{}` does not exist",
-                                         file)))
+                bail!("the license file `{}` does not exist", file)
             }
         }
         None => {}
@@ -145,7 +141,7 @@ pub fn registry(config: &Config,
     let api_host = {
         let mut src = RegistrySource::new(&sid, config);
         try!(src.update().chain_error(|| {
-            human(format!("Failed to update registry {}", index))
+            human(format!("failed to update registry {}", index))
         }));
         (try!(src.config())).api
     };
@@ -319,7 +315,7 @@ pub fn yank(config: &Config,
     };
     let version = match version {
         Some(v) => v,
-        None => return Err(human("a version must be specified to yank"))
+        None => bail!("a version must be specified to yank")
     };
 
     let (mut registry, _) = try!(registry(config, token, index));
