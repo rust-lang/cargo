@@ -36,8 +36,7 @@ impl PackageIdSpec {
         };
         for ch in name.chars() {
             if !ch.is_alphanumeric() && ch != '_' && ch != '-' {
-                return Err(human(format!("invalid character in pkgid `{}`: `{}`",
-                                         spec, ch)))
+                bail!("invalid character in pkgid `{}`: `{}`", spec, ch)
             }
         }
         Ok(PackageIdSpec {
@@ -66,8 +65,7 @@ impl PackageIdSpec {
 
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         if url.query.is_some() {
-            return Err(human(format!("cannot have a query string in a pkgid: {}",
-                             url)));
+            bail!("cannot have a query string in a pkgid: {}", url)
         }
         let frag = url.fragment.take();
         let (name, version) = {
@@ -133,8 +131,8 @@ impl PackageIdSpec {
         let mut ids = i.into_iter().filter(|p| self.matches(*p));
         let ret = match ids.next() {
             Some(id) => id,
-            None => return Err(human(format!("package id specification `{}` \
-                                              matched no packages", self))),
+            None => bail!("package id specification `{}` \
+                           matched no packages", self),
         };
         return match ids.next() {
             Some(other) => {

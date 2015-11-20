@@ -128,9 +128,9 @@ pub fn to_manifest(contents: &[u8],
         None => {}
     }
     if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
-        return Err(human(format!("no targets specified in the manifest\n  either \
-                                  src/lib.rs, src/main.rs, a [lib] section, or [[bin]] \
-                                  section must be present")))
+        bail!("no targets specified in the manifest\n  \
+               either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] \
+               section must be present")
     }
     return Ok((manifest, paths));
 
@@ -374,11 +374,11 @@ impl TomlManifest {
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
         let project = try!(project.chain_error(|| {
-            human("No `package` or `project` section found.")
+            human("no `package` or `project` section found.")
         }));
 
         if project.name.trim().is_empty() {
-            return Err(human("package name cannot be an empty string."))
+            bail!("package name cannot be an empty string.")
         }
 
         let pkgid = try!(project.to_package_id(source_id));
@@ -430,8 +430,8 @@ impl TomlManifest {
 
         for bin in bins.iter() {
             if blacklist.iter().find(|&x| *x == bin.name()) != None {
-                return Err(human(&format!("the binary target name `{}` is \
-                                           forbidden", bin.name())));
+                bail!("the binary target name `{}` is forbidden",
+                      bin.name())
             }
         }
 

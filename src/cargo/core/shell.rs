@@ -10,7 +10,7 @@ use self::AdequateTerminal::{NoColor, Colored};
 use self::Verbosity::{Verbose, Normal, Quiet};
 use self::ColorConfig::{Auto, Always, Never};
 
-use util::errors::{human, CargoResult};
+use util::errors::CargoResult;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Verbosity {
@@ -105,7 +105,7 @@ impl MultiShell {
 
     pub fn set_verbosity(&mut self, verbose: bool, quiet: bool) -> CargoResult<()> {
         self.verbosity = match (verbose, quiet) {
-            (true, true) => return Err(human("cannot set both --verbose and --quiet")),
+            (true, true) => bail!("cannot set both --verbose and --quiet"),
             (true, false) => Verbose,
             (false, true) => Quiet,
             (false, false) => Normal
@@ -130,9 +130,8 @@ impl MultiShell {
 
             None => Auto,
 
-            Some(arg) => return Err(human(format!("argument for --color must be auto, always, or \
-                                                   never, but found `{}`",
-                                                  arg))),
+            Some(arg) => bail!("argument for --color must be auto, always, or \
+                                never, but found `{}`", arg),
         });
         Ok(())
     }
