@@ -5,7 +5,7 @@ use std::process::Command;
 
 use core::{Package, PackageIdSpec};
 use ops;
-use util::{CargoResult, human};
+use util::CargoResult;
 
 pub struct DocOptions<'a> {
     pub open_result: bool,
@@ -28,10 +28,9 @@ pub fn doc(manifest_path: &Path,
         }
         for bin in bin_names.iter() {
             if lib_names.contains(bin) {
-                return Err(human("Cannot document a package where a library \
-                                  and a binary have the same name. Consider \
-                                  renaming one or marking the target as \
-                                  `doc = false`"))
+                bail!("cannot document a package where a library and a binary \
+                       have the same name. Consider renaming one or marking \
+                       the target as `doc = false`")
             }
         }
     }
@@ -40,8 +39,7 @@ pub fn doc(manifest_path: &Path,
 
     if options.open_result {
         let name = if options.compile_opts.spec.len() > 1 {
-            return Err(human("Passing multiple packages and `open` is not \
-                              supported"))
+            bail!("Passing multiple packages and `open` is not supported")
         } else if options.compile_opts.spec.len() == 1 {
             try!(PackageIdSpec::parse(&options.compile_opts.spec[0]))
                                              .name().replace("-", "_").to_string()

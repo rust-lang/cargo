@@ -2,7 +2,7 @@ use std::path::Path;
 
 use ops;
 use core::{PackageIdSpec, Package};
-use util::{CargoResult, human, Config};
+use util::{CargoResult, Config};
 
 pub fn pkgid(manifest_path: &Path,
              spec: Option<&str>,
@@ -13,7 +13,7 @@ pub fn pkgid(manifest_path: &Path,
     let source_id = package.package_id().source_id();
     let resolve = match try!(ops::load_lockfile(&lockfile, source_id)) {
         Some(resolve) => resolve,
-        None => return Err(human("A Cargo.lock must exist for this command"))
+        None => bail!("a Cargo.lock must exist for this command"),
     };
 
     let pkgid = match spec {

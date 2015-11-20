@@ -551,10 +551,6 @@ pub fn path2url(p: PathBuf) -> Url {
     Url::from_file_path(&*p).ok().unwrap()
 }
 
-pub fn cwd() -> PathBuf {
-    env::current_dir().unwrap()
-}
-
 pub static RUNNING:     &'static str = "     Running";
 pub static COMPILING:   &'static str = "   Compiling";
 pub static DOCUMENTING: &'static str = " Documenting";

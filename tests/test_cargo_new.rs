@@ -87,7 +87,7 @@ test!(existing {
     fs::create_dir(&dst).unwrap();
     assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
-                       .with_stderr(format!("Destination `{}` already exists\n",
+                       .with_stderr(format!("destination `{}` already exists\n",
                                             dst.display())));
 });
 
