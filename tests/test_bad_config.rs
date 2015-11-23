@@ -284,3 +284,87 @@ Cargo.toml:[..]
 
 "));
 });
+
+test!(duplicate_binary_names {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+       [package]
+       name = "qqq"
+       version = "0.1.0"
+       authors = ["A <a@a.a>"]
+
+       [[bin]]
+       name = "e"
+       path = "a.rs"
+
+       [[bin]]
+       name = "e"
+       path = "b.rs"
+    "#)
+    .file("a.rs", r#"fn main() -> () {}"#)
+    .file("b.rs", r#"fn main() -> () {}"#);
+
+    assert_that(foo.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  found duplicate binary name e, but all binary targets must have a unique name
+"));
+});
+
+test!(duplicate_example_names {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+       [package]
+       name = "qqq"
+       version = "0.1.0"
+       authors = ["A <a@a.a>"]
+
+       [[example]]
+       name = "ex"
+       path = "examples/ex.rs"
+
+       [[example]]
+       name = "ex"
+       path = "examples/ex2.rs"
+    "#)
+    .file("examples/ex.rs", r#"fn main () -> () {}"#)
+    .file("examples/ex2.rs", r#"fn main () -> () {}"#);
+
+    assert_that(foo.cargo_process("build").arg("--example").arg("ex"),
+                execs().with_status(101).with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  found duplicate example name ex, but all binary targets must have a unique name
+"));
+});
+
+test!(duplicate_bench_names {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+       [package]
+       name = "qqq"
+       version = "0.1.0"
+       authors = ["A <a@a.a>"]
+
+       [[bench]]
+       name = "ex"
+       path = "benches/ex.rs"
+
+       [[bench]]
+       name = "ex"
+       path = "benches/ex2.rs"
+    "#)
+    .file("benches/ex.rs", r#"fn main () {}"#)
+    .file("benches/ex2.rs", r#"fn main () {}"#);
+
+    assert_that(foo.cargo_process("bench"),
+                execs().with_status(101).with_stderr("\
+failed to parse manifest at `[..]`
+
+Caused by:
+  found duplicate bench name ex, but all binary targets must have a unique name
+"));
+});
