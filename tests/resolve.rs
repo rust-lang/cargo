@@ -126,14 +126,14 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 #[test]
 fn test_resolving_empty_dependency_list() {
     let res = resolve(pkg_id("root"), Vec::new(),
-                      &mut registry(vec!())).unwrap();
+                      &mut registry(vec![])).unwrap();
 
     assert_that(&res, equal_to(&names(&["root"])));
 }
 
 #[test]
 fn test_resolving_only_package() {
-    let mut reg = registry(vec!(pkg("foo")));
+    let mut reg = registry(vec![pkg("foo")]);
     let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
 
     assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
@@ -141,7 +141,7 @@ fn test_resolving_only_package() {
 
 #[test]
 fn test_resolving_one_dep() {
-    let mut reg = registry(vec!(pkg("foo"), pkg("bar")));
+    let mut reg = registry(vec![pkg("foo"), pkg("bar")]);
     let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg);
 
     assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
@@ -149,7 +149,7 @@ fn test_resolving_one_dep() {
 
 #[test]
 fn test_resolving_multiple_deps() {
-    let mut reg = registry(vec!(pkg!("foo"), pkg!("bar"), pkg!("baz")));
+    let mut reg = registry(vec![pkg!("foo"), pkg!("bar"), pkg!("baz")]);
     let res = resolve(pkg_id("root"), vec![dep("foo"), dep("baz")],
                       &mut reg).unwrap();
 
@@ -158,7 +158,7 @@ fn test_resolving_multiple_deps() {
 
 #[test]
 fn test_resolving_transitive_deps() {
-    let mut reg = registry(vec!(pkg!("foo"), pkg!("bar" => ["foo"])));
+    let mut reg = registry(vec![pkg!("foo"), pkg!("bar" => ["foo"])]);
     let res = resolve(pkg_id("root"), vec![dep("bar")], &mut reg).unwrap();
 
     assert_that(&res, contains(names(&["root", "foo", "bar"])));
@@ -166,7 +166,7 @@ fn test_resolving_transitive_deps() {
 
 #[test]
 fn test_resolving_common_transitive_deps() {
-    let mut reg = registry(vec!(pkg!("foo" => ["bar"]), pkg!("bar")));
+    let mut reg = registry(vec![pkg!("foo" => ["bar"]), pkg!("bar")]);
     let res = resolve(pkg_id("root"), vec![dep("foo"), dep("bar")],
                       &mut reg).unwrap();
 
@@ -194,12 +194,12 @@ fn test_resolving_with_same_name() {
 
 #[test]
 fn test_resolving_with_dev_deps() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!("foo" => ["bar", dep_kind("baz", Development)]),
         pkg!("baz" => ["bat", dep_kind("bam", Development)]),
         pkg!("bar"),
         pkg!("bat")
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"),
                       vec![dep("foo"), dep_kind("baz", Development)],
@@ -210,10 +210,10 @@ fn test_resolving_with_dev_deps() {
 
 #[test]
 fn resolving_with_many_versions() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.1")),
         pkg!(("foo", "1.0.2")),
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"), vec![dep("foo")], &mut reg).unwrap();
 
@@ -223,10 +223,10 @@ fn resolving_with_many_versions() {
 
 #[test]
 fn resolving_with_specific_version() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.1")),
         pkg!(("foo", "1.0.2")),
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"), vec![dep_req("foo", "=1.0.1")],
                       &mut reg).unwrap();
@@ -237,11 +237,11 @@ fn resolving_with_specific_version() {
 
 #[test]
 fn resolving_incompat_versions() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.1")),
         pkg!(("foo", "1.0.2")),
         pkg!("bar" => [dep_req("foo", "=1.0.2")]),
-    ));
+    ]);
 
     assert!(resolve(pkg_id("root"), vec![
         dep_req("foo", "=1.0.1"),
@@ -251,12 +251,12 @@ fn resolving_incompat_versions() {
 
 #[test]
 fn resolving_backtrack() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.2") => [dep("bar")]),
         pkg!(("foo", "1.0.1") => [dep("baz")]),
         pkg!("bar" => [dep_req("foo", "=2.0.2")]),
         pkg!("baz"),
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"), vec![
         dep_req("foo", "^1"),
@@ -269,7 +269,7 @@ fn resolving_backtrack() {
 
 #[test]
 fn resolving_allows_multiple_compatible_versions() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.0")),
         pkg!(("foo", "2.0.0")),
         pkg!(("foo", "0.1.0")),
@@ -280,7 +280,7 @@ fn resolving_allows_multiple_compatible_versions() {
         pkg!("d2" => [dep_req("foo", "2")]),
         pkg!("d3" => [dep_req("foo", "0.1")]),
         pkg!("d4" => [dep_req("foo", "0.2")]),
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"), vec![
         dep("bar"),
@@ -300,7 +300,7 @@ fn resolving_allows_multiple_compatible_versions() {
 
 #[test]
 fn resolving_with_deep_backtracking() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
         pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
 
@@ -313,7 +313,7 @@ fn resolving_with_deep_backtracking() {
 
         pkg!(("dep_req", "1.0.0")),
         pkg!(("dep_req", "2.0.0")),
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"), vec![
         dep_req("foo", "1"),
@@ -327,8 +327,8 @@ fn resolving_with_deep_backtracking() {
 
 #[test]
 fn resolving_but_no_exists() {
-    let mut reg = registry(vec!(
-    ));
+    let mut reg = registry(vec![
+    ]);
 
     let res = resolve(pkg_id("root"), vec![
         dep_req("foo", "1"),
@@ -344,9 +344,9 @@ version required: ^1\
 
 #[test]
 fn resolving_cycle() {
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!("foo" => ["foo"]),
-    ));
+    ]);
 
     let _ = resolve(pkg_id("root"), vec![
         dep_req("foo", "1"),
@@ -356,12 +356,12 @@ fn resolving_cycle() {
 #[test]
 fn hard_equality() {
     extern crate env_logger;
-    let mut reg = registry(vec!(
+    let mut reg = registry(vec![
         pkg!(("foo", "1.0.1")),
         pkg!(("foo", "1.0.0")),
 
         pkg!(("bar", "1.0.0") => [dep_req("foo", "1.0.0")]),
-    ));
+    ]);
 
     let res = resolve(pkg_id("root"), vec![
         dep_req("bar", "1"),

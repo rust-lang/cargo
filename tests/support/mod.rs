@@ -104,8 +104,8 @@ impl ProjectBuilder {
         ProjectBuilder {
             name: name.to_string(),
             root: root,
-            files: vec!(),
-            symlinks: vec!()
+            files: vec![],
+            symlinks: vec![]
         }
     }
 
