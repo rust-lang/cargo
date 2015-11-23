@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
 use core::PackageId;
@@ -87,17 +87,14 @@ pub fn update_lockfile(manifest_path: &Path,
     };
     for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
         if removed.len() == 1 && added.len() == 1 {
-            if removed[0].source_id().is_git() {
-                try!(print_change("Updating", format!("{} -> #{}",
-                    removed[0],
-                    &added[0].source_id().precise().unwrap()[..8])));
+            let msg = if removed[0].source_id().is_git() {
+                format!("{} -> #{}", removed[0],
+                        &added[0].source_id().precise().unwrap()[..8])
             } else {
-                try!(print_change("Updating", format!("{} -> v{}",
-                    removed[0],
-                    added[0].version())));
-            }
-        }
-        else {
+                format!("{} -> v{}", removed[0], added[0].version())
+            };
+            try!(print_change("Updating", msg));
+        } else {
             for package in removed.iter() {
                 try!(print_change("Removing", format!("{}", package)));
             }
@@ -113,57 +110,76 @@ pub fn update_lockfile(manifest_path: &Path,
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
                           set: &mut HashSet<&'a PackageId>,
                           visited: &mut HashSet<&'a PackageId>) {
-        if !visited.insert(dep) { return }
+        if !visited.insert(dep) {
+            return
+        }
         set.insert(dep);
-        match resolve.deps(dep) {
-            Some(deps) => {
-                for dep in deps {
-                    fill_with_deps(resolve, dep, set, visited);
-                }
+        if let Some(deps) =  resolve.deps(dep) {
+            for dep in deps {
+                fill_with_deps(resolve, dep, set, visited);
             }
-            None => {}
         }
     }
 
     fn compare_dependency_graphs<'a>(previous_resolve: &'a Resolve,
                                      resolve: &'a Resolve) ->
                                      Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
-        // Map (package name, package source) to (removed versions, added versions).
-        fn changes_key<'a>(dep: &'a PackageId) -> (&'a str, &'a SourceId) {
+        fn key(dep: &PackageId) -> (&str, &SourceId) {
             (dep.name(), dep.source_id())
         }
 
-        fn vec_subtract<T>(a: &[T], b: &[T]) -> Vec<T>
-            where T: Ord + Clone {
-            let mut result = a.to_owned();
-            let mut b = b.to_owned();
-            b.sort();
-            result.retain(|x| b.binary_search(x).is_err());
-            result
+        // Removes all package ids in `b` from `a`. Note that this is somewhat
+        // more complicated because the equality for source ids does not take
+        // precise versions into account (e.g. git shas), but we want to take
+        // that into account here.
+        fn vec_subtract<'a>(a: &[&'a PackageId],
+                            b: &[&'a PackageId]) -> Vec<&'a PackageId> {
+            a.iter().filter(|a| {
+                // If this package id is not found in `b`, then it's definitely
+                // in the subtracted set
+                let i = match b.binary_search(a) {
+                    Ok(i) => i,
+                    Err(..) => return true,
+                };
+
+                // If we've found `a` in `b`, then we iterate over all instances
+                // (we know `b` is sorted) and see if they all have different
+                // precise versions. If so, then `a` isn't actually in `b` so
+                // we'll let it through.
+                //
+                // Note that we only check this for non-registry sources,
+                // however, as registries countain enough version information in
+                // the package id to disambiguate
+                if a.source_id().is_registry() {
+                    return false
+                }
+                b[i..].iter().take_while(|b| a == b).all(|b| {
+                    a.source_id().precise() != b.source_id().precise()
+                })
+            }).cloned().collect()
         }
 
-        let mut changes = HashMap::new();
-
+        // Map (package name, package source) to (removed versions, added versions).
+        let mut changes = BTreeMap::new();
+        let empty = (Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {
-            changes.insert(changes_key(dep), (vec![dep], vec![]));
+            changes.entry(key(dep)).or_insert(empty.clone()).0.push(dep);
         }
         for dep in resolve.iter() {
-            let (_, ref mut added) = *changes.entry(changes_key(dep))
-                                             .or_insert_with(|| (vec![], vec![]));
-            added.push(dep);
+            changes.entry(key(dep)).or_insert(empty.clone()).1.push(dep);
         }
 
         for (_, v) in changes.iter_mut() {
             let (ref mut old, ref mut new) = *v;
+            old.sort();
+            new.sort();
             let removed = vec_subtract(old, new);
             let added = vec_subtract(new, old);
             *old = removed;
             *new = added;
         }
+        debug!("{:#?}", changes);
 
-        // Sort the packages by their names.
-        let mut packages: Vec<_> = changes.keys().map(|x| *x).collect();
-        packages.sort();
-        packages.iter().map(|k| changes[k].clone()).collect()
+        changes.into_iter().map(|(_, v)| v).collect()
     }
 }
