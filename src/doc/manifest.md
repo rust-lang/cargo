@@ -304,11 +304,7 @@ To use the package `awesome`:
 
 ```toml
 [dependencies]
-awesome = { version = "1.3.5",
-            default-features = false, # do not include the default features, and optionally
-                                      # cherry-pick individual features
-            features = ["secure-password", "civet"]
-          }
+awesome = { version = "1.3.5", default-features = false, features = ["secure-password", "civet"] }
 ```
 
 ## Rules
