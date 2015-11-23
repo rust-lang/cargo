@@ -161,7 +161,7 @@ impl Encodable for Target {
             TargetKind::Lib(ref kinds) => {
                 kinds.iter().map(|k| k.crate_type()).collect()
             }
-            TargetKind::Bin => vec!("bin"),
+            TargetKind::Bin => vec!["bin"],
             TargetKind::Example => vec!["example"],
             TargetKind::Test => vec!["test"],
             TargetKind::CustomBuild => vec!["custom-build"],
@@ -372,7 +372,7 @@ impl Target {
             TargetKind::Bench |
             TargetKind::Test |
             TargetKind::Example |
-            TargetKind::Bin => vec!("bin"),
+            TargetKind::Bin => vec!["bin"],
         }
     }
 

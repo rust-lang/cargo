@@ -79,7 +79,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
-            overrides: vec!(),
+            overrides: vec![],
             config: config,
             locked: HashMap::new(),
         }
@@ -327,7 +327,7 @@ pub mod test {
 
     impl RegistryBuilder {
         pub fn new() -> RegistryBuilder {
-            RegistryBuilder { summaries: vec!(), overrides: vec!() }
+            RegistryBuilder { summaries: vec![], overrides: vec![] }
         }
 
         pub fn summary(mut self, summary: Summary) -> RegistryBuilder {

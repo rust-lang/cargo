@@ -74,10 +74,10 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
 
 pub fn project_layout(root_path: &Path) -> Layout {
     let mut lib = None;
-    let mut bins = vec!();
-    let mut examples = vec!();
-    let mut tests = vec!();
-    let mut benches = vec!();
+    let mut bins = vec![];
+    let mut examples = vec![];
+    let mut tests = vec![];
+    let mut benches = vec![];
 
     let lib_canidate = root_path.join("src").join("lib.rs");
     if fs::metadata(&lib_canidate).is_ok() {
@@ -369,8 +369,8 @@ impl TomlManifest {
     pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout,
                        config: &Config)
         -> CargoResult<(Manifest, Vec<PathBuf>)> {
-        let mut nested_paths = vec!();
-        let mut warnings = vec!();
+        let mut nested_paths = vec![];
+        let mut warnings = vec![];
 
         let project = self.project.as_ref().or_else(|| self.package.as_ref());
         let project = try!(project.chain_error(|| {
