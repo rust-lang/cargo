@@ -56,7 +56,8 @@ pub fn install(root: Option<&str>,
         try!(select_pkg(RegistrySource::new(source_id, config),
                         source_id, krate, vers,
                         &mut |_| Err(human("must specify a crate to install from \
-                                            crates.io"))))
+                                            crates.io, or use --path or --git to \
+                                            specify alternate source"))))
     };
 
     let mut list = try!(read_crate_list(&root));
