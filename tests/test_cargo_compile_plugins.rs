@@ -54,10 +54,10 @@ test!(plugin_to_the_max {
         .file("src/lib.rs", r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc;
+            extern crate rustc_plugin;
             extern crate baz;
 
-            use rustc::plugin::Registry;
+            use rustc_plugin::Registry;
 
             #[plugin_registrar]
             pub fn foo(_reg: &mut Registry) {
@@ -154,9 +154,9 @@ test!(plugin_with_dynamic_native_dependency {
         "#)
         .file("bar/src/lib.rs", &format!(r#"
             #![feature(plugin_registrar, rustc_private)]
-            extern crate rustc;
+            extern crate rustc_plugin;
 
-            use rustc::plugin::Registry;
+            use rustc_plugin::Registry;
 
             #[link(name = "{}")]
             extern {{ fn foo(); }}

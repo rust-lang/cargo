@@ -93,4 +93,4 @@ if not exists:
     if h != hash:
         raise Exception("failed to verify the checksum of the snapshot")
 
-download.unpack(dl_path, dst)
+download.unpack(dl_path, dst, strip=2)
