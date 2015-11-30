@@ -122,7 +122,8 @@ could not find `foo` in `registry file://[..]` with version `0.2.0`
 test!(no_crate {
     assert_that(cargo_process("install"),
                 execs().with_status(101).with_stderr("\
-must specify a crate to install from crates.io
+must specify a crate to install from crates.io, or use --path or --git \
+to specify alternate source
 "));
 });
 
