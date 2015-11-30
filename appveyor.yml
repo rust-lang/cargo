@@ -16,7 +16,7 @@ install:
   - python src/etc/dl-snapshot.py %TARGET%
   - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" %ARCH%
   - SET PATH=%PATH%;%cd%/rustc/bin
-  - SET PATH=%PATH%;%cd%/target/snapshot/cargo/bin
+  - SET PATH=%PATH%;%cd%/target/snapshot/bin
   - if defined NEEDS_LIBGCC set PATH=%PATH%;C:\MinGW\bin
   - rustc -V
   - cargo -V

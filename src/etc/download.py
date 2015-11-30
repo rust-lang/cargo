@@ -16,22 +16,29 @@ def get(url, path, quiet=False):
         run(["curl", "-o", path, url], quiet=quiet)
 
 
-def unpack(tarball, dst, quiet=False):
+def unpack(tarball, dst, quiet=False, strip=0):
     if quiet:
         print("extracting " + tarball)
-    fname = os.path.basename(tarball).replace(".tar.gz", "")
     with contextlib.closing(tarfile.open(tarball)) as tar:
-        for p in tar.getnames():
-            name = p.replace(fname + "/", "", 1)
-            fp = os.path.join(dst, name)
-            if not quiet:
-                print("extracting " + p)
-            tar.extract(p, dst)
-            tp = os.path.join(dst, p)
-            if os.path.isdir(tp) and os.path.exists(fp):
+        for p in tar.getmembers():
+            if p.isdir():
                 continue
-            shutil.move(tp, fp)
-    shutil.rmtree(os.path.join(dst, fname))
+            path = []
+            p2 = p.name
+            while p2 != "":
+                a, b = os.path.split(p2)
+                path.insert(0, b)
+                p2 = a
+            if len(path) <= strip:
+                continue
+            fp = os.path.join(dst, *path[strip:])
+            if not quiet:
+                print("extracting " + p.name)
+            contents = tar.extractfile(p)
+            if not os.path.exists(os.path.dirname(fp)):
+                os.makedirs(os.path.dirname(fp))
+            open(fp, 'wb').write(contents.read())
+            os.chmod(fp, p.mode)
 
 
 def run(args, quiet=False):
