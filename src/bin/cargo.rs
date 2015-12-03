@@ -8,13 +8,10 @@ extern crate toml;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::io;
-use std::path::{PathBuf, Path};
-use std::process::Command;
+use std::path::PathBuf;
 
-use cargo::{execute_main_without_stdin, handle_error, shell};
-use cargo::core::MultiShell;
-use cargo::util::{CliError, CliResult, lev_distance, Config};
+use cargo::execute_main_without_stdin;
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 
 #[derive(RustcDecodable)]
 struct Flags {
@@ -61,35 +58,37 @@ fn main() {
     execute_main_without_stdin(execute, true, USAGE)
 }
 
-macro_rules! each_subcommand{ ($mac:ident) => ({
-    $mac!(bench);
-    $mac!(build);
-    $mac!(clean);
-    $mac!(doc);
-    $mac!(fetch);
-    $mac!(generate_lockfile);
-    $mac!(git_checkout);
-    $mac!(help);
-    $mac!(install);
-    $mac!(locate_project);
-    $mac!(login);
-    $mac!(new);
-    $mac!(owner);
-    $mac!(package);
-    $mac!(pkgid);
-    $mac!(publish);
-    $mac!(read_manifest);
-    $mac!(run);
-    $mac!(rustc);
-    $mac!(rustdoc);
-    $mac!(search);
-    $mac!(test);
-    $mac!(uninstall);
-    $mac!(update);
-    $mac!(verify_project);
-    $mac!(version);
-    $mac!(yank);
-}) }
+macro_rules! each_subcommand{
+    ($mac:ident) => ({
+        $mac!(bench);
+        $mac!(build);
+        $mac!(clean);
+        $mac!(doc);
+        $mac!(fetch);
+        $mac!(generate_lockfile);
+        $mac!(git_checkout);
+        $mac!(help);
+        $mac!(install);
+        $mac!(locate_project);
+        $mac!(login);
+        $mac!(new);
+        $mac!(owner);
+        $mac!(package);
+        $mac!(pkgid);
+        $mac!(publish);
+        $mac!(read_manifest);
+        $mac!(run);
+        $mac!(rustc);
+        $mac!(rustdoc);
+        $mac!(search);
+        $mac!(test);
+        $mac!(uninstall);
+        $mac!(update);
+        $mac!(verify_project);
+        $mac!(version);
+        $mac!(yank);
+    })
+}
 
 /**
   The top-level `cargo` command handles configuration and project location
@@ -104,7 +103,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
     if flags.flag_list {
         println!("Installed Commands:");
-        for command in list_commands().into_iter() {
+        for command in list_commands(config) {
             println!("    {}", command);
         };
         return Ok(None)
@@ -143,8 +142,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         _ => env::args().collect(),
     };
 
-    macro_rules! cmd{ ($name:ident) => (
-        if args[1] == stringify!($name).replace("_", "-") {
+    macro_rules! cmd{
+        ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
             mod $name;
             config.shell().set_verbose(true);
             let r = cargo::call_main_without_stdin($name::execute, config,
@@ -153,130 +152,100 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
                                                    false);
             cargo::process_executed(r, &mut config.shell());
             return Ok(None)
-        }
-    ) }
+        })
+    }
     each_subcommand!(cmd);
 
-    execute_subcommand(&args[1], &args, &mut config.shell());
+    try!(execute_subcommand(config, &args[1], &args));
     Ok(None)
 }
 
-fn find_closest(cmd: &str) -> Option<String> {
-    let cmds = list_commands();
+fn find_closest(config: &Config, cmd: &str) -> Option<String> {
+    let cmds = list_commands(config);
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
     let mut filtered = cmds.iter().map(|c| (lev_distance(&c, cmd), c))
                                   .filter(|&(d, _)| d < 4)
                                   .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));
-
-    if filtered.len() == 0 {
-        None
-    } else {
-        Some(filtered[0].1.to_string())
-    }
+    filtered.get(0).map(|slot| slot.1.to_string())
 }
 
-fn execute_subcommand(cmd: &str, args: &[String], shell: &mut MultiShell) {
-    let command = match find_command(cmd) {
-        Some(command) => command,
+fn execute_subcommand(config: &Config,
+                      cmd: &str,
+                      args: &[String]) -> CargoResult<()> {
+    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
+    let path = search_directories(config)
+                    .iter()
+                    .map(|dir| dir.join(&command_exe))
+                    .filter_map(|dir| fs::metadata(&dir).ok().map(|m| (dir, m)))
+                    .find(|&(_, ref meta)| is_executable(meta));
+    let command = match path {
+        Some((command, _)) => command,
         None => {
-            let msg = match find_closest(cmd) {
-                Some(closest) => format!("No such subcommand\n\n\t\
+            return Err(human(match find_closest(config, cmd) {
+                Some(closest) => format!("no such subcommand\n\n\t\
                                           Did you mean `{}`?\n", closest),
-                None => "No such subcommand".to_string()
-            };
-            return handle_error(CliError::new(&msg, 127), shell)
+                None => "no such subcommand".to_string()
+            }))
         }
     };
-    match Command::new(&command).args(&args[1..]).status() {
-        Ok(ref status) if status.success() => {}
-        Ok(ref status) => {
-            match status.code() {
-                Some(code) => handle_error(CliError::new("", code), shell),
-                None => {
-                    let msg = format!("subcommand failed with: {}", status);
-                    handle_error(CliError::new(&msg, 101), shell)
-                }
-            }
-        }
-        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            handle_error(CliError::new("No such subcommand", 127), shell)
-        }
-        Err(err) => {
-            let msg = format!("Subcommand failed to run: {}", err);
-            handle_error(CliError::new(&msg, 127), shell)
-        }
-    }
+    try!(util::process(&command).args(&args[1..]).exec());
+    Ok(())
 }
 
 /// List all runnable commands. find_command should always succeed
 /// if given one of returned command.
-fn list_commands() -> BTreeSet<String> {
-    let command_prefix = "cargo-";
+fn list_commands(config: &Config) -> BTreeSet<String> {
+    let prefix = "cargo-";
+    let suffix = env::consts::EXE_SUFFIX;
     let mut commands = BTreeSet::new();
-    for dir in list_command_directory().iter() {
+    for dir in search_directories(config) {
         let entries = match fs::read_dir(dir) {
             Ok(entries) => entries,
             _ => continue
         };
-        for entry in entries {
-            let entry = match entry { Ok(e) => e, Err(..) => continue };
-            let entry = entry.path();
-            let filename = match entry.file_name().and_then(|s| s.to_str()) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let filename = match path.file_name().and_then(|s| s.to_str()) {
                 Some(filename) => filename,
                 _ => continue
             };
-            if filename.starts_with(command_prefix) &&
-               filename.ends_with(env::consts::EXE_SUFFIX) &&
-               is_executable(&entry) {
-                let command = &filename[
-                    command_prefix.len()..
-                    filename.len() - env::consts::EXE_SUFFIX.len()];
-                commands.insert(command.to_string());
+            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+                continue
+            }
+            if let Ok(meta) = entry.metadata() {
+                if is_executable(&meta) {
+                    let end = filename.len() - suffix.len();
+                    commands.insert(filename[prefix.len()..end].to_string());
+                }
             }
         }
     }
 
-    macro_rules! add_cmd{ ($cmd:ident) => ({
-        commands.insert(stringify!($cmd).replace("_", "-"));
-    }) }
+    macro_rules! add_cmd {
+        ($cmd:ident) => (commands.insert(stringify!($cmd).replace("_", "-")))
+    }
     each_subcommand!(add_cmd);
     commands
 }
 
 #[cfg(unix)]
-fn is_executable(path: &Path) -> bool {
+fn is_executable(metadata: &fs::Metadata) -> bool {
     use std::os::unix::prelude::*;
-    fs::metadata(path).map(|m| {
-        m.permissions().mode() & 0o001 == 0o001
-    }).unwrap_or(false)
+    metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
 }
 #[cfg(windows)]
-fn is_executable(path: &Path) -> bool {
-    fs::metadata(path).map(|m| m.is_file()).unwrap_or(false)
+fn is_executable(metadata: &fs::Metadata) -> bool {
+    metadata.is_file()
 }
 
-/// Get `Command` to run given command.
-fn find_command(cmd: &str) -> Option<PathBuf> {
-    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
-    let dirs = list_command_directory();
-    let mut command_paths = dirs.iter().map(|dir| dir.join(&command_exe));
-    command_paths.find(|path| fs::metadata(&path).is_ok())
-}
-
-/// List candidate locations where subcommands might be installed.
-fn list_command_directory() -> Vec<PathBuf> {
-    let mut dirs = vec![];
-    if let Ok(mut path) = env::current_exe() {
-        path.pop();
-        dirs.push(path.join("../lib/cargo"));
-        dirs.push(path);
-    }
+fn search_directories(config: &Config) -> Vec<PathBuf> {
+    let mut dirs = vec![config.home().join("bin")];
     if let Some(val) = env::var_os("PATH") {
         dirs.extend(env::split_paths(&val));
     }
-    dirs
+    return dirs
 }
 
 fn init_git_transports(config: &Config) {
