@@ -188,7 +188,7 @@ test!(wildcard_deps {
         dir = p.url(),
         reg = registry::registry()))
                 .with_stderr("\
-warning: some dependencies have wildcard (\"*\") version constraints. On December 11th, 2015, \
+warning: some dependencies have wildcard (\"*\") version constraints. On January 22nd, 2016, \
 crates.io will begin rejecting packages with wildcard dependency constraints. See \
 http://doc.crates.io/crates-io.html#using-crates.io-based-crates for information on version \
 constraints.

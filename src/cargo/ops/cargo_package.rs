@@ -120,7 +120,7 @@ fn check_dependencies(pkg: &Package, config: &Config) -> CargoResult<()> {
         let deps = wildcard_deps.connect(", ");
         try!(config.shell().warn(
             "warning: some dependencies have wildcard (\"*\") version constraints. \
-             On December 11th, 2015, crates.io will begin rejecting packages with \
+             On January 22nd, 2016, crates.io will begin rejecting packages with \
              wildcard dependency constraints. See \
              http://doc.crates.io/crates-io.html#using-crates.io-based-crates \
              for information on version constraints."));
