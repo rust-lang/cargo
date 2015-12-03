@@ -84,12 +84,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    let err = try!(ops::run(&root,
-                            &compile_opts,
-                            &options.arg_args).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    }));
-    match err {
+    match try!(ops::run(&root, &compile_opts, &options.arg_args)) {
         None => Ok(None),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {

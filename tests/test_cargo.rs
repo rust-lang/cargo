@@ -62,8 +62,8 @@ test!(find_closest_biuld_to_build {
     pr.arg("biuld").cwd(&paths::root()).env("HOME", &paths::home());
 
     assert_that(pr,
-                execs().with_status(127)
-                       .with_stderr("No such subcommand
+                execs().with_status(101)
+                       .with_stderr("no such subcommand
 
 Did you mean `build`?
 
@@ -76,8 +76,8 @@ test!(find_closest_dont_correct_nonsense {
     pr.arg("asdf").cwd(&paths::root()).env("HOME", &paths::home());
 
     assert_that(pr,
-                execs().with_status(127)
-                       .with_stderr("No such subcommand
+                execs().with_status(101)
+                       .with_stderr("no such subcommand
 "));
 });
 
