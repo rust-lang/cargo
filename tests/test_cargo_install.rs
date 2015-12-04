@@ -512,3 +512,19 @@ test!(uninstall_piecemeal {
 package id specification `foo` matched no packages
 "));
 });
+
+test!(subcommand_works_out_of_the_box {
+    Package::new("cargo-foo", "1.0.0")
+        .file("src/main.rs", r#"
+            fn main() {
+                println!("bar");
+            }
+        "#)
+        .publish();
+    assert_that(cargo_process("install").arg("cargo-foo"),
+                execs().with_status(0));
+    assert_that(cargo_process("foo"),
+                execs().with_status(0).with_stdout("bar\n"));
+    assert_that(cargo_process("--list"),
+                execs().with_status(0).with_stdout_contains("  foo\n"));
+});
