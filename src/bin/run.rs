@@ -15,6 +15,7 @@ struct Options {
     flag_quiet: bool,
     flag_color: Option<String>,
     flag_release: bool,
+    flag_with: Option<String>,
     arg_args: Vec<String>,
 }
 
@@ -34,6 +35,7 @@ Options:
     --no-default-features   Do not build the `default` feature
     --target TRIPLE         Build for the target triple
     --manifest-path PATH    Path to the manifest to execute
+    -w, --with CMD          Run CMD and pass the path to the binary as its argument (see below)
     -v, --verbose           Use verbose output
     -q, --quiet             No output printed to stdout
     --color WHEN            Coloring: auto, always, never
@@ -46,6 +48,9 @@ and `--example` specifies the example target to run. At most one of `--bin` or
 All of the trailing arguments are passed to the binary to run. If you're passing
 arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.
+If the -w option is used, arguments are passed to CMD instead;
+all arguments equal to \"{}\" are replaced with the binary path or,
+if no such argument is passed, the binary path is appended as the last argument.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
@@ -86,6 +91,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let err = try!(ops::run(&root,
                             &compile_opts,
+                            options.flag_with,
                             &options.arg_args).map_err(|err| {
         CliError::from_boxed(err, 101)
     }));

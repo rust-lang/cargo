@@ -6,6 +6,7 @@ use core::Package;
 
 pub fn run(manifest_path: &Path,
            options: &ops::CompileOptions,
+           with: Option<String>,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.config;
     let root = try!(Package::for_path(manifest_path, config));
@@ -48,10 +49,33 @@ pub fn run(manifest_path: &Path,
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
-    let mut process = try!(compile.target_process(exe, &root))
-                                  .into_process_builder();
-    process.args(args).cwd(config.cwd());
 
-    try!(config.shell().status("Running", process.to_string()));
-    Ok(process.exec().err())
+    match with {
+        Some(cmd) => {
+            let mut process = try!(compile.target_process(cmd, &root))
+                                          .into_process_builder();
+
+            let mut exe_passed = false;
+            for arg in args {
+                if arg == "{}" {
+                    exe_passed = true;
+                    process.arg(exe.clone());
+                }
+                else { process.arg(arg); }
+            }
+            if !exe_passed { process.arg(exe); }
+
+            try!(config.shell().status("Running", process.to_string()));
+            Ok(process.exec().err())
+        },
+        None => {
+            let mut process = try!(compile.target_process(exe, &root))
+                                          .into_process_builder();
+
+            process.args(args).cwd(config.cwd());
+
+            try!(config.shell().status("Running", process.to_string()));
+            Ok(process.exec().err())
+        }
+    }
 }
