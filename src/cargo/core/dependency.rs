@@ -1,4 +1,5 @@
 use semver::VersionReq;
+use rustc_serialize::{Encoder, Encodable};
 
 use core::{SourceId, Summary, PackageId};
 use std::rc::Rc;
@@ -28,6 +29,22 @@ pub struct DependencyInner {
 #[derive(PartialEq,Clone,Debug)]
 pub struct Dependency {
     inner: Rc<DependencyInner>,
+}
+
+
+#[derive(RustcEncodable)]
+struct SerializedDependency {
+    name: String,
+    req: String
+}
+
+impl Encodable for Dependency {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        SerializedDependency {
+            name: self.name().to_string(),
+            req: self.version_req().to_string()
+        }.encode(s)
+    }
 }
 
 #[derive(PartialEq, Clone, Debug, Copy)]
@@ -219,17 +236,3 @@ impl Dependency {
     }
 }
 
-#[derive(PartialEq,Clone,RustcEncodable)]
-pub struct SerializedDependency {
-    name: String,
-    req: String
-}
-
-impl SerializedDependency {
-    pub fn from_dependency(dep: &Dependency) -> SerializedDependency {
-        SerializedDependency {
-            name: dep.name().to_string(),
-            req: dep.version_req().to_string()
-        }
-    }
-}
