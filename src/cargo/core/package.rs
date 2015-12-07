@@ -6,7 +6,6 @@ use semver::Version;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Registry, Target, Summary, Metadata};
 use ops;
-use core::dependency::SerializedDependency;
 use util::{CargoResult, graph, Config};
 use rustc_serialize::{Encoder,Encodable};
 use core::source::Source;
@@ -24,10 +23,10 @@ pub struct Package {
 }
 
 #[derive(RustcEncodable)]
-struct SerializedPackage {
+struct SerializedPackage<'a> {
     name: String,
     version: String,
-    dependencies: Vec<SerializedDependency>,
+    dependencies: &'a [Dependency],
     targets: Vec<Target>,
     manifest_path: String,
 }
@@ -41,9 +40,7 @@ impl Encodable for Package {
         SerializedPackage {
             name: package_id.name().to_string(),
             version: package_id.version().to_string(),
-            dependencies: summary.dependencies().iter().map(|d| {
-                SerializedDependency::from_dependency(d)
-            }).collect(),
+            dependencies: summary.dependencies(),
             targets: manifest.targets().to_vec(),
             manifest_path: self.manifest_path.display().to_string()
         }.encode(s)
