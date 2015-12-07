@@ -44,8 +44,8 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[derive(PartialEq,Clone,RustcEncodable)]
-pub struct SerializedManifest {
+#[derive(RustcEncodable)]
+struct SerializedManifest {
     name: String,
     version: String,
     dependencies: Vec<SerializedDependency>,
