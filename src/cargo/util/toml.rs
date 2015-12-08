@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::fmt;
 use std::fs;
@@ -465,6 +465,26 @@ impl TomlManifest {
             None => inferred_bench_targets(layout)
         };
 
+        if let Err(e) = unique_names_in_targets(&bins) {
+            bail!("found duplicate binary name {}, but all binary targets \
+                   must have a unique name", e);
+        }
+
+        if let Err(e) = unique_names_in_targets(&examples) {
+            bail!("found duplicate example name {}, but all binary targets \
+                   must have a unique name", e);
+        }
+
+        if let Err(e) = unique_names_in_targets(&benches) {
+            bail!("found duplicate bench name {}, but all binary targets must \
+                   have a unique name", e);
+        }
+
+        if let Err(e) = unique_names_in_targets(&tests) {
+            bail!("found duplicate test name {}, but all binary targets must \
+                   have a unique name", e)
+        }
+
         // processing the custom build script
         let new_build = project.build.as_ref().map(PathBuf::from);
 
@@ -559,6 +579,19 @@ impl TomlManifest {
 
         Ok((manifest, nested_paths))
     }
+}
+
+/// Will check a list of toml targets, and make sure the target names are unique within a vector.
+/// If not, the name of the offending binary target is returned.
+fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
+    let values = targets.iter().map(|e| e.name()).collect::<Vec<String>>();
+    let mut seen = HashSet::new();
+    for v in values {
+        if !seen.insert(v.clone()) {
+            return Err(v);
+        }
+    }
+    Ok(())
 }
 
 fn validate_library_name(target: &TomlTarget) -> CargoResult<()> {
