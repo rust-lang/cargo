@@ -3,11 +3,10 @@ use std::fmt;
 use std::path::{PathBuf, Path};
 
 use semver::Version;
-use rustc_serialize::{Encoder,Encodable};
+use rustc_serialize::{Encoder, Encodable};
 
 use core::{Dependency, PackageId, Summary};
 use core::package_id::Metadata;
-use core::dependency::SerializedDependency;
 use util::{CargoResult, human};
 
 /// Contains all the information about a package, as loaded from a Cargo.toml.
@@ -44,11 +43,11 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[derive(PartialEq,Clone,RustcEncodable)]
-pub struct SerializedManifest {
+#[derive(RustcEncodable)]
+struct SerializedManifest<'a> {
     name: String,
     version: String,
-    dependencies: Vec<SerializedDependency>,
+    dependencies: &'a [Dependency],
     targets: Vec<Target>,
 }
 
@@ -57,9 +56,7 @@ impl Encodable for Manifest {
         SerializedManifest {
             name: self.summary.name().to_string(),
             version: self.summary.version().to_string(),
-            dependencies: self.summary.dependencies().iter().map(|d| {
-                SerializedDependency::from_dependency(d)
-            }).collect(),
+            dependencies: self.summary.dependencies(),
             targets: self.targets.clone(),
         }.encode(s)
     }
