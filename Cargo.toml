@@ -1,6 +1,6 @@
 [project]
 name = "cargo"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
