@@ -131,10 +131,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
         // For `cargo help foo`, print out the usage message for the specified
         // subcommand by executing the command with the `-h` flag.
-        "help" => {
-            vec!["cargo".to_string(), flags.arg_args[0].clone(),
-                 "-h".to_string()]
-        }
+        "help" => vec!["cargo".to_string(), flags.arg_args[0].clone(),
+                       "-h".to_string()],
 
         // For all other invocations, we're of the form `cargo foo args...`. We
         // use the exact environment arguments to preserve tokens like `--` for
@@ -168,7 +166,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
                                   .filter(|&(d, _)| d < 4)
                                   .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));
-    filtered.get(0).map(|slot| slot.1.to_string())
+    filtered.get(0).map(|slot| slot.1.clone())
 }
 
 fn execute_subcommand(config: &Config,
@@ -245,7 +243,7 @@ fn search_directories(config: &Config) -> Vec<PathBuf> {
     if let Some(val) = env::var_os("PATH") {
         dirs.extend(env::split_paths(&val));
     }
-    return dirs
+    dirs
 }
 
 fn init_git_transports(config: &Config) {
