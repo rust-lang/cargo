@@ -1,6 +1,5 @@
 use std::default::Default;
 use std::fs;
-use std::io::prelude::*;
 use std::path::Path;
 
 use core::{Package, PackageSet, Profiles};
