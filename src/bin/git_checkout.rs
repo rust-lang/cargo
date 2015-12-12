@@ -34,7 +34,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                    })
                    .map_err(|e| CliError::from_boxed(e, 1)));
 
-    let reference = GitReference::Branch(reference.to_string());
+    let reference = GitReference::Branch(reference.clone());
     let source_id = SourceId::for_git(&url, reference);
 
     let mut source = GitSource::new(&source_id, config);
