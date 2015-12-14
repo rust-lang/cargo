@@ -117,6 +117,27 @@ case $state in
                     '*: :_cargo_cmds' \
                     ;;
 
+            install)
+                _arguments \
+                    '--bin=[only install the specified binary]' \
+                    '--branch=[branch to use when installing from git]' \
+                    '--color=:colorization option:(auto always never)' \
+                    '--debug[build in debug mode instead of release mode]' \
+                    '--example[install the specified example instead of binaries]' \
+                    '--features=[space separated feature list]' \
+                    '--git=[URL from which to install the crate]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
+                    '--no-default-features[do not build the default features]' \
+                    '--path=[local filesystem path to crate to install]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '--rev=[specific commit to use when installing from git]' \
+                    '--root=[directory to install packages into]' \
+                    '--tag=[tag to use when installing from git]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--vers=[version to install from crates.io]' \
+                    ;;
+
             locate-project)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
@@ -272,6 +293,7 @@ local -a commands;commands=(
 'generate-lockfile:create lockfile'
 'git-checkout:git checkout'
 'help:get help for commands'
+'install:install a Rust binary'
 'locate-project:print "Cargo.toml" location'
 'login:login to remote server'
 'new:create a new project'
