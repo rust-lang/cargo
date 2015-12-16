@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -51,9 +51,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         to_remove: options.flag_remove,
         list: options.flag_list,
     };
-    try!(ops::modify_owners(config, &opts).map_err(|e| {
-        CliError::from_boxed(e, 101)
-    }));
+    try!(ops::modify_owners(config, &opts));
     Ok(None)
 }
 

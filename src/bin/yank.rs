@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -46,9 +46,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                    options.flag_vers,
                    options.flag_token,
                    options.flag_index,
-                   options.flag_undo).map_err(|e| {
-        CliError::from_boxed(e, 101)
-    }));
+                   options.flag_undo));
     Ok(None)
 }
 
