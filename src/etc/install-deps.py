@@ -30,7 +30,8 @@ elif sys.platform == 'win32':
     else:
         host = host_bits + '-pc-windows-gnu'
 else:
-    raise "Unknown platform"
+    exit_msg = "There is no official Cargo snapshot for {} platform, sorry." 
+    sys.exit(exit_msg.format(sys.platform))
 
 rust_date = open('src/rustversion.txt').read().strip()
 url = 'https://static.rust-lang.org/dist/' + rust_date
