@@ -68,7 +68,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
                                               config.cwd()));
 
-    let mut doc_opts = ops::DocOptions {
+    let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
             config: config,
@@ -90,8 +90,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    try!(ops::doc(&root, &mut doc_opts));
+    try!(ops::doc(&root, &doc_opts));
 
     Ok(None)
 }
-

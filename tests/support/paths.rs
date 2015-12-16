@@ -1,6 +1,5 @@
 use std::env;
 use std::fs;
-use std::io::prelude::*;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::{Once, ONCE_INIT};
