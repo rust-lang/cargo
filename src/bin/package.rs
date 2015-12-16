@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
@@ -35,10 +35,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
-    ops::package(&root, config,
-                 !options.flag_no_verify,
-                 options.flag_list,
-                 !options.flag_no_metadata).map(|_| None).map_err(|err| {
-        CliError::from_boxed(err, 101)
-    })
+    try!(ops::package(&root, config,
+                      !options.flag_no_verify,
+                      options.flag_list,
+                      !options.flag_no_metadata));
+    Ok(None)
 }
