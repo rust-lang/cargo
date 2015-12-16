@@ -3,19 +3,26 @@ use hamcrest::{assert_that};
 
 fn setup() {}
 
+fn remove_all_whitespace(s: &str) -> String {
+    s.split_whitespace().collect()
+}
+
 fn read_manifest_output() -> String {
-    "\
-{\
-    \"name\":\"foo\",\
-    \"version\":\"0.5.0\",\
-    \"dependencies\":[],\
-    \"targets\":[{\
-        \"kind\":[\"bin\"],\
-        \"name\":\"foo\",\
-        \"src_path\":\"src[..]foo.rs\"\
-    }],\
-    \"manifest_path\":\"[..]Cargo.toml\"\
-}".into()
+    remove_all_whitespace(r#"
+{
+    "name":"foo",
+    "version":"0.5.0",
+    "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
+    "source":null,
+    "dependencies":[],
+    "targets":[{
+        "kind":["bin"],
+        "name":"foo",
+        "src_path":"src[..]foo.rs"
+    }],
+    "features":{},
+    "manifest_path":"[..]Cargo.toml"
+}"#)
 }
 
 test!(cargo_read_manifest_path_to_cargo_toml_relative {
