@@ -12,8 +12,7 @@ fn read_manifest_output() -> String {
     \"targets\":[{\
         \"kind\":[\"bin\"],\
         \"name\":\"foo\",\
-        \"src_path\":\"src[..]foo.rs\",\
-        \"metadata\":null\
+        \"src_path\":\"src[..]foo.rs\"\
     }],\
     \"manifest_path\":\"[..]Cargo.toml\"\
 }".into()
