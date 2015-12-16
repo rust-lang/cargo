@@ -43,25 +43,6 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[derive(RustcEncodable)]
-struct SerializedManifest<'a> {
-    name: String,
-    version: String,
-    dependencies: &'a [Dependency],
-    targets: Vec<Target>,
-}
-
-impl Encodable for Manifest {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        SerializedManifest {
-            name: self.summary.name().to_string(),
-            version: self.summary.version().to_string(),
-            dependencies: self.summary.dependencies(),
-            targets: self.targets.clone(),
-        }.encode(s)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, RustcEncodable, Copy)]
 pub enum LibKind {
     Lib,
