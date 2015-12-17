@@ -135,13 +135,9 @@ impl ProjectBuilder {
     }
 
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
-        let mut p = process(program);
-        p.cwd(&self.root())
-         .env("HOME", &paths::home())
-         .env_remove("CARGO_HOME")  // make sure we don't pick up an outer one
-         .env_remove("CARGO_TARGET_DIR") // we assume 'target'
-         .env_remove("MSYSTEM");    // assume cmd.exe everywhere on windows
-        return p;
+        let mut p = ::process(program);
+        p.cwd(self.root());
+        return p
     }
 
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {

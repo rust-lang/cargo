@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::env;
 use tempdir::TempDir;
 
-use support::{execs, paths, cargo_dir};
+use support::{execs, paths};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
@@ -19,8 +19,8 @@ fn my_process(s: &str) -> ProcessBuilder {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = process(&cargo_dir().join("cargo"));
-    p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
+    let mut p = ::cargo_process();
+    p.arg(s);
     return p;
 }
 
