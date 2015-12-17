@@ -3,10 +3,10 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use cargo::util::{process, ProcessBuilder};
+use cargo::util::ProcessBuilder;
 use hamcrest::{assert_that, existing_file, is_not, Matcher, MatchResult};
 
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use support::{UPDATING, DOWNLOADING, COMPILING, INSTALLING, REMOVING};
 use support::paths;
 use support::registry::Package;
@@ -17,6 +17,12 @@ use self::InstalledExe as has_installed_exe;
 fn setup() {
 }
 
+fn cargo_process(s: &str) -> ProcessBuilder {
+    let mut p = ::cargo_process();
+    p.arg(s);
+    return p
+}
+
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
         .file("src/lib.rs", "")
@@ -25,14 +31,6 @@ fn pkg(name: &str, vers: &str) {
             fn main() {{}}
         ", name))
         .publish()
-}
-
-fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = process(&cargo_dir().join("cargo"));
-    p.arg(s).cwd(&paths::root())
-     .env("HOME", &paths::home())
-     .env_remove("CARGO_HOME");
-    return p;
 }
 
 fn exe(name: &str) -> String {
