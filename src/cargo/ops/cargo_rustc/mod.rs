@@ -162,7 +162,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
         let any_dylib = output.library_links.iter().any(|l| {
             !l.starts_with("static=") && !l.starts_with("framework=")
         });
-        if !any_dylib { continue }
+        if !any_dylib && !output.library_links.is_empty() {
+            continue
+        }
         for dir in output.library_paths.iter() {
             cx.compilation.native_dirs.insert(pkg.clone(), dir.clone());
         }
