@@ -33,16 +33,29 @@ pub struct Dependency {
 
 
 #[derive(RustcEncodable)]
-struct SerializedDependency {
-    name: String,
-    req: String
+struct SerializedDependency<'a> {
+    name: &'a str,
+    source: &'a SourceId,
+    req: String,
+    kind: Kind,
+
+    optional: bool,
+    uses_default_features: bool,
+    features: &'a [String],
+    target: &'a Option<&'a str>,
 }
 
 impl Encodable for Dependency {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedDependency {
-            name: self.name().to_string(),
-            req: self.version_req().to_string()
+            name: self.name(),
+            source: &self.source_id(),
+            req: self.version_req().to_string(),
+            kind: self.kind(),
+            optional: self.is_optional(),
+            uses_default_features: self.uses_default_features(),
+            features: self.features(),
+            target: &self.only_for_platform(),
         }.encode(s)
     }
 }
@@ -52,6 +65,16 @@ pub enum Kind {
     Normal,
     Development,
     Build,
+}
+
+impl Encodable for Kind {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        match *self {
+            Kind::Normal => None,
+            Kind::Development => Some("dev"),
+            Kind::Build => Some("build"),
+        }.encode(s)
+    }
 }
 
 impl DependencyInner {
@@ -235,4 +258,3 @@ impl Dependency {
         self.inner.matches_id(id)
     }
 }
-
