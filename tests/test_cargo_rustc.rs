@@ -1,8 +1,9 @@
 use std::path::MAIN_SEPARATOR as SEP;
+
 use support::{execs, project};
 use support::{COMPILING, RUNNING};
-use hamcrest::{assert_that};
 
+use hamcrest::{assert_that, existing_file};
 
 fn setup() {
 }
@@ -352,4 +353,34 @@ Invalid arguments.
 
 Usage:
     cargo rustc [options] [--] [<opts>...]".to_string()));
+});
+
+test!(rustc_with_other_profile {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dev-dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/main.rs", r#"
+            #[cfg(test)] extern crate a;
+
+            #[test]
+            fn foo() {}
+        "#)
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    foo.build();
+
+    assert_that(foo.cargo("rustc").arg("--profile").arg("test"),
+                execs().with_status(0));
 });
