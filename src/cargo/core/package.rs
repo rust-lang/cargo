@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{self, Formatter};
 use std::hash;
 use std::slice;
@@ -24,25 +25,30 @@ pub struct Package {
 
 #[derive(RustcEncodable)]
 struct SerializedPackage<'a> {
-    name: String,
-    version: String,
+    name: &'a str,
+    version: &'a str,
+    id: &'a PackageId,
+    source: &'a SourceId,
     dependencies: &'a [Dependency],
-    targets: Vec<Target>,
-    manifest_path: String,
+    targets: &'a [Target],
+    features: &'a HashMap<String, Vec<String>>,
+    manifest_path: &'a str,
 }
 
 impl Encodable for Package {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        let manifest = self.manifest();
-        let summary = manifest.summary();
+        let summary = self.manifest.summary();
         let package_id = summary.package_id();
 
         SerializedPackage {
-            name: package_id.name().to_string(),
-            version: package_id.version().to_string(),
+            name: &package_id.name(),
+            version: &package_id.version().to_string(),
+            id: package_id,
+            source: summary.source_id(),
             dependencies: summary.dependencies(),
-            targets: manifest.targets().to_vec(),
-            manifest_path: self.manifest_path.display().to_string()
+            targets: &self.manifest.targets(),
+            features: summary.features(),
+            manifest_path: &self.manifest_path.display().to_string(),
         }.encode(s)
     }
 }

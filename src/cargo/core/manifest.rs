@@ -43,25 +43,6 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[derive(RustcEncodable)]
-struct SerializedManifest<'a> {
-    name: String,
-    version: String,
-    dependencies: &'a [Dependency],
-    targets: Vec<Target>,
-}
-
-impl Encodable for Manifest {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        SerializedManifest {
-            name: self.summary.name().to_string(),
-            version: self.summary.version().to_string(),
-            dependencies: self.summary.dependencies(),
-            targets: self.targets.clone(),
-        }.encode(s)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, RustcEncodable, Copy)]
 pub enum LibKind {
     Lib,
@@ -93,7 +74,7 @@ impl LibKind {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, RustcEncodable, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
@@ -101,6 +82,21 @@ pub enum TargetKind {
     Bench,
     Example,
     CustomBuild,
+}
+
+impl Encodable for TargetKind {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        match *self {
+            TargetKind::Lib(ref kinds) => {
+                kinds.iter().map(|k| k.crate_type()).collect()
+            }
+            TargetKind::Bin => vec!["bin"],
+            TargetKind::Example => vec!["example"],
+            TargetKind::Test => vec!["test"],
+            TargetKind::CustomBuild => vec!["custom-build"],
+            TargetKind::Bench => vec!["bench"],
+        }.encode(s)
+    }
 }
 
 #[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug, Hash)]
@@ -145,31 +141,18 @@ pub struct Target {
 }
 
 #[derive(RustcEncodable)]
-pub struct SerializedTarget {
-    kind: Vec<&'static str>,
-    name: String,
-    src_path: String,
-    metadata: Option<Metadata>
+struct SerializedTarget<'a> {
+    kind: &'a TargetKind,
+    name: &'a str,
+    src_path: &'a str,
 }
 
 impl Encodable for Target {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        let kind = match self.kind {
-            TargetKind::Lib(ref kinds) => {
-                kinds.iter().map(|k| k.crate_type()).collect()
-            }
-            TargetKind::Bin => vec!["bin"],
-            TargetKind::Example => vec!["example"],
-            TargetKind::Test => vec!["test"],
-            TargetKind::CustomBuild => vec!["custom-build"],
-            TargetKind::Bench => vec!["bench"],
-        };
-
         SerializedTarget {
-            kind: kind,
-            name: self.name.clone(),
-            src_path: self.src_path.display().to_string(),
-            metadata: self.metadata.clone()
+            kind: &self.kind,
+            name: &self.name,
+            src_path: &self.src_path.display().to_string(),
         }.encode(s)
     }
 }
