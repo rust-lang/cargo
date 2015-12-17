@@ -188,7 +188,9 @@ fn execute_subcommand(config: &Config,
             }))
         }
     };
-    try!(util::process(&command).args(&args[1..]).exec());
+    // Important: &args[2..] is to pop the subcommand name from the arguments to
+    // cargo, so that 'cargo check' does not become 'cargo-check check'
+    try!(util::process(&command).args(&args[2..]).exec());
     Ok(())
 }
 

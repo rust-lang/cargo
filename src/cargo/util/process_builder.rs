@@ -74,6 +74,7 @@ impl ProcessBuilder {
 
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
+
         let exit = try!(command.status().map_err(|e| {
             process_error(&format!("Could not execute process `{}`",
                                    self.debug_string()),
