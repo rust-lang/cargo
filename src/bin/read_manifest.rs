@@ -12,6 +12,8 @@ struct Options {
 }
 
 pub const USAGE: &'static str = "
+Print a JSON representation of a Cargo.toml manifest
+
 Usage:
     cargo read-manifest [options]
     cargo read-manifest -h | --help
@@ -19,7 +21,7 @@ Usage:
 Options:
     -h, --help               Print this message
     -v, --verbose            Use verbose output
-    --manifest-path PATH     Path to the manifest to compile
+    --manifest-path PATH     Path to the manifest
     --color WHEN             Coloring: auto, always, never
 ";
 

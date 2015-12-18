@@ -24,7 +24,7 @@ Options:
     --host HOST              Host to upload the package to
     --token TOKEN            Token to use when uploading
     --no-verify              Don't verify package tarball before publish
-    --manifest-path PATH     Path to the manifest to compile
+    --manifest-path PATH     Path to the manifest of the package to publish
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
