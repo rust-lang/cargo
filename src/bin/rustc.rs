@@ -1,9 +1,9 @@
 use std::env;
 
-use cargo::ops::CompileOptions;
+use cargo::ops::{CompileOptions, CompileMode};
 use cargo::ops;
 use cargo::util::important_paths::{find_root_manifest_for_wd};
-use cargo::util::{CliResult, Config};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -23,6 +23,7 @@ struct Options {
     flag_example: Vec<String>,
     flag_test: Vec<String>,
     flag_bench: Vec<String>,
+    flag_profile: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -41,6 +42,7 @@ Options:
     --test NAME              Build only the specified test target
     --bench NAME             Build only the specified benchmark target
     --release                Build artifacts in release mode, with optimizations
+    --profile PROFILE        Profile to build the selected target for
     --features FEATURES      Features to compile for the package
     --no-default-features    Do not compile default features for the package
     --target TRIPLE          Target triple which compiles will be for
@@ -69,6 +71,15 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
                                               config.cwd()));
+    let mode = match options.flag_profile.as_ref().map(|t| &t[..]) {
+        Some("dev") | None => CompileMode::Build,
+        Some("test") => CompileMode::Test,
+        Some("bench") => CompileMode::Bench,
+        Some(mode) => {
+            return Err(CliError::new(&format!("unknown profile: `{}`, use dev,
+                                               test, or bench", mode), 101))
+        }
+    };
 
     let opts = CompileOptions {
         config: config,
@@ -78,7 +89,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         no_default_features: options.flag_no_default_features,
         spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
         exec_engine: None,
-        mode: ops::CompileMode::Build,
+        mode: mode,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,
                                         &options.flag_bin,
