@@ -26,7 +26,7 @@ Options:
     -p SPEC, --package SPEC ...  Package to update
     --aggressive                 Force updating all dependencies of <name> as well
     --precise PRECISE            Update a single dependency to exactly PRECISE
-    --manifest-path PATH         Path to the manifest to compile
+    --manifest-path PATH         Path to the crate's manifest
     -v, --verbose                Use verbose output
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
@@ -68,4 +68,3 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(ops::update_lockfile(&root, &update_opts));
     Ok(None)
 }
-

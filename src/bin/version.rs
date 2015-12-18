@@ -7,6 +7,8 @@ use cargo::util::{CliResult, Config};
 struct Options;
 
 pub const USAGE: &'static str = "
+Show version information
+
 Usage:
     cargo version [options]
 
