@@ -11,7 +11,7 @@ use util::{internal, ChainError, profile, paths};
 use util::Freshness;
 
 use super::job::Work;
-use super::{fingerprint, process, Kind, Context, Unit};
+use super::{fingerprint, Kind, Context, Unit};
 use super::CommandType;
 
 /// Contains the parsed output of a custom build script.
