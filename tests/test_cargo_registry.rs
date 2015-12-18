@@ -1,8 +1,7 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use cargo::util::process;
 
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING};
 use support::paths::{self, CargoPathExt};
 use support::registry::{self, Package};
@@ -563,10 +562,7 @@ test!(dev_dependency_not_used {
 test!(login_with_no_cargo_dir {
     let home = paths::home().join("new-home");
     fs::create_dir(&home).unwrap();
-    assert_that(process(&cargo_dir().join("cargo"))
-                       .arg("login").arg("foo").arg("-v")
-                       .cwd(&paths::root())
-                       .env("HOME", &home),
+    assert_that(::cargo_process().arg("login").arg("foo").arg("-v"),
                 execs().with_status(0));
 });
 
