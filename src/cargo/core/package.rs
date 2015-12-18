@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::{self, Formatter};
+use std::fmt;
 use std::hash;
 use std::slice;
 use std::path::{Path, PathBuf};
