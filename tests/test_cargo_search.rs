@@ -4,9 +4,9 @@ use std::path::PathBuf;
 
 use url::Url;
 
-use cargo::util::{process, ProcessBuilder};
+use cargo::util::ProcessBuilder;
 use support::UPDATING;
-use support::{execs, cargo_dir};
+use support::execs;
 use support::paths;
 use support::git::repo;
 
@@ -35,9 +35,9 @@ fn setup() {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut b = process(&cargo_dir().join("cargo"));
-    b.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
-    b
+    let mut b = ::cargo_process();
+    b.arg(s);
+    return b
 }
 
 test!(simple {

@@ -4,10 +4,10 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str;
-use cargo::util::process;
 
+use cargo_process;
 use support::paths;
-use support::{execs, project, cargo_dir, mkdir_recursive, ProjectBuilder};
+use support::{execs, project, mkdir_recursive, ProjectBuilder};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -43,9 +43,7 @@ fn path() -> Vec<PathBuf> {
 test!(list_commands_looks_at_path {
     let proj = project("list-non-overlapping");
     let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
-    let mut pr = process(&cargo_dir().join("cargo"));
-    pr.cwd(&proj.root())
-      .env("HOME", &paths::home());
+    let mut pr = cargo_process();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
@@ -58,8 +56,8 @@ test!(list_commands_looks_at_path {
 });
 
 test!(find_closest_biuld_to_build {
-    let mut pr = process(&cargo_dir().join("cargo"));
-    pr.arg("biuld").cwd(&paths::root()).env("HOME", &paths::home());
+    let mut pr = cargo_process();
+    pr.arg("biuld");
 
     assert_that(pr,
                 execs().with_status(101)
@@ -72,8 +70,16 @@ Did you mean `build`?
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 test!(find_closest_dont_correct_nonsense {
-    let mut pr = process(&cargo_dir().join("cargo"));
-    pr.arg("asdf").cwd(&paths::root()).env("HOME", &paths::home());
+    let paths = path().into_iter().filter(|p| {
+        fs::read_dir(p).into_iter()
+           .flat_map(|i| i)
+           .filter_map(|e| e.ok())
+           .all(|e| !e.file_name().to_str().unwrap_or("").starts_with("cargo-"))
+    });
+    let mut pr = cargo_process();
+    pr.arg("asdf")
+      .cwd(&paths::root())
+      .env("PATH", env::join_paths(paths).unwrap());
 
     assert_that(pr,
                 execs().with_status(101)
@@ -92,11 +98,9 @@ test!(override_cargo_home {
         git = false
     "#).unwrap();
 
-    assert_that(process(&cargo_dir().join("cargo"))
+    assert_that(cargo_process()
                     .arg("new").arg("foo")
-                    .cwd(&paths::root())
                     .env("USER", "foo")
-                    .env("HOME", &paths::home())
                     .env("CARGO_HOME", &my_home),
                 execs().with_status(0));
 
@@ -107,22 +111,18 @@ test!(override_cargo_home {
 });
 
 test!(cargo_help {
-    assert_that(process(&cargo_dir().join("cargo")),
+    assert_that(cargo_process(),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).arg("help"),
+    assert_that(cargo_process().arg("help"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo")).arg("-h"),
+    assert_that(cargo_process().arg("-h"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo"))
-                       .arg("help").arg("build"),
+    assert_that(cargo_process().arg("help").arg("build"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo"))
-                       .arg("build").arg("-h"),
+    assert_that(cargo_process().arg("build").arg("-h"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo"))
-                       .arg("help").arg("-h"),
+    assert_that(cargo_process().arg("help").arg("-h"),
                 execs().with_status(0));
-    assert_that(process(&cargo_dir().join("cargo"))
-                       .arg("help").arg("help"),
+    assert_that(cargo_process().arg("help").arg("help"),
                 execs().with_status(0));
 });

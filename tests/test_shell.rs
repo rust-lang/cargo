@@ -6,9 +6,8 @@ use hamcrest::{assert_that};
 
 use cargo::core::shell::{Shell, ShellConfig};
 use cargo::core::shell::ColorConfig::{Auto,Always, Never};
-use cargo::util::process;
 
-use support::{Tap, cargo_dir, execs, shell_writes};
+use support::{Tap, execs, shell_writes};
 
 fn setup() {
 }
@@ -81,8 +80,7 @@ test!(color_explicitly_enabled {
 
 test!(no_term {
     // Verify that shell creation is successful when $TERM does not exist.
-    assert_that(process(&cargo_dir().join("cargo"))
-                    .env_remove("TERM"),
+    assert_that(::cargo_process().env_remove("TERM"),
                 execs().with_stderr(""));
 });
 

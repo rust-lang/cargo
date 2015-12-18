@@ -53,6 +53,10 @@ impl RepoBuilder {
                          "Initial commit", &tree, &[]).unwrap();
     }
 
+    pub fn root(&self) -> &Path {
+        self.repo.workdir().unwrap()
+    }
+
     pub fn url(&self) -> Url {
         path2url(self.repo.workdir().unwrap().to_path_buf())
     }

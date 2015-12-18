@@ -17,6 +17,7 @@ extern crate url;
 extern crate log;
 
 use cargo::util::Rustc;
+use std::ffi::OsStr;
 
 mod support;
 macro_rules! test {
@@ -80,4 +81,18 @@ fn is_nightly() -> bool {
 
 fn can_panic() -> bool {
     RUSTC.with(|r| !(r.host.contains("msvc") && !r.host.contains("x86_64")))
+}
+
+fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
+    let mut p = cargo::util::process(t.as_ref());
+    p.cwd(&support::paths::root())
+     .env("HOME", &support::paths::home())
+     .env_remove("CARGO_HOME")
+     .env_remove("CARGO_TARGET_DIR") // we assume 'target'
+     .env_remove("MSYSTEM");    // assume cmd.exe everywhere on windows
+    return p
+}
+
+fn cargo_process() -> cargo::util::ProcessBuilder {
+    process(&support::cargo_dir().join("cargo"))
 }

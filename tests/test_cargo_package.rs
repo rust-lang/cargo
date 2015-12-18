@@ -3,12 +3,11 @@ use std::io::Cursor;
 use std::io::prelude::*;
 use std::path::Path;
 
-use cargo::util::process;
 use flate2::read::GzDecoder;
 use git2;
 use tar::Archive;
 
-use support::{project, execs, cargo_dir, paths, git, path2url};
+use support::{project, execs, paths, git, path2url};
 use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING, UPDATING, DOWNLOADING};
 use support::registry::{self, Package};
 use hamcrest::{assert_that, existing_file};
@@ -215,8 +214,8 @@ test!(package_verbose {
         "#)
         .file("a/src/lib.rs", "");
     p.build();
-    let mut cargo = process(&cargo_dir().join("cargo"));
-    cargo.cwd(&root).env("HOME", &paths::home());
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(cargo.arg("package").arg("-v").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
@@ -330,7 +329,7 @@ test!(package_new_git_repo {
     p.build();
     git2::Repository::init(&p.root()).unwrap();
 
-    assert_that(p.process(cargo_dir().join("cargo")).arg("package")
+    assert_that(::cargo_process().arg("package").cwd(p.root())
                  .arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ([..])
