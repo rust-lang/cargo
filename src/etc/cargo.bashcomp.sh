@@ -67,6 +67,15 @@ _cargo()
 			--manifest-path)
 				_filedir toml
 				;;
+			--bin)
+				COMPREPLY=( $( compgen -W "$(_bin_names)" -- "$cur" ) )
+				;;
+			--test)
+				COMPREPLY=( $( compgen -W "$(_test_names)" -- "$cur" ) )
+				;;
+			--bench)
+				COMPREPLY=( $( compgen -W "$(_benchmark_names)" -- "$cur" ) )
+				;;
 			--example)
 				COMPREPLY=( $( compgen -W "$(_get_examples)" -- "$cur" ) )
 				;;
@@ -95,6 +104,61 @@ _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
 	# regexp-replace manifest '\{"root":"|"\}' ''
 	echo ${manifest:9:-2}
+}
+
+# Extracts the values of "name" from the array given in $1 and shows them as
+# command line options for completion
+_get_names_from_array()
+{
+    local manifest=$(_locate_manifest)
+    if [[ -z $manifest ]]; then
+        return 0
+    fi
+
+    local last_line
+    local -a names
+    local in_block=false
+    local block_name=$1
+    while read line
+    do
+        if [[ $last_line == "[[$block_name]]" ]]; then
+            in_block=true
+        else
+            if [[ $last_line =~ .*\[\[.* ]]; then
+                in_block=false
+            fi
+        fi
+
+        if [[ $in_block == true ]]; then
+            if [[ $line =~ .*name.*\= ]]; then
+                line=${line##*=}
+                line=${line%%\"}
+                line=${line##*\"}
+                names+=($line)
+            fi
+        fi
+
+        last_line=$line
+    done < $manifest
+    echo "${names[@]}"
+}
+
+#Gets the bin names from the manifest file
+_bin_names()
+{
+    _get_names_from_array "bin"
+}
+
+#Gets the test names from the manifest file
+_test_names()
+{
+    _get_names_from_array "test"
+}
+
+#Gets the bench names from the manifest file
+_benchmark_names()
+{
+    _get_names_from_array "bench"
 }
 
 _get_examples(){
