@@ -7,11 +7,13 @@ struct LocateProjectFlags {
 }
 
 pub const USAGE: &'static str = "
+Print a JSON representation of a Cargo.toml file's location
+
 Usage:
     cargo locate-project [options]
 
 Options:
-    --manifest-path PATH    Path to the manifest to build benchmarks for
+    --manifest-path PATH    Path to the manifest to locate
     -h, --help              Print this message
 ";
 

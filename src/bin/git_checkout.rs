@@ -12,6 +12,8 @@ struct Options {
 }
 
 pub const USAGE: &'static str = "
+Checkout a copy of a Git repository
+
 Usage:
     cargo git-checkout [options] --url=URL --reference=REF
     cargo git-checkout -h | --help

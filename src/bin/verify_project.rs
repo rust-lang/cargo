@@ -19,6 +19,8 @@ struct Flags {
 }
 
 pub const USAGE: &'static str = "
+Check correctness of crate manifest
+
 Usage:
     cargo verify-project [options]
     cargo verify-project -h | --help
