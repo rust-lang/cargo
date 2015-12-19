@@ -368,3 +368,22 @@ Caused by:
   found duplicate bench name ex, but all binary targets must have a unique name
 "));
 });
+
+test!(unused_keys {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+           [package]
+           name = "foo"
+           version = "0.1.0"
+           authors = []
+
+           [target.foo]
+           bar = "3"
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build"),
+                execs().with_status(0).with_stderr("\
+unused manifest key: target.foo.bar
+"));
+});
