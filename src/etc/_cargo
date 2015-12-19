@@ -211,6 +211,57 @@ case $state in
                     '*: :_normal' \
                 ;;
 
+            rustc)
+                _arguments \
+                    '--bench=[build only the specified benchmark target]' \
+                    '--bin=[build only the specified binary]' \
+                    '--color=:colorization option:(auto always never)' \
+                    '--example=[build only the specified example]' \
+                    '--features=[features to compile for the package]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'=[number of jobs to run in parallel]' \
+                    '--lib[build only the library for this package]' \
+                    '--manifest-path=[path to the manifest to fetch dependencies for]' \
+                    '--no-default-features[do not compile default features for the package]' \
+                    '(-p, --package)'{-p,--package}'=[profile to compile for]' \
+                    '--profile=[profile to build the selected target for]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '--release[build artifacts in release mode, with optimizations]' \
+                    '--target=[target triple which compiles will be for]' \
+                    '--test=[build only the specified test target]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            rustdoc)
+                _arguments \
+                    '--bench=[build only the specified benchmark target]' \
+                    '--bin=[build only the specified binary]' \
+                    '--color=:colorization option:(auto always never)' \
+                    '--example=[build only the specified example]' \
+                    '--features=[space-separated list of features to also build]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'=[number of jobs to run in parallel]' \
+                    '--lib[build only the library for this package]' \
+                    '--manifest-path=[path to the manifest to document]' \
+                    '--no-default-features[do not build the `default` feature]' \
+                    '--open[open the docs in a browser after the operation]' \
+                    '(-p, --package)'{-p,--package}'=[package to document]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '--release[build artifacts in release mode, with optimizations]' \
+                    '--target=[build for the target triple]' \
+                    '--test=[build only the specified test target]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
+            search)
+                _arguments \
+                    '--color=:colorization option:(auto always never)' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--host=[host of a registry to search in]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    ;;
+
             test)
                 _arguments \
                     '--features=[space separated feature list]' \
@@ -225,6 +276,16 @@ case $state in
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
                     '1: :_test_names' \
+                    ;;
+
+            uninstall)
+                _arguments \
+                    '--bin=[only uninstall the binary NAME]' \
+                    '--color=:colorization option:(auto always never)' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-q, --quiet)'{-q,--quiet}'[less output printed to stdout]' \
+                    '--root=[directory to uninstall packages from]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
             update)
@@ -288,7 +349,11 @@ local -a commands;commands=(
 'publish:upload package to the registry'
 'read-manifest:print manifest in JSON format'
 'run:run the main binary of the local package'
+'rustc:compile a package and all of its dependencies'
+'rustdoc:build documentation for a package'
+'search:search packages on crates.io'
 'test:execute all unit and tests of a local package'
+'uninstall:remove a Rust binary'
 'update:update dependencies'
 'verify-project:check Cargo.toml'
 'version:show version information'
