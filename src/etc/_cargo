@@ -60,19 +60,6 @@ case $state in
                     '--color=:colorization option:(auto always never)' \
                     ;;
 
-            config-for-key)
-                _arguments \
-                    '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--human[]' \
-                    '--key=[key]' \
-                    ;;
-
-            config-list)
-                _arguments \
-                    '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--human[]' \
-                    ;;
-
             doc)
                 _arguments \
                     '--features=[space separated feature list]' \
@@ -286,8 +273,6 @@ local -a commands;commands=(
 'bench:execute all benchmarks of a local package'
 'build:compile the current project'
 'clean:remove generated artifacts'
-'config-for-key:print key from cargo config file'
-'config-list:print all config from cargo config file'
 'doc:build package documentation'
 'fetch:fetch package dependencies'
 'generate-lockfile:create lockfile'
