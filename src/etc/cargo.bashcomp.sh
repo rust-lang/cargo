@@ -33,7 +33,7 @@ _cargo()
 	local opt__install="$opt_common $opt_feat $opt_jobs --bin --branch --debug --example --git --list --path --rev --root --tag --vers"
 	local opt__locate_project="$opt_mani -h --help"
 	local opt__login="$opt_common --host"
-	local opt__new="$opt_common --vcs --bin --name --license"
+	local opt__new="$opt_common --vcs --bin --name --license --license-file"
 	local opt__owner="$opt_common -a --add -r --remove -l --list --index --token"
 	local opt__package="$opt_common $opt_mani -l --list --no-verify --no-metadata"
 	local opt__pkgid="${opt__fetch}"

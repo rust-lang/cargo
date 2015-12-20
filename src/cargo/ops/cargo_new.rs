@@ -27,6 +27,7 @@ pub struct NewOptions<'a> {
     pub path: &'a str,
     pub name: Option<&'a str>,
     pub license: Option<Vec<License>>,
+    pub license_file: Option<&'a str>,
 }
 
 impl Decodable for VersionControl {
@@ -107,6 +108,7 @@ struct CargoNewConfig {
     email: Option<String>,
     version_control: Option<VersionControl>,
     license: Option<Vec<License>>,
+    license_file: Option<String>
 }
 
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
@@ -220,21 +222,41 @@ fn mk(config: &Config, path: &Path, name: &str,
         (&_, Some(lic)) => Some(lic.clone()),
     };
 
+    let license_file: Option<String> = match (&opts.license_file, cfg.license_file) {
+        (&None, None) => None,
+        (&Some(ref lic_file), _) => Some(lic_file.to_string()),
+        (&_, Some(lic_file)) => Some(lic_file.to_string()),
+    };
+
+    let license_options: String = match (license.clone(), license_file) {
+        (Some(license), Some(license_file)) => {
+            let license = join_licenses(license.iter()
+                                               .map(|l| format!("{}", l))
+                                               .collect::<Vec<_>>());
+            format!(r#"license = "{}"
+license-file = "{}"
+"#, license, license_file)
+        },
+        (Some(license), None) => {
+            let license = join_licenses(license.iter()
+                                               .map(|l| format!("{}", l))
+                                               .collect::<Vec<_>>());
+            format!(r#"license = "{}"
+"#, license)
+        },
+        (None, Some(license_file)) => {
+            format!(r#"license-file = "{}"
+"#, license_file)
+        },
+        (None, None) => {
+            "".to_owned()
+        }
+    };
+
+    // If there is more than one license, we suffix the filename
+    // with the name of the license
     if license.is_some() {
         let license = license.unwrap();
-        let license_string = join_licenses(license.iter()
-                                                  .map(|l| format!("{}", l))
-                                                  .collect::<Vec<_>>());
-        try!(file(&path.join("Cargo.toml"), format!(
-r#"[package]
-name = "{}"
-version = "0.1.0"
-authors = [{}]
-license = "{}"
-"#, name, toml::Value::String(author.clone()), license_string).as_bytes()));
-
-        // If there is more than one license, we suffix the filename
-        // with the name of the license
         if license.len() > 1 {
             for l in &license {
                 let upper = format!("{}", l).to_uppercase();
@@ -244,16 +266,16 @@ license = "{}"
             let license = license.get(0).unwrap();
             try!(license.write_file(&path.join("LICENSE"), &author))
         }
-    } else {
-        try!(file(&path.join("Cargo.toml"), format!(
+    }
+
+    try!(file(&path.join("Cargo.toml"), format!(
 r#"[package]
 name = "{}"
 version = "0.1.0"
 authors = [{}]
-
+{}
 [dependencies]
-"#, name, toml::Value::String(author.clone())).as_bytes()));
-    }
+"#, name, toml::Value::String(author.clone()), license_options).as_bytes()));
 
     try!(fs::create_dir(&path.join("src")));
 
@@ -303,6 +325,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
     let email = try!(config.get_string("cargo-new.email")).map(|s| s.0);
     let vcs = try!(config.get_string("cargo-new.vcs"));
     let license = try!(config.get_string("cargo-new.license"));
+    let license_file = try!(config.get_string("cargo-new.license-file"));
 
     let vcs = match vcs.as_ref().map(|p| (&p.0[..], &p.1)) {
         Some(("git", _)) => Some(VersionControl::Git),
@@ -326,11 +349,13 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         },
         _ => None,
     };
+    let license_file: Option<String> = license_file.as_ref().map(|p| p.0.to_owned());
     Ok(CargoNewConfig {
         name: name,
         email: email,
         version_control: vcs,
         license: license,
+        license_file: license_file,
     })
 }
 

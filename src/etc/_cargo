@@ -147,6 +147,7 @@ case $state in
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
                     '--license=[license choice]' \
+                    '--license-file=[license file location]' \
                     ;;
 
             owner)
