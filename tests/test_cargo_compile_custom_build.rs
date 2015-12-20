@@ -1789,3 +1789,36 @@ test!(rebuild_only_on_explicit_paths {
 ", running = RUNNING, compiling = COMPILING)));
 });
 
+
+test!(doctest_recieves_build_link_args {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            [dependencies.a]
+            path = "a"
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "bar"
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=native=bar");
+            }
+        "#);
+
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout_contains(&format!("\
+{running} `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
+", running = RUNNING)));
+});
