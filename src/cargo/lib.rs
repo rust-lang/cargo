@@ -131,13 +131,18 @@ pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
 }
 
 pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
-    let tty = isatty(libc::STDERR_FILENO);
+    enum Output {
+        Stdout,
+        Stderr,
+    }
+
+    let tty = isatty(Output::Stderr);
     let stderr = Box::new(io::stderr());
 
     let config = ShellConfig { color_config: color_config, tty: tty };
     let err = Shell::create(stderr, config);
 
-    let tty = isatty(libc::STDOUT_FILENO);
+    let tty = isatty(Output::Stdout);
     let stdout = Box::new(io::stdout());
 
     let config = ShellConfig { color_config: color_config, tty: tty };
@@ -146,19 +151,26 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
     return MultiShell::new(out, err, verbosity);
 
     #[cfg(unix)]
-    fn isatty(fd: libc::c_int) -> bool {
+    fn isatty(output: Output) -> bool {
+        let fd = match output {
+            Output::Stdout => libc::STDOUT_FILENO,
+            Output::Stderr => libc::STDERR_FILENO,
+        };
+
         unsafe { libc::isatty(fd) != 0 }
     }
     #[cfg(windows)]
-    fn isatty(fd: libc::c_int) -> bool {
+    fn isatty(output: Output) -> bool {
         extern crate kernel32;
         extern crate winapi;
+
+        let handle = match output {
+            Output::Stdout => winapi::winbase::STD_OUTPUT_HANDLE,
+            Output::Stderr => winapi::winbase::STD_ERROR_HANDLE,
+        };
+
         unsafe {
-            let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {
-                winapi::winbase::STD_OUTPUT_HANDLE
-            } else {
-                winapi::winbase::STD_ERROR_HANDLE
-            });
+            let handle = kernel32::GetStdHandle(handle);
             let mut out = 0;
             kernel32::GetConsoleMode(handle, &mut out) != 0
         }
