@@ -1,5 +1,4 @@
 use std::ascii::AsciiExt;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use core::resolver::Resolve;
@@ -53,39 +52,12 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
                                          config,
                                          opt.features,
                                          opt.no_default_features));
-    let (resolved_deps, packages) = deps;
+    let (packages, resolve) = deps;
 
-    #[derive(RustcEncodable)]
-    struct RootPackageInfo<'a> {
-        name: &'a str,
-        version: String,
-        features: Option<&'a HashMap<String, Vec<String>>>,
-    }
-
-    #[derive(RustcEncodable)]
-    struct ExportInfo<'a> {
-        root: RootPackageInfo<'a>,
-        packages: Vec<&'a Package>,
-    }
-
-    let mut output = ExportInfo {
-        root: RootPackageInfo {
-            name: resolved_deps.root().name(),
-            version: format!("{}", resolved_deps.root().version()),
-            features: None,
-        },
-        packages: Vec::new(),
+    let output = ExportInfo {
+        packages: &packages,
+        resolve: &resolve,
     };
-
-    for package in packages.iter() {
-        output.packages.push(&package);
-        if package.package_id() == resolved_deps.root() {
-            let features = package.manifest().summary().features();
-            if !features.is_empty() {
-                output.root.features = Some(features);
-            }
-        }
-    }
 
     let serialized_str = match &opt.output_format.to_ascii_uppercase()[..] {
         "TOML" => toml::encode_str(&output),
@@ -102,13 +74,20 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
     Ok(())
 }
 
+#[derive(RustcEncodable)]
+struct ExportInfo<'a> {
+    packages: &'a [Package],
+    resolve: &'a Resolve,
+}
+
+
 /// Loads the manifest and resolves the dependencies of the project to the
 /// concrete used versions. Afterwards available overrides of dependencies are applied.
 fn resolve_dependencies(manifest: &Path,
                         config: &Config,
                         features: Vec<String>,
                         no_default_features: bool)
-                        -> CargoResult<(Resolve, Vec<Package>)> {
+                        -> CargoResult<(Vec<Package>, Resolve)> {
     let mut source = try!(PathSource::for_path(manifest.parent().unwrap(), config));
     try!(source.update());
 
@@ -122,5 +101,5 @@ fn resolve_dependencies(manifest: &Path,
 
     let (packages, resolve_with_overrides, _) = deps;
 
-    Ok((resolve_with_overrides, packages))
+    Ok((packages, resolve_with_overrides))
 }
