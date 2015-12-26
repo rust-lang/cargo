@@ -474,7 +474,7 @@ impl ConfigValue {
     }
 }
 
-fn determine_paths(cwd: &Path) -> Option<Paths> {
+fn determine_paths(cwd: &Path) -> CargoResult<Paths> {
     use dirs;
     fn path_exists(path: PathBuf) -> Option<PathBuf> {
         fs::metadata(&path).ok().map(|_| path)
@@ -490,52 +490,51 @@ fn determine_paths(cwd: &Path) -> Option<Paths> {
 
     // 1)
     if let Some(v) = env::var_os("CARGO_HOME").map(|p| cwd.join(p)) {
-        return Some(Paths {
+        return Ok(Paths {
             bin: v.clone(),
             cache: v.clone(),
             config: v,
         });
     }
 
+    let dirs = try!(dirs::Directories::with_prefix("cargo", "Cargo").chain_error(|| {
+        human("Cargo couldn't find its configuration directory. \
+               This probably means that $HOME was not set.")
+    }));
+
     let user_home = env::home_dir();
-
-    let dirs = dirs::Directories::with_prefix("cargo", "Cargo").ok();
-
     let legacy = user_home.map(|h| h.join(".cargo"));
 
-    let platform_bin = dirs.as_ref().map(|d| d.bin_home());
-    let platform_cache = dirs.as_ref().map(|d| d.cache_home());
-    let platform_config = dirs.as_ref().map(|d| d.config_home());
+    let platform_bin = dirs.bin_home();
+    let platform_cache = dirs.cache_home();
+    let platform_config = dirs.config_home();
 
     let mut bin: Option<PathBuf>;
     let mut cache: Option<PathBuf>;
     let mut config: Option<PathBuf>;
 
     // 2)
-    bin = platform_bin.clone().map(|p| path_exists(p)).unwrap_or(None);
-    cache = platform_cache.clone().map(|p| path_exists(p)).unwrap_or(None);
-    config = platform_config.clone().map(|p| path_exists(p)).unwrap_or(None);
+    bin = path_exists(platform_bin.clone());
+    cache = path_exists(platform_cache.clone());
+    config = path_exists(platform_config.clone());
 
     // 3)
     if let Some(l) = legacy.map(|l| path_exists(l)).unwrap_or(None) {
+        bin = bin.or_else(|| Some(l.join("bin")));
         cache = cache.or_else(|| Some(l.clone()));
-        bin = bin.or_else(|| Some(l.clone()));
         config = config.or_else(|| Some(l));
     }
 
     // 4)
-    bin = bin.or(platform_bin);
-    cache = cache.or(platform_cache);
-    config = config.or(platform_config);
+    let bin = bin.unwrap_or(platform_bin);
+    let cache = cache.unwrap_or(platform_cache);
+    let config = config.unwrap_or(platform_config);
 
-    match (bin, cache, config) {
-        (Some(bin), Some(cache), Some(config)) => Some(Paths {
-            bin: bin,
-            cache: cache,
-            config: config,
-        }),
-        _ => None
-    }
+    Ok(Paths {
+        bin: bin,
+        cache: cache,
+        config: config,
+    })
 }
 
 fn walk_tree<F>(config: &Config, mut walk: F) -> CargoResult<()>

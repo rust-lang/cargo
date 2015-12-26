@@ -263,6 +263,7 @@ fn read_crate_list(path: &Path) -> CargoResult<CrateListingV1> {
 }
 
 fn write_crate_list(path: &Path, listing: CrateListingV1) -> CargoResult<()> {
+    try!(fs::create_dir_all(path));
     let metadata = path.join(".crates.toml");
     (|| -> CargoResult<_> {
         let mut f = try!(File::create(&metadata));

@@ -7,7 +7,7 @@ dependencies = [
  "crates-io 0.1.0",
  "crossbeam 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "curl 0.2.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "dirs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dirs 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "filetime 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -107,14 +107,13 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "ole32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "shell32-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "uuid-sys 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "xdg 2.0.0-pre5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xdg 2.0.0-pre6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -480,15 +479,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "uuid-sys"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "winapi 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "winapi"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -509,6 +499,6 @@ dependencies = [
 
 [[package]]
 name = "xdg"
-version = "2.0.0-pre5"
+version = "2.0.0-pre6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
