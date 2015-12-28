@@ -14,7 +14,7 @@ pub use self::process_builder::{process, ProcessBuilder};
 pub use self::rustc::Rustc;
 pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
-pub use self::to_url::ToUrl;
+pub use self::to_url::{ToUrl, ToUrlWithBase};
 pub use self::vcs::{GitRepo, HgRepo};
 
 pub mod config;
