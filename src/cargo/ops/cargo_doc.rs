@@ -36,6 +36,7 @@ pub fn doc(manifest_path: &Path,
     }
 
     try!(ops::compile(manifest_path, &options.compile_opts));
+    try!(build_markdown_docs(manifest_path));
 
     if options.open_result {
         let name = if options.compile_opts.spec.len() > 1 {
@@ -54,6 +55,38 @@ pub fn doc(manifest_path: &Path,
         let path = target_dir.join("doc").join(&name).join("index.html");
         if fs::metadata(&path).is_ok() {
             open_docs(&path);
+        }
+    }
+
+    Ok(())
+}
+
+fn build_markdown_docs(manifest_path: &Path) -> CargoResult<()> {
+    let docs_dir = manifest_path.parent().unwrap().join("doc");
+    let target_dir = manifest_path.parent().unwrap().join("target/doc");
+
+    try!(fs::create_dir_all(&target_dir));
+
+    for entry in try!(fs::read_dir(docs_dir)) {
+        let entry = try!(entry);
+        let path = entry.path();
+
+        let extension = match path.extension() {
+            Some(e) => e,
+            None => continue,
+        };
+
+        if "md" == extension {
+            println!("let's do this: {:?}", path);
+            let output_result = Command::new("rustdoc")
+                .arg(&path)
+                .arg("-otarget/doc")
+                .output();
+            let output = try!(output_result);
+
+            if !output.status.success() {
+                println!("failed");
+            }
         }
     }
 
