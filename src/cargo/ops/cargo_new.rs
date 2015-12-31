@@ -159,8 +159,11 @@ fn main() {
 "));
     } else {
         try!(paths::write(&path.join("src/lib.rs"), b"\
-#[test]
-fn it_works() {
+#[cfg(test)]
+mod test {
+    #[test]
+    fn it_works() {
+    }
 }
 "));
     }
