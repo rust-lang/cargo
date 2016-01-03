@@ -419,6 +419,8 @@ They must compile as executables (with a `main()` function) and load in the
 library by using `extern crate <library-name>`. They are compiled when you run
 your tests to protect them from bitrotting.
 
+You can run individual examples with the command `cargo run --example <example-name>`.
+
 # Tests
 
 When you run `cargo test`, Cargo will:
