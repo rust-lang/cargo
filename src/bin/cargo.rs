@@ -48,6 +48,7 @@ Some common cargo commands are:
     bench       Run the benchmarks
     update      Update dependencies listed in Cargo.lock
     search      Search registry for crates
+    publish     Package and upload this project to the registry
     install     Install a Rust binary
 
 See 'cargo help <command>' for more information on a specific command.
