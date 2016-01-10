@@ -161,8 +161,11 @@ impl<'cfg> PathSource<'cfg> {
             opts.pathspec(suffix);
         }
         let statuses = try!(repo.statuses(Some(&mut opts)));
-        let untracked = statuses.iter().map(|entry| {
-            (join(&root, entry.path_bytes()), None)
+        let untracked = statuses.iter().filter_map(|entry| {
+            match entry.status() {
+                git2::STATUS_WT_NEW => Some((join(&root, entry.path_bytes()), None)),
+                _ => None
+            }
         });
 
         'outer: for (file_path, is_dir) in index_files.chain(untracked) {
