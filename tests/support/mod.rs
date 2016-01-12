@@ -269,11 +269,11 @@ pub struct Execs {
     expect_stdin: Option<String>,
     expect_stderr: Option<String>,
     expect_exit_code: Option<i32>,
-    expect_stdout_contains: Vec<String>
+    expect_stdout_contains: Vec<String>,
+    expect_stderr_contains: Vec<String>,
 }
 
 impl Execs {
-
     pub fn with_stdout<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stdout = Some(expected.to_string());
         self
@@ -291,6 +291,11 @@ impl Execs {
 
     pub fn with_stdout_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stdout_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_stderr_contains<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_stderr_contains.push(expected.to_string());
         self
     }
 
@@ -320,6 +325,10 @@ impl Execs {
         for expect in self.expect_stdout_contains.iter() {
             try!(self.match_std(Some(expect), &actual.stdout, "stdout",
                                 &actual.stderr, true));
+        }
+        for expect in self.expect_stderr_contains.iter() {
+            try!(self.match_std(Some(expect), &actual.stderr, "stderr",
+                                &actual.stdout, true));
         }
         Ok(())
     }
@@ -475,7 +484,8 @@ pub fn execs() -> Execs {
         expect_stderr: None,
         expect_stdin: None,
         expect_exit_code: None,
-        expect_stdout_contains: vec![]
+        expect_stdout_contains: Vec::new(),
+        expect_stderr_contains: Vec::new(),
     }
 }
 
