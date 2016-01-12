@@ -223,10 +223,12 @@ test!(cargo_compile_with_invalid_code {
     assert_that(p.cargo_process("build"),
         execs()
         .with_status(101)
-        .with_stderr("\
+        .with_stderr_contains("\
 src[..]foo.rs:1:1: 1:8 error: expected item[..]found `invalid`
 src[..]foo.rs:1 invalid rust code!
              ^~~~~~~
+")
+        .with_stderr_contains("\
 Could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n"));
