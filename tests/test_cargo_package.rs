@@ -371,6 +371,32 @@ test!(package_git_submodule {
     assert!(from_utf8(&result.stdout).unwrap().contains(&format!("{} bar/Makefile", ARCHIVING)));
 });
 
+test!(no_duplicates_from_modified_tracked_files {
+    let root = paths::root().join("all");
+    let p = git::repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+    p.build();
+    File::create(p.root().join("src/main.rs")).unwrap().write_all(r#"
+            fn main() { println!("A change!"); }
+        "#.as_bytes()).unwrap();
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.clone().arg("build"), execs().with_status(0));
+    assert_that(cargo.arg("package").arg("--list"),
+                execs().with_status(0).with_stdout(&format!("\
+Cargo.toml
+src/main.rs
+")));
+});
+
 test!(ignore_nested {
     let cargo_toml = r#"
             [project]
