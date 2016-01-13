@@ -3,7 +3,7 @@ use std::path::MAIN_SEPARATOR as SEP;
 use support::{execs, project};
 use support::{COMPILING, RUNNING};
 
-use hamcrest::{assert_that, existing_file};
+use hamcrest::assert_that;
 
 fn setup() {
 }
