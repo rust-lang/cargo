@@ -257,3 +257,35 @@ test!(no_rebuild_transitive_target_deps {
 {compiling} foo v0.0.1 ([..])
 ", compiling = COMPILING)));
 });
+
+test!(rerun_if_changed_in_dep {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:rerun-if-changed=build.rs");
+            }
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stdout(""));
+});
