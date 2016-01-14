@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use cargo::ops::{output_metadata, OutputTo, OutputMetadataOptions};
 use cargo::util::important_paths::find_root_manifest_for_wd;
-use cargo::util::{CliResult, CliError, Config};
+use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -59,7 +59,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         output_to: output_to,
     };
 
-    output_metadata(options, config)
-        .map(|_| None)
-        .map_err(|err| CliError::from_boxed(err, 101))
+    try!(output_metadata(options, config));
+    Ok(None)
 }
