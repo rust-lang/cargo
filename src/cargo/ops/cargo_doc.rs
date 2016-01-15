@@ -42,7 +42,7 @@ pub fn doc(manifest_path: &Path,
             bail!("Passing multiple packages and `open` is not supported")
         } else if options.compile_opts.spec.len() == 1 {
             try!(PackageIdSpec::parse(&options.compile_opts.spec[0]))
-                                             .name().replace("-", "_").to_string()
+                                             .name().replace("-", "_")
         } else {
             match lib_names.iter().chain(bin_names.iter()).nth(0) {
                 Some(s) => s.to_string(),

@@ -134,7 +134,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             lines.next().unwrap().trim()
                  .split('_').skip(1).next().unwrap().to_string()
         };
-        Ok((dylib, exe_suffix.to_string()))
+        Ok((dylib, exe_suffix))
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in
@@ -244,7 +244,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None if unit.target.allows_underscores() => {
                 unit.target.name().to_string()
             }
-            None => unit.target.crate_name().to_string(),
+            None => unit.target.crate_name(),
         }
     }
 
