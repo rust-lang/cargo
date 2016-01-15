@@ -312,7 +312,7 @@ impl<'cfg> Source for PathSource<'cfg> {
 
         Ok(self.packages.iter()
            .filter(|pkg| ids.iter().any(|id| pkg.package_id() == id))
-           .map(|pkg| pkg.clone())
+           .cloned()
            .collect())
     }
 
