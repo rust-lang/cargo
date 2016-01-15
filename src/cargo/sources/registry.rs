@@ -487,7 +487,7 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
             let mut summaries = try!(self.summaries(dep.name())).iter().map(|s| {
                 s.0.clone()
             }).collect::<Vec<_>>();
-            if try!(summaries.query(dep)).len() == 0 {
+            if try!(summaries.query(dep)).is_empty() {
                 try!(self.do_update());
             }
         }

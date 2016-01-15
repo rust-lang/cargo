@@ -106,7 +106,7 @@ impl<'cfg> PathSource<'cfg> {
         let mut filter = |p: &Path| {
             let relative_path = util::without_prefix(p, &root).unwrap();
             include.iter().any(|p| p.matches_path(&relative_path)) || {
-                include.len() == 0 &&
+                include.is_empty() &&
                  !exclude.iter().any(|p| p.matches_path(&relative_path))
             }
         };

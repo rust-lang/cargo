@@ -312,7 +312,7 @@ pub fn uninstall(root: Option<&str>,
             }
         }
 
-        if bins.len() == 0 {
+        if bins.is_empty() {
             to_remove.extend(installed.get().iter().map(|b| dst.join(b)));
             installed.get_mut().clear();
         } else {
@@ -321,7 +321,7 @@ pub fn uninstall(root: Option<&str>,
                 installed.get_mut().remove(bin);
             }
         }
-        if installed.get().len() == 0 {
+        if installed.get().is_empty() {
             installed.remove();
         }
     }

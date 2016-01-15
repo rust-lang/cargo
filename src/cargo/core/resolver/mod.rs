@@ -453,7 +453,7 @@ fn activation_error(cx: &Context,
     candidates.sort_by(|a, b| {
         b.version().cmp(a.version())
     });
-    if candidates.len() > 0 {
+    if !candidates.is_empty() {
         msg.push_str("\nversions found: ");
         for (i, c) in candidates.iter().take(3).enumerate() {
             if i != 0 { msg.push_str(", "); }
@@ -469,7 +469,7 @@ fn activation_error(cx: &Context,
     // update`. In this case try to print a helpful error!
     if dep.source_id().is_path() &&
        dep.version_req().to_string().starts_with("=") &&
-       candidates.len() > 0 {
+       !candidates.is_empty() {
         msg.push_str("\nconsider running `cargo update` to update \
                       a path dependency's locked version");
 
@@ -607,7 +607,7 @@ impl Context {
                     (!use_default || prev.contains("default") ||
                      !has_default_feature)
             }
-            None => features.len() == 0 && (!use_default || !has_default_feature)
+            None => features.is_empty() && (!use_default || !has_default_feature)
         }
     }
 
@@ -686,10 +686,10 @@ impl Context {
         // they should have all been weeded out by the above iteration. Any
         // remaining features are bugs in that the package does not actually
         // have those features.
-        if feature_deps.len() > 0 {
+        if !feature_deps.is_empty() {
             let unknown = feature_deps.keys().map(|s| &s[..])
                                       .collect::<Vec<&str>>();
-            if unknown.len() > 0 {
+            if !unknown.is_empty() {
                 let features = unknown.connect(", ");
                 bail!("Package `{}` does not have these features: `{}`",
                       parent.package_id(), features)
@@ -697,7 +697,7 @@ impl Context {
         }
 
         // Record what list of features is active for this package.
-        if used_features.len() > 0 {
+        if !used_features.is_empty() {
             let pkgid = parent.package_id();
             self.resolve.features.entry(pkgid.clone())
                 .or_insert(HashSet::new())

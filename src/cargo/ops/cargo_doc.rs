@@ -18,7 +18,7 @@ pub fn doc(manifest_path: &Path,
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
-    if options.compile_opts.spec.len() == 0 {
+    if options.compile_opts.spec.is_empty() {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
                 assert!(lib_names.insert(target.crate_name()));

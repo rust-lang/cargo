@@ -138,7 +138,7 @@ pub fn to_manifest(contents: &[u8],
         match *toml {
             toml::Value::Table(ref table) => {
                 for (k, v) in table.iter() {
-                    add_unused_keys(m, v, if key.len() == 0 {
+                    add_unused_keys(m, v, if key.is_empty() {
                         k.clone()
                     } else {
                         key.clone() + "." + k
