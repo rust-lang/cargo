@@ -10,7 +10,7 @@ pub struct GitRepo;
 impl GitRepo {
     pub fn init(path: &Path, _: &Path) -> CargoResult<GitRepo> {
         try!(git2::Repository::init(path));
-        return Ok(GitRepo)
+        Ok(GitRepo)
     }
     pub fn discover(path: &Path, _: &Path) -> Result<git2::Repository,git2::Error> {
         git2::Repository::discover(path)
@@ -20,11 +20,11 @@ impl GitRepo {
 impl HgRepo {
     pub fn init(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
         try!(process("hg").cwd(cwd).arg("init").arg(path).exec());
-        return Ok(HgRepo)
+        Ok(HgRepo)
     }
     pub fn discover(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
         try!(process("hg").cwd(cwd).arg("root").cwd(path).exec_with_output());
-        return Ok(HgRepo)
+        Ok(HgRepo)
     }
 }
 

@@ -81,7 +81,7 @@ impl MultiShell {
         where F: FnMut(&mut MultiShell) -> io::Result<()>
     {
         match self.verbosity {
-            Verbose => return callback(self),
+            Verbose => callback(self),
             _ => Ok(())
         }
     }
@@ -91,7 +91,7 @@ impl MultiShell {
     {
         match self.verbosity {
             Verbose => Ok(()),
-            _ => return callback(self)
+            _ => callback(self)
         }
     }
 
