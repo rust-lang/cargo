@@ -159,7 +159,7 @@ impl GitRemote {
 }
 
 impl GitDatabase {
-    fn path<'a>(&'a self) -> &'a Path {
+    fn path(&self) -> &Path {
         &self.path
     }
 

@@ -241,7 +241,7 @@ pub fn version() -> String {
     })
 }
 
-fn flags_from_args<'a, T>(usage: &str, args: &[String],
+fn flags_from_args<T>(usage: &str, args: &[String],
                           options_first: bool) -> CliResult<T>
     where T: Decodable
 {
