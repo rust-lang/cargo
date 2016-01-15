@@ -15,7 +15,7 @@ pub trait Registry {
 impl Registry for Vec<Summary> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         Ok(self.iter().filter(|summary| dep.matches(*summary))
-               .map(|summary| summary.clone()).collect())
+               .cloned().collect())
     }
 }
 

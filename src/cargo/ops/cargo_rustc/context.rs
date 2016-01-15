@@ -213,7 +213,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if unit.target.is_lib() && unit.profile.test {
             // Libs and their tests are built in parallel, so we need to make
             // sure that their metadata is different.
-            metadata.map(|m| m.clone()).map(|mut m| {
+            metadata.cloned().map(|mut m| {
                 m.mix(&"test");
                 m
             })
@@ -232,7 +232,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // file names like `target/debug/libfoo.{a,so,rlib}` and such.
             None
         } else {
-            metadata.map(|m| m.clone())
+            metadata.cloned()
         }
     }
 

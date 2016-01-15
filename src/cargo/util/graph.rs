@@ -21,7 +21,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 
     pub fn add(&mut self, node: N, children: &[N]) {
-        self.nodes.insert(node, children.iter().map(|n| n.clone()).collect());
+        self.nodes.insert(node, children.iter().cloned().collect());
     }
 
     pub fn link(&mut self, node: N, child: N) {

@@ -360,8 +360,8 @@ pub fn process_error(msg: &str,
 
     ProcessError {
         desc: desc,
-        exit: status.map(|a| a.clone()),
-        output: output.map(|a| a.clone()),
+        exit: status.cloned(),
+        output: output.cloned(),
         cause: cause,
     }
 }
