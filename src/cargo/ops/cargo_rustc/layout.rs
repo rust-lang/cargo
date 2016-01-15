@@ -113,9 +113,9 @@ impl Layout {
         }
     }
 
-    pub fn dest<'a>(&'a self) -> &'a Path { &self.root }
-    pub fn deps<'a>(&'a self) -> &'a Path { &self.deps }
-    pub fn examples<'a>(&'a self) -> &'a Path { &self.examples }
+    pub fn dest(&self) -> &Path { &self.root }
+    pub fn deps(&self) -> &Path { &self.deps }
+    pub fn examples(&self) -> &Path { &self.examples }
 
     pub fn fingerprint(&self, package: &Package) -> PathBuf {
         self.fingerprint.join(&self.pkg_dir(package))
