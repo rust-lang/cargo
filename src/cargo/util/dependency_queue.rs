@@ -110,6 +110,11 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
         Some((fresh, key, data))
     }
 
+    /// Returns whether there are remaining packages to be built.
+    pub fn is_empty(&self) -> bool {
+        self.dep_map.is_empty() && self.pending.is_empty()
+    }
+
     /// Returns the number of remaining packages to be built.
     pub fn len(&self) -> usize {
         self.dep_map.len() + self.pending.len()
