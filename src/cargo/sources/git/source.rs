@@ -145,7 +145,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
         _ => {}
     }
 
-    return url;
+    url
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {

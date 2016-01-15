@@ -561,7 +561,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         for src in self.sources.values() {
             ret.extend(try!(src.get(packages)).into_iter());
         }
-        return Ok(ret);
+        Ok(ret)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

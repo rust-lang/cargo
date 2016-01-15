@@ -141,7 +141,7 @@ impl Fingerprint {
         }
         let ret = util::hash_u64(self);
         *self.memoized_hash.lock().unwrap() = Some(ret);
-        return ret
+        ret
     }
 
     fn compare(&self, old: &Fingerprint) -> CargoResult<()> {

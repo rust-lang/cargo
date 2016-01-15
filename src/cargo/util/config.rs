@@ -469,7 +469,7 @@ fn homedir(cwd: &Path) -> Option<PathBuf> {
         cwd.join(home)
     });
     let user_home = env::home_dir().map(|p| p.join(".cargo"));
-    return cargo_home.or(user_home);
+    cargo_home.or(user_home)
 }
 
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>

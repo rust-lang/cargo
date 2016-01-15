@@ -244,7 +244,7 @@ impl<'cfg> PathSource<'cfg> {
             let loc = pkg.root();
             try!(PathSource::walk(loc, &mut ret, true, filter));
         }
-        return Ok(ret);
+        Ok(ret)
     }
 
     fn walk(path: &Path, ret: &mut Vec<PathBuf>,
@@ -275,7 +275,7 @@ impl<'cfg> PathSource<'cfg> {
             }
             try!(PathSource::walk(&dir, ret, false, filter));
         }
-        return Ok(())
+        Ok(())
     }
 }
 

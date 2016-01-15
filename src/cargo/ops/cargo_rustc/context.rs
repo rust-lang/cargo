@@ -159,7 +159,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.compilation.deps_output =
                 self.layout(root, Kind::Target).proxy().deps().to_path_buf();
 
-        return Ok(());
+        Ok(())
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
@@ -283,7 +283,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         assert!(ret.len() > 0);
-        return Ok(ret);
+        Ok(ret)
     }
 
     /// For a package, return all targets which are registered as dependencies
@@ -374,7 +374,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }));
         }
-        return ret
+        ret
     }
 
     /// Returns the dependencies needed to run a build script.
@@ -462,7 +462,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if unit.target.is_bin() {
             ret.extend(self.maybe_lib(unit));
         }
-        return ret
+        ret
     }
 
     /// If a build script is scheduled to be run for the package specified by

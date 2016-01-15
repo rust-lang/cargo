@@ -257,7 +257,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
 
-    return Ok(ret);
+    Ok(ret)
 }
 
 impl<'a> CompileFilter<'a> {
@@ -311,7 +311,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Build => build,
         CompileMode::Doc { .. } => &profiles.doc,
     };
-    return match *filter {
+    match *filter {
         CompileFilter::Everything => {
             match mode {
                 CompileMode::Bench => {
@@ -379,7 +379,7 @@ fn generate_targets<'a>(pkg: &'a Package,
             }
             Ok(targets)
         }
-    };
+    }
 }
 
 /// Read the `paths` configuration variable to discover all path overrides that

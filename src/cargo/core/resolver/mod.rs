@@ -384,7 +384,7 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
             return Some(candidate)
         }
     }
-    return None
+    None
 }
 
 #[allow(deprecated)] // connect => join in 1.3
