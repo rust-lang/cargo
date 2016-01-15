@@ -65,6 +65,12 @@ The --jobs argument affects the building of the test executable but does
 not affect how many jobs are used when running the tests.
 
 Compilation can be configured via the `test` profile in the manifest.
+
+By default the rust test harness hides output from test execution to
+keep results readable. Test output can be recovered (e.g. for debugging)
+by passing `--nocapture` to the test binaries:
+
+  cargo test -- --nocapture
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
