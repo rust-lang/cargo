@@ -43,7 +43,7 @@ pub fn update_lockfile(manifest_path: &Path,
     let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
 
-    if opts.to_update.len() == 0 {
+    if opts.to_update.is_empty() {
         to_avoid.extend(previous_resolve.iter());
     } else {
         let mut sources = Vec::new();

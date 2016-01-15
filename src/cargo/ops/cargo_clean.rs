@@ -22,7 +22,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
 
     // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
-    if opts.spec.len() == 0 {
+    if opts.spec.is_empty() {
         return rm_rf(&target_dir);
     }
 

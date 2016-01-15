@@ -176,7 +176,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
         vec![root_package.package_id()]
     };
 
-    if spec.len() > 0 && invalid_spec.len() > 0 {
+    if !spec.is_empty() && !invalid_spec.is_empty() {
         bail!("could not find package matching spec `{}`",
               invalid_spec.connect(", "))
     }

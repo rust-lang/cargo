@@ -157,7 +157,7 @@ impl Package {
         let f = File::create(&dst).unwrap();
         let a = Archive::new(GzEncoder::new(f, Default));
         self.append(&a, "Cargo.toml", &manifest);
-        if self.files.len() == 0 {
+        if self.files.is_empty() {
             self.append(&a, "src/lib.rs", "");
         } else {
             for &(ref name, ref contents) in self.files.iter() {

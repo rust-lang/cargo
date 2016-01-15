@@ -295,7 +295,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let overrides = try!(self.query_overrides(dep));
 
-        let ret = if overrides.len() == 0 {
+        let ret = if overrides.is_empty() {
             // Ensure the requested source_id is loaded
             try!(self.ensure_loaded(dep.source_id(), Kind::Normal));
             let mut ret = Vec::new();

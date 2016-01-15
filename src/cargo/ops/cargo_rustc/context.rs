@@ -282,7 +282,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
         }
-        assert!(ret.len() > 0);
+        assert!(!ret.is_empty());
         Ok(ret)
     }
 

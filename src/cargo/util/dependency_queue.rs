@@ -99,7 +99,7 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
     /// `None` is returned then no packages are ready to be built.
     pub fn dequeue(&mut self) -> Option<(Freshness, K, V)> {
         let key = match self.dep_map.iter()
-                                    .find(|&(_, &(ref deps, _))| deps.len() == 0)
+                                    .find(|&(_, &(ref deps, _))| deps.is_empty())
                                     .map(|(key, _)| key.clone()) {
             Some(key) => key,
             None => return None
