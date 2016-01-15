@@ -93,7 +93,7 @@ fn run_unit_tests(options: &TestOptions,
             shell.status("Running", cmd.to_string())
         }));
 
-        if let Err(e) = ExecEngine::exec(&mut ProcessEngine, cmd) {
+        if let Err(e) = ExecEngine::exec(&ProcessEngine, cmd) {
             errors.push(e);
             if !options.no_fail_fast {
                 break
@@ -166,7 +166,7 @@ fn run_doc_tests(options: &TestOptions,
             try!(config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())
             }));
-            if let Err(e) = ExecEngine::exec(&mut ProcessEngine, p) {
+            if let Err(e) = ExecEngine::exec(&ProcessEngine, p) {
                 errors.push(e);
                 if !options.no_fail_fast {
                     return Ok(errors);
