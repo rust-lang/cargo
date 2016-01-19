@@ -89,7 +89,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
                 let deps = r.deps(node).into_iter().flat_map(|i| i)
                             .filter(|p| keep(p, to_avoid, &to_avoid_sources))
-                            .map(|p| p.clone()).collect();
+                            .cloned().collect();
                 registry.register_lock(node.clone(), deps);
             }
 

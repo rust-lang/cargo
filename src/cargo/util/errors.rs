@@ -142,7 +142,7 @@ pub struct CargoTestError {
 impl CargoTestError {
     #[allow(deprecated)] // connect => join in 1.3
     pub fn new(errors: Vec<ProcessError>) -> Self {
-        if errors.len() == 0 {
+        if errors.is_empty() {
             panic!("Cannot create CargoTestError from empty Vec")
         }
         let desc = errors.iter().map(|error| error.desc.clone())
@@ -360,8 +360,8 @@ pub fn process_error(msg: &str,
 
     ProcessError {
         desc: desc,
-        exit: status.map(|a| a.clone()),
-        output: output.map(|a| a.clone()),
+        exit: status.cloned(),
+        output: output.cloned(),
         cause: cause,
     }
 }

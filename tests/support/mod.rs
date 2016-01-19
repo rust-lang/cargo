@@ -370,7 +370,7 @@ impl Execs {
         } else {
             self.diff_lines(a, e, partial)
         };
-        ham::expect(diffs.len() == 0,
+        ham::expect(diffs.is_empty(),
                     format!("differences:\n\
                             {}\n\n\
                             other output:\n\
@@ -416,7 +416,7 @@ fn lines_match(expected: &str, mut actual: &str) -> bool {
             }
         }
     }
-    actual.len() == 0 || expected.ends_with("[..]")
+    actual.is_empty() || expected.ends_with("[..]")
 }
 
 struct ZipAll<I1: Iterator, I2: Iterator> {

@@ -99,7 +99,7 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
     /// `None` is returned then no packages are ready to be built.
     pub fn dequeue(&mut self) -> Option<(Freshness, K, V)> {
         let key = match self.dep_map.iter()
-                                    .find(|&(_, &(ref deps, _))| deps.len() == 0)
+                                    .find(|&(_, &(ref deps, _))| deps.is_empty())
                                     .map(|(key, _)| key.clone()) {
             Some(key) => key,
             None => return None
@@ -108,6 +108,11 @@ impl<K: Dependency, V> DependencyQueue<K, V> {
         let fresh = if self.dirty.contains(&key) {Dirty} else {Fresh};
         self.pending.insert(key.clone());
         Some((fresh, key, data))
+    }
+
+    /// Returns whether there are remaining packages to be built.
+    pub fn is_empty(&self) -> bool {
+        self.dep_map.is_empty() && self.pending.is_empty()
     }
 
     /// Returns the number of remaining packages to be built.

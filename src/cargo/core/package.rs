@@ -129,6 +129,10 @@ impl PackageSet {
         PackageSet { packages: packages.to_vec() }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.packages.is_empty()
+    }
+
     pub fn len(&self) -> usize {
         self.packages.len()
     }
