@@ -24,7 +24,7 @@ pub fn run_tests(manifest_path: &Path,
     let mut errors = try!(run_unit_tests(options, test_args, &compilation));
 
     // If we have an error and want to fail fast, return
-    if errors.len() > 0 && !options.no_fail_fast {
+    if !errors.is_empty() && !options.no_fail_fast {
         return Ok(Some(CargoTestError::new(errors)))
     }
 
@@ -38,7 +38,7 @@ pub fn run_tests(manifest_path: &Path,
     }
 
     errors.extend(try!(run_doc_tests(options, test_args, &compilation)));
-    if errors.len() == 0 {
+    if errors.is_empty() {
         Ok(None)
     } else {
         Ok(Some(CargoTestError::new(errors)))
@@ -93,7 +93,7 @@ fn run_unit_tests(options: &TestOptions,
             shell.status("Running", cmd.to_string())
         }));
 
-        if let Err(e) = ExecEngine::exec(&mut ProcessEngine, cmd) {
+        if let Err(e) = ExecEngine::exec(&ProcessEngine, cmd) {
             errors.push(e);
             if !options.no_fail_fast {
                 break
@@ -166,7 +166,7 @@ fn run_doc_tests(options: &TestOptions,
             try!(config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())
             }));
-            if let Err(e) = ExecEngine::exec(&mut ProcessEngine, p) {
+            if let Err(e) = ExecEngine::exec(&ProcessEngine, p) {
                 errors.push(e);
                 if !options.no_fail_fast {
                     return Ok(errors);

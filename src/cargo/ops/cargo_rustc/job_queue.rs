@@ -104,7 +104,7 @@ impl<'a> JobQueue<'a> {
         // and then immediately return.
         loop {
             while self.active < self.jobs {
-                if queue.len() > 0 {
+                if !queue.is_empty() {
                     let (key, job, fresh) = queue.remove(0);
                     try!(self.run(key, fresh, job, config, scope));
                 } else if let Some((fresh, key, jobs)) = self.queue.dequeue() {
@@ -152,7 +152,7 @@ impl<'a> JobQueue<'a> {
             }
         }
 
-        if self.queue.len() == 0 {
+        if self.queue.is_empty() {
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);

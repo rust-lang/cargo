@@ -399,6 +399,6 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         let prev = out.entry(*unit).or_insert(BuildScripts::default());
         prev.to_link.extend(to_link);
         prev.plugins.extend(plugins);
-        return prev
+        prev
     }
 }

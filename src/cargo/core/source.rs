@@ -419,6 +419,10 @@ impl<'src> SourceMap<'src> {
         self.map.insert(id.clone(), source);
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
     pub fn len(&self) -> usize {
         self.map.len()
     }

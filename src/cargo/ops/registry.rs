@@ -366,7 +366,7 @@ pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResul
             Some(desc) => {
                 let space = repeat(' ').take(description_margin - name.len())
                                        .collect::<String>();
-                name.to_string() + &space + &desc
+                name + &space + &desc
             }
             None => name
         };

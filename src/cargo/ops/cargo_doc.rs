@@ -18,7 +18,7 @@ pub fn doc(manifest_path: &Path,
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
-    if options.compile_opts.spec.len() == 0 {
+    if options.compile_opts.spec.is_empty() {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
                 assert!(lib_names.insert(target.crate_name()));
@@ -42,7 +42,7 @@ pub fn doc(manifest_path: &Path,
             bail!("Passing multiple packages and `open` is not supported")
         } else if options.compile_opts.spec.len() == 1 {
             try!(PackageIdSpec::parse(&options.compile_opts.spec[0]))
-                                             .name().replace("-", "_").to_string()
+                                             .name().replace("-", "_")
         } else {
             match lib_names.iter().chain(bin_names.iter()).nth(0) {
                 Some(s) => s.to_string(),
