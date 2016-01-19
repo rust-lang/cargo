@@ -932,3 +932,27 @@ test!(bundled_crate_in_registry {
 
     assert_that(p.cargo("run"), execs().with_status(0));
 });
+
+test!(update_same_prefix_oh_my_how_was_this_a_bug {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "ugh"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("foobar", "0.2.0").publish();
+    Package::new("foo", "0.1.0")
+        .dep("foobar", "0.2.0")
+        .publish();
+
+    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("update").arg("-pfoobar").arg("--precise=0.2.0"),
+                execs().with_status(0));
+});
