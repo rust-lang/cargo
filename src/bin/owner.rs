@@ -2,7 +2,7 @@ use cargo::ops;
 use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     arg_crate: Option<String>,
     flag_token: Option<String>,
     flag_add: Option<Vec<String>>,

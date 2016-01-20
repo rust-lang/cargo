@@ -1,7 +1,6 @@
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::thread;
 use tempdir::TempDir;
 
 use support::{project, execs, main_file, basic_bin_manifest};
@@ -1648,7 +1647,7 @@ test!(compile_then_delete {
     assert_that(&p.bin("foo"), existing_file());
     if cfg!(windows) {
         // On windows unlinking immediately after running often fails, so sleep
-        thread::sleep_ms(100);
+        ::sleep_ms(100);
     }
     fs::remove_file(&p.bin("foo")).unwrap();
     assert_that(p.cargo("run"),

@@ -2,7 +2,7 @@ use cargo::util::{CliResult, CliError, human, ChainError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
-struct LocateProjectFlags {
+pub struct LocateProjectFlags {
     flag_manifest_path: Option<String>,
 }
 
@@ -18,7 +18,7 @@ Options:
 ";
 
 #[derive(RustcEncodable)]
-struct ProjectLocation {
+pub struct ProjectLocation {
     root: String
 }
 

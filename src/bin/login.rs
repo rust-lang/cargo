@@ -7,7 +7,7 @@ use cargo::sources::RegistrySource;
 use cargo::util::{CliResult, Config, human, ChainError};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_host: Option<String>,
     arg_token: Option<String>,
     flag_verbose: bool,

@@ -5,7 +5,7 @@ use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,

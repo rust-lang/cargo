@@ -3,7 +3,7 @@ use cargo::core::{SourceId, GitReference};
 use cargo::util::{CliResult, Config, ToUrl, human};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_no_default_features: bool,

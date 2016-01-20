@@ -6,7 +6,7 @@ use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::sources::{PathSource};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_manifest_path: Option<String>,
     flag_color: Option<String>,
 }

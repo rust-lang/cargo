@@ -3,7 +3,7 @@ use cargo::sources::git::{GitSource};
 use cargo::util::{Config, CliResult, CliError, human, ToUrl};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_url: String,
     flag_reference: String,
     flag_verbose: bool,
