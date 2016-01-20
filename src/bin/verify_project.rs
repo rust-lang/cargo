@@ -11,7 +11,7 @@ use toml;
 pub type Error = HashMap<String, String>;
 
 #[derive(RustcDecodable)]
-struct Flags {
+pub struct Flags {
     flag_manifest_path: Option<String>,
     flag_verbose: bool,
     flag_quiet: bool,

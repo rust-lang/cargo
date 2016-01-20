@@ -1,7 +1,7 @@
 use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
-struct Options;
+pub struct Options;
 
 pub const USAGE: &'static str = "
 Get some help with a cargo command.

@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::io::Cursor;
 use std::io::prelude::*;
 use std::path::Path;
 
@@ -8,8 +7,7 @@ use git2;
 use tar::Archive;
 
 use support::{project, execs, paths, git, path2url};
-use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING, UPDATING, DOWNLOADING};
-use support::registry::{self, Package};
+use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -54,8 +52,8 @@ src[..]main.rs
     let mut rdr = GzDecoder::new(f).unwrap();
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
-    let ar = Archive::new(Cursor::new(contents));
-    for f in ar.files().unwrap() {
+    let mut ar = Archive::new(&contents[..]);
+    for f in ar.entries().unwrap() {
         let f = f.unwrap();
         let fname = f.header().path_bytes();
         let fname = &*fname;
@@ -387,8 +385,8 @@ src[..]main.rs
     let mut rdr = GzDecoder::new(f).unwrap();
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
-    let ar = Archive::new(Cursor::new(contents));
-    for f in ar.files().unwrap() {
+    let mut ar = Archive::new(&contents[..]);
+    for f in ar.entries().unwrap() {
         let f = f.unwrap();
         let fname = f.header().path_bytes();
         let fname = &*fname;

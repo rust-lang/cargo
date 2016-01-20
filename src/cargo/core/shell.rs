@@ -2,9 +2,8 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io;
 
-use term::Attr;
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};
-use term::{Terminal, TerminfoTerminal, color};
+use term::{self, Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
 use self::Verbosity::{Verbose, Normal, Quiet};
@@ -61,14 +60,15 @@ impl MultiShell {
         &mut self.err
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color)
+                            -> CargoResult<()> {
         match self.verbosity {
             Quiet => Ok(()),
             _ => self.out().say(message, color)
         }
     }
 
-    pub fn status<T, U>(&mut self, status: T, message: U) -> io::Result<()>
+    pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
         match self.verbosity {
@@ -77,8 +77,8 @@ impl MultiShell {
         }
     }
 
-    pub fn verbose<F>(&mut self, mut callback: F) -> io::Result<()>
-        where F: FnMut(&mut MultiShell) -> io::Result<()>
+    pub fn verbose<F>(&mut self, mut callback: F) -> CargoResult<()>
+        where F: FnMut(&mut MultiShell) -> CargoResult<()>
     {
         match self.verbosity {
             Verbose => callback(self),
@@ -86,8 +86,8 @@ impl MultiShell {
         }
     }
 
-    pub fn concise<F>(&mut self, mut callback: F) -> io::Result<()>
-        where F: FnMut(&mut MultiShell) -> io::Result<()>
+    pub fn concise<F>(&mut self, mut callback: F) -> CargoResult<()>
+        where F: FnMut(&mut MultiShell) -> CargoResult<()>
     {
         match self.verbosity {
             Verbose => Ok(()),
@@ -95,11 +95,11 @@ impl MultiShell {
         }
     }
 
-    pub fn error<T: ToString>(&mut self, message: T) -> io::Result<()> {
+    pub fn error<T: ToString>(&mut self, message: T) -> CargoResult<()> {
         self.err().say(message, RED)
     }
 
-    pub fn warn<T: ToString>(&mut self, message: T) -> io::Result<()> {
+    pub fn warn<T: ToString>(&mut self, message: T) -> CargoResult<()> {
         self.err().say(message, YELLOW)
     }
 
@@ -170,7 +170,7 @@ impl Shell {
         self.config.color_config = color_config;
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> io::Result<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> CargoResult<()> {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
         try!(write!(self, "{}\n", message.to_string()));
@@ -180,7 +180,7 @@ impl Shell {
     }
 
     pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)
-                            -> io::Result<()>
+                            -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
         try!(self.reset());
@@ -193,22 +193,24 @@ impl Shell {
         Ok(())
     }
 
-    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
+    fn fg(&mut self, color: color::Color) -> CargoResult<bool> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => c.fg(color),
-            _ => Ok(false)
+            Colored(ref mut c) if colored => try!(c.fg(color)),
+            _ => return Ok(false),
         }
+        Ok(true)
     }
 
-    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
+    fn attr(&mut self, attr: Attr) -> CargoResult<bool> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => c.attr(attr),
-            _ => Ok(false)
+            Colored(ref mut c) if colored => try!(c.attr(attr)),
+            _ => return Ok(false)
         }
+        Ok(true)
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
@@ -220,13 +222,14 @@ impl Shell {
         }
     }
 
-    fn reset(&mut self) -> io::Result<()> {
+    fn reset(&mut self) -> term::Result<()> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => c.reset().map(|_| ()),
-            _ => Ok(())
+            Colored(ref mut c) if colored => try!(c.reset()),
+            _ => ()
         }
+        Ok(())
     }
 
     fn colored(&self) -> bool {

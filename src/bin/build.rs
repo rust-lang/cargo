@@ -6,7 +6,7 @@ use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_package: Vec<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,

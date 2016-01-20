@@ -6,6 +6,7 @@ use hamcrest::{assert_that};
 
 use cargo::core::shell::{Shell, ShellConfig};
 use cargo::core::shell::ColorConfig::{Auto,Always, Never};
+use cargo::util::CargoResult;
 
 use support::{Tap, execs, shell_writes};
 
@@ -84,7 +85,7 @@ test!(no_term {
                 execs().with_stderr(""));
 });
 
-fn colored_output(string: &str, color: color::Color) -> io::Result<String> {
+fn colored_output(string: &str, color: color::Color) -> CargoResult<String> {
     let mut term = TerminfoTerminal::new(Vec::new()).unwrap();
     try!(term.reset());
     try!(term.fg(color));

@@ -1,6 +1,5 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::thread;
 
 use support::{project, execs};
 use support::{COMPILING, RUNNING, DOCTEST, FRESH, DOCUMENTING};
@@ -1739,7 +1738,7 @@ test!(rebuild_only_on_explicit_paths {
 {running} `rustc src[..]lib.rs [..]`
 ", running = RUNNING, compiling = COMPILING)));
 
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
     File::create(p.root().join("foo")).unwrap();
     File::create(p.root().join("bar")).unwrap();
 
@@ -1758,7 +1757,7 @@ test!(rebuild_only_on_explicit_paths {
 {fresh} a v0.5.0 ([..])
 ", fresh = FRESH)));
 
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
 
     // random other files do not affect freshness
     println!("run baz");

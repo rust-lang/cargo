@@ -1,6 +1,5 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::thread;
 
 use support::{project, execs, path2url};
 use support::COMPILING;
@@ -67,7 +66,7 @@ test!(modify_only_some_files {
 ", compiling = COMPILING, dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
 
     assert_that(&p.bin("foo"), existing_file());
 
