@@ -1,4 +1,5 @@
 use support::{project, execs};
+use support::registry::Package;
 use hamcrest::assert_that;
 
 fn setup() {}
@@ -385,5 +386,27 @@ test!(unused_keys {
     assert_that(foo.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 unused manifest key: target.foo.bar
+"));
+});
+
+test!(empty_dependencies {
+    let p = project("empty_deps")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "empty_deps"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies]
+        foo = {}
+    "#)
+    .file("src/main.rs", "fn main() {}");
+
+    Package::new("foo", "0.0.1").publish();
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr_contains("\
+warning: dependency (foo) specified without providing a local path, Git repository, or version \
+to use. This will be considered an error in future versions
 "));
 });
