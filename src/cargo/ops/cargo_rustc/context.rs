@@ -42,9 +42,11 @@ pub struct Context<'a, 'cfg: 'a> {
     target: Option<Layout>,
     target_triple: String,
     host_dylib: Option<(String, String)>,
+    host_staticlib: Option<(String, String)>,
     host_exe: String,
     package_set: &'a PackageSet,
     target_dylib: Option<(String, String)>,
+    target_staticlib: Option<(String, String)>,
     target_exe: String,
     profiles: &'a Profiles,
 }
@@ -60,10 +62,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
-        let (target_dylib, target_exe) = try!(Context::filename_parts(target,
+        let (target_dylib, target_staticlib, target_exe) = try!(Context::filename_parts(target,
                                                                       config));
-        let (host_dylib, host_exe) = if build_config.requested_target.is_none() {
-            (target_dylib.clone(), target_exe.clone())
+        let (host_dylib, host_staticlib, host_exe) = if build_config.requested_target.is_none() {
+            (target_dylib.clone(), target_staticlib.clone(), target_exe.clone())
         } else {
             try!(Context::filename_parts(None, config))
         };
@@ -82,8 +84,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             package_set: deps,
             config: config,
             target_dylib: target_dylib,
+            target_staticlib: target_staticlib,
             target_exe: target_exe,
             host_dylib: host_dylib,
+            host_staticlib: host_staticlib,
             host_exe: host_exe,
             compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config, deps)),
@@ -100,11 +104,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Run `rustc` to discover the dylib prefix/suffix for the target
     /// specified as well as the exe suffix
     fn filename_parts(target: Option<&str>, cfg: &Config)
-                      -> CargoResult<(Option<(String, String)>, String)> {
+                      -> CargoResult<(Option<(String, String)>, Option<(String, String)>, String)> {
         let mut process = util::process(cfg.rustc());
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--crate-type").arg("dylib")
+               .arg("--crate-type").arg("staticlib")
                .arg("--crate-type").arg("bin")
                .arg("--print=file-names")
                .env_remove("RUST_LOG");
@@ -117,6 +122,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let output = str::from_utf8(&output.stdout).unwrap();
         let mut lines = output.lines();
         let nodylib = Regex::new("unsupported crate type.*dylib").unwrap();
+        let nostaticlib = Regex::new("unsupported crate type.*staticlib").unwrap();
         let nobin = Regex::new("unsupported crate type.*bin").unwrap();
         let dylib = if nodylib.is_match(error) {
             None
@@ -127,6 +133,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     "rustc --print-file-name output has changed");
             Some((dylib_parts[0].to_string(), dylib_parts[1].to_string()))
         };
+        let staticlib = if nostaticlib.is_match(error) {
+            None
+        } else {
+            let staticlib_parts: Vec<&str> = lines.next().unwrap().trim()
+                                              .split('_').collect();
+            assert!(staticlib_parts.len() == 2,
+                    "rustc --print-file-name output has changed");
+            Some((staticlib_parts[0].to_string(), staticlib_parts[1].to_string()))
+        };
 
         let exe_suffix = if nobin.is_match(error) {
             String::new()
@@ -134,7 +149,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             lines.next().unwrap().trim()
                  .split('_').skip(1).next().unwrap().to_string()
         };
-        Ok((dylib, exe_suffix))
+        Ok((dylib, staticlib, exe_suffix))
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in
@@ -198,6 +213,22 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         match *pair {
             None => bail!("dylib outputs are not supported for {}", triple),
+            Some((ref s1, ref s2)) => Ok((s1, s2)),
+        }
+    }
+
+    /// Return the (prefix, suffix) pair for static libraries.
+    ///
+    /// If `plugin` is true, the pair corresponds to the host platform,
+    /// otherwise it corresponds to the target platform.
+    fn staticlib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
+        let (triple, pair) = if kind == Kind::Host {
+            (&self.config.rustc_info().host, &self.host_staticlib)
+        } else {
+            (&self.target_triple, &self.target_staticlib)
+        };
+        match *pair {
+            None => bail!("staticlib outputs are not supported for {}", triple),
             Some((ref s1, ref s2)) => Ok((s1, s2)),
         }
     }
@@ -277,7 +308,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         }
                         LibKind::Lib |
                         LibKind::Rlib => ret.push(format!("lib{}.rlib", stem)),
-                        LibKind::StaticLib => ret.push(format!("lib{}.a", stem)),
+                        LibKind::StaticLib => {
+                            if let Ok((prefix, suffix)) = self.staticlib(unit.kind) {
+                                ret.push(format!("{}{}{}", prefix, stem, suffix));
+                            }
+                        }
                     }
                 }
             }
