@@ -1,15 +1,19 @@
 use std::env;
-use std::fs;
+use std::fmt;
+use std::fs::{self, File};
 use std::io::prelude::*;
+use std::io;
 use std::path::Path;
+use std::str::{FromStr};
 
 use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
 
 use term::color::BLACK;
+use time::{strftime, now};
 
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
+use util::{GitRepo, HgRepo, CargoResult, CargoError, human, ChainError, internal};
 use util::{Config, paths};
 
 use toml;
@@ -22,6 +26,8 @@ pub struct NewOptions<'a> {
     pub bin: bool,
     pub path: &'a str,
     pub name: Option<&'a str>,
+    pub license: Option<Vec<License>>,
+    pub license_file: Option<&'a str>,
 }
 
 impl Decodable for VersionControl {
@@ -38,10 +44,71 @@ impl Decodable for VersionControl {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum License {
+    MIT,
+    BSD3,
+    APACHE2,
+    MPL2,
+    GPL3,
+}
+
+impl License {
+    fn write_file(&self, path: &Path, holders: &str) -> io::Result<()> {
+        let mut license_text: Vec<u8> = Vec::new();
+        let _ = self.license_text(&mut license_text, holders);
+        file(path, &license_text)
+    }
+
+    fn license_text<F: io::Write>(&self, f: &mut F, holders: &str) -> io::Result<()> {
+        let tm = now();
+        let year = strftime("%Y", &tm).unwrap();
+        match *self {
+            // Not sure about this, would like to make this prettier
+            License::MIT => write!(f, include_str!("../../../src/etc/licenses/MIT"),
+                                   year = &year, holders = holders),
+            License::BSD3 => write!(f, include_str!("../../../src/etc/licenses/BSD3"),
+                                    year = &year, holders = holders),
+            License::APACHE2 => write!(f, include_str!("../../../src/etc/licenses/APACHE2")),
+            License::MPL2 => write!(f, include_str!("../../../src/etc/licenses/MPL2")),
+            License::GPL3 => write!(f, include_str!("../../../src/etc/licenses/GPL3")),
+        }
+    }
+}
+
+impl FromStr for License {
+    type Err = Box<CargoError>;
+    fn from_str(s: &str) -> CargoResult<License> {
+        Ok(match s.to_lowercase().as_ref() {
+            "mit" => License::MIT,
+            "bsd-3-clause" => License::BSD3,
+            "apache-2.0" => License::APACHE2,
+            "mpl-2.0" => License::MPL2,
+            "gpl-3.0" => License::GPL3,
+            _ => return Err(internal(format!("Unknown license {}", s))),
+        })
+    }
+}
+
+impl fmt::Display for License {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            &License::MIT => "MIT",
+            &License::BSD3 => "BSD-3-Clause",
+            &License::APACHE2 => "Apache-2.0",
+            &License::MPL2 => "MPL-2.0",
+            &License::GPL3 => "GPL-3.0",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 struct CargoNewConfig {
     name: Option<String>,
     email: Option<String>,
     version_control: Option<VersionControl>,
+    license: Option<Vec<License>>,
+    license_file: Option<String>
 }
 
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
@@ -99,6 +166,15 @@ fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     GitRepo::discover(path, cwd).is_ok() || HgRepo::discover(path, cwd).is_ok()
 }
 
+fn file(p: &Path, contents: &[u8]) -> io::Result<()> {
+    try!(File::create(p)).write_all(contents)
+}
+
+#[allow(deprecated)] // connect => join in 1.3
+fn join_licenses(v: Vec<String>) -> String {
+    v.connect("/")
+}
+
 fn mk(config: &Config, path: &Path, name: &str,
       opts: &NewOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
@@ -140,14 +216,66 @@ fn mk(config: &Config, path: &Path, name: &str,
         (None, None, name, None) => name,
     };
 
-    try!(paths::write(&path.join("Cargo.toml"), format!(
+    let license: Option<Vec<License>> = match (&opts.license, cfg.license) {
+        (&None, None) => None,
+        (&Some(ref lic), _) => Some(lic.clone()),
+        (&_, Some(lic)) => Some(lic.clone()),
+    };
+
+    let license_file: Option<String> = match (&opts.license_file, cfg.license_file) {
+        (&None, None) => None,
+        (&Some(ref lic_file), _) => Some(lic_file.to_string()),
+        (&_, Some(lic_file)) => Some(lic_file.to_string()),
+    };
+
+    let license_options: String = match (license.clone(), license_file) {
+        (Some(license), Some(license_file)) => {
+            let license = join_licenses(license.iter()
+                                               .map(|l| format!("{}", l))
+                                               .collect::<Vec<_>>());
+            format!(r#"license = "{}"
+license-file = "{}"
+"#, license, license_file)
+        },
+        (Some(license), None) => {
+            let license = join_licenses(license.iter()
+                                               .map(|l| format!("{}", l))
+                                               .collect::<Vec<_>>());
+            format!(r#"license = "{}"
+"#, license)
+        },
+        (None, Some(license_file)) => {
+            format!(r#"license-file = "{}"
+"#, license_file)
+        },
+        (None, None) => {
+            "".to_owned()
+        }
+    };
+
+    // If there is more than one license, we suffix the filename
+    // with the name of the license
+    if license.is_some() {
+        let license = license.unwrap();
+        if license.len() > 1 {
+            for l in &license {
+                let upper = format!("{}", l).to_uppercase();
+                try!(l.write_file(&path.join(format!("LICENSE-{}", upper)), &author));
+            }
+        } else {
+            let license = license.get(0).unwrap();
+            try!(license.write_file(&path.join("LICENSE"), &author))
+        }
+    }
+
+    try!(file(&path.join("Cargo.toml"), format!(
 r#"[package]
 name = "{}"
 version = "0.1.0"
 authors = [{}]
-
+{}
 [dependencies]
-"#, name, toml::Value::String(author)).as_bytes()));
+"#, name, toml::Value::String(author.clone()), license_options).as_bytes()));
 
     try!(fs::create_dir(&path.join("src")));
 
@@ -198,6 +326,8 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
     let name = try!(config.get_string("cargo-new.name")).map(|s| s.0);
     let email = try!(config.get_string("cargo-new.email")).map(|s| s.0);
     let vcs = try!(config.get_string("cargo-new.vcs"));
+    let license = try!(config.get_string("cargo-new.license"));
+    let license_file = try!(config.get_string("cargo-new.license-file"));
 
     let vcs = match vcs.as_ref().map(|p| (&p.0[..], &p.1)) {
         Some(("git", _)) => Some(VersionControl::Git),
@@ -210,10 +340,24 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         }
         None => None
     };
+    let license: Option<Vec<License>> = match license.as_ref().map(|p| &p.0[..]) {
+        Some(s) => {
+            let r = &s[..];
+            let mut licenses: Vec<License> = vec![];
+            for lic in r.split("/") {
+                licenses.push(try!(FromStr::from_str(lic)));
+            }
+            Some(licenses)
+        },
+        _ => None,
+    };
+    let license_file: Option<String> = license_file.as_ref().map(|p| p.0.to_owned());
     Ok(CargoNewConfig {
         name: name,
         email: email,
         version_control: vcs,
+        license: license,
+        license_file: license_file,
     })
 }
 
