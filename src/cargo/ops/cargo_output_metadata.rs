@@ -10,6 +10,7 @@ use toml;
 use util::config::Config;
 use util::{paths, CargoResult};
 
+const VERSION: u32 = 1;
 
 /// Where the dependencies should be written to.
 pub enum OutputTo {
@@ -19,10 +20,11 @@ pub enum OutputTo {
 
 pub struct OutputMetadataOptions<'a> {
     pub features: Vec<String>,
-    pub output_format: String,
-    pub output_to: OutputTo,
     pub manifest_path: &'a Path,
     pub no_default_features: bool,
+    pub output_format: String,
+    pub output_to: OutputTo,
+    pub version: u32,
 }
 
 /// Loads the manifest, resolves the dependencies of the project to the concrete
@@ -54,9 +56,11 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
                                          opt.no_default_features));
     let (packages, resolve) = deps;
 
+    assert_eq!(opt.version, VERSION);
     let output = ExportInfo {
         packages: &packages,
         resolve: &resolve,
+        version: VERSION,
     };
 
     let serialized_str = match &opt.output_format.to_ascii_uppercase()[..] {
@@ -78,6 +82,7 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
 struct ExportInfo<'a> {
     packages: &'a [Package],
     resolve: &'a Resolve,
+    version: u32,
 }
 
 

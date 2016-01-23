@@ -14,7 +14,8 @@ test!(cargo_metadata_simple {
     let p = project("foo")
             .file("Cargo.toml", &basic_bin_manifest("foo"));
 
-    assert_that(p.cargo_process("metadata"), execs().with_stdout(r#"
+    assert_that(p.cargo_process("metadata"), execs().with_stdout(r#"version = 1
+
 [[packages]]
 dependencies = []
 id = "foo 0.5.0 [..]"
@@ -76,7 +77,8 @@ test!(cargo_metadata_simple_json {
                     "dependencies" : []
                 },
                 "metadata": null
-            }
+            },
+            "version": 1
         }"#.split_whitespace().collect::<String>()));
 });
 
