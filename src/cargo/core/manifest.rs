@@ -20,6 +20,7 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     profiles: Profiles,
+    publish: bool
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -163,7 +164,8 @@ impl Manifest {
                include: Vec<String>,
                links: Option<String>,
                metadata: ManifestMetadata,
-               profiles: Profiles) -> Manifest {
+               profiles: Profiles,
+               publish: bool) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -173,6 +175,7 @@ impl Manifest {
             links: links,
             metadata: metadata,
             profiles: profiles,
+            publish: publish,
         }
     }
 
@@ -187,6 +190,7 @@ impl Manifest {
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn warnings(&self) -> &[String] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
+    pub fn publish(&self) -> bool { self.publish }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }
