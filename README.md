@@ -27,18 +27,36 @@ inside an MSYS shell, likely from a MinGW-64 installation.
 
 Cargo requires the following tools and packages to build:
 
-* `rustc`
 * `python`
 * `curl` (on Unix)
 * `cmake`
 * OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
 
-Cargo can then be compiled like many other standard unix-like projects:
+First, you'll want to check out this repository
+
+```
+git clone --recursive https://github.com/rust-lang/cargo
+cd cargo
+```
+
+If you already have `rustc` and `cargo` installed elsewhere, you can simply run
+
+```
+cargo build --release
+```
+
+Otherwise, if you have `rustc` installed and not Cargo, you can simply run:
 
 ```sh
-git clone https://github.com/rust-lang/cargo
-cd cargo
-git submodule update --init
+./configure
+make
+make install
+```
+
+If, however, you have neither `rustc` nor `cargo` previously installed you can
+run:
+
+```sh
 python -B src/etc/install-deps.py
 ./configure --local-rust-root="$PWD"/rustc
 make
