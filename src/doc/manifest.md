@@ -72,15 +72,15 @@ necessary source files may not be included.
 [globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
 
 
-## The `private`  Field (optional)
+## The `publish`  Field (optional)
 
-The `private` field can be used to prevent a package from being
-published to crates.io by mistake.
+The `publish` field can be used to prevent a package from being
+published to a repository by mistake.
 
 ```toml
 [package]
 # ...
-private = true
+publish = false
 ```
 
 
