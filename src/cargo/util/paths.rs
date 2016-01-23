@@ -1,6 +1,7 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf, Component};
 
@@ -80,6 +81,21 @@ pub fn read(path: &Path) -> CargoResult<String> {
 pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
     (|| -> CargoResult<()> {
         let mut f = try!(File::create(path));
+        try!(f.write_all(contents));
+        Ok(())
+    }).chain_error(|| {
+        internal(format!("failed to write `{}`", path.display()))
+    })
+}
+
+pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
+    (|| -> CargoResult<()> {
+        let mut f = try!(OpenOptions::new()
+                            .write(true)
+                            .append(true)
+                            .create(true)
+                            .open(path));
+
         try!(f.write_all(contents));
         Ok(())
     }).chain_error(|| {
