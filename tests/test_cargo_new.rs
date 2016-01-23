@@ -94,7 +94,9 @@ test!(existing {
 test!(invalid_characters {
     assert_that(cargo_process("new").arg("foo.rs"),
                 execs().with_status(101)
-                       .with_stderr("Invalid character `.` in crate name: `foo.rs`"));
+                       .with_stderr("\
+Invalid character `.` in crate name: `foo.rs`
+use --name to override crate name"));
 });
 
 test!(rust_prefix_stripped {
