@@ -34,6 +34,11 @@ pub fn publish(manifest_path: &Path,
                verify: bool) -> CargoResult<()> {
     let pkg = try!(Package::for_path(&manifest_path, config));
 
+    if !pkg.publish() {
+        bail!("some crates cannot be published.\n\
+               `{}` is marked as unpublishable", pkg.name());
+    }
+
     let (mut registry, reg_id) = try!(registry(config, token, index));
     try!(verify_dependencies(&pkg, &reg_id));
 
