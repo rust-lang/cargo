@@ -40,7 +40,7 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: environment-variables.html
+[env]: environment-variables.md
 
 ## Outputs of the Build Script
 
