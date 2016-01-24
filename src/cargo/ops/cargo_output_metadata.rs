@@ -1,55 +1,27 @@
-use std::ascii::AsciiExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use core::resolver::Resolve;
 use core::{Source, Package};
 use ops;
-use rustc_serialize::json;
 use sources::PathSource;
-use toml;
 use util::config::Config;
-use util::{paths, CargoResult};
+use util::CargoResult;
 
 const VERSION: u32 = 1;
-
-/// Where the dependencies should be written to.
-pub enum OutputTo {
-    File(PathBuf),
-    StdOut,
-}
 
 pub struct OutputMetadataOptions<'a> {
     pub features: Vec<String>,
     pub manifest_path: &'a Path,
     pub no_default_features: bool,
-    pub output_format: String,
-    pub output_to: OutputTo,
     pub version: u32,
 }
 
 /// Loads the manifest, resolves the dependencies of the project to the concrete
-/// used versions - considering overrides - and writes all dependencies in a TOML
-/// format to stdout or the specified file.
-///
-/// The TOML format is e.g.:
-/// ```toml
-/// root = "libA"
-///
-/// [packages.libA]
-/// dependencies = ["libB"]
-/// path = "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/libA-0.1"
-/// version = "0.1"
-///
-/// [packages.libB]
-/// dependencies = []
-/// path = "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/libB-0.4"
-/// version = "0.4"
-///
-/// [packages.libB.features]
-/// featureA = ["featureB"]
-/// featureB = []
-/// ```
-pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<()> {
+/// used versions - considering overrides - and writes all dependencies in a JSON
+/// format to stdout.
+pub fn output_metadata<'a>(opt: OutputMetadataOptions,
+                           config: &'a Config)
+                           -> CargoResult<ExportInfo> {
     let deps = try!(resolve_dependencies(opt.manifest_path,
                                          config,
                                          opt.features,
@@ -57,31 +29,17 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
     let (packages, resolve) = deps;
 
     assert_eq!(opt.version, VERSION);
-    let output = ExportInfo {
-        packages: &packages,
-        resolve: &resolve,
+    Ok(ExportInfo {
+        packages: packages,
+        resolve: resolve,
         version: VERSION,
-    };
-
-    let serialized_str = match &opt.output_format.to_ascii_uppercase()[..] {
-        "TOML" => toml::encode_str(&output),
-        "JSON" => try!(json::encode(&output)),
-        _ => bail!("unknown format: {}, supported formats are TOML, JSON.",
-                   opt.output_format),
-    };
-
-    match opt.output_to {
-        OutputTo::StdOut => println!("{}", serialized_str),
-        OutputTo::File(ref path) => try!(paths::write(path, serialized_str.as_bytes()))
-    }
-
-    Ok(())
+    })
 }
 
 #[derive(RustcEncodable)]
-struct ExportInfo<'a> {
-    packages: &'a [Package],
-    resolve: &'a Resolve,
+pub struct ExportInfo {
+    packages: Vec<Package>,
+    resolve: Resolve,
     version: u32,
 }
 
