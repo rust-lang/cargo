@@ -69,6 +69,7 @@ macro_rules! each_subcommand{
         $mac!(generate_lockfile);
         $mac!(git_checkout);
         $mac!(help);
+        $mac!(init);
         $mac!(install);
         $mac!(locate_project);
         $mac!(login);
