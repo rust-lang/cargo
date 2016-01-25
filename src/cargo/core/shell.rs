@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::io;
 
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};
-use term::{self, Terminal, TerminfoTerminal, color, Attr};
+use term::{Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
 use self::Verbosity::{Verbose, Normal, Quiet};
@@ -196,21 +196,21 @@ impl Shell {
     fn fg(&mut self, color: color::Color) -> CargoResult<bool> {
         let colored = self.colored();
 
-        match self.terminal {
+        let ok = match self.terminal {
             Colored(ref mut c) if colored => try!(c.fg(color)),
             _ => return Ok(false),
-        }
-        Ok(true)
+        };
+        Ok(ok)
     }
 
     fn attr(&mut self, attr: Attr) -> CargoResult<bool> {
         let colored = self.colored();
 
-        match self.terminal {
+        let ok = match self.terminal {
             Colored(ref mut c) if colored => try!(c.attr(attr)),
             _ => return Ok(false)
-        }
-        Ok(true)
+        };
+        Ok(ok)
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
@@ -222,11 +222,11 @@ impl Shell {
         }
     }
 
-    fn reset(&mut self) -> term::Result<()> {
+    fn reset(&mut self) -> CargoResult<()> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => try!(c.reset()),
+            Colored(ref mut c) if colored => { try!(c.reset()); }
             _ => ()
         }
         Ok(())
