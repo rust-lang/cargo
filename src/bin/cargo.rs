@@ -14,7 +14,7 @@ use cargo::execute_main_without_stdin;
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 
 #[derive(RustcDecodable)]
-struct Flags {
+pub struct Flags {
     flag_list: bool,
     flag_verbose: bool,
     flag_quiet: bool,

@@ -97,3 +97,8 @@ fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
 fn cargo_process() -> cargo::util::ProcessBuilder {
     process(&support::cargo_dir().join("cargo"))
 }
+
+#[allow(deprecated)] // sleep_ms is now deprecated in favor of sleep()
+fn sleep_ms(ms: u32) {
+    std::thread::sleep_ms(ms);
+}
