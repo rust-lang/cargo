@@ -73,6 +73,7 @@ macro_rules! each_subcommand{
         $mac!(install);
         $mac!(locate_project);
         $mac!(login);
+        $mac!(metadata);
         $mac!(new);
         $mac!(owner);
         $mac!(package);
