@@ -52,7 +52,11 @@ pub fn install(root: Option<&str>,
                             .expect("path sources must have a valid path");
         try!(select_pkg(PathSource::new(&path, source_id, config),
                         source_id, krate, vers,
-                        &mut |path| path.read_packages()))
+                        &mut |path| path.read_packages())
+                 .chain_error(|| human(format!("`{}` is not a crate root; specify a \
+                                                crate to install from crates.io, or \
+                                                use --path or --git to specify an \
+                                                alternate source", path.display()))))
     } else {
         try!(select_pkg(RegistrySource::new(source_id, config),
                         source_id, krate, vers,
