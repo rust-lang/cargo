@@ -50,6 +50,12 @@ pub fn install(root: Option<&str>,
     } else if source_id.is_path() {
         let path = source_id.url().to_file_path().ok()
                             .expect("path sources must have a valid path");
+        let mut src = PathSource::new(&path, source_id, config);
+        try!(src.update().chain_error(|| {
+            human(format!("`{}` is not a crate root; specify a crate to \
+                           install from crates.io, or use --path or --git to \
+                           specify an alternate source", path.display()))
+        }));
         try!(select_pkg(PathSource::new(&path, source_id, config),
                         source_id, krate, vers,
                         &mut |path| path.read_packages()))
