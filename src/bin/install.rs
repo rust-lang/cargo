@@ -75,6 +75,10 @@ crate has multiple binaries, the `--bin` argument can selectively install only
 one of them, and if you'd rather install examples the `--example` argument can
 be used as well.
 
+As a special convenience, omitting the <crate> specification entirely will
+install the crate in the current directory. That is, `install` is equivalent to
+the more explicit `install --path .`.
+
 The `--list` option will list all installed packages (and their versions).
 ";
 
@@ -112,6 +116,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         SourceId::for_git(&url, gitref)
     } else if let Some(path) = options.flag_path {
         try!(SourceId::for_path(&config.cwd().join(path)))
+    } else if options.arg_crate == None {
+        try!(SourceId::for_path(&config.cwd()))
     } else {
         try!(SourceId::for_central(config))
     };
