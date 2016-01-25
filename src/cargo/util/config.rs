@@ -491,7 +491,7 @@ fn determine_paths(cwd: &Path) -> CargoResult<Paths> {
     // 1)
     if let Some(v) = env::var_os("CARGO_HOME").map(|p| cwd.join(p)) {
         return Ok(Paths {
-            bin: v.clone(),
+            bin: v.join("bin"),
             cache: v.clone(),
             config: v,
         });
