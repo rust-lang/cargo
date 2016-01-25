@@ -574,7 +574,11 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
         let layout = cx.layout(unit.pkg, unit.kind);
 
         for filename in try!(cx.target_filenames(unit)) {
-            if filename.ends_with(".a") { continue }
+            if let Ok((prefix, suffix)) = cx.staticlib(unit.kind) {
+                if filename.starts_with(prefix) && filename.ends_with(suffix) {
+                    continue
+                }
+            }
             let mut v = OsString::new();
             v.push(&unit.target.crate_name());
             v.push("=");
