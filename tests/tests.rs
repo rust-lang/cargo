@@ -51,6 +51,7 @@ mod test_cargo_freshness;
 mod test_cargo_generate_lockfile;
 mod test_cargo_init;
 mod test_cargo_install;
+mod test_cargo_metadata;
 mod test_cargo_new;
 mod test_cargo_package;
 mod test_cargo_profiles;

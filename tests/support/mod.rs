@@ -10,6 +10,7 @@ use std::process::Output;
 use std::str;
 use std::usize;
 
+use rustc_serialize::json::Json;
 use url::Url;
 use hamcrest as ham;
 use cargo::util::ProcessBuilder;
@@ -271,6 +272,7 @@ pub struct Execs {
     expect_exit_code: Option<i32>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
+    expect_json: Option<Json>,
 }
 
 impl Execs {
@@ -296,6 +298,11 @@ impl Execs {
 
     pub fn with_stderr_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_json(mut self, expected: &str) -> Execs {
+        self.expect_json = Some(Json::from_str(expected).unwrap());
         self
     }
 
@@ -329,6 +336,10 @@ impl Execs {
         for expect in self.expect_stderr_contains.iter() {
             try!(self.match_std(Some(expect), &actual.stderr, "stderr",
                                 &actual.stdout, true));
+        }
+
+        if let Some(ref expect_json) = self.expect_json {
+            try!(self.match_json(expect_json, &actual.stdout));
         }
         Ok(())
     }
@@ -379,6 +390,27 @@ impl Execs {
 
     }
 
+    fn match_json(&self, expected: &Json, stdout: &[u8]) -> ham::MatchResult {
+        let stdout = match str::from_utf8(stdout) {
+            Err(..) => return Err("stdout was not utf8 encoded".to_owned()),
+            Ok(stdout) => stdout,
+        };
+
+        let actual = match Json::from_str(stdout) {
+             Err(..) => return Err(format!("Invalid json {}", stdout)),
+             Ok(actual) => actual,
+        };
+
+        match find_mismatch(expected, &actual) {
+            Some((expected_part, actual_part)) => Err(format!(
+                "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
+                expected.pretty(), actual.pretty(),
+                expected_part.pretty(), actual_part.pretty()
+            )),
+            None => Ok(()),
+        }
+    }
+
     fn diff_lines<'a>(&self, actual: str::Lines<'a>, expected: str::Lines<'a>,
                       partial: bool) -> Vec<String> {
         let actual = actual.take(if partial {
@@ -417,6 +449,49 @@ fn lines_match(expected: &str, mut actual: &str) -> bool {
         }
     }
     actual.is_empty() || expected.ends_with("[..]")
+}
+
+// Compares JSON object for approximate equality.
+// You can use `[..]` wildcard in strings (useful for OS dependent things such as paths).
+// Arrays are sorted before comparison.
+fn find_mismatch<'a>(expected: &'a Json, actual: &'a Json) -> Option<(&'a Json, &'a Json)> {
+    use rustc_serialize::json::Json::*;
+    match (expected, actual) {
+        (&I64(l), &I64(r)) if l == r => None,
+        (&F64(l), &F64(r)) if l == r => None,
+        (&U64(l), &U64(r)) if l == r => None,
+        (&Boolean(l), &Boolean(r)) if l == r => None,
+        (&String(ref l), &String(ref r)) if lines_match(l, r) => None,
+        (&Array(ref l), &Array(ref r)) => {
+            if l.len() != r.len() {
+                return Some((expected, actual));
+            }
+
+            fn sorted(xs: &Vec<Json>) -> Vec<&Json> {
+                let mut result = xs.iter().collect::<Vec<_>>();
+                // `unwrap` should be safe because JSON spec does not allow NaNs
+                result.sort_by(|x, y| x.partial_cmp(y).unwrap());
+                result
+            }
+
+            sorted(l).iter().zip(sorted(r))
+             .filter_map(|(l, r)| find_mismatch(l, r))
+             .nth(0)
+        }
+        (&Object(ref l), &Object(ref r)) => {
+            let same_keys = l.len() == r.len() && l.keys().all(|k| r.contains_key(k));
+            if !same_keys {
+                return Some((expected, actual));
+            }
+
+            l.values().zip(r.values())
+             .filter_map(|(l, r)| find_mismatch(l, r))
+             .nth(0)
+        }
+        (&Null, &Null) => None,
+        _ => Some((expected, actual)),
+    }
+
 }
 
 struct ZipAll<I1: Iterator, I2: Iterator> {
@@ -486,6 +561,7 @@ pub fn execs() -> Execs {
         expect_exit_code: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
+        expect_json: None,
     }
 }
 

@@ -23,6 +23,7 @@ pub use self::registry::{modify_owners, yank, OwnersOptions};
 pub use self::cargo_fetch::{fetch, get_resolved_packages};
 pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{resolve_pkg, resolve_with_previous};
+pub use self::cargo_output_metadata::{output_metadata, OutputMetadataOptions, ExportInfo};
 
 mod cargo_clean;
 mod cargo_compile;
@@ -31,6 +32,7 @@ mod cargo_fetch;
 mod cargo_generate_lockfile;
 mod cargo_install;
 mod cargo_new;
+mod cargo_output_metadata;
 mod cargo_package;
 mod cargo_pkgid;
 mod cargo_read_manifest;
