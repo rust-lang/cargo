@@ -1135,7 +1135,8 @@ test!(build_script_with_dynamic_native_dependency {
         "#)
         .file("bar/src/lib.rs", r#"
             pub fn bar() {
-                #[link(name = "builder")]
+                #[cfg_attr(not(target_env = "msvc"), link(name = "builder"))]
+                #[cfg_attr(target_env = "msvc", link(name = "builder.dll"))]
                 extern { fn foo(); }
                 unsafe { foo() }
             }
