@@ -6,7 +6,7 @@ use flate2::Compression::Default;
 use flate2::write::GzEncoder;
 use git2;
 use rustc_serialize::hex::ToHex;
-use tar::{Archive, Header};
+use tar::{Builder, Header};
 use url::Url;
 
 use support::paths;
@@ -155,25 +155,24 @@ impl Package {
         let dst = self.archive_dst();
         fs::create_dir_all(dst.parent().unwrap()).unwrap();
         let f = File::create(&dst).unwrap();
-        let a = Archive::new(GzEncoder::new(f, Default));
-        self.append(&a, "Cargo.toml", &manifest);
+        let mut a = Builder::new(GzEncoder::new(f, Default));
+        self.append(&mut a, "Cargo.toml", &manifest);
         if self.files.is_empty() {
-            self.append(&a, "src/lib.rs", "");
+            self.append(&mut a, "src/lib.rs", "");
         } else {
             for &(ref name, ref contents) in self.files.iter() {
-                self.append(&a, name, contents);
+                self.append(&mut a, name, contents);
             }
         }
-        a.finish().unwrap();
     }
 
-    fn append<W: Write>(&self, ar: &Archive<W>, file: &str, contents: &str) {
-        let mut header = Header::new();
+    fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, contents: &str) {
+        let mut header = Header::new_ustar();
         header.set_size(contents.len() as u64);
         header.set_path(format!("{}-{}/{}", self.name, self.vers, file)).unwrap();
         header.set_cksum();
 
-        ar.append(&header, &mut contents.as_bytes()).unwrap();
+        ar.append(&header, contents.as_bytes()).unwrap();
     }
 
     pub fn archive_dst(&self) -> PathBuf {

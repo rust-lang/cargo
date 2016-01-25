@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 use std::path::{self, Path, PathBuf};
 
-use tar::Archive;
+use tar::{Archive, Builder};
 use flate2::{GzBuilder, Compression};
 use flate2::read::GzDecoder;
 
@@ -119,7 +119,7 @@ fn tar(pkg: &Package,
                                   .write(tmpfile, Compression::Best);
 
     // Put all package files into a compressed archive
-    let ar = Archive::new(encoder);
+    let mut ar = Builder::new(encoder);
     let root = pkg.root();
     for file in try!(src.list_files(pkg)).iter() {
         if &**file == dst { continue }
@@ -139,7 +139,8 @@ fn tar(pkg: &Package,
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
-    try!(ar.finish());
+    let encoder = try!(ar.into_inner());
+    try!(encoder.finish());
     Ok(())
 }
 

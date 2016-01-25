@@ -1,7 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
-use std::thread;
 use git2;
 
 use support::{git, project, execs, main_file, path2url};
@@ -638,7 +637,7 @@ test!(update_with_shared_deps {
     git::add(&repo);
     git::commit(&repo);
 
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
 
     // By default, not transitive updates
     println!("dep1 update");
@@ -848,7 +847,7 @@ test!(stale_cached_version {
     git::add(&repo);
     git::commit(&repo);
 
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
 
     let rev = repo.revparse_single("HEAD").unwrap().id();
 
@@ -955,7 +954,7 @@ test!(dep_with_changed_submodule {
     git::add(&repo);
     git::commit(&repo);
 
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
     // Update the dependency and carry on!
     println!("update");
     assert_that(project.cargo("update").arg("-v"),
@@ -1056,7 +1055,7 @@ test!(git_build_cmd_freshness {
     }).unwrap();
     foo.root().move_into_the_past().unwrap();
 
-    thread::sleep_ms(1000);
+    ::sleep_ms(1000);
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0)

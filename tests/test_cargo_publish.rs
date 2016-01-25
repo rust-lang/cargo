@@ -1,6 +1,6 @@
 use std::io::prelude::*;
 use std::fs::{self, File};
-use std::io::{Cursor, SeekFrom};
+use std::io::SeekFrom;
 use std::path::PathBuf;
 
 use flate2::read::GzDecoder;
@@ -76,9 +76,8 @@ test!(simple {
     assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
-    let inner = Cursor::new(contents);
-    let ar = Archive::new(inner);
-    for file in ar.files().unwrap() {
+    let mut ar = Archive::new(&contents[..]);
+    for file in ar.entries().unwrap() {
         let file = file.unwrap();
         let fname = file.header().path_bytes();
         let fname = &*fname;
