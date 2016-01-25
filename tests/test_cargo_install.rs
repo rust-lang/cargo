@@ -120,8 +120,7 @@ could not find `foo` in `registry file://[..]` with version `0.2.0`
 test!(no_crate {
     assert_that(cargo_process("install"),
                 execs().with_status(101).with_stderr("\
-must specify a crate to install from crates.io, or use --path or --git \
-to specify alternate source
+Could not find Cargo.toml in `[..]`
 "));
 });
 
@@ -525,4 +524,19 @@ test!(subcommand_works_out_of_the_box {
                 execs().with_status(0).with_stdout("bar\n"));
     assert_that(cargo_process("--list"),
                 execs().with_status(0).with_stdout_contains("  foo\n"));
+});
+
+test!(installs_from_cwd_by_default {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install"), execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
 });
