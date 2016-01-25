@@ -1738,13 +1738,12 @@ test!(predictable_filenames {
 
             [lib]
             name = "foo"
-            crate-type = ["staticlib", "dylib", "rlib"]
+            crate-type = ["dylib", "rlib"]
         "#)
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-    assert_that(&p.root().join("target/debug/libfoo.a"), existing_file());
     assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
     let dylib_name = format!("{}foo{}", env::consts::DLL_PREFIX,
                              env::consts::DLL_SUFFIX);

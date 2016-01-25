@@ -221,7 +221,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///
     /// If `plugin` is true, the pair corresponds to the host platform,
     /// otherwise it corresponds to the target platform.
-    fn staticlib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
+    pub fn staticlib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
         let (triple, pair) = if kind == Kind::Host {
             (&self.config.rustc_info().host, &self.host_staticlib)
         } else {
