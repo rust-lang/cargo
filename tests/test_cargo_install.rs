@@ -120,7 +120,10 @@ could not find `foo` in `registry file://[..]` with version `0.2.0`
 test!(no_crate {
     assert_that(cargo_process("install"),
                 execs().with_status(101).with_stderr("\
-Could not find Cargo.toml in `[..]`
+`[..]` is not a crate root; specify a crate to install [..]
+
+Caused by:
+  Could not find Cargo.toml in `[..]`
 "));
 });
 
