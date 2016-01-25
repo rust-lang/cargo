@@ -87,9 +87,10 @@ fn can_panic() -> bool {
 
 fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
     let mut p = cargo::util::process(t.as_ref());
+    let home = support::paths::home();
     p.cwd(&support::paths::root())
-     .env("HOME", &support::paths::home())
-     .env_remove("CARGO_HOME")
+     .env("HOME", &home)
+     .env("CARGO_HOME", &home.join(".cargo"))
      .env_remove("CARGO_TARGET_DIR") // we assume 'target'
      .env_remove("MSYSTEM");    // assume cmd.exe everywhere on windows
     return p
