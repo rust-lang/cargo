@@ -435,6 +435,11 @@ impl<'cfg> RegistrySource<'cfg> {
             _ => Kind::Normal,
         };
 
+        let platform = match target {
+            Some(target) => Some(try!(target.parse())),
+            None => None,
+        };
+
         // Unfortunately older versions of cargo and/or the registry ended up
         // publishing lots of entries where the features array contained the
         // empty feature, "", inside. This confuses the resolution process much
@@ -445,7 +450,7 @@ impl<'cfg> RegistrySource<'cfg> {
         Ok(dep.set_optional(optional)
               .set_default_features(default_features)
               .set_features(features)
-              .set_only_for_platform(target)
+              .set_platform(platform)
               .set_kind(kind)
               .into_dependency())
     }

@@ -1,12 +1,22 @@
+use std::fmt;
+use std::rc::Rc;
+use std::str::FromStr;
+
 use semver::VersionReq;
 use rustc_serialize::{Encoder, Encodable};
 
 use core::{SourceId, Summary, PackageId};
-use std::rc::Rc;
-use util::CargoResult;
+use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human};
+
+/// Information about a dependency requested by a Cargo manifest.
+/// Cheap to copy.
+#[derive(PartialEq, Clone ,Debug)]
+pub struct Dependency {
+    inner: Rc<DependencyInner>,
+}
 
 /// The data underlying a Dependency.
-#[derive(PartialEq,Clone,Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct DependencyInner {
     name: String,
     source_id: SourceId,
@@ -21,16 +31,14 @@ pub struct DependencyInner {
 
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
-    only_for_platform: Option<String>,
+    platform: Option<Platform>,
 }
 
-/// Information about a dependency requested by a Cargo manifest.
-/// Cheap to copy.
-#[derive(PartialEq,Clone,Debug)]
-pub struct Dependency {
-    inner: Rc<DependencyInner>,
+#[derive(Clone, Debug, PartialEq)]
+pub enum Platform {
+    Name(String),
+    Cfg(CfgExpr),
 }
-
 
 #[derive(RustcEncodable)]
 struct SerializedDependency<'a> {
@@ -42,7 +50,7 @@ struct SerializedDependency<'a> {
     optional: bool,
     uses_default_features: bool,
     features: &'a [String],
-    target: &'a Option<&'a str>,
+    target: Option<&'a Platform>,
 }
 
 impl Encodable for Dependency {
@@ -55,7 +63,7 @@ impl Encodable for Dependency {
             optional: self.is_optional(),
             uses_default_features: self.uses_default_features(),
             features: self.features(),
-            target: &self.only_for_platform(),
+            target: self.platform(),
         }.encode(s)
     }
 }
@@ -106,7 +114,7 @@ impl DependencyInner {
             features: Vec::new(),
             default_features: true,
             specified_req: None,
-            only_for_platform: None,
+            platform: None,
         }
     }
 
@@ -118,10 +126,10 @@ impl DependencyInner {
         self.specified_req.as_ref().map(|s| &s[..])
     }
 
-    /// If none, this dependencies must be built for all platforms.
-    /// If some, it must only be built for the specified platform.
-    pub fn only_for_platform(&self) -> Option<&str> {
-        self.only_for_platform.as_ref().map(|s| &s[..])
+    /// If none, this dependency must be built for all platforms.
+    /// If some, it must only be built for matching platforms.
+    pub fn platform(&self) -> Option<&Platform> {
+        self.platform.as_ref()
     }
 
     pub fn set_kind(mut self, kind: Kind) -> DependencyInner {
@@ -159,9 +167,9 @@ impl DependencyInner {
         self
     }
 
-    pub fn set_only_for_platform(mut self, platform: Option<String>)
-                                 -> DependencyInner {
-        self.only_for_platform = platform;
+    pub fn set_platform(mut self, platform: Option<Platform>)
+                        -> DependencyInner {
+        self.platform = platform;
         self
     }
 
@@ -230,8 +238,8 @@ impl Dependency {
 
     /// If none, this dependencies must be built for all platforms.
     /// If some, it must only be built for the specified platform.
-    pub fn only_for_platform(&self) -> Option<&str> {
-        self.inner.only_for_platform()
+    pub fn platform(&self) -> Option<&Platform> {
+        self.inner.platform()
     }
 
     /// Lock this dependency to depending on the specified package id
@@ -256,5 +264,49 @@ impl Dependency {
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
         self.inner.matches_id(id)
+    }
+}
+
+impl Platform {
+    pub fn matches(&self, name: &str, cfg: Option<&[Cfg]>) -> bool {
+        match *self {
+            Platform::Name(ref p) => p == name,
+            Platform::Cfg(ref p) => {
+                match cfg {
+                    Some(cfg) => p.matches(cfg),
+                    None => false,
+                }
+            }
+        }
+    }
+}
+
+impl Encodable for Platform {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        self.to_string().encode(s)
+    }
+}
+
+impl FromStr for Platform {
+    type Err = Box<CargoError>;
+
+    fn from_str(s: &str) -> CargoResult<Platform> {
+        if s.starts_with("cfg(") && s.ends_with(")") {
+            let s = &s[4..s.len()-1];
+            s.parse().map(Platform::Cfg).chain_error(|| {
+                human(format!("failed to parse `{}` as a cfg expression", s))
+            })
+        } else {
+            Ok(Platform::Name(s.to_string()))
+        }
+    }
+}
+
+impl fmt::Display for Platform {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Platform::Name(ref n) => n.fmt(f),
+            Platform::Cfg(ref e) => write!(f, "cfg({})", e),
+        }
     }
 }

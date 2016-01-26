@@ -1,6 +1,6 @@
 use std::collections::{HashSet, HashMap};
 use std::path::{Path, PathBuf};
-use std::str;
+use std::str::{self, FromStr};
 use std::sync::Arc;
 
 use regex::Regex;
@@ -8,7 +8,7 @@ use regex::Regex;
 use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
 use core::dependency::Kind as DepKind;
-use util::{self, CargoResult, ChainError, internal, Config, profile};
+use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
@@ -41,14 +41,18 @@ pub struct Context<'a, 'cfg: 'a> {
     host: Layout,
     target: Option<Layout>,
     target_triple: String,
-    host_dylib: Option<(String, String)>,
-    host_staticlib: Option<(String, String)>,
-    host_exe: String,
+    target_info: TargetInfo,
+    host_info: TargetInfo,
     package_set: &'a PackageSet,
-    target_dylib: Option<(String, String)>,
-    target_staticlib: Option<(String, String)>,
-    target_exe: String,
     profiles: &'a Profiles,
+}
+
+#[derive(Clone)]
+struct TargetInfo {
+    dylib: Option<(String, String)>,
+    staticlib: Option<(String, String)>,
+    exe: String,
+    cfg: Option<Vec<Cfg>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -62,12 +66,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
-        let (target_dylib, target_staticlib, target_exe) = try!(Context::filename_parts(target,
-                                                                      config));
-        let (host_dylib, host_staticlib, host_exe) = if build_config.requested_target.is_none() {
-            (target_dylib.clone(), target_staticlib.clone(), target_exe.clone())
+        let target_info = try!(Context::target_info(target, config));
+        let host_info = if build_config.requested_target.is_none() {
+            target_info.clone()
         } else {
-            try!(Context::filename_parts(None, config))
+            try!(Context::target_info(None, config))
         };
         let target_triple = target.unwrap_or_else(|| {
             &config.rustc_info().host[..]
@@ -83,12 +86,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             sources: sources,
             package_set: deps,
             config: config,
-            target_dylib: target_dylib,
-            target_staticlib: target_staticlib,
-            target_exe: target_exe,
-            host_dylib: host_dylib,
-            host_staticlib: host_staticlib,
-            host_exe: host_exe,
+            target_info: target_info,
+            host_info: host_info,
             compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config, deps)),
             build_config: build_config,
@@ -103,8 +102,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Run `rustc` to discover the dylib prefix/suffix for the target
     /// specified as well as the exe suffix
-    fn filename_parts(target: Option<&str>, cfg: &Config)
-                      -> CargoResult<(Option<(String, String)>, Option<(String, String)>, String)> {
+    fn target_info(target: Option<&str>, cfg: &Config)
+                   -> CargoResult<TargetInfo> {
         let mut process = util::process(cfg.rustc());
         process.arg("-")
                .arg("--crate-name").arg("_")
@@ -116,7 +115,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if let Some(s) = target {
             process.arg("--target").arg(s);
         };
-        let output = try!(process.exec_with_output());
+
+        let mut with_cfg = process.clone();
+        with_cfg.arg("--print=cfg");
+
+        let mut has_cfg = true;
+        let output = try!(with_cfg.exec_with_output().or_else(|_| {
+            has_cfg = false;
+            process.exec_with_output()
+        }).chain_error(|| {
+            human(format!("failed to run `rustc` to learn about \
+                           target-specific information"))
+        }));
 
         let error = str::from_utf8(&output.stderr).unwrap();
         let output = str::from_utf8(&output.stdout).unwrap();
@@ -143,13 +153,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some((staticlib_parts[0].to_string(), staticlib_parts[1].to_string()))
         };
 
-        let exe_suffix = if nobin.is_match(error) {
+        let exe = if nobin.is_match(error) {
             String::new()
         } else {
             lines.next().unwrap().trim()
                  .split('_').skip(1).next().unwrap().to_string()
         };
-        Ok((dylib, staticlib, exe_suffix))
+
+        let cfg = if has_cfg {
+            Some(try!(lines.map(Cfg::from_str).collect()))
+        } else {
+            None
+        };
+
+        Ok(TargetInfo {
+            dylib: dylib,
+            staticlib: staticlib,
+            exe: exe,
+            cfg: cfg,
+        })
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in
@@ -207,9 +229,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// otherwise it corresponds to the target platform.
     fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
         let (triple, pair) = if kind == Kind::Host {
-            (&self.config.rustc_info().host, &self.host_dylib)
+            (&self.config.rustc_info().host, &self.host_info.dylib)
         } else {
-            (&self.target_triple, &self.target_dylib)
+            (&self.target_triple, &self.target_info.dylib)
         };
         match *pair {
             None => bail!("dylib outputs are not supported for {}", triple),
@@ -223,9 +245,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// otherwise it corresponds to the target platform.
     pub fn staticlib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
         let (triple, pair) = if kind == Kind::Host {
-            (&self.config.rustc_info().host, &self.host_staticlib)
+            (&self.config.rustc_info().host, &self.host_info.staticlib)
         } else {
-            (&self.target_triple, &self.target_staticlib)
+            (&self.target_triple, &self.target_info.staticlib)
         };
         match *pair {
             None => bail!("staticlib outputs are not supported for {}", triple),
@@ -284,9 +306,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn target_filenames(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         let stem = self.file_stem(unit);
         let suffix = if unit.target.for_host() {
-            &self.host_exe
+            &self.host_info.exe
         } else {
-            &self.target_exe
+            &self.target_info.exe
         };
 
         let mut ret = Vec::new();
@@ -532,15 +554,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
-        match (dep.only_for_platform(), kind) {
-            (Some(ref platform), Kind::Host) => {
-                *platform == self.config.rustc_info().host
-            },
-            (Some(ref platform), Kind::Target) => {
-                *platform == self.target_triple
-            },
-            (None, _) => true
-        }
+        let platform = match dep.platform() {
+            Some(p) => p,
+            None => return true,
+        };
+        let (name, info) = match kind {
+            Kind::Host => (&self.config.rustc_info().host, &self.host_info),
+            Kind::Target => (&self.target_triple, &self.target_info),
+        };
+        platform.matches(name, info.cfg.as_ref().map(|cfg| &cfg[..]))
     }
 
     /// Gets a package for the given package id.
