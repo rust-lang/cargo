@@ -137,3 +137,23 @@ all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 "));
 });
+
+test!(unpublishable_crate {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = false
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish"),
+                execs().with_status(101).with_stderr("\
+some crates cannot be published.
+`foo` is marked as unpublishable
+"));
+});

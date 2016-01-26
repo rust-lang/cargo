@@ -71,6 +71,18 @@ necessary source files may not be included.
 
 [globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
 
+
+## The `publish`  Field (optional)
+
+The `publish` field can be used to prevent a package from being
+published to a repository by mistake.
+
+```toml
+[package]
+# ...
+publish = false
+```
+
 ## Package metadata
 
 There are a number of optional metadata fields also accepted under the
