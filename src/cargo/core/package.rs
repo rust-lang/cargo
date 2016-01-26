@@ -79,6 +79,7 @@ impl Package {
     pub fn summary(&self) -> &Summary { self.manifest.summary() }
     pub fn targets(&self) -> &[Target] { self.manifest().targets() }
     pub fn version(&self) -> &Version { self.package_id().version() }
+    pub fn publish(&self) -> bool { self.manifest.publish() }
 
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
