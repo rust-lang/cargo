@@ -1,3 +1,4 @@
+pub use self::cfg::{Cfg, CfgExpr};
 pub use self::config::Config;
 pub use self::dependency_queue::Dependency;
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
@@ -30,8 +31,9 @@ pub mod to_url;
 pub mod toml;
 pub mod lev_distance;
 pub mod job;
+mod cfg;
 mod dependency_queue;
+mod rustc;
 mod sha256;
 mod shell_escape;
 mod vcs;
-mod rustc;
