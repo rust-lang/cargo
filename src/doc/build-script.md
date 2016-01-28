@@ -58,8 +58,8 @@ cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
 
-There are a few special keys that Cargo recognizes, affecting how the crate this
-build script is for is built:
+There are a few special keys that Cargo recognizes, affecting how the
+crate is built:
 
 * `rustc-link-lib` indicates that the specified value should be passed to the
   compiler as a `-l` flag.
