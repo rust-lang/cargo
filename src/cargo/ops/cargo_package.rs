@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 use std::path::{self, Path, PathBuf};
 
-use tar::{Archive, Builder};
+use tar::{Archive, Builder, Header};
 use flate2::{GzBuilder, Compression};
 use flate2::read::GzDecoder;
 
@@ -135,7 +135,36 @@ fn tar(pkg: &Package,
         }));
         let path = format!("{}-{}{}{}", pkg.name(), pkg.version(),
                            path::MAIN_SEPARATOR, relative);
-        try!(ar.append_file(&path, &mut file).chain_error(|| {
+
+        // The tar::Builder type by default will build GNU archives, but
+        // unfortunately we force it here to use UStar archives instead. The
+        // UStar format has more limitations on the length of path name that it
+        // can encode, so it's not quite as nice to use.
+        //
+        // Older cargos, however, had a bug where GNU archives were interpreted
+        // as UStar archives. This bug means that if we publish a GNU archive
+        // which has fully filled out metadata it'll be corrupt when unpacked by
+        // older cargos.
+        //
+        // Hopefully in the future after enough cargos have been running around
+        // with the bugfixed tar-rs library we'll be able to switch this over to
+        // GNU archives, but for now we'll just say that you can't encode paths
+        // in archives that are *too* long.
+        //
+        // For an instance of this in the wild, use the tar-rs 0.3.3 library to
+        // unpack the selectors 0.4.0 crate on crates.io. Either that or take a
+        // look at rust-lang/cargo#2326
+        let mut header = Header::new_ustar();
+        let metadata = try!(file.metadata().chain_error(|| {
+            human(format!("could not learn metadata for: `{}`", relative))
+        }));
+        try!(header.set_path(&path).chain_error(|| {
+            human(format!("failed to add to archive: `{}`", relative))
+        }));
+        header.set_metadata(&metadata);
+        header.set_cksum();
+
+        try!(ar.append(&header, &mut file).chain_error(|| {
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
