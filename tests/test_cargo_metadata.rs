@@ -1,4 +1,4 @@
-use hamcrest::{assert_that, existing_file};
+use hamcrest::assert_that;
 use support::registry::Package;
 use support::{project, execs, basic_bin_manifest};
 
@@ -32,14 +32,13 @@ test!(cargo_metadata_simple {
             }
         ],
         "resolve": {
-            "package": [],
-            "root": {
-                "name": "foo",
-                "version": "0.5.0",
-                "source": null,
-                "dependencies" : []
-            },
-            "metadata": null
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                }
+            ],
+            "root": "foo 0.5.0 (path+file:[..]foo)"
         },
         "version": 1
     }"#));
@@ -146,31 +145,25 @@ test!(cargo_metadata_with_deps {
             }
         ],
         "resolve": {
-            "metadata": null,
-            "package": [
+            "nodes": [
+                {
+                    "dependencies": [
+                        "bar 0.0.1 (registry+file:[..])"
+                    ],
+                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                },
                 {
                     "dependencies": [
                         "baz 0.0.1 (registry+file:[..])"
                     ],
-                    "name": "bar",
-                    "source": "registry+file:[..]",
-                    "version": "0.0.1"
+                    "id": "bar 0.0.1 (registry+file:[..])"
                 },
                 {
                     "dependencies": [],
-                    "name": "baz",
-                    "source": "registry+file:[..]",
-                    "version": "0.0.1"
+                    "id": "baz 0.0.1 (registry+file:[..])"
                 }
             ],
-            "root": {
-                "dependencies": [
-                    "bar 0.0.1 (registry+file:[..])"
-                ],
-                "name": "foo",
-                "source": null,
-                "version": "0.5.0"
-            }
+            "root": "foo 0.5.0 (path+file:[..]foo)"
         },
         "version": 1
     }"#));
