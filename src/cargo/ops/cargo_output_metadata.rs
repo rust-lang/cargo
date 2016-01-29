@@ -1,7 +1,9 @@
 use std::path::Path;
 
+use rustc_serialize::{Encodable, Encoder};
+
 use core::resolver::Resolve;
-use core::{Source, Package};
+use core::{Source, Package, PackageId};
 use ops;
 use sources::PathSource;
 use util::config::Config;
@@ -19,9 +21,7 @@ pub struct OutputMetadataOptions<'a> {
 /// Loads the manifest, resolves the dependencies of the project to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata<'a>(opt: OutputMetadataOptions,
-                           config: &'a Config)
-                           -> CargoResult<ExportInfo> {
+pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
     let deps = try!(resolve_dependencies(opt.manifest_path,
                                          config,
                                          opt.features,
@@ -31,7 +31,7 @@ pub fn output_metadata<'a>(opt: OutputMetadataOptions,
     assert_eq!(opt.version, VERSION);
     Ok(ExportInfo {
         packages: packages,
-        resolve: resolve,
+        resolve: MetadataResolve(resolve),
         version: VERSION,
     })
 }
@@ -39,10 +39,45 @@ pub fn output_metadata<'a>(opt: OutputMetadataOptions,
 #[derive(RustcEncodable)]
 pub struct ExportInfo {
     packages: Vec<Package>,
-    resolve: Resolve,
+    resolve: MetadataResolve,
     version: u32,
 }
 
+/// Newtype wrapper to provide a custom `Encodable` implementation.
+/// The one from lockfile does not fit because it uses a non-standard
+/// format for `PackageId`s
+struct MetadataResolve(Resolve);
+
+impl Encodable for MetadataResolve {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        #[derive(RustcEncodable)]
+        struct EncodableResolve<'a> {
+            root: &'a PackageId,
+            nodes: Vec<Node<'a>>,
+        }
+
+        #[derive(RustcEncodable)]
+        struct Node<'a> {
+            id: &'a PackageId,
+            dependencies: Vec<&'a PackageId>,
+        }
+
+        let resolve = &self.0;
+        let encodable = EncodableResolve {
+            root: resolve.root(),
+            nodes: resolve.iter().map(|id| {
+                Node {
+                    id: id,
+                    dependencies: resolve.deps(id)
+                        .map(|it| it.collect())
+                        .unwrap_or(Vec::new()),
+                }
+            }).collect(),
+        };
+
+        encodable.encode(s)
+    }
+}
 
 /// Loads the manifest and resolves the dependencies of the project to the
 /// concrete used versions. Afterwards available overrides of dependencies are applied.
