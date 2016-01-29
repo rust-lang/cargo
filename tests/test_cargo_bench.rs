@@ -181,14 +181,14 @@ test!(cargo_bench_failing_test {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("bench"),
-                execs().with_stdout(&format!("\
+                execs().with_stdout_contains(&format!("\
 {} foo v0.5.0 ({})
 {} target[..]release[..]foo-[..]
 
 running 1 test
 test bench_hello ... ",
         COMPILING, p.url(), RUNNING))
-              .with_stderr("\
+              .with_stderr_contains("\
 thread '<main>' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
