@@ -185,14 +185,13 @@ fn url(s: &str) -> url::ParseResult<Url> {
 }
 
 impl fmt::Display for PackageIdSpec {
-    #[allow(deprecated)] // connect => join in 1.3
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
                 if url.scheme == "cargo" {
                     try!(write!(f, "{}/{}", url.host().unwrap(),
-                                url.path().unwrap().connect("/")));
+                                url.path().unwrap().join("/")));
                 } else {
                     try!(write!(f, "{}", url));
                 }

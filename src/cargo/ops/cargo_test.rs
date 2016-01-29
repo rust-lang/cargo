@@ -12,7 +12,6 @@ pub struct TestOptions<'a> {
 
 
 
-#[allow(deprecated)] // connect => join in 1.3
 pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<CargoTestError>> {
@@ -103,7 +102,6 @@ fn run_unit_tests(options: &TestOptions,
     Ok(errors)
 }
 
-#[allow(deprecated)] // connect => join in 1.3
 fn run_doc_tests(options: &TestOptions,
                  test_args: &[String],
                  compilation: &Compilation)
@@ -133,7 +131,7 @@ fn run_doc_tests(options: &TestOptions,
             }
 
             if test_args.len() > 0 {
-                p.arg("--test-args").arg(&test_args.connect(" "));
+                p.arg("--test-args").arg(&test_args.join(" "));
             }
 
             for cfg in compilation.cfgs.iter() {
