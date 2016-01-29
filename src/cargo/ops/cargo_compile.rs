@@ -139,7 +139,6 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
     Ok((packages, resolved_with_overrides, registry.move_sources()))
 }
 
-#[allow(deprecated)] // connect => join in 1.3
 pub fn compile_pkg<'a>(root_package: &Package,
                        source: Option<Box<Source + 'a>>,
                        options: &CompileOptions<'a>)
@@ -178,7 +177,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
 
     if !spec.is_empty() && !invalid_spec.is_empty() {
         bail!("could not find package matching spec `{}`",
-              invalid_spec.connect(", "))
+              invalid_spec.join(", "))
     }
 
     let to_builds = packages.iter().filter(|p| pkgids.contains(&p.package_id()))

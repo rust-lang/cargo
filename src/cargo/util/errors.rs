@@ -140,14 +140,13 @@ pub struct CargoTestError {
 }
 
 impl CargoTestError {
-    #[allow(deprecated)] // connect => join in 1.3
     pub fn new(errors: Vec<ProcessError>) -> Self {
         if errors.is_empty() {
             panic!("Cannot create CargoTestError from empty Vec")
         }
         let desc = errors.iter().map(|error| error.desc.clone())
                                 .collect::<Vec<String>>()
-                                .connect("\n");
+                                .join("\n");
         CargoTestError {
             desc: desc,
             exit: errors[0].exit,

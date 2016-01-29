@@ -387,7 +387,6 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
     None
 }
 
-#[allow(deprecated)] // connect => join in 1.3
 fn activation_error(cx: &Context,
                     registry: &mut Registry,
                     parent: &Summary,
@@ -424,7 +423,7 @@ fn activation_error(cx: &Context,
                                         .map(|v| v.version())
                                         .map(|v| v.to_string())
                                         .collect::<Vec<_>>()
-                                        .connect(", ")));
+                                        .join(", ")));
 
         return human(msg)
     }
@@ -648,7 +647,6 @@ impl Context {
         self.activations.get(&key).map(|v| &v[..]).unwrap_or(&[])
     }
 
-    #[allow(deprecated)] // connect => join in 1.3
     fn resolve_features(&mut self, parent: &Summary, method: &Method)
             -> CargoResult<Vec<(Dependency, Vec<String>)>> {
         let dev_deps = match *method {
@@ -690,7 +688,7 @@ impl Context {
             let unknown = feature_deps.keys().map(|s| &s[..])
                                       .collect::<Vec<&str>>();
             if !unknown.is_empty() {
-                let features = unknown.connect(", ");
+                let features = unknown.join(", ");
                 bail!("Package `{}` does not have these features: `{}`",
                       parent.package_id(), features)
             }
