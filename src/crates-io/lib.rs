@@ -55,6 +55,7 @@ pub struct NewCrate {
     pub authors: Vec<String>,
     pub description: Option<String>,
     pub documentation: Option<String>,
+    pub changelog: Option<String>,
     pub homepage: Option<String>,
     pub readme: Option<String>,
     pub keywords: Vec<String>,

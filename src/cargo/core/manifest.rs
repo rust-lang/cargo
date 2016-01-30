@@ -42,6 +42,7 @@ pub struct ManifestMetadata {
     pub homepage: Option<String>,       // url
     pub repository: Option<String>,     // url
     pub documentation: Option<String>,  // url
+    pub changelog: Option<String>,      // url
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, RustcEncodable, Copy)]
