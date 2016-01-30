@@ -412,6 +412,7 @@ fn source_ids_from_config(config: &Config, cur_path: &Path)
 /// configured options are:
 ///
 /// * build.jobs
+/// * build.target
 /// * target.$target.ar
 /// * target.$target.linker
 /// * target.$target.libfoo.metadata
@@ -432,6 +433,8 @@ fn scrape_build_config(config: &Config,
         None => None,
     };
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
+    let cfg_target = try!(config.get_string("build.target")).map(|s| s.0);
+    let target = target.or(cfg_target);
     let mut base = ops::BuildConfig {
         jobs: jobs,
         requested_target: target.clone(),

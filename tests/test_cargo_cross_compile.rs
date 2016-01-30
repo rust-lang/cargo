@@ -78,6 +78,42 @@ test!(simple_cross {
                 execs().with_status(0));
 });
 
+test!(simple_cross_config {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file(".cargo/config", &format!(r#"
+            [build]
+            target = "{}"
+        "#, alternate()))
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", &format!(r#"
+            fn main() {{
+                assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+            }}
+        "#, alternate()))
+        .file("src/main.rs", &format!(r#"
+            use std::env;
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+        "#, alternate_arch()));
+
+    let target = alternate();
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+    assert_that(&p.target_bin(&target, "foo"), existing_file());
+
+    assert_that(process(&p.target_bin(&target, "foo")),
+                execs().with_status(0));
+});
+
 test!(simple_deps {
     if disabled() { return }
 
