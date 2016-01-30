@@ -19,8 +19,14 @@ use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
+struct Paths {
+    pub bin: PathBuf,
+    pub cache: PathBuf,
+    pub config: PathBuf,
+}
+
 pub struct Config {
-    home_path: PathBuf,
+    paths: Paths,
     shell: RefCell<MultiShell>,
     rustc_info: Rustc,
     values: RefCell<HashMap<String, ConfigValue>>,
@@ -32,11 +38,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(shell: MultiShell,
-               cwd: PathBuf,
-               homedir: PathBuf) -> CargoResult<Config> {
+    fn new(shell: MultiShell, cwd: PathBuf, paths: Paths) -> CargoResult<Config> {
         let mut cfg = Config {
-            home_path: homedir,
+            paths: paths,
             shell: RefCell::new(shell),
             rustc_info: Rustc::blank(),
             cwd: cwd,
@@ -59,33 +63,39 @@ impl Config {
         let cwd = try!(env::current_dir().chain_error(|| {
             human("couldn't get the current directory of the process")
         }));
-        let homedir = try!(homedir(&cwd).chain_error(|| {
+        let paths = try!(determine_paths(&cwd).chain_error(|| {
             human("Cargo couldn't find your home directory. \
                   This probably means that $HOME was not set.")
         }));
-        Config::new(shell, cwd, homedir)
+        Config::new(shell, cwd, paths)
     }
 
-    pub fn home(&self) -> &Path { &self.home_path }
+    pub fn bin_path(&self) -> PathBuf {
+        self.paths.bin.clone()
+    }
+
+    pub fn config_path(&self) -> PathBuf {
+        self.paths.config.clone()
+    }
 
     pub fn git_db_path(&self) -> PathBuf {
-        self.home_path.join("git").join("db")
+        self.paths.cache.join("git").join("db")
     }
 
     pub fn git_checkout_path(&self) -> PathBuf {
-        self.home_path.join("git").join("checkouts")
+        self.paths.cache.join("git").join("checkouts")
     }
 
     pub fn registry_index_path(&self) -> PathBuf {
-        self.home_path.join("registry").join("index")
+        self.paths.cache.join("registry").join("index")
     }
 
     pub fn registry_cache_path(&self) -> PathBuf {
-        self.home_path.join("registry").join("cache")
+        self.paths.cache.join("registry").join("cache")
     }
 
     pub fn registry_source_path(&self) -> PathBuf {
-        self.home_path.join("registry").join("src")
+        self.paths.cache.join("registry").join("src")
     }
 
     pub fn shell(&self) -> RefMut<MultiShell> {
@@ -207,7 +217,7 @@ impl Config {
     fn load_values(&self) -> CargoResult<()> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
-        try!(walk_tree(&self.cwd, |mut file, path| {
+        try!(walk_tree(self, |mut file, path| {
             let mut contents = String::new();
             try!(file.read_to_string(&mut contents));
             let table = try!(cargo_toml::parse(&contents, &path).chain_error(|| {
@@ -464,18 +474,73 @@ impl ConfigValue {
     }
 }
 
-fn homedir(cwd: &Path) -> Option<PathBuf> {
-    let cargo_home = env::var_os("CARGO_HOME").map(|home| {
-        cwd.join(home)
-    });
-    let user_home = env::home_dir().map(|p| p.join(".cargo"));
-    cargo_home.or(user_home)
+fn determine_paths(cwd: &Path) -> CargoResult<Paths> {
+    use dirs;
+    fn path_exists(path: PathBuf) -> Option<PathBuf> {
+        fs::metadata(&path).ok().map(|_| path)
+    }
+
+    // Strategy to determine where to put files:
+    //
+    // 1) Use the environment variable CARGO_HOME if it exists.
+    // 2) Use the platform-specific location if it exists.
+    // 3) Use the legacy location (~/.cargo) if it exists.
+    // 4) Fall back to platform-specific location if all of the above things
+    //    fail.
+
+    // 1)
+    if let Some(v) = env::var_os("CARGO_HOME").map(|p| cwd.join(p)) {
+        return Ok(Paths {
+            bin: v.join("bin"),
+            cache: v.clone(),
+            config: v,
+        });
+    }
+
+    let dirs = try!(dirs::Directories::with_prefix("cargo", "Cargo").chain_error(|| {
+        human("Cargo couldn't find its configuration directory. \
+               This probably means that $HOME was not set.")
+    }));
+
+    let user_home = env::home_dir();
+    let legacy = user_home.map(|h| h.join(".cargo"));
+
+    let platform_bin = dirs.bin_home();
+    let platform_cache = dirs.cache_home();
+    let platform_config = dirs.config_home();
+
+    let mut bin: Option<PathBuf>;
+    let mut cache: Option<PathBuf>;
+    let mut config: Option<PathBuf>;
+
+    // 2)
+    bin = path_exists(platform_bin.clone());
+    cache = path_exists(platform_cache.clone());
+    config = path_exists(platform_config.clone());
+
+    // 3)
+    if let Some(l) = legacy.map(|l| path_exists(l)).unwrap_or(None) {
+        bin = bin.or_else(|| Some(l.join("bin")));
+        cache = cache.or_else(|| Some(l.clone()));
+        config = config.or_else(|| Some(l));
+    }
+
+    // 4)
+    let bin = bin.unwrap_or(platform_bin);
+    let cache = cache.unwrap_or(platform_cache);
+    let config = config.unwrap_or(platform_config);
+
+    Ok(Paths {
+        bin: bin,
+        cache: cache,
+        config: config,
+    })
 }
 
-fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
+fn walk_tree<F>(config: &Config, mut walk: F) -> CargoResult<()>
     where F: FnMut(File, &Path) -> CargoResult<()>
 {
-    let mut current = pwd;
+    let mut current: &Path = &config.cwd;
 
     loop {
         let possible = current.join(".cargo").join("config");
@@ -493,18 +558,13 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = try!(homedir(pwd).chain_error(|| {
-        human("Cargo couldn't find your home directory. \
-              This probably means that $HOME was not set.")
-    }));
-    if !pwd.starts_with(&home) {
-        let config = home.join("config");
+    if !config.cwd.starts_with(&config.paths.config) {
+        let config = config.paths.config.join("config");
         if fs::metadata(&config).is_ok() {
             let file = try!(File::open(&config));
             try!(walk(file, &config));
         }
     }
-
     Ok(())
 }
 
@@ -516,7 +576,7 @@ pub fn set_config(cfg: &Config, loc: Location, key: &str,
     // 2. This blows away all comments in a file
     // 3. This blows away the previous ordering of a file.
     let file = match loc {
-        Location::Global => cfg.home_path.join("config"),
+        Location::Global => cfg.paths.config.join("config"),
         Location::Project => unimplemented!(),
     };
     try!(fs::create_dir_all(file.parent().unwrap()));
