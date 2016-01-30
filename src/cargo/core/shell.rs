@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::io;
 
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};
-use term::{self, Terminal, TerminfoTerminal, color, Attr};
+use term::{Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
 use self::Verbosity::{Verbose, Normal, Quiet};
@@ -193,24 +193,22 @@ impl Shell {
         Ok(())
     }
 
-    fn fg(&mut self, color: color::Color) -> CargoResult<bool> {
+    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => try!(c.fg(color)),
-            _ => return Ok(false),
+            Colored(ref mut c) if colored => c.fg(color),
+            _ => Ok(false),
         }
-        Ok(true)
     }
 
-    fn attr(&mut self, attr: Attr) -> CargoResult<bool> {
+    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => try!(c.attr(attr)),
-            _ => return Ok(false)
+            Colored(ref mut c) if colored => c.attr(attr),
+            _ => Ok(false)
         }
-        Ok(true)
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
@@ -222,14 +220,13 @@ impl Shell {
         }
     }
 
-    fn reset(&mut self) -> term::Result<()> {
+    fn reset(&mut self) -> io::Result<()> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => try!(c.reset()),
-            _ => ()
+            Colored(ref mut c) if colored => c.reset().map(|_| ()),
+            _ => Ok(())
         }
-        Ok(())
     }
 
     fn colored(&self) -> bool {
