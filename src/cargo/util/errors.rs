@@ -9,7 +9,6 @@ use curl;
 use git2;
 use rustc_serialize::json;
 use semver;
-use term;
 use toml;
 use url;
 
@@ -307,7 +306,6 @@ from_error! {
     url::ParseError,
     toml::DecodeError,
     ffi::NulError,
-    term::Error,
 }
 
 impl<E: CargoError> From<Human<E>> for Box<CargoError> {
@@ -327,7 +325,6 @@ impl CargoError for toml::Error {}
 impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
 impl CargoError for ffi::NulError {}
-impl CargoError for term::Error {}
 
 // =============================================================================
 // Construction helpers
