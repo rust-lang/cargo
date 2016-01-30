@@ -111,9 +111,6 @@ test!(plugin_with_dynamic_native_dependency {
         lib.starts_with(env::consts::DLL_PREFIX) &&
             lib.ends_with(env::consts::DLL_SUFFIX)
     }).unwrap();
-    let libname = lib.file_name().unwrap().to_str().unwrap();
-    let libname = &libname[env::consts::DLL_PREFIX.len()..
-                           libname.len() - env::consts::DLL_SUFFIX.len()];
 
     let foo = project("foo")
         .file("Cargo.toml", r#"
