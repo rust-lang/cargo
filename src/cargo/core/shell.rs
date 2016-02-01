@@ -149,21 +149,23 @@ impl Shell {
         // output to stderr if a tty is present and color output is not possible.
         match ::term::terminfo::TermInfo::from_env() {
             Ok(ti) => {
+                let term = TerminfoTerminal::new_with_terminfo(out, ti);
                 // Color output is possible.
-                Shell {
-                    terminal: Colored(Box::new(TerminfoTerminal::new_with_terminfo(out, ti))),
-                    config: config
+                if !term.supports_color() {
+                    Err(term.into_inner())
+                } else {
+                    Ok(Shell {
+                        terminal: Colored(Box::new(term)),
+                        config: config
+                    })
                 }
             }
-            _ if config.tty => {
-                // Color output is expected but not available, fall back to stderr.
-                Shell { terminal: NoColor(Box::new(io::stderr())), config: config }
-            }
-            _ => {
-                // No color output.
-                Shell { terminal: NoColor(out), config: config }
-            }
-        }
+            Err(_) => Err(out)
+        }.unwrap_or_else(|out| Shell {
+            // If config.tty is set, we should be able to color output but can't. Write to stderr.
+            terminal: NoColor(if config.tty { Box::new(io::stderr()) } else { out }),
+            config: config,
+        })
     }
 
     pub fn set_color_config(&mut self, color_config: ColorConfig) {
