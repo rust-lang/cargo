@@ -956,3 +956,22 @@ test!(update_same_prefix_oh_my_how_was_this_a_bug {
     assert_that(p.cargo("update").arg("-pfoobar").arg("--precise=0.2.0"),
                 execs().with_status(0));
 });
+
+test!(use_semver {                                        
+    let p = project("foo")                                
+        .file("Cargo.toml", r#"                           
+            [project]                                     
+            name = "bar"                                  
+            version = "0.5.0"                             
+            authors = []                                  
+
+            [dependencies]                                
+            foo = "1.2.3-alpha.0"                         
+        "#)                                               
+        .file("src/main.rs", "fn main() {}");             
+    p.build();                                            
+
+    Package::new("foo", "1.2.3-alpha.0").publish();       
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+});
