@@ -817,7 +817,7 @@ impl TomlDependency {
                     .or_else(|| details.tag.clone().map(GitReference::Tag))
                     .or_else(|| details.rev.clone().map(GitReference::Rev))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
-                let loc = try!(git.to_url().map_err(human));
+                let loc = try!(git.to_url());
                 SourceId::for_git(&loc, reference)
             },
             (None, Some(path)) => {

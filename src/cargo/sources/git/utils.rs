@@ -257,7 +257,7 @@ impl<'a> GitCheckout<'a> {
             }));
         }
 
-        let url = try!(source.to_url().map_err(human));
+        let url = try!(source.to_url());
         let url = url.to_string();
         let repo = try!(git2::Repository::clone(&url, into).chain_error(|| {
             internal(format!("failed to clone {} into {}", source.display(),
@@ -278,7 +278,7 @@ impl<'a> GitCheckout<'a> {
 
     fn fetch(&self, cargo_config: &Config) -> CargoResult<()> {
         info!("fetch {}", self.repo.path().display());
-        let url = try!(self.database.path.to_url().map_err(human));
+        let url = try!(self.database.path.to_url());
         let url = url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
         try!(fetch(&self.repo, &url, refspec, &cargo_config));

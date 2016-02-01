@@ -182,15 +182,21 @@ impl Decodable for EncodablePackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
-        let captures = regex.captures(&string)
-                            .expect("invalid serialized PackageId");
+        let captures = try!(regex.captures(&string).ok_or_else(|| {
+            d.error("invalid serialized PackageId")
+        }));
 
         let name = captures.at(1).unwrap();
         let version = captures.at(2).unwrap();
 
-        let source = captures.at(3);
-
-        let source_id = source.map(|s| SourceId::from_url(s));
+        let source_id = match captures.at(3) {
+            Some(s) => {
+                Some(try!(SourceId::from_url(s).map_err(|e| {
+                    d.error(&e.to_string())
+                })))
+            }
+            None => None,
+        };
 
         Ok(EncodablePackageId {
             name: name.to_string(),

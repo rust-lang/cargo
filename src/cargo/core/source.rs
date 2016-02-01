@@ -91,14 +91,14 @@ impl SourceId {
     ///                     libssh2-static-sys#80e71a3021618eb05\
     ///                     656c58fb7c5ef5f12bc747f");
     /// ```
-    pub fn from_url(string: &str) -> SourceId {
+    pub fn from_url(string: &str) -> CargoResult<SourceId> {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
 
         match kind {
             "git" => {
-                let mut url = url.to_url().unwrap();
+                let mut url = try!(url.to_url());
                 let mut reference = GitReference::Branch("master".to_string());
                 for (k, v) in url.query_pairs() {
                     match &k[..] {
@@ -114,18 +114,18 @@ impl SourceId {
                 let precise = url.fragment().map(|s| s.to_owned());
                 url.set_fragment(None);
                 url.set_query(None);
-                SourceId::for_git(&url, reference).with_precise(precise)
-            }
+                Ok(SourceId::for_git(&url, reference).with_precise(precise))
+            },
             "registry" => {
-                let url = url.to_url().unwrap();
-                SourceId::new(Kind::Registry, url)
-                    .with_precise(Some("locked".to_string()))
+                let url = try!(url.to_url());
+                Ok(SourceId::new(Kind::Registry, url)
+                            .with_precise(Some("locked".to_string())))
             }
             "path" => {
-                let url = url.to_url().unwrap();
-                SourceId::new(Kind::Path, url)
+                let url = try!(url.to_url());
+                Ok(SourceId::new(Kind::Path, url))
             }
-            _ => panic!("Unsupported serialized SourceId"),
+            kind => Err(human(format!("unsupported source protocol: {}", kind)))
         }
     }
 
@@ -155,7 +155,7 @@ impl SourceId {
 
     // Pass absolute path
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
-        let url = try!(path.to_url().map_err(human));
+        let url = try!(path.to_url());
         Ok(SourceId::new(Kind::Path, url))
     }
 
@@ -267,8 +267,10 @@ impl Encodable for SourceId {
 
 impl Decodable for SourceId {
     fn decode<D: Decoder>(d: &mut D) -> Result<SourceId, D::Error> {
-        let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
-        Ok(SourceId::from_url(&string))
+        let string: String = try!(Decodable::decode(d));
+        SourceId::from_url(&string).map_err(|e| {
+            d.error(&e.to_string())
+        })
     }
 }
 

@@ -1,6 +1,6 @@
 use cargo::ops;
 use cargo::core::{SourceId, GitReference};
-use cargo::util::{CliResult, Config, ToUrl, human};
+use cargo::util::{CliResult, Config, ToUrl};
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -116,7 +116,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     };
 
     let source = if let Some(url) = options.flag_git {
-        let url = try!(url.to_url().map_err(human));
+        let url = try!(url.to_url());
         let gitref = if let Some(branch) = options.flag_branch {
             GitReference::Branch(branch)
         } else if let Some(tag) = options.flag_tag {
