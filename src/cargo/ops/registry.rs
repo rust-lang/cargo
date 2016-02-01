@@ -167,7 +167,7 @@ pub fn registry(config: &Config,
     } = try!(registry_configuration(config));
     let token = token.or(token_config);
     let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
-    let index = try!(index.to_url().map_err(human));
+    let index = try!(index.to_url());
     let sid = SourceId::for_registry(&index);
     let api_host = {
         let mut src = RegistrySource::new(&sid, config);

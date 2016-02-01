@@ -38,13 +38,19 @@ impl Decodable for PackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
         let string: String = try!(Decodable::decode(d));
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
-        let captures = regex.captures(&string).expect("invalid serialized PackageId");
+        let captures = try!(regex.captures(&string).ok_or_else(|| {
+            d.error("invalid serialized PackageId")
+        }));
 
         let name = captures.at(1).unwrap();
         let version = captures.at(2).unwrap();
         let url = captures.at(3).unwrap();
-        let version = semver::Version::parse(version).ok().expect("invalid version");
-        let source_id = SourceId::from_url(url);
+        let version = try!(semver::Version::parse(version).map_err(|_| {
+            d.error("invalid version")
+        }));
+        let source_id = try!(SourceId::from_url(url).map_err(|e| {
+            d.error(&e.to_string())
+        }));
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
