@@ -17,6 +17,7 @@ use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 pub struct Flags {
     flag_list: bool,
     flag_verbose: bool,
+    flag_version: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
     arg_command: String,
@@ -103,6 +104,11 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_color_config(flags.flag_color.as_ref().map(|s| &s[..])));
 
     init_git_transports(config);
+
+    if flags.flag_version {
+        println!("{}", cargo::version());
+        return Ok(None)
+    }
 
     if flags.flag_list {
         println!("Installed Commands:");

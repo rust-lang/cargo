@@ -248,8 +248,7 @@ fn flags_from_args<T>(usage: &str, args: &[String],
     let docopt = Docopt::new(usage).unwrap()
                                    .options_first(options_first)
                                    .argv(args.iter().map(|s| &s[..]))
-                                   .help(true)
-                                   .version(Some(version()));
+                                   .help(true);
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
         CliError::from_error(human(e.to_string()), code)
