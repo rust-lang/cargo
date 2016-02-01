@@ -88,15 +88,3 @@ impl PartialEq for Summary {
         self.package_id == other.package_id
     }
 }
-
-pub trait SummaryVec {
-    fn names(&self) -> Vec<String>;
-}
-
-impl SummaryVec for Vec<Summary> {
-    // TODO: Move to Registry
-    fn names(&self) -> Vec<String> {
-        self.iter().map(|summary| summary.name().to_string()).collect()
-    }
-
-}
