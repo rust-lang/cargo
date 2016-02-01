@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::io;
 
 use term::color::{Color, BLACK, RED, GREEN, YELLOW};
-use term::{Terminal, TerminfoTerminal, color, Attr};
+use term::{self, Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
 use self::Verbosity::{Verbose, Normal, Quiet};
@@ -143,26 +143,26 @@ impl MultiShell {
 
 impl Shell {
     pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
-        // Match from_env() to determine if creation of a TerminfoTerminal is possible regardless
-        // of the tty status. --color options are parsed after Shell creation so always try to
-        // create a terminal that supports color output. Fall back to a no-color terminal or write
-        // output to stderr if a tty is present and color output is not possible.
-        match ::term::terminfo::TermInfo::from_env() {
-            Ok(ti) => {
-                // Color output is possible.
-                Shell {
-                    terminal: Colored(Box::new(TerminfoTerminal::new_with_terminfo(out, ti))),
-                    config: config
-                }
-            }
-            _ if config.tty => {
-                // Color output is expected but not available, fall back to stderr.
-                Shell { terminal: NoColor(Box::new(io::stderr())), config: config }
-            }
-            _ => {
-                // No color output.
-                Shell { terminal: NoColor(out), config: config }
-            }
+        // Use `TermInfo::from_env()` and `TerminfoTerminal::supports_color()`
+        // to determine if creation of a TerminfoTerminal is possible regardless
+        // of the tty status. --color options are parsed after Shell creation so
+        // always try to create a terminal that supports color output. Fall back
+        // to a no-color terminal regardless of whether or not a tty is present
+        // and if color output is not possible.
+        Shell {
+            terminal: match ::term::terminfo::TermInfo::from_env() {
+                Ok(ti) => {
+                    let term = TerminfoTerminal::new_with_terminfo(out, ti);
+                    if !term.supports_color() {
+                        NoColor(term.into_inner())
+                    } else {
+                        // Color output is possible.
+                        Colored(Box::new(term))
+                    }
+                },
+                Err(_) => NoColor(out),
+            },
+            config: config,
         }
     }
 
@@ -193,22 +193,24 @@ impl Shell {
         Ok(())
     }
 
-    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
+    fn fg(&mut self, color: color::Color) -> CargoResult<bool> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => c.fg(color),
-            _ => Ok(false),
+            Colored(ref mut c) if colored => try!(c.fg(color)),
+            _ => return Ok(false),
         }
+        Ok(true)
     }
 
-    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
+    fn attr(&mut self, attr: Attr) -> CargoResult<bool> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => c.attr(attr),
-            _ => Ok(false)
+            Colored(ref mut c) if colored => try!(c.attr(attr)),
+            _ => return Ok(false)
         }
+        Ok(true)
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
@@ -220,13 +222,14 @@ impl Shell {
         }
     }
 
-    fn reset(&mut self) -> io::Result<()> {
+    fn reset(&mut self) -> term::Result<()> {
         let colored = self.colored();
 
         match self.terminal {
-            Colored(ref mut c) if colored => c.reset().map(|_| ()),
-            _ => Ok(())
+            Colored(ref mut c) if colored => try!(c.reset()),
+            _ => ()
         }
+        Ok(())
     }
 
     fn colored(&self) -> bool {
