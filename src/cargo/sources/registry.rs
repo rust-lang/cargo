@@ -174,7 +174,7 @@ use url::Url;
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::{Dependency, DependencyInner, Kind};
 use sources::{PathSource, git};
-use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
+use util::{CargoResult, Config, internal, ChainError, ToUrl};
 use util::{hex, Sha256, paths};
 use ops;
 
@@ -251,7 +251,7 @@ impl<'cfg> RegistrySource<'cfg> {
     pub fn url(config: &Config) -> CargoResult<Url> {
         let config = try!(ops::registry_configuration(config));
         let url = config.index.unwrap_or(DEFAULT.to_string());
-        url.to_url().map_err(human)
+        url.to_url()
     }
 
     /// Get the default url for the registry

@@ -1,34 +1,37 @@
-use url::{self, Url, UrlParser};
 use std::path::Path;
 
+use url::{self, Url, UrlParser};
+
+use util::{human, CargoResult};
+
 pub trait ToUrl {
-    fn to_url(self) -> Result<Url, String>;
+    fn to_url(self) -> CargoResult<Url>;
 }
 
 impl ToUrl for Url {
-    fn to_url(self) -> Result<Url, String> {
+    fn to_url(self) -> CargoResult<Url> {
         Ok(self)
     }
 }
 
 impl<'a> ToUrl for &'a Url {
-    fn to_url(self) -> Result<Url, String> {
+    fn to_url(self) -> CargoResult<Url> {
         Ok(self.clone())
     }
 }
 
 impl<'a> ToUrl for &'a str {
-    fn to_url(self) -> Result<Url, String> {
+    fn to_url(self) -> CargoResult<Url> {
         UrlParser::new().scheme_type_mapper(mapper).parse(self).map_err(|s| {
-            format!("invalid url `{}`: {}", self, s)
+            human(format!("invalid url `{}`: {}", self, s))
         })
     }
 }
 
 impl<'a> ToUrl for &'a Path {
-    fn to_url(self) -> Result<Url, String> {
+    fn to_url(self) -> CargoResult<Url> {
         Url::from_file_path(self).map_err(|()| {
-            format!("invalid path url `{}`", self.display())
+            human(format!("invalid path url `{}`", self.display()))
         })
     }
 }

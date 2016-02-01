@@ -694,9 +694,7 @@ fn process_dependencies(cx: &mut Context,
 
         let new_source_id = match details.git {
             Some(ref git) => {
-                let loc = try!(git.to_url().map_err(|e| {
-                    human(e)
-                }));
+                let loc = try!(git.to_url());
                 Some(SourceId::for_git(&loc, reference))
             }
             None => {
