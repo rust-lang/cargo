@@ -143,29 +143,27 @@ impl MultiShell {
 
 impl Shell {
     pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
-        // Match from_env() to determine if creation of a TerminfoTerminal is possible regardless
-        // of the tty status. --color options are parsed after Shell creation so always try to
-        // create a terminal that supports color output. Fall back to a no-color terminal or write
-        // output to stderr if a tty is present and color output is not possible.
-        match ::term::terminfo::TermInfo::from_env() {
-            Ok(ti) => {
-                let term = TerminfoTerminal::new_with_terminfo(out, ti);
-                // Color output is possible.
-                if !term.supports_color() {
-                    Err(term.into_inner())
-                } else {
-                    Ok(Shell {
-                        terminal: Colored(Box::new(term)),
-                        config: config
-                    })
-                }
-            }
-            Err(_) => Err(out)
-        }.unwrap_or_else(|out| Shell {
-            // If config.tty is set, we should be able to color output but can't. Write to stderr.
-            terminal: NoColor(if config.tty { Box::new(io::stderr()) } else { out }),
+        // Use `TermInfo::from_env()` and `TerminfoTerminal::supports_color()`
+        // to determine if creation of a TerminfoTerminal is possible regardless
+        // of the tty status. --color options are parsed after Shell creation so
+        // always try to create a terminal that supports color output. Fall back
+        // to a no-color terminal regardless of whether or not a tty is present
+        // and if color output is not possible.
+        Shell {
+            terminal: match ::term::terminfo::TermInfo::from_env() {
+                Ok(ti) => {
+                    let term = TerminfoTerminal::new_with_terminfo(out, ti);
+                    if !term.supports_color() {
+                        NoColor(term.into_inner())
+                    } else {
+                        // Color output is possible.
+                        Colored(Box::new(term))
+                    }
+                },
+                Err(_) => NoColor(out),
+            },
             config: config,
-        })
+        }
     }
 
     pub fn set_color_config(&mut self, color_config: ColorConfig) {
