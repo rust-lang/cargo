@@ -90,8 +90,10 @@ fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
     p.cwd(&support::paths::root())
      .env("HOME", &support::paths::home())
      .env_remove("CARGO_HOME")
-     .env_remove("CARGO_TARGET_DIR") // we assume 'target'
-     .env_remove("MSYSTEM");    // assume cmd.exe everywhere on windows
+     .env_remove("XDG_CONFIG_HOME")      // see #2345
+     .env("GIT_CONFIG_NOSYSTEM", "1")    // keep trying to sandbox ourselves
+     .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
+     .env_remove("MSYSTEM");             // assume cmd.exe everywhere on windows
     return p
 }
 
