@@ -922,6 +922,35 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 ", compiling = COMPILING, running = RUNNING)));
 });
 
+test!(test_bench_no_run {
+    if !::is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+        "#)
+        .file("src/lib.rs", "")
+        .file("benches/bbaz.rs", r#"
+            #![feature(test)] 
+
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_baz(_: &mut Bencher) {}
+        "#);
+
+    assert_that(p.cargo_process("bench").arg("--no-run"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} foo v0.1.0 ([..])
+", compiling = COMPILING)));
+});
+
 test!(test_bench_multiple_packages {
     if !::is_nightly() { return }
 
