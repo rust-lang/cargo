@@ -13,12 +13,12 @@ use util::{CargoResult, CargoError, short_hash, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct PackageId {
     inner: Arc<PackageIdInner>,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord, Debug)]
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
 struct PackageIdInner {
     name: String,
     version: semver::Version,
@@ -186,6 +186,16 @@ impl fmt::Display for PackageId {
         }
 
         Ok(())
+    }
+}
+
+impl fmt::Debug for PackageId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct("PackageId")
+         .field("name", &self.inner.name)
+         .field("version", &self.inner.version.to_string())
+         .field("source", &self.inner.source_id.to_string())
+         .finish()
     }
 }
 
