@@ -1822,3 +1822,43 @@ test!(doctest_recieves_build_link_args {
 {running} `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
 ", running = RUNNING)));
 });
+
+test!(please_respect_the_dag {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [dependencies]
+            a = { path = 'a' }
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=native=foo");
+            }
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "bar"
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=native=bar");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout_contains(&format!("\
+{running} `rustc [..] -L native=foo -L native=bar[..]`
+", running = RUNNING)));
+});
