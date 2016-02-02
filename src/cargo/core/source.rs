@@ -37,6 +37,20 @@ pub trait Source: Registry {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
 }
 
+impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    fn update(&mut self) -> CargoResult<()> {
+        (**self).update()
+    }
+
+    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+        (**self).download(id)
+    }
+
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
+        (**self).fingerprint(pkg)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
     /// Kind::Git(<git reference>) represents a git repository
