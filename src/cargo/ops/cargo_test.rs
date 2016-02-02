@@ -50,6 +50,10 @@ pub fn run_benches(manifest_path: &Path,
     let mut args = args.to_vec();
     args.push("--bench".to_string());
     let compilation = try!(compile_tests(manifest_path, options));
+
+    if options.no_run {
+        return Ok(None)
+    }
     let errors = try!(run_unit_tests(options, &args, &compilation));
     match errors.len() {
         0 => Ok(None),
