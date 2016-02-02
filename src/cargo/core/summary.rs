@@ -81,6 +81,19 @@ impl Summary {
         self.dependencies = deps.into_iter().map(f).collect();
         self
     }
+
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+                      -> Summary {
+        let me = if self.package_id().source_id() == to_replace {
+            let new_id = self.package_id().with_source_id(replace_with);
+            self.override_id(new_id)
+        } else {
+            self
+        };
+        me.map_dependencies(|dep| {
+            dep.map_source(to_replace, replace_with)
+        })
+    }
 }
 
 impl PartialEq for Summary {
