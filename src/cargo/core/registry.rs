@@ -26,6 +26,12 @@ impl Registry for Vec<Package> {
     }
 }
 
+impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
+    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
+        (**self).query(name)
+    }
+}
+
 /// This structure represents a registry of known packages. It internally
 /// contains a number of `Box<Source>` instances which are used to load a
 /// `Package` from.
