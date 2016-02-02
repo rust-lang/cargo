@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{HashMap, BTreeSet, HashSet};
 use std::fs;
 use std::io::prelude::*;
 use std::path::{PathBuf, Path};
@@ -37,7 +37,21 @@ pub struct BuildState {
 
 #[derive(Default)]
 pub struct BuildScripts {
-    pub to_link: BTreeSet<(PackageId, Kind)>,
+    // Cargo will use this `to_link` vector to add -L flags to compiles as we
+    // propagate them upwards towards the final build. Note, however, that we
+    // need to preserve the ordering of `to_link` to be topologically sorted.
+    // This will ensure that build scripts which print their paths properly will
+    // correctly pick up the files they generated (if there are duplicates
+    // elsewhere).
+    //
+    // To preserve this ordering, the (id, kind) is stored in two places, once
+    // in the `Vec` and once in `seen_to_link` for a fast lookup. We maintain
+    // this as we're building interactively below to ensure that the memory
+    // usage here doesn't blow up too much.
+    //
+    // For more information, see #2354
+    pub to_link: Vec<(PackageId, Kind)>,
+    seen_to_link: HashSet<(PackageId, Kind)>,
     pub plugins: BTreeSet<PackageId>,
 }
 
@@ -379,26 +393,37 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
             return &out[unit]
         }
 
-        let mut to_link = BTreeSet::new();
-        let mut plugins = BTreeSet::new();
+        let mut ret = BuildScripts::default();
 
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
-            to_link.insert((unit.pkg.package_id().clone(), unit.kind));
+            add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
         }
         for unit in cx.dep_targets(unit).iter() {
             let dep_scripts = build(out, cx, unit);
 
             if unit.target.for_host() {
-                plugins.extend(dep_scripts.to_link.iter()
-                                          .map(|p| &p.0).cloned());
+                ret.plugins.extend(dep_scripts.to_link.iter()
+                                              .map(|p| &p.0).cloned());
             } else if unit.target.linkable() {
-                to_link.extend(dep_scripts.to_link.iter().cloned());
+                for &(ref pkg, kind) in dep_scripts.to_link.iter() {
+                    add_to_link(&mut ret, pkg, kind);
+                }
             }
         }
 
         let prev = out.entry(*unit).or_insert(BuildScripts::default());
-        prev.to_link.extend(to_link);
-        prev.plugins.extend(plugins);
+        for (pkg, kind) in ret.to_link {
+            add_to_link(prev, &pkg, kind);
+        }
+        prev.plugins.extend(ret.plugins);
         prev
+    }
+
+    // When adding an entry to 'to_link' we only actually push it on if the
+    // script hasn't seen it yet (e.g. we don't push on duplicates).
+    fn add_to_link(scripts: &mut BuildScripts, pkg: &PackageId, kind: Kind) {
+        if scripts.seen_to_link.insert((pkg.clone(), kind)) {
+            scripts.to_link.push((pkg.clone(), kind));
+        }
     }
 }
