@@ -89,6 +89,14 @@ impl Package {
     pub fn generate_metadata(&self) -> Metadata {
         self.package_id().generate_metadata()
     }
+
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+                      -> Package {
+        Package {
+            manifest: self.manifest.map_source(to_replace, replace_with),
+            manifest_path: self.manifest_path,
+        }
+    }
 }
 
 impl fmt::Display for Package {

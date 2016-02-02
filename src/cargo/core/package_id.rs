@@ -157,6 +157,16 @@ impl PackageId {
             }),
         }
     }
+
+    pub fn with_source_id(&self, source: &SourceId) -> PackageId {
+        PackageId {
+            inner: Arc::new(PackageIdInner {
+                name: self.inner.name.to_string(),
+                version: self.inner.version.clone(),
+                source_id: source.clone(),
+            }),
+        }
+    }
 }
 
 impl Metadata {
