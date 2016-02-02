@@ -8,7 +8,7 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
-struct Options {
+pub struct Options {
     flag_color: Option<String>,
     flag_features: Vec<String>,
     flag_format_version: u32,
