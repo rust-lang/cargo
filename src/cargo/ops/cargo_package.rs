@@ -247,21 +247,21 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
     try!(archive.unpack(dst.parent().unwrap()));
     let manifest_path = dst.join("Cargo.toml");
 
-    // When packages are uploaded to the registry, all path dependencies are
-    // implicitly converted to registry-based dependencies, so we rewrite those
+    // When packages are uploaded to a registry, all path dependencies are
+    // implicitly converted to registry dependencies, so we rewrite those
     // dependencies here.
     //
     // We also make sure to point all paths at `dst` instead of the previous
     // location that the package was originally read from. In locking the
     // `SourceId` we're telling it that the corresponding `PathSource` will be
     // considered updated and we won't actually read any packages.
-    let registry = try!(SourceId::for_central(config));
+    let cratesio = try!(SourceId::crates_io(config));
     let precise = Some("locked".to_string());
     let new_src = try!(SourceId::for_path(&dst)).with_precise(precise);
     let new_pkgid = try!(PackageId::new(pkg.name(), pkg.version(), &new_src));
     let new_summary = pkg.summary().clone().map_dependencies(|d| {
         if !d.source_id().is_path() { return d }
-        d.clone_inner().set_source_id(registry.clone()).into_dependency()
+        d.clone_inner().set_source_id(cratesio.clone()).into_dependency()
     });
     let mut new_manifest = pkg.manifest().clone();
     new_manifest.set_summary(new_summary.override_id(new_pkgid));

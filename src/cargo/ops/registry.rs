@@ -163,16 +163,17 @@ pub fn registry(config: &Config,
     // Parse all configuration options
     let RegistryConfig {
         token: token_config,
-        index: index_config,
+        index: _index_config,
     } = try!(registry_configuration(config));
     let token = token.or(token_config);
-    let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
-    let index = try!(index.to_url());
-    let sid = SourceId::for_registry(&index);
+    let sid = match index {
+        Some(index) => SourceId::for_registry(&try!(index.to_url())),
+        None => try!(SourceId::crates_io(config)),
+    };
     let api_host = {
         let mut src = RegistrySource::new(&sid, config);
         try!(src.update().chain_error(|| {
-            human(format!("failed to update registry {}", index))
+            human(format!("failed to update {}", sid))
         }));
         (try!(src.config())).api
     };

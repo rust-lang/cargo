@@ -22,10 +22,6 @@ fn api() -> Url { Url::from_file_path(&*api_path()).ok().unwrap() }
 fn setup() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config).unwrap().write_all(format!(r#"
-        [registry]
-            index = "{reg}"
-    "#, reg = registry()).as_bytes()).unwrap();
     fs::create_dir_all(&api_path().join("api/v1")).unwrap();
 
     repo(&registry_path())
@@ -85,7 +81,8 @@ fn simple() {
              .write_all(contents.as_bytes()).unwrap();
     }
 
-    assert_that(cargo_process("search").arg("postgres"),
+    assert_that(cargo_process("search").arg("postgres")
+                    .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`")
@@ -136,7 +133,8 @@ fn multiple_query_params() {
              .write_all(contents.as_bytes()).unwrap();
     }
 
-    assert_that(cargo_process("search").arg("postgres").arg("sql"),
+    assert_that(cargo_process("search").arg("postgres").arg("sql")
+                    .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`")

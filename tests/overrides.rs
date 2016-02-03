@@ -3,7 +3,7 @@ extern crate hamcrest;
 
 use cargotest::support::git;
 use cargotest::support::paths;
-use cargotest::support::registry::{registry, Package};
+use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 
@@ -145,7 +145,7 @@ fn transitive() {
 [UPDATING] git repository `[..]`
 [DOWNLOADING] bar v0.2.0 (registry [..])
 [COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] bar v0.2.0 (registry [..])
+[COMPILING] bar v0.2.0
 [COMPILING] local v0.0.1 (file://[..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
@@ -343,7 +343,7 @@ fn override_adds_some_deps() {
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] foo v0.1.1 (registry [..])
-[COMPILING] foo v0.1.1 (registry [..])
+[COMPILING] foo v0.1.1
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] local v0.0.1 (file://[..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
@@ -356,7 +356,9 @@ fn override_adds_some_deps() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] git repository `file://[..]`
 "));
-    assert_that(p.cargo("update").arg("-p").arg(&format!("{}#bar", registry())),
+    assert_that(p.cargo("update")
+                 .arg("-p")
+                 .arg("https://github.com/rust-lang/crates.io-index#bar"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 "));
@@ -532,8 +534,10 @@ fn multiple_specs() {
 
             [replace]
             "foo:0.1.0" = {{ git = '{0}' }}
-            "{1}#foo:0.1.0" = {{ git = '{0}' }}
-        "#, foo.url(), registry()))
+
+            [replace."https://github.com/rust-lang/crates.io-index#foo:0.1.0"]
+            git = '{0}'
+        "#, foo.url()))
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
@@ -545,7 +549,7 @@ error: overlapping replacement specifications found:
   * [..]
   * [..]
 
-both specifications match: foo v0.1.0 ([..])
+both specifications match: foo v0.1.0
 "));
 }
 

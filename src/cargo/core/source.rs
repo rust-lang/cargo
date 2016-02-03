@@ -4,13 +4,16 @@ use std::fmt::{self, Formatter};
 use std::hash;
 use std::path::Path;
 use std::sync::Arc;
-use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
+use std::sync::atomic::Ordering::SeqCst;
 
+use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 use url::Url;
 
 use core::{Package, PackageId, Registry};
-use sources::{PathSource, GitSource, RegistrySource};
+use ops;
 use sources::git;
+use sources::{PathSource, GitSource, RegistrySource, CRATES_IO};
 use util::{human, Config, CargoResult, ToUrl};
 
 /// A Source finds and downloads remote packages based on names and
@@ -185,8 +188,22 @@ impl SourceId {
     ///
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
-    pub fn for_central(config: &Config) -> CargoResult<SourceId> {
-        Ok(SourceId::for_registry(&try!(RegistrySource::url(config))))
+    pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
+        let cfg = try!(ops::registry_configuration(config));
+        let url = if let Some(ref index) = cfg.index {
+            static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
+            if !WARNED.swap(true, SeqCst) {
+                try!(config.shell().warn("custom registry support via \
+                                          the `registry.index` configuration is \
+                                          being removed, this functionality \
+                                          will not work in the future"));
+            }
+            &index[..]
+        } else {
+            CRATES_IO
+        };
+        let url = try!(url.to_url());
+        Ok(SourceId::for_registry(&url))
     }
 
     pub fn url(&self) -> &Url {
@@ -247,7 +264,7 @@ impl SourceId {
             Kind::Registry => {}
             _ => return false,
         }
-        self.inner.url.to_string() == RegistrySource::default_url()
+        self.inner.url.to_string() == CRATES_IO
     }
 }
 
