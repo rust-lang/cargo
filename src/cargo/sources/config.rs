@@ -70,6 +70,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         };
         let mut path = Path::new("/");
         let orig_name = name;
+        let new_id;
         loop {
             let cfg = match self.cfgs.get(name) {
                 Some(cfg) => cfg,
@@ -85,10 +86,9 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 }
                 None if *id == cfg.id => return Ok(id.load(self.config)),
                 None => {
-                    let new_id = cfg.id.with_precise(id.precise()
-                                                       .map(|s| s.to_string()));
-                    let src = new_id.load(self.config);
-                    return Ok(Box::new(ReplacedSource::new(id, &new_id, src)))
+                    new_id = cfg.id.with_precise(id.precise()
+                                                 .map(|s| s.to_string()));
+                    break
                 }
             }
             debug!("following pointer to {}", name);
@@ -98,6 +98,22 @@ impl<'cfg> SourceConfigMap<'cfg> {
                        (configuration in `{}`)", name, path.display())
             }
         }
+        let new_src = new_id.load(self.config);
+        let old_src = id.load(self.config);
+        if new_src.supports_checksums() != old_src.supports_checksums() {
+            let (supports, no_support) = if new_src.supports_checksums() {
+                (name, orig_name)
+            } else {
+                (orig_name, name)
+            };
+            bail!("\
+cannot replace `{orig}` with `{name}`, the source `{supports}` supports \
+checksums, but `{no_support}` does not
+
+a lock file compatible with `{orig}` cannot be generated in this situation
+", orig = orig_name, name = name, supports = supports, no_support = no_support);
+        }
+        Ok(Box::new(ReplacedSource::new(id, &new_id, new_src)))
     }
 
     fn add(&mut self, name: &str, cfg: SourceConfig) {

@@ -153,7 +153,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                               &replace,
                                               registry));
     if let Some(previous) = previous {
-        resolved.copy_metadata(previous);
+        try!(resolved.merge_from(previous));
     }
     return Ok(resolved);
 

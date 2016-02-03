@@ -720,6 +720,8 @@ fn git_and_registry_dep() {
 
 #[test]
 fn update_publish_then_update() {
+    // First generate a Cargo.lock and a clone of the registry index at the
+    // "head" of the current registry.
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -736,16 +738,35 @@ fn update_publish_then_update() {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
+    // Next, publish a new package and back up the copy of the registry we just
+    // created.
     Package::new("a", "0.1.1").publish();
+    let registry = paths::home().join(".cargo/registry");
+    let backup = paths::root().join("registry-backup");
+    fs::rename(&registry, &backup).unwrap();
 
-    let lock = p.root().join("Cargo.lock");
-    let mut s = String::new();
-    File::open(&lock).unwrap().read_to_string(&mut s).unwrap();
-    File::create(&lock).unwrap()
-         .write_all(s.replace("0.1.0", "0.1.1").as_bytes()).unwrap();
-    println!("second");
+    // Generate a Cargo.lock with the newer version, and then move the old copy
+    // of the registry back into place.
+    let p2 = project("foo2")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
 
-    fs::remove_dir_all(&p.root().join("target")).unwrap();
+            [dependencies]
+            a = "0.1.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    assert_that(p2.cargo_process("build"),
+                execs().with_status(0));
+    fs::remove_dir_all(&registry).unwrap();
+    fs::rename(&backup, &registry).unwrap();
+    fs::rename(p2.root().join("Cargo.lock"), p.root().join("Cargo.lock")).unwrap();
+
+    // Finally, build the first project again (with our newer Cargo.lock) which
+    // should force an update of the old registry, download the new crate, and
+    // then build everything again.
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
