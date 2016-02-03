@@ -43,7 +43,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let src = try!(SourceId::for_central(config));
+            let src = try!(SourceId::crates_io(config));
             let mut src = RegistrySource::new(&src, config);
             try!(src.update());
             let config = try!(src.config());

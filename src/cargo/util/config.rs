@@ -274,7 +274,7 @@ impl Config {
     }
 
     pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
-        val.expected(ty).map_err(|e| {
+        val.expected(ty, key).map_err(|e| {
             human(format!("invalid configuration for key `{}`\n{}", key, e))
         })
     }
@@ -512,38 +512,39 @@ impl ConfigValue {
         Ok(())
     }
 
-    pub fn i64(&self) -> CargoResult<(i64, &Path)> {
+    pub fn i64(&self, key: &str) -> CargoResult<(i64, &Path)> {
         match *self {
             CV::Integer(i, ref p) => Ok((i, p)),
-            _ => self.expected("integer"),
+            _ => self.expected("integer", key),
         }
     }
 
-    pub fn string(&self) -> CargoResult<(&str, &Path)> {
+    pub fn string(&self, key: &str) -> CargoResult<(&str, &Path)> {
         match *self {
             CV::String(ref s, ref p) => Ok((s, p)),
-            _ => self.expected("string"),
+            _ => self.expected("string", key),
         }
     }
 
-    pub fn table(&self) -> CargoResult<(&HashMap<String, ConfigValue>, &Path)> {
+    pub fn table(&self, key: &str)
+                 -> CargoResult<(&HashMap<String, ConfigValue>, &Path)> {
         match *self {
             CV::Table(ref table, ref p) => Ok((table, p)),
-            _ => self.expected("table"),
+            _ => self.expected("table", key),
         }
     }
 
-    pub fn list(&self) -> CargoResult<&[(String, PathBuf)]> {
+    pub fn list(&self, key: &str) -> CargoResult<&[(String, PathBuf)]> {
         match *self {
             CV::List(ref list, _) => Ok(list),
-            _ => self.expected("list"),
+            _ => self.expected("list", key),
         }
     }
 
-    pub fn boolean(&self) -> CargoResult<(bool, &Path)> {
+    pub fn boolean(&self, key: &str) -> CargoResult<(bool, &Path)> {
         match *self {
             CV::Boolean(b, ref p) => Ok((b, p)),
-            _ => self.expected("bool"),
+            _ => self.expected("bool", key),
         }
     }
 
@@ -567,10 +568,10 @@ impl ConfigValue {
         }
     }
 
-    fn expected<T>(&self, wanted: &str) -> CargoResult<T> {
-        Err(internal(format!("expected a {}, but found a {} in {}",
-                             wanted, self.desc(),
-                             self.definition_path().display())))
+    fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
+        Err(human(format!("expected a {}, but found a {} for `{}` in {}",
+                          wanted, self.desc(), key,
+                          self.definition_path().display())))
     }
 
     fn into_toml(self) -> toml::Value {

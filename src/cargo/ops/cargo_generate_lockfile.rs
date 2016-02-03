@@ -16,7 +16,7 @@ pub struct UpdateOptions<'a> {
 }
 
 pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
-    let mut registry = PackageRegistry::new(ws.config());
+    let mut registry = try!(PackageRegistry::new(ws.config()));
     let resolve = try!(ops::resolve_with_previous(&mut registry, ws,
                                                   Method::Everything,
                                                   None, None));
@@ -35,7 +35,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
     };
-    let mut registry = PackageRegistry::new(opts.config);
+    let mut registry = try!(PackageRegistry::new(opts.config));
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {

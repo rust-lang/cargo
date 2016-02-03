@@ -838,7 +838,7 @@ impl TomlDependency {
                     cx.source_id.clone()
                 }
             },
-            (None, None) => try!(SourceId::for_central(cx.config)),
+            (None, None) => try!(SourceId::crates_io(cx.config)),
         };
 
         let version = details.version.as_ref().map(|v| &v[..]);

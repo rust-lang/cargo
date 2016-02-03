@@ -25,13 +25,12 @@ fn upload() -> Url { Url::from_file_path(&*upload_path()).ok().unwrap() }
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
-    fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config).unwrap().write_all(&format!(r#"
+    t!(fs::create_dir_all(config.parent().unwrap()));
+    t!(t!(File::create(&config)).write_all(&format!(r#"
         [registry]
-            index = "{reg}"
             token = "api-token"
-    "#, reg = registry()).as_bytes()).unwrap();
-    fs::create_dir_all(&upload_path().join("api/v1/crates")).unwrap();
+    "#).as_bytes()));
+    t!(fs::create_dir_all(&upload_path().join("api/v1/crates")));
 
     repo(&registry_path())
         .file("config.json", &format!(r#"{{
@@ -56,7 +55,8 @@ fn simple() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish").arg("--no-verify"),
+    assert_that(p.cargo_process("publish").arg("--no-verify")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
@@ -110,7 +110,8 @@ fn git_deps() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
+    assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [ERROR] all dependencies must come from the same source.
@@ -143,7 +144,8 @@ fn path_dependency_no_version() {
         "#)
         .file("bar/src/lib.rs", "");
 
-    assert_that(p.cargo_process("publish"),
+    assert_that(p.cargo_process("publish")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [ERROR] all path dependencies must have a version specified when publishing.
@@ -167,7 +169,8 @@ fn unpublishable_crate() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish"),
+    assert_that(p.cargo_process("publish")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
@@ -195,7 +198,8 @@ fn dont_publish_dirty() {
 
     let p = project("foo");
     t!(File::create(p.root().join("bar")));
-    assert_that(p.cargo("publish"),
+    assert_that(p.cargo("publish")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry `[..]`
 error: 1 dirty files found in the working directory:
@@ -226,7 +230,8 @@ fn publish_clean() {
         .build();
 
     let p = project("foo");
-    assert_that(p.cargo("publish"),
+    assert_that(p.cargo("publish")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -251,7 +256,8 @@ fn publish_in_sub_repo() {
 
     let p = project("foo");
     t!(File::create(p.root().join("baz")));
-    assert_that(p.cargo("publish").cwd(p.root().join("bar")),
+    assert_that(p.cargo("publish").cwd(p.root().join("bar"))
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -277,7 +283,8 @@ fn publish_when_ignored() {
 
     let p = project("foo");
     t!(File::create(p.root().join("baz")));
-    assert_that(p.cargo("publish"),
+    assert_that(p.cargo("publish")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -301,7 +308,8 @@ fn ignore_when_crate_ignored() {
         .nocommit_file("bar/src/main.rs", "fn main() {}");
     let p = project("foo");
     t!(File::create(p.root().join("bar/baz")));
-    assert_that(p.cargo("publish").cwd(p.root().join("bar")),
+    assert_that(p.cargo("publish").cwd(p.root().join("bar"))
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -324,7 +332,8 @@ fn new_crate_rejected() {
         .nocommit_file("src/main.rs", "fn main() {}");
     let p = project("foo");
     t!(File::create(p.root().join("baz")));
-    assert_that(p.cargo("publish"),
+    assert_that(p.cargo("publish")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(101));
 }
 
@@ -343,7 +352,8 @@ fn dry_run() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish").arg("--dry-run"),
+    assert_that(p.cargo_process("publish").arg("--dry-run")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]

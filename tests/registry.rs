@@ -32,7 +32,7 @@ fn simple() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -43,8 +43,8 @@ fn simple() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
-[..] bar v0.0.1 (registry file://[..])
-[..] foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
         dir = p.url(),
@@ -73,8 +73,8 @@ fn deps() {
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] baz v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] baz v0.0.1
+[COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -102,7 +102,7 @@ fn nonexistent() {
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [ERROR] no matching package named `nonexistent` found (required by `foo`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: >= 0.0.0
 "));
 }
@@ -127,7 +127,7 @@ fn wrong_version() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: >= 1.0.0
 versions found: 0.0.2, 0.0.1
 "));
@@ -138,7 +138,7 @@ versions found: 0.0.2, 0.0.1
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: >= 1.0.0
 versions found: 0.0.4, 0.0.3, 0.0.2, ...
 "));
@@ -169,6 +169,9 @@ fn bad_cksum() {
 [ERROR] unable to get packages from source
 
 Caused by:
+  failed to download replaced source `registry https://[..]`
+
+Caused by:
   failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
 
 Caused by:
@@ -195,7 +198,7 @@ fn update_registry() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `notyet` found (required by `foo`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: >= 0.0.0
 "));
 
@@ -205,7 +208,7 @@ version required: >= 0.0.0
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
-[COMPILING] notyet v0.0.1 (registry file://[..])
+[COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -247,7 +250,7 @@ fn package_with_path_deps() {
 
 Caused by:
   no matching package named `notyet` found (required by `foo`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: ^0.0.1
 "));
 
@@ -259,7 +262,7 @@ version required: ^0.0.1
 [VERIFYING] foo v0.0.1 ({dir})
 [UPDATING] registry `[..]`
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
-[COMPILING] notyet v0.0.1 (registry file://[..])
+[COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ({dir}[..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ", dir = p.url())));
@@ -286,7 +289,7 @@ fn lockfile_locks() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -322,8 +325,8 @@ fn lockfile_locks_transitively() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] baz v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] baz v0.0.1
+[COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -362,8 +365,8 @@ fn yanks_are_not_used() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] baz v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] baz v0.0.1
+[COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -392,7 +395,7 @@ fn relying_on_a_yank_is_bad() {
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `baz` found (required by `bar`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: = 0.0.2
 versions found: 0.0.1
 "));
@@ -428,7 +431,7 @@ fn yanks_in_lockfiles_are_ok() {
     assert_that(p.cargo("update"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `bar` found (required by `foo`)
-location searched: registry file://[..]
+location searched: registry [..]
 version required: *
 "));
 }
@@ -490,14 +493,14 @@ fn update_lockfile() {
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] bar v0.0.1 (registry file://[..]) -> v0.0.2
+[UPDATING] bar v0.0.1 -> v0.0.2
 "));
 
     println!("0.0.2 build");
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.2 (registry file://[..])
-[COMPILING] bar v0.0.2 (registry file://[..])
+[COMPILING] bar v0.0.2
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -508,14 +511,14 @@ fn update_lockfile() {
                  .arg("-p").arg("bar"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] bar v0.0.2 (registry file://[..]) -> v0.0.3
+[UPDATING] bar v0.0.2 -> v0.0.3
 "));
 
     println!("0.0.3 build");
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.3 (registry file://[..])
-[COMPILING] bar v0.0.3 (registry file://[..])
+[COMPILING] bar v0.0.3
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -528,8 +531,8 @@ fn update_lockfile() {
                 .arg("-p").arg("bar"),
                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] bar v0.0.3 (registry file://[..]) -> v0.0.4
-[ADDING] spam v0.2.5 (registry file://[..])
+[UPDATING] bar v0.0.3 -> v0.0.4
+[ADDING] spam v0.2.5
 "));
 
    println!("new dependencies update");
@@ -538,8 +541,8 @@ fn update_lockfile() {
                 .arg("-p").arg("bar"),
                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] bar v0.0.4 (registry file://[..]) -> v0.0.5
-[REMOVING] spam v0.2.5 (registry file://[..])
+[UPDATING] bar v0.0.4 -> v0.0.5
+[REMOVING] spam v0.2.5
 "));
 }
 
@@ -565,7 +568,7 @@ fn dev_dependency_not_used() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -633,7 +636,7 @@ fn updating_a_dep() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
+[COMPILING] bar v0.0.1
 [COMPILING] a v0.0.1 ({dir}/a)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
@@ -656,7 +659,7 @@ fn updating_a_dep() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry file://[..])
-[COMPILING] bar v0.1.0 (registry file://[..])
+[COMPILING] bar v0.1.0
 [COMPILING] a v0.0.1 ({dir}/a)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
@@ -702,7 +705,7 @@ fn git_and_registry_dep() {
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] a v0.0.1 (registry file://[..])
-[COMPILING] a v0.0.1 (registry [..])
+[COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
@@ -729,9 +732,7 @@ fn update_publish_then_update() {
         "#)
         .file("src/main.rs", "fn main() {}");
     p.build();
-
     Package::new("a", "0.1.0").publish();
-
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
@@ -749,7 +750,7 @@ fn update_publish_then_update() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry file://[..])
-[COMPILING] a v0.1.1 (registry [..])
+[COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
@@ -809,15 +810,15 @@ fn update_transitive_dependency() {
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] b v0.1.0 (registry [..]) -> v0.1.1
+[UPDATING] b v0.1.0 -> v0.1.1
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [DOWNLOADING] b v0.1.1 (registry file://[..])
-[COMPILING] b v0.1.1 (registry [..])
-[COMPILING] a v0.1.0 (registry [..])
+[COMPILING] b v0.1.1
+[COMPILING] a v0.1.0
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 "));
@@ -892,15 +893,15 @@ fn update_multiple_packages() {
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] a v0.1.0 (registry [..]) -> v0.1.1
-[UPDATING] b v0.1.0 (registry [..]) -> v0.1.1
+[UPDATING] a v0.1.0 -> v0.1.1
+[UPDATING] b v0.1.0 -> v0.1.1
 "));
 
     assert_that(p.cargo("update").arg("-pb").arg("-pc"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
-[UPDATING] c v0.1.0 (registry [..]) -> v0.1.1
+[UPDATING] c v0.1.0 -> v0.1.1
 "));
 
     assert_that(p.cargo("build"),
@@ -912,11 +913,11 @@ fn update_multiple_packages() {
                        .with_stderr_contains("\
 [DOWNLOADING] c v0.1.1 (registry file://[..])")
                        .with_stderr_contains("\
-[COMPILING] a v0.1.1 (registry [..])")
+[COMPILING] a v0.1.1")
                        .with_stderr_contains("\
-[COMPILING] b v0.1.1 (registry [..])")
+[COMPILING] b v0.1.1")
                        .with_stderr_contains("\
-[COMPILING] c v0.1.1 (registry [..])")
+[COMPILING] c v0.1.1")
                        .with_stderr_contains("\
 [COMPILING] foo v0.5.0 ([..])"));
 }
@@ -1034,7 +1035,7 @@ fn only_download_relevant() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
-[COMPILING] baz v0.1.0 ([..])
+[COMPILING] baz v0.1.0
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 "));

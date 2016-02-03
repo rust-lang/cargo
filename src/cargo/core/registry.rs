@@ -3,6 +3,7 @@ use std::collections::{HashSet, HashMap};
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use core::PackageSet;
 use util::{CargoResult, ChainError, Config, human, profile};
+use sources::config::SourceConfigMap;
 
 /// Source of information about a group of packages.
 ///
@@ -47,7 +48,6 @@ impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
 /// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'cfg> {
     sources: SourceMap<'cfg>,
-    config: &'cfg Config,
 
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
@@ -71,6 +71,7 @@ pub struct PackageRegistry<'cfg> {
     source_ids: HashMap<SourceId, (SourceId, Kind)>,
 
     locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
+    source_config: SourceConfigMap<'cfg>,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -81,14 +82,15 @@ enum Kind {
 }
 
 impl<'cfg> PackageRegistry<'cfg> {
-    pub fn new(config: &'cfg Config) -> PackageRegistry<'cfg> {
-        PackageRegistry {
+    pub fn new(config: &'cfg Config) -> CargoResult<PackageRegistry<'cfg>> {
+        let source_config = try!(SourceConfigMap::new(config));
+        Ok(PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
             overrides: Vec::new(),
-            config: config,
+            source_config: source_config,
             locked: HashMap::new(),
-        }
+        })
     }
 
     pub fn get(self, package_ids: &[PackageId]) -> PackageSet<'cfg> {
@@ -164,8 +166,8 @@ impl<'cfg> PackageRegistry<'cfg> {
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
-            // Save off the source
-            let source = source_id.load(self.config);
+            let source = try!(self.source_config.load(source_id));
+
             if kind == Kind::Override {
                 self.overrides.push(source_id.clone());
             }
