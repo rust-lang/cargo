@@ -12,7 +12,7 @@ use toml;
 use core::{SourceId, Source, Package, Registry, Dependency, PackageIdSpec};
 use core::PackageId;
 use ops::{self, CompileFilter};
-use sources::{GitSource, PathSource, RegistrySource};
+use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{CargoResult, ChainError, Config, human, internal};
 
 #[derive(RustcDecodable, RustcEncodable)]
@@ -44,6 +44,7 @@ pub fn install(root: Option<&str>,
                opts: &ops::CompileOptions) -> CargoResult<()> {
     let config = opts.config;
     let root = try!(resolve_root(root, config));
+    let map = try!(SourceConfigMap::new(config));
     let (pkg, source) = if source_id.is_git() {
         try!(select_pkg(GitSource::new(source_id, config), source_id,
                         krate, vers, &mut |git| git.read_packages()))
@@ -60,7 +61,7 @@ pub fn install(root: Option<&str>,
                         source_id, krate, vers,
                         &mut |path| path.read_packages()))
     } else {
-        try!(select_pkg(RegistrySource::new(source_id, config),
+        try!(select_pkg(try!(map.load(source_id)),
                         source_id, krate, vers,
                         &mut |_| Err(human("must specify a crate to install from \
                                             crates.io, or use --path or --git to \

@@ -34,16 +34,23 @@ fn init() {
     }
     File::create(&config).unwrap().write_all(format!(r#"
         [registry]
-            index = "{reg}"
             token = "api-token"
+
+        [source.crates-io]
+        registry = 'https://wut'
+        replace-with = 'dummy-registry'
+
+        [source.dummy-registry]
+        registry = '{reg}'
     "#, reg = registry()).as_bytes()).unwrap();
 
     // Init a new registry
     repo(&registry_path())
         .file("config.json", &format!(r#"
-            {{"dl":"{}","api":""}}
+            {{"dl":"{0}","api":"{0}"}}
         "#, dl_url()))
         .build();
+    fs::create_dir_all(dl_path().join("api/v1/crates")).unwrap();
 }
 
 impl Package {

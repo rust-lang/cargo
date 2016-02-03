@@ -720,7 +720,7 @@ fn process_dependencies(cx: &mut Context,
                     None => None,
                 }
             }
-        }.unwrap_or(try!(SourceId::for_central(cx.config)));
+        }.unwrap_or(try!(SourceId::crates_io(cx.config)));
 
         let version = details.version.as_ref().map(|v| &v[..]);
         let mut dep = try!(DependencyInner::parse(&n, version, &new_source_id));

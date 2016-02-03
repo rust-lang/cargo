@@ -1,6 +1,6 @@
 use cargo::ops;
 use cargo::core::{SourceId, GitReference};
-use cargo::util::{CliResult, Config, ToUrl, human};
+use cargo::util::{CliResult, Config, ToUrl};
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -120,7 +120,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     } else if options.arg_crate == None {
         try!(SourceId::for_path(&config.cwd()))
     } else {
-        try!(SourceId::for_central(config))
+        try!(SourceId::crates_io(config))
     };
 
     let krate = options.arg_crate.as_ref().map(|s| &s[..]);

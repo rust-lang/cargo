@@ -178,7 +178,7 @@ use util::{CargoResult, Config, internal, ChainError, ToUrl};
 use util::{hex, Sha256, paths};
 use ops;
 
-static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
+pub static CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
@@ -242,21 +242,6 @@ impl<'cfg> RegistrySource<'cfg> {
             cache: HashMap::new(),
             updated: false,
         }
-    }
-
-    /// Get the configured default registry URL.
-    ///
-    /// This is the main cargo registry by default, but it can be overridden in
-    /// a .cargo/config
-    pub fn url(config: &Config) -> CargoResult<Url> {
-        let config = try!(ops::registry_configuration(config));
-        let url = config.index.unwrap_or(DEFAULT.to_string());
-        url.to_url()
-    }
-
-    /// Get the default url for the registry
-    pub fn default_url() -> String {
-        DEFAULT.to_string()
     }
 
     /// Decode the configuration stored within the registry.
