@@ -421,8 +421,10 @@ impl<'cfg> RegistrySource<'cfg> {
             self.parse_registry_dependency(dep)
         }).collect();
         let deps = try!(deps);
+        let summary = try!(Summary::new(pkgid, deps, features));
+        let summary = summary.set_checksum(cksum.clone());
         self.hashes.insert((name, vers), cksum);
-        Ok((try!(Summary::new(pkgid, deps, features)), yanked.unwrap_or(false)))
+        Ok((summary, yanked.unwrap_or(false)))
     }
 
     /// Converts an encoded dependency in the registry to a cargo dependency
@@ -535,6 +537,10 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
             }
         });
         summaries.query(dep)
+    }
+
+    fn supports_checksums(&self) -> bool {
+        true
     }
 }
 

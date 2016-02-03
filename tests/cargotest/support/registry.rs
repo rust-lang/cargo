@@ -37,7 +37,7 @@ struct Dependency {
     features: Vec<String>,
 }
 
-fn init() {
+pub fn init() {
     let config = paths::home().join(".cargo/config");
     t!(fs::create_dir_all(config.parent().unwrap()));
     if fs::metadata(&config).is_ok() {
