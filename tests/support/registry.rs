@@ -26,7 +26,7 @@ pub struct Package {
     yanked: bool,
 }
 
-fn init() {
+pub fn init() {
     let config = paths::home().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     if fs::metadata(&config).is_ok() {

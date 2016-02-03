@@ -389,11 +389,8 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         Some(list) => list,
         None => return Ok(())
     };
-    let paths = try!(config_paths.list("paths").chain_error(|| {
-        internal("invalid configuration for the key `paths`")
-    }));
 
-    paths.iter().map(|&(ref s, ref p)| {
+    let paths = paths.val.iter().map(|&(ref s, ref p)| {
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.

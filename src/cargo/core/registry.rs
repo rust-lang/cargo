@@ -11,6 +11,14 @@ use sources::config::SourceConfigMap;
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
     fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
+
+    /// Returns whether or not this registry will return summaries with
+    /// checksums listed.
+    ///
+    /// By default, registries do not support checksums.
+    fn supports_checksums(&self) -> bool {
+        false
+    }
 }
 
 impl Registry for Vec<Summary> {

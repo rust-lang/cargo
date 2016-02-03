@@ -47,7 +47,7 @@
 //! over the place.
 
 use std::cmp::Ordering;
-use std::collections::{HashSet, HashMap, BinaryHeap};
+use std::collections::{HashSet, HashMap, BinaryHeap, BTreeMap};
 use std::fmt;
 use std::ops::Range;
 use std::rc::Rc;
@@ -74,8 +74,9 @@ mod encode;
 pub struct Resolve {
     graph: Graph<PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
+    checksums: HashMap<PackageId, Option<String>>,
     root: PackageId,
-    metadata: Option<Metadata>,
+    metadata: Metadata,
 }
 
 #[derive(Clone, Copy)]
@@ -99,21 +100,93 @@ type ResolveResult = CargoResult<CargoResult<Box<Context>>>;
 type DepInfo = (Dependency, Vec<Rc<Summary>>, Vec<String>);
 
 impl Resolve {
-    fn new(root: PackageId) -> Resolve {
-        let mut g = Graph::new();
-        g.add(root.clone(), &[]);
-        Resolve { graph: g, root: root, features: HashMap::new(), metadata: None }
-    }
+    pub fn merge_from(&mut self, previous: &Resolve) -> CargoResult<()> {
+        // Given a previous instance of resolve, it should be forbidden to ever
+        // have a checksums which *differ*. If the same package id has differing
+        // checksums, then something has gone wrong such as:
+        //
+        // * Something got seriously corrupted
+        // * A "mirror" isn't actually a mirror as some changes were made
+        // * A replacement source wasn't actually a replacment, some changes
+        //   were made
+        //
+        // In all of these cases, we want to report an error to indicate that
+        // something is awry. Normal execution (esp just using crates.io) should
+        // never run into this.
+        for (id, cksum) in previous.checksums.iter() {
+            if let Some(mine) = self.checksums.get(id) {
+                if mine == cksum {
+                    continue
+                }
 
-    pub fn copy_metadata(&mut self, other: &Resolve) {
-        self.metadata = other.metadata.clone();
+                // If the previous checksum wasn't calculated, the current
+                // checksum is `Some`. This may indicate that a source was
+                // erroneously replaced or was replaced with something that
+                // desires stronger checksum guarantees than can be afforded
+                // elsewhere.
+                if cksum.is_none() {
+                    bail!("\
+checksum for `{}` was not previously calculated, but a checksum could now \
+be calculated
+
+this could be indicative of a few possible situations:
+
+    * the source `{}` did not previously support checksums,
+      but was replaced with one that does
+    * newer Cargo implementations know how to checksum this source, but this
+      older implementation does not
+    * the lock file is corrupt
+", id, id.source_id())
+
+                // If our checksum hasn't been calculated, then it could mean
+                // that future Cargo figured out how to checksum something or
+                // more realistically we were overridden with a source that does
+                // not have checksums.
+                } else if mine.is_none() {
+                    bail!("\
+checksum for `{}` could not be calculated, but a checksum is listed in \
+the existing lock file
+
+this could be indicative of a few possible situations:
+
+    * the source `{}` supports checksums,
+      but was replaced with one that doesn't
+    * the lock file is corrupt
+
+unable to verify that `{0}` was the same as before in either situation
+", id, id.source_id())
+
+                // If the checksums aren't equal, and neither is None, then they
+                // must both be Some, in which case the checksum now differs.
+                // That's quite bad!
+                } else {
+                    bail!("\
+checksum for `{}` changed between lock files
+
+this could be indicative of a few possible errors:
+
+    * the lock file is corrupt
+    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * the source itself may be corrupt in one way or another
+
+unable to verify that `{0}` was the same as before in any situation
+", id);
+                }
+            }
+        }
+
+        // Be sure to just copy over any unknown metadata.
+        self.metadata = previous.metadata.clone();
+        Ok(())
     }
 
     pub fn iter(&self) -> Nodes<PackageId> {
         self.graph.iter()
     }
 
-    pub fn root(&self) -> &PackageId { &self.root }
+    pub fn root(&self) -> &PackageId {
+        &self.root
+    }
 
     pub fn deps(&self, pkg: &PackageId) -> Option<Edges<PackageId>> {
         self.graph.edges(pkg)
@@ -142,23 +215,42 @@ impl fmt::Debug for Resolve {
 #[derive(Clone)]
 struct Context {
     activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
-    resolve: Resolve,
+    resolve_graph: Graph<PackageId>,
+    resolve_features: HashMap<PackageId, HashSet<String>>,
+    visited: HashSet<PackageId>,
 }
 
 /// Builds the list of all packages required to build the first argument.
-pub fn resolve(summary: &Summary, method: &Method,
-               registry: &mut Registry) -> CargoResult<Resolve> {
+pub fn resolve(summary: &Summary, method: &Method, registry: &mut Registry)
+               -> CargoResult<Resolve> {
     trace!("resolve; summary={}", summary.package_id());
-    let summary = Rc::new(summary.clone());
 
     let cx = Context {
-        resolve: Resolve::new(summary.package_id().clone()),
+        resolve_graph: Graph::new(),
+        resolve_features: HashMap::new(),
         activations: HashMap::new(),
     };
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
-    let cx = try!(activate_deps_loop(cx, registry, summary, method));
+    let cx = try!(activate_deps_loop(cx, registry, Rc::new(summary.clone()),
+                                     method));
+
+    let mut resolve = Resolve {
+        graph: cx.resolve_graph,
+        features: cx.resolve_features,
+        root: summary.package_id().clone(),
+        checksums: HashMap::new(),
+        metadata: BTreeMap::new(),
+    };
+
+    for summary in cx.activations.values().flat_map(|v| v.iter()) {
+        let cksum = summary.checksum().map(|s| s.to_string());
+        resolve.checksums.insert(summary.package_id().clone(), cksum);
+    }
+
     try!(check_cycles(&cx));
-    Ok(cx.resolve)
+
+    trace!("resolved: {:?}", resolve);
+    Ok(resolve)
 }
 
 /// Attempts to activate the summary `parent` in the context `cx`.
@@ -398,12 +490,12 @@ fn activate_deps_loop(mut cx: Context,
 
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.version());
-        cx.resolve.graph.link(parent.package_id().clone(),
+        cx.resolve_graph.link(parent.package_id().clone(),
                               candidate.package_id().clone());
         remaining_deps.extend(try!(activate(&mut cx, registry,
                                             candidate, &method)));
     }
-    trace!("resolved: {:?}", cx.resolve);
+
     Ok(cx)
 }
 
@@ -444,8 +536,8 @@ fn activation_error(cx: &Context,
                               dep.name(), parent.name(),
                               dep.name());
         'outer: for v in prev_active.iter() {
-            for node in cx.resolve.graph.iter() {
-                let edges = match cx.resolve.graph.edges(node) {
+            for node in cx.resolve_graph.iter() {
+                let edges = match cx.resolve_graph.edges(node) {
                     Some(edges) => edges,
                     None => continue,
                 };
@@ -630,7 +722,7 @@ impl Context {
         let key = (id.name().to_string(), id.source_id().clone());
         let prev = self.activations.entry(key).or_insert(Vec::new());
         if !prev.iter().any(|c| c == summary) {
-            self.resolve.graph.add(id.clone(), &[]);
+            self.resolve_graph.add(id.clone(), &[]);
             prev.push(summary.clone());
             return false
         }
@@ -643,7 +735,7 @@ impl Context {
         };
 
         let has_default_feature = summary.features().contains_key("default");
-        match self.resolve.features(id) {
+        match self.resolve_features.get(id) {
             Some(prev) => {
                 features.iter().all(|f| prev.contains(f)) &&
                     (!use_default || prev.contains("default") ||
@@ -740,7 +832,7 @@ impl Context {
         // Record what list of features is active for this package.
         if !used_features.is_empty() {
             let pkgid = parent.package_id();
-            self.resolve.features.entry(pkgid.clone())
+            self.resolve_features.entry(pkgid.clone())
                 .or_insert(HashSet::new())
                 .extend(used_features);
         }

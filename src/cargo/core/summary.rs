@@ -15,6 +15,7 @@ pub struct Summary {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
     features: HashMap<String, Vec<String>>,
+    checksum: Option<String>,
 }
 
 impl Summary {
@@ -60,6 +61,7 @@ impl Summary {
             package_id: pkg_id,
             dependencies: dependencies,
             features: features,
+            checksum: None,
         })
     }
 
@@ -69,9 +71,17 @@ impl Summary {
     pub fn source_id(&self) -> &SourceId { self.package_id.source_id() }
     pub fn dependencies(&self) -> &[Dependency] { &self.dependencies }
     pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.features }
+    pub fn checksum(&self) -> Option<&str> {
+        self.checksum.as_ref().map(|s| &s[..])
+    }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
         self.package_id = id;
+        self
+    }
+
+    pub fn set_checksum(mut self, cksum: String) -> Summary {
+        self.checksum = Some(cksum);
         self
     }
 
