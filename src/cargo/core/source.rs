@@ -235,7 +235,7 @@ impl SourceId {
                 };
                 Box::new(PathSource::new(&path, self, config))
             }
-            Kind::Registry => Box::new(RegistrySource::new(self, config)),
+            Kind::Registry => Box::new(RegistrySource::remote(self, config)),
         }
     }
 

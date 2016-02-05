@@ -172,9 +172,6 @@ Caused by:
   failed to download replaced source `registry https://[..]`
 
 Caused by:
-  failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
-
-Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry file://[..])`
 "));
 }

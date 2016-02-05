@@ -171,11 +171,11 @@ pub fn registry(config: &Config,
         None => try!(SourceId::crates_io(config)),
     };
     let api_host = {
-        let mut src = RegistrySource::new(&sid, config);
+        let mut src = RegistrySource::remote(&sid, config);
         try!(src.update().chain_error(|| {
             human(format!("failed to update {}", sid))
         }));
-        (try!(src.config())).api
+        (try!(src.config())).unwrap().api
     };
     let handle = try!(http_handle(config));
     Ok((Registry::new_handle(api_host, token, handle), sid))
