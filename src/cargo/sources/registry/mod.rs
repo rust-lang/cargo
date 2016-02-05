@@ -160,7 +160,7 @@
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
@@ -227,6 +227,7 @@ pub trait RegistryData {
 
 mod index;
 mod remote;
+mod local;
 
 fn short_name(id: &SourceId) -> String {
     let hash = hex::short_hash(id);
@@ -239,6 +240,14 @@ impl<'cfg> RegistrySource<'cfg> {
                   config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
+        RegistrySource::new(source_id, config, &name, Box::new(ops))
+    }
+
+    pub fn local(source_id: &SourceId,
+                 path: &Path,
+                 config: &'cfg Config) -> RegistrySource<'cfg> {
+        let name = short_name(source_id);
+        let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops))
     }
 

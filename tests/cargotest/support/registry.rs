@@ -27,6 +27,7 @@ pub struct Package {
     files: Vec<(String, String)>,
     yanked: bool,
     features: HashMap<String, Vec<String>>,
+    local: bool,
 }
 
 struct Dependency {
@@ -74,7 +75,13 @@ impl Package {
             files: Vec::new(),
             yanked: false,
             features: HashMap::new(),
+            local: false,
         }
+    }
+
+    pub fn local(&mut self, local: bool) -> &mut Package {
+        self.local = local;
+        self
     }
 
     pub fn file(&mut self, name: &str, contents: &str) -> &mut Package {
@@ -162,7 +169,11 @@ impl Package {
         };
 
         // Write file/line in the index
-        let dst = registry_path().join(&file);
+        let dst = if self.local {
+            registry_path().join("index").join(&file)
+        } else {
+            registry_path().join(&file)
+        };
         let mut prev = String::new();
         let _ = File::open(&dst).and_then(|mut f| f.read_to_string(&mut prev));
         t!(fs::create_dir_all(dst.parent().unwrap()));
@@ -170,20 +181,22 @@ impl Package {
                   .write_all((prev + &line[..] + "\n").as_bytes()));
 
         // Add the new file to the index
-        let repo = t!(git2::Repository::open(&registry_path()));
-        let mut index = t!(repo.index());
-        t!(index.add_path(Path::new(&file)));
-        t!(index.write());
-        let id = t!(index.write_tree());
+        if !self.local {
+            let repo = t!(git2::Repository::open(&registry_path()));
+            let mut index = t!(repo.index());
+            t!(index.add_path(Path::new(&file)));
+            t!(index.write());
+            let id = t!(index.write_tree());
 
-        // Commit this change
-        let tree = t!(repo.find_tree(id));
-        let sig = t!(repo.signature());
-        let parent = t!(repo.refname_to_id("refs/heads/master"));
-        let parent = t!(repo.find_commit(parent));
-        t!(repo.commit(Some("HEAD"), &sig, &sig,
-                       "Another commit", &tree,
-                       &[&parent]));
+            // Commit this change
+            let tree = t!(repo.find_tree(id));
+            let sig = t!(repo.signature());
+            let parent = t!(repo.refname_to_id("refs/heads/master"));
+            let parent = t!(repo.find_commit(parent));
+            t!(repo.commit(Some("HEAD"), &sig, &sig,
+                           "Another commit", &tree,
+                           &[&parent]));
+        }
     }
 
     fn make_archive(&self) {
@@ -233,7 +246,12 @@ impl Package {
     }
 
     pub fn archive_dst(&self) -> PathBuf {
-        dl_path().join(&self.name).join(&self.vers).join("download")
+        if self.local {
+            registry_path().join(format!("{}-{}.crate", self.name,
+                                         self.vers))
+        } else {
+            dl_path().join(&self.name).join(&self.vers).join("download")
+        }
     }
 }
 

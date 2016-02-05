@@ -77,8 +77,10 @@ fn bad3() {
 
     assert_that(foo.cargo_process("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
-[UPDATING] registry `[..]`
-[ERROR] invalid configuration for key `http.proxy`
+error: failed to update registry [..]
+
+Caused by:
+  invalid configuration for key `http.proxy`
 expected a string, but found a boolean for `http.proxy` in [..]config
 "));
 }
@@ -555,7 +557,7 @@ fn bad_source_config1() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-error: no source URL specified for `source.foo`, needs [..]
+error: no source URL specified for `source.foo`, need [..]
 "));
 }
 
@@ -759,7 +761,6 @@ This will be considered an error in future versions"));
 }
 
 #[test]
-#[ignore]
 fn bad_source_config7() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -775,7 +776,7 @@ fn bad_source_config7() {
         .file(".cargo/config", r#"
             [source.foo]
             registry = 'http://example.com'
-            directory = 'file:///another/file'
+            local-registry = 'file:///another/file'
         "#);
 
     Package::new("bar", "0.1.0").publish();
@@ -783,30 +784,5 @@ fn bad_source_config7() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
 error: more than one source URL specified for `source.foo`
-"));
-}
-
-#[test]
-#[ignore]
-fn bad_source_config8() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-
-            [dependencies]
-            bar = "*"
-        "#)
-        .file("src/lib.rs", "")
-        .file(".cargo/config", r#"
-            [source.foo]
-            directory = 'file://another/file'
-        "#);
-
-    assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-error: failed to convert `file://another/file` to an absolute path (configured in [..])
 "));
 }

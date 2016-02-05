@@ -128,11 +128,21 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             let url = try!(url(val, &format!("source.{}.registry", name)));
             srcs.push(SourceId::for_registry(&url));
         }
+        if let Some(val) = table.get("local-registry") {
+            let (s, path) = try!(val.string(&format!("source.{}.local-registry",
+                                                     name)));
+            let mut path = path.to_path_buf();
+            path.pop();
+            path.pop();
+            path.push(s);
+            srcs.push(try!(SourceId::for_local_registry(&path)));
+        }
 
         let mut srcs = srcs.into_iter();
         let src = try!(srcs.next().chain_error(|| {
-            human(format!("no source URL specified for `source.{}`, needs \
-                           `registry` defined", name))
+            human(format!("no source URL specified for `source.{}`, need \
+                           either `registry` or `local-registry` defined",
+                          name))
         }));
         if srcs.next().is_some() {
             return Err(human(format!("more than one source URL specified for \
