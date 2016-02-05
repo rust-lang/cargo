@@ -160,36 +160,26 @@
 
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
-use curl::http;
 use flate2::read::GzDecoder;
-use git2;
-use rustc_serialize::hex::ToHex;
-use rustc_serialize::json;
 use tar::Archive;
-use url::Url;
 
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
-use core::dependency::{Dependency, DependencyInner, Kind};
-use sources::{PathSource, git};
-use util::{CargoResult, Config, internal, ChainError, ToUrl};
-use util::{hex, Sha256, paths};
-use ops;
+use core::dependency::Dependency;
+use sources::PathSource;
+use util::{CargoResult, Config, internal, ChainError};
+use util::hex;
 
 pub static CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
-    checkout_path: PathBuf,
-    cache_path: PathBuf,
     src_path: PathBuf,
     config: &'cfg Config,
-    handle: Option<http::Handle>,
-    hashes: HashMap<(String, String), String>, // (name, vers) => cksum
-    cache: HashMap<String, Vec<(Summary, bool)>>,
     updated: bool,
+    ops: Box<RegistryData + 'cfg>,
+    index: index::RegistryIndex,
 }
 
 #[derive(RustcDecodable)]
@@ -225,107 +215,51 @@ struct RegistryDependency {
     kind: Option<String>,
 }
 
+pub trait RegistryData {
+    fn index_path(&self) -> &Path;
+    fn config(&self) -> CargoResult<Option<RegistryConfig>>;
+    fn update_index(&mut self) -> CargoResult<()>;
+    fn download(&mut self,
+                pkg: &PackageId,
+                checksum: &str) -> CargoResult<PathBuf>;
+}
+
+mod index;
+mod remote;
+
+fn short_name(id: &SourceId) -> String {
+    let hash = hex::short_hash(id);
+    let ident = id.url().host().unwrap().to_string();
+    format!("{}-{}", ident, hash)
+}
+
 impl<'cfg> RegistrySource<'cfg> {
-    pub fn new(source_id: &SourceId,
-               config: &'cfg Config) -> RegistrySource<'cfg> {
-        let hash = hex::short_hash(source_id);
-        let ident = source_id.url().host().unwrap().to_string();
-        let part = format!("{}-{}", ident, hash);
+    pub fn remote(source_id: &SourceId,
+                  config: &'cfg Config) -> RegistrySource<'cfg> {
+        let name = short_name(source_id);
+        let ops = remote::RemoteRegistry::new(source_id, config, &name);
+        RegistrySource::new(source_id, config, &name, Box::new(ops))
+    }
+
+    fn new(source_id: &SourceId,
+           config: &'cfg Config,
+           name: &str,
+           ops: Box<RegistryData + 'cfg>) -> RegistrySource<'cfg> {
         RegistrySource {
-            checkout_path: config.registry_index_path().join(&part),
-            cache_path: config.registry_cache_path().join(&part),
-            src_path: config.registry_source_path().join(&part),
+            src_path: config.registry_source_path().join(name),
             config: config,
             source_id: source_id.clone(),
-            handle: None,
-            hashes: HashMap::new(),
-            cache: HashMap::new(),
             updated: false,
+            index: index::RegistryIndex::new(source_id, ops.index_path()),
+            ops: ops,
         }
     }
 
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    pub fn config(&self) -> CargoResult<RegistryConfig> {
-        let contents = try!(paths::read(&self.checkout_path.join("config.json")));
-        let config = try!(json::decode(&contents));
-        Ok(config)
-    }
-
-    /// Open the git repository for the index of the registry.
-    ///
-    /// This will attempt to open an existing checkout, and failing that it will
-    /// initialize a fresh new directory and git checkout. No remotes will be
-    /// configured by default.
-    fn open(&self) -> CargoResult<git2::Repository> {
-        match git2::Repository::open(&self.checkout_path) {
-            Ok(repo) => return Ok(repo),
-            Err(..) => {}
-        }
-
-        try!(fs::create_dir_all(&self.checkout_path));
-        let _ = fs::remove_dir_all(&self.checkout_path);
-        let repo = try!(git2::Repository::init(&self.checkout_path));
-        Ok(repo)
-    }
-
-    /// Download the given package from the given url into the local cache.
-    ///
-    /// This will perform the HTTP request to fetch the package. This function
-    /// will only succeed if the HTTP download was successful and the file is
-    /// then ready for inspection.
-    ///
-    /// No action is taken if the package is already downloaded.
-    fn download_package(&mut self, pkg: &PackageId, url: &Url)
-                        -> CargoResult<PathBuf> {
-        // TODO: should discover filename from the S3 redirect
-        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let dst = self.cache_path.join(&filename);
-        if fs::metadata(&dst).is_ok() { return Ok(dst) }
-        try!(self.config.shell().status("Downloading", pkg));
-
-        try!(fs::create_dir_all(dst.parent().unwrap()));
-        let expected_hash = try!(self.hash(pkg));
-        let handle = match self.handle {
-            Some(ref mut handle) => handle,
-            None => {
-                self.handle = Some(try!(ops::http_handle(self.config)));
-                self.handle.as_mut().unwrap()
-            }
-        };
-        // TODO: don't download into memory (curl-rust doesn't expose it)
-        let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
-        if resp.get_code() != 200 && resp.get_code() != 0 {
-            return Err(internal(format!("failed to get 200 response from {}\n{}",
-                                        url, resp)))
-        }
-
-        // Verify what we just downloaded
-        let actual = {
-            let mut state = Sha256::new();
-            state.update(resp.get_body());
-            state.finish()
-        };
-        if actual.to_hex() != expected_hash {
-            bail!("failed to verify the checksum of `{}`", pkg)
-        }
-
-        try!(paths::write(&dst, resp.get_body()));
-        Ok(dst)
-    }
-
-    /// Return the hash listed for a specified PackageId.
-    fn hash(&mut self, pkg: &PackageId) -> CargoResult<String> {
-        let key = (pkg.name().to_string(), pkg.version().to_string());
-        if let Some(s) = self.hashes.get(&key) {
-            return Ok(s.clone())
-        }
-        // Ok, we're missing the key, so parse the index file to load it.
-        try!(self.summaries(pkg.name()));
-        self.hashes.get(&key).chain_error(|| {
-            internal(format!("no hash listed for {}", pkg))
-        }).map(|s| s.clone())
+    pub fn config(&self) -> CargoResult<Option<RegistryConfig>> {
+        self.ops.config()
     }
 
     /// Unpacks a downloaded package into a location where it's ready to be
@@ -336,7 +270,9 @@ impl<'cfg> RegistrySource<'cfg> {
                       -> CargoResult<PathBuf> {
         let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
                                               pkg.version()));
-        if fs::metadata(&dst.join(".cargo-ok")).is_ok() { return Ok(dst) }
+        if fs::metadata(&dst.join(".cargo-ok")).is_ok() {
+            return Ok(dst)
+        }
 
         try!(fs::create_dir_all(dst.parent().unwrap()));
         let f = try!(File::open(&tarball));
@@ -347,122 +283,10 @@ impl<'cfg> RegistrySource<'cfg> {
         Ok(dst)
     }
 
-    /// Parse the on-disk metadata for the package provided
-    pub fn summaries(&mut self, name: &str) -> CargoResult<&Vec<(Summary, bool)>> {
-        if self.cache.contains_key(name) {
-            return Ok(self.cache.get(name).unwrap());
-        }
-        // see module comment for why this is structured the way it is
-        let path = self.checkout_path.clone();
-        let fs_name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
-        let path = match fs_name.len() {
-            1 => path.join("1").join(&fs_name),
-            2 => path.join("2").join(&fs_name),
-            3 => path.join("3").join(&fs_name[..1]).join(&fs_name),
-            _ => path.join(&fs_name[0..2])
-                     .join(&fs_name[2..4])
-                     .join(&fs_name),
-        };
-        let summaries = match File::open(&path) {
-            Ok(mut f) => {
-                let mut contents = String::new();
-                try!(f.read_to_string(&mut contents));
-                let ret: CargoResult<Vec<(Summary, bool)>>;
-                ret = contents.lines().filter(|l| l.trim().len() > 0)
-                              .map(|l| self.parse_registry_package(l))
-                              .collect();
-                try!(ret.chain_error(|| {
-                    internal(format!("failed to parse registry's information \
-                                      for: {}", name))
-                }))
-            }
-            Err(..) => Vec::new(),
-        };
-        let summaries = summaries.into_iter().filter(|summary| {
-            summary.0.package_id().name() == name
-        }).collect();
-        self.cache.insert(name.to_string(), summaries);
-        Ok(self.cache.get(name).unwrap())
-    }
-
-    /// Parse a line from the registry's index file into a Summary for a
-    /// package.
-    ///
-    /// The returned boolean is whether or not the summary has been yanked.
-    fn parse_registry_package(&mut self, line: &str)
-                              -> CargoResult<(Summary, bool)> {
-        let RegistryPackage {
-            name, vers, cksum, deps, features, yanked
-        } = try!(json::decode::<RegistryPackage>(line));
-        let pkgid = try!(PackageId::new(&name, &vers, &self.source_id));
-        let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
-            self.parse_registry_dependency(dep)
-        }).collect();
-        let deps = try!(deps);
-        let summary = try!(Summary::new(pkgid, deps, features));
-        let summary = summary.set_checksum(cksum.clone());
-        self.hashes.insert((name, vers), cksum);
-        Ok((summary, yanked.unwrap_or(false)))
-    }
-
-    /// Converts an encoded dependency in the registry to a cargo dependency
-    fn parse_registry_dependency(&self, dep: RegistryDependency)
-                                 -> CargoResult<Dependency> {
-        let RegistryDependency {
-            name, req, features, optional, default_features, target, kind
-        } = dep;
-
-        let dep = try!(DependencyInner::parse(&name, Some(&req),
-                                              &self.source_id));
-        let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
-            "dev" => Kind::Development,
-            "build" => Kind::Build,
-            _ => Kind::Normal,
-        };
-
-        let platform = match target {
-            Some(target) => Some(try!(target.parse())),
-            None => None,
-        };
-
-        // Unfortunately older versions of cargo and/or the registry ended up
-        // publishing lots of entries where the features array contained the
-        // empty feature, "", inside. This confuses the resolution process much
-        // later on and these features aren't actually valid, so filter them all
-        // out here.
-        let features = features.into_iter().filter(|s| !s.is_empty()).collect();
-
-        Ok(dep.set_optional(optional)
-              .set_default_features(default_features)
-              .set_features(features)
-              .set_platform(platform)
-              .set_kind(kind)
-              .into_dependency())
-    }
-
-    /// Actually perform network operations to update the registry
     fn do_update(&mut self) -> CargoResult<()> {
-        if self.updated { return Ok(()) }
-
-        try!(self.config.shell().status("Updating",
-             format!("registry `{}`", self.source_id.url())));
-        let repo = try!(self.open());
-
-        // git fetch origin
-        let url = self.source_id.url().to_string();
-        let refspec = "refs/heads/*:refs/remotes/origin/*";
-        try!(git::fetch(&repo, &url, refspec).chain_error(|| {
-            internal(format!("failed to fetch `{}`", url))
-        }));
-
-        // git reset --hard origin/master
-        let reference = "refs/remotes/origin/master";
-        let oid = try!(repo.refname_to_id(reference));
-        trace!("[{}] updating to rev {}", self.source_id, oid);
-        let object = try!(repo.find_object(oid, None));
-        try!(repo.reset(&object, git2::ResetType::Hard, None));
-        self.updated = true;
-        self.cache.clear();
+        try!(self.ops.update_index());
+        let path = self.ops.index_path();
+        self.index = index::RegistryIndex::new(&self.source_id, path);
         Ok(())
     }
 }
@@ -473,37 +297,13 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.source_id().precise().is_some() {
-            let mut summaries = try!(self.summaries(dep.name())).iter().map(|s| {
-                s.0.clone()
-            }).collect::<Vec<_>>();
-            if try!(summaries.query(dep)).is_empty() {
+        if dep.source_id().precise().is_some() && !self.updated {
+            if try!(self.index.query(dep)).is_empty() {
                 try!(self.do_update());
             }
         }
 
-        let mut summaries = {
-            let summaries = try!(self.summaries(dep.name()));
-            summaries.iter().filter(|&&(_, yanked)| {
-                dep.source_id().precise().is_some() || !yanked
-            }).map(|s| s.0.clone()).collect::<Vec<_>>()
-        };
-
-        // Handle `cargo update --precise` here. If specified, our own source
-        // will have a precise version listed of the form `<pkg>=<req>` where
-        // `<pkg>` is the name of a crate on this source and `<req>` is the
-        // version requested (agument to `--precise`).
-        summaries.retain(|s| {
-            match self.source_id.precise() {
-                Some(p) if p.starts_with(dep.name()) &&
-                           p[dep.name().len()..].starts_with("=") => {
-                    let vers = &p[dep.name().len() + 1..];
-                    s.version().to_string() == vers
-                }
-                _ => true,
-            }
-        });
-        summaries.query(dep)
+        self.index.query(dep)
     }
 
     fn supports_checksums(&self) -> bool {
@@ -527,20 +327,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
-        let config = try!(self.config());
-        let url = try!(config.dl.to_url().map_err(internal));
-        let mut url = url.clone();
-        url.path_mut().unwrap().push(package.name().to_string());
-        url.path_mut().unwrap().push(package.version().to_string());
-        url.path_mut().unwrap().push("download".to_string());
-        let path = try!(self.download_package(package, &url).chain_error(|| {
-            internal(format!("failed to download package `{}` from {}",
-                             package, url))
-        }));
+        let hash = try!(self.index.hash(package));
+        let path = try!(self.ops.download(package, &hash));
         let path = try!(self.unpack_package(package, path).chain_error(|| {
             internal(format!("failed to unpack package `{}`", package))
         }));
-
         let mut src = PathSource::new(&path, &self.source_id, self.config);
         try!(src.update());
         src.download(package)

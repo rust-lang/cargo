@@ -439,7 +439,7 @@ test!(bad_source_config1 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-no source URL specified for `source.foo`, need [..]
+no source URL specified for `source.foo`, needs [..]
 "));
 });
 
@@ -581,52 +581,5 @@ test!(bad_source_config6 {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
 expected a string, but found a array for `source.crates-io.replace-with` in [..]
-"));
-});
-
-test!(bad_source_config7 {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-
-            [dependencies]
-            bar = "*"
-        "#)
-        .file("src/lib.rs", "")
-        .file(".cargo/config", r#"
-            [source.foo]
-            registry = 'http://example.com'
-            directory = 'file:///another/file'
-        "#);
-
-    assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-more than one source URL specified for `source.foo`
-"));
-});
-
-test!(bad_source_config8 {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-
-            [dependencies]
-            bar = "*"
-        "#)
-        .file("src/lib.rs", "")
-        .file(".cargo/config", r#"
-            [source.foo]
-            directory = 'file://another/file'
-        "#);
-
-    assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-failed to convert `file://another/file` to an absolute path (configured in [..])
 "));
 });
