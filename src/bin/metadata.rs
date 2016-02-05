@@ -14,6 +14,7 @@ pub struct Options {
     flag_format_version: u32,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
+    flag_no_deps: bool,
     flag_quiet: bool,
     flag_verbose: bool,
 }
@@ -29,6 +30,8 @@ Options:
     -h, --help                 Print this message
     --features FEATURES        Space-separated list of features
     --no-default-features      Do not include the `default` feature
+    --no-deps                  Output information only about the root package
+                               and don't fetch dependencies.
     --manifest-path PATH       Path to the manifest
     --format-version VERSION   Format version [default: 1]
                                Valid values: 1
@@ -46,6 +49,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
         features: options.flag_features,
         manifest_path: &manifest,
         no_default_features: options.flag_no_default_features,
+        no_deps: options.flag_no_deps,
         version: options.flag_format_version,
     };
 
