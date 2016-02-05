@@ -53,6 +53,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn update_index(&mut self) -> CargoResult<()> {
+        // Ensure that this'll actually succeed later on.
+        try!(ops::http_handle(self.config));
+
+        // Then we actually update the index
         try!(self.index_path.create_dir());
         let lock = try!(self.index_path.open_rw(Path::new(INDEX_LOCK),
                                                 self.config,

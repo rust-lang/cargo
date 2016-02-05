@@ -160,7 +160,7 @@ fn bad_cksum() {
 
     let pkg = Package::new("bad-cksum", "0.0.1");
     pkg.publish();
-    File::create(&pkg.archive_dst()).unwrap();
+    t!(File::create(&pkg.archive_dst()));
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
@@ -418,7 +418,7 @@ fn yanks_in_lockfiles_are_ok() {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
-    fs::remove_dir_all(&registry::registry_path().join("3")).unwrap();
+    registry::registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
@@ -575,7 +575,7 @@ fn dev_dependency_not_used() {
 #[test]
 fn login_with_no_cargo_dir() {
     let home = paths::home().join("new-home");
-    fs::create_dir(&home).unwrap();
+    t!(fs::create_dir(&home));
     assert_that(cargo_process().arg("login").arg("foo").arg("-v"),
                 execs().with_status(0));
 }
@@ -640,7 +640,7 @@ fn updating_a_dep() {
 ",
    dir = p.url())));
 
-    t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(br#"
+    t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(br#"
         [project]
         name = "a"
         version = "0.0.1"
@@ -648,7 +648,7 @@ fn updating_a_dep() {
 
         [dependencies]
         bar = "0.1.0"
-    "#).unwrap();
+    "#));
     Package::new("bar", "0.1.0").publish();
 
     println!("second");
@@ -740,7 +740,7 @@ fn update_publish_then_update() {
     Package::new("a", "0.1.1").publish();
     let registry = paths::home().join(".cargo/registry");
     let backup = paths::root().join("registry-backup");
-    fs::rename(&registry, &backup).unwrap();
+    t!(fs::rename(&registry, &backup));
 
     // Generate a Cargo.lock with the newer version, and then move the old copy
     // of the registry back into place.
@@ -757,9 +757,9 @@ fn update_publish_then_update() {
         .file("src/main.rs", "fn main() {}");
     assert_that(p2.cargo_process("build"),
                 execs().with_status(0));
-    fs::remove_dir_all(&registry).unwrap();
-    fs::rename(&backup, &registry).unwrap();
-    fs::rename(p2.root().join("Cargo.lock"), p.root().join("Cargo.lock")).unwrap();
+    registry.rm_rf();
+    t!(fs::rename(&backup, &registry));
+    t!(fs::rename(p2.root().join("Cargo.lock"), p.root().join("Cargo.lock")));
 
     // Finally, build the first project again (with our newer Cargo.lock) which
     // should force an update of the old registry, download the new crate, and
@@ -1125,16 +1125,12 @@ fn disallow_network() {
 
     assert_that(p.cargo("build").arg("--frozen"),
                 execs().with_status(101).with_stderr("\
-[UPDATING] registry `[..]`
 error: failed to load source for a dependency on `foo`
 
 Caused by:
   Unable to update registry [..]
 
 Caused by:
-  failed to fetch `[..]`
-
-Caused by:
-  attempting to update a git repository, but --frozen was specified
+  attempting to make an HTTP request, but --frozen was specified
 "));
 }

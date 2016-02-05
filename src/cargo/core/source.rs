@@ -62,6 +62,8 @@ enum Kind {
     Path,
     /// represents the central registry
     Registry,
+    /// represents a local filesystem-based registry
+    LocalRegistry,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -167,6 +169,9 @@ impl SourceId {
             SourceIdInner { kind: Kind::Registry, ref url, .. } => {
                 format!("registry+{}", url)
             }
+            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
+                format!("local-registry+{}", url)
+            }
         }
     }
 
@@ -182,6 +187,11 @@ impl SourceId {
 
     pub fn for_registry(url: &Url) -> SourceId {
         SourceId::new(Kind::Registry, url.clone())
+    }
+
+    pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
+        let url = try!(path.to_url());
+        Ok(SourceId::new(Kind::LocalRegistry, url))
     }
 
     /// Returns the `SourceId` corresponding to the main repository.
@@ -213,7 +223,7 @@ impl SourceId {
         self.inner.kind == Kind::Path
     }
     pub fn is_registry(&self) -> bool {
-        self.inner.kind == Kind::Registry
+        self.inner.kind == Kind::Registry || self.inner.kind == Kind::LocalRegistry
     }
 
     pub fn is_git(&self) -> bool {
@@ -236,6 +246,13 @@ impl SourceId {
                 Box::new(PathSource::new(&path, self, config))
             }
             Kind::Registry => Box::new(RegistrySource::remote(self, config)),
+            Kind::LocalRegistry => {
+                let path = match self.inner.url.to_file_path() {
+                    Ok(p) => p,
+                    Err(()) => panic!("path sources cannot be remote"),
+                };
+                Box::new(RegistrySource::local(self, &path, config))
+            }
         }
     }
 
@@ -321,7 +338,8 @@ impl fmt::Display for SourceId {
                 }
                 Ok(())
             }
-            SourceIdInner { kind: Kind::Registry, ref url, .. } => {
+            SourceIdInner { kind: Kind::Registry, ref url, .. } |
+            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
                 write!(f, "registry {}", url)
             }
         }

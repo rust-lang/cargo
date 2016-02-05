@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::io::prelude::*;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::path::Path;
 
 use rustc_serialize::json;
@@ -52,6 +52,13 @@ impl<'cfg> RegistryIndex<'cfg> {
         if self.cache.contains_key(name) {
             return Ok(self.cache.get(name).unwrap());
         }
+        // If the lock file doesn't already exist then this'll cause *someone*
+        // to create it. We don't actually care who creates it, and if it's
+        // already there this should have no effect.
+        drop(OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .open(self.path.join(INDEX_LOCK).into_path_unlocked()));
         let lock = self.path.open_ro(Path::new(INDEX_LOCK),
                                      self.config,
                                      "the registry index");
