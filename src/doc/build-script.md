@@ -244,7 +244,7 @@ fn main() {
 
 This is where the real magic happens. The library is using the rustc-defined
 `include!` macro in combination with the `concat!` and `env!` macros to include
-the generated file (`mod.rs`) into the crate’s compilation.
+the generated file (`hello.rs`) into the crate’s compilation.
 
 Using the structure shown here, crates can include any number of generated files
 from the build script itself. We’ve also seen a brief example of how a build
