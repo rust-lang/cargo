@@ -84,6 +84,7 @@ timeout = 60000   # Timeout for each HTTP request, in milliseconds
 jobs = 1               # number of jobs to run by default (default to # cpus)
 rustc = "rustc"        # the rust compiler tool
 rustdoc = "rustdoc"    # the doc generator tool
+target = "triple"      # build for the target triple
 target-dir = "target"  # path of where to place all generated artifacts
 ```
 
