@@ -1,6 +1,6 @@
 use hamcrest::assert_that;
 use support::registry::Package;
-use support::{project, execs, basic_bin_manifest};
+use support::{project, execs, basic_bin_manifest, main_file};
 
 
 fn setup() {}
@@ -45,7 +45,7 @@ test!(cargo_metadata_simple {
 });
 
 
-test!(cargo_metadata_with_deps {
+test!(cargo_metadata_with_deps_and_version {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -64,7 +64,10 @@ test!(cargo_metadata_with_deps {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
 
-    assert_that(p.cargo_process("metadata").arg("-q"), execs().with_json(r#"
+    assert_that(p.cargo_process("metadata")
+                 .arg("-q")
+                 .arg("--format-version").arg("1"),
+                execs().with_json(r#"
     {
         "packages": [
             {
@@ -179,4 +182,96 @@ failed to parse manifest at `[..]`
 
 Caused by:
   no `package` or `project` section found."))
+});
+
+const MANIFEST_OUTPUT: &'static str=
+    r#"
+{
+    "packages": [{
+        "name":"foo",
+        "version":"0.5.0",
+        "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
+        "source":null,
+        "dependencies":[],
+        "targets":[{
+            "kind":["bin"],
+            "name":"foo",
+            "src_path":"src[..]foo.rs"
+        }],
+        "features":{},
+        "manifest_path":"[..]Cargo.toml"
+    }],
+    "resolve": null,
+    "version": 1
+}"#;
+
+test!(cargo_metadata_no_deps_path_to_cargo_toml_relative {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+        assert_that(p.cargo_process("metadata").arg("--no-deps")
+                     .arg("--manifest-path").arg("foo/Cargo.toml")
+                     .cwd(p.root().parent().unwrap()),
+                    execs().with_status(0)
+                           .with_json(MANIFEST_OUTPUT));
+});
+
+test!(cargo_metadata_no_deps_path_to_cargo_toml_absolute {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(p.cargo_process("metadata").arg("--no-deps")
+                 .arg("--manifest-path").arg(p.root().join("Cargo.toml"))
+                 .cwd(p.root().parent().unwrap()),
+                execs().with_status(0)
+                       .with_json(MANIFEST_OUTPUT));
+});
+
+test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_relative {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(p.cargo_process("metadata").arg("--no-deps")
+                 .arg("--manifest-path").arg("foo")
+                 .cwd(p.root().parent().unwrap()),
+                execs().with_status(101)
+                       .with_stderr("the manifest-path must be a path to a Cargo.toml file"));
+});
+
+test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(p.cargo_process("metadata").arg("--no-deps")
+                 .arg("--manifest-path").arg(p.root())
+                 .cwd(p.root().parent().unwrap()),
+                execs().with_status(101)
+                       .with_stderr("the manifest-path must be a path to a Cargo.toml file"));
+});
+
+test!(cargo_metadata_no_deps_cwd {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(p.cargo_process("metadata").arg("--no-deps")
+                 .cwd(p.root()),
+                execs().with_status(0)
+                       .with_json(MANIFEST_OUTPUT));
+});
+
+test!(carg_metadata_bad_version {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(p.cargo_process("metadata").arg("--no-deps")
+                 .arg("--format-version").arg("2")
+                 .cwd(p.root()),
+                execs().with_status(101)
+    .with_stderr("metadata version 2 not supported, only 1 is currently supported"));
 });

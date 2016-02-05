@@ -15,6 +15,7 @@ pub struct OutputMetadataOptions<'a> {
     pub features: Vec<String>,
     pub manifest_path: &'a Path,
     pub no_default_features: bool,
+    pub no_deps: bool,
     pub version: u32,
 }
 
@@ -22,16 +23,37 @@ pub struct OutputMetadataOptions<'a> {
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
 pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
+    if opt.version != VERSION {
+        bail!("metadata version {} not supported, only {} is currently supported",
+              opt.version, VERSION);
+    }
+    if opt.no_deps {
+        metadata_no_deps(opt, config)
+    } else {
+        metadata_full(opt, config)
+    }
+}
+
+fn metadata_no_deps(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
+    let mut source = try!(PathSource::for_path(opt.manifest_path.parent().unwrap(), config));
+
+    Ok(ExportInfo {
+        packages: vec![try!(source.root_package())],
+        resolve: None,
+        version: VERSION,
+    })
+}
+
+fn metadata_full(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
     let deps = try!(resolve_dependencies(opt.manifest_path,
                                          config,
                                          opt.features,
                                          opt.no_default_features));
     let (packages, resolve) = deps;
 
-    assert_eq!(opt.version, VERSION);
     Ok(ExportInfo {
         packages: packages,
-        resolve: MetadataResolve(resolve),
+        resolve: Some(MetadataResolve(resolve)),
         version: VERSION,
     })
 }
@@ -39,7 +61,7 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
 #[derive(RustcEncodable)]
 pub struct ExportInfo {
     packages: Vec<Package>,
-    resolve: MetadataResolve,
+    resolve: Option<MetadataResolve>,
     version: u32,
 }
 
