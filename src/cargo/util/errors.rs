@@ -337,7 +337,7 @@ pub fn process_error(msg: &str,
                      status: Option<&ExitStatus>,
                      output: Option<&Output>) -> ProcessError {
     let exit = match status {
-        Some(s) => s.to_string(),
+        Some(s) => status_to_string(s),
         None => "never executed".to_string(),
     };
     let mut desc = format!("{} ({})", &msg, exit);
@@ -359,11 +359,45 @@ pub fn process_error(msg: &str,
         }
     }
 
-    ProcessError {
+    return ProcessError {
         desc: desc,
         exit: status.cloned(),
         output: output.cloned(),
         cause: cause,
+    };
+
+    #[cfg(unix)]
+    fn status_to_string(status: &ExitStatus) -> String {
+        use std::os::unix::process::*;
+        use libc;
+
+        if let Some(signal) = status.signal() {
+            let name = match signal as libc::c_int {
+                libc::SIGABRT => ", SIGABRT: process abort signal",
+                libc::SIGALRM => ", SIGALRM: alarm clock",
+                libc::SIGFPE => ", SIGFPE: erroneous arithmetic operation",
+                libc::SIGHUP => ", SIGHUP: hangup",
+                libc::SIGILL => ", SIGILL: illegal instruction",
+                libc::SIGINT => ", SIGINT: terminal interrupt signal",
+                libc::SIGKILL => ", SIGKILL: kill",
+                libc::SIGPIPE => ", SIGPIPE: write on a pipe with no one to read",
+                libc::SIGQUIT => ", SIGQUIT: terminal quite signal",
+                libc::SIGSEGV => ", SIGSEGV: invalid memory reference",
+                libc::SIGTERM => ", SIGTERM: termination signal",
+                libc::SIGBUS => ", SIGBUS: access to undefined memory",
+                libc::SIGSYS => ", SIGSYS: bad system call",
+                libc::SIGTRAP => ", SIGTRAP: trace/breakpoint trap",
+                _ => "",
+            };
+            format!("signal: {}{}", signal, name)
+        } else {
+            status.to_string()
+        }
+    }
+
+    #[cfg(windows)]
+    fn status_to_string(status: &ExitStatus) -> String {
+        status.to_string()
     }
 }
 
