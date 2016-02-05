@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 extern crate hamcrest;
 extern crate cargo;
 

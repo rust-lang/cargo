@@ -7,7 +7,7 @@ use support::{execs, paths};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
-use cargo::util::{process, ProcessBuilder};
+use cargo::util::ProcessBuilder;
 
 fn setup() {
 }
