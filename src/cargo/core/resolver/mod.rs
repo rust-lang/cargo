@@ -217,7 +217,6 @@ struct Context {
     activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
     resolve_graph: Graph<PackageId>,
     resolve_features: HashMap<PackageId, HashSet<String>>,
-    visited: HashSet<PackageId>,
 }
 
 /// Builds the list of all packages required to build the first argument.
@@ -233,6 +232,7 @@ pub fn resolve(summary: &Summary, method: &Method, registry: &mut Registry)
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
     let cx = try!(activate_deps_loop(cx, registry, Rc::new(summary.clone()),
                                      method));
+    try!(check_cycles(&cx, summary.package_id()));
 
     let mut resolve = Resolve {
         graph: cx.resolve_graph,
@@ -246,8 +246,6 @@ pub fn resolve(summary: &Summary, method: &Method, registry: &mut Registry)
         let cksum = summary.checksum().map(|s| s.to_string());
         resolve.checksums.insert(summary.package_id().clone(), cksum);
     }
-
-    try!(check_cycles(&cx));
 
     trace!("resolved: {:?}", resolve);
     Ok(resolve)
@@ -841,18 +839,18 @@ impl Context {
     }
 }
 
-fn check_cycles(cx: &Context) -> CargoResult<()> {
+fn check_cycles(cx: &Context, root: &PackageId) -> CargoResult<()> {
     let mut summaries = HashMap::new();
     for summary in cx.activations.values().flat_map(|v| v) {
         summaries.insert(summary.package_id(), &**summary);
     }
-    return visit(&cx.resolve,
-                 cx.resolve.root(),
+    return visit(&cx.resolve_graph,
+                 root,
                  &summaries,
                  &mut HashSet::new(),
                  &mut HashSet::new());
 
-    fn visit<'a>(resolve: &'a Resolve,
+    fn visit<'a>(resolve: &'a Graph<PackageId>,
                  id: &'a PackageId,
                  summaries: &HashMap<&'a PackageId, &Summary>,
                  visited: &mut HashSet<&'a PackageId>,
@@ -873,7 +871,7 @@ fn check_cycles(cx: &Context) -> CargoResult<()> {
         // dependencies.
         if checked.insert(id) {
             let summary = summaries[id];
-            for dep in resolve.deps(id).into_iter().flat_map(|a| a) {
+            for dep in resolve.edges(id).into_iter().flat_map(|a| a) {
                 let is_transitive = summary.dependencies().iter().any(|d| {
                     d.matches_id(dep) && d.is_transitive()
                 });

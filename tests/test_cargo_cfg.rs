@@ -215,8 +215,8 @@ test!(works_through_the_registry {
 {updating} registry [..]
 {downloading} [..]
 {downloading} [..]
-{compiling} foo v0.1.0 ([..])
-{compiling} bar v0.1.0 ([..])
+{compiling} foo v0.1.0
+{compiling} bar v0.1.0
 {compiling} a v0.0.1 ([..])
 ", compiling = COMPILING, updating = UPDATING, downloading = DOWNLOADING)));
 });

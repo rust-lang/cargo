@@ -6,14 +6,8 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 
 use support::{project, execs};
-<<<<<<< HEAD
 use support::{UPDATING, PACKAGING, UPLOADING, ERROR};
-use support::paths;
-use support::git::repo;
-=======
-use support::{UPDATING, PACKAGING, UPLOADING};
 use support::registry;
->>>>>>> Implement source redirection
 
 use hamcrest::assert_that;
 

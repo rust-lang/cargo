@@ -24,6 +24,7 @@ pub struct Package {
     deps: Vec<(String, String, &'static str, String)>,
     files: Vec<(String, String)>,
     yanked: bool,
+    local: bool,
 }
 
 pub fn init() {
@@ -62,7 +63,13 @@ impl Package {
             deps: Vec::new(),
             files: Vec::new(),
             yanked: false,
+            local: false,
         }
+    }
+
+    pub fn local(&mut self, local: bool) -> &mut Package {
+        self.local = local;
+        self
     }
 
     pub fn file(&mut self, name: &str, contents: &str) -> &mut Package {
@@ -96,7 +103,6 @@ impl Package {
         self
     }
 
-    #[allow(deprecated)] // connect => join in 1.3
     pub fn publish(&self) {
         self.make_archive();
 
@@ -109,7 +115,7 @@ impl Package {
                        \"target\":{},\
                        \"optional\":false,\
                        \"kind\":\"{}\"}}", name, req, target, kind)
-        }).collect::<Vec<_>>().connect(",");
+        }).collect::<Vec<_>>().join(",");
         let cksum = {
             let mut c = Vec::new();
             File::open(&self.archive_dst()).unwrap()
@@ -128,7 +134,11 @@ impl Package {
         };
 
         // Write file/line in the index
-        let dst = registry_path().join(&file);
+        let dst = if self.local {
+            registry_path().join("index").join(&file)
+        } else {
+            registry_path().join(&file)
+        };
         let mut prev = String::new();
         let _ = File::open(&dst).and_then(|mut f| f.read_to_string(&mut prev));
         fs::create_dir_all(dst.parent().unwrap()).unwrap();
@@ -136,20 +146,22 @@ impl Package {
              .write_all((prev + &line[..] + "\n").as_bytes()).unwrap();
 
         // Add the new file to the index
-        let repo = git2::Repository::open(&registry_path()).unwrap();
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new(&file)).unwrap();
-        index.write().unwrap();
-        let id = index.write_tree().unwrap();
+        if !self.local {
+            let repo = git2::Repository::open(&registry_path()).unwrap();
+            let mut index = repo.index().unwrap();
+            index.add_path(Path::new(&file)).unwrap();
+            index.write().unwrap();
+            let id = index.write_tree().unwrap();
 
-        // Commit this change
-        let tree = repo.find_tree(id).unwrap();
-        let sig = repo.signature().unwrap();
-        let parent = repo.refname_to_id("refs/heads/master").unwrap();
-        let parent = repo.find_commit(parent).unwrap();
-        repo.commit(Some("HEAD"), &sig, &sig,
-                    "Another commit", &tree,
-                    &[&parent]).unwrap();
+            // Commit this change
+            let tree = repo.find_tree(id).unwrap();
+            let sig = repo.signature().unwrap();
+            let parent = repo.refname_to_id("refs/heads/master").unwrap();
+            let parent = repo.find_commit(parent).unwrap();
+            repo.commit(Some("HEAD"), &sig, &sig,
+                        "Another commit", &tree,
+                        &[&parent]).unwrap();
+        }
     }
 
     fn make_archive(&self) {
@@ -199,7 +211,12 @@ impl Package {
     }
 
     pub fn archive_dst(&self) -> PathBuf {
-        dl_path().join(&self.name).join(&self.vers).join("download")
+        if self.local {
+            registry_path().join(format!("{}-{}.crate", self.name,
+                                         self.vers))
+        } else {
+            dl_path().join(&self.name).join(&self.vers).join("download")
+        }
     }
 }
 

@@ -438,9 +438,9 @@ test!(bad_source_config1 {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-no source URL specified for `source.foo`, needs [..]
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} no source URL specified for `source.foo`, need [..]
+", error = ERROR)));
 });
 
 test!(bad_source_config2 {
@@ -462,13 +462,13 @@ test!(bad_source_config2 {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-Unable to update registry https://[..]
+                execs().with_status(101).with_stderr(&format!("\
+{error} Unable to update registry https://[..]
 
 Caused by:
   could not find a configured source with the name `bar` \
     when attempting to lookup `crates-io` (configuration in [..])
-"));
+", error = ERROR)));
 });
 
 test!(bad_source_config3 {
@@ -490,12 +490,12 @@ test!(bad_source_config3 {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-Unable to update registry https://[..]
+                execs().with_status(101).with_stderr(&format!("\
+{error} Unable to update registry https://[..]
 
 Caused by:
   detected a cycle of `replace-with` sources, [..]
-"));
+", error = ERROR)));
 });
 
 test!(bad_source_config4 {
@@ -521,13 +521,13 @@ test!(bad_source_config4 {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-Unable to update registry https://[..]
+                execs().with_status(101).with_stderr(&format!("\
+{error} Unable to update registry https://[..]
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
     eventually replaced with itself (configuration in [..])
-"));
+", error = ERROR)));
 });
 
 test!(bad_source_config5 {
@@ -552,12 +552,12 @@ test!(bad_source_config5 {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-configuration key `source.bar.registry` specified an invalid URL (in [..])
+                execs().with_status(101).with_stderr(&format!("\
+{error} configuration key `source.bar.registry` specified an invalid URL (in [..])
 
 Caused by:
   invalid url `not a url`: [..]
-"));
+", error = ERROR)));
 });
 
 test!(bad_source_config6 {
@@ -579,7 +579,31 @@ test!(bad_source_config6 {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-expected a string, but found a array for `source.crates-io.replace-with` in [..]
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} expected a string, but found a array for `source.crates-io.replace-with` in [..]
+", error = ERROR)));
+});
+
+test!(bad_source_config7 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.foo]
+            registry = 'http://example.com'
+            local-registry = 'file:///another/file'
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} more than one source URL specified for `source.foo`
+", error = ERROR)));
 });

@@ -100,7 +100,7 @@ test!(nonexistent {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(&format!("\
 {error} no matching package named `nonexistent` found (required by `foo`)
 location searched: registry [..]
 version required: >= 0.0.0
@@ -125,7 +125,7 @@ test!(wrong_version {
     Package::new("foo", "0.0.2").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(&format!("\
 {error} no matching package named `foo` found (required by `foo`)
 location searched: registry [..]
 version required: >= 1.0.0
@@ -137,7 +137,7 @@ error = ERROR)));
     Package::new("foo", "0.0.4").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(&format!("\
 {error} no matching package named `foo` found (required by `foo`)
 location searched: registry [..]
 version required: >= 1.0.0
@@ -193,7 +193,6 @@ test!(update_registry {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-                execs().with_status(101).with_stderr("\
 {error} no matching package named `notyet` found (required by `foo`)
 location searched: registry [..]
 version required: >= 0.0.0
@@ -393,7 +392,6 @@ test!(relying_on_a_yank_is_bad {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr(&format!("\
-                execs().with_status(101).with_stderr("\
 {error} no matching package named `baz` found (required by `bar`)
 location searched: registry [..]
 version required: = 0.0.2
@@ -421,7 +419,7 @@ test!(yanks_in_lockfiles_are_ok {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
-    fs::remove_dir_all(&registry::registry_path().join("3")).unwrap();
+    registry::registry_path().join("3").rm_rf().unwrap();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
@@ -429,7 +427,7 @@ test!(yanks_in_lockfiles_are_ok {
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("update"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(&format!("\
 {error} no matching package named `bar` found (required by `foo`)
 location searched: registry [..]
 version required: *
@@ -746,7 +744,7 @@ test!(update_publish_then_update {
         .file("src/main.rs", "fn main() {}");
     assert_that(p2.cargo_process("build"),
                 execs().with_status(0));
-    fs::remove_dir_all(&registry).unwrap();
+    registry.rm_rf().unwrap();
     fs::rename(&backup, &registry).unwrap();
     fs::rename(p2.root().join("Cargo.lock"), p.root().join("Cargo.lock")).unwrap();
 
@@ -1031,8 +1029,8 @@ test!(only_download_relevant {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
-{downloading} baz v0.1.0
-{compiling} baz v0.1.0 ([..])
+{downloading} baz v0.1.0 ([..])
+{compiling} baz v0.1.0
 {compiling} bar v0.5.0 ([..])
 ", downloading = DOWNLOADING, compiling = COMPILING, updating = UPDATING)));
 });

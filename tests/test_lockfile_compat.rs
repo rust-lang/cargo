@@ -141,9 +141,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "#).unwrap();
 
     assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr_contains("\
-checksum for `foo v0.1.0` changed between lock files
-"));
+                execs().with_status(101).with_stderr_contains(&format!("\
+{error} checksum for `foo v0.1.0` changed between lock files
+", error = ERROR)));
 });
 
 // If the checksum is unlisted in the lockfile (e.g. <none>) yet we can
@@ -183,8 +183,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "#).unwrap();
 
     assert_that(p.cargo("fetch"),
-                execs().with_status(101).with_stderr("\
-checksum for `foo v0.1.0` was not previously calculated, but a checksum could \
+                execs().with_status(101).with_stderr(&format!("\
+{error} checksum for `foo v0.1.0` was not previously calculated, but a checksum could \
 now be calculated
 
 this could be indicative of a few possible situations:
@@ -195,7 +195,7 @@ this could be indicative of a few possible situations:
       older implementation does not
     * the lock file is corrupt
 
-"));
+", error = ERROR)));
 });
 
 // If the checksum is listed in the lockfile yet we cannot calculate it (e.g.
@@ -244,8 +244,8 @@ source = "git+{0}"
         .write_all(lockfile.as_bytes()).unwrap();
 
     assert_that(p.cargo("fetch"),
-                execs().with_status(101).with_stderr("\
-checksum for `foo v0.1.0 ([..])` could not be calculated, but a \
+                execs().with_status(101).with_stderr(&format!("\
+{error} checksum for `foo v0.1.0 ([..])` could not be calculated, but a \
 checksum is listed in the existing lock file[..]
 
 this could be indicative of a few possible situations:
@@ -256,5 +256,5 @@ this could be indicative of a few possible situations:
 
 unable to verify that `foo v0.1.0 ([..])` was the same as before in either situation
 
-"));
+", error = ERROR)));
 });
