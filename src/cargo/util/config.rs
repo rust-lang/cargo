@@ -2,7 +2,6 @@ use std::cell::{RefCell, RefMut, Ref, Cell};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::{HashMap};
 use std::env;
-use std::ffi::OsString;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -243,26 +242,29 @@ impl Config {
     }
 
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
-        if let Some((dir, dir2)) = try!(self.get_string("build.target-dir")) {
+        if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+            *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
+        } else if let Some((dir, dir2)) = try!(self.get_string("build.target-dir")) {
             let mut path = PathBuf::from(dir2);
             path.pop();
             path.pop();
             path.push(dir);
             *self.target_dir.borrow_mut() = Some(path);
-        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
         }
         Ok(())
     }
 
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+        let var = tool.chars().flat_map(|c| c.to_uppercase()).collect::<String>();
+        if let Some(tool_path) = env::var_os(&var) {
+            return Ok(PathBuf::from(tool_path));
+        }
+
         let var = format!("build.{}", tool);
         if let Some(tool_path) = try!(self.get_path(&var)) {
             return Ok(tool_path);
         }
 
-        let var = tool.chars().flat_map(|c| c.to_uppercase()).collect::<String>();
-        let tool = env::var_os(&var).unwrap_or_else(|| OsString::from(tool));
         Ok(PathBuf::from(tool))
     }
 }
