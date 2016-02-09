@@ -115,6 +115,8 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
             out.push_str("]\n");
         }
         out.push_str("\n");
+    } else if dep.contains_key("replace") {
+        out.push_str(&format!("replace = {}\n\n", lookup(dep, "replace")));
     }
 }
 

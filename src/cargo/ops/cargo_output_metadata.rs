@@ -92,9 +92,7 @@ impl Encodable for MetadataResolve {
             nodes: resolve.iter().map(|id| {
                 Node {
                     id: id,
-                    dependencies: resolve.deps(id)
-                        .map(|it| it.collect())
-                        .unwrap_or(Vec::new()),
+                    dependencies: resolve.deps(id).collect(),
                 }
             }).collect(),
         };

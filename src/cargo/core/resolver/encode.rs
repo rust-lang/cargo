@@ -26,18 +26,23 @@ impl EncodableResolve {
 
         let mut g = Graph::new();
         let mut tmp = HashMap::new();
+        let mut replacements = HashMap::new();
 
         let packages = Vec::new();
         let packages = self.package.as_ref().unwrap_or(&packages);
 
-        let root = try!(to_package_id(&self.root.name,
-                                      &self.root.version,
-                                      self.root.source.as_ref(),
-                                      default, &path_deps));
-        let ids = try!(packages.iter().map(|p| {
-            to_package_id(&p.name, &p.version, p.source.as_ref(),
+        let id2pkgid = |id: &EncodablePackageId| {
+            to_package_id(&id.name, &id.version, id.source.as_ref(),
                           default, &path_deps)
-        }).collect::<CargoResult<Vec<_>>>());
+        };
+        let dep2pkgid = |dep: &EncodableDependency| {
+            to_package_id(&dep.name, &dep.version, dep.source.as_ref(),
+                          default, &path_deps)
+        };
+
+        let root = try!(dep2pkgid(&self.root));
+        let ids = try!(packages.iter().map(&dep2pkgid)
+                               .collect::<CargoResult<Vec<_>>>());
 
         {
             let mut register_pkg = |pkgid: &PackageId| {
@@ -57,16 +62,22 @@ impl EncodableResolve {
         {
             let mut add_dependencies = |id: &PackageId, pkg: &EncodableDependency|
                                         -> CargoResult<()> {
+                if let Some(ref replace) = pkg.replace {
+                    let replace = try!(id2pkgid(replace));
+                    let replace_precise = tmp.get(&replace).map(|p| {
+                        replace.with_precise(p.clone())
+                    }).unwrap_or(replace);
+                    replacements.insert(id.clone(), replace_precise);
+                    assert!(pkg.dependencies.is_none());
+                    return Ok(())
+                }
+
                 let deps = match pkg.dependencies {
                     Some(ref deps) => deps,
                     None => return Ok(()),
                 };
                 for edge in deps.iter() {
-                    let to_depend_on = try!(to_package_id(&edge.name,
-                                                          &edge.version,
-                                                          edge.source.as_ref(),
-                                                          default,
-                                                          &path_deps));
+                    let to_depend_on = try!(id2pkgid(edge));
                     let precise_pkgid =
                         tmp.get(&to_depend_on)
                            .map(|p| to_depend_on.with_precise(p.clone()))
@@ -87,6 +98,7 @@ impl EncodableResolve {
             root: root,
             features: HashMap::new(),
             metadata: self.metadata.clone(),
+            replacements: replacements,
         })
     }
 }
@@ -136,7 +148,8 @@ pub struct EncodableDependency {
     name: String,
     version: String,
     source: Option<SourceId>,
-    dependencies: Option<Vec<EncodablePackageId>>
+    dependencies: Option<Vec<EncodablePackageId>>,
+    replace: Option<EncodablePackageId>,
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -186,24 +199,32 @@ impl Encodable for Resolve {
         let encodable = ids.iter().filter_map(|&id| {
             if self.root == *id { return None; }
 
-            Some(encodable_resolve_node(id, &self.graph))
+            Some(encodable_resolve_node(id, self))
         }).collect::<Vec<EncodableDependency>>();
 
         EncodableResolve {
             package: Some(encodable),
-            root: encodable_resolve_node(&self.root, &self.graph),
+            root: encodable_resolve_node(&self.root, self),
             metadata: self.metadata.clone(),
         }.encode(s)
     }
 }
 
-fn encodable_resolve_node(id: &PackageId, graph: &Graph<PackageId>)
+fn encodable_resolve_node(id: &PackageId, resolve: &Resolve)
                           -> EncodableDependency {
-    let deps = graph.edges(id).map(|edge| {
-        let mut deps = edge.map(encodable_package_id).collect::<Vec<_>>();
-        deps.sort();
-        deps
-    });
+    let (replace, deps) = match resolve.replacement(id) {
+        Some(id) => {
+            (Some(encodable_package_id(id)), None)
+        }
+        None => {
+            let mut deps = resolve.graph.edges(id)
+                                  .into_iter().flat_map(|a| a)
+                                  .map(encodable_package_id)
+                                  .collect::<Vec<_>>();
+            deps.sort();
+            (None, Some(deps))
+        }
+    };
 
     let source = if id.source_id().is_path() {
         None
@@ -216,6 +237,7 @@ fn encodable_resolve_node(id: &PackageId, graph: &Graph<PackageId>)
         version: id.version().to_string(),
         source: source,
         dependencies: deps,
+        replace: replace,
     }
 }
 
