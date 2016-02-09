@@ -6,10 +6,10 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use toml;
-use semver;
+use semver::{self, VersionReq};
 use rustc_serialize::{Decodable, Decoder};
 
-use core::{SourceId, Profiles};
+use core::{SourceId, Profiles, PackageIdSpec};
 use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId,
            GitReference};
 use core::dependency::{Kind, Platform};
@@ -220,6 +220,7 @@ pub struct TomlManifest {
     build_dependencies: Option<HashMap<String, TomlDependency>>,
     features: Option<HashMap<String, Vec<String>>>,
     target: Option<HashMap<String, TomlPlatform>>,
+    replace: Option<HashMap<String, TomlDependency>>,
 }
 
 #[derive(RustcDecodable, Clone, Default)]
@@ -503,6 +504,7 @@ impl TomlManifest {
         }
 
         let mut deps = Vec::new();
+        let mut replace = Vec::new();
 
         {
 
@@ -538,6 +540,36 @@ impl TomlManifest {
                                               Some(Kind::Development)));
                 }
             }
+
+            if let Some(ref map) = self.replace {
+                for (spec, replacement) in map {
+                    let spec = try!(PackageIdSpec::parse(spec));
+
+                    let version_specified = match *replacement {
+                        TomlDependency::Detailed(ref d) => d.version.is_some(),
+                        TomlDependency::Simple(..) => true,
+                    };
+                    if version_specified {
+                        bail!("replacements cannot specify a version \
+                               requirement, but found one for `{}`", spec);
+                    }
+
+                    let dep = try!(replacement.to_dependency(spec.name(),
+                                                             &mut cx,
+                                                             None));
+                    let dep = {
+                        let version = try!(spec.version().chain_error(|| {
+                            human(format!("replacements must specify a version \
+                                           to replace, but `{}` does not",
+                                          spec))
+                        }));
+                        let req = VersionReq::exact(version);
+                        dep.clone_inner().set_version_req(req)
+                           .into_dependency()
+                    };
+                    replace.push((spec, dep));
+                }
+            }
         }
 
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
@@ -566,7 +598,8 @@ impl TomlManifest {
                                          project.links.clone(),
                                          metadata,
                                          profiles,
-                                         publish);
+                                         publish,
+                                         replace);
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("only one of `license` or \
                                           `license-file` is necessary"));
@@ -660,16 +693,13 @@ fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
     }
 }
 
-fn process_dependencies(cx: &mut Context,
-                        new_deps: Option<&HashMap<String, TomlDependency>>,
-                        kind: Option<Kind>)
-                        -> CargoResult<()> {
-    let dependencies = match new_deps {
-        Some(ref dependencies) => dependencies,
-        None => return Ok(())
-    };
-    for (n, v) in dependencies.iter() {
-        let details = match *v {
+impl TomlDependency {
+    fn to_dependency(&self,
+                     name: &str,
+                     cx: &mut Context,
+                     kind: Option<Kind>)
+                     -> CargoResult<Dependency> {
+        let details = match *self {
             TomlDependency::Simple(ref version) => {
                 let mut d: DetailedTomlDependency = Default::default();
                 d.version = Some(version.clone());
@@ -680,11 +710,11 @@ fn process_dependencies(cx: &mut Context,
 
         if details.version.is_none() && details.path.is_none() &&
            details.git.is_none() {
-            cx.warnings.push(format!("dependency ({}) specified \
-                                      without providing a local path, Git \
-                                      repository, or version to use. This will \
-                                      be considered an error in future \
-                                      versions", n));
+            let msg = format!("dependency ({}) specified without \
+                               providing a local path, Git repository, or \
+                               version to use. This will be considered an \
+                               error in future versions", name);
+            cx.warnings.push(msg);
         }
 
         let reference = details.branch.clone().map(GitReference::Branch)
@@ -725,7 +755,7 @@ fn process_dependencies(cx: &mut Context,
         }.unwrap_or(try!(SourceId::for_central(cx.config)));
 
         let version = details.version.as_ref().map(|v| &v[..]);
-        let mut dep = try!(DependencyInner::parse(&n, version, &new_source_id));
+        let mut dep = try!(DependencyInner::parse(name, version, &new_source_id));
         dep = dep.set_features(details.features.unwrap_or(Vec::new()))
                  .set_default_features(details.default_features.unwrap_or(true))
                  .set_optional(details.optional.unwrap_or(false))
@@ -733,7 +763,21 @@ fn process_dependencies(cx: &mut Context,
         if let Some(kind) = kind {
             dep = dep.set_kind(kind);
         }
-        cx.deps.push(dep.into_dependency());
+        Ok(dep.into_dependency())
+    }
+}
+
+fn process_dependencies(cx: &mut Context,
+                        new_deps: Option<&HashMap<String, TomlDependency>>,
+                        kind: Option<Kind>)
+                        -> CargoResult<()> {
+    let dependencies = match new_deps {
+        Some(ref dependencies) => dependencies,
+        None => return Ok(())
+    };
+    for (n, v) in dependencies.iter() {
+        let dep = try!(v.to_dependency(n, cx, kind));
+        cx.deps.push(dep);
     }
 
     Ok(())

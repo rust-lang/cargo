@@ -79,7 +79,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
-            overrides: vec![],
+            overrides: Vec::new(),
             config: config,
             locked: HashMap::new(),
         }
@@ -270,18 +270,16 @@ impl<'cfg> PackageRegistry<'cfg> {
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let overrides = try!(self.query_overrides(dep));
+        let overrides = try!(self.query_overrides(&dep));
 
         let ret = if overrides.is_empty() {
             // Ensure the requested source_id is loaded
             try!(self.ensure_loaded(dep.source_id(), Kind::Normal));
-            let mut ret = Vec::new();
-            for (id, src) in self.sources.sources_mut() {
-                if id == dep.source_id() {
-                    ret.extend(try!(src.query(dep)).into_iter());
-                }
+
+            match self.sources.get_mut(dep.source_id()) {
+                Some(src) => try!(src.query(&dep)),
+                None => Vec::new(),
             }
-            ret
         } else {
             overrides
         };
