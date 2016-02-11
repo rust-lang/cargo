@@ -1,5 +1,5 @@
 pub use self::dependency::{Dependency, DependencyInner};
-pub use self::manifest::{Manifest, Target, TargetKind, Profile, LibKind, Profiles};
+pub use self::manifest::{Manifest, Target, TargetKind, Profile, ProfileId, LibKind, Profiles};
 pub use self::package::{Package, PackageSet};
 pub use self::package_id::{PackageId, Metadata};
 pub use self::package_id_spec::PackageIdSpec;

@@ -240,6 +240,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
+        build_config.deps_profile = root_package.manifest().deps_profile().cloned();
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }

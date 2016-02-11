@@ -255,6 +255,7 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<bool>,
+    dependencies_profile: Option<String>,
 
     // package metadata
     description: Option<String>,
@@ -564,6 +565,13 @@ impl TomlManifest {
         };
         let profiles = build_profiles(&self.profile);
         let publish = project.publish.unwrap_or(true);
+        let deps_profile = match project.dependencies_profile {
+            None => None,
+            Some(ref name) => match profiles.name_to_id(name) {
+                None => bail!("No such profile {}", name),
+                Some(id) => Some(id),
+            }
+        };
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          exclude,
@@ -571,7 +579,8 @@ impl TomlManifest {
                                          project.links.clone(),
                                          metadata,
                                          profiles,
-                                         publish);
+                                         publish,
+                                         deps_profile);
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("warning: only one of `license` or \
                                                    `license-file` is necessary"));
@@ -975,7 +984,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath
+            opt_level, lto, codegen_units, debug, debug_assertions, rpath,
         } = match toml {
             Some(toml) => toml,
             None => return profile,

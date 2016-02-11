@@ -1,4 +1,5 @@
 use std::default::Default;
+use std::collections::HashMap;
 use std::fmt;
 use std::path::{PathBuf, Path};
 
@@ -20,7 +21,8 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     profiles: Profiles,
-    publish: bool
+    publish: bool,
+    deps_profile: Option<ProfileId>,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -115,6 +117,11 @@ pub struct Profile {
     pub run_custom_build: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct ProfileId {
+    name: String
+}
+
 #[derive(Default, Clone, Debug)]
 pub struct Profiles {
     pub release: Profile,
@@ -165,7 +172,8 @@ impl Manifest {
                links: Option<String>,
                metadata: ManifestMetadata,
                profiles: Profiles,
-               publish: bool) -> Manifest {
+               publish: bool,
+               deps_profile: Option<ProfileId>) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -176,6 +184,7 @@ impl Manifest {
             metadata: metadata,
             profiles: profiles,
             publish: publish,
+            deps_profile: deps_profile,
         }
     }
 
@@ -191,6 +200,7 @@ impl Manifest {
     pub fn warnings(&self) -> &[String] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn publish(&self) -> bool { self.publish }
+    pub fn deps_profile(&self) -> Option<&ProfileId> { self.deps_profile.as_ref() }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }
@@ -482,5 +492,28 @@ impl fmt::Display for Profile {
             write!(f, "Profile(build)")
         }
 
+    }
+}
+
+impl Profiles {
+    pub fn name_to_id(&self, name: &str) -> Option<ProfileId> {
+        if self.all_profiles().contains_key(name) {
+            Some(ProfileId { name: name.to_owned() })
+        } else {
+            None
+        }
+    }
+
+    pub fn by_id(&self, id: &ProfileId) -> &Profile {
+        let key: &str = &id.name;
+        self.all_profiles()[key]
+    }
+
+    fn all_profiles(&self) -> HashMap<&str, &Profile> {
+        [("dev", &self.dev),
+         ("release", &self.release),
+         ("test", &self.test),
+         ("bench", &self.bench),
+         ("doc", &self.doc)].iter().map(|&x| x).collect()
     }
 }

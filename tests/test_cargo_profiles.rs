@@ -1,8 +1,9 @@
 use std::env;
 use std::path::MAIN_SEPARATOR as SEP;
 
+use support::registry::Package;
+use support::{COMPILING, RUNNING, UPDATING, DOWNLOADING};
 use support::{project, execs};
-use support::{COMPILING, RUNNING};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -108,4 +109,55 @@ test!(top_level_overrides_deps {
                     sep = SEP,
                     prefix = env::consts::DLL_PREFIX,
                     suffix = env::consts::DLL_SUFFIX)));
+});
+
+
+test!(dependencies_profile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            dependencies-profile="release"
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [profile.release]
+            opt-level = 3
+
+            [dependencies]
+            baz = "*"
+        "#)
+        .file("src/lib.rs", "extern crate baz;");
+        Package::new("baz", "0.0.1").publish();
+
+        assert_that(p.cargo_process("build").arg("-v"),
+        execs().with_status(0).with_stdout(&format!("\
+{updating} registry [..]
+{downloading} baz v0.0.1 ([..])
+{compiling} baz v0.0.1 ([..])
+{running} `rustc [..]lib.rs --crate-name baz --crate-type lib \
+        -C opt-level=3 \
+        -C metadata=[..] \
+        -C extra-filename=[..] \
+        --out-dir [..]deps \
+        --emit=dep-info,link \
+        -L dependency=[..]deps \
+        -L dependency=[..]deps \
+        --cap-lints allow`
+{compiling} test v0.0.0 ([..])
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+        -g \
+        --out-dir {dir}{sep}target{sep}debug \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}debug \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps \
+        --extern baz=[..].rlib`",
+            updating = UPDATING,
+            downloading = DOWNLOADING,
+            running = RUNNING,
+            compiling = COMPILING,
+            sep = SEP,
+            dir = p.root().display())
+        ));
 });

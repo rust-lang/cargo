@@ -7,7 +7,7 @@ use std::path::{self, PathBuf};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use core::{Profile, Profiles};
+use core::{Profile, ProfileId, Profiles};
 use util::{self, CargoResult, human};
 use util::{Config, internal, ChainError, profile, join_paths};
 
@@ -42,6 +42,7 @@ pub struct BuildConfig {
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
     pub doc_all: bool,
+    pub deps_profile: Option<ProfileId>,
 }
 
 #[derive(Clone, Default)]
