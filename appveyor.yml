@@ -5,7 +5,6 @@ environment:
     BITS: 32
     TARGET: i686-pc-windows-msvc
     ARCH: x86
-    NEEDS_LIBGCC: 1
   - MSVC: 1
     BITS: 64
     TARGET: x86_64-pc-windows-msvc
@@ -17,14 +16,13 @@ install:
   - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" %ARCH%
   - SET PATH=%PATH%;%cd%/rustc/bin
   - SET PATH=%PATH%;%cd%/target/snapshot/bin
-  - if defined NEEDS_LIBGCC set PATH=%PATH%;C:\MinGW\bin
   - rustc -V
   - cargo -V
 
 build: false
 
 test_script:
-  - cargo test -- --nocapture
+  - cargo test
 
 branches:
   only:

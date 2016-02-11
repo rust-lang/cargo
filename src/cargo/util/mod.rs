@@ -29,6 +29,7 @@ pub mod to_semver;
 pub mod to_url;
 pub mod toml;
 pub mod lev_distance;
+pub mod job;
 mod dependency_queue;
 mod sha256;
 mod shell_escape;

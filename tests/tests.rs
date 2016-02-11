@@ -69,6 +69,7 @@ mod test_cargo_tool_paths;
 mod test_cargo_verify_project;
 mod test_cargo_version;
 mod test_shell;
+mod test_cargo_death;
 
 thread_local!(static RUSTC: Rustc = Rustc::new("rustc").unwrap());
 
