@@ -104,6 +104,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_color_config(flags.flag_color.as_ref().map(|s| &s[..])));
 
     init_git_transports(config);
+    cargo::util::job::setup();
 
     if flags.flag_version {
         println!("{}", cargo::version());
