@@ -62,8 +62,17 @@ pub fn doc(manifest_path: &Path,
 }
 
 fn build_markdown_docs(manifest_path: &Path) -> CargoResult<()> {
-    let docs_dir = manifest_path.parent().unwrap().join("doc");
-    let target_dir = manifest_path.parent().unwrap().join("target/doc");
+    let docs_dir = if let Some(dir) = manifest_path.parent() {
+        dir.join("doc")
+    } else {
+        return Ok(());
+    };
+
+    let target_dir = if let Some(dir) = manifest_path.parent() {
+        dir.join("target/doc")
+    } else {
+        return Ok(());
+    };
 
     try!(fs::create_dir_all(&target_dir));
 
