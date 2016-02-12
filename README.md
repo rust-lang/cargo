@@ -84,6 +84,10 @@ a list of known community-developed subcommands.
 To contribute to the docs, all you need to do is change the markdown files in
 the `src/doc` directory.
 
+## Release notes
+
+High level release notes are available as part of [Rust's release notes](https://github.com/rust-lang/rust/blob/master/RELEASES.md).
+
 ## Reporting Issues
 
 Found a bug? We'd love to know about it!
