@@ -61,7 +61,7 @@ fn main() {
 }
 
 macro_rules! each_subcommand{
-    ($mac:ident) => ({
+    ($mac:ident) => {
         $mac!(bench);
         $mac!(build);
         $mac!(clean);
@@ -91,7 +91,14 @@ macro_rules! each_subcommand{
         $mac!(verify_project);
         $mac!(version);
         $mac!(yank);
-    })
+    }
+}
+
+mod subcommands {
+    macro_rules! declare_mod {
+        ($name:ident) => ( pub mod $name; )
+    }
+    each_subcommand!(declare_mod);
 }
 
 /**
@@ -152,10 +159,9 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
     macro_rules! cmd{
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
-            mod $name;
             config.shell().set_verbose(true);
-            let r = cargo::call_main_without_stdin($name::execute, config,
-                                                   $name::USAGE,
+            let r = cargo::call_main_without_stdin(subcommands::$name::execute, config,
+                                                   subcommands::$name::USAGE,
                                                    &args,
                                                    false);
             cargo::process_executed(r, &mut config.shell());
@@ -232,7 +238,7 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
     }
 
     macro_rules! add_cmd {
-        ($cmd:ident) => (commands.insert(stringify!($cmd).replace("_", "-")))
+        ($cmd:ident) => ({ commands.insert(stringify!($cmd).replace("_", "-")); })
     }
     each_subcommand!(add_cmd);
     commands
