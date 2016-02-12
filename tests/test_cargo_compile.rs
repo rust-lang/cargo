@@ -1913,9 +1913,9 @@ test!(custom_target_dir {
     fs::create_dir(p.root().join(".cargo")).unwrap();
     File::create(p.root().join(".cargo/config")).unwrap().write_all(br#"
         [build]
-        target-dir = "bar/target"
+        target-dir = "foo/target"
     "#).unwrap();
-    assert_that(p.cargo("build").env("CARGO_TARGET_DIR", "foo/target"),
+    assert_that(p.cargo("build").env("CARGO_TARGET_DIR", "bar/target"),
                 execs().with_status(0));
     assert_that(&p.root().join("bar/target/debug").join(&exe_name),
                 existing_file());
