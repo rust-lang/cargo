@@ -84,10 +84,6 @@ fn is_nightly() -> bool {
     })
 }
 
-fn can_panic() -> bool {
-    RUSTC.with(|r| !(r.host.contains("msvc") && !r.host.contains("x86_64")))
-}
-
 fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
     let mut p = cargo::util::process(t.as_ref());
     p.cwd(&support::paths::root())

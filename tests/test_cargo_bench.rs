@@ -154,7 +154,6 @@ test!(many_similar_names {
 
 test!(cargo_bench_failing_test {
     if !::is_nightly() { return }
-    if !::can_panic() { return }
 
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -934,7 +933,7 @@ test!(test_bench_no_run {
         "#)
         .file("src/lib.rs", "")
         .file("benches/bbaz.rs", r#"
-            #![feature(test)] 
+            #![feature(test)]
 
             extern crate test;
 
