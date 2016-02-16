@@ -21,7 +21,7 @@ pub fn dl_url() -> Url { Url::from_file_path(&*dl_path()).ok().unwrap() }
 pub struct Package {
     name: String,
     vers: String,
-    deps: Vec<(String, String, &'static str)>,
+    deps: Vec<(String, String, &'static str, String)>,
     files: Vec<(String, String)>,
     yanked: bool,
 }
@@ -64,12 +64,23 @@ impl Package {
     }
 
     pub fn dep(&mut self, name: &str, vers: &str) -> &mut Package {
-        self.deps.push((name.to_string(), vers.to_string(), "normal"));
+        self.deps.push((name.to_string(), vers.to_string(), "normal",
+                        "null".to_string()));
+        self
+    }
+
+    pub fn target_dep(&mut self,
+                      name: &str,
+                      vers: &str,
+                      target: &str) -> &mut Package {
+        self.deps.push((name.to_string(), vers.to_string(), "normal",
+                        format!("\"{}\"", target)));
         self
     }
 
     pub fn dev_dep(&mut self, name: &str, vers: &str) -> &mut Package {
-        self.deps.push((name.to_string(), vers.to_string(), "dev"));
+        self.deps.push((name.to_string(), vers.to_string(), "dev",
+                        "null".to_string()));
         self
     }
 
@@ -83,14 +94,14 @@ impl Package {
         self.make_archive();
 
         // Figure out what we're going to write into the index
-        let deps = self.deps.iter().map(|&(ref name, ref req, ref kind)| {
+        let deps = self.deps.iter().map(|&(ref name, ref req, ref kind, ref target)| {
             format!("{{\"name\":\"{}\",\
                        \"req\":\"{}\",\
                        \"features\":[],\
                        \"default_features\":false,\
-                       \"target\":null,\
+                       \"target\":{},\
                        \"optional\":false,\
-                       \"kind\":\"{}\"}}", name, req, kind)
+                       \"kind\":\"{}\"}}", name, req, target, kind)
         }).collect::<Vec<_>>().connect(",");
         let cksum = {
             let mut c = Vec::new();
@@ -141,15 +152,20 @@ impl Package {
             version = "{}"
             authors = []
         "#, self.name, self.vers);
-        for &(ref dep, ref req, kind) in self.deps.iter() {
-            manifest.push_str(&format!(r#"
-                [{}dependencies.{}]
-                version = "{}"
-            "#, match kind {
+        for &(ref dep, ref req, kind, ref target) in self.deps.iter() {
+            let target = match &target[..] {
+                "null" => String::new(),
+                t => format!("target.{}.", t),
+            };
+            let kind = match kind {
                 "build" => "build-",
                 "dev" => "dev-",
                 _ => ""
-            }, dep, req));
+            };
+            manifest.push_str(&format!(r#"
+                [{}{}dependencies.{}]
+                version = "{}"
+            "#, target, kind, dep, req));
         }
 
         let dst = self.archive_dst();

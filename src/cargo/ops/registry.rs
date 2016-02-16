@@ -81,7 +81,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
             name: dep.name().to_string(),
             features: dep.features().to_vec(),
             version_req: dep.version_req().to_string(),
-            target: dep.only_for_platform().map(|s| s.to_string()),
+            target: dep.platform().map(|s| s.to_string()),
             kind: match dep.kind() {
                 Kind::Normal => "normal",
                 Kind::Build => "build",
