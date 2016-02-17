@@ -2396,3 +2396,53 @@ test!(rustflags_plugin_dep_with_target {
                 .arg("--target").arg(host),
                 execs().with_status(0));
 });
+
+test!(rustflags_recompile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    // Setting RUSTFLAGS forces a recompile
+    assert_that(p.cargo("build").env("RUSTFLAGS", "-Z bogus"),
+                execs().with_status(101));
+});
+
+test!(rustflags_recompile2 {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
+                execs().with_status(0));
+    // Setting RUSTFLAGS forces a recompile
+    assert_that(p.cargo("build").env("RUSTFLAGS", "-Z bogus"),
+                execs().with_status(101));
+});
+
+test!(rustflags_no_recompile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
+                execs().with_status(0));
+    assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
+                execs().with_stdout("").with_status(0));
+});
