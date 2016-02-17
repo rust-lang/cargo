@@ -44,6 +44,7 @@ Some common cargo commands are:
     clean       Remove the target directory
     doc         Build this project's and its dependencies' documentation
     new         Create a new cargo project
+    init        Create a new cargo project in an existing directory
     run         Build and execute src/main.rs
     test        Run the tests
     bench       Run the benchmarks

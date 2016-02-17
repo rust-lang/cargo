@@ -44,6 +44,9 @@ Remove the target directory with build output
 \fBcargo doc\fR
 Build this project's and its dependencies' documentation
 .TP
+\fBcargo init\fR
+Create a new cargo project in the current directory
+.TP
 \fBcargo install\fR
 Install a Rust binary
 .TP
@@ -89,6 +92,13 @@ Build a package with optimizations
 
 Run tests for a cross-compiled target
     $ cargo test --target i686-unknown-linux-gnu
+
+Create a new project that builds an executable
+    $ cargo new --init foobar
+
+Create a project in the current directory
+    $ mkdir foo && cd foo
+    $ cargo init .
 
 Learn about a command's options and usage
     $ cargo help clean
