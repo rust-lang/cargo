@@ -1,4 +1,5 @@
 use std::collections::{HashSet, HashMap};
+use std::env;
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::Arc;
@@ -46,6 +47,7 @@ pub struct Context<'a, 'cfg: 'a> {
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
+    rustflags: Option<String>,
 }
 
 #[derive(Clone)]
@@ -78,6 +80,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
             Arc::new(Box::new(ProcessEngine))
         });
+        let rustflags = env::var("RUSTFLAGS").ok();
         Ok(Context {
             target_triple: target_triple,
             host: host,
@@ -97,6 +100,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
+            rustflags: rustflags,
         })
     }
 
@@ -615,5 +619,46 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // TODO: should build scripts always be built with a dev
         //       profile? How is this controlled at the CLI layer?
         &self.profiles.dev
+    }
+
+    pub fn rustflags_args(&self, unit: &Unit) -> Vec<String> {
+        // We *want* to apply RUSTFLAGS only to builds for the
+        // requested target architecture, and not to things like build
+        // scripts and plugins, which may be for an entirely different
+        // architecture. Cargo's present architecture makes it quite
+        // hard to only apply flags to things that are not build
+        // scripts and plugins though, so we do something more hacky
+        // instead to avoid applying the same RUSTFLAGS to multiple targets
+        // arches:
+        //
+        // 1) If --target is not specified we just apply RUSTFLAGS to
+        // all builds; they are all going to have the same target.
+        //
+        // 2) If --target *is* specified then we only apply RUSTFLAGS
+        // to compilation units with the Target kind, which indicates
+        // it was chosen by the --target flag.
+        //
+        // This means that, e.g. even if the specified --target is the
+        // same as the host, build scripts in plugins won't get
+        // RUSTFLAGS.
+        let compiling_with_target = self.build_config.requested_target.is_some();
+        let is_target_kind = unit.kind == Kind::Target;
+        let use_rustflags = match (compiling_with_target, is_target_kind) {
+            (false, _) => true,
+            (true, true) => true,
+            (true, false) => false,
+        };
+
+        if !use_rustflags { return Vec::new(); }
+
+        let mut args = Vec::new();
+
+        if let Some(ref a) = self.rustflags {
+            for s in a.split(" ") {
+                args.push(s.to_owned());
+            }
+        }
+
+        args
     }
 }
