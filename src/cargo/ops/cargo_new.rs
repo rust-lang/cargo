@@ -36,6 +36,7 @@ struct MkOptions<'a> {
     path: &'a Path,
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
+    bin: bool,
 }
 
 impl Decodable for VersionControl {
@@ -222,6 +223,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         path: &path,
         name: name,
         source_files: vec![plan_new_source_file(opts.bin, name.to_string())],
+        bin: opts.bin,
     };
     
     mk(config, &mkopts).chain_error(|| {
@@ -282,6 +284,7 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         version_control: version_control,
         path: &path,
         name: name,
+        bin: src_paths_types.iter().any(|x|x.bin),
         source_files: src_paths_types,
     };
     
@@ -315,7 +318,9 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let cfg = try!(global_config(config));
     let mut ignore = "target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
-    ignore.push_str("Cargo.lock\n");
+    if !opts.bin {
+        ignore.push_str("Cargo.lock\n");
+    }
 
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
         (None, None, false) => VersionControl::Git,
