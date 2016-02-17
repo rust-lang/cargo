@@ -243,9 +243,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
-    return Ok(Work::new(move |desc_tx| {
-        debug!("about to run: {}", rustc);
+    let rustflags = cx.rustflags_args(unit);
 
+    return Ok(Work::new(move |desc_tx| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -266,6 +266,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 try!(fs::remove_file(&dst));
             }
         }
+
+        // Add the arguments from RUSTFLAGS
+        rustc.args(&rustflags);
 
         desc_tx.send(rustc.to_string()).ok();
         try!(exec_engine.exec(rustc).chain_error(|| {
