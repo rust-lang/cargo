@@ -285,6 +285,67 @@ test!(gitignore_appended_not_replaced {
     assert!(contents.contains(r#"qqqqqq"#));
 });
 
+test!(cargo_lock_gitignored_if_lib1 {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+    
+    assert_that(cargo_process("init").arg("--vcs").arg("git")
+                                     .env("USER", "foo"),
+                execs().with_status(0));
+    
+    assert_that(&paths::root().join(".gitignore"), existing_file());
+    
+    let mut contents = String::new();
+    File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"Cargo.lock"#));
+});
+
+test!(cargo_lock_gitignored_if_lib2 {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+    
+    File::create(&paths::root().join("lib.rs")).unwrap().write_all(br#""#).unwrap();
+
+    assert_that(cargo_process("init").arg("--vcs").arg("git")
+                                     .env("USER", "foo"),
+                execs().with_status(0));
+    
+    assert_that(&paths::root().join(".gitignore"), existing_file());
+    
+    let mut contents = String::new();
+    File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"Cargo.lock"#));
+});
+
+test!(cargo_lock_not_gitignored_if_bin1 {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+    
+    assert_that(cargo_process("init").arg("--vcs").arg("git")
+                                     .arg("--bin")
+                                     .env("USER", "foo"),
+                execs().with_status(0));
+    
+    assert_that(&paths::root().join(".gitignore"), existing_file());
+    
+    let mut contents = String::new();
+    File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(!contents.contains(r#"Cargo.lock"#));
+});
+
+test!(cargo_lock_not_gitignored_if_bin2 {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+    
+    File::create(&paths::root().join("main.rs")).unwrap().write_all(br#""#).unwrap();
+
+    assert_that(cargo_process("init").arg("--vcs").arg("git")
+                                     .env("USER", "foo"),
+                execs().with_status(0));
+    
+    assert_that(&paths::root().join(".gitignore"), existing_file());
+    
+    let mut contents = String::new();
+    File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(!contents.contains(r#"Cargo.lock"#));
+});
+
 test!(with_argument {
     assert_that(cargo_process("init").arg("foo").arg("--vcs").arg("none")
                                      .env("USER", "foo"),
