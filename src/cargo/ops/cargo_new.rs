@@ -414,7 +414,7 @@ fn main() {
         } else {
             b"\
 #[cfg(test)]
-mod test {
+mod tests {
     #[test]
     fn it_works() {
     }
