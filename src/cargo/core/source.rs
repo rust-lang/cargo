@@ -443,65 +443,6 @@ impl<'a, 'src> Iterator for SourcesMut<'a, 'src> {
     }
 }
 
-/// List of `Source` implementors. `SourceSet` itself implements `Source`.
-pub struct SourceSet<'src> {
-    sources: Vec<Box<Source+'src>>
-}
-
-impl<'src> SourceSet<'src> {
-    pub fn new(sources: Vec<Box<Source+'src>>) -> SourceSet<'src> {
-        SourceSet { sources: sources }
-    }
-}
-
-impl<'src> Registry for SourceSet<'src> {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
-        let mut ret = Vec::new();
-
-        for source in self.sources.iter_mut() {
-            ret.extend(try!(source.query(name)).into_iter());
-        }
-
-        Ok(ret)
-    }
-}
-
-impl<'src> Source for SourceSet<'src> {
-    fn update(&mut self) -> CargoResult<()> {
-        for source in self.sources.iter_mut() {
-            try!(source.update());
-        }
-
-        Ok(())
-    }
-
-    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
-        for source in self.sources.iter_mut() {
-            try!(source.download(packages));
-        }
-
-        Ok(())
-    }
-
-    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
-        let mut ret = Vec::new();
-
-        for source in self.sources.iter() {
-            ret.extend(try!(source.get(packages)).into_iter());
-        }
-
-        Ok(ret)
-    }
-
-    fn fingerprint(&self, id: &Package) -> CargoResult<String> {
-        let mut ret = String::new();
-        for source in self.sources.iter() {
-            ret.push_str(&try!(source.fingerprint(id))[..]);
-        }
-        Ok(ret)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{SourceId, Kind, GitReference};
