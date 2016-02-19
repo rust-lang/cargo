@@ -126,8 +126,8 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
 }
 
 pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
-    let index = try!(config.get_string("registry.index")).map(|p| p.0);
-    let token = try!(config.get_string("registry.token")).map(|p| p.0);
+    let index = try!(config.get_string("registry.index")).map(|p| p.val);
+    let token = try!(config.get_string("registry.token")).map(|p| p.val);
     Ok(RegistryConfig { index: index, token: token })
 }
 
@@ -182,7 +182,7 @@ pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
 /// via environment variables are picked up by libcurl.
 fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
     match try!(config.get_string("http.proxy")) {
-        Some((s, _)) => return Ok(Some(s)),
+        Some(s) => return Ok(Some(s.val)),
         None => {}
     }
     match git2::Config::open_default() {
@@ -218,7 +218,7 @@ pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
     match try!(config.get_i64("http.timeout")) {
-        Some((s, _)) => return Ok(Some(s)),
+        Some(s) => return Ok(Some(s.val)),
         None => {}
     }
     Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))

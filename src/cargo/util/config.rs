@@ -148,50 +148,74 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
-    pub fn get_string(&self, key: &str) -> CargoResult<Option<(String, PathBuf)>> {
+    pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
         match try!(self.get(key)) {
-            Some(CV::String(i, path)) => Ok(Some((i, path))),
+            Some(CV::String(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("string", key, val),
             None => Ok(None),
         }
     }
 
-    pub fn get_path(&self, key: &str) -> CargoResult<Option<PathBuf>> {
-        if let Some((specified_path, path_to_config)) = try!(self.get_string(&key)) {
-            if specified_path.contains("/") || (cfg!(windows) && specified_path.contains("\\")) {
-                // An absolute or a relative path
-                let prefix_path = path_to_config.parent().unwrap().parent().unwrap();
-                // Joining an absolute path to any path results in the given absolute path
-                Ok(Some(prefix_path.join(specified_path)))
+    pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
+        if let Some(val) = try!(self.get_string(&key)) {
+            let is_path = val.val.contains("/") ||
+                          (cfg!(windows) && val.val.contains("\\"));
+            let path = if is_path {
+                val.definition.root(self).join(val.val)
             } else {
                 // A pathless name
-                Ok(Some(PathBuf::from(specified_path)))
-            }
+                PathBuf::from(val.val)
+            };
+            Ok(Some(Value {
+                val: path,
+                definition: val.definition,
+            }))
         } else {
             Ok(None)
         }
     }
 
-    pub fn get_list(&self, key: &str) -> CargoResult<Option<(Vec<(String, PathBuf)>, PathBuf)>> {
+    pub fn get_list(&self, key: &str)
+                    -> CargoResult<Option<Value<Vec<(String, PathBuf)>>>> {
         match try!(self.get(key)) {
-            Some(CV::List(i, path)) => Ok(Some((i, path))),
+            Some(CV::List(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("list", key, val),
             None => Ok(None),
         }
     }
 
     pub fn get_table(&self, key: &str)
-                    -> CargoResult<Option<(HashMap<String, CV>, PathBuf)>> {
+                    -> CargoResult<Option<Value<HashMap<String, CV>>>> {
         match try!(self.get(key)) {
-            Some(CV::Table(i, path)) => Ok(Some((i, path))),
+            Some(CV::Table(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("table", key, val),
             None => Ok(None),
         }
     }
 
-    pub fn get_i64(&self, key: &str) -> CargoResult<Option<(i64, PathBuf)>> {
+    pub fn get_i64(&self, key: &str) -> CargoResult<Option<Value<i64>>> {
         match try!(self.get(key)) {
-            Some(CV::Integer(i, path)) => Ok(Some((i, path))),
+            Some(CV::Integer(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("integer", key, val),
             None => Ok(None),
         }
@@ -244,12 +268,8 @@ impl Config {
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
-        } else if let Some((dir, dir2)) = try!(self.get_string("build.target-dir")) {
-            let mut path = PathBuf::from(dir2);
-            path.pop();
-            path.pop();
-            path.push(dir);
-            *self.target_dir.borrow_mut() = Some(path);
+        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
+            *self.target_dir.borrow_mut() = Some(val.val);
         }
         Ok(())
     }
@@ -262,7 +282,7 @@ impl Config {
 
         let var = format!("build.{}", tool);
         if let Some(tool_path) = try!(self.get_path(&var)) {
-            return Ok(tool_path);
+            return Ok(tool_path.val);
         }
 
         Ok(PathBuf::from(tool))
@@ -282,6 +302,15 @@ pub enum ConfigValue {
     List(Vec<(String, PathBuf)>, PathBuf),
     Table(HashMap<String, ConfigValue>, PathBuf),
     Boolean(bool, PathBuf),
+}
+
+pub struct Value<T> {
+    pub val: T,
+    pub definition: Definition,
+}
+
+pub enum Definition {
+    Path(PathBuf),
 }
 
 impl fmt::Debug for ConfigValue {
@@ -462,6 +491,22 @@ impl ConfigValue {
             CV::Table(l, _) => toml::Value::Table(l.into_iter()
                                           .map(|(k, v)| (k, v.into_toml()))
                                           .collect()),
+        }
+    }
+}
+
+impl Definition {
+    pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
+        match *self {
+            Definition::Path(ref p) => p.parent().unwrap().parent().unwrap(),
+        }
+    }
+}
+
+impl fmt::Display for Definition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Definition::Path(ref p) => p.display().fmt(f),
         }
     }
 }

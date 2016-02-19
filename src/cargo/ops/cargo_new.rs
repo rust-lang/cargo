@@ -63,17 +63,17 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     if let Some(name) = opts.name {
         return Ok(name);
     }
-    
+
     if path.file_name().is_none() {
         bail!("cannot auto-detect project name from path {:?} ; use --name to override",
                               path.as_os_str());
     }
-    
+
     let dir_name = try!(path.file_name().and_then(|s| s.to_str()).chain_error(|| {
         human(&format!("cannot create a project with a non-unicode name: {:?}",
                        path.file_name().unwrap()))
     }));
-    
+
     if opts.bin {
         Ok(dir_name)
     } else {
@@ -99,24 +99,24 @@ fn check_name(name: &str) -> CargoResult<()> {
     Ok(())
 }
 
-fn detect_source_paths_and_types(project_path : &Path, 
-                                 project_name: &str, 
+fn detect_source_paths_and_types(project_path : &Path,
+                                 project_name: &str,
                                  detected_files: &mut Vec<SourceFileInformation>,
                                  ) -> CargoResult<()> {
     let path = project_path;
     let name = project_name;
-    
+
     enum H {
         Bin,
         Lib,
         Detect,
     }
-    
+
     struct Test {
         proposed_path: String,
         handling: H,
     }
-        
+
     let tests = vec![
         Test { proposed_path: format!("src/main.rs"),     handling: H::Bin },
         Test { proposed_path: format!("main.rs"),         handling: H::Bin },
@@ -125,48 +125,48 @@ fn detect_source_paths_and_types(project_path : &Path,
         Test { proposed_path: format!("src/lib.rs"),      handling: H::Lib },
         Test { proposed_path: format!("lib.rs"),          handling: H::Lib },
     ];
-    
+
     for i in tests {
         let pp = i.proposed_path;
-        
+
         // path/pp does not exist or is not a file
         if !fs::metadata(&path.join(&pp)).map(|x| x.is_file()).unwrap_or(false) {
             continue;
         }
-        
+
         let sfi = match i.handling {
             H::Bin => {
-                SourceFileInformation { 
-                    relative_path: pp, 
-                    target_name: project_name.to_string(), 
-                    bin: true 
+                SourceFileInformation {
+                    relative_path: pp,
+                    target_name: project_name.to_string(),
+                    bin: true
                 }
             }
             H::Lib => {
-                SourceFileInformation { 
-                    relative_path: pp, 
-                    target_name: project_name.to_string(), 
+                SourceFileInformation {
+                    relative_path: pp,
+                    target_name: project_name.to_string(),
                     bin: false
                 }
             }
             H::Detect => {
                 let content = try!(paths::read(&path.join(pp.clone())));
                 let isbin = content.contains("fn main");
-                SourceFileInformation { 
-                    relative_path: pp, 
-                    target_name: project_name.to_string(), 
-                    bin: isbin 
+                SourceFileInformation {
+                    relative_path: pp,
+                    target_name: project_name.to_string(),
+                    bin: isbin
                 }
             }
         };
         detected_files.push(sfi);
     }
-    
+
     // Check for duplicate lib attempt
-    
+
     let mut previous_lib_relpath : Option<&str> = None;
     let mut duplicates_checker : BTreeMap<&str, &SourceFileInformation> = BTreeMap::new();
-        
+
     for i in detected_files {
         if i.bin {
             if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, i.target_name.as_ref()) {
@@ -188,13 +188,13 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
             previous_lib_relpath = Some(&i.relative_path);
         }
     }
-    
+
     Ok(())
 }
 
 fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformation {
     if bin {
-        SourceFileInformation { 
+        SourceFileInformation {
              relative_path: "src/main.rs".to_string(),
              target_name: project_name,
              bin: true,
@@ -214,7 +214,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         bail!("destination `{}` already exists",
               path.display())
     }
-    
+
     let name = try!(get_name(&path, &opts, config));
     try!(check_name(name));
 
@@ -225,7 +225,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         source_files: vec![plan_new_source_file(opts.bin, name.to_string())],
         bin: opts.bin,
     };
-    
+
     mk(config, &mkopts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
@@ -234,19 +234,19 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
 
 pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
-    
+
     let cargotoml_path = path.join("Cargo.toml");
     if fs::metadata(&cargotoml_path).is_ok() {
         bail!("`cargo init` cannot be run on existing Cargo projects")
     }
-    
+
     let name = try!(get_name(&path, &opts, config));
     try!(check_name(name));
-    
+
     let mut src_paths_types = vec![];
-    
+
     try!(detect_source_paths_and_types(&path, name, &mut src_paths_types));
-    
+
     if src_paths_types.len() == 0 {
         src_paths_types.push(plan_new_source_file(opts.bin, name.to_string()));
     } else {
@@ -254,24 +254,24 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         // Maybe when doing `cargo init --bin` inside a library project stub,
         // user may mean "initialize for library, but also add binary target"
     }
-    
+
     let mut version_control = opts.version_control;
-    
+
     if version_control == None {
         let mut num_detected_vsces = 0;
-        
+
         if fs::metadata(&path.join(".git")).is_ok() {
             version_control = Some(VersionControl::Git);
             num_detected_vsces += 1;
         }
-        
+
         if fs::metadata(&path.join(".hg")).is_ok() {
             version_control = Some(VersionControl::Hg);
             num_detected_vsces += 1;
         }
-        
+
         // if none exists, maybe create git, like in `cargo new`
-        
+
         if num_detected_vsces > 1 {
             bail!("both .git and .hg directories found \
                               and the ignore file can't be \
@@ -279,7 +279,7 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
                               specify --vcs to override detection");
         }
     }
-    
+
     let mkopts = MkOptions {
         version_control: version_control,
         path: &path,
@@ -287,7 +287,7 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         bin: src_paths_types.iter().any(|x|x.bin),
         source_files: src_paths_types,
     };
-    
+
     mk(config, &mkopts).chain_error(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
@@ -357,11 +357,11 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         (Some(name), None, _, None) |
         (None, None, name, None) => name,
     };
-    
+
     let mut cargotoml_path_specifier = String::new();
-    
+
     // Calculare what [lib] and [[bin]]s do we need to append to Cargo.toml
-    
+
     for i in &opts.source_files {
         if i.bin {
             if i.relative_path != "src/main.rs" {
@@ -394,17 +394,17 @@ authors = [{}]
 {}"#, name, toml::Value::String(author), cargotoml_path_specifier).as_bytes()));
 
 
-    // Create all specified source files 
-    // (with respective parent directories) 
+    // Create all specified source files
+    // (with respective parent directories)
     // if they are don't exist
 
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
-        
+
         if let Some(src_dir) = path_of_source_file.parent() {
             try!(fs::create_dir_all(src_dir));
         }
-    
+
         let default_file_content : &[u8] = if i.bin {
             b"\
 fn main() {
@@ -421,7 +421,7 @@ mod tests {
 }
 "
         };
-    
+
         if !fs::metadata(&path_of_source_file).map(|x| x.is_file()).unwrap_or(false) {
             return paths::write(&path_of_source_file, default_file_content)
         }
@@ -454,18 +454,18 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
 }
 
 fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
-    let name = try!(config.get_string("cargo-new.name")).map(|s| s.0);
-    let email = try!(config.get_string("cargo-new.email")).map(|s| s.0);
+    let name = try!(config.get_string("cargo-new.name")).map(|s| s.val);
+    let email = try!(config.get_string("cargo-new.email")).map(|s| s.val);
     let vcs = try!(config.get_string("cargo-new.vcs"));
 
-    let vcs = match vcs.as_ref().map(|p| (&p.0[..], &p.1)) {
+    let vcs = match vcs.as_ref().map(|p| (&p.val[..], &p.definition)) {
         Some(("git", _)) => Some(VersionControl::Git),
         Some(("hg", _)) => Some(VersionControl::Hg),
         Some(("none", _)) => Some(VersionControl::NoVcs),
         Some((s, p)) => {
             return Err(internal(format!("invalid configuration for key \
                                          `cargo-new.vcs`, unknown vcs `{}` \
-                                         (found in {:?})", s, p)))
+                                         (found in {})", s, p)))
         }
         None => None
     };
