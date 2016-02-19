@@ -51,8 +51,13 @@ fn metadata_full(opt: OutputMetadataOptions, config: &Config) -> CargoResult<Exp
                                          opt.no_default_features));
     let (packages, resolve) = deps;
 
+    let packages = packages.package_ids()
+                           .map(|i| packages.get(i))
+                           .cloned()
+                           .collect();
+
     Ok(ExportInfo {
-        packages: packages.packages().cloned().collect(),
+        packages: packages,
         resolve: Some(MetadataResolve(resolve)),
         version: VERSION,
     })
