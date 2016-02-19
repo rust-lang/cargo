@@ -16,9 +16,9 @@ use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, Cha
 #[derive(RustcDecodable)]
 pub struct Flags {
     flag_list: bool,
-    flag_verbose: bool,
     flag_version: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
     arg_command: String,
     arg_args: Vec<String>,
@@ -108,8 +108,9 @@ mod subcommands {
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    try!(config.shell().set_verbosity(flags.flag_verbose, flags.flag_quiet));
-    try!(config.shell().set_color_config(flags.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(flags.flag_verbose,
+                                flags.flag_quiet,
+                                &flags.flag_color));
 
     init_git_transports(config);
     cargo::util::job::setup();

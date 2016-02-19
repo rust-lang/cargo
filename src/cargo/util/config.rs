@@ -184,6 +184,22 @@ impl Config {
         }
     }
 
+    pub fn get_bool(&self, key: &str) -> CargoResult<Option<Value<bool>>> {
+        if let Some(v) = try!(self.get_env(key)) {
+            return Ok(Some(v))
+        }
+        match try!(self.get(key)) {
+            Some(CV::Boolean(b, path)) => {
+                Ok(Some(Value {
+                    val: b,
+                    definition: Definition::Path(path),
+                }))
+            }
+            Some(val) => self.expected("bool", key, val),
+            None => Ok(None),
+        }
+    }
+
     pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
         if let Some(val) = try!(self.get_string(&key)) {
             let is_path = val.val.contains("/") ||
@@ -251,6 +267,22 @@ impl Config {
         val.expected(ty).map_err(|e| {
             human(format!("invalid configuration for key `{}`\n{}", key, e))
         })
+    }
+
+    pub fn configure_shell(&self,
+                           verbose: Option<bool>,
+                           quiet: Option<bool>,
+                           color: &Option<String>) -> CargoResult<()> {
+        let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
+        let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
+        let verbose = verbose.or(cfg_verbose).unwrap_or(false);
+        let quiet = quiet.unwrap_or(false);
+        let color = color.as_ref().or(cfg_color.as_ref());
+
+        try!(self.shell().set_verbosity(verbose, quiet));
+        try!(self.shell().set_color_config(color.map(|s| &s[..])));
+
+        Ok(())
     }
 
     fn load_values(&self) -> CargoResult<()> {

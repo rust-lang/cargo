@@ -6,8 +6,8 @@ use cargo::util::{Config, CliResult, CliError, human, ToUrl};
 pub struct Options {
     flag_url: String,
     flag_reference: String,
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
 
@@ -26,8 +26,9 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(options.flag_verbose,
+                                options.flag_quiet,
+                                &options.flag_color));
     let Options { flag_url: url, flag_reference: reference, .. } = options;
 
     let url = try!(url.to_url().map_err(|e| {
