@@ -117,7 +117,7 @@ impl Config {
         *self.target_dir.borrow_mut() = Some(path.to_owned());
     }
 
-    pub fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
+    fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
         let vals = try!(self.values());
         let mut parts = key.split('.').enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
@@ -496,7 +496,7 @@ impl ConfigValue {
 }
 
 impl Definition {
-    pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
+    pub fn root<'a>(&'a self, _config: &'a Config) -> &'a Path {
         match *self {
             Definition::Path(ref p) => p.parent().unwrap().parent().unwrap(),
         }
