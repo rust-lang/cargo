@@ -241,7 +241,7 @@ impl BuildState {
     pub fn new(config: &super::BuildConfig,
                packages: &PackageSet) -> BuildState {
         let mut sources = HashMap::new();
-        for package in packages.iter() {
+        for package in packages.packages() {
             match package.manifest().links() {
                 Some(links) => {
                     sources.insert(links.to_string(),

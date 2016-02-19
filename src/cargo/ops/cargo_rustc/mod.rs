@@ -6,7 +6,7 @@ use std::io::prelude::*;
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
-use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
+use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles};
 use util::{self, CargoResult, human};
 use util::{Config, internal, ChainError, profile, join_paths};
@@ -51,14 +51,13 @@ pub struct TargetConfig {
     pub overrides: HashMap<String, BuildOutput>,
 }
 
-pub type PackagesToBuild<'a> = [(&'a Package,Vec<(&'a Target,&'a Profile)>)];
+pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target,&'a Profile)>)];
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
 pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
-                                     deps: &'a PackageSet,
+                                     packages: &'a PackageSet<'cfg>,
                                      resolve: &'a Resolve,
-                                     sources: &'a SourceMap<'cfg>,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
                                      profiles: &'a Profiles)
@@ -78,16 +77,18 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
             }
         })
     }).collect::<Vec<_>>();
-    try!(links::validate(deps));
+    try!(links::validate(packages));
 
     let dest = if build_config.release {"release"} else {"debug"};
-    let root = deps.iter().find(|p| p.package_id() == resolve.root()).unwrap();
+    let root = packages.packages().find(|p| {
+        p.package_id() == resolve.root()
+    }).unwrap();
     let host_layout = Layout::new(config, root, None, &dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
         layout::Layout::new(config, root, Some(&target), &dest)
     });
 
-    let mut cx = try!(Context::new(resolve, sources, deps, config,
+    let mut cx = try!(Context::new(resolve, packages, config,
                                    host_layout, target_layout,
                                    build_config, profiles));
 

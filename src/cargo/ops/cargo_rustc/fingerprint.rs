@@ -562,7 +562,7 @@ fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
 
 fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
-    let source = try!(cx.sources.get(source_id).chain_error(|| {
+    let source = try!(cx.packages.sources().get(source_id).chain_error(|| {
         internal("missing package source")
     }));
     source.fingerprint(pkg)

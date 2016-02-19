@@ -8,7 +8,7 @@ use util::CargoResult;
 pub fn validate(deps: &PackageSet) -> CargoResult<()> {
     let mut map: HashMap<_, &PackageId> = HashMap::new();
 
-    for dep in deps.iter() {
+    for dep in deps.packages() {
         let lib = match dep.manifest().links() {
             Some(lib) => lib,
             None => continue,
