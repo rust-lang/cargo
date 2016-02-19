@@ -32,7 +32,7 @@ use core::{Source, SourceId, SourceMap, PackageSet, Package, Target};
 use core::{Profile, TargetKind, Profiles};
 use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
-use util::config::{ConfigValue, Config};
+use util::config::Config;
 use util::{CargoResult, internal, ChainError, profile};
 
 /// Contains information about how a package should be compiled.
@@ -479,37 +479,36 @@ fn scrape_target_config(config: &Config, triple: &str)
         let table = try!(config.get_table(&key)).unwrap().val;
         for (k, _) in table.into_iter() {
             let key = format!("{}.{}", key, k);
-            match try!(config.get(&key)).unwrap() {
-                ConfigValue::String(v, path) => {
-                    if k == "rustc-flags" {
-                        let whence = format!("in `{}` (in {})", key,
-                                             path.display());
-                        let (paths, links) = try!(
-                            BuildOutput::parse_rustc_flags(&v, &whence)
-                        );
-                        output.library_paths.extend(paths.into_iter());
-                        output.library_links.extend(links.into_iter());
-                    } else {
-                        output.metadata.push((k, v));
-                    }
-                },
-                ConfigValue::List(a, p) => {
-                    if k == "rustc-link-lib" {
-                        output.library_links.extend(a.into_iter().map(|v| v.0));
-                    } else if k == "rustc-link-search" {
-                        output.library_paths.extend(a.into_iter().map(|v| {
-                            PathBuf::from(&v.0)
-                        }));
-                    } else if k == "rustc-cfg" {
-                        output.cfgs.extend(a.into_iter().map(|v| v.0));
-                    } else {
-                        try!(config.expected("string", &k,
-                                             ConfigValue::List(a, p)));
-                    }
-                },
-                // technically could be a list too, but that's the exception to
-                // the rule...
-                cv => { try!(config.expected("string", &k, cv)); }
+            match &k[..] {
+                "rustc-flags" => {
+                    let flags = try!(config.get_string(&key)).unwrap();
+                    let whence = format!("in `{}` (in {})", key,
+                                         flags.definition);
+                    let (paths, links) = try!(
+                        BuildOutput::parse_rustc_flags(&flags.val, &whence)
+                    );
+                    output.library_paths.extend(paths.into_iter());
+                    output.library_links.extend(links.into_iter());
+                }
+                "rustc-link-lib" => {
+                    let list = try!(config.get_list(&key)).unwrap();
+                    output.library_links.extend(list.val.into_iter()
+                                                        .map(|v| v.0));
+                }
+                "rustc-link-search" => {
+                    let list = try!(config.get_list(&key)).unwrap();
+                    output.library_paths.extend(list.val.into_iter().map(|v| {
+                        PathBuf::from(&v.0)
+                    }));
+                }
+                "rustc-cfg" => {
+                    let list = try!(config.get_list(&key)).unwrap();
+                    output.cfgs.extend(list.val.into_iter().map(|v| v.0));
+                }
+                _ => {
+                    let val = try!(config.get_string(&key)).unwrap();
+                    output.metadata.push((k, val.val));
+                }
             }
         }
         ret.overrides.insert(lib_name, output);
