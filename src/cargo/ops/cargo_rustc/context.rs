@@ -14,6 +14,7 @@ use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::layout::{Layout, LayoutProxy};
+use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 use super::{ProcessEngine, ExecEngine};
 
@@ -37,6 +38,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compiled: HashSet<Unit<'a>>,
     pub build_config: BuildConfig,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
+    pub links: Links<'a>,
 
     host: Layout,
     target: Option<Layout>,
@@ -94,6 +96,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
+            links: Links::new(),
         })
     }
 
