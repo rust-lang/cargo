@@ -7,8 +7,8 @@ pub struct Options {
     flag_host: Option<String>,
     flag_token: Option<String>,
     flag_manifest_path: Option<String>,
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_no_verify: bool,
 }
@@ -32,8 +32,9 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(options.flag_verbose,
+                                options.flag_quiet,
+                                &options.flag_color));
     let Options {
         flag_token: token,
         flag_host: host,

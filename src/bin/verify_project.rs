@@ -13,8 +13,8 @@ pub type Error = HashMap<String, String>;
 #[derive(RustcDecodable)]
 pub struct Flags {
     flag_manifest_path: Option<String>,
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
 
@@ -34,8 +34,9 @@ Options:
 ";
 
 pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
-    try!(config.shell().set_verbosity(args.flag_verbose, args.flag_quiet));
-    try!(config.shell().set_color_config(args.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(args.flag_verbose,
+                                args.flag_quiet,
+                                &args.flag_color));
 
     let mut contents = String::new();
     let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());
