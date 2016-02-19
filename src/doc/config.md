@@ -90,8 +90,16 @@ target-dir = "target"  # path of where to place all generated artifacts
 
 # Environment Variables
 
-Cargo recognizes a few global [environment variables][env] to configure itself.
-Settings specified via config files take precedence over those specified via
+Cargo can also be configured through environment variables in addition to the
+TOML syntax above. For each configuration key above of the form `foo.bar` the
+environment variable `CARGO_FOO_BAR` can also be used to define the value. For
+example the `build.jobs` key can also be defined by `CARGO_BUILD_JOBS`.
+
+Environment variables will take precedent over TOML configuration, and currently
+only integer, boolean, and string keys are supported to be defined by
 environment variables.
+
+In addition to the system above, Cargo recognizes a few other specific
+[environment variables][env].
 
 [env]: environment-variables.html

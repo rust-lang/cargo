@@ -7,12 +7,13 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::{MultiShell, Package};
-use util::{CargoResult, ChainError, Rustc, internal, human, paths};
+use util::{CargoResult, CargoError, ChainError, Rustc, internal, human, paths};
 
 use util::toml as cargo_toml;
 
@@ -148,7 +149,29 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
+    fn get_env<V: FromStr>(&self, key: &str) -> CargoResult<Option<Value<V>>>
+        where Box<CargoError>: From<V::Err>
+    {
+        let key = key.replace(".", "_")
+                     .replace("-", "_")
+                     .chars()
+                     .flat_map(|c| c.to_uppercase())
+                     .collect::<String>();
+        match env::var(&format!("CARGO_{}", key)) {
+            Ok(value) => {
+                Ok(Some(Value {
+                    val: try!(value.parse()),
+                    definition: Definition::Environment,
+                }))
+            }
+            Err(..) => Ok(None),
+        }
+    }
+
     pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
+        if let Some(v) = try!(self.get_env(key)) {
+            return Ok(Some(v))
+        }
         match try!(self.get(key)) {
             Some(CV::String(i, path)) => {
                 Ok(Some(Value {
@@ -209,6 +232,9 @@ impl Config {
     }
 
     pub fn get_i64(&self, key: &str) -> CargoResult<Option<Value<i64>>> {
+        if let Some(v) = try!(self.get_env(key)) {
+            return Ok(Some(v))
+        }
         match try!(self.get(key)) {
             Some(CV::Integer(i, path)) => {
                 Ok(Some(Value {
@@ -311,6 +337,7 @@ pub struct Value<T> {
 
 pub enum Definition {
     Path(PathBuf),
+    Environment,
 }
 
 impl fmt::Debug for ConfigValue {
@@ -496,9 +523,10 @@ impl ConfigValue {
 }
 
 impl Definition {
-    pub fn root<'a>(&'a self, _config: &'a Config) -> &'a Path {
+    pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
         match *self {
             Definition::Path(ref p) => p.parent().unwrap().parent().unwrap(),
+            Definition::Environment => config.cwd(),
         }
     }
 }
@@ -507,6 +535,7 @@ impl fmt::Display for Definition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Definition::Path(ref p) => p.display().fmt(f),
+            Definition::Environment => "the environment".fmt(f),
         }
     }
 }
