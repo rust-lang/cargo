@@ -77,7 +77,6 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
             }
         })
     }).collect::<Vec<_>>();
-    try!(links::validate(packages));
 
     let dest = if build_config.release {"release"} else {"debug"};
     let root = packages.packages().find(|p| {
@@ -179,6 +178,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     let p = profile::start(format!("preparing: {}/{}", unit.pkg,
                                    unit.target.name()));
     try!(fingerprint::prepare_init(cx, unit));
+    try!(cx.links.validate(unit));
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         try!(custom_build::prepare(cx, unit))

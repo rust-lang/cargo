@@ -1,38 +1,49 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use core::{PackageId, PackageSet};
+use core::PackageId;
 use util::CargoResult;
+use super::Unit;
 
-// Validate that there are no duplicated native libraries among packages and
-// that all packages with `links` also have a build script.
-pub fn validate(deps: &PackageSet) -> CargoResult<()> {
-    let mut map: HashMap<_, &PackageId> = HashMap::new();
+pub struct Links<'a> {
+    validated: HashSet<&'a PackageId>,
+    links: HashMap<String, &'a PackageId>,
+}
 
-    for dep in deps.packages() {
-        let lib = match dep.manifest().links() {
+impl<'a> Links<'a> {
+    pub fn new() -> Links<'a> {
+        Links {
+            validated: HashSet::new(),
+            links: HashMap::new(),
+        }
+    }
+
+    pub fn validate(&mut self, unit: &Unit<'a>) -> CargoResult<()> {
+        if !self.validated.insert(unit.pkg.package_id()) {
+            return Ok(())
+        }
+        let lib = match unit.pkg.manifest().links() {
             Some(lib) => lib,
-            None => continue,
+            None => return Ok(()),
         };
-        if let Some(prev) = map.get(&lib) {
-            let dep = dep.package_id();
-            if prev.name() == dep.name() && prev.source_id() == dep.source_id() {
+        if let Some(prev) = self.links.get(lib) {
+            let pkg = unit.pkg.package_id();
+            if prev.name() == pkg.name() && prev.source_id() == pkg.source_id() {
                 bail!("native library `{}` is being linked to by more \
                        than one version of the same package, but it can \
                        only be linked once; try updating or pinning your \
                        dependencies to ensure that this package only shows \
-                       up once\n\n  {}\n  {}", lib, prev, dep)
+                       up once\n\n  {}\n  {}", lib, prev, pkg)
             } else {
                 bail!("native library `{}` is being linked to by more than \
                        one package, and can only be linked to by one \
-                       package\n\n  {}\n  {}", lib, prev, dep)
+                       package\n\n  {}\n  {}", lib, prev, pkg)
             }
         }
-        if !dep.manifest().targets().iter().any(|t| t.is_custom_build()) {
+        if !unit.pkg.manifest().targets().iter().any(|t| t.is_custom_build()) {
             bail!("package `{}` specifies that it links to `{}` but does not \
-                   have a custom build script", dep.package_id(), lib)
+                   have a custom build script", unit.pkg.package_id(), lib)
         }
-        map.insert(lib, dep.package_id());
+        self.links.insert(lib.to_string(), unit.pkg.package_id());
+        Ok(())
     }
-
-    Ok(())
 }
