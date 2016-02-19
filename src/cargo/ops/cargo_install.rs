@@ -340,11 +340,11 @@ pub fn uninstall(root: Option<&str>,
 }
 
 fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<PathBuf> {
-    let config_root = try!(config.get_string("install.root"));
+    let config_root = try!(config.get_path("install.root"));
     Ok(flag.map(PathBuf::from).or_else(|| {
         env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from)
-    }).or_else(|| {
-        config_root.clone().map(|(v, _)| PathBuf::from(v))
+    }).or_else(move || {
+        config_root.map(|v| v.val)
     }).unwrap_or_else(|| {
         config.home().to_owned()
     }))

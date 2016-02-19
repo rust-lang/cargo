@@ -421,19 +421,21 @@ fn scrape_build_config(config: &Config,
                        target: Option<String>)
                        -> CargoResult<ops::BuildConfig> {
     let cfg_jobs = match try!(config.get_i64("build.jobs")) {
-        Some((n, p)) => {
-            if n <= 0 {
-                bail!("build.jobs must be positive, but found {} in {:?}", n, p)
-            } else if n >= u32::max_value() as i64 {
-                bail!("build.jobs is too large: found {} in {:?}", n, p)
+        Some(v) => {
+            if v.val <= 0 {
+                bail!("build.jobs must be positive, but found {} in {}",
+                      v.val, v.definition)
+            } else if v.val >= u32::max_value() as i64 {
+                bail!("build.jobs is too large: found {} in {}", v.val,
+                      v.definition)
             } else {
-                Some(n as u32)
+                Some(v.val as u32)
             }
         }
         None => None,
     };
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-    let cfg_target = try!(config.get_string("build.target")).map(|s| s.0);
+    let cfg_target = try!(config.get_string("build.target")).map(|s| s.val);
     let target = target.or(cfg_target);
     let mut base = ops::BuildConfig {
         jobs: jobs,
@@ -453,16 +455,18 @@ fn scrape_target_config(config: &Config, triple: &str)
 
     let key = format!("target.{}", triple);
     let mut ret = ops::TargetConfig {
-        ar: try!(config.get_path(&format!("{}.ar", key))),
-        linker: try!(config.get_path(&format!("{}.linker", key))),
+        ar: try!(config.get_path(&format!("{}.ar", key))).map(|v| v.val),
+        linker: try!(config.get_path(&format!("{}.linker", key))).map(|v| v.val),
         overrides: HashMap::new(),
     };
     let table = match try!(config.get_table(&key)) {
-        Some((table, _)) => table,
+        Some(table) => table.val,
         None => return Ok(ret),
     };
     for (lib_name, _) in table.into_iter() {
-        if lib_name == "ar" || lib_name == "linker" { continue }
+        if lib_name == "ar" || lib_name == "linker" {
+            continue
+        }
 
         let mut output = BuildOutput {
             library_paths: Vec::new(),
@@ -472,7 +476,7 @@ fn scrape_target_config(config: &Config, triple: &str)
             rerun_if_changed: Vec::new(),
         };
         let key = format!("{}.{}", key, lib_name);
-        let table = try!(config.get_table(&key)).unwrap().0;
+        let table = try!(config.get_table(&key)).unwrap().val;
         for (k, _) in table.into_iter() {
             let key = format!("{}.{}", key, k);
             match try!(config.get(&key)).unwrap() {
