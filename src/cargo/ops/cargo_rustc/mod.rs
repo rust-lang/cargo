@@ -370,12 +370,14 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&unit.target.crate_name());
 
-    let mut doc_dir = cx.config.target_dir(cx.get_package(cx.resolve.root()));
     if let Some(target) = cx.requested_target() {
         rustdoc.arg("--target").arg(target);
-        doc_dir.push(target);
     }
-    doc_dir.push("doc");
+
+    // the "root" directory ends in 'debug' or 'release', and we want it to end
+    // in 'doc' instead
+    let doc_dir = cx.layout(unit.pkg, unit.kind).proxy().root();
+    let doc_dir = doc_dir.parent().unwrap().join("doc");
 
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
