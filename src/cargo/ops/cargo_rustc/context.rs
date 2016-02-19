@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use regex::Regex;
 
-use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
+use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
 use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
@@ -28,8 +28,8 @@ pub struct Unit<'a> {
 pub struct Context<'a, 'cfg: 'a> {
     pub config: &'cfg Config,
     pub resolve: &'a Resolve,
-    pub sources: &'a SourceMap<'cfg>,
     pub compilation: Compilation<'cfg>,
+    pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
     pub build_explicit_deps: HashMap<Unit<'a>, (PathBuf, Vec<String>)>,
     pub exec_engine: Arc<Box<ExecEngine>>,
@@ -43,7 +43,6 @@ pub struct Context<'a, 'cfg: 'a> {
     target_triple: String,
     target_info: TargetInfo,
     host_info: TargetInfo,
-    package_set: &'a PackageSet,
     profiles: &'a Profiles,
 }
 
@@ -57,8 +56,7 @@ struct TargetInfo {
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn new(resolve: &'a Resolve,
-               sources: &'a SourceMap<'cfg>,
-               deps: &'a PackageSet,
+               packages: &'a PackageSet<'cfg>,
                config: &'cfg Config,
                host: Layout,
                target_layout: Option<Layout>,
@@ -83,13 +81,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             host: host,
             target: target_layout,
             resolve: resolve,
-            sources: sources,
-            package_set: deps,
+            packages: packages,
             config: config,
             target_info: target_info,
             host_info: host_info,
             compilation: Compilation::new(config),
-            build_state: Arc::new(BuildState::new(&build_config, deps)),
+            build_state: Arc::new(BuildState::new(&build_config, packages)),
             build_config: build_config,
             exec_engine: engine,
             fingerprints: HashMap::new(),
@@ -213,14 +210,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
-        let out_dir = self.layout(unit.pkg, unit.kind);
-        if unit.target.is_custom_build() {
-            out_dir.build(unit.pkg)
-        } else if unit.target.is_example() {
-            out_dir.examples().to_path_buf()
-        } else {
-            out_dir.root().to_path_buf()
-        }
+        self.layout(unit.pkg, unit.kind).out_dir(unit.pkg, unit.target)
     }
 
     /// Return the (prefix, suffix) pair for dynamic libraries.
@@ -567,7 +557,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Gets a package for the given package id.
     pub fn get_package(&self, id: &PackageId) -> &'a Package {
-        self.package_set.iter()
+        self.packages.packages()
             .find(|pkg| id == pkg.package_id())
             .expect("Should have found package")
     }

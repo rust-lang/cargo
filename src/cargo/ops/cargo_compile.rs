@@ -28,7 +28,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
-use core::{Source, SourceId, SourceMap, PackageSet, Package, Target};
+use core::{Source, SourceId, PackageSet, Package, Target};
 use core::{Profile, TargetKind, Profiles};
 use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
@@ -102,7 +102,7 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
                                 source: Option<Box<Source + 'a>>,
                                 features: Vec<String>,
                                 no_default_features: bool)
-                                -> CargoResult<(Vec<Package>, Resolve, SourceMap<'a>)> {
+                                -> CargoResult<(PackageSet<'a>, Resolve)> {
 
     let override_ids = try!(source_ids_from_config(config, root_package.root()));
 
@@ -134,9 +134,9 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
                                             method, Some(&resolve), None));
 
     let packages = try!(ops::get_resolved_packages(&resolved_with_overrides,
-                                                   &mut registry));
+                                                   registry));
 
-    Ok((packages, resolved_with_overrides, registry.move_sources()))
+    Ok((packages, resolved_with_overrides))
 }
 
 pub fn compile_pkg<'a>(root_package: &Package,
@@ -158,7 +158,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
         bail!("jobs must be at least 1")
     }
 
-    let (packages, resolve_with_overrides, sources) = {
+    let (packages, resolve_with_overrides) = {
         try!(resolve_dependencies(root_package, config, source, features,
                                   no_default_features))
     };
@@ -180,7 +180,8 @@ pub fn compile_pkg<'a>(root_package: &Package,
               invalid_spec.join(", "))
     }
 
-    let to_builds = packages.iter().filter(|p| pkgids.contains(&p.package_id()))
+    let to_builds = packages.packages()
+                            .filter(|p| pkgids.contains(&p.package_id()))
                             .collect::<Vec<_>>();
 
     let mut general_targets = Vec::new();
@@ -245,9 +246,8 @@ pub fn compile_pkg<'a>(root_package: &Package,
         }
 
         try!(ops::compile_targets(&package_targets,
-                                  &PackageSet::new(&packages),
+                                  &packages,
                                   &resolve_with_overrides,
-                                  &sources,
                                   config,
                                   build_config,
                                   root_package.manifest().profiles(),

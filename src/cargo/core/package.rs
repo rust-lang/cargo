@@ -5,11 +5,11 @@ use std::slice;
 use std::path::{Path, PathBuf};
 use semver::Version;
 
-use core::{Dependency, Manifest, PackageId, SourceId, Registry, Target, Summary, Metadata};
+use core::{Dependency, Manifest, PackageId, SourceId, Target};
+use core::{Summary, Metadata, SourceMap};
 use ops;
-use util::{CargoResult, graph, Config};
+use util::{CargoResult, Config};
 use rustc_serialize::{Encoder,Encodable};
-use core::source::Source;
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -118,78 +118,25 @@ impl hash::Hash for Package {
     }
 }
 
-#[derive(PartialEq,Clone,Debug)]
-pub struct PackageSet {
+pub struct PackageSet<'cfg> {
     packages: Vec<Package>,
+    sources: SourceMap<'cfg>,
 }
 
-impl PackageSet {
-    pub fn new(packages: &[Package]) -> PackageSet {
-        //assert!(packages.len() > 0,
-        //        "PackageSet must be created with at least one package")
-        PackageSet { packages: packages.to_vec() }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.packages.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.packages.len()
-    }
-
-    pub fn pop(&mut self) -> Package {
-        self.packages.pop().expect("PackageSet.pop: empty set")
-    }
-
-    /// Get a package by name out of the set
-    pub fn get(&self, name: &str) -> &Package {
-        self.packages.iter().find(|pkg| name == pkg.name())
-            .expect("PackageSet.get: empty set")
-    }
-
-    pub fn get_all(&self, names: &[&str]) -> Vec<&Package> {
-        names.iter().map(|name| self.get(*name) ).collect()
-    }
-
-    pub fn packages(&self) -> &[Package] { &self.packages }
-
-    // For now, assume that the package set contains only one package with a
-    // given name
-    pub fn sort(&self) -> Option<PackageSet> {
-        let mut graph = graph::Graph::new();
-
-        for pkg in self.packages.iter() {
-            let deps: Vec<&str> = pkg.dependencies().iter()
-                .map(|dep| dep.name())
-                .collect();
-
-            graph.add(pkg.name(), &deps);
+impl<'cfg> PackageSet<'cfg> {
+    pub fn new(packages: Vec<Package>,
+               sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
+        PackageSet {
+            packages: packages,
+            sources: sources,
         }
-
-        let pkgs = match graph.sort() {
-            Some(pkgs) => pkgs,
-            None => return None,
-        };
-        let pkgs = pkgs.iter().map(|name| {
-            self.get(*name).clone()
-        }).collect();
-
-        Some(PackageSet {
-            packages: pkgs
-        })
     }
 
-    pub fn iter(&self) -> slice::Iter<Package> {
+    pub fn packages(&self) -> slice::Iter<Package> {
         self.packages.iter()
     }
-}
 
-impl Registry for PackageSet {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.packages.iter()
-            .filter(|pkg| name.name() == pkg.name())
-            .map(|pkg| pkg.summary().clone())
-            .collect())
+    pub fn sources(&self) -> &SourceMap<'cfg> {
+        &self.sources
     }
 }
