@@ -302,18 +302,13 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, _: &[PackageId])  -> CargoResult<()>{
-        // TODO: assert! that the PackageId is contained by the source
-        Ok(())
-    }
+    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+        trace!("getting packages; id={}", id);
 
-    fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        trace!("getting packages; ids={:?}", ids);
-
-        Ok(self.packages.iter()
-           .filter(|pkg| ids.iter().any(|id| pkg.package_id() == id))
-           .cloned()
-           .collect())
+        let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
+        pkg.cloned().ok_or_else(|| {
+            internal(format!("failed to find {} in path source", id))
+        })
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

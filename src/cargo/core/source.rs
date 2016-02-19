@@ -9,7 +9,7 @@ use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
 
-use core::{Summary, Package, PackageId, Registry, Dependency};
+use core::{Package, PackageId, Registry};
 use sources::{PathSource, GitSource, RegistrySource};
 use sources::git;
 use util::{human, Config, CargoResult, ToUrl};
@@ -24,13 +24,7 @@ pub trait Source: Registry {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()>;
-
-    /// The get method returns the Path of each specified package on the
-    /// local file system. It assumes that `download` was already called,
-    /// and that the packages are already locally available on the file
-    /// system.
-    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
+    fn download(&mut self, package: &PackageId) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
