@@ -347,7 +347,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id).into_iter().flat_map(|a| a);
-        let mut ret = deps.map(|id| self.get_package(id)).filter(|dep| {
+        let mut ret = deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|d| {
@@ -384,7 +384,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 // actually used!
                 true
             })
-        }).filter_map(|pkg| {
+        }).filter_map(|id| {
+            let pkg = self.get_package(id);
             pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
                 Unit {
                     pkg: pkg,
@@ -468,9 +469,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the dependencies necessary to document a package
     fn doc_deps(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
         let deps = self.resolve.deps(unit.pkg.package_id()).into_iter();
-        let deps = deps.flat_map(|a| a).map(|id| {
-            self.get_package(id)
-        }).filter(|dep| {
+        let deps = deps.flat_map(|a| a).filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {
@@ -481,6 +480,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             })
         }).filter_map(|dep| {
+            let dep = self.get_package(dep);
             dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
         });
 
