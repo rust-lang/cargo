@@ -2,7 +2,7 @@ use std::collections::{HashSet, HashMap};
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use core::PackageSet;
-use util::{CargoResult, ChainError, Config, human, profile};
+use util::{CargoResult, ChainError, Config, human, internal, profile};
 
 /// Source of information about a group of packages.
 ///
@@ -89,23 +89,14 @@ impl<'cfg> PackageRegistry<'cfg> {
                -> CargoResult<PackageSet<'cfg>> {
         trace!("getting packages; sources={}", self.sources.len());
 
-        // TODO: Only call source with package ID if the package came from the
-        // source
-        let mut ret = Vec::new();
+        let pkgs = try!(package_ids.iter().map(|id| {
+            let src = try!(self.sources.get_mut(id.source_id()).chain_error(|| {
+                internal(format!("failed to find a source listed for `{}`", id))
+            }));
+            src.download(id)
+        }).collect::<CargoResult<Vec<_>>>());
 
-        for (_, source) in self.sources.sources_mut() {
-            try!(source.download(package_ids));
-            let packages = try!(source.get(package_ids));
-
-            ret.extend(packages.into_iter());
-        }
-
-        // TODO: Return earlier if fail
-        assert!(package_ids.len() == ret.len(),
-                "could not get packages from registry; ids={:?}; ret={:?}",
-                package_ids, ret);
-
-        Ok(PackageSet::new(ret, self.sources))
+        Ok(PackageSet::new(pkgs, self.sources))
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId, kind: Kind) -> CargoResult<()> {

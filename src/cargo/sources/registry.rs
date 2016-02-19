@@ -187,7 +187,6 @@ pub struct RegistrySource<'cfg> {
     src_path: PathBuf,
     config: &'cfg Config,
     handle: Option<http::Handle>,
-    sources: HashMap<PackageId, PathSource<'cfg>>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     cache: HashMap<String, Vec<(Summary, bool)>>,
     updated: bool,
@@ -239,7 +238,6 @@ impl<'cfg> RegistrySource<'cfg> {
             config: config,
             source_id: source_id.clone(),
             handle: None,
-            sources: HashMap::new(),
             hashes: HashMap::new(),
             cache: HashMap::new(),
             updated: false,
@@ -537,37 +535,24 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
+    fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
         let config = try!(self.config());
         let url = try!(config.dl.to_url().map_err(internal));
-        for package in packages.iter() {
-            if self.source_id != *package.source_id() { continue }
-            if self.sources.contains_key(package) { continue }
+        let mut url = url.clone();
+        url.path_mut().unwrap().push(package.name().to_string());
+        url.path_mut().unwrap().push(package.version().to_string());
+        url.path_mut().unwrap().push("download".to_string());
+        let path = try!(self.download_package(package, &url).chain_error(|| {
+            internal(format!("failed to download package `{}` from {}",
+                             package, url))
+        }));
+        let path = try!(self.unpack_package(package, path).chain_error(|| {
+            internal(format!("failed to unpack package `{}`", package))
+        }));
 
-            let mut url = url.clone();
-            url.path_mut().unwrap().push(package.name().to_string());
-            url.path_mut().unwrap().push(package.version().to_string());
-            url.path_mut().unwrap().push("download".to_string());
-            let path = try!(self.download_package(package, &url).chain_error(|| {
-                internal(format!("failed to download package `{}` from {}",
-                                 package, url))
-            }));
-            let path = try!(self.unpack_package(package, path).chain_error(|| {
-                internal(format!("failed to unpack package `{}`", package))
-            }));
-            let mut src = PathSource::new(&path, &self.source_id, self.config);
-            try!(src.update());
-            self.sources.insert(package.clone(), src);
-        }
-        Ok(())
-    }
-
-    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
-        let mut ret = Vec::new();
-        for src in self.sources.values() {
-            ret.extend(try!(src.get(packages)).into_iter());
-        }
-        Ok(ret)
+        let mut src = PathSource::new(&path, &self.source_id, self.config);
+        try!(src.update());
+        src.download(package)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

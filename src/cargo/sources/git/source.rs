@@ -187,16 +187,12 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.path_source.as_mut().unwrap().update()
     }
 
-    fn download(&mut self, _: &[PackageId]) -> CargoResult<()> {
-        // TODO: assert! that the PackageId is contained by the source
-        Ok(())
-    }
-
-    fn get(&self, ids: &[PackageId]) -> CargoResult<Vec<Package>> {
-        trace!("getting packages for package ids `{:?}` from `{:?}`", ids,
-             self.remote);
-        self.path_source.as_ref().expect("BUG: update() must be called \
-                                          before get()").get(ids)
+    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+        trace!("getting packages for package id `{}` from `{:?}`", id,
+               self.remote);
+        self.path_source.as_mut()
+                        .expect("BUG: update() must be called before get()")
+                        .download(id)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
