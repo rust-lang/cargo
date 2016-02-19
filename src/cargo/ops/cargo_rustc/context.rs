@@ -560,9 +560,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Gets a package for the given package id.
     pub fn get_package(&self, id: &PackageId) -> &'a Package {
-        self.packages.packages()
-            .find(|pkg| id == pkg.package_id())
-            .expect("Should have found package")
+        self.packages.get(id)
     }
 
     /// Get the user-specified linker for a particular host or target

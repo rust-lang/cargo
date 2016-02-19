@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::hash;
-use std::slice;
+use std::iter;
 use std::path::{Path, PathBuf};
+use std::slice;
 use semver::Version;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
@@ -132,8 +133,14 @@ impl<'cfg> PackageSet<'cfg> {
         }
     }
 
-    pub fn packages(&self) -> slice::Iter<Package> {
-        self.packages.iter()
+    pub fn package_ids(&self) -> iter::Map<slice::Iter<Package>,
+                                           fn(&Package) -> &PackageId> {
+        let f = Package::package_id as fn(&Package) -> &PackageId;
+        self.packages.iter().map(f)
+    }
+
+    pub fn get(&self, id: &PackageId) -> &Package {
+        self.packages.iter().find(|pkg| pkg.package_id() == id).unwrap()
     }
 
     pub fn sources(&self) -> &SourceMap<'cfg> {
