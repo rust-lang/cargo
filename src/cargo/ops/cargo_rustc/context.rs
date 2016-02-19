@@ -88,7 +88,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             target_info: target_info,
             host_info: host_info,
             compilation: Compilation::new(config),
-            build_state: Arc::new(BuildState::new(&build_config, packages)),
+            build_state: Arc::new(BuildState::new(&build_config)),
             build_config: build_config,
             exec_engine: engine,
             fingerprints: HashMap::new(),
