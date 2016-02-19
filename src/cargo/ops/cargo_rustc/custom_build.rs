@@ -5,7 +5,7 @@ use std::path::{PathBuf, Path};
 use std::str;
 use std::sync::{Mutex, Arc};
 
-use core::{PackageId, PackageSet};
+use core::PackageId;
 use util::{CargoResult, human, Human};
 use util::{internal, ChainError, profile, paths};
 use util::Freshness;
@@ -33,6 +33,7 @@ pub type BuildMap = HashMap<(PackageId, Kind), BuildOutput>;
 
 pub struct BuildState {
     pub outputs: Mutex<BuildMap>,
+    overrides: HashMap<(String, Kind), BuildOutput>,
 }
 
 #[derive(Default)]
@@ -65,8 +66,7 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                          -> CargoResult<(Work, Work, Freshness)> {
     let _p = profile::start(format!("build script prepare: {}/{}",
                                     unit.pkg, unit.target.name()));
-    let key = (unit.pkg.package_id().clone(), unit.kind);
-    let overridden = cx.build_state.outputs.lock().unwrap().contains_key(&key);
+    let overridden = cx.build_state.has_override(unit);
     let (work_dirty, work_fresh) = if overridden {
         (Work::new(|_| Ok(())), Work::new(|_| Ok(())))
     } else {
@@ -238,33 +238,33 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
 }
 
 impl BuildState {
-    pub fn new(config: &super::BuildConfig,
-               packages: &PackageSet) -> BuildState {
-        let mut sources = HashMap::new();
-        for package in packages.packages() {
-            match package.manifest().links() {
-                Some(links) => {
-                    sources.insert(links.to_string(),
-                                   package.package_id().clone());
-                }
-                None => {}
-            }
-        }
-        let mut outputs = HashMap::new();
+    pub fn new(config: &super::BuildConfig) -> BuildState {
+        let mut overrides = HashMap::new();
         let i1 = config.host.overrides.iter().map(|p| (p, Kind::Host));
         let i2 = config.target.overrides.iter().map(|p| (p, Kind::Target));
         for ((name, output), kind) in i1.chain(i2) {
-            // If no package is using the library named `name`, then this is
-            // just an override that we ignore.
-            if let Some(id) = sources.get(name) {
-                outputs.insert((id.clone(), kind), output.clone());
-            }
+            overrides.insert((name.clone(), kind), output.clone());
         }
-        BuildState { outputs: Mutex::new(outputs) }
+        BuildState {
+            outputs: Mutex::new(HashMap::new()),
+            overrides: overrides,
+        }
     }
 
     fn insert(&self, id: PackageId, kind: Kind, output: BuildOutput) {
         self.outputs.lock().unwrap().insert((id, kind), output);
+    }
+
+    fn has_override(&self, unit: &Unit) -> bool {
+        let key = unit.pkg.manifest().links().map(|l| (l.to_string(), unit.kind));
+        match key.and_then(|k| self.overrides.get(&k)) {
+            Some(output) => {
+                self.insert(unit.pkg.package_id().clone(), unit.kind,
+                            output.clone());
+                true
+            }
+            None => false,
+        }
     }
 }
 
