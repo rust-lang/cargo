@@ -42,7 +42,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     for spec in opts.spec {
         // Translate the spec to a Package
         let pkgid = try!(resolve.query(spec));
-        let pkg = packages.get(&pkgid);
+        let pkg = try!(packages.get(&pkgid));
 
         // And finally, clean everything out!
         for target in pkg.targets() {

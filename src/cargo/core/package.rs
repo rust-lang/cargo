@@ -1,15 +1,15 @@
+use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::fmt;
 use std::hash;
-use std::iter;
 use std::path::{Path, PathBuf};
-use std::slice;
+
 use semver::Version;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, Metadata, SourceMap};
 use ops;
-use util::{CargoResult, Config};
+use util::{CargoResult, Config, LazyCell, ChainError, internal};
 use rustc_serialize::{Encoder,Encodable};
 
 /// Information about a package that is available somewhere in the file system.
@@ -120,30 +120,43 @@ impl hash::Hash for Package {
 }
 
 pub struct PackageSet<'cfg> {
-    packages: Vec<Package>,
-    sources: SourceMap<'cfg>,
+    packages: Vec<(PackageId, LazyCell<Package>)>,
+    sources: RefCell<SourceMap<'cfg>>,
 }
 
 impl<'cfg> PackageSet<'cfg> {
     pub fn new(packages: Vec<Package>,
                sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
         PackageSet {
-            packages: packages,
-            sources: sources,
+            packages: packages.into_iter().map(|pkg| {
+                (pkg.package_id().clone(), LazyCell::new(Some(pkg)))
+            }).collect(),
+            sources: RefCell::new(sources),
         }
     }
 
-    pub fn package_ids(&self) -> iter::Map<slice::Iter<Package>,
-                                           fn(&Package) -> &PackageId> {
-        let f = Package::package_id as fn(&Package) -> &PackageId;
-        self.packages.iter().map(f)
+    pub fn package_ids<'a>(&'a self) -> Box<Iterator<Item=&'a PackageId> + 'a> {
+        Box::new(self.packages.iter().map(|&(ref p, _)| p))
     }
 
-    pub fn get(&self, id: &PackageId) -> &Package {
-        self.packages.iter().find(|pkg| pkg.package_id() == id).unwrap()
+    pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
+        let slot = try!(self.packages.iter().find(|p| p.0 == *id).chain_error(|| {
+            internal(format!("couldn't find `{}` in package set", id))
+        }));
+        let slot = &slot.1;
+        if let Some(pkg) = slot.borrow() {
+            return Ok(pkg)
+        }
+        let mut sources = self.sources.borrow_mut();
+        let source = try!(sources.get_mut(id.source_id()).chain_error(|| {
+            internal(format!("couldn't find source for `{}`", id))
+        }));
+        let pkg = try!(source.download(id));
+        assert!(slot.fill(pkg).is_ok());
+        Ok(slot.borrow().unwrap())
     }
 
-    pub fn sources(&self) -> &SourceMap<'cfg> {
-        &self.sources
+    pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
+        self.sources.borrow()
     }
 }

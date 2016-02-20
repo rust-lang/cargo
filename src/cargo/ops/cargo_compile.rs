@@ -180,7 +180,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
               invalid_spec.join(", "))
     }
 
-    let to_builds = pkgids.iter().map(|id| packages.get(id)).collect::<Vec<_>>();
+    let to_builds = try!(pkgids.iter().map(|id| {
+        packages.get(id)
+    }).collect::<CargoResult<Vec<_>>>());
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();

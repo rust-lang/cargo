@@ -560,7 +560,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Gets a package for the given package id.
     pub fn get_package(&self, id: &PackageId) -> &'a Package {
-        self.packages.get(id)
+        // TODO: remove this unwrap() -- happens in a later commit
+        self.packages.get(id).unwrap()
     }
 
     /// Get the user-specified linker for a particular host or target

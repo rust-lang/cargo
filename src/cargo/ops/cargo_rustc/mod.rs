@@ -79,7 +79,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
     }).collect::<Vec<_>>();
 
     let dest = if build_config.release {"release"} else {"debug"};
-    let root = packages.get(resolve.root());
+    let root = try!(packages.get(resolve.root()));
     let host_layout = Layout::new(config, root, None, &dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
         layout::Layout::new(config, root, Some(&target), &dest)

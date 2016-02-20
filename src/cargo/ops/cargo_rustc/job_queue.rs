@@ -8,7 +8,7 @@ use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, Dependency, profile, internal};
+use util::{CargoResult, profile, internal};
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
@@ -68,10 +68,13 @@ impl<'a> JobQueue<'a> {
         }
     }
 
-    pub fn enqueue(&mut self, cx: &Context<'a, 'a>,
-                   unit: &Unit<'a>, job: Job, fresh: Freshness) {
+    pub fn enqueue<'cfg>(&mut self, cx: &Context<'a, 'cfg>,
+                         unit: &Unit<'a>, job: Job, fresh: Freshness) {
         let key = Key::new(unit);
-        self.queue.queue(cx, Fresh, key, Vec::new()).push((job, fresh));
+        self.queue.queue(Fresh,
+                         key,
+                         Vec::new(),
+                         &key.dependencies(cx)).push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
     }
 
@@ -230,10 +233,17 @@ impl<'a> JobQueue<'a> {
     }
 }
 
-impl<'a> Dependency for Key<'a> {
-    type Context = Context<'a, 'a>;
+impl<'a> Key<'a> {
+    fn new(unit: &Unit<'a>) -> Key<'a> {
+        Key {
+            pkg: unit.pkg.package_id(),
+            target: unit.target,
+            profile: unit.profile,
+            kind: unit.kind,
+        }
+    }
 
-    fn dependencies(&self, cx: &Context<'a, 'a>) -> Vec<Key<'a>> {
+    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>) -> Vec<Key<'a>> {
         let unit = Unit {
             pkg: cx.get_package(self.pkg),
             target: self.target,
@@ -249,17 +259,6 @@ impl<'a> Dependency for Key<'a> {
                 Some(Key::new(unit))
             }
         }).collect()
-    }
-}
-
-impl<'a> Key<'a> {
-    fn new(unit: &Unit<'a>) -> Key<'a> {
-        Key {
-            pkg: unit.pkg.package_id(),
-            target: unit.target,
-            profile: unit.profile,
-            kind: unit.kind,
-        }
     }
 }
 
