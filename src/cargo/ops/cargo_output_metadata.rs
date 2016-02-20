@@ -51,10 +51,9 @@ fn metadata_full(opt: OutputMetadataOptions, config: &Config) -> CargoResult<Exp
                                          opt.no_default_features));
     let (packages, resolve) = deps;
 
-    let packages = packages.package_ids()
-                           .map(|i| packages.get(i))
-                           .cloned()
-                           .collect();
+    let packages = try!(packages.package_ids()
+                                .map(|i| packages.get(i).map(|p| p.clone()))
+                                .collect());
 
     Ok(ExportInfo {
         packages: packages,
