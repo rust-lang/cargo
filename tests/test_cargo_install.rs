@@ -2,6 +2,7 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
+use support::paths::CargoPathExt;
 
 use cargo::util::ProcessBuilder;
 use hamcrest::{assert_that, existing_file, is_not, Matcher, MatchResult};
@@ -403,7 +404,7 @@ test!(compile_failure {
 error: main function not found
 error: aborting due to previous error
 failed to compile `foo v0.1.0 (file://[..])`, intermediate artifacts can be \
-    found at `[..]target-install`
+    found at `[..]target`
 
 Caused by:
   Could not compile `foo`.
@@ -541,5 +542,29 @@ test!(installs_from_cwd_by_default {
     p.build();
 
     assert_that(cargo_process("install"), execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+});
+
+test!(do_not_rebuilds_on_local_install {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("--release"),
+                execs().with_status(0));
+    assert_that(cargo_process("install").arg("--path").arg(p.root()),
+                execs().with_status(0).with_stdout("\
+  Installing [..]
+").with_stderr("\
+be sure to add `[..]` to your PATH to be able to run the installed binaries
+"));
+
+    assert!(p.build_dir().c_exists());
+    assert!(p.release_bin("foo").c_exists());
     assert_that(cargo_home(), has_installed_exe("foo"));
 });

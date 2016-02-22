@@ -71,7 +71,11 @@ pub fn install(root: Option<&str>,
     let dst = root.join("bin");
     try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
 
-    let target_dir = config.cwd().join("target-install");
+    let target_dir = if source_id.is_path() {
+        config.target_dir(&pkg)
+    } else {
+        config.cwd().join("target-install")
+    };
     config.set_target_dir(&target_dir);
     let compile = try!(ops::compile_pkg(&pkg, Some(source), opts).chain_error(|| {
         human(format!("failed to compile `{}`, intermediate artifacts can be \
@@ -89,7 +93,10 @@ pub fn install(root: Option<&str>,
         }));
         t.bins.push(dst);
     }
-    try!(fs::remove_dir_all(&target_dir));
+
+    if !source_id.is_path() {
+        try!(fs::remove_dir_all(&target_dir));
+    }
 
     list.v1.entry(pkg.package_id().clone()).or_insert_with(|| {
         BTreeSet::new()
