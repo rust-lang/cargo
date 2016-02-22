@@ -133,8 +133,8 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
             try!(ops::resolve_with_previous(&mut registry, root_package,
                                             method, Some(&resolve), None));
 
-    let packages = try!(ops::get_resolved_packages(&resolved_with_overrides,
-                                                   registry));
+    let packages = ops::get_resolved_packages(&resolved_with_overrides,
+                                              registry);
 
     Ok((packages, resolved_with_overrides))
 }

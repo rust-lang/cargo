@@ -9,7 +9,7 @@ use semver::Version;
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, Metadata, SourceMap};
 use ops;
-use util::{CargoResult, Config, LazyCell, ChainError, internal};
+use util::{CargoResult, Config, LazyCell, ChainError, internal, human};
 use rustc_serialize::{Encoder,Encodable};
 
 /// Information about a package that is available somewhere in the file system.
@@ -125,11 +125,11 @@ pub struct PackageSet<'cfg> {
 }
 
 impl<'cfg> PackageSet<'cfg> {
-    pub fn new(packages: Vec<Package>,
+    pub fn new(package_ids: &[PackageId],
                sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
         PackageSet {
-            packages: packages.into_iter().map(|pkg| {
-                (pkg.package_id().clone(), LazyCell::new(Some(pkg)))
+            packages: package_ids.iter().map(|id| {
+                (id.clone(), LazyCell::new(None))
             }).collect(),
             sources: RefCell::new(sources),
         }
@@ -151,7 +151,9 @@ impl<'cfg> PackageSet<'cfg> {
         let source = try!(sources.get_mut(id.source_id()).chain_error(|| {
             internal(format!("couldn't find source for `{}`", id))
         }));
-        let pkg = try!(source.download(id));
+        let pkg = try!(source.download(id).chain_error(|| {
+            human("unable to get packages from source")
+        }));
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())
     }
