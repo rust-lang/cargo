@@ -68,14 +68,16 @@ impl<'a> JobQueue<'a> {
         }
     }
 
-    pub fn enqueue<'cfg>(&mut self, cx: &Context<'a, 'cfg>,
-                         unit: &Unit<'a>, job: Job, fresh: Freshness) {
+    pub fn enqueue<'cfg>(&mut self,
+                         cx: &Context<'a, 'cfg>,
+                         unit: &Unit<'a>,
+                         job: Job,
+                         fresh: Freshness) -> CargoResult<()> {
         let key = Key::new(unit);
-        self.queue.queue(Fresh,
-                         key,
-                         Vec::new(),
-                         &key.dependencies(cx)).push((job, fresh));
+        let deps = try!(key.dependencies(cx));
+        self.queue.queue(Fresh, key, Vec::new(), &deps).push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
+        Ok(())
     }
 
     /// Execute all jobs necessary to build the dependency graph.
@@ -243,14 +245,16 @@ impl<'a> Key<'a> {
         }
     }
 
-    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>) -> Vec<Key<'a>> {
+    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
+                          -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: cx.get_package(self.pkg),
+            pkg: try!(cx.get_package(self.pkg)),
             target: self.target,
             profile: self.profile,
             kind: self.kind,
         };
-        cx.dep_targets(&unit).iter().filter_map(|unit| {
+        let targets = try!(cx.dep_targets(&unit));
+        Ok(targets.iter().filter_map(|unit| {
             // Binaries aren't actually needed to *compile* tests, just to run
             // them, so we don't include this dependency edge in the job graph.
             if self.target.is_test() && unit.target.is_bin() {
@@ -258,7 +262,7 @@ impl<'a> Key<'a> {
             } else {
                 Some(Key::new(unit))
             }
-        }).collect()
+        }).collect())
     }
 }
 

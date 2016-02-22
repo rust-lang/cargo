@@ -92,7 +92,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
     let mut queue = JobQueue::new(&cx);
 
     try!(cx.prepare(root));
-    custom_build::build_map(&mut cx, &units);
+    try!(custom_build::build_map(&mut cx, &units));
 
     for unit in units.iter() {
         // Build up a list of pending jobs, each of which represent
@@ -129,7 +129,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
             if !unit.target.is_lib() { continue }
 
             // Include immediate lib deps as well
-            for unit in cx.dep_targets(unit).iter() {
+            for unit in try!(cx.dep_targets(unit)).iter() {
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
@@ -191,11 +191,11 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         let dirty = work.then(dirty);
         (dirty, fresh, freshness)
     };
-    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness);
+    try!(jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness));
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    for unit in cx.dep_targets(unit).iter() {
+    for unit in try!(cx.dep_targets(unit)).iter() {
         try!(compile(cx, jobs, unit));
     }
     Ok(())
@@ -562,7 +562,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
         cmd.env("OUT_DIR", &layout.build_out(unit.pkg));
     }
 
-    for unit in cx.dep_targets(unit).iter() {
+    for unit in try!(cx.dep_targets(unit)).iter() {
         if unit.target.linkable() {
             try!(link_to(cmd, cx, unit));
         }
