@@ -2,7 +2,7 @@ use std::collections::{HashSet, HashMap};
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use core::PackageSet;
-use util::{CargoResult, ChainError, Config, human, internal, profile};
+use util::{CargoResult, ChainError, Config, human, profile};
 
 /// Source of information about a group of packages.
 ///
@@ -85,18 +85,9 @@ impl<'cfg> PackageRegistry<'cfg> {
         }
     }
 
-    pub fn get(mut self, package_ids: &[PackageId])
-               -> CargoResult<PackageSet<'cfg>> {
+    pub fn get(self, package_ids: &[PackageId]) -> PackageSet<'cfg> {
         trace!("getting packages; sources={}", self.sources.len());
-
-        let pkgs = try!(package_ids.iter().map(|id| {
-            let src = try!(self.sources.get_mut(id.source_id()).chain_error(|| {
-                internal(format!("failed to find a source listed for `{}`", id))
-            }));
-            src.download(id)
-        }).collect::<CargoResult<Vec<_>>>());
-
-        Ok(PackageSet::new(pkgs, self.sources))
+        PackageSet::new(package_ids, self.sources)
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId, kind: Kind) -> CargoResult<()> {
