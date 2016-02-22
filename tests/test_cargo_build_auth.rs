@@ -108,6 +108,7 @@ Caused by:
 
 Caused by:
   failed to authenticate when downloading repository
+attempted to find username/password via `credential.helper`, but [..]
 
 To learn more, run the command again with --verbose.
 ",
