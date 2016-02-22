@@ -124,7 +124,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        cx.dep_run_custom_build(unit).iter().filter_map(|unit| {
+        try!(cx.dep_run_custom_build(unit)).iter().filter_map(|unit| {
             if unit.profile.run_custom_build {
                 Some((unit.pkg.manifest().links().unwrap().to_string(),
                       unit.pkg.package_id().clone()))
@@ -372,25 +372,27 @@ impl BuildOutput {
 /// The given set of targets to this function is the initial set of
 /// targets/profiles which are being built.
 pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
-                           units: &[Unit<'b>]) {
+                           units: &[Unit<'b>])
+                           -> CargoResult<()> {
     let mut ret = HashMap::new();
     for unit in units {
-        build(&mut ret, cx, unit);
+        try!(build(&mut ret, cx, unit));
     }
     cx.build_scripts.extend(ret.into_iter().map(|(k, v)| {
         (k, Arc::new(v))
     }));
+    return Ok(());
 
     // Recursive function to build up the map we're constructing. This function
     // memoizes all of its return values as it goes along.
     fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<Unit<'b>, BuildScripts>,
                            cx: &Context<'b, 'cfg>,
                            unit: &Unit<'b>)
-                           -> &'a BuildScripts {
+                           -> CargoResult<&'a BuildScripts> {
         // Do a quick pre-flight check to see if we've already calculated the
         // set of dependencies.
         if out.contains_key(unit) {
-            return &out[unit]
+            return Ok(&out[unit])
         }
 
         let mut ret = BuildScripts::default();
@@ -398,8 +400,8 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
             add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
         }
-        for unit in cx.dep_targets(unit).iter() {
-            let dep_scripts = build(out, cx, unit);
+        for unit in try!(cx.dep_targets(unit)).iter() {
+            let dep_scripts = try!(build(out, cx, unit));
 
             if unit.target.for_host() {
                 ret.plugins.extend(dep_scripts.to_link.iter()
@@ -416,7 +418,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
             add_to_link(prev, &pkg, kind);
         }
         prev.plugins.extend(ret.plugins);
-        prev
+        Ok(prev)
     }
 
     // When adding an entry to 'to_link' we only actually push it on if the
