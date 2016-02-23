@@ -112,7 +112,7 @@ test!(top_level_overrides_deps {
 });
 
 
-test!(dependencies_profile {
+test!(dependencies_profile_in_dev {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -129,9 +129,9 @@ test!(dependencies_profile {
             baz = "*"
         "#)
         .file("src/lib.rs", "extern crate baz;");
-        Package::new("baz", "0.0.1").publish();
+    Package::new("baz", "0.0.1").publish();
 
-        assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo_process("build").arg("-v"),
         execs().with_status(0).with_stdout(&format!("\
 {updating} registry [..]
 {downloading} baz v0.0.1 ([..])
@@ -152,6 +152,59 @@ test!(dependencies_profile {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
+        --extern baz=[..].rlib`",
+            updating = UPDATING,
+            downloading = DOWNLOADING,
+            running = RUNNING,
+            compiling = COMPILING,
+            sep = SEP,
+            dir = p.root().display())
+        ));
+});
+
+
+test!(dependencies_profile_in_release {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            dependencies-profile="dev"
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [profile.dev]
+            opt-level = 1
+
+            [dependencies]
+            baz = "*"
+        "#)
+        .file("src/lib.rs", "extern crate baz;");
+    Package::new("baz", "0.0.1").publish();
+
+    assert_that(p.cargo_process("build").arg("--release").arg("-v"),
+        execs().with_status(0).with_stdout(&format!("\
+{updating} registry [..]
+{downloading} baz v0.0.1 ([..])
+{compiling} baz v0.0.1 ([..])
+{running} `rustc [..]lib.rs --crate-name baz --crate-type lib \
+        -C opt-level=1 \
+        -g \
+        -C debug-assertions=on \
+        -C metadata=[..] \
+        -C extra-filename=[..] \
+        --out-dir [..]deps \
+        --emit=dep-info,link \
+        -L dependency=[..]deps \
+        -L dependency=[..]deps \
+        --cap-lints allow`
+{compiling} test v0.0.0 ([..])
+{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+        -C opt-level=3 \
+        --out-dir {dir}{sep}target{sep}release \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}release \
+        -L dependency={dir}{sep}target{sep}release{sep}deps \
         --extern baz=[..].rlib`",
             updating = UPDATING,
             downloading = DOWNLOADING,

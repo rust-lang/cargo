@@ -577,18 +577,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn lib_profile(&self, pkg: &Package) -> &'a Profile {
-        if self.build_config.release {
-            return &self.profiles.release
+        if !pkg.is_local() {
+            if let Some(ref id) = self.build_config.deps_profile {
+                return self.profiles.by_id(id)
+            }
         }
-        if pkg.is_local() {
-            return &self.profiles.dev
-        }
-
-        if let Some(ref id) = self.build_config.deps_profile {
-            self.profiles.by_id(id)
-        } else {
-            &self.profiles.dev
-        }
+        if self.build_config.release { &self.profiles.release } else { &self.profiles.dev }
     }
 
     pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
