@@ -449,7 +449,7 @@ fn build_base_args(cx: &Context,
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
-        rustdoc_args: _,
+        rustdoc_args: _, deps_profile: _,
     } = *unit.profile;
     assert!(!run_custom_build);
 

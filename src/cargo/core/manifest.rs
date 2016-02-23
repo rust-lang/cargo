@@ -22,7 +22,6 @@ pub struct Manifest {
     metadata: ManifestMetadata,
     profiles: Profiles,
     publish: bool,
-    deps_profile: Option<ProfileId>,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -102,7 +101,7 @@ impl Encodable for TargetKind {
     }
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Profile {
     pub opt_level: u32,
     pub lto: bool,
@@ -115,9 +114,10 @@ pub struct Profile {
     pub test: bool,
     pub doc: bool,
     pub run_custom_build: bool,
+    pub deps_profile: Option<ProfileId>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ProfileId {
     name: String
 }
@@ -172,8 +172,7 @@ impl Manifest {
                links: Option<String>,
                metadata: ManifestMetadata,
                profiles: Profiles,
-               publish: bool,
-               deps_profile: Option<ProfileId>) -> Manifest {
+               publish: bool) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -184,7 +183,6 @@ impl Manifest {
             metadata: metadata,
             profiles: profiles,
             publish: publish,
-            deps_profile: deps_profile,
         }
     }
 
@@ -200,7 +198,6 @@ impl Manifest {
     pub fn warnings(&self) -> &[String] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn publish(&self) -> bool { self.publish }
-    pub fn deps_profile(&self) -> Option<&ProfileId> { self.deps_profile.as_ref() }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }
@@ -476,6 +473,7 @@ impl Default for Profile {
             test: false,
             doc: false,
             run_custom_build: false,
+            deps_profile: None,
         }
     }
 }
@@ -496,8 +494,9 @@ impl fmt::Display for Profile {
 }
 
 impl Profiles {
-    pub fn name_to_id(&self, name: &str) -> Option<ProfileId> {
-        if self.all_profiles().contains_key(name) {
+    pub fn name_to_id(name: &str) -> Option<ProfileId> {
+        let all_profiles = ["dev", "release", "test", "bench", "doc"];
+        if all_profiles.iter().any(|&profile| profile == name) {
             Some(ProfileId { name: name.to_owned() })
         } else {
             None

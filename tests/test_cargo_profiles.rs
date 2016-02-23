@@ -116,11 +116,12 @@ test!(dependencies_profile_in_dev {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
-            dependencies-profile="release"
-
             name = "test"
             version = "0.0.0"
             authors = []
+
+            [profile.dev]
+            dependencies-profile = "release"
 
             [profile.release]
             opt-level = 3
@@ -167,7 +168,6 @@ test!(dependencies_profile_in_release {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
-            dependencies-profile="dev"
 
             name = "test"
             version = "0.0.0"
@@ -175,6 +175,9 @@ test!(dependencies_profile_in_release {
 
             [profile.dev]
             opt-level = 1
+
+            [profile.release]
+            dependencies-profile = "dev"
 
             [dependencies]
             baz = "*"
@@ -214,3 +217,23 @@ test!(dependencies_profile_in_release {
             dir = p.root().display())
         ));
 });
+
+test!(invalid_dependencies_profile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [profile.dev]
+            dependencies-profile = "spam"
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+        execs().with_status(101).with_stderr("failed to parse manifest at [..]
+
+Caused by:
+no such profile: spam"));
+});
+
