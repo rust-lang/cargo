@@ -568,3 +568,25 @@ be sure to add `[..]` to your PATH to be able to run the installed binaries
     assert!(p.release_bin("foo").c_exists());
     assert_that(cargo_home(), has_installed_exe("foo"));
 });
+
+test!(reports_unsuccessful_subcommand_result {
+    Package::new("cargo-fail", "1.0.0")
+        .file("src/main.rs", r#"
+            fn main() {
+                panic!();
+            }
+        "#)
+        .publish();
+    assert_that(cargo_process("install").arg("cargo-fail"),
+                execs().with_status(0));
+    assert_that(cargo_process("--list"),
+                execs().with_status(0).with_stdout_contains("  fail\n"));
+    assert_that(cargo_process("fail"),
+                execs().with_status(101).with_stderr_contains("\
+thread '<main>' panicked at 'explicit panic', [..]
+").with_stderr_contains("\
+third party subcommand `cargo-fail[..]` exited unsuccessfully
+
+To learn more, run the command again with --verbose.
+"));
+});
