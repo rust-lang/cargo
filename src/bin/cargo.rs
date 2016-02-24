@@ -11,7 +11,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use cargo::execute_main_without_stdin;
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, ChainError};
 
 #[derive(RustcDecodable)]
 pub struct Flags {
@@ -205,7 +205,9 @@ fn execute_subcommand(config: &Config,
             }))
         }
     };
-    try!(util::process(&command).args(&args[1..]).exec());
+    try!(util::process(&command).args(&args[1..]).exec().chain_error(|| {
+        human(format!("third party subcommand `{}` exited unsuccessfully", command_exe))
+    }));
     Ok(())
 }
 
