@@ -15,7 +15,8 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
 
 * `CARGO_HOME` - Cargo maintains a local cache of the registry index and of git
   checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
-  this variable overrides the location of this directory.
+  this variable overrides the location of this directory. Once a crate is cached
+  it is not removed by the clean command.
 * `CARGO_PROFILE` - If this is set to a positive integer *N*, Cargo will record
   timing data as it runs.  When it exits, it will print this data as a profile
   *N* levels deep.
