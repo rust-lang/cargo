@@ -59,9 +59,9 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
 
 # Environment variables Cargo sets for crates
 
+* `CARGO_MANIFEST_DIR` - The directory containing the manifest of your package.
 * `CARGO_PKG_VERSION` - The full version of your package.
 * `CARGO_PKG_VERSION_MAJOR` - The major version of your package.
 * `CARGO_PKG_VERSION_MINOR` - The minor version of your package.
 * `CARGO_PKG_VERSION_PATCH` - The patch version of your package.
 * `CARGO_PKG_VERSION_PRE` - The pre-release version of your package.
-
