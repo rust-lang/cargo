@@ -56,14 +56,13 @@ make install
 If, however, you have neither `rustc` nor `cargo` previously installed you can
 run:
 
-Note: if building for 32 bit systems run `BIT=32 python -B ..`
-
 ```sh
 python -B src/etc/install-deps.py
 ./configure --local-rust-root="$PWD"/rustc
 make
 make install
 ```
+Note: if building for 32 bit systems run `BITS=32 python -B ..`
 
 More options can be discovered through `./configure`, such as compiling cargo
 for more than one target. For example, if you'd like to compile both 32 and 64
