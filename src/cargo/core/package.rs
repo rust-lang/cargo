@@ -88,6 +88,10 @@ impl Package {
     pub fn generate_metadata(&self) -> Metadata {
         self.package_id().generate_metadata(self.root())
     }
+
+    pub fn is_local(&self) -> bool {
+        self.manifest.summary().source_id().is_path()
+    }
 }
 
 impl fmt::Display for Package {

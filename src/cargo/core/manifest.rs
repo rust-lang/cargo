@@ -1,4 +1,5 @@
 use std::default::Default;
+use std::collections::HashMap;
 use std::fmt;
 use std::path::{PathBuf, Path};
 
@@ -20,7 +21,7 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     profiles: Profiles,
-    publish: bool
+    publish: bool,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -100,7 +101,7 @@ impl Encodable for TargetKind {
     }
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Profile {
     pub opt_level: u32,
     pub lto: bool,
@@ -113,6 +114,12 @@ pub struct Profile {
     pub test: bool,
     pub doc: bool,
     pub run_custom_build: bool,
+    pub deps_profile: Option<ProfileId>,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct ProfileId {
+    name: String
 }
 
 #[derive(Default, Clone, Debug)]
@@ -466,6 +473,7 @@ impl Default for Profile {
             test: false,
             doc: false,
             run_custom_build: false,
+            deps_profile: None,
         }
     }
 }
@@ -482,5 +490,29 @@ impl fmt::Display for Profile {
             write!(f, "Profile(build)")
         }
 
+    }
+}
+
+impl Profiles {
+    pub fn name_to_id(name: &str) -> Option<ProfileId> {
+        let all_profiles = ["dev", "release", "test", "bench", "doc"];
+        if all_profiles.iter().any(|&profile| profile == name) {
+            Some(ProfileId { name: name.to_owned() })
+        } else {
+            None
+        }
+    }
+
+    pub fn by_id(&self, id: &ProfileId) -> &Profile {
+        let key: &str = &id.name;
+        self.all_profiles()[key]
+    }
+
+    fn all_profiles(&self) -> HashMap<&str, &Profile> {
+        [("dev", &self.dev),
+         ("release", &self.release),
+         ("test", &self.test),
+         ("bench", &self.bench),
+         ("doc", &self.doc)].iter().map(|&x| x).collect()
     }
 }

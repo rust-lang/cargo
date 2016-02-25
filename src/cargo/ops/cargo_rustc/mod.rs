@@ -7,7 +7,7 @@ use std::path::{self, PathBuf};
 use std::sync::Arc;
 
 use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
-use core::{Profile, Profiles};
+use core::{Profile, ProfileId, Profiles};
 use util::{self, CargoResult, human};
 use util::{Config, internal, ChainError, profile, join_paths};
 
@@ -42,6 +42,7 @@ pub struct BuildConfig {
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
     pub doc_all: bool,
+    pub deps_profile: Option<ProfileId>,
 }
 
 #[derive(Clone, Default)]
@@ -448,7 +449,7 @@ fn build_base_args(cx: &Context,
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
-        rustdoc_args: _,
+        rustdoc_args: _, deps_profile: _,
     } = *unit.profile;
     assert!(!run_custom_build);
 

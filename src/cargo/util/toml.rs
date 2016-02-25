@@ -243,6 +243,7 @@ pub struct TomlProfile {
     debug: Option<bool>,
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
+    dependencies_profile: Option<String>,
 }
 
 #[derive(RustcDecodable)]
@@ -559,7 +560,7 @@ impl TomlManifest {
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
         };
-        let profiles = build_profiles(&self.profile);
+        let profiles = try!(build_profiles(&self.profile));
         let publish = project.publish.unwrap_or(true);
         let mut manifest = Manifest::new(summary,
                                          targets,
@@ -955,30 +956,40 @@ fn normalize(lib: &Option<TomlLibTarget>,
     ret
 }
 
-fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
+fn build_profiles(profiles: &Option<TomlProfiles>) -> CargoResult<Profiles> {
     let profiles = profiles.as_ref();
-    return Profiles {
-        release: merge(Profile::default_release(),
-                       profiles.and_then(|p| p.release.as_ref())),
-        dev: merge(Profile::default_dev(),
-                   profiles.and_then(|p| p.dev.as_ref())),
-        test: merge(Profile::default_test(),
-                    profiles.and_then(|p| p.test.as_ref())),
-        bench: merge(Profile::default_bench(),
-                     profiles.and_then(|p| p.bench.as_ref())),
-        doc: merge(Profile::default_doc(),
-                   profiles.and_then(|p| p.doc.as_ref())),
+    return Ok(Profiles {
+        release: try!(merge(Profile::default_release(),
+                            profiles.and_then(|p| p.release.as_ref()))),
+        dev: try!(merge(Profile::default_dev(),
+                        profiles.and_then(|p| p.dev.as_ref()))),
+        test: try!(merge(Profile::default_test(),
+                         profiles.and_then(|p| p.test.as_ref()))),
+        bench: try!(merge(Profile::default_bench(),
+                          profiles.and_then(|p| p.bench.as_ref()))),
+        doc: try!(merge(Profile::default_doc(),
+                        profiles.and_then(|p| p.doc.as_ref()))),
         custom_build: Profile::default_custom_build(),
-    };
+    });
 
-    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
+    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> CargoResult<Profile> {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath
+        opt_level, lto, codegen_units, debug,
+        debug_assertions, rpath, ref dependencies_profile
         } = match toml {
             Some(toml) => toml,
-            None => return profile,
+            None => return Ok(profile),
         };
-        Profile {
+        let deps_profile = match *dependencies_profile {
+            None => None,
+            Some(ref name) => if let Some(id) = Profiles::name_to_id(name) {
+                Some(id)
+            } else {
+                bail!("no such profile: {}", name)
+            }
+        };
+
+        Ok(Profile {
             opt_level: opt_level.unwrap_or(profile.opt_level),
             lto: lto.unwrap_or(profile.lto),
             codegen_units: codegen_units,
@@ -990,6 +1001,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             test: profile.test,
             doc: profile.doc,
             run_custom_build: profile.run_custom_build,
-        }
-    }
+            deps_profile: deps_profile,
+        })
+    };
 }

@@ -396,7 +396,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Unit {
                     pkg: pkg,
                     target: t,
-                    profile: self.lib_profile(id),
+                    profile: self.lib_profile(pkg),
                     kind: unit.kind.for_target(t),
                 }
             })
@@ -426,7 +426,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    profile: self.lib_profile(id),
+                    profile: self.lib_profile(unit.pkg),
                     kind: unit.kind.for_target(t),
                 }
             }));
@@ -499,7 +499,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             ret.push(Unit {
                 pkg: dep,
                 target: lib,
-                profile: self.lib_profile(dep.package_id()),
+                profile: self.lib_profile(dep),
                 kind: unit.kind.for_target(lib),
             });
             if self.build_config.doc_all {
@@ -545,7 +545,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Unit {
                 pkg: unit.pkg,
                 target: t,
-                profile: self.lib_profile(unit.pkg.package_id()),
+                profile: self.lib_profile(unit.pkg),
                 kind: unit.kind.for_target(t),
             }
         })
@@ -598,12 +598,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
-    pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
-        if self.build_config.release {
-            &self.profiles.release
-        } else {
-            &self.profiles.dev
+    pub fn lib_profile(&self, pkg: &Package) -> &'a Profile {
+        if !pkg.is_local() {
+            if let Some(ref id) = self.build_config.deps_profile {
+                return self.profiles.by_id(id)
+            }
         }
+        if self.build_config.release { &self.profiles.release } else { &self.profiles.dev }
     }
 
     pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
