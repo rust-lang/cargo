@@ -66,6 +66,7 @@ mod test_cargo_rustdoc;
 mod test_cargo_search;
 mod test_cargo_test;
 mod test_cargo_tool_paths;
+mod test_cargo_config;
 mod test_cargo_verify_project;
 mod test_cargo_version;
 mod test_shell;
