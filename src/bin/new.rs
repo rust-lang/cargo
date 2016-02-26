@@ -5,8 +5,8 @@ use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 pub struct Options {
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_bin: bool,
     arg_path: String,
@@ -35,8 +35,9 @@ Options:
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={:?}", env::args().collect::<Vec<_>>());
-    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(options.flag_verbose,
+                                options.flag_quiet,
+                                &options.flag_color));
 
     let Options { flag_bin, arg_path, flag_name, flag_vcs, .. } = options;
 

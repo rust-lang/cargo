@@ -8,8 +8,8 @@ pub struct Options {
     flag_add: Option<Vec<String>>,
     flag_remove: Option<Vec<String>>,
     flag_index: Option<String>,
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_list: bool,
 }
@@ -41,8 +41,9 @@ and troubleshooting.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(options.flag_verbose,
+                                options.flag_quiet,
+                                &options.flag_color));
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,
