@@ -2,8 +2,10 @@ use std::error::Error;
 use std::ffi;
 use std::fmt;
 use std::io;
+use std::num;
 use std::process::{Output, ExitStatus};
 use std::str;
+use std::string;
 
 use curl;
 use git2;
@@ -308,6 +310,13 @@ from_error! {
     toml::DecodeError,
     ffi::NulError,
     term::Error,
+    num::ParseIntError,
+}
+
+impl From<string::ParseError> for Box<CargoError> {
+    fn from(t: string::ParseError) -> Box<CargoError> {
+        match t {}
+    }
 }
 
 impl<E: CargoError> From<Human<E>> for Box<CargoError> {
@@ -328,6 +337,7 @@ impl CargoError for toml::DecodeError {}
 impl CargoError for url::ParseError {}
 impl CargoError for ffi::NulError {}
 impl CargoError for term::Error {}
+impl CargoError for num::ParseIntError {}
 
 // =============================================================================
 // Construction helpers
