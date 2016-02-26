@@ -311,6 +311,7 @@ from_error! {
     ffi::NulError,
     term::Error,
     num::ParseIntError,
+    str::ParseBoolError,
 }
 
 impl From<string::ParseError> for Box<CargoError> {
@@ -338,6 +339,7 @@ impl CargoError for url::ParseError {}
 impl CargoError for ffi::NulError {}
 impl CargoError for term::Error {}
 impl CargoError for num::ParseIntError {}
+impl CargoError for str::ParseBoolError {}
 
 // =============================================================================
 // Construction helpers

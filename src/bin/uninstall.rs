@@ -5,8 +5,8 @@ use cargo::util::{CliResult, Config};
 pub struct Options {
     flag_bin: Vec<String>,
     flag_root: Option<String>,
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
 
     arg_spec: String,
@@ -34,8 +34,9 @@ only uninstall particular binaries.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(options.flag_verbose,
+                                options.flag_quiet,
+                                &options.flag_color));
 
     let root = options.flag_root.as_ref().map(|s| &s[..]);
     try!(ops::uninstall(root, &options.arg_spec, &options.flag_bin, config));

@@ -84,6 +84,10 @@ rustc = "rustc"        # the rust compiler tool
 rustdoc = "rustdoc"    # the doc generator tool
 target = "triple"      # build for the target triple
 target-dir = "target"  # path of where to place all generated artifacts
+
+[term]
+verbose = false        # whether cargo provides verbose output
+color = 'auto'         # whether cargo colorizes output
 ```
 
 # Environment Variables
