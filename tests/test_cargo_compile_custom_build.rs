@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{COMPILING, RUNNING, DOCTEST, FRESH, DOCUMENTING};
+use support::{COMPILING, RUNNING, DOCTEST, FRESH, DOCUMENTING, ERROR};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir};
 
@@ -36,10 +36,10 @@ test!(custom_build_script_failed {
 ",
 url = p.url(), compiling = COMPILING, running = RUNNING))
                        .with_stderr(&format!("\
-failed to run custom build command for `foo v0.5.0 ({})`
+{error} failed to run custom build command for `foo v0.5.0 ({})`
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
     (exit code: 101)",
-p.url())));
+p.url(), error = ERROR)));
 });
 
 test!(custom_build_env_vars {
@@ -135,9 +135,9 @@ test!(custom_build_script_wrong_rustc_flags {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
+{error} Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
 `-aaa -bbb`",
-p.url())));
+p.url(), error = ERROR)));
 });
 
 /*
@@ -205,10 +205,11 @@ test!(links_no_build_cmd {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr("\
-package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
+                       .with_stderr(&format!("\
+{error} package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
 not have a custom build script
-"));
+",
+  error = ERROR)));
 });
 
 test!(links_duplicates {
@@ -239,13 +240,14 @@ test!(links_duplicates {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr("\
-native library `a` is being linked to by more than one package, and can only be \
+                       .with_stderr(&format!("\
+{error} native library `a` is being linked to by more than one package, and can only be \
 linked to by one package
 
   [..] v0.5.0 (file://[..])
   [..] v0.5.0 (file://[..])
-"));
+",
+  error = ERROR)));
 });
 
 test!(overrides_and_links {
@@ -680,16 +682,17 @@ test!(build_deps_not_for_normal {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr(&format!("\
 [..]lib.rs[..] error: can't find crate for `aaaaa`[..]
 [..]lib.rs[..] extern crate aaaaa;
 [..]           ^~~~~~~~~~~~~~~~~~~
 error: aborting due to previous error
-Could not compile `foo`.
+{error} Could not compile `foo`.
 
 Caused by:
   Process didn't exit successfully: [..]
-"));
+",
+  error = ERROR)));
 });
 
 test!(build_cmd_with_a_build_cmd {
@@ -929,12 +932,13 @@ test!(build_script_only {
         .file("build.rs", r#"fn main() {}"#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
-failed to parse manifest at `[..]`
+                       .with_stderr(&format!("\
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present"));
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present",
+  error = ERROR)));
 });
 
 test!(shared_dep_with_a_build_script {

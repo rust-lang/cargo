@@ -2,7 +2,7 @@ use std::str;
 use std::fs;
 
 use support::{project, execs, path2url};
-use support::{COMPILING, DOCUMENTING, RUNNING};
+use support::{COMPILING, DOCUMENTING, RUNNING, ERROR};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -206,10 +206,11 @@ test!(doc_lib_bin_same_name {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
-                       .with_stderr("\
-cannot document a package where a library and a binary have the same name. \
+                       .with_stderr(&format!("\
+{error} cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
-"));
+",
+error = ERROR)));
 });
 
 test!(doc_dash_p {

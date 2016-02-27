@@ -1,6 +1,6 @@
 use std::path::MAIN_SEPARATOR as SEP;
 use support::{execs, project};
-use support::{COMPILING, RUNNING, DOCUMENTING};
+use support::{COMPILING, RUNNING, DOCUMENTING, ERROR};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -167,7 +167,8 @@ test!(rustdoc_same_name_err {
                  .arg("--").arg("--no-defaults"),
                 execs()
                 .with_status(101)
-                .with_stderr("cannot document a package where a library and a \
+                .with_stderr(&format!("{error} cannot document a package where a library and a \
                               binary have the same name. Consider renaming one \
-                              or marking the target as `doc = false`"));
+                              or marking the target as `doc = false`",
+                              error = ERROR)));
 });

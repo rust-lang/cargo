@@ -8,7 +8,7 @@ use cargo::util::ProcessBuilder;
 use hamcrest::{assert_that, existing_file, is_not, Matcher, MatchResult};
 
 use support::{project, execs};
-use support::{UPDATING, DOWNLOADING, COMPILING, INSTALLING, REMOVING};
+use support::{UPDATING, DOWNLOADING, COMPILING, INSTALLING, REMOVING, ERROR};
 use support::paths;
 use support::registry::Package;
 use support::git;
@@ -105,30 +105,33 @@ test!(pick_max_version {
 test!(missing {
     pkg("foo", "0.0.1");
     assert_that(cargo_process("install").arg("bar"),
-                execs().with_status(101).with_stderr("\
-could not find `bar` in `registry file://[..]`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} could not find `bar` in `registry file://[..]`
+",
+error = ERROR)));
 });
 
 test!(bad_version {
     pkg("foo", "0.0.1");
     assert_that(cargo_process("install").arg("foo").arg("--vers=0.2.0"),
-                execs().with_status(101).with_stderr("\
-could not find `foo` in `registry file://[..]` with version `0.2.0`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} could not find `foo` in `registry file://[..]` with version `0.2.0`
+",
+error = ERROR)));
 });
 
 test!(no_crate {
     assert_that(cargo_process("install"),
-                execs().with_status(101).with_stderr("\
-`[..]` is not a crate root; specify a crate to install [..]
+                execs().with_status(101).with_stderr(&format!("\
+{error} `[..]` is not a crate root; specify a crate to install [..]
 
 Caused by:
   failed to read `[..]Cargo.toml`
 
 Caused by:
   [..] (os error [..])
-"));
+",
+error = ERROR)));
 });
 
 test!(install_location_precedence {
@@ -194,9 +197,10 @@ test!(install_path {
                 execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_process("install").arg("--path").arg(".").cwd(p.root()),
-                execs().with_status(101).with_stderr("\
-binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
+",
+error = ERROR)));
 });
 
 test!(multiple_crates_error {
@@ -218,9 +222,10 @@ test!(multiple_crates_error {
     p.build();
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
-                execs().with_status(101).with_stderr("\
-multiple packages with binaries found: bar, foo
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} multiple packages with binaries found: bar, foo
+",
+error = ERROR)));
 });
 
 test!(multiple_crates_select {
@@ -333,9 +338,10 @@ test!(no_binaries_or_examples {
     p.build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(101).with_stderr("\
-no packages found with binaries or examples
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} no packages found with binaries or examples
+",
+error = ERROR)));
 });
 
 test!(no_binaries {
@@ -351,9 +357,10 @@ test!(no_binaries {
     p.build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()).arg("foo"),
-                execs().with_status(101).with_stderr("\
-specified package has no binaries
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} specified package has no binaries
+",
+error = ERROR)));
 });
 
 test!(examples {
@@ -388,9 +395,10 @@ test!(install_twice {
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(101).with_stderr("\
-binary `foo[..]` already exists in destination as part of `foo v0.1.0 ([..])`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} binary `foo[..]` already exists in destination as part of `foo v0.1.0 ([..])`
+",
+error = ERROR)));
 });
 
 test!(compile_failure {
@@ -405,17 +413,18 @@ test!(compile_failure {
     p.build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(&format!("\
 error: main function not found
 error: aborting due to previous error
-failed to compile `foo v0.1.0 (file://[..])`, intermediate artifacts can be \
+{error} failed to compile `foo v0.1.0 (file://[..])`, intermediate artifacts can be \
     found at `[..]target`
 
 Caused by:
   Could not compile `foo`.
 
 To learn more, run the command again with --verbose.
-"));
+",
+error = ERROR)));
 });
 
 test!(git_repo {
@@ -466,9 +475,10 @@ foo v0.0.1 (registry [..]):
 
 test!(uninstall_pkg_does_not_exist {
     assert_that(cargo_process("uninstall").arg("foo"),
-                execs().with_status(101).with_stderr("\
-package id specification `foo` matched no packages
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} package id specification `foo` matched no packages
+",
+error = ERROR)));
 });
 
 test!(uninstall_bin_does_not_exist {
@@ -477,9 +487,10 @@ test!(uninstall_bin_does_not_exist {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0));
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=bar"),
-                execs().with_status(101).with_stderr("\
-binary `bar[..]` not installed as part of `foo v0.0.1 ([..])`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} binary `bar[..]` not installed as part of `foo v0.0.1 ([..])`
+",
+error = ERROR)));
 });
 
 test!(uninstall_piecemeal {
@@ -514,9 +525,10 @@ test!(uninstall_piecemeal {
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(cargo_process("uninstall").arg("foo"),
-                execs().with_status(101).with_stderr("\
-package id specification `foo` matched no packages
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} package id specification `foo` matched no packages
+",
+error = ERROR)));
 });
 
 test!(subcommand_works_out_of_the_box {
@@ -590,11 +602,12 @@ test!(reports_unsuccessful_subcommand_result {
     assert_that(cargo_process("fail"),
                 execs().with_status(101).with_stderr_contains("\
 thread '<main>' panicked at 'explicit panic', [..]
-").with_stderr_contains("\
-third party subcommand `cargo-fail[..]` exited unsuccessfully
+").with_stderr_contains(format!("\
+{error} third party subcommand `cargo-fail[..]` exited unsuccessfully
 
 To learn more, run the command again with --verbose.
-"));
+",
+error = ERROR)));
 });
 
 test!(git_with_lockfile {

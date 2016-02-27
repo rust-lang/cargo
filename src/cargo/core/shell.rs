@@ -96,7 +96,7 @@ impl MultiShell {
     }
 
     pub fn error<T: ToString>(&mut self, message: T) -> CargoResult<()> {
-        self.err().say(message, RED)
+        self.err().say_status("error", message.to_string(), RED)
     }
 
     pub fn warn<T: ToString>(&mut self, message: T) -> CargoResult<()> {
