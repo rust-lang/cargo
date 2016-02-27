@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING};
+use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING, ERROR};
 use support::paths::{self, CargoPathExt};
 use support::registry::{self, Package};
 use support::git;
@@ -100,11 +100,12 @@ test!(nonexistent {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-no matching package named `nonexistent` found (required by `foo`)
+                execs().with_status(101).with_stderr(&format!("\
+{error} no matching package named `nonexistent` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
-"));
+",
+error = ERROR)));
 });
 
 test!(wrong_version {
@@ -124,23 +125,25 @@ test!(wrong_version {
     Package::new("foo", "0.0.2").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-no matching package named `foo` found (required by `foo`)
+                execs().with_status(101).with_stderr(&format!("\
+{error} no matching package named `foo` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 1.0.0
 versions found: 0.0.2, 0.0.1
-"));
+",
+error = ERROR)));
 
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-no matching package named `foo` found (required by `foo`)
+                execs().with_status(101).with_stderr(&format!("\
+{error} no matching package named `foo` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 1.0.0
 versions found: 0.0.4, 0.0.3, 0.0.2, ...
-"));
+",
+error = ERROR)));
 });
 
 test!(bad_cksum {
@@ -161,15 +164,16 @@ test!(bad_cksum {
     File::create(&pkg.archive_dst()).unwrap();
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr("\
-unable to get packages from source
+                execs().with_status(101).with_stderr(&format!("\
+{error} unable to get packages from source
 
 Caused by:
   failed to download package `bad-cksum v0.0.1 (registry file://[..])` from [..]
 
 Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry file://[..])`
-"));
+",
+error = ERROR)));
 });
 
 test!(update_registry {
@@ -188,11 +192,12 @@ test!(update_registry {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-no matching package named `notyet` found (required by `foo`)
+                execs().with_status(101).with_stderr(&format!("\
+{error} no matching package named `notyet` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
-"));
+",
+error = ERROR)));
 
     Package::new("notyet", "0.0.1").publish();
 
@@ -238,14 +243,15 @@ test!(package_with_path_deps {
     p.build();
 
     assert_that(p.cargo("package").arg("-v"),
-                execs().with_status(101).with_stderr("\
-failed to verify package tarball
+                execs().with_status(101).with_stderr(&format!("\
+{error} failed to verify package tarball
 
 Caused by:
   no matching package named `notyet` found (required by `foo`)
 location searched: registry file://[..]
 version required: ^0.0.1
-"));
+",
+error = ERROR)));
 
     Package::new("notyet", "0.0.1").publish();
 
@@ -385,12 +391,13 @@ test!(relying_on_a_yank_is_bad {
     Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr("\
-no matching package named `baz` found (required by `bar`)
+                execs().with_status(101).with_stderr(&format!("\
+{error} no matching package named `baz` found (required by `bar`)
 location searched: registry file://[..]
 version required: = 0.0.2
 versions found: 0.0.1
-"));
+",
+error = ERROR)));
 });
 
 test!(yanks_in_lockfiles_are_ok {
@@ -420,11 +427,12 @@ test!(yanks_in_lockfiles_are_ok {
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("update"),
-                execs().with_status(101).with_stderr("\
-no matching package named `bar` found (required by `foo`)
+                execs().with_status(101).with_stderr(&format!("\
+{error} no matching package named `bar` found (required by `foo`)
 location searched: registry file://[..]
 version required: *
-"));
+",
+error = ERROR)));
 });
 
 test!(update_with_lockfile_if_packages_missing {
@@ -583,8 +591,8 @@ test!(bad_license_file {
         "#);
     assert_that(p.cargo_process("publish").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
-the license file `foo` does not exist"));
+                       .with_stderr(&format!("\
+{error} the license file `foo` does not exist", error = ERROR)));
 });
 
 test!(updating_a_dep {

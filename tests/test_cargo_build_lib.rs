@@ -1,6 +1,6 @@
 use std::path::MAIN_SEPARATOR as SEP;
 use support::{basic_bin_manifest, execs, project, ProjectBuilder};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, RUNNING, ERROR};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -50,7 +50,7 @@ test!(build_with_no_lib {
 
     assert_that(p.cargo_process("build").arg("--lib"),
                 execs().with_status(101)
-                       .with_stderr("no library targets found"));
+                       .with_stderr(&format!("{error} no library targets found", error = ERROR)));
 });
 
 test!(build_with_relative_cargo_home_path {

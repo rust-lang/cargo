@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use hamcrest::assert_that;
 
-use support::{project, execs, COMPILING, UPDATING, DOWNLOADING};
+use support::{project, execs, COMPILING, UPDATING, DOWNLOADING, ERROR};
 use support::registry::Package;
 
 macro_rules! c {
@@ -235,15 +235,16 @@ test!(bad_target_spec {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr(&format!("\
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   failed to parse `4` as a cfg expression
 
 Caused by:
   unexpected character in cfg `4`, [..]
-"));
+",
+error = ERROR)));
 });
 
 test!(bad_target_spec2 {
@@ -260,15 +261,16 @@ test!(bad_target_spec2 {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr(&format!("\
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   failed to parse `foo =` as a cfg expression
 
 Caused by:
   expected a string, found nothing
-"));
+",
+error = ERROR)));
 });
 
 test!(multiple_match_ok {

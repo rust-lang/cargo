@@ -7,7 +7,7 @@ use std::str;
 
 use cargo_process;
 use support::paths;
-use support::{execs, project, mkdir_recursive, ProjectBuilder};
+use support::{execs, project, mkdir_recursive, ProjectBuilder, ERROR};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -61,11 +61,12 @@ test!(find_closest_biuld_to_build {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr("no such subcommand
+                       .with_stderr(&format!("{error} no such subcommand
 
 <tab>Did you mean `build`?
 
-"));
+",
+error = ERROR)));
 });
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
@@ -83,8 +84,9 @@ test!(find_closest_dont_correct_nonsense {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr("no such subcommand
-"));
+                       .with_stderr(&format!("{error} no such subcommand
+",
+error = ERROR)));
 });
 
 test!(override_cargo_home {
