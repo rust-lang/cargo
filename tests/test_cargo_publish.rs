@@ -8,7 +8,7 @@ use tar::Archive;
 use url::Url;
 
 use support::{project, execs};
-use support::{UPDATING, PACKAGING, UPLOADING, ERROR};
+use support::{UPDATING, PACKAGING, UPLOADING, ERROR, TAGGING};
 use support::paths;
 use support::git::repo;
 
@@ -85,6 +85,108 @@ test!(simple {
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {:?}", file.header().path());
     }
+});
+
+test!(uncommited_git_files_error{
+    let root = paths::root().join("all");
+    let p = repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .file(".cargo/config", r#"
+            [publish]
+            auto_tag = true
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("--no-verify"),
+                execs().with_status(101).with_stderr(&format!("\
+{updating} registry `{reg}`
+{packaging} foo v0.0.1 ({dir})
+{tagging} repository for version 0.0.1
+{uploading} foo v0.0.1 ({dir})
+",
+        updating = UPDATING,
+        uploading = UPLOADING,
+        packaging = PACKAGING,
+        tagging   = TAGGING,
+        dir = p.url(),
+        reg = registry())));
+});
+
+
+test!(git_auto_tag {
+    let root = paths::root().join("all");
+    let p = repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .file(".cargo/config", r#"
+            [publish]
+            auto_tag = true
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("--no-verify"),
+                execs().with_status(0).with_stdout(&format!("\
+{updating} registry `{reg}`
+{packaging} foo v0.0.1 ({dir})
+{tagging} repository for version 0.0.1
+{uploading} foo v0.0.1 ({dir})
+",
+        updating = UPDATING,
+        uploading = UPLOADING,
+        packaging = PACKAGING,
+        tagging   = TAGGING,
+        dir = p.url(),
+        reg = registry())));
+});
+
+test!(git_auto_tag_no_supported_source_control {
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .file(".cargo/config", r#"
+            [publish]
+            auto_tag = true
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish").arg("--no-verify"),
+                execs().with_status(0).with_stdout(&format!("\
+{updating} registry `{reg}`
+{packaging} foo v0.0.1 ({dir})
+{tagging} repository for version 0.0.1
+{tagging} failed: no taggable source control. auto_tag can be turned off in your cargo config file
+{uploading} foo v0.0.1 ({dir})
+",
+        updating = UPDATING,
+        uploading = UPLOADING,
+        packaging = PACKAGING,
+        tagging = TAGGING,
+        dir = p.url(),
+        reg = registry())));
 });
 
 test!(git_deps {
