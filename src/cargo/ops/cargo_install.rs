@@ -137,9 +137,8 @@ fn select_pkg<'a, T>(mut source: T,
             let deps = try!(source.query(&dep));
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {
-                    try!(source.download(&[pkgid.clone()]));
-                    Ok((try!(source.get(&[pkgid.clone()])).remove(0),
-                        Box::new(source)))
+                    let pkg = try!(source.download(pkgid));
+                    Ok((pkg, Box::new(source)))
                 }
                 None => {
                     let vers_info = vers.map(|v| format!(" with version `{}`", v))

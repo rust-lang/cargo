@@ -5,7 +5,7 @@ use std::path::{PathBuf, Path};
 use std::str;
 use std::sync::{Mutex, Arc};
 
-use core::{PackageId, PackageSet};
+use core::PackageId;
 use util::{CargoResult, human, Human};
 use util::{internal, ChainError, profile, paths};
 use util::Freshness;
@@ -33,6 +33,7 @@ pub type BuildMap = HashMap<(PackageId, Kind), BuildOutput>;
 
 pub struct BuildState {
     pub outputs: Mutex<BuildMap>,
+    overrides: HashMap<(String, Kind), BuildOutput>,
 }
 
 #[derive(Default)]
@@ -65,8 +66,7 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                          -> CargoResult<(Work, Work, Freshness)> {
     let _p = profile::start(format!("build script prepare: {}/{}",
                                     unit.pkg, unit.target.name()));
-    let key = (unit.pkg.package_id().clone(), unit.kind);
-    let overridden = cx.build_state.outputs.lock().unwrap().contains_key(&key);
+    let overridden = cx.build_state.has_override(unit);
     let (work_dirty, work_fresh) = if overridden {
         (Work::new(|_| Ok(())), Work::new(|_| Ok(())))
     } else {
@@ -124,7 +124,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        cx.dep_run_custom_build(unit).iter().filter_map(|unit| {
+        try!(cx.dep_run_custom_build(unit)).iter().filter_map(|unit| {
             if unit.profile.run_custom_build {
                 Some((unit.pkg.manifest().links().unwrap().to_string(),
                       unit.pkg.package_id().clone()))
@@ -238,33 +238,33 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
 }
 
 impl BuildState {
-    pub fn new(config: &super::BuildConfig,
-               packages: &PackageSet) -> BuildState {
-        let mut sources = HashMap::new();
-        for package in packages.iter() {
-            match package.manifest().links() {
-                Some(links) => {
-                    sources.insert(links.to_string(),
-                                   package.package_id().clone());
-                }
-                None => {}
-            }
-        }
-        let mut outputs = HashMap::new();
+    pub fn new(config: &super::BuildConfig) -> BuildState {
+        let mut overrides = HashMap::new();
         let i1 = config.host.overrides.iter().map(|p| (p, Kind::Host));
         let i2 = config.target.overrides.iter().map(|p| (p, Kind::Target));
         for ((name, output), kind) in i1.chain(i2) {
-            // If no package is using the library named `name`, then this is
-            // just an override that we ignore.
-            if let Some(id) = sources.get(name) {
-                outputs.insert((id.clone(), kind), output.clone());
-            }
+            overrides.insert((name.clone(), kind), output.clone());
         }
-        BuildState { outputs: Mutex::new(outputs) }
+        BuildState {
+            outputs: Mutex::new(HashMap::new()),
+            overrides: overrides,
+        }
     }
 
     fn insert(&self, id: PackageId, kind: Kind, output: BuildOutput) {
         self.outputs.lock().unwrap().insert((id, kind), output);
+    }
+
+    fn has_override(&self, unit: &Unit) -> bool {
+        let key = unit.pkg.manifest().links().map(|l| (l.to_string(), unit.kind));
+        match key.and_then(|k| self.overrides.get(&k)) {
+            Some(output) => {
+                self.insert(unit.pkg.package_id().clone(), unit.kind,
+                            output.clone());
+                true
+            }
+            None => false,
+        }
     }
 }
 
@@ -372,25 +372,27 @@ impl BuildOutput {
 /// The given set of targets to this function is the initial set of
 /// targets/profiles which are being built.
 pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
-                           units: &[Unit<'b>]) {
+                           units: &[Unit<'b>])
+                           -> CargoResult<()> {
     let mut ret = HashMap::new();
     for unit in units {
-        build(&mut ret, cx, unit);
+        try!(build(&mut ret, cx, unit));
     }
     cx.build_scripts.extend(ret.into_iter().map(|(k, v)| {
         (k, Arc::new(v))
     }));
+    return Ok(());
 
     // Recursive function to build up the map we're constructing. This function
     // memoizes all of its return values as it goes along.
     fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<Unit<'b>, BuildScripts>,
                            cx: &Context<'b, 'cfg>,
                            unit: &Unit<'b>)
-                           -> &'a BuildScripts {
+                           -> CargoResult<&'a BuildScripts> {
         // Do a quick pre-flight check to see if we've already calculated the
         // set of dependencies.
         if out.contains_key(unit) {
-            return &out[unit]
+            return Ok(&out[unit])
         }
 
         let mut ret = BuildScripts::default();
@@ -398,8 +400,8 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
             add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
         }
-        for unit in cx.dep_targets(unit).iter() {
-            let dep_scripts = build(out, cx, unit);
+        for unit in try!(cx.dep_targets(unit)).iter() {
+            let dep_scripts = try!(build(out, cx, unit));
 
             if unit.target.for_host() {
                 ret.plugins.extend(dep_scripts.to_link.iter()
@@ -416,7 +418,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
             add_to_link(prev, &pkg, kind);
         }
         prev.plugins.extend(ret.plugins);
-        prev
+        Ok(prev)
     }
 
     // When adding an entry to 'to_link' we only actually push it on if the
