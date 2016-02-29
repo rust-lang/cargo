@@ -567,6 +567,7 @@ test!(login_with_no_cargo_dir {
 });
 
 test!(bad_license_file {
+    Package::new("foo", "1.0.0").publish();
     let p = project("all")
         .file("Cargo.toml", r#"
             [project]
@@ -957,21 +958,52 @@ test!(update_same_prefix_oh_my_how_was_this_a_bug {
                 execs().with_status(0));
 });
 
-test!(use_semver {                                        
-    let p = project("foo")                                
-        .file("Cargo.toml", r#"                           
-            [project]                                     
-            name = "bar"                                  
-            version = "0.5.0"                             
-            authors = []                                  
+test!(use_semver {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
 
-            [dependencies]                                
-            foo = "1.2.3-alpha.0"                         
-        "#)                                               
-        .file("src/main.rs", "fn main() {}");             
-    p.build();                                            
+            [dependencies]
+            foo = "1.2.3-alpha.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
 
-    Package::new("foo", "1.2.3-alpha.0").publish();       
+    Package::new("foo", "1.2.3-alpha.0").publish();
 
     assert_that(p.cargo("build"), execs().with_status(0));
+});
+
+test!(only_download_relevant {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [target.foo.dependencies]
+            foo = "*"
+            [dev-dependencies]
+            bar = "*"
+            [dependencies]
+            baz = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{downloading} baz v0.1.0 ([..])
+{compiling} baz v0.1.0 ([..])
+{compiling} bar v0.5.0 ([..])
+", downloading = DOWNLOADING, compiling = COMPILING, updating = UPDATING)));
 });

@@ -8,7 +8,7 @@ use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, Dependency, profile, internal};
+use util::{CargoResult, profile, internal};
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
@@ -68,11 +68,16 @@ impl<'a> JobQueue<'a> {
         }
     }
 
-    pub fn enqueue(&mut self, cx: &Context<'a, 'a>,
-                   unit: &Unit<'a>, job: Job, fresh: Freshness) {
+    pub fn enqueue<'cfg>(&mut self,
+                         cx: &Context<'a, 'cfg>,
+                         unit: &Unit<'a>,
+                         job: Job,
+                         fresh: Freshness) -> CargoResult<()> {
         let key = Key::new(unit);
-        self.queue.queue(cx, Fresh, key, Vec::new()).push((job, fresh));
+        let deps = try!(key.dependencies(cx));
+        self.queue.queue(Fresh, key, Vec::new(), &deps).push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
+        Ok(())
     }
 
     /// Execute all jobs necessary to build the dependency graph.
@@ -230,28 +235,6 @@ impl<'a> JobQueue<'a> {
     }
 }
 
-impl<'a> Dependency for Key<'a> {
-    type Context = Context<'a, 'a>;
-
-    fn dependencies(&self, cx: &Context<'a, 'a>) -> Vec<Key<'a>> {
-        let unit = Unit {
-            pkg: cx.get_package(self.pkg),
-            target: self.target,
-            profile: self.profile,
-            kind: self.kind,
-        };
-        cx.dep_targets(&unit).iter().filter_map(|unit| {
-            // Binaries aren't actually needed to *compile* tests, just to run
-            // them, so we don't include this dependency edge in the job graph.
-            if self.target.is_test() && unit.target.is_bin() {
-                None
-            } else {
-                Some(Key::new(unit))
-            }
-        }).collect()
-    }
-}
-
 impl<'a> Key<'a> {
     fn new(unit: &Unit<'a>) -> Key<'a> {
         Key {
@@ -260,6 +243,26 @@ impl<'a> Key<'a> {
             profile: unit.profile,
             kind: unit.kind,
         }
+    }
+
+    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
+                          -> CargoResult<Vec<Key<'a>>> {
+        let unit = Unit {
+            pkg: try!(cx.get_package(self.pkg)),
+            target: self.target,
+            profile: self.profile,
+            kind: self.kind,
+        };
+        let targets = try!(cx.dep_targets(&unit));
+        Ok(targets.iter().filter_map(|unit| {
+            // Binaries aren't actually needed to *compile* tests, just to run
+            // them, so we don't include this dependency edge in the job graph.
+            if self.target.is_test() && unit.target.is_bin() {
+                None
+            } else {
+                Some(Key::new(unit))
+            }
+        }).collect())
     }
 }
 

@@ -9,7 +9,7 @@ use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
 use url::Url;
 
-use core::{Summary, Package, PackageId, Registry, Dependency};
+use core::{Package, PackageId, Registry};
 use sources::{PathSource, GitSource, RegistrySource};
 use sources::git;
 use util::{human, Config, CargoResult, ToUrl};
@@ -24,13 +24,7 @@ pub trait Source: Registry {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()>;
-
-    /// The get method returns the Path of each specified package on the
-    /// local file system. It assumes that `download` was already called,
-    /// and that the packages are already locally available on the file
-    /// system.
-    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>>;
+    fn download(&mut self, package: &PackageId) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -440,65 +434,6 @@ impl<'a, 'src> Iterator for SourcesMut<'a, 'src> {
     type Item = (&'a SourceId, &'a mut (Source + 'src));
     fn next(&mut self) -> Option<(&'a SourceId, &'a mut (Source + 'src))> {
         self.inner.next().map(|(a, b)| (a, &mut **b))
-    }
-}
-
-/// List of `Source` implementors. `SourceSet` itself implements `Source`.
-pub struct SourceSet<'src> {
-    sources: Vec<Box<Source+'src>>
-}
-
-impl<'src> SourceSet<'src> {
-    pub fn new(sources: Vec<Box<Source+'src>>) -> SourceSet<'src> {
-        SourceSet { sources: sources }
-    }
-}
-
-impl<'src> Registry for SourceSet<'src> {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
-        let mut ret = Vec::new();
-
-        for source in self.sources.iter_mut() {
-            ret.extend(try!(source.query(name)).into_iter());
-        }
-
-        Ok(ret)
-    }
-}
-
-impl<'src> Source for SourceSet<'src> {
-    fn update(&mut self) -> CargoResult<()> {
-        for source in self.sources.iter_mut() {
-            try!(source.update());
-        }
-
-        Ok(())
-    }
-
-    fn download(&mut self, packages: &[PackageId]) -> CargoResult<()> {
-        for source in self.sources.iter_mut() {
-            try!(source.download(packages));
-        }
-
-        Ok(())
-    }
-
-    fn get(&self, packages: &[PackageId]) -> CargoResult<Vec<Package>> {
-        let mut ret = Vec::new();
-
-        for source in self.sources.iter() {
-            ret.extend(try!(source.get(packages)).into_iter());
-        }
-
-        Ok(ret)
-    }
-
-    fn fingerprint(&self, id: &Package) -> CargoResult<String> {
-        let mut ret = String::new();
-        for source in self.sources.iter() {
-            ret.push_str(&try!(source.fingerprint(id))[..]);
-        }
-        Ok(ret)
     }
 }
 

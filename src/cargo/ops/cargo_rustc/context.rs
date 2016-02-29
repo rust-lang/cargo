@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use regex::Regex;
 
-use core::{SourceMap, Package, PackageId, PackageSet, Resolve, Target, Profile};
+use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
 use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
@@ -14,6 +14,7 @@ use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::layout::{Layout, LayoutProxy};
+use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 use super::{ProcessEngine, ExecEngine};
 
@@ -28,8 +29,8 @@ pub struct Unit<'a> {
 pub struct Context<'a, 'cfg: 'a> {
     pub config: &'cfg Config,
     pub resolve: &'a Resolve,
-    pub sources: &'a SourceMap<'cfg>,
     pub compilation: Compilation<'cfg>,
+    pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
     pub build_explicit_deps: HashMap<Unit<'a>, (PathBuf, Vec<String>)>,
     pub exec_engine: Arc<Box<ExecEngine>>,
@@ -37,13 +38,13 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compiled: HashSet<Unit<'a>>,
     pub build_config: BuildConfig,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
+    pub links: Links<'a>,
 
     host: Layout,
     target: Option<Layout>,
     target_triple: String,
     target_info: TargetInfo,
     host_info: TargetInfo,
-    package_set: &'a PackageSet,
     profiles: &'a Profiles,
 }
 
@@ -57,8 +58,7 @@ struct TargetInfo {
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn new(resolve: &'a Resolve,
-               sources: &'a SourceMap<'cfg>,
-               deps: &'a PackageSet,
+               packages: &'a PackageSet<'cfg>,
                config: &'cfg Config,
                host: Layout,
                target_layout: Option<Layout>,
@@ -83,13 +83,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             host: host,
             target: target_layout,
             resolve: resolve,
-            sources: sources,
-            package_set: deps,
+            packages: packages,
             config: config,
             target_info: target_info,
             host_info: host_info,
             compilation: Compilation::new(config),
-            build_state: Arc::new(BuildState::new(&build_config, deps)),
+            build_state: Arc::new(BuildState::new(&build_config)),
             build_config: build_config,
             exec_engine: engine,
             fingerprints: HashMap::new(),
@@ -97,6 +96,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
+            links: Links::new(),
         })
     }
 
@@ -213,14 +213,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
-        let out_dir = self.layout(unit.pkg, unit.kind);
-        if unit.target.is_custom_build() {
-            out_dir.build(unit.pkg)
-        } else if unit.target.is_example() {
-            out_dir.examples().to_path_buf()
-        } else {
-            out_dir.root().to_path_buf()
-        }
+        self.layout(unit.pkg, unit.kind).out_dir(unit.pkg, unit.target)
     }
 
     /// Return the (prefix, suffix) pair for dynamic libraries.
@@ -345,7 +338,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         if unit.profile.run_custom_build {
             return self.dep_run_custom_build(unit)
         } else if unit.profile.doc {
@@ -354,7 +347,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id).into_iter().flat_map(|a| a);
-        let mut ret = deps.map(|id| self.get_package(id)).filter(|dep| {
+        let mut ret = try!(deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|d| {
@@ -391,22 +384,27 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 // actually used!
                 true
             })
-        }).filter_map(|pkg| {
-            pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                Unit {
-                    pkg: pkg,
-                    target: t,
-                    profile: self.lib_profile(id),
-                    kind: unit.kind.for_target(t),
+        }).filter_map(|id| {
+            match self.get_package(id) {
+                Ok(pkg) => {
+                    pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                        Ok(Unit {
+                            pkg: pkg,
+                            target: t,
+                            profile: self.lib_profile(id),
+                            kind: unit.kind.for_target(t),
+                        })
+                    })
                 }
-            })
-        }).collect::<Vec<_>>();
+                Err(e) => Some(Err(e))
+            }
+        }).collect::<CargoResult<Vec<_>>>());
 
         // If this target is a build script, then what we've collected so far is
         // all we need. If this isn't a build script, then it depends on the
         // build script if there is one.
         if unit.target.is_custom_build() {
-            return ret
+            return Ok(ret)
         }
         ret.extend(self.dep_build_script(unit));
 
@@ -415,7 +413,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // didn't include `pkg` in the return values, so we need to special case
         // it here and see if we need to push `(pkg, pkg_lib_target)`.
         if unit.target.is_lib() {
-            return ret
+            return Ok(ret)
         }
         ret.extend(self.maybe_lib(unit));
 
@@ -431,20 +429,21 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }));
         }
-        ret
+        Ok(ret)
     }
 
     /// Returns the dependencies needed to run a build script.
     ///
     /// The `unit` provided must represent an execution of a build script, and
     /// the returned set of units must all be run before `unit` is run.
-    pub fn dep_run_custom_build(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+    pub fn dep_run_custom_build(&self, unit: &Unit<'a>)
+                                -> CargoResult<Vec<Unit<'a>>> {
         // If this build script's execution has been overridden then we don't
         // actually depend on anything, we've reached the end of the dependency
         // chain as we've got all the info we're gonna get.
         let key = (unit.pkg.package_id().clone(), unit.kind);
         if self.build_state.outputs.lock().unwrap().contains_key(&key) {
-            return Vec::new()
+            return Ok(Vec::new())
         }
 
         // When not overridden, then the dependencies to run a build script are:
@@ -460,7 +459,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profile: &self.profiles.dev,
             ..*unit
         };
-        self.dep_targets(&tmp).iter().filter_map(|unit| {
+        let deps = try!(self.dep_targets(&tmp));
+        Ok(deps.iter().filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None
             }
@@ -469,15 +469,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profile: self.build_script_profile(unit.pkg.package_id()),
             kind: Kind::Host, // build scripts always compiled for the host
             ..*unit
-        })).collect()
+        })).collect())
     }
 
     /// Returns the dependencies necessary to document a package
-    fn doc_deps(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+    fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         let deps = self.resolve.deps(unit.pkg.package_id()).into_iter();
-        let deps = deps.flat_map(|a| a).map(|id| {
-            self.get_package(id)
-        }).filter(|dep| {
+        let deps = deps.flat_map(|a| a).filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {
@@ -487,15 +485,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     _ => false,
                 }
             })
-        }).filter_map(|dep| {
-            dep.targets().iter().find(|t| t.is_lib()).map(|t| (dep, t))
+        }).map(|dep| {
+            self.get_package(dep)
         });
 
         // To document a library, we depend on dependencies actually being
         // built. If we're documenting *all* libraries, then we also depend on
         // the documentation of the library being built.
         let mut ret = Vec::new();
-        for (dep, lib) in deps {
+        for dep in deps {
+            let dep = try!(dep);
+            let lib = match dep.targets().iter().find(|t| t.is_lib()) {
+                Some(lib) => lib,
+                None => continue,
+            };
             ret.push(Unit {
                 pkg: dep,
                 target: lib,
@@ -519,7 +522,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if unit.target.is_bin() {
             ret.extend(self.maybe_lib(unit));
         }
-        ret
+        Ok(ret)
     }
 
     /// If a build script is scheduled to be run for the package specified by
@@ -566,10 +569,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> &'a Package {
-        self.package_set.iter()
-            .find(|pkg| id == pkg.package_id())
-            .expect("Should have found package")
+    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
+        self.packages.get(id)
     }
 
     /// Get the user-specified linker for a particular host or target

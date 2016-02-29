@@ -2,9 +2,8 @@ use std::default::Default;
 use std::fs;
 use std::path::Path;
 
-use core::{Package, PackageSet, Profiles};
-use core::source::{Source, SourceMap};
-use core::registry::PackageRegistry;
+use core::{Package, Profiles};
+use core::source::Source;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context, BuildConfig, Kind, Unit};
 
@@ -26,18 +25,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         return rm_rf(&target_dir);
     }
 
-    // Load the lockfile (if one's available)
-    let lockfile = root.root().join("Cargo.lock");
-    let source_id = root.package_id().source_id();
-    let resolve = match try!(ops::load_lockfile(&lockfile, source_id)) {
-        Some(resolve) => resolve,
-        None => bail!("a Cargo.lock must exist before cleaning")
-    };
-
-    // Create a compilation context to have access to information like target
-    // filenames and such
-    let srcs = SourceMap::new();
-    let pkgs = PackageSet::new(&[]);
+    let (resolve, packages) = try!(ops::fetch(manifest_path, opts.config));
 
     let dest = if opts.release {"release"} else {"debug"};
     let host_layout = Layout::new(opts.config, &root, None, dest);
@@ -45,22 +33,16 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         Layout::new(opts.config, &root, Some(target), dest)
     });
 
-    let cx = try!(Context::new(&resolve, &srcs, &pkgs, opts.config,
+    let cx = try!(Context::new(&resolve, &packages, opts.config,
                                host_layout, target_layout,
                                BuildConfig::default(),
                                root.manifest().profiles()));
 
-    let mut registry = PackageRegistry::new(opts.config);
-
     // resolve package specs and remove the corresponding packages
     for spec in opts.spec {
+        // Translate the spec to a Package
         let pkgid = try!(resolve.query(spec));
-
-        // Translate the PackageId to a Package
-        let pkg = {
-            try!(registry.add_sources(&[pkgid.source_id().clone()]));
-            (try!(registry.get(&[pkgid.clone()]))).into_iter().next().unwrap()
-        };
+        let pkg = try!(packages.get(&pkgid));
 
         // And finally, clean everything out!
         for target in pkg.targets() {

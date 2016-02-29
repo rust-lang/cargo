@@ -49,7 +49,7 @@ use std::fs;
 use std::io;
 use std::path::{PathBuf, Path};
 
-use core::Package;
+use core::{Package, Target};
 use util::Config;
 use util::hex::short_hash;
 
@@ -116,6 +116,7 @@ impl Layout {
     pub fn dest(&self) -> &Path { &self.root }
     pub fn deps(&self) -> &Path { &self.deps }
     pub fn examples(&self) -> &Path { &self.examples }
+    pub fn root(&self) -> &Path { &self.root }
 
     pub fn fingerprint(&self, package: &Package) -> PathBuf {
         self.fingerprint.join(&self.pkg_dir(package))
@@ -154,4 +155,14 @@ impl<'a> LayoutProxy<'a> {
     pub fn build_out(&self, pkg: &Package) -> PathBuf { self.root.build_out(pkg) }
 
     pub fn proxy(&self) -> &'a Layout { self.root }
+
+    pub fn out_dir(&self, pkg: &Package, target: &Target) -> PathBuf {
+        if target.is_custom_build() {
+            self.build(pkg)
+        } else if target.is_example() {
+            self.examples().to_path_buf()
+        } else {
+            self.root().to_path_buf()
+        }
+    }
 }
