@@ -315,7 +315,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     assert_that(p.cargo_process("build"),
         execs()
-        .with_stdout(&format!("{} bar v0.5.0 ({})\n\
+        .with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                               {} foo v0.5.0 ({})\n",
                              COMPILING, p.url(),
                              COMPILING, p.url()))
@@ -607,7 +607,7 @@ test!(cargo_compile_with_dep_name_mismatch {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!(
 r#"no matching package named `notquitebar` found (required by `foo`)
-location searched: {proj_dir}
+location searched: {proj_dir}/bar
 version required: *
 "#, proj_dir = p.url())));
 });
@@ -1004,7 +1004,7 @@ test!(verbose_release_build_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} foo v0.0.0 ({url}/foo)
 {running} `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \

@@ -78,7 +78,7 @@ test!(top_level_overrides_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.0 ({url})
+{compiling} foo v0.0.0 ({url}/foo)
 {running} `rustc foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
