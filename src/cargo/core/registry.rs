@@ -143,11 +143,9 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.source_ids.insert(id.clone(), (id.clone(), kind));
     }
 
-    pub fn add_overrides(&mut self, ids: Vec<SourceId>) -> CargoResult<()> {
-        for id in ids.iter() {
-            try!(self.load(id, Kind::Override));
-        }
-        Ok(())
+    pub fn add_override(&mut self, id: &SourceId, source: Box<Source + 'cfg>) {
+        self.add_source(id, source, Kind::Override);
+        self.overrides.push(id.clone());
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {

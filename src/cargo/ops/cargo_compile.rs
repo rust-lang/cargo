@@ -32,8 +32,9 @@ use core::{Source, SourceId, PackageSet, Package, Target};
 use core::{Profile, TargetKind, Profiles};
 use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
+use sources::PathSource;
 use util::config::Config;
-use util::{CargoResult, internal, ChainError, profile};
+use util::{CargoResult, profile};
 
 /// Contains information about how a package should be compiled.
 pub struct CompileOptions<'a> {
@@ -104,8 +105,6 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
                                 no_default_features: bool)
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
-    let override_ids = try!(source_ids_from_config(config, root_package.root()));
-
     let mut registry = PackageRegistry::new(config);
 
     if let Some(source) = source {
@@ -121,7 +120,7 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
     // overrides, etc.
     let _p = profile::start("resolving w/ overrides...");
 
-    try!(registry.add_overrides(override_ids));
+    try!(add_overrides(&mut registry, root_package.root(), config));
 
     let method = Method::Required{
         dev_deps: true, // TODO: remove this option?
@@ -383,20 +382,14 @@ fn generate_targets<'a>(pkg: &'a Package,
 
 /// Read the `paths` configuration variable to discover all path overrides that
 /// have been configured.
-fn source_ids_from_config(config: &Config, cur_path: &Path)
-                          -> CargoResult<Vec<SourceId>> {
-
-    let configs = try!(config.values());
-    debug!("loaded config; configs={:?}", configs);
-    let config_paths = match configs.get("paths") {
-        Some(cfg) => cfg,
-        None => return Ok(Vec::new())
+fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
+                     cur_path: &Path,
+                     config: &'a Config) -> CargoResult<()> {
+    let paths = match try!(config.get_list("paths")) {
+        Some(list) => list,
+        None => return Ok(())
     };
-    let paths = try!(config_paths.list().chain_error(|| {
-        internal("invalid configuration for the key `paths`")
-    }));
-
-    paths.iter().map(|&(ref s, ref p)| {
+    let paths = paths.val.iter().map(|&(ref s, ref p)| {
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
@@ -405,7 +398,15 @@ fn source_ids_from_config(config: &Config, cur_path: &Path)
         // Make sure we don't override the local package, even if it's in the
         // list of override paths.
         cur_path != &**p
-    }).map(|p| SourceId::for_path(&p)).collect()
+    });
+
+    for path in paths {
+        let id = try!(SourceId::for_path(&path));
+        let mut source = PathSource::new_recursive(&path, &id, config);
+        try!(source.update());
+        registry.add_override(&id, Box::new(source));
+    }
+    Ok(())
 }
 
 /// Parse all config files to learn about build configuration. Currently
