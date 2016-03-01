@@ -253,7 +253,7 @@ test!(no_feature_doesnt_build {
 
     assert_that(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
@@ -293,7 +293,7 @@ test!(default_feature_pulled_in {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
@@ -394,8 +394,8 @@ test!(groups_on_groups_on_groups {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} ba[..] v0.0.1 ({dir})
-{compiling} ba[..] v0.0.1 ({dir})
+{compiling} ba[..] v0.0.1 ({dir}/ba[..])
+{compiling} ba[..] v0.0.1 ({dir}/ba[..])
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url())));
 });
@@ -438,8 +438,8 @@ test!(many_cli_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar baz"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} ba[..] v0.0.1 ({dir})
-{compiling} ba[..] v0.0.1 ({dir})
+{compiling} ba[..] v0.0.1 ({dir}/ba[..])
+{compiling} ba[..] v0.0.1 ({dir}/ba[..])
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url())));
 });
@@ -499,8 +499,8 @@ test!(union_features {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} d2 v0.0.1 ({dir})
-{compiling} d1 v0.0.1 ({dir})
+{compiling} d2 v0.0.1 ({dir}/d2)
+{compiling} d1 v0.0.1 ({dir}/d1)
 {compiling} foo v0.0.1 ({dir})
 ", compiling = COMPILING, dir = p.url())));
 });
@@ -533,14 +533,14 @@ test!(many_features_no_rebuilds {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} a v0.1.0 ({dir})
+{compiling} a v0.1.0 ({dir}/a)
 {compiling} b v0.1.0 ({dir})
 ", compiling = COMPILING, dir = p.url())));
     p.root().move_into_the_past().unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{fresh} a v0.1.0 ([..])
+{fresh} a v0.1.0 ([..]/a)
 {fresh} b v0.1.0 ([..])
 ", fresh = FRESH)));
 });

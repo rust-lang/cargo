@@ -72,8 +72,8 @@ test!(cargo_compile_with_nested_deps_shorthand {
 
     assert_that(p.cargo_process("build"),
         execs().with_status(0)
-               .with_stdout(&format!("{} baz v0.5.0 ({})\n\
-                                     {} bar v0.5.0 ({})\n\
+               .with_stdout(&format!("{} baz v0.5.0 ({}/bar/baz)\n\
+                                     {} bar v0.5.0 ({}/bar)\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
                                     COMPILING, p.url(),
@@ -90,13 +90,13 @@ test!(cargo_compile_with_nested_deps_shorthand {
     println!("building baz");
     assert_that(p.cargo("build").arg("-p").arg("baz"),
                 execs().with_status(0)
-                       .with_stdout(&format!("{} baz v0.5.0 ({})\n",
+                       .with_stdout(&format!("{} baz v0.5.0 ({}/bar/baz)\n",
                                             COMPILING, p.url())));
     println!("building foo");
     assert_that(p.cargo("build")
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout(&format!("{} bar v0.5.0 ({})\n\
+                       .with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
@@ -176,15 +176,15 @@ test!(cargo_compile_with_root_dev_deps_with_testing {
     p2.build();
     assert_that(p.cargo_process("test"),
         execs().with_stdout(&format!("\
-{compiling} [..] v0.5.0 ({url})
-{compiling} [..] v0.5.0 ({url})
+{compiling} [..] v0.5.0 ([..])
+{compiling} [..] v0.5.0 ([..])
 {running} target[..]foo-[..]
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, url = p.url(), running = RUNNING)));
+", compiling = COMPILING, running = RUNNING)));
 });
 
 test!(cargo_compile_with_transitive_dev_deps {
@@ -229,7 +229,7 @@ test!(cargo_compile_with_transitive_dev_deps {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+        execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
                                     COMPILING, p.url())));
@@ -271,7 +271,7 @@ test!(no_rebuild_dependency {
         "#);
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
@@ -282,7 +282,7 @@ test!(no_rebuild_dependency {
 
     p.build(); // rebuild the files (rewriting them in the process)
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
@@ -337,8 +337,8 @@ test!(deep_dependencies_trigger_rebuild {
             pub fn baz() {}
         "#);
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("{} baz v0.5.0 ({})\n\
-                                             {} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} baz v0.5.0 ({}/baz)\n\
+                                             {} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url(),
@@ -355,8 +355,8 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn baz() { println!("hello!"); }
     "#).unwrap();
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("{} baz v0.5.0 ({})\n\
-                                             {} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} baz v0.5.0 ({}/baz)\n\
+                                             {} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url(),
@@ -369,7 +369,7 @@ test!(deep_dependencies_trigger_rebuild {
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#).unwrap();
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url())));
@@ -426,8 +426,8 @@ test!(no_rebuild_two_deps {
             pub fn baz() {}
         "#);
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("{} baz v0.5.0 ({})\n\
-                                             {} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} baz v0.5.0 ({}/baz)\n\
+                                             {} bar v0.5.0 ({}/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, p.url(),
                                             COMPILING, p.url(),
@@ -473,7 +473,7 @@ test!(nested_deps_recompile {
     let bar = p.url();
 
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+                execs().with_stdout(&format!("{} bar v0.5.0 ({}/src/bar)\n\
                                              {} foo v0.5.0 ({})\n",
                                             COMPILING, bar,
                                             COMPILING, p.url())));
@@ -509,14 +509,16 @@ test!(error_message_for_missing_manifest {
        .file("src/bar/not-a-manifest", "");
 
     assert_that(p.cargo_process("build"),
-                execs()
-                .with_status(101)
-                .with_stderr(&format!("\
+                execs().with_status(101)
+                       .with_stderr("\
 Unable to update file://[..]
 
 Caused by:
-  Could not find `Cargo.toml` in `{}`
-", p.root().join("src").join("bar").display())));
+  failed to read `[..]bar[..]Cargo.toml`
+
+Caused by:
+  No such file or directory ([..])
+"));
 
 });
 
@@ -678,7 +680,7 @@ test!(path_dep_build_cmd {
     p.root().join("bar").move_into_the_past().unwrap();
 
     assert_that(p.cargo("build"),
-        execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+        execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
                                     COMPILING, p.url())));
@@ -695,7 +697,7 @@ test!(path_dep_build_cmd {
     }
 
     assert_that(p.cargo("build"),
-        execs().with_stdout(&format!("{} bar v0.5.0 ({})\n\
+        execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\
                                      {} foo v0.5.0 ({})\n",
                                     COMPILING, p.url(),
                                     COMPILING, p.url())));
@@ -741,8 +743,8 @@ test!(dev_deps_no_rebuild_lib {
     assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} [..] v0.5.0 ({url})
-{compiling} [..] v0.5.0 ({url})
+{compiling} [..] v0.5.0 ({url}[..])
+{compiling} [..] v0.5.0 ({url}[..])
 {running} target[..]foo-[..]
 
 running 0 tests

@@ -82,7 +82,7 @@ test!(cargo_test_release {
 
     assert_that(p.cargo_process("test").arg("-v").arg("--release"),
                 execs().with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {running} [..] -C opt-level=3 [..]
 {compiling} foo v0.1.0 ({dir})
 {running} [..] -C opt-level=3 [..]
@@ -314,7 +314,7 @@ test!(test_with_deep_lib_dep {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ([..])
 {compiling} bar v0.0.1 ({dir})
 {running} target[..]
 
@@ -951,7 +951,7 @@ test!(test_dylib {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -1259,7 +1259,7 @@ test!(selective_testing {
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d1 v0.0.1 ({dir})
+{compiling} d1 v0.0.1 ({dir}/d1)
 {running} target[..]d1-[..]
 
 running 0 tests
@@ -1279,7 +1279,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.cargo("test").arg("-p").arg("d2"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d2 v0.0.1 ({dir})
+{compiling} d2 v0.0.1 ({dir}/d2)
 {running} target[..]d2-[..]
 
 running 0 tests
@@ -1457,7 +1457,7 @@ test!(selective_testing_with_docs {
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d1 v0.0.1 ({dir})
+{compiling} d1 v0.0.1 ({dir}/d1)
 {running} target[..]deps[..]d1[..]
 
 running 0 tests

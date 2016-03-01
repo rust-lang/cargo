@@ -970,7 +970,7 @@ test!(shared_dep_with_a_build_script {
             authors = []
 
             [dependencies.a]
-            path = "../b"
+            path = "../a"
         "#)
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),

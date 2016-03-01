@@ -162,9 +162,22 @@ test!(package_verbose {
     let mut cargo = ::cargo_process();
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
-    assert_that(cargo.arg("package").arg("-v").arg("--no-verify"),
+
+    println!("package main repo");
+    assert_that(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ([..])
+{archiving} [..]
+{archiving} [..]
+",
+        packaging = PACKAGING,
+        archiving = ARCHIVING)));
+
+    println!("package sub-repo");
+    assert_that(cargo.arg("package").arg("-v").arg("--no-verify")
+                     .cwd(p.root().join("a")),
+                execs().with_status(0).with_stdout(&format!("\
+{packaging} a v0.0.1 ([..])
 {archiving} [..]
 {archiving} [..]
 ",

@@ -264,7 +264,7 @@ test!(native_plugin_dependency_with_custom_ar_linker {
     foo.build();
     assert_that(bar.cargo_process("build").arg("--verbose"),
                 execs().with_stdout(&format!("\
-{compiling} foo v0.0.1 ({url})
+{compiling} foo v0.0.1 ([..])
 {running} `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
-", compiling = COMPILING, running = RUNNING, url = bar.url())))
+", compiling = COMPILING, running = RUNNING)));
 });
