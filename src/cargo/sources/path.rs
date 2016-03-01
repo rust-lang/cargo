@@ -108,24 +108,39 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        // If this package is a git repository, then we really do want to query
-        // the git repository as it takes into account items such as .gitignore.
-        // We're not quite sure where the git repository is, however, so we do a
-        // bit of a probe.
+        // If this package is in a git repository, then we really do want to
+        // query the git repository as it takes into account items such as
+        // .gitignore. We're not quite sure where the git repository is,
+        // however, so we do a bit of a probe.
         //
-        // We check all packages in this source that are ancestors of the
-        // specified package (including the same package) to see if they're at
-        // the root of the git repository. This isn't always true, but it'll get
-        // us there most of the time!
-        let repo = self.packages.iter()
-                       .map(|pkg| pkg.root())
-                       .filter(|path| root.starts_with(path))
-                       .filter_map(|path| git2::Repository::open(&path).ok())
-                       .next();
-        match repo {
-            Some(repo) => self.list_files_git(pkg, repo, &mut filter),
-            None => self.list_files_walk(pkg, &mut filter),
+        // We walk this package's path upwards and look for a sibling
+        // Cargo.toml and .git folder. If we find one then we assume that we're
+        // part of that repository.
+        let mut cur = root;
+        loop {
+            if cur.join("Cargo.toml").is_file() {
+                // If we find a git repository next to this Cargo.toml, we still
+                // check to see if we are indeed part of the index. If not, then
+                // this is likely an unrelated git repo, so keep going.
+                if let Ok(repo) = git2::Repository::open(cur) {
+                    let index = try!(repo.index());
+                    let path = util::without_prefix(root, cur)
+                                    .unwrap().join("Cargo.toml");
+                    if index.get_path(&path, 0).is_some() {
+                        return self.list_files_git(pkg, repo, &mut filter);
+                    }
+                }
+            }
+            // don't cross submodule boundaries
+            if cur.join(".git").is_dir() {
+                break
+            }
+            match cur.parent() {
+                Some(parent) => cur = parent,
+                None => break,
+            }
         }
+        self.list_files_walk(pkg, &mut filter)
     }
 
     fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
@@ -138,7 +153,7 @@ impl<'cfg> PathSource<'cfg> {
         }));
         let pkg_path = pkg.root();
 
-        let mut ret = Vec::new();
+        let mut ret = Vec::<PathBuf>::new();
 
         // We use information from the git repository to guide us in traversing
         // its tree. The primary purpose of this is to take advantage of the
@@ -165,32 +180,48 @@ impl<'cfg> PathSource<'cfg> {
             }
         });
 
+        let mut subpackages_found = Vec::new();
+
         'outer: for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = try!(file_path);
 
-            // Filter out files outside this package.
-            if !file_path.starts_with(pkg_path) { continue }
-
-            // Filter out Cargo.lock and target always
-            {
-                let fname = file_path.file_name().and_then(|s| s.to_str());
-                if fname == Some("Cargo.lock") { continue }
-                if fname == Some("target") { continue }
+            // Filter out files blatantly outside this package. This is helped a
+            // bit obove via the `pathspec` function call, but we need to filter
+            // the entries in the index as well.
+            if !file_path.starts_with(pkg_path) {
+                continue
             }
 
-            // Filter out sub-packages of this package
-            for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
-                let other_path = other_pkg.root();
-                if other_path.starts_with(pkg_path) &&
-                   file_path.starts_with(other_path) {
-                    continue 'outer;
+            match file_path.file_name().and_then(|s| s.to_str()) {
+                // Filter out Cargo.lock and target always, we don't want to
+                // package a lock file no one will ever read and we also avoid
+                // build artifacts
+                Some("Cargo.lock") |
+                Some("target") => continue,
+
+                // Keep track of all sub-packages found and also strip out all
+                // matches we've found so far. Note, though, that if we find
+                // our own `Cargo.toml` we keep going.
+                Some("Cargo.toml") => {
+                    let path = file_path.parent().unwrap();
+                    if path != pkg_path {
+                        warn!("subpackage found: {}", path.display());
+                        ret.retain(|p| !p.starts_with(path));
+                        subpackages_found.push(path.to_path_buf());
+                        continue
+                    }
                 }
+
+                _ => {}
             }
 
-            let is_dir = is_dir.or_else(|| {
-                fs::metadata(&file_path).ok().map(|m| m.is_dir())
-            }).unwrap_or(false);
-            if is_dir {
+            // If this file is part of any other sub-package we've found so far,
+            // skip it.
+            if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
+                continue
+            }
+
+            if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, &root).unwrap();
                 let rel = try!(rel.to_str().chain_error(|| {
@@ -237,10 +268,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(&self, pkg: &Package, filter: &mut FnMut(&Path) -> bool)
                        -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
-        for pkg in self.packages.iter().filter(|p| *p == pkg) {
-            let loc = pkg.root();
-            try!(PathSource::walk(loc, &mut ret, true, filter));
-        }
+        try!(PathSource::walk(pkg.root(), &mut ret, true, filter));
         Ok(ret)
     }
 
