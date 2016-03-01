@@ -113,7 +113,7 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = try!(ops::resolve_pkg(&mut registry, root_package));
+    let resolve = try!(ops::resolve_pkg(&mut registry, root_package, config));
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle

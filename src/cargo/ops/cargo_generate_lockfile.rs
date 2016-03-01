@@ -31,7 +31,8 @@ pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
     let package = try!(Package::for_path(manifest_path, opts.config));
 
-    let previous_resolve = match try!(ops::load_pkg_lockfile(&package)) {
+    let previous_resolve = match try!(ops::load_pkg_lockfile(&package,
+                                                             opts.config)) {
         Some(resolve) => resolve,
         None => bail!("a Cargo.lock must exist before it is updated")
     };

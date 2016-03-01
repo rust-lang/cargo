@@ -5,19 +5,20 @@ use std::path::Path;
 use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
 
-use core::{Resolve, resolver, Package, SourceId};
-use util::{CargoResult, ChainError, human, paths};
+use core::{Resolve, resolver, Package};
+use util::{CargoResult, ChainError, human, paths, Config};
 use util::toml as cargo_toml;
 
-pub fn load_pkg_lockfile(pkg: &Package) -> CargoResult<Option<Resolve>> {
+pub fn load_pkg_lockfile(pkg: &Package, config: &Config)
+                         -> CargoResult<Option<Resolve>> {
     let lockfile = pkg.root().join("Cargo.lock");
-    let source_id = pkg.package_id().source_id();
-    load_lockfile(&lockfile, source_id).chain_error(|| {
+    load_lockfile(&lockfile, pkg, config).chain_error(|| {
         human(format!("failed to parse lock file at: {}", lockfile.display()))
     })
 }
 
-pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>> {
+pub fn load_lockfile(path: &Path, pkg: &Package, config: &Config)
+                     -> CargoResult<Option<Resolve>> {
     // If there is no lockfile, return none.
     let mut f = match File::open(path) {
         Ok(f) => f,
@@ -30,7 +31,7 @@ pub fn load_lockfile(path: &Path, sid: &SourceId) -> CargoResult<Option<Resolve>
     let table = toml::Value::Table(try!(cargo_toml::parse(&s, path)));
     let mut d = toml::Decoder::new(table);
     let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
-    Ok(Some(try!(v.to_resolve(sid))))
+    Ok(Some(try!(v.to_resolve(pkg, config))))
 }
 
 pub fn write_pkg_lockfile(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
