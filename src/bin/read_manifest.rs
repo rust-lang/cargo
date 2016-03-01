@@ -1,9 +1,8 @@
 use std::env;
 
-use cargo::core::{Package, Source};
+use cargo::core::Package;
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
-use cargo::sources::{PathSource};
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -32,9 +31,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> 
 
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
-    let mut source = try!(PathSource::for_path(root.parent().unwrap(), config));
-    try!(source.update());
-
-    let pkg = try!(source.root_package());
+    let pkg = try!(Package::for_path(&root, config));
     Ok(Some(pkg))
 }
