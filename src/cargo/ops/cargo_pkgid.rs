@@ -10,8 +10,7 @@ pub fn pkgid(manifest_path: &Path,
     let package = try!(Package::for_path(manifest_path, config));
 
     let lockfile = package.root().join("Cargo.lock");
-    let source_id = package.package_id().source_id();
-    let resolve = match try!(ops::load_lockfile(&lockfile, source_id)) {
+    let resolve = match try!(ops::load_lockfile(&lockfile, &package, config)) {
         Some(resolve) => resolve,
         None => bail!("a Cargo.lock must exist for this command"),
     };
