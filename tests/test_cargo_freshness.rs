@@ -288,3 +288,67 @@ test!(rerun_if_changed_in_dep {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
 });
+
+test!(same_build_dir_cached_packages {
+    let p = project("foo")
+        .file("a1/Cargo.toml", r#"
+            [package]
+            name = "a1"
+            version = "0.0.1"
+            authors = []
+            [dependencies]
+            b = { path = "../b" }
+        "#)
+        .file("a1/src/lib.rs", "")
+        .file("a2/Cargo.toml", r#"
+            [package]
+            name = "a2"
+            version = "0.0.1"
+            authors = []
+            [dependencies]
+            b = { path = "../b" }
+        "#)
+        .file("a2/src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+            [dependencies]
+            c = { path = "../c" }
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", r#"
+            [package]
+            name = "c"
+            version = "0.0.1"
+            authors = []
+            [dependencies]
+            d = { path = "../d" }
+        "#)
+        .file("c/src/lib.rs", "")
+        .file("d/Cargo.toml", r#"
+            [package]
+            name = "d"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("d/src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            target-dir = "./target"
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("a1")),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} d v0.0.1 ({dir}/d)
+{compiling} c v0.0.1 ({dir}/c)
+{compiling} b v0.0.1 ({dir}/b)
+{compiling} a1 v0.0.1 ({dir}/a1)
+", compiling = COMPILING, dir = p.url())));
+    assert_that(p.cargo("build").cwd(p.root().join("a2")),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} a2 v0.0.1 ({dir}/a2)
+", compiling = COMPILING, dir = p.url())));
+});

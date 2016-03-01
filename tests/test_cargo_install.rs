@@ -127,7 +127,7 @@ Caused by:
   failed to read `[..]Cargo.toml`
 
 Caused by:
-  No such file or directory ([..])
+  [..] (os error [..])
 "));
 });
 
