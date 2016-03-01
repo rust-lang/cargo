@@ -16,8 +16,9 @@ pub fn package(manifest_path: &Path,
                verify: bool,
                list: bool,
                metadata: bool) -> CargoResult<Option<PathBuf>> {
-    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                            config));
+    let path = manifest_path.parent().unwrap();
+    let id = try!(SourceId::for_path(path));
+    let mut src = PathSource::new(path, &id, config);
     let pkg = try!(src.root_package());
 
     if metadata {
