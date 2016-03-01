@@ -299,7 +299,7 @@ test!(bench_with_deep_lib_dep {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ([..])
 {compiling} bar v0.0.1 ({dir})
 {running} target[..]
 
@@ -705,7 +705,7 @@ test!(bench_dylib {
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {running} [..] -C opt-level=3 [..]
 {compiling} foo v0.0.1 ({dir})
 {running} [..] -C opt-level=3 [..]
@@ -732,7 +732,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
     assert_that(p.cargo("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{fresh} bar v0.0.1 ({dir})
+{fresh} bar v0.0.1 ({dir}/bar)
 {fresh} foo v0.0.1 ({dir})
 {running} [..]target[..]release[..]bench-[..]
 

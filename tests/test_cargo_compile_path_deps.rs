@@ -517,7 +517,7 @@ Caused by:
   failed to read `[..]bar[..]Cargo.toml`
 
 Caused by:
-  No such file or directory ([..])
+  [..] (os error [..])
 "));
 
 });
