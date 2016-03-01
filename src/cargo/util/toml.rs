@@ -295,6 +295,7 @@ struct Context<'a, 'b> {
     config: &'b Config,
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
+    layout: &'a Layout,
 }
 
 // These functions produce the equivalent of specific manifest entries. One
@@ -385,7 +386,7 @@ impl TomlManifest {
         }
 
         let pkgid = try!(project.to_package_id(source_id));
-        let metadata = pkgid.generate_metadata(&layout.root);
+        let metadata = pkgid.generate_metadata();
 
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
@@ -516,6 +517,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
+                layout: &layout,
             };
 
             // Collect the deps
@@ -702,10 +704,27 @@ fn process_dependencies(cx: &mut Context,
                 Some(SourceId::for_git(&loc, reference))
             }
             None => {
-                details.path.as_ref().map(|path| {
-                    cx.nested_paths.push(PathBuf::from(path));
-                    cx.source_id.clone()
-                })
+                match details.path.as_ref() {
+                    Some(path) => {
+                        cx.nested_paths.push(PathBuf::from(path));
+                        // If the source id for the package we're parsing is a
+                        // path source, then we normalize the path here to get
+                        // rid of components like `..`.
+                        //
+                        // The purpose of this is to get a canonical id for the
+                        // package that we're depending on to ensure that builds
+                        // of this package always end up hashing to the same
+                        // value no matter where it's built from.
+                        if cx.source_id.is_path() {
+                            let path = cx.layout.root.join(path);
+                            let path = util::normalize_path(&path);
+                            Some(try!(SourceId::for_path(&path)))
+                        } else {
+                            Some(cx.source_id.clone())
+                        }
+                    }
+                    None => None,
+                }
             }
         }.unwrap_or(try!(SourceId::for_central(cx.config)));
 

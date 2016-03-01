@@ -18,30 +18,39 @@ pub struct PathSource<'cfg> {
     updated: bool,
     packages: Vec<Package>,
     config: &'cfg Config,
+    recursive: bool,
 }
 
-// TODO: Figure out if packages should be discovered in new or self should be
-// mut and packages are discovered in update
 impl<'cfg> PathSource<'cfg> {
-    pub fn for_path(path: &Path, config: &'cfg Config)
-                    -> CargoResult<PathSource<'cfg>> {
-        trace!("PathSource::for_path; path={}", path.display());
-        Ok(PathSource::new(path, &try!(SourceId::for_path(path)), config))
-    }
-
     /// Invoked with an absolute path to a directory that contains a Cargo.toml.
-    /// The source will read the manifest and find any other packages contained
-    /// in the directory structure reachable by the root manifest.
+    ///
+    /// This source will only return the package at precisely the `path`
+    /// specified, and it will be an error if there's not a package at `path`.
     pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
                -> PathSource<'cfg> {
-        trace!("new; id={}", id);
-
         PathSource {
             id: id.clone(),
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
             config: config,
+            recursive: false,
+        }
+    }
+
+    /// Creates a new source which is walked recursively to discover packages.
+    ///
+    /// This is similar to the `new` method except that instead of requiring a
+    /// valid package to be present at `root` the folder is walked entirely to
+    /// crawl for packages.
+    ///
+    /// Note that this should be used with care and likely shouldn't be chosen
+    /// by default!
+    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config)
+                         -> PathSource<'cfg> {
+        PathSource {
+            recursive: true,
+            .. PathSource::new(root, id, config)
         }
     }
 
@@ -59,25 +68,13 @@ impl<'cfg> PathSource<'cfg> {
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
-        } else if (self.id.is_path() && self.id.precise().is_some()) ||
-                  self.id.is_registry() {
-            // If our source id is a path and it's listed with a precise
-            // version, then it means that we're not allowed to have nested
-            // dependencies (they've been rewritten to crates.io dependencies).
-            //
-            // If our source id is a registry dependency then crates are
-            // published one at a time so we don't recurse as well. Note that
-            // cargo by default doesn't package up nested dependencies but it
-            // may do so for custom-crafted tarballs.
-            //
-            // In these cases we specifically read just one package, not a list
-            // of packages.
+        } else if self.recursive {
+            ops::read_packages(&self.path, &self.id, self.config)
+        } else {
             let path = self.path.join("Cargo.toml");
             let (pkg, _) = try!(ops::read_package(&path, &self.id,
                                                   self.config));
             Ok(vec![pkg])
-        } else {
-            ops::read_packages(&self.path, &self.id, self.config)
         }
     }
 
