@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use semver::Version;
-use url::{self, Url, UrlParser};
+use url::Url;
 
 use core::PackageId;
 use util::{CargoResult, ToUrl, human, ToSemver, ChainError};
@@ -22,7 +22,7 @@ impl PackageIdSpec {
                 Err(..) => {}
             }
             if !spec.contains("://") {
-                match url(&format!("cargo://{}", spec)) {
+                match Url::parse(&format!("cargo://{}", spec)) {
                     Ok(url) => return PackageIdSpec::from_url(url),
                     Err(..) => {}
                 }
@@ -64,15 +64,16 @@ impl PackageIdSpec {
     }
 
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
-        if url.query.is_some() {
+        if url.query().is_some() {
             bail!("cannot have a query string in a pkgid: {}", url)
         }
-        let frag = url.fragment.take();
+        let frag = url.fragment().map(|s| s.to_owned());
+        url.set_fragment(None);
         let (name, version) = {
-            let path = try!(url.path().chain_error(|| {
+            let mut path = try!(url.path_segments().chain_error(|| {
                 human(format!("pkgid urls must have a path: {}", url))
             }));
-            let path_name = try!(path.last().chain_error(|| {
+            let path_name = try!(path.next_back().chain_error(|| {
                 human(format!("pkgid urls must have at least one path \
                                component: {}", url))
             }));
@@ -171,31 +172,17 @@ impl PackageIdSpec {
     }
 }
 
-fn url(s: &str) -> url::ParseResult<Url> {
-    return UrlParser::new().scheme_type_mapper(mapper).parse(s);
-
-    fn mapper(scheme: &str) -> url::SchemeType {
-        if scheme == "cargo" {
-            url::SchemeType::Relative(1)
-        } else {
-            url::whatwg_scheme_type_mapper(scheme)
-        }
-    }
-
-}
-
 impl fmt::Display for PackageIdSpec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
-                if url.scheme == "cargo" {
-                    try!(write!(f, "{}/{}", url.host().unwrap(),
-                                url.path().unwrap().join("/")));
+                if url.scheme() == "cargo" {
+                    try!(write!(f, "{}{}", url.host().unwrap(), url.path()));
                 } else {
                     try!(write!(f, "{}", url));
                 }
-                if url.path().unwrap().last().unwrap() != &self.name {
+                if url.path_segments().unwrap().next_back().unwrap() != &self.name {
                     printed_name = true;
                     try!(write!(f, "#{}", self.name));
                 }
@@ -215,7 +202,7 @@ impl fmt::Display for PackageIdSpec {
 #[cfg(test)]
 mod tests {
     use core::{PackageId, SourceId};
-    use super::{PackageIdSpec, url};
+    use super::PackageIdSpec;
     use url::Url;
     use semver::Version;
 
@@ -230,32 +217,32 @@ mod tests {
         ok("http://crates.io/foo#1.2.3", PackageIdSpec {
             name: "foo".to_string(),
             version: Some(Version::parse("1.2.3").unwrap()),
-            url: Some(url("http://crates.io/foo").unwrap()),
+            url: Some(Url::parse("http://crates.io/foo").unwrap()),
         });
         ok("http://crates.io/foo#bar:1.2.3", PackageIdSpec {
             name: "bar".to_string(),
             version: Some(Version::parse("1.2.3").unwrap()),
-            url: Some(url("http://crates.io/foo").unwrap()),
+            url: Some(Url::parse("http://crates.io/foo").unwrap()),
         });
         ok("crates.io/foo", PackageIdSpec {
             name: "foo".to_string(),
             version: None,
-            url: Some(url("cargo://crates.io/foo").unwrap()),
+            url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
         });
         ok("crates.io/foo#1.2.3", PackageIdSpec {
             name: "foo".to_string(),
             version: Some(Version::parse("1.2.3").unwrap()),
-            url: Some(url("cargo://crates.io/foo").unwrap()),
+            url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
         });
         ok("crates.io/foo#bar", PackageIdSpec {
             name: "bar".to_string(),
             version: None,
-            url: Some(url("cargo://crates.io/foo").unwrap()),
+            url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
         });
         ok("crates.io/foo#bar:1.2.3", PackageIdSpec {
             name: "bar".to_string(),
             version: Some(Version::parse("1.2.3").unwrap()),
-            url: Some(url("cargo://crates.io/foo").unwrap()),
+            url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
         });
         ok("foo", PackageIdSpec {
             name: "foo".to_string(),
