@@ -244,8 +244,9 @@ ul.dropdown {
     visibility: none;
     position: absolute;
     top: 100%;
-    left: 0;
+    right: 0;
     width: 100%;
+    min-width: 150px;
     opacity: 0;
     margin: 0;
     text-align: left;
