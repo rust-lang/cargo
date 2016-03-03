@@ -63,7 +63,7 @@ test!(find_closest_biuld_to_build {
                 execs().with_status(101)
                        .with_stderr("no such subcommand
 
-Did you mean `build`?
+<tab>Did you mean `build`?
 
 "));
 });
