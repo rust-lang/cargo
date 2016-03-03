@@ -469,7 +469,7 @@ fn scrape_target_config(config: &Config, triple: &str)
         None => return Ok(ret),
     };
     for (lib_name, _) in table.into_iter() {
-        if lib_name == "ar" || lib_name == "linker" {
+        if lib_name == "ar" || lib_name == "linker" || lib_name == "rustflags" {
             continue
         }
 

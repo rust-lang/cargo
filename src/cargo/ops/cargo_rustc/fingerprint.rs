@@ -354,7 +354,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         deps: deps,
         local: local,
         memoized_hash: Mutex::new(None),
-        rustflags: cx.rustflags_args(unit),
+        rustflags: try!(cx.rustflags_args(unit)),
     });
     cx.fingerprints.insert(*unit, fingerprint.clone());
     Ok(fingerprint)
