@@ -1401,8 +1401,8 @@ test!(update_one_dep_in_repo_with_many_deps {
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-Updating git repository `{}`
-", foo.url())));
+{updating} git repository `{}`
+", foo.url(), updating = UPDATING)));
 });
 
 test!(switch_deps_does_not_update_transitive {
@@ -1455,12 +1455,12 @@ test!(switch_deps_does_not_update_transitive {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-Updating git repository `{}`
-Updating git repository `{}`
+{updating} git repository `{}`
+{updating} git repository `{}`
 {compiling} transitive [..]
 {compiling} dep [..]
 {compiling} project [..]
-", dep1.url(), transitive.url(), compiling = COMPILING)));
+", dep1.url(), transitive.url(), compiling = COMPILING, updating = UPDATING)));
 
     // Update the dependency to point to the second repository, but this
     // shouldn't update the transitive dependency which is the same.
@@ -1476,10 +1476,10 @@ Updating git repository `{}`
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-Updating git repository `{}`
+{updating} git repository `{}`
 {compiling} dep [..]
 {compiling} project [..]
-", dep2.url(), compiling = COMPILING)));
+", dep2.url(), compiling = COMPILING, updating = UPDATING)));
 });
 
 test!(update_one_source_updates_all_packages_in_that_git_source {

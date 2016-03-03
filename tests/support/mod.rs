@@ -440,15 +440,33 @@ impl Execs {
 }
 
 fn lines_match(expected: &str, mut actual: &str) -> bool {
-    for part in expected.split("[..]") {
+    for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
-            Some(i) => actual = &actual[i + part.len()..],
+            Some(j) => {
+                if i == 0 && j != 0 {
+                    return false
+                }
+                actual = &actual[j + part.len()..];
+            }
             None => {
                 return false
             }
         }
     }
     actual.is_empty() || expected.ends_with("[..]")
+}
+
+#[test]
+fn lines_match_works() {
+    assert!(lines_match("a b", "a b"));
+    assert!(lines_match("a[..]b", "a b"));
+    assert!(lines_match("a[..]", "a b"));
+    assert!(lines_match("[..]", "a b"));
+    assert!(lines_match("[..]b", "a b"));
+
+    assert!(!lines_match("[..]b", "c"));
+    assert!(!lines_match("b", "c"));
+    assert!(!lines_match("b", "cb"));
 }
 
 // Compares JSON object for approximate equality.
