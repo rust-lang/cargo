@@ -741,15 +741,15 @@ test!(dev_deps_no_rebuild_lib {
     assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{} [..] v0.5.0 ({})
-{} [..] v0.5.0 ({})
-Running target[..]foo-[..]
+{compiling} [..] v0.5.0 ({url})
+{compiling} [..] v0.5.0 ({url})
+{running} target[..]foo-[..]
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", COMPILING, p.url(), COMPILING, p.url())));
+", url = p.url(), compiling = COMPILING, running = RUNNING)));
 });
 
 test!(custom_target_no_rebuild {

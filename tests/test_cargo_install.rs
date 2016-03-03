@@ -527,7 +527,7 @@ test!(subcommand_works_out_of_the_box {
     assert_that(cargo_process("foo"),
                 execs().with_status(0).with_stdout("bar\n"));
     assert_that(cargo_process("--list"),
-                execs().with_status(0).with_stdout_contains("  foo\n"));
+                execs().with_status(0).with_stdout_contains("    foo\n"));
 });
 
 test!(installs_from_cwd_by_default {
@@ -558,9 +558,9 @@ test!(do_not_rebuilds_on_local_install {
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout("\
-  Installing [..]
-").with_stderr("\
+                execs().with_status(0).with_stdout(&format!("\
+{installing} [..]
+", installing = INSTALLING)).with_stderr("\
 be sure to add `[..]` to your PATH to be able to run the installed binaries
 "));
 
@@ -580,7 +580,7 @@ test!(reports_unsuccessful_subcommand_result {
     assert_that(cargo_process("install").arg("cargo-fail"),
                 execs().with_status(0));
     assert_that(cargo_process("--list"),
-                execs().with_status(0).with_stdout_contains("  fail\n"));
+                execs().with_status(0).with_stdout_contains("    fail\n"));
     assert_that(cargo_process("fail"),
                 execs().with_status(101).with_stderr_contains("\
 thread '<main>' panicked at 'explicit panic', [..]
