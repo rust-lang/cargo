@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use core::{Package, Manifest, SourceId, PackageId};
-use util::{self, CargoResult, human, Config, ChainError};
+use util::{self, paths, CargoResult, human, Config, ChainError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::{Layout, project_layout};
 
@@ -22,13 +21,11 @@ pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
 pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
                     -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
-    let mut file = try!(File::open(path));
-    let mut data = Vec::new();
-    try!(file.read_to_end(&mut data));
+    let data = try!(paths::read(path));
 
     let layout = project_layout(path.parent().unwrap());
     let (manifest, nested) =
-        try!(read_manifest(&data, layout, source_id, config));
+        try!(read_manifest(data.as_bytes(), layout, source_id, config));
 
     Ok((Package::new(manifest, path), nested))
 }

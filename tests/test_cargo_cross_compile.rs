@@ -602,7 +602,7 @@ test!(build_script_needed_for_host_and_target {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stdout_contains(&format!("\
-{compiling} d1 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+{compiling} d1 v0.0.0 ({url}/d1)", compiling = COMPILING, url = p.url()))
                        .with_stdout_contains(&format!("\
 {running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
     running = RUNNING, dir = p.root().display()))
@@ -612,7 +612,7 @@ test!(build_script_needed_for_host_and_target {
                        .with_stdout_contains(&format!("\
 {running} `rustc d1[..]src[..]lib.rs [..]`", running = RUNNING))
                        .with_stdout_contains(&format!("\
-{compiling} d2 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+{compiling} d2 v0.0.0 ({url}/d2)", compiling = COMPILING, url = p.url()))
                        .with_stdout_contains(&format!("\
 {running} `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`", running = RUNNING, host = host))

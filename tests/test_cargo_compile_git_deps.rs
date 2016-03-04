@@ -622,8 +622,8 @@ test!(update_with_shared_deps {
                 execs().with_stdout(&format!("\
 {updating} git repository `{git}`
 {compiling} bar v0.5.0 ({git}#[..])
-{compiling} [..] v0.5.0 ({dir})
-{compiling} [..] v0.5.0 ({dir})
+{compiling} [..] v0.5.0 ([..])
+{compiling} [..] v0.5.0 ([..])
 {compiling} foo v0.5.0 ({dir})\n",
                     updating = UPDATING, git = git_project.url(),
                     compiling = COMPILING, dir = p.url())));
@@ -681,8 +681,8 @@ To learn more, run the command again with --verbose.
     assert_that(p.cargo("build"),
                 execs().with_stdout(&format!("\
 {compiling} bar v0.5.0 ({git}#[..])
-{compiling} [..] v0.5.0 ({dir})
-{compiling} [..] v0.5.0 ({dir})
+{compiling} [..] v0.5.0 ({dir}[..]dep[..])
+{compiling} [..] v0.5.0 ({dir}[..]dep[..])
 {compiling} foo v0.5.0 ({dir})\n",
                     git = git_project.url(),
                     compiling = COMPILING, dir = p.url())));

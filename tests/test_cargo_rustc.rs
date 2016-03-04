@@ -249,7 +249,7 @@ test!(build_foo_with_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} bar v0.1.0 ({url})
+{compiling} bar v0.1.0 ([..])
 {running} `[..] -g -C [..]`
 {compiling} foo v0.0.1 ({url})
 {running} `[..] -g -Z unstable-options [..]`
@@ -292,11 +292,10 @@ test!(build_only_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} bar v0.1.0 ({url})
+{compiling} bar v0.1.0 ([..])
 {running} `[..]--crate-name bar --crate-type lib [..] -Z unstable-options [..]`
 ",
-                compiling = COMPILING, running = RUNNING,
-                url = foo.url())));
+                compiling = COMPILING, running = RUNNING)));
 });
 
 test!(fail_with_multiple_packages {

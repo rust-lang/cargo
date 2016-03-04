@@ -18,30 +18,39 @@ pub struct PathSource<'cfg> {
     updated: bool,
     packages: Vec<Package>,
     config: &'cfg Config,
+    recursive: bool,
 }
 
-// TODO: Figure out if packages should be discovered in new or self should be
-// mut and packages are discovered in update
 impl<'cfg> PathSource<'cfg> {
-    pub fn for_path(path: &Path, config: &'cfg Config)
-                    -> CargoResult<PathSource<'cfg>> {
-        trace!("PathSource::for_path; path={}", path.display());
-        Ok(PathSource::new(path, &try!(SourceId::for_path(path)), config))
-    }
-
     /// Invoked with an absolute path to a directory that contains a Cargo.toml.
-    /// The source will read the manifest and find any other packages contained
-    /// in the directory structure reachable by the root manifest.
+    ///
+    /// This source will only return the package at precisely the `path`
+    /// specified, and it will be an error if there's not a package at `path`.
     pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
                -> PathSource<'cfg> {
-        trace!("new; id={}", id);
-
         PathSource {
             id: id.clone(),
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
             config: config,
+            recursive: false,
+        }
+    }
+
+    /// Creates a new source which is walked recursively to discover packages.
+    ///
+    /// This is similar to the `new` method except that instead of requiring a
+    /// valid package to be present at `root` the folder is walked entirely to
+    /// crawl for packages.
+    ///
+    /// Note that this should be used with care and likely shouldn't be chosen
+    /// by default!
+    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config)
+                         -> PathSource<'cfg> {
+        PathSource {
+            recursive: true,
+            .. PathSource::new(root, id, config)
         }
     }
 
@@ -59,25 +68,13 @@ impl<'cfg> PathSource<'cfg> {
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
-        } else if (self.id.is_path() && self.id.precise().is_some()) ||
-                  self.id.is_registry() {
-            // If our source id is a path and it's listed with a precise
-            // version, then it means that we're not allowed to have nested
-            // dependencies (they've been rewritten to crates.io dependencies).
-            //
-            // If our source id is a registry dependency then crates are
-            // published one at a time so we don't recurse as well. Note that
-            // cargo by default doesn't package up nested dependencies but it
-            // may do so for custom-crafted tarballs.
-            //
-            // In these cases we specifically read just one package, not a list
-            // of packages.
+        } else if self.recursive {
+            ops::read_packages(&self.path, &self.id, self.config)
+        } else {
             let path = self.path.join("Cargo.toml");
             let (pkg, _) = try!(ops::read_package(&path, &self.id,
                                                   self.config));
             Ok(vec![pkg])
-        } else {
-            ops::read_packages(&self.path, &self.id, self.config)
         }
     }
 
@@ -111,24 +108,39 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        // If this package is a git repository, then we really do want to query
-        // the git repository as it takes into account items such as .gitignore.
-        // We're not quite sure where the git repository is, however, so we do a
-        // bit of a probe.
+        // If this package is in a git repository, then we really do want to
+        // query the git repository as it takes into account items such as
+        // .gitignore. We're not quite sure where the git repository is,
+        // however, so we do a bit of a probe.
         //
-        // We check all packages in this source that are ancestors of the
-        // specified package (including the same package) to see if they're at
-        // the root of the git repository. This isn't always true, but it'll get
-        // us there most of the time!
-        let repo = self.packages.iter()
-                       .map(|pkg| pkg.root())
-                       .filter(|path| root.starts_with(path))
-                       .filter_map(|path| git2::Repository::open(&path).ok())
-                       .next();
-        match repo {
-            Some(repo) => self.list_files_git(pkg, repo, &mut filter),
-            None => self.list_files_walk(pkg, &mut filter),
+        // We walk this package's path upwards and look for a sibling
+        // Cargo.toml and .git folder. If we find one then we assume that we're
+        // part of that repository.
+        let mut cur = root;
+        loop {
+            if cur.join("Cargo.toml").is_file() {
+                // If we find a git repository next to this Cargo.toml, we still
+                // check to see if we are indeed part of the index. If not, then
+                // this is likely an unrelated git repo, so keep going.
+                if let Ok(repo) = git2::Repository::open(cur) {
+                    let index = try!(repo.index());
+                    let path = util::without_prefix(root, cur)
+                                    .unwrap().join("Cargo.toml");
+                    if index.get_path(&path, 0).is_some() {
+                        return self.list_files_git(pkg, repo, &mut filter);
+                    }
+                }
+            }
+            // don't cross submodule boundaries
+            if cur.join(".git").is_dir() {
+                break
+            }
+            match cur.parent() {
+                Some(parent) => cur = parent,
+                None => break,
+            }
         }
+        self.list_files_walk(pkg, &mut filter)
     }
 
     fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
@@ -141,7 +153,7 @@ impl<'cfg> PathSource<'cfg> {
         }));
         let pkg_path = pkg.root();
 
-        let mut ret = Vec::new();
+        let mut ret = Vec::<PathBuf>::new();
 
         // We use information from the git repository to guide us in traversing
         // its tree. The primary purpose of this is to take advantage of the
@@ -168,32 +180,48 @@ impl<'cfg> PathSource<'cfg> {
             }
         });
 
+        let mut subpackages_found = Vec::new();
+
         'outer: for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = try!(file_path);
 
-            // Filter out files outside this package.
-            if !file_path.starts_with(pkg_path) { continue }
-
-            // Filter out Cargo.lock and target always
-            {
-                let fname = file_path.file_name().and_then(|s| s.to_str());
-                if fname == Some("Cargo.lock") { continue }
-                if fname == Some("target") { continue }
+            // Filter out files blatantly outside this package. This is helped a
+            // bit obove via the `pathspec` function call, but we need to filter
+            // the entries in the index as well.
+            if !file_path.starts_with(pkg_path) {
+                continue
             }
 
-            // Filter out sub-packages of this package
-            for other_pkg in self.packages.iter().filter(|p| *p != pkg) {
-                let other_path = other_pkg.root();
-                if other_path.starts_with(pkg_path) &&
-                   file_path.starts_with(other_path) {
-                    continue 'outer;
+            match file_path.file_name().and_then(|s| s.to_str()) {
+                // Filter out Cargo.lock and target always, we don't want to
+                // package a lock file no one will ever read and we also avoid
+                // build artifacts
+                Some("Cargo.lock") |
+                Some("target") => continue,
+
+                // Keep track of all sub-packages found and also strip out all
+                // matches we've found so far. Note, though, that if we find
+                // our own `Cargo.toml` we keep going.
+                Some("Cargo.toml") => {
+                    let path = file_path.parent().unwrap();
+                    if path != pkg_path {
+                        warn!("subpackage found: {}", path.display());
+                        ret.retain(|p| !p.starts_with(path));
+                        subpackages_found.push(path.to_path_buf());
+                        continue
+                    }
                 }
+
+                _ => {}
             }
 
-            let is_dir = is_dir.or_else(|| {
-                fs::metadata(&file_path).ok().map(|m| m.is_dir())
-            }).unwrap_or(false);
-            if is_dir {
+            // If this file is part of any other sub-package we've found so far,
+            // skip it.
+            if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
+                continue
+            }
+
+            if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, &root).unwrap();
                 let rel = try!(rel.to_str().chain_error(|| {
@@ -240,10 +268,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(&self, pkg: &Package, filter: &mut FnMut(&Path) -> bool)
                        -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
-        for pkg in self.packages.iter().filter(|p| *p == pkg) {
-            let loc = pkg.root();
-            try!(PathSource::walk(loc, &mut ret, true, filter));
-        }
+        try!(PathSource::walk(pkg.root(), &mut ret, true, filter));
         Ok(ret)
     }
 

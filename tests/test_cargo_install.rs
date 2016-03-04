@@ -124,7 +124,10 @@ test!(no_crate {
 `[..]` is not a crate root; specify a crate to install [..]
 
 Caused by:
-  Could not find Cargo.toml in `[..]`
+  failed to read `[..]Cargo.toml`
+
+Caused by:
+  [..] (os error [..])
 "));
 });
 
@@ -197,7 +200,7 @@ binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
 });
 
 test!(multiple_crates_error {
-    let p = project("foo")
+    let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -214,14 +217,14 @@ test!(multiple_crates_error {
         .file("a/src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(cargo_process("install").arg("--path").arg(p.root()),
+    assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
                 execs().with_status(101).with_stderr("\
 multiple packages with binaries found: bar, foo
 "));
 });
 
 test!(multiple_crates_select {
-    let p = project("foo")
+    let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -238,12 +241,14 @@ test!(multiple_crates_select {
         .file("a/src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(cargo_process("install").arg("--path").arg(p.root()).arg("foo"),
+    assert_that(cargo_process("install").arg("--git").arg(p.url().to_string())
+                                        .arg("foo"),
                 execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
 
-    assert_that(cargo_process("install").arg("--path").arg(p.root()).arg("bar"),
+    assert_that(cargo_process("install").arg("--git").arg(p.url().to_string())
+                                        .arg("bar"),
                 execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("bar"));
 });
@@ -541,7 +546,8 @@ test!(installs_from_cwd_by_default {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(cargo_process("install"), execs().with_status(0));
+    assert_that(cargo_process("install").cwd(p.root()),
+                execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
 });
 
