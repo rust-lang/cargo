@@ -340,7 +340,10 @@ pub fn yank(config: &Config,
     Ok(())
 }
 
-pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResult<()> {
+pub fn search(query: &str,
+              config: &Config,
+              index: Option<String>,
+              limit: u8) -> CargoResult<()> {
     fn truncate_with_ellipsis(s: &str, max_length: usize) -> String {
         if s.len() < max_length {
             s.to_string()
@@ -350,7 +353,7 @@ pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResul
     }
 
     let (mut registry, _) = try!(registry(config, None, index));
-    let crates = try!(registry.search(query).map_err(|e| {
+    let crates = try!(registry.search(query, limit).map_err(|e| {
         human(format!("failed to retrieve search results from the registry: {}", e))
     }));
 
