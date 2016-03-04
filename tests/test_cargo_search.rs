@@ -76,7 +76,7 @@ test!(simple {
     // from source there anyway!
     File::create(&base).unwrap().write_all(contents.as_bytes()).unwrap();
     if !cfg!(windows) {
-        File::create(&base.with_file_name("crates?q=postgres")).unwrap()
+        File::create(&base.with_file_name("crates?q=postgres&per_page=10")).unwrap()
              .write_all(contents.as_bytes()).unwrap();
     }
 
