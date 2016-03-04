@@ -3,7 +3,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::prelude::*;
-use std::path::{self, PathBuf};
+use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
@@ -446,10 +446,32 @@ fn build_base_args(cx: &Context,
                    cmd: &mut CommandPrototype,
                    unit: &Unit,
                    crate_types: &[&str]) {
+    // Check if the sysroot is applicable for this Unit
+    // For the explanation of this logic see Context::rustflags_args
+    fn applicable_sysroot<'a>(sysroot: &'a Option<PathBuf>,
+                         cx: &Context,
+                         unit: &Unit) -> Option<&'a Path> {
+        sysroot.as_ref().and_then(|sysroot| {
+            let compiling_with_target = cx.build_config.requested_target.is_some();
+            let is_target_kind = unit.kind == Kind::Target;
+            let use_sysroot = match (compiling_with_target, is_target_kind) {
+                (false, _) => true,
+                (true, true) => true,
+                (true, false) => false,
+            };
+
+            if use_sysroot {
+                Some(&**sysroot)
+            } else {
+                None
+            }
+        })
+    }
+
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
-        rustdoc_args: _,
+        ref sysroot, rustdoc_args: _,
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -457,6 +479,10 @@ fn build_base_args(cx: &Context,
     cmd.cwd(cx.config.cwd());
 
     cmd.arg(&root_path(cx, unit));
+
+    if let Some(sysroot) = applicable_sysroot(sysroot, cx, unit) {
+        cmd.arg("--sysroot").arg(sysroot.display().to_string());
+    }
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 

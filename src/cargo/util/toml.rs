@@ -243,6 +243,7 @@ pub struct TomlProfile {
     debug: Option<bool>,
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
+    sysroot: Option<String>,
 }
 
 #[derive(RustcDecodable)]
@@ -973,7 +974,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath
+            opt_level, lto, codegen_units, debug, debug_assertions, rpath, ref sysroot
         } = match toml {
             Some(toml) => toml,
             None => return profile,
@@ -990,6 +991,9 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             test: profile.test,
             doc: profile.doc,
             run_custom_build: profile.run_custom_build,
+            // FIXME if 'sysroot' is a relative path it should be relative to the root of the cargo
+            // project (???)
+            sysroot: sysroot.as_ref().map(|s| PathBuf::from(s)),
         }
     }
 }
