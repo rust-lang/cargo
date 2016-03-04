@@ -95,12 +95,10 @@ macro_rules! each_subcommand{
     }
 }
 
-mod subcommands {
-    macro_rules! declare_mod {
-        ($name:ident) => ( pub mod $name; )
-    }
-    each_subcommand!(declare_mod);
+macro_rules! declare_mod {
+    ($name:ident) => ( pub mod $name; )
 }
+each_subcommand!(declare_mod);
 
 /**
   The top-level `cargo` command handles configuration and project location
@@ -162,8 +160,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     macro_rules! cmd{
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
             config.shell().set_verbose(true);
-            let r = cargo::call_main_without_stdin(subcommands::$name::execute, config,
-                                                   subcommands::$name::USAGE,
+            let r = cargo::call_main_without_stdin($name::execute, config,
+                                                   $name::USAGE,
                                                    &args,
                                                    false);
             cargo::process_executed(r, &mut config.shell());
