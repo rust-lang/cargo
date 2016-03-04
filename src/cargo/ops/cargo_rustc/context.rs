@@ -317,8 +317,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 for lib in libs.iter() {
                     match *lib {
                         LibKind::Dylib => {
-                            if let Ok((prefix, suffix)) = self.dylib(unit.kind) {
-                                ret.push(format!("{}{}{}", prefix, stem, suffix));
+                            match self.dylib(unit.kind) {
+                                Ok((prefix, suffix)) =>
+                                    ret.push(format!("{}{}{}", prefix, stem, suffix)),
+                                Err(e) => try!(self.config.shell().warn(format!("{}", e)))
                             }
                         }
                         LibKind::Lib |
@@ -332,7 +334,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
         }
-        assert!(!ret.is_empty());
+        if ret.is_empty() {
+            bail!("no valid targets found")
+        }
         Ok(ret)
     }
 
