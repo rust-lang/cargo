@@ -73,8 +73,8 @@ pub fn read(path: &Path) -> CargoResult<String> {
         let mut f = try!(File::open(path));
         try!(f.read_to_string(&mut ret));
         Ok(ret)
-    }).chain_error(|| {
-        internal(format!("failed to read `{}`", path.display()))
+    })().map_err(human).chain_error(|| {
+        human(format!("failed to read `{}`", path.display()))
     })
 }
 
@@ -83,8 +83,8 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
         let mut f = try!(File::create(path));
         try!(f.write_all(contents));
         Ok(())
-    }).chain_error(|| {
-        internal(format!("failed to write `{}`", path.display()))
+    })().map_err(human).chain_error(|| {
+        human(format!("failed to write `{}`", path.display()))
     })
 }
 

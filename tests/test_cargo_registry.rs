@@ -618,7 +618,7 @@ test!(updating_a_dep {
 {updating} registry `[..]`
 {downloading} bar v0.0.1 (registry file://[..])
 {compiling} bar v0.0.1 (registry file://[..])
-{compiling} a v0.0.1 ({dir})
+{compiling} a v0.0.1 ({dir}/a)
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url())));
@@ -640,7 +640,7 @@ test!(updating_a_dep {
 {updating} registry `[..]`
 {downloading} bar v0.1.0 (registry file://[..])
 {compiling} bar v0.1.0 (registry file://[..])
-{compiling} a v0.0.1 ({dir})
+{compiling} a v0.0.1 ({dir}/a)
 {compiling} foo v0.0.1 ({dir})
 ", updating = UPDATING, downloading = DOWNLOADING, compiling = COMPILING,
    dir = p.url())));

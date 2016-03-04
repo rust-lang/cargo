@@ -3,9 +3,8 @@ use std::path::Path;
 use rustc_serialize::{Encodable, Encoder};
 
 use core::resolver::Resolve;
-use core::{Source, Package, PackageId, PackageSet};
+use core::{Package, PackageId, PackageSet};
 use ops;
-use sources::PathSource;
 use util::config::Config;
 use util::CargoResult;
 
@@ -35,10 +34,9 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
 }
 
 fn metadata_no_deps(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
-    let mut source = try!(PathSource::for_path(opt.manifest_path.parent().unwrap(), config));
-
+    let root = try!(Package::for_path(opt.manifest_path, config));
     Ok(ExportInfo {
-        packages: vec![try!(source.root_package())],
+        packages: vec![root],
         resolve: None,
         version: VERSION,
     })
@@ -112,14 +110,10 @@ fn resolve_dependencies<'a>(manifest: &Path,
                             features: Vec<String>,
                             no_default_features: bool)
                             -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let mut source = try!(PathSource::for_path(manifest.parent().unwrap(), config));
-    try!(source.update());
-
-    let package = try!(source.root_package());
-
+    let package = try!(Package::for_path(manifest, config));
     ops::resolve_dependencies(&package,
                               config,
-                              Some(Box::new(source)),
+                              None,
                               features,
                               no_default_features)
 }

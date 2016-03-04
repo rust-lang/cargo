@@ -101,8 +101,8 @@ test!(doc_deps {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(&format!("\
-[..] bar v0.0.1 ({dir})
-[..] bar v0.0.1 ({dir})
+[..] bar v0.0.1 ({dir}/bar)
+[..] bar v0.0.1 ({dir}/bar)
 {documenting} foo v0.0.1 ({dir})
 ",
         documenting = DOCUMENTING,
@@ -148,7 +148,7 @@ test!(doc_no_deps {
 
     assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {documenting} foo v0.0.1 ({dir})
 ",
         documenting = DOCUMENTING, compiling = COMPILING,

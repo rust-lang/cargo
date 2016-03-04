@@ -4,16 +4,18 @@ use core::{Package, PackageId, SourceId};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use ops;
-use util::CargoResult;
+use util::{CargoResult, Config};
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
 ///
 /// This function will also write the result of resolution as a new
 /// lockfile.
-pub fn resolve_pkg(registry: &mut PackageRegistry, package: &Package)
+pub fn resolve_pkg(registry: &mut PackageRegistry,
+                   package: &Package,
+                   config: &Config)
                    -> CargoResult<Resolve> {
-    let prev = try!(ops::load_pkg_lockfile(package));
+    let prev = try!(ops::load_pkg_lockfile(package, config));
     let resolve = try!(resolve_with_previous(registry, package,
                                              Method::Everything,
                                              prev.as_ref(), None));
