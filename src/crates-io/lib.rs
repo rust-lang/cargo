@@ -170,8 +170,8 @@ impl Registry {
         Ok(())
     }
 
-    pub fn search(&mut self, query: &str) -> Result<Vec<Crate>> {
-        let body = try!(self.req(format!("/crates?q={}", query), None, Get,
+    pub fn search(&mut self, query: &str, limit: u8) -> Result<Vec<Crate>> {
+        let body = try!(self.req(format!("/crates?q={}&per_page={}", query, limit), None, Get,
                                  Auth::Unauthorized));
 
         Ok(json::decode::<Crates>(&body).unwrap().crates)
