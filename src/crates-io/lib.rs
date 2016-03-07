@@ -1,4 +1,5 @@
 extern crate curl;
+extern crate url;
 extern crate rustc_serialize;
 
 use std::collections::HashMap;
@@ -13,6 +14,8 @@ use curl::http;
 use curl::http::handle::Method::{Put, Get, Delete};
 use curl::http::handle::{Method, Request};
 use rustc_serialize::json;
+
+use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
 pub struct Registry {
     host: String,
@@ -88,7 +91,8 @@ pub struct User {
 #[derive(RustcDecodable)] struct ApiError { detail: String }
 #[derive(RustcEncodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
 #[derive(RustcDecodable)] struct Users { users: Vec<User> }
-#[derive(RustcDecodable)] struct Crates { crates: Vec<Crate> }
+#[derive(RustcDecodable)] struct TotalCrates { total: u32 }
+#[derive(RustcDecodable)] struct Crates { crates: Vec<Crate>, meta: TotalCrates }
 
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {
@@ -170,11 +174,15 @@ impl Registry {
         Ok(())
     }
 
-    pub fn search(&mut self, query: &str, limit: u8) -> Result<Vec<Crate>> {
-        let body = try!(self.req(format!("/crates?q={}&per_page={}", query, limit), None, Get,
-                                 Auth::Unauthorized));
+    pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
+        let formated_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
+        let body = try!(self.req(
+            format!("/crates?q={}&per_page={}", formated_query, limit),
+            None, Get, Auth::Unauthorized
+        ));
 
-        Ok(json::decode::<Crates>(&body).unwrap().crates)
+        let crates = json::decode::<Crates>(&body).unwrap();
+        Ok((crates.crates, crates.meta.total))
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
