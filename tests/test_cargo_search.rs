@@ -86,6 +86,52 @@ test!(simple {
 hoare (0.1.1)    Design by contract style assertions for Rust", updating = UPDATING)));
 });
 
+test!(multiple_query_params {
+    let contents = r#"{
+        "crates": [{
+            "created_at": "2014-11-16T20:17:35Z",
+            "description": "Design by contract style assertions for Rust",
+            "documentation": null,
+            "downloads": 2,
+            "homepage": null,
+            "id": "hoare",
+            "keywords": [],
+            "license": null,
+            "links": {
+                "owners": "/api/v1/crates/hoare/owners",
+                "reverse_dependencies": "/api/v1/crates/hoare/reverse_dependencies",
+                "version_downloads": "/api/v1/crates/hoare/downloads",
+                "versions": "/api/v1/crates/hoare/versions"
+            },
+            "max_version": "0.1.1",
+            "name": "hoare",
+            "repository": "https://github.com/nick29581/libhoare",
+            "updated_at": "2014-11-20T21:49:21Z",
+            "versions": null
+        }],
+        "meta": {
+            "total": 1
+        }
+    }"#;
+    let base = api_path().join("api/v1/crates");
+
+    // Older versions of curl don't peel off query parameters when looking for
+    // filenames, so just make both files.
+    //
+    // On windows, though, `?` is an invalid character, but we always build curl
+    // from source there anyway!
+    File::create(&base).unwrap().write_all(contents.as_bytes()).unwrap();
+    if !cfg!(windows) {
+        File::create(&base.with_file_name("crates?q=postgres+sql&per_page=10")).unwrap()
+             .write_all(contents.as_bytes()).unwrap();
+    }
+
+    assert_that(cargo_process("search").arg("postgres").arg("sql"),
+                execs().with_status(0).with_stdout(format!("\
+{updating} registry `[..]`
+hoare (0.1.1)    Design by contract style assertions for Rust", updating = UPDATING)));
+});
+
 test!(help {
     assert_that(cargo_process("search").arg("-h"),
                 execs().with_status(0));
