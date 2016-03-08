@@ -40,6 +40,20 @@ pub enum Error {
     TokenMissing,
     Io(io::Error),
     NotFound,
+    JsonEncodeError(json::EncoderError),
+    JsonDecodeError(json::DecoderError),
+}
+
+impl From<json::EncoderError> for Error {
+    fn from(err: json::EncoderError) -> Error {
+        Error::JsonEncodeError(err)
+    }
+}
+
+impl From<json::DecoderError> for Error {
+    fn from(err: json::DecoderError) -> Error {
+        Error::JsonDecodeError(err)
+    }
 }
 
 #[derive(RustcDecodable)]
@@ -109,28 +123,28 @@ impl Registry {
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners }).unwrap();
+        let body = try!(json::encode(&OwnersReq { users: owners }));
         let body = try!(self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes()));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners }).unwrap();
+        let body = try!(json::encode(&OwnersReq { users: owners }));
         let body = try!(self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes())));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
         let body = try!(self.get(format!("/crates/{}/owners", krate)));
-        Ok(json::decode::<Users>(&body).unwrap().users)
+        Ok(try!(json::decode::<Users>(&body)).users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
-        let json = json::encode(krate).unwrap();
+        let json = try!(json::encode(krate));
         // Prepare the body. The format of the upload request is:
         //
         //      <le u32 of json>
@@ -181,21 +195,21 @@ impl Registry {
             None, Get, Auth::Unauthorized
         ));
 
-        let crates = json::decode::<Crates>(&body).unwrap();
+        let crates = try!(json::decode::<Crates>(&body));
         Ok((crates.crates, crates.meta.total))
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.delete(format!("/crates/{}/{}/yank", krate, version),
                                     None));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.put(format!("/crates/{}/{}/unyank", krate, version),
                                  &[]));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
@@ -274,6 +288,8 @@ impl fmt::Display for Error {
             Error::TokenMissing => write!(f, "no upload token found, please run `cargo login`"),
             Error::Io(ref e) => write!(f, "io error: {}", e),
             Error::NotFound => write!(f, "cannot find crate"),
+            Error::JsonEncodeError(ref e) => write!(f, "json encode error: {}", e),
+            Error::JsonDecodeError(ref e) => write!(f, "json decode error: {}", e),
         }
     }
 }
