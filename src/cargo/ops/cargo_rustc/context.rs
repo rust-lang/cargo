@@ -213,7 +213,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
-        self.layout(unit.pkg, unit.kind).out_dir(unit.pkg, unit.target)
+        if unit.profile.doc {
+            self.layout(unit.pkg, unit.kind).doc_root()
+        } else {
+            self.layout(unit.pkg, unit.kind).out_dir(unit.pkg, unit.target)
+        }
     }
 
     /// Return the (prefix, suffix) pair for dynamic libraries.

@@ -1,4 +1,5 @@
 use std::str;
+use std::fs;
 
 use support::{project, execs, path2url};
 use support::{COMPILING, DOCUMENTING, RUNNING};
@@ -524,4 +525,27 @@ test!(features {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
+});
+
+test!(rerun_when_dir_removed {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            /// dox
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
+
+    fs::remove_dir_all(p.root().join("target/doc/foo")).unwrap();
+
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 });
