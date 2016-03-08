@@ -10,14 +10,14 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_limit: Option<u32>,
-    arg_query: String
+    arg_query: Vec<String>
 }
 
 pub const USAGE: &'static str = "
 Search packages in crates.io
 
 Usage:
-    cargo search [options] <query>
+    cargo search [options] <query>...
     cargo search [-h | --help]
 
 Options:
@@ -40,6 +40,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         ..
     } = options;
 
-    try!(ops::search(&query, config, host, cmp::min(100, limit.unwrap_or(10)) as u8));
+    try!(ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8));
     Ok(None)
 }
