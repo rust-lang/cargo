@@ -185,10 +185,6 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-/*
- * TODO: Make all struct fields private
- */
-
 #[derive(RustcDecodable)]
 pub enum TomlDependency {
     Simple(String),
