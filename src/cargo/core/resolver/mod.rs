@@ -46,11 +46,12 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::HashSet;
-use std::collections::hash_map::HashMap;
+use std::cmp::Ordering;
+use std::collections::{HashSet, HashMap, BinaryHeap};
 use std::fmt;
 use std::ops::Range;
 use std::rc::Rc;
+
 use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
@@ -142,7 +143,6 @@ impl fmt::Debug for Resolve {
 struct Context {
     activations: HashMap<(String, SourceId), Vec<Rc<Summary>>>,
     resolve: Resolve,
-    visited: HashSet<PackageId>,
 }
 
 /// Builds the list of all packages required to build the first argument.
@@ -154,10 +154,11 @@ pub fn resolve(summary: &Summary, method: &Method,
     let cx = Context {
         resolve: Resolve::new(summary.package_id().clone()),
         activations: HashMap::new(),
-        visited: HashSet::new(),
     };
     let _p = profile::start(format!("resolving: {}", summary.package_id()));
-    activate_deps_loop(cx, registry, summary, method)
+    let cx = try!(activate_deps_loop(cx, registry, summary, method));
+    try!(check_cycles(&cx));
+    Ok(cx.resolve)
 }
 
 /// Attempts to activate the summary `parent` in the context `cx`.
@@ -174,13 +175,9 @@ fn activate(cx: &mut Context,
     // Dependency graphs are required to be a DAG, so we keep a set of
     // packages we're visiting and bail if we hit a dupe.
     let id = parent.package_id().clone();
-    if !cx.visited.insert(id.clone()) {
-        bail!("cyclic package dependency: package `{}` depends on itself", id)
-    }
 
     // If we're already activated, then that was easy!
     if cx.flag_activated(&parent, method) {
-        cx.visited.remove(&id);
         return Ok(None);
     }
     trace!("activating {}", parent.package_id());
@@ -207,16 +204,25 @@ impl<T> RcVecIter<T> {
             vec: Rc::new(vec),
         }
     }
+
     fn cur_index(&self) -> usize {
         self.rest.start - 1
     }
+
+    fn as_slice(&self) -> &[T] {
+        &self.vec[self.rest.start..self.rest.end]
+    }
 }
+
 impl<T> Iterator for RcVecIter<T> where T: Clone {
     type Item = (usize, T);
     fn next(&mut self) -> Option<(usize, T)> {
         self.rest.next().and_then(|i| {
             self.vec.get(i).map(|val| (i, val.clone()))
         })
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.rest.size_hint()
     }
 }
 
@@ -227,9 +233,46 @@ struct DepsFrame {
     id: PackageId,
 }
 
+impl DepsFrame {
+    /// Returns the least number of candidates that any of this frame's siblings
+    /// has.
+    ///
+    /// The `remaining_siblings` array is already sorted with the smallest
+    /// number of candidates at the front, so we just return the number of
+    /// candidates in that entry.
+    fn min_candidates(&self) -> usize {
+        self.remaining_siblings.as_slice().get(0).map(|&(_, ref candidates, _)| {
+            candidates.len()
+        }).unwrap_or(0)
+    }
+}
+
+impl PartialEq for DepsFrame {
+    fn eq(&self, other: &DepsFrame) -> bool {
+        self.min_candidates() == other.min_candidates()
+    }
+}
+
+impl Eq for DepsFrame {}
+
+impl PartialOrd for DepsFrame {
+    fn partial_cmp(&self, other: &DepsFrame) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for DepsFrame {
+    fn cmp(&self, other: &DepsFrame) -> Ordering {
+        // the frame with the sibling that has the least number of candidates
+        // needs to get the bubbled up to the top of the heap we use below, so
+        // reverse the order of the comparison here.
+        other.min_candidates().cmp(&self.min_candidates())
+    }
+}
+
 struct BacktrackFrame {
     context_backup: Context,
-    deps_backup: Vec<DepsFrame>,
+    deps_backup: BinaryHeap<DepsFrame>,
     remaining_candidates: RcVecIter<Rc<Summary>>,
     parent: Rc<Summary>,
     dep: Dependency,
@@ -243,9 +286,16 @@ struct BacktrackFrame {
 fn activate_deps_loop(mut cx: Context,
                       registry: &mut Registry,
                       top: Rc<Summary>,
-                      top_method: &Method) -> CargoResult<Resolve> {
+                      top_method: &Method) -> CargoResult<Context> {
+    // Note that a `BinaryHeap` is used for the remaining dependencies that need
+    // activation. This heap is sorted such that the "largest value" is the most
+    // constrained dependency, or the one with the least candidates.
+    //
+    // This helps us get through super constrained portions of the dependency
+    // graph quickly and hopefully lock down what later larger dependencies can
+    // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
-    let mut remaining_deps = Vec::new();
+    let mut remaining_deps = BinaryHeap::new();
     remaining_deps.extend(try!(activate(&mut cx, registry, top, &top_method)));
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
@@ -268,10 +318,7 @@ fn activate_deps_loop(mut cx: Context,
                 remaining_deps.push(deps_frame);
                 (parent, sibling)
             }
-            None => {
-                cx.visited.remove(&deps_frame.id);
-                continue
-            }
+            None => continue,
         };
         let (mut parent, (mut cur, (mut dep, candidates, features))) = frame;
         assert!(!remaining_deps.is_empty());
@@ -353,32 +400,28 @@ fn activate_deps_loop(mut cx: Context,
                candidate.version());
         cx.resolve.graph.link(parent.package_id().clone(),
                               candidate.package_id().clone());
-
-        // If we hit an intransitive dependency then clear out the visitation
-        // list as we can't induce a cycle through transitive dependencies.
-        if !dep.is_transitive() {
-            cx.visited.clear();
-        }
         remaining_deps.extend(try!(activate(&mut cx, registry,
                                             candidate, &method)));
     }
     trace!("resolved: {:?}", cx.resolve);
-    Ok(cx.resolve)
+    Ok(cx)
 }
 
 // Searches up `backtrack_stack` until it finds a dependency with remaining
 // candidates. Resets `cx` and `remaining_deps` to that level and returns the
 // next candidate. If all candidates have been exhausted, returns None.
 fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
-                  cx: &mut Context, remaining_deps: &mut Vec<DepsFrame>,
-                  parent: &mut Rc<Summary>, cur: &mut usize,
+                  cx: &mut Context,
+                  remaining_deps: &mut BinaryHeap<DepsFrame>,
+                  parent: &mut Rc<Summary>,
+                  cur: &mut usize,
                   dep: &mut Dependency) -> Option<Rc<Summary>> {
     while let Some(mut frame) = backtrack_stack.pop() {
         if let Some((_, candidate)) = frame.remaining_candidates.next() {
             *cx = frame.context_backup.clone();
             *remaining_deps = frame.deps_backup.clone();
             *parent = frame.parent.clone();
-            *cur = remaining_deps.last().unwrap().remaining_siblings.cur_index();
+            *cur = remaining_deps.peek().unwrap().remaining_siblings.cur_index();
             *dep = frame.dep.clone();
             backtrack_stack.push(frame);
             return Some(candidate)
@@ -703,5 +746,53 @@ impl Context {
         }
 
         Ok(ret)
+    }
+}
+
+fn check_cycles(cx: &Context) -> CargoResult<()> {
+    let mut summaries = HashMap::new();
+    for summary in cx.activations.values().flat_map(|v| v) {
+        summaries.insert(summary.package_id(), &**summary);
+    }
+    return visit(&cx.resolve,
+                 cx.resolve.root(),
+                 &summaries,
+                 &mut HashSet::new(),
+                 &mut HashSet::new());
+
+    fn visit<'a>(resolve: &'a Resolve,
+                 id: &'a PackageId,
+                 summaries: &HashMap<&'a PackageId, &Summary>,
+                 visited: &mut HashSet<&'a PackageId>,
+                 checked: &mut HashSet<&'a PackageId>)
+                 -> CargoResult<()> {
+        // See if we visited ourselves
+        if !visited.insert(id) {
+            bail!("cyclic package dependency: package `{}` depends on itself",
+                  id);
+        }
+
+        // If we've already checked this node no need to recurse again as we'll
+        // just conclude the same thing as last time, so we only execute the
+        // recursive step if we successfully insert into `checked`.
+        //
+        // Note that if we hit an intransitive dependency then we clear out the
+        // visitation list as we can't induce a cycle through transitive
+        // dependencies.
+        if checked.insert(id) {
+            let summary = summaries[id];
+            for dep in resolve.deps(id).into_iter().flat_map(|a| a) {
+                let is_transitive = summary.dependencies().iter().any(|d| {
+                    d.matches_id(dep) && d.is_transitive()
+                });
+                let mut empty = HashSet::new();
+                let visited = if is_transitive {&mut *visited} else {&mut empty};
+                try!(visit(resolve, dep, summaries, visited, checked));
+            }
+        }
+
+        // Ok, we're done, no longer visiting our node any more
+        visited.remove(id);
+        Ok(())
     }
 }
