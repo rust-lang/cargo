@@ -1,5 +1,7 @@
+use cargo::core::package::Package;
+use cargo::core::manifest::TargetKind;
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config, Human};
+use cargo::util::{CliResult, CliError, Config, Human, human, lev_distance};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
@@ -48,18 +50,49 @@ arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.
 ";
 
+fn find_closest_target<'a>(package: &'a Package, target: &str, kind: TargetKind) -> Option<&'a str> {
+    let targets = package.targets();
+    let mut filtered = targets.iter().filter(|t| *t.kind() == kind)
+                                     .map(|t| (lev_distance(target, t.name()), t))
+                                     .filter(|&(d, _)| d < 4)
+                                     .collect::<Vec<_>>();
+    filtered.sort_by(|a, b| a.0.cmp(&b.0));
+    filtered.get(0).map(|t| t.1.name().clone())
+}
+
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.configure_shell(options.flag_verbose,
                                 options.flag_quiet,
                                 &options.flag_color));
 
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let package = try!(Package::for_path(&root, &config));
 
     let (mut examples, mut bins) = (Vec::new(), Vec::new());
     if let Some(s) = options.flag_bin {
+        let target = package.targets().iter().find(|t| {
+            t.name() == s && *t.kind() == TargetKind::Bin
+        });
+        if target.is_none() {
+            return Err(CliError::from_error(human(match find_closest_target(&package, &s, TargetKind::Bin) {
+                Some(closest) => format!("no bin target named `{}`\n\n\
+                                          Did you mean `{}`?", s, closest),
+                None => format!("no bin target named `{}`", s),
+            }), 101));
+        }
         bins.push(s);
     }
     if let Some(s) = options.flag_example {
+        let target = package.targets().iter().find(|t| {
+            t.name() == s && *t.kind() == TargetKind::Example
+        });
+        if target.is_none() {
+            return Err(CliError::from_error(human(match find_closest_target(&package, &s, TargetKind::Example) {
+                Some(closest) => format!("no example target named `{}`\n\n\
+                                          Did you mean `{}`?", s, closest),
+                None => format!("no example target named `{}`", s),
+            }), 101));
+        }
         examples.push(s);
     }
 
