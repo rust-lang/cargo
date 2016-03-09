@@ -273,7 +273,6 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
 }
 
 impl fmt::Display for Error {
-    #[allow(deprecated)] // connect => join in 1.3
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::NonUtf8Body => write!(f, "response body was not utf-8"),
@@ -282,7 +281,7 @@ impl fmt::Display for Error {
                 write!(f, "failed to get a 200 OK response: {}", resp)
             }
             Error::Api(ref errs) => {
-                write!(f, "api errors: {}", errs.connect(", "))
+                write!(f, "api errors: {}", errs.join(", "))
             }
             Error::Unauthorized => write!(f, "unauthorized API access"),
             Error::TokenMissing => write!(f, "no upload token found, please run `cargo login`"),
