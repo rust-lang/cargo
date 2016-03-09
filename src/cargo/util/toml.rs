@@ -850,9 +850,14 @@ fn normalize(lib: &Option<TomlLibTarget>,
             }
         };
 
+        // Binaries, examples, etc, may link to this library. Their crate names
+        // have a high likelihood to being the same as ours, however, so we need
+        // some extra metadata in our name to ensure symbols won't collide.
+        let mut metadata = metadata.clone();
+        metadata.mix(&"lib");
         let mut target = Target::lib_target(&l.name(), crate_types,
                                             &path.to_path(),
-                                            metadata.clone());
+                                            metadata);
         configure(l, &mut target);
         dst.push(target);
     }
