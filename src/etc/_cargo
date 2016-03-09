@@ -270,6 +270,7 @@ case $state in
                     '--color=:colorization option:(auto always never)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--host=[host of a registry to search in]' \
+                    '--limit=[limit the number of results]' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
