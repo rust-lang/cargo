@@ -16,7 +16,6 @@ use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, Cha
 
 #[derive(RustcDecodable)]
 pub struct Flags {
-    flag_list: bool,
     flag_version: bool,
     flag_verbose: Option<bool>,
     flag_quiet: Option<bool>,
@@ -35,7 +34,6 @@ Usage:
 Options:
     -h, --help          Display this message
     -V, --version       Print version info and exit
-    --list              List installed commands
     -v, --verbose       Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
@@ -44,6 +42,7 @@ Some common cargo commands are:
     build       Compile the current project
     clean       Remove the target directory
     doc         Build this project's and its dependencies' documentation
+    list        List installed commands
     new         Create a new cargo project
     init        Create a new cargo project in an existing directory
     run         Build and execute src/main.rs
@@ -72,6 +71,7 @@ macro_rules! each_subcommand{
         $mac!(generate_lockfile);
         $mac!(git_checkout);
         $mac!(help);
+        $mac!(list);
         $mac!(init);
         $mac!(install);
         $mac!(locate_project);
@@ -116,14 +116,6 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
     if flags.flag_version {
         println!("{}", cargo::version());
-        return Ok(None)
-    }
-
-    if flags.flag_list {
-        println!("Installed Commands:");
-        for command in list_commands(config) {
-            println!("    {}", command);
-        };
         return Ok(None)
     }
 
