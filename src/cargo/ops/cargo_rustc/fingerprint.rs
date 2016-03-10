@@ -59,7 +59,10 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     let root = cx.out_dir(unit);
     let mut missing_outputs = false;
-    if !unit.profile.doc {
+    if unit.profile.doc {
+        missing_outputs = !root.join(unit.target.crate_name())
+                               .join("index.html").exists();
+    } else {
         for filename in try!(cx.target_filenames(unit)).iter() {
             missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
