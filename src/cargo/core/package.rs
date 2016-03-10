@@ -6,10 +6,10 @@ use std::path::{Path, PathBuf};
 
 use semver::Version;
 
-use core::{Dependency, Manifest, PackageId, SourceId, Target};
+use core::{Dependency, Manifest, PackageId, SourceId, Target, TargetKind};
 use core::{Summary, Metadata, SourceMap};
 use ops;
-use util::{CargoResult, Config, LazyCell, ChainError, internal, human};
+use util::{CargoResult, Config, LazyCell, ChainError, internal, human, lev_distance};
 use rustc_serialize::{Encoder,Encodable};
 
 /// Information about a package that is available somewhere in the file system.
@@ -88,6 +88,17 @@ impl Package {
 
     pub fn generate_metadata(&self) -> Metadata {
         self.package_id().generate_metadata()
+    }
+
+    pub fn find_closest_target(&self, target: &str, kind: TargetKind) -> Option<&Target> {
+        let targets = self.targets();
+
+        let mut matches = targets.iter().filter(|t| *t.kind() == kind)
+                                        .map(|t| (lev_distance(target, t.name()), t))
+                                        .filter(|&(d, _)| d < 4)
+                                        .collect::<Vec<_>>();
+        matches.sort_by(|a, b| a.0.cmp(&b.0));
+        matches.get(0).map(|t| t.1)
     }
 }
 
