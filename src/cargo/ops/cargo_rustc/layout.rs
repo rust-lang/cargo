@@ -165,4 +165,10 @@ impl<'a> LayoutProxy<'a> {
             self.root().to_path_buf()
         }
     }
+
+    pub fn doc_root(&self) -> PathBuf {
+        // the "root" directory ends in 'debug' or 'release', and we want it to
+        // end in 'doc' instead
+        self.root.root().parent().unwrap().join("doc")
+    }
 }
