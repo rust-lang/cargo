@@ -526,11 +526,17 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
 
 pub fn fetch(repo: &git2::Repository, url: &str,
              refspec: &str) -> CargoResult<()> {
-    // Create a local anonymous remote in the repository to fetch the url
-
-    with_authentication(url, &try!(repo.config()), |f| {
+    let config = try!(repo.config());
+    let noverify = env::var("GIT_SSL_NO_VERIFY").is_ok() ||
+                   config.get_bool("http.sslVerify").ok() == Some(false);
+    with_authentication(url, &config, |f| {
         let mut cb = git2::RemoteCallbacks::new();
         cb.credentials(f);
+        if noverify {
+            cb.certificate_check(|_, _| true);
+        }
+
+        // Create a local anonymous remote in the repository to fetch the url
         let mut remote = try!(repo.remote_anonymous(&url));
         let mut opts = git2::FetchOptions::new();
         opts.remote_callbacks(cb)
