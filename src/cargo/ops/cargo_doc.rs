@@ -54,7 +54,12 @@ pub fn doc(manifest_path: &Path,
         let target_dir = options.compile_opts.config.target_dir(&package);
         let path = target_dir.join("doc").join(&name).join("index.html");
         if fs::metadata(&path).is_ok() {
-            open_docs(&path);
+            match open_docs(&path) {
+                Ok(_) => (),
+                Err(_) => {
+                    println!("warning: could not determine a browser to open docs with.");
+                }
+            }
         }
     }
 
@@ -62,44 +67,47 @@ pub fn doc(manifest_path: &Path,
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-fn open_docs(path: &Path) {
+fn open_docs(path: &Path) -> Result<(), ()> {
     // trying $BROWSER
     match env::var("BROWSER").map(|name| Command::new(name).arg(path).status()) {
-        Ok(_) => return,
+        Ok(_) => return Ok(()),
         Err(_) => ()
     }
 
     // trying xdg-open
     match Command::new("xdg-open").arg(path).status() {
-        Ok(_) => return,
+        Ok(_) => return Ok(()),
         Err(_) => ()
     };
 
     // trying gnome-open
     match Command::new("gnome-open").arg(path).status() {
-        Ok(_) => return,
+        Ok(_) => return Ok(()),
         Err(_) => ()
     };
 
     // trying kde-open
     match Command::new("kde-open").arg(path).status() {
-        Ok(_) => return,
+        Ok(_) => return Ok(()),
         Err(_) => ()
     };
+    Err(())
 }
 
 #[cfg(target_os = "windows")]
-fn open_docs(path: &Path) {
+fn open_docs(path: &Path) -> Result<(), ()> {
     match Command::new("cmd").arg("/C").arg("start").arg("").arg(path).status() {
-        Ok(_) => return,
+        Ok(_) => return Ok(()),
         Err(_) => ()
     };
+    Err(())
 }
 
 #[cfg(target_os = "macos")]
-fn open_docs(path: &Path) {
+fn open_docs(path: &Path) -> Result<(), ()> {
     match Command::new("open").arg(path).status() {
-        Ok(_) => return,
+        Ok(_) => return Ok(()),
         Err(_) => ()
     };
+    Err(())
 }
