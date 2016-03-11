@@ -838,3 +838,30 @@ test!(override_and_depend {
 {compiling} b v0.5.0 ([..])
 ", compiling = COMPILING)));
 });
+
+test!(missing_path_dependency {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            paths = ["../whoa-this-does-not-exist"]
+        "#);
+    p.build();
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+failed to update path override `[..]../whoa-this-does-not-exist` \
+(defined in `[..]`)
+
+Caused by:
+  failed to read directory `[..]`
+
+Caused by:
+  [..] (os error [..])
+"));
+});
