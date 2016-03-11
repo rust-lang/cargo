@@ -34,7 +34,7 @@ use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
 use sources::PathSource;
 use util::config::Config;
-use util::{CargoResult, profile};
+use util::{CargoResult, profile, human, ChainError};
 
 /// Contains information about how a package should be compiled.
 pub struct CompileOptions<'a> {
@@ -393,17 +393,21 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
-        p.parent().unwrap().parent().unwrap().join(s)
-    }).filter(|p| {
+        (p.parent().unwrap().parent().unwrap().join(s), p)
+    }).filter(|&(ref p, _)| {
         // Make sure we don't override the local package, even if it's in the
         // list of override paths.
         cur_path != &**p
     });
 
-    for path in paths {
+    for (path, definition) in paths {
         let id = try!(SourceId::for_path(&path));
         let mut source = PathSource::new_recursive(&path, &id, config);
-        try!(source.update());
+        try!(source.update().chain_error(|| {
+            human(format!("failed to update path override `{}` \
+                           (defined in `{}`)", path.display(),
+                          definition.display()))
+        }));
         registry.add_override(&id, Box::new(source));
     }
     Ok(())
