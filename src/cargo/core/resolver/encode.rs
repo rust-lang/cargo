@@ -95,7 +95,13 @@ fn build_path_deps(root: &Package,
                    map: &mut HashMap<String, SourceId>,
                    config: &Config)
                    -> CargoResult<()> {
-    assert!(root.package_id().source_id().is_path());
+    // If the root crate is *not* a path source, then we're probably in a
+    // situation such as `cargo install` with a lock file from a remote
+    // dependency. In that case we don't need to fixup any path dependencies (as
+    // they're not actually path dependencies any more), so we ignore them.
+    if !root.package_id().source_id().is_path() {
+        return Ok(())
+    }
 
     let deps = root.dependencies()
                    .iter()
