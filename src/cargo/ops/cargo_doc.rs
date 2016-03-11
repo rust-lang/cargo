@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -62,6 +63,12 @@ pub fn doc(manifest_path: &Path,
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn open_docs(path: &Path) {
+    // trying $BROWSER
+    match env::var("BROWSER").map(|name| Command::new(name).arg(path).status()) {
+        Ok(_) => return,
+        Err(_) => ()
+    }
+
     // trying xdg-open
     match Command::new("xdg-open").arg(path).status() {
         Ok(_) => return,
