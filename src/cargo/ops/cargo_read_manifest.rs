@@ -87,7 +87,11 @@ fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
         Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => {
             return Ok(())
         }
-        Err(e) => return Err(From::from(e)),
+        Err(e) => {
+            return Err(human(e)).chain_error(|| {
+                human(format!("failed to read directory `{}`", path.display()))
+            })
+        }
     };
     for dir in dirs {
         let dir = try!(dir);
