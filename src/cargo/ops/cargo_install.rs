@@ -4,7 +4,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io;
+use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
 use toml;
@@ -14,10 +14,12 @@ use core::PackageId;
 use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, RegistrySource};
 use util::{CargoResult, ChainError, Config, human, internal};
+use util::{Filesystem, FileLock};
 
 #[derive(RustcDecodable, RustcEncodable)]
 enum CrateListing {
     V1(CrateListingV1),
+    Empty,
 }
 
 #[derive(RustcDecodable, RustcEncodable)]
@@ -67,9 +69,15 @@ pub fn install(root: Option<&str>,
                                             specify alternate source"))))
     };
 
-    let mut list = try!(read_crate_list(&root));
-    let dst = root.join("bin");
-    try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
+    // Preflight checks to check up front whether we'll overwrite something.
+    // We have to check this again afterwards, but may as well avoid building
+    // anything if we're gonna throw it away anyway.
+    {
+        let metadata = try!(metadata(config, &root));
+        let list = try!(read_crate_list(metadata.file()));
+        let dst = metadata.parent().join("bin");
+        try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
+    }
 
     let target_dir = if source_id.is_path() {
         config.target_dir(&pkg)
@@ -81,6 +89,11 @@ pub fn install(root: Option<&str>,
         human(format!("failed to compile `{}`, intermediate artifacts can be \
                        found at `{}`", pkg, target_dir.display()))
     }));
+
+    let metadata = try!(metadata(config, &root));
+    let mut list = try!(read_crate_list(metadata.file()));
+    let dst = metadata.parent().join("bin");
+    try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
 
     let mut t = Transaction { bins: Vec::new() };
     try!(fs::create_dir_all(&dst));
@@ -103,7 +116,7 @@ pub fn install(root: Option<&str>,
     }).extend(t.bins.iter().map(|t| {
         t.file_name().unwrap().to_string_lossy().into_owned()
     }));
-    try!(write_crate_list(&root, list));
+    try!(write_crate_list(metadata.file(), list));
 
     t.bins.truncate(0);
 
@@ -230,51 +243,40 @@ fn check_overwrites(dst: &Path,
     Ok(())
 }
 
-fn read_crate_list(path: &Path) -> CargoResult<CrateListingV1> {
-    let metadata = path.join(".crates.toml");
-    let mut f = match File::open(&metadata) {
-        Ok(f) => f,
-        Err(e) => {
-            if e.kind() == io::ErrorKind::NotFound {
-                return Ok(CrateListingV1 { v1: BTreeMap::new() });
-            }
-            return Err(e).chain_error(|| {
-                human(format!("failed to open crate metadata at `{}`",
-                              metadata.display()))
-            });
-        }
-    };
+fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
     (|| -> CargoResult<_> {
         let mut contents = String::new();
-        try!(f.read_to_string(&mut contents));
+        try!(file.read_to_string(&mut contents));
         let listing = try!(toml::decode_str(&contents).chain_error(|| {
             internal("invalid TOML found for metadata")
         }));
         match listing {
             CrateListing::V1(v1) => Ok(v1),
+            CrateListing::Empty => {
+                Ok(CrateListingV1 { v1: BTreeMap::new() })
+            }
         }
     }).chain_error(|| {
-        human(format!("failed to parse crate metadata at `{}`",
-                      metadata.display()))
+        human("failed to parse crate metadata")
     })
 }
 
-fn write_crate_list(path: &Path, listing: CrateListingV1) -> CargoResult<()> {
-    let metadata = path.join(".crates.toml");
+fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()> {
     (|| -> CargoResult<_> {
-        let mut f = try!(File::create(&metadata));
+        try!(file.seek(SeekFrom::Start(0)));
+        try!(file.set_len(0));
         let data = toml::encode_str::<CrateListing>(&CrateListing::V1(listing));
-        try!(f.write_all(data.as_bytes()));
+        try!(file.write_all(data.as_bytes()));
         Ok(())
     }).chain_error(|| {
-        human(format!("failed to write crate metadata at `{}`",
-                      metadata.display()))
+        human("failed to write crate metadata")
     })
 }
 
 pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let dst = try!(resolve_root(dst, config));
-    let list = try!(read_crate_list(&dst));
+    let dst = try!(metadata(config, &dst));
+    let list = try!(read_crate_list(dst.file()));
     let mut shell = config.shell();
     let out = shell.out();
     for (k, v) in list.v1.iter() {
@@ -291,7 +293,8 @@ pub fn uninstall(root: Option<&str>,
                  bins: &[String],
                  config: &Config) -> CargoResult<()> {
     let root = try!(resolve_root(root, config));
-    let mut metadata = try!(read_crate_list(&root));
+    let crate_metadata = try!(metadata(config, &root));
+    let mut metadata = try!(read_crate_list(crate_metadata.file()));
     let mut to_remove = Vec::new();
     {
         let result = try!(PackageIdSpec::query_str(spec, metadata.v1.keys()))
@@ -300,7 +303,7 @@ pub fn uninstall(root: Option<&str>,
             Entry::Occupied(e) => e,
             Entry::Vacant(..) => panic!("entry not found: {}", result),
         };
-        let dst = root.join("bin");
+        let dst = crate_metadata.parent().join("bin");
         for bin in installed.get() {
             let bin = dst.join(bin);
             if fs::metadata(&bin).is_err() {
@@ -336,7 +339,7 @@ pub fn uninstall(root: Option<&str>,
             installed.remove();
         }
     }
-    try!(write_crate_list(&root, metadata));
+    try!(write_crate_list(crate_metadata.file(), metadata));
     for bin in to_remove {
         try!(config.shell().status("Removing", bin.display()));
         try!(fs::remove_file(bin));
@@ -345,13 +348,18 @@ pub fn uninstall(root: Option<&str>,
     Ok(())
 }
 
-fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<PathBuf> {
+fn metadata(config: &Config, root: &Filesystem) -> CargoResult<FileLock> {
+    root.open_rw(Path::new(".crates.toml"), config, "crate metadata")
+}
+
+fn resolve_root(flag: Option<&str>,
+                config: &Config) -> CargoResult<Filesystem> {
     let config_root = try!(config.get_path("install.root"));
     Ok(flag.map(PathBuf::from).or_else(|| {
         env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from)
     }).or_else(move || {
         config_root.map(|v| v.val)
-    }).unwrap_or_else(|| {
-        config.home().to_owned()
+    }).map(Filesystem::new).unwrap_or_else(|| {
+        config.home().clone()
     }))
 }
