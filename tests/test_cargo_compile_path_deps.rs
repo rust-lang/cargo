@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs, main_file};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, RUNNING, ERROR};
 use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -510,15 +510,16 @@ test!(error_message_for_missing_manifest {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr("\
-Unable to update file://[..]
+                       .with_stderr(&format!("\
+{error} Unable to update file://[..]
 
 Caused by:
   failed to read `[..]bar[..]Cargo.toml`
 
 Caused by:
   [..] (os error [..])
-"));
+",
+error = ERROR)));
 
 });
 
@@ -854,8 +855,8 @@ test!(missing_path_dependency {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
-                       .with_stderr("\
-failed to update path override `[..]../whoa-this-does-not-exist` \
+                       .with_stderr(format!("\
+{error} failed to update path override `[..]../whoa-this-does-not-exist` \
 (defined in `[..]`)
 
 Caused by:
@@ -863,5 +864,5 @@ Caused by:
 
 Caused by:
   [..] (os error [..])
-"));
+", error = ERROR)));
 });

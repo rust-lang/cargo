@@ -1,7 +1,7 @@
 use std::path::MAIN_SEPARATOR as SEP;
 
 use support::{project, execs, path2url};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, RUNNING, ERROR};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -64,10 +64,10 @@ test!(simple_quiet_and_verbose {
         "#);
 
     assert_that(p.cargo_process("run").arg("-q").arg("-v"),
-                execs().with_status(101).with_stderr("\
-cannot set both --verbose and --quiet
-")
-    );
+                execs().with_status(101).with_stderr(&format!("\
+{error} cannot set both --verbose and --quiet
+",
+error = ERROR)));
 });
 
 test!(simple_with_args {
@@ -104,9 +104,9 @@ test!(exit_code {
     assert_that(p.cargo_process("run"),
                 execs().with_status(2)
                        .with_stderr(&format!("\
-Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+{error} Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 ",
-        )));
+error = ERROR)));
 });
 
 test!(exit_code_verbose {
@@ -124,9 +124,9 @@ test!(exit_code_verbose {
     assert_that(p.cargo_process("run").arg("-v"),
                 execs().with_status(2)
                        .with_stderr(&format!("\
-Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+{error} Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 ",
-        )));
+error = ERROR)));
 });
 
 test!(no_main_file {
@@ -141,8 +141,8 @@ test!(no_main_file {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
-                       .with_stderr("a bin target must be available \
-                                     for `cargo run`\n"));
+                       .with_stderr(&format!("{error} a bin target must be available \
+                                     for `cargo run`\n", error = ERROR)));
 });
 
 test!(too_many_bins {
@@ -159,9 +159,9 @@ test!(too_many_bins {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
-                       .with_stderr("`cargo run` requires that a project only \
+                       .with_stderr(&format!("{error} `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
-                                     to specify which one to run\n"));
+                                     to specify which one to run\n", error = ERROR)));
 });
 
 test!(specify_name {
@@ -251,9 +251,10 @@ test!(either_name_or_example {
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("--example").arg("b"),
                 execs().with_status(101)
-                       .with_stderr("`cargo run` can run at most one \
+                       .with_stderr(&format!("{error} `cargo run` can run at most one \
                                      executable, but multiple were \
-                                     specified"));
+                                     specified",
+                                     error = ERROR)));
 });
 
 test!(one_bin_multiple_examples {

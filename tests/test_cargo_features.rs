@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{COMPILING, FRESH};
+use support::{COMPILING, FRESH, ERROR};
 use support::paths::CargoPathExt;
 use hamcrest::assert_that;
 
@@ -24,11 +24,12 @@ test!(invalid1 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` includes `baz` which is neither a dependency nor another feature
-")));
+",
+error = ERROR)));
 });
 
 test!(invalid2 {
@@ -49,11 +50,12 @@ test!(invalid2 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   Features and dependencies cannot have the same name: `bar`
-")));
+",
+error = ERROR)));
 });
 
 test!(invalid3 {
@@ -74,12 +76,13 @@ test!(invalid3 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` depends on `baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
-")));
+",
+error = ERROR)));
 });
 
 test!(invalid4 {
@@ -105,8 +108,9 @@ test!(invalid4 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-Package `bar v0.0.1 ([..])` does not have these features: `bar`
-")));
+{error} Package `bar v0.0.1 ([..])` does not have these features: `bar`
+",
+error = ERROR)));
 
     let p = p.file("Cargo.toml", r#"
             [project]
@@ -117,8 +121,9 @@ Package `bar v0.0.1 ([..])` does not have these features: `bar`
 
     assert_that(p.cargo_process("build").arg("--features").arg("test"),
                 execs().with_status(101).with_stderr(&format!("\
-Package `foo v0.0.1 ([..])` does not have these features: `test`
-")));
+{error} Package `foo v0.0.1 ([..])` does not have these features: `test`
+",
+error = ERROR)));
 });
 
 test!(invalid5 {
@@ -137,11 +142,12 @@ test!(invalid5 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   Dev-dependencies are not allowed to be optional: `bar`
-")));
+",
+error = ERROR)));
 });
 
 test!(invalid6 {
@@ -159,11 +165,12 @@ test!(invalid6 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
-")));
+",
+error = ERROR)));
 });
 
 test!(invalid7 {
@@ -182,11 +189,12 @@ test!(invalid7 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
-")));
+",
+error = ERROR)));
 });
 
 test!(invalid8 {
@@ -212,8 +220,9 @@ test!(invalid8 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(&format!("\
-features in dependencies cannot enable features in other dependencies: `foo/bar`
-")));
+{error} features in dependencies cannot enable features in other dependencies: `foo/bar`
+",
+error = ERROR)));
 });
 
 test!(no_feature_doesnt_build {
@@ -321,9 +330,10 @@ test!(cyclic_feature {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-Cyclic feature dependency: feature `default` depends on itself
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} Cyclic feature dependency: feature `default` depends on itself
+",
+error = ERROR)));
 });
 
 test!(cyclic_feature2 {
@@ -341,9 +351,10 @@ test!(cyclic_feature2 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-Cyclic feature dependency: feature `[..]` depends on itself
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} Cyclic feature dependency: feature `[..]` depends on itself
+",
+error = ERROR)));
 });
 
 test!(groups_on_groups_on_groups {
