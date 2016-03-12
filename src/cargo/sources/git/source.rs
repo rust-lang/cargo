@@ -1,14 +1,13 @@
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::mem;
-use std::path::PathBuf;
 
 use url::{self, Url};
 
 use core::source::{Source, SourceId};
 use core::GitReference;
 use core::{Package, PackageId, Summary, Registry, Dependency};
-use util::{CargoResult, Config, to_hex};
+use util::{CargoResult, Config, FileLock, to_hex};
 use sources::PathSource;
 use sources::git::utils::{GitRemote, GitRevision};
 
@@ -17,11 +16,11 @@ use sources::git::utils::{GitRemote, GitRevision};
 pub struct GitSource<'cfg> {
     remote: GitRemote,
     reference: GitReference,
-    db_path: PathBuf,
-    checkout_path: PathBuf,
     source_id: SourceId,
     path_source: Option<PathSource<'cfg>>,
     rev: Option<GitRevision>,
+    checkout_lock: Option<FileLock>,
+    ident: String,
     config: &'cfg Config,
 }
 
@@ -30,24 +29,8 @@ impl<'cfg> GitSource<'cfg> {
                config: &'cfg Config) -> GitSource<'cfg> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
-        let reference = match source_id.git_reference() {
-            Some(reference) => reference,
-            None => panic!("Not a git source; id={}", source_id),
-        };
-
         let remote = GitRemote::new(source_id.url());
         let ident = ident(source_id.url());
-
-        let db_path = config.git_db_path().join(&ident);
-
-        let reference_path = match *reference {
-            GitReference::Branch(ref s) |
-            GitReference::Tag(ref s) |
-            GitReference::Rev(ref s) => s.to_string(),
-        };
-        let checkout_path = config.git_checkout_path()
-                                  .join(&ident)
-                                  .join(&reference_path);
 
         let reference = match source_id.precise() {
             Some(s) => GitReference::Rev(s.to_string()),
@@ -57,11 +40,11 @@ impl<'cfg> GitSource<'cfg> {
         GitSource {
             remote: remote,
             reference: reference,
-            db_path: db_path,
-            checkout_path: checkout_path,
             source_id: source_id.clone(),
             path_source: None,
             rev: None,
+            checkout_lock: None,
+            ident: ident,
             config: config,
         }
     }
@@ -160,7 +143,34 @@ impl<'cfg> Registry for GitSource<'cfg> {
 
 impl<'cfg> Source for GitSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
-        let actual_rev = self.remote.rev_for(&self.db_path, &self.reference);
+        // First, lock both the global database and checkout locations that
+        // we're going to use. We may be performing a fetch into these locations
+        // so we need writable access.
+        let db_lock = format!(".cargo-lock-{}", self.ident);
+        let db_lock = try!(self.config.git_db_path()
+                                      .open_rw(&db_lock, self.config,
+                                               "the git database"));
+        let db_path = db_lock.parent().join(&self.ident);
+
+        let reference_path = match self.source_id.git_reference() {
+            Some(&GitReference::Branch(ref s)) |
+            Some(&GitReference::Tag(ref s)) |
+            Some(&GitReference::Rev(ref s)) => s,
+            None => panic!("not a git source"),
+        };
+        let checkout_lock = format!(".cargo-lock-{}-{}", self.ident,
+                                    reference_path);
+        let checkout_lock = try!(self.config.git_checkout_path()
+                                     .join(&self.ident)
+                                     .open_rw(&checkout_lock, self.config,
+                                              "the git checkout"));
+        let checkout_path = checkout_lock.parent().join(reference_path);
+
+        // Resolve our reference to an actual revision, and check if the
+        // databaes already has that revision. If it does, we just load a
+        // database pinned at that revision, and if we don't we issue an update
+        // to try to find the revision.
+        let actual_rev = self.remote.rev_for(&db_path, &self.reference);
         let should_update = actual_rev.is_err() ||
                             self.source_id.precise().is_none();
 
@@ -169,22 +179,29 @@ impl<'cfg> Source for GitSource<'cfg> {
                 format!("git repository `{}`", self.remote.url())));
 
             trace!("updating git source `{:?}`", self.remote);
-            let repo = try!(self.remote.checkout(&self.db_path));
+            let repo = try!(self.remote.checkout(&db_path));
             let rev = try!(repo.rev_for(&self.reference));
             (repo, rev)
         } else {
-            (try!(self.remote.db_at(&self.db_path)), actual_rev.unwrap())
+            (try!(self.remote.db_at(&db_path)), actual_rev.unwrap())
         };
 
-        try!(repo.copy_to(actual_rev.clone(), &self.checkout_path));
+        // Copy the database to the checkout location. After this we could drop
+        // the lock on the database as we no longer needed it, but we leave it
+        // in scope so the destructors here won't tamper with too much.
+        try!(repo.copy_to(actual_rev.clone(), &checkout_path));
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&self.checkout_path,
+        let path_source = PathSource::new_recursive(&checkout_path,
                                                     &source_id,
                                                     self.config);
 
+        // Cache the information we just learned, and crucially also cache the
+        // lock on the checkout location. We wouldn't want someone else to come
+        // swipe our checkout location to another revision while we're using it!
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);
+        self.checkout_lock = Some(checkout_lock);
         self.path_source.as_mut().unwrap().update()
     }
 

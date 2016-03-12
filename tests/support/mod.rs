@@ -571,6 +571,12 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
     }
 }
 
+impl ham::Matcher<Output> for Execs {
+    fn matches(&self, output: Output) -> ham::MatchResult {
+        self.match_output(&output)
+    }
+}
+
 pub fn execs() -> Execs {
     Execs {
         expect_stdout: None,

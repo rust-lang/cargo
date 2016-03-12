@@ -4,6 +4,7 @@ use std::collections::hash_map::{HashMap};
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
+use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -13,14 +14,15 @@ use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::{MultiShell, Package};
-use util::{CargoResult, CargoError, ChainError, Rustc, internal, human, paths};
+use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
+use util::Filesystem;
 
 use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
 pub struct Config {
-    home_path: PathBuf,
+    home_path: Filesystem,
     shell: RefCell<MultiShell>,
     rustc_info: Rustc,
     values: RefCell<HashMap<String, ConfigValue>>,
@@ -36,7 +38,7 @@ impl Config {
                cwd: PathBuf,
                homedir: PathBuf) -> CargoResult<Config> {
         let mut cfg = Config {
-            home_path: homedir,
+            home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             rustc_info: Rustc::blank(),
             cwd: cwd,
@@ -66,25 +68,25 @@ impl Config {
         Config::new(shell, cwd, homedir)
     }
 
-    pub fn home(&self) -> &Path { &self.home_path }
+    pub fn home(&self) -> &Filesystem { &self.home_path }
 
-    pub fn git_db_path(&self) -> PathBuf {
+    pub fn git_db_path(&self) -> Filesystem {
         self.home_path.join("git").join("db")
     }
 
-    pub fn git_checkout_path(&self) -> PathBuf {
+    pub fn git_checkout_path(&self) -> Filesystem {
         self.home_path.join("git").join("checkouts")
     }
 
-    pub fn registry_index_path(&self) -> PathBuf {
+    pub fn registry_index_path(&self) -> Filesystem {
         self.home_path.join("registry").join("index")
     }
 
-    pub fn registry_cache_path(&self) -> PathBuf {
+    pub fn registry_cache_path(&self) -> Filesystem {
         self.home_path.join("registry").join("cache")
     }
 
-    pub fn registry_source_path(&self) -> PathBuf {
+    pub fn registry_source_path(&self) -> Filesystem {
         self.home_path.join("registry").join("src")
     }
 
@@ -616,23 +618,30 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     Ok(())
 }
 
-pub fn set_config(cfg: &Config, loc: Location, key: &str,
+pub fn set_config(cfg: &Config,
+                  loc: Location,
+                  key: &str,
                   value: ConfigValue) -> CargoResult<()> {
     // TODO: There are a number of drawbacks here
     //
     // 1. Project is unimplemented
     // 2. This blows away all comments in a file
     // 3. This blows away the previous ordering of a file.
-    let file = match loc {
-        Location::Global => cfg.home_path.join("config"),
+    let mut file = match loc {
+        Location::Global => {
+            try!(cfg.home_path.create_dir());
+            try!(cfg.home_path.open_rw(Path::new("config"), cfg,
+                                       "the global config file"))
+        }
         Location::Project => unimplemented!(),
     };
-    try!(fs::create_dir_all(file.parent().unwrap()));
-    let contents = paths::read(&file).unwrap_or(String::new());
-    let mut toml = try!(cargo_toml::parse(&contents, &file));
+    let mut contents = String::new();
+    let _ = file.read_to_string(&mut contents);
+    let mut toml = try!(cargo_toml::parse(&contents, file.path()));
     toml.insert(key.to_string(), value.into_toml());
 
     let contents = toml::Value::Table(toml).to_string();
-    try!(paths::write(&file, contents.as_bytes()));
+    try!(file.seek(SeekFrom::Start(0)));
+    try!(file.write_all(contents.as_bytes()));
     Ok(())
 }
