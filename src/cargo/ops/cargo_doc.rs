@@ -54,10 +54,15 @@ pub fn doc(manifest_path: &Path,
         let target_dir = options.compile_opts.config.target_dir(&package);
         let path = target_dir.join("doc").join(&name).join("index.html");
         if fs::metadata(&path).is_ok() {
+            let mut shell = options.compile_opts.config.shell();
             match open_docs(&path) {
-                Ok(_) => (),
-                Err(_) => {
-                    println!("warning: could not determine a browser to open docs with.");
+                Ok(m) => try!(shell.status("Opening with", m)),
+                Err(e) => {
+                    try!(shell.warn(
+                            "warning: could not determine a browser to open docs with, tried:"));
+                    for method in e {
+                        try!(shell.warn(format!("\t{}", method)));
+                    }
                 }
             }
         }
@@ -67,47 +72,36 @@ pub fn doc(manifest_path: &Path,
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-fn open_docs(path: &Path) -> Result<(), ()> {
+fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
+    let mut methods = Vec::new();
     // trying $BROWSER
     match env::var("BROWSER").map(|name| Command::new(name).arg(path).status()) {
-        Ok(_) => return Ok(()),
-        Err(_) => ()
+        Ok(_) => return Ok("$BROWSER"),
+        Err(_) => methods.push("$BROWSER")
     }
 
-    // trying xdg-open
-    match Command::new("xdg-open").arg(path).status() {
-        Ok(_) => return Ok(()),
-        Err(_) => ()
-    };
+    for m in ["xdg-open", "gnome-open", "kde-open"].iter() {
+        match Command::new(m).arg(path).status() {
+            Ok(_) => return Ok(m),
+            Err(_) => methods.push(m)
+        }
+    }
 
-    // trying gnome-open
-    match Command::new("gnome-open").arg(path).status() {
-        Ok(_) => return Ok(()),
-        Err(_) => ()
-    };
-
-    // trying kde-open
-    match Command::new("kde-open").arg(path).status() {
-        Ok(_) => return Ok(()),
-        Err(_) => ()
-    };
-    Err(())
+    Err(methods)
 }
 
 #[cfg(target_os = "windows")]
-fn open_docs(path: &Path) -> Result<(), ()> {
+fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     match Command::new("cmd").arg("/C").arg("start").arg("").arg(path).status() {
-        Ok(_) => return Ok(()),
-        Err(_) => ()
+        Ok(_) => return Ok("cmd /C start"),
+        Err(_) => return Err(vec!["cmd /C start"])
     };
-    Err(())
 }
 
 #[cfg(target_os = "macos")]
-fn open_docs(path: &Path) -> Result<(), ()> {
+fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     match Command::new("open").arg(path).status() {
-        Ok(_) => return Ok(()),
-        Err(_) => ()
+        Ok(_) => return Ok("open"),
+        Err(_) => return Err(vec!["open"])
     };
-    Err(())
 }
