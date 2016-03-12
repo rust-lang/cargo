@@ -1,5 +1,7 @@
+use cargo::core::package::Package;
+use cargo::core::manifest::TargetKind;
 use cargo::ops;
-use cargo::util::{CliResult, CliError, Config, Human};
+use cargo::util::{CliResult, CliError, Config, Human, human};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
@@ -54,12 +56,35 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 &options.flag_color));
 
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let package = try!(Package::for_path(&root, &config));
 
     let (mut examples, mut bins) = (Vec::new(), Vec::new());
     if let Some(s) = options.flag_bin {
+        let target = package.targets().iter().find(|t| {
+            t.name() == s && *t.kind() == TargetKind::Bin
+        });
+        if target.is_none() {
+            let suggestion = package.find_closest_target(&s, TargetKind::Bin);
+            return Err(CliError::from_error(human(match suggestion {
+                Some(closest) => format!("no bin target named `{}`\n\n\
+                                          Did you mean `{}`?", s, closest.name()),
+                None => format!("no bin target named `{}`", s),
+            }), 101));
+        }
         bins.push(s);
     }
     if let Some(s) = options.flag_example {
+        let target = package.targets().iter().find(|t| {
+            t.name() == s && *t.kind() == TargetKind::Example
+        });
+        if target.is_none() {
+            let suggestion = package.find_closest_target(&s, TargetKind::Example);
+            return Err(CliError::from_error(human(match suggestion {
+                Some(closest) => format!("no example target named `{}`\n\n\
+                                          Did you mean `{}`?", s, closest.name()),
+                None => format!("no example target named `{}`", s),
+            }), 101));
+        }
         examples.push(s);
     }
 
