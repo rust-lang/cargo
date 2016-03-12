@@ -56,7 +56,7 @@ pub fn doc(manifest_path: &Path,
         if fs::metadata(&path).is_ok() {
             let mut shell = options.compile_opts.config.shell();
             match open_docs(&path) {
-                Ok(m) => try!(shell.status("Opening with", m)),
+                Ok(m) => try!(shell.status("Launching", m)),
                 Err(e) => {
                     try!(shell.warn(
                             "warning: could not determine a browser to open docs with, tried:"));
@@ -75,9 +75,12 @@ pub fn doc(manifest_path: &Path,
 fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     let mut methods = Vec::new();
     // trying $BROWSER
-    match env::var("BROWSER").map(|name| Command::new(name).arg(path).status()) {
-        Ok(_) => return Ok("$BROWSER"),
-        Err(_) => methods.push("$BROWSER")
+    match env::var("BROWSER"){
+        Ok(name) => match Command::new(name).arg(path).status() {
+            Ok(_) => return Ok("$BROWSER"),
+            Err(_) => methods.push("$BROWSER")
+        },
+        Err(_) => () // Do nothing here if $BROWSER is not found
     }
 
     for m in ["xdg-open", "gnome-open", "kde-open"].iter() {
