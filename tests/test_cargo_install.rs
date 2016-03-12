@@ -596,3 +596,38 @@ third party subcommand `cargo-fail[..]` exited unsuccessfully
 To learn more, run the command again with --verbose.
 "));
 });
+
+test!(git_with_lockfile {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "fn main() {}")
+        .file("Cargo.lock", r#"
+            [root]
+            name = "foo"
+            version = "0.1.0"
+            dependencies = [ "b 0.1.0" ]
+
+            [[package]]
+            name = "bar"
+            version = "0.1.0"
+        "#);
+    p.build();
+
+    assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
+                execs().with_status(0));
+});
