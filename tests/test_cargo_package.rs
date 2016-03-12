@@ -411,6 +411,8 @@ src[..]main.rs
 
 #[cfg(unix)] // windows doesn't allow these characters in filenames
 test!(package_weird_characters {
+
+    use support::ERROR;
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -424,11 +426,12 @@ test!(package_weird_characters {
         .file("src/:foo", "");
 
     assert_that(p.cargo_process("package"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(format!("\
 warning: [..]
-failed to prepare local package for uploading
+{error} failed to prepare local package for uploading
 
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
-"));
+",
+error = ERROR)));
 });

@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, RUNNING, DOCTEST};
+use support::{COMPILING, RUNNING, DOCTEST, ERROR};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, is_not};
 use cargo::util::process;
@@ -742,10 +742,11 @@ test!(bin_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  binary target bin.name is required")));
+  binary target bin.name is required",
+  error = ERROR)));
 });
 
 test!(bench_without_name {
@@ -786,10 +787,11 @@ test!(bench_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  bench target bench.name is required")));
+  bench target bench.name is required",
+    error = ERROR)));
 });
 
 test!(test_without_name {
@@ -829,10 +831,11 @@ test!(test_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  test target test.name is required")));
+  test target test.name is required",
+  error = ERROR)));
 });
 
 test!(example_without_name {
@@ -872,10 +875,11 @@ test!(example_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  example target example.name is required")));
+  example target example.name is required",
+  error = ERROR)));
 });
 
 test!(bin_there_for_integration {
@@ -1599,13 +1603,15 @@ test!(bad_example {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("run").arg("--example").arg("foo"),
-                execs().with_status(101).with_stderr("\
-no example target named `foo`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} no example target named `foo`
+",
+    error = ERROR)));
     assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
-                execs().with_status(101).with_stderr("\
-no bin target named `foo`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} no bin target named `foo`
+",
+    error = ERROR)));
 });
 
 test!(doctest_feature {

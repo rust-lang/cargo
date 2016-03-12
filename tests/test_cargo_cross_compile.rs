@@ -1,7 +1,7 @@
 use std::env;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING, DOCTEST};
+use support::{RUNNING, COMPILING, DOCTEST, ERROR};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -826,16 +826,16 @@ test!(platform_specific_dependencies_do_not_leak {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr(format!("\
 [..] error: can't find crate for `d2`[..]
 [..] extern crate d2;
 [..]
 error: aborting due to previous error
-Could not compile `d1`.
+{error} Could not compile `d1`.
 
 Caused by:
   [..]
-"));
+", error = ERROR)));
 });
 
 test!(platform_specific_variables_reflected_in_build_scripts {

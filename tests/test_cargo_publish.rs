@@ -8,7 +8,7 @@ use tar::Archive;
 use url::Url;
 
 use support::{project, execs};
-use support::{UPDATING, PACKAGING, UPLOADING};
+use support::{UPDATING, PACKAGING, UPLOADING, ERROR};
 use support::paths;
 use support::git::repo;
 
@@ -103,10 +103,11 @@ test!(git_deps {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
-                execs().with_status(101).with_stderr("\
-all dependencies must come from the same source.
+                execs().with_status(101).with_stderr(&format!("\
+{error} all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
-"));
+",
+error = ERROR)));
 });
 
 test!(path_dependency_no_version {
@@ -132,10 +133,11 @@ test!(path_dependency_no_version {
         .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("publish"),
-                execs().with_status(101).with_stderr("\
-all path dependencies must have a version specified when publishing.
+                execs().with_status(101).with_stderr(&format!("\
+{error} all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
-"));
+",
+error = ERROR)));
 });
 
 test!(unpublishable_crate {
@@ -152,8 +154,9 @@ test!(unpublishable_crate {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish"),
-                execs().with_status(101).with_stderr("\
-some crates cannot be published.
+                execs().with_status(101).with_stderr(&format!("\
+{error} some crates cannot be published.
 `foo` is marked as unpublishable
-"));
+",
+error = ERROR)));
 });

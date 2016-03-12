@@ -1,16 +1,17 @@
 use std::path::MAIN_SEPARATOR as SEP;
 
 use support::{execs, project};
-use support::{COMPILING, RUNNING};
+use support::{COMPILING, RUNNING, ERROR};
 
 use hamcrest::assert_that;
 
 fn setup() {
 }
 
-fn cargo_rustc_error() -> &'static str {
-    "extra arguments to `rustc` can only be passed to one target, consider filtering\n\
-    the package by passing e.g. `--lib` or `--bin NAME` to specify a single target"
+fn cargo_rustc_error() -> String {
+    format!("{error} extra arguments to `rustc` can only be passed to one target, \
+    consider filtering\nthe package by passing e.g. `--lib` or `--bin NAME` to \
+    specify a single target", error = ERROR)
 }
 
 test!(build_lib_for_foo {
@@ -125,7 +126,7 @@ test!(fails_when_trying_to_build_main_and_lib_with_args {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(101)
-                .with_stderr(cargo_rustc_error()));
+                .with_stderr(&cargo_rustc_error()));
 });
 
 test!(build_with_args_to_one_of_multiple_binaries {
@@ -185,7 +186,7 @@ test!(fails_with_args_to_all_binaries {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(101)
-                .with_stderr(cargo_rustc_error()));
+                .with_stderr(&cargo_rustc_error()));
 });
 
 test!(build_with_args_to_one_of_multiple_tests {
@@ -347,11 +348,11 @@ test!(fail_with_multiple_packages {
 
     assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
                                           .arg("-p").arg("baz"),
-                execs().with_status(1).with_stderr("\
-Invalid arguments.
+                execs().with_status(1).with_stderr(format!("\
+{error} Invalid arguments.
 
 Usage:
-    cargo rustc [options] [--] [<opts>...]".to_string()));
+    cargo rustc [options] [--] [<opts>...]", error = ERROR)));
 });
 
 test!(rustc_with_other_profile {

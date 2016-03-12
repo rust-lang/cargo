@@ -653,6 +653,7 @@ pub fn path2url(p: PathBuf) -> Url {
 
 pub static RUNNING:     &'static str = "     Running";
 pub static COMPILING:   &'static str = "   Compiling";
+pub static ERROR:       &'static str = "       error";
 pub static DOCUMENTING: &'static str = " Documenting";
 pub static FRESH:       &'static str = "       Fresh";
 pub static UPDATING:    &'static str = "    Updating";

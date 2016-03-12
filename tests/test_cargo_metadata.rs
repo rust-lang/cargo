@@ -1,6 +1,6 @@
 use hamcrest::assert_that;
 use support::registry::Package;
-use support::{project, execs, basic_bin_manifest, main_file};
+use support::{project, execs, basic_bin_manifest, main_file, ERROR};
 
 
 fn setup() {}
@@ -177,11 +177,12 @@ test!(cargo_metadata_with_invalid_manifest {
             .file("Cargo.toml", "");
 
     assert_that(p.cargo_process("metadata"), execs().with_status(101)
-                                                    .with_stderr("\
-failed to parse manifest at `[..]`
+                                                    .with_stderr(&format!("\
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  no `package` or `project` section found."))
+  no `package` or `project` section found.",
+  error = ERROR)))
 });
 
 const MANIFEST_OUTPUT: &'static str=
@@ -238,7 +239,9 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_relative {
                  .arg("--manifest-path").arg("foo")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr("the manifest-path must be a path to a Cargo.toml file"));
+                       .with_stderr(&format!("{error} the manifest-path must be \
+                                             a path to a Cargo.toml file",
+                                             error = ERROR)));
 });
 
 test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
@@ -250,7 +253,9 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
                  .arg("--manifest-path").arg(p.root())
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr("the manifest-path must be a path to a Cargo.toml file"));
+                       .with_stderr(&format!("{error} the manifest-path must be \
+                                             a path to a Cargo.toml file",
+                                             error = ERROR)));
 });
 
 test!(cargo_metadata_no_deps_cwd {
@@ -273,5 +278,6 @@ test!(carg_metadata_bad_version {
                  .arg("--format-version").arg("2")
                  .cwd(p.root()),
                 execs().with_status(101)
-    .with_stderr("metadata version 2 not supported, only 1 is currently supported"));
+    .with_stderr(&format!("{error} metadata version 2 not supported, only 1 is currently supported",
+                          error = ERROR)));
 });
