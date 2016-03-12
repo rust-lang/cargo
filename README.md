@@ -2,6 +2,10 @@ Cargo downloads your Rust project’s dependencies and compiles your project.
 
 Learn more at http://doc.crates.io/
 
+## Code Status
+[![Build Status](https://travis-ci.org/rust-lang/cargo.svg?branch=master)](https://travis-ci.org/rust-lang/cargo)
+[![Build Status](https://ci.appveyor.com/api/projects/status/jnh54531mpidb2c2?svg=true)](https://ci.appveyor.com/project/alexcrichton/cargo)
+
 ## Installing Cargo
 
 Cargo is distributed by default with Rust, so if you've got `rustc` installed
