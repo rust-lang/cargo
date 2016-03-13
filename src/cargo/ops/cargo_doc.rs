@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -73,6 +72,7 @@ pub fn doc(manifest_path: &Path,
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
+    use std::env;
     let mut methods = Vec::new();
     // trying $BROWSER
     match env::var("BROWSER"){
