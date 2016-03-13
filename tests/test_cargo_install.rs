@@ -579,7 +579,7 @@ test!(do_not_rebuilds_on_local_install {
                 execs().with_status(0).with_stdout(&format!("\
 {installing} [..]
 ", installing = INSTALLING)).with_stderr("\
-be sure to add `[..]` to your PATH to be able to run the installed binaries
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 "));
 
     assert!(p.build_dir().c_exists());

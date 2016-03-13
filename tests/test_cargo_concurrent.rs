@@ -87,7 +87,7 @@ test!(one_install_should_be_bad {
 {error} binary `foo[..]` already exists in destination as part of `[..]`
 ", error = ERROR)));
     assert_that(good, execs().with_status(0).with_stderr("\
-be sure to add `[..]` to your PATH [..]
+warning: be sure to add `[..]` to your PATH [..]
 "));
 
     assert_that(cargo_home(), has_installed_exe("foo"));
