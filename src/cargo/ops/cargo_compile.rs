@@ -143,7 +143,7 @@ fn validate_target(package: &Package,
                    kind: TargetKind,
                    kind_str: &str) -> CargoResult<()> {
     let target = package.targets().iter().find(|t: &&Target| {
-        t.name() == name && *t.kind() == TargetKind::Bin
+        t.name() == name && *t.kind() == kind
     });
     if target.is_none() {
         let suggestion = package.find_closest_target(name, kind);
