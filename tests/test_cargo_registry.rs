@@ -1015,3 +1015,26 @@ test!(only_download_relevant {
 {compiling} bar v0.5.0 ([..])
 ", downloading = DOWNLOADING, compiling = COMPILING, updating = UPDATING)));
 });
+
+test!(resolve_and_backtracking {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("foo", "0.1.1")
+            .feature_dep("bar", "0.1", &["a", "b"])
+            .publish();
+    Package::new("foo", "0.1.0").publish();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+});

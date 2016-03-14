@@ -275,6 +275,7 @@ struct BacktrackFrame {
     remaining_candidates: RcVecIter<Rc<Summary>>,
     parent: Rc<Summary>,
     dep: Dependency,
+    features: Vec<String>,
 }
 
 /// Recursively activates the dependencies for `top`, in depth-first order,
@@ -319,14 +320,8 @@ fn activate_deps_loop(mut cx: Context,
             }
             None => continue,
         };
-        let (mut parent, (mut cur, (mut dep, candidates, features))) = frame;
+        let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
         assert!(!remaining_deps.is_empty());
-
-        let method = Method::Required {
-            dev_deps: false,
-            features: &features,
-            uses_default_features: dep.uses_default_features(),
-        };
 
         let my_candidates = {
             let prev_active = cx.prev_active(&dep);
@@ -373,6 +368,7 @@ fn activate_deps_loop(mut cx: Context,
                     remaining_candidates: remaining_candidates,
                     parent: parent.clone(),
                     dep: dep.clone(),
+                    features: features.clone(),
                 });
                 candidate
             }
@@ -383,9 +379,13 @@ fn activate_deps_loop(mut cx: Context,
                 // their state at the found level of the `backtrack_stack`.
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur,
                        dep.name());
-                match find_candidate(&mut backtrack_stack, &mut cx,
-                                     &mut remaining_deps, &mut parent, &mut cur,
-                                     &mut dep) {
+                match find_candidate(&mut backtrack_stack,
+                                     &mut cx,
+                                     &mut remaining_deps,
+                                     &mut parent,
+                                     &mut cur,
+                                     &mut dep,
+                                     &mut features) {
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
                                                         &cx.prev_active(&dep),
@@ -395,6 +395,11 @@ fn activate_deps_loop(mut cx: Context,
             }
         };
 
+        let method = Method::Required {
+            dev_deps: false,
+            features: &features,
+            uses_default_features: dep.uses_default_features(),
+        };
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.version());
         cx.resolve.graph.link(parent.package_id().clone(),
@@ -414,7 +419,8 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
                   remaining_deps: &mut BinaryHeap<DepsFrame>,
                   parent: &mut Rc<Summary>,
                   cur: &mut usize,
-                  dep: &mut Dependency) -> Option<Rc<Summary>> {
+                  dep: &mut Dependency,
+                  features: &mut Vec<String>) -> Option<Rc<Summary>> {
     while let Some(mut frame) = backtrack_stack.pop() {
         if let Some((_, candidate)) = frame.remaining_candidates.next() {
             *cx = frame.context_backup.clone();
@@ -422,6 +428,7 @@ fn find_candidate(backtrack_stack: &mut Vec<BacktrackFrame>,
             *parent = frame.parent.clone();
             *cur = remaining_deps.peek().unwrap().remaining_siblings.cur_index();
             *dep = frame.dep.clone();
+            *features = frame.features.clone();
             backtrack_stack.push(frame);
             return Some(candidate)
         }
