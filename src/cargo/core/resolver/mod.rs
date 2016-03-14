@@ -6,10 +6,9 @@
 //! which is more worried about discovering crates from various sources, this
 //! module just uses the Registry trait as a source to learn about crates from.
 //!
-//! Actually solving a constraint graph is an NP-hard (or NP-complete, I forget
-//! which) problem, this the algorithm is basically a nice heuristic to make
-//! sure we get roughly the best answer most of the time. The constraints that
-//! we're working with are:
+//! Actually solving a constraint graph is an NP-hard problem. This algorithm 
+//! is basically a nice heuristic to make sure we get roughly the best answer 
+//! most of the time. The constraints that we're working with are:
 //!
 //! 1. Each crate can have any number of dependencies. Each dependency can
 //!    declare a version range that it is compatible with.
