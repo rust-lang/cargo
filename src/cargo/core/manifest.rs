@@ -384,10 +384,7 @@ impl Target {
         self
     }
     pub fn set_harness(&mut self, harness: bool) -> &mut Target {
-        match  self.kind {
-            TargetKind::Lib(_) => (),
-            _ => self.harness = harness,
-        }
+        self.harness = harness;
         self
     }
     pub fn set_doc(&mut self, doc: bool) -> &mut Target {

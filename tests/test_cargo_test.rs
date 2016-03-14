@@ -1228,7 +1228,7 @@ test!(test_no_harness_in_lib {
             name = "foo"
             harness = false
         "#)
-        .file("src/lib.rs", "#[cfg(test)] fn main() {}");
+        .file("src/lib.rs", "#[cfg(tfoo)] fn main() {}");
 
     assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
                 execs().with_status(0)
