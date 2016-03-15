@@ -113,6 +113,13 @@ fn run_doc_tests(options: &TestOptions,
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
+    // We don't build/rust doctests if target != host
+    if let Some(target) = options.compile_opts.target {
+        if config.rustc_info().host != target {
+            return Ok(errors);
+        }
+    }
+
     let libs = compilation.to_doc_test.iter().map(|package| {
         (package, package.targets().iter().filter(|t| t.doctested())
                          .map(|t| (t.src_path(), t.name(), t.crate_name())))
