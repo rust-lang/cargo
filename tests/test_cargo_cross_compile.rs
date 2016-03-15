@@ -46,6 +46,21 @@ fn alternate_arch() -> &'static str {
     }
 }
 
+fn host() -> String {
+    let platform = match env::consts::OS {
+        "linux" => "unknown-linux-gnu",
+        "macos" => "apple-darwin",
+        "windows" => "pc-windows-msvc",
+        _ => unreachable!(),
+    };
+    let arch = match env::consts::ARCH {
+        "x86" => "i686",
+        "x86_64" => "x86_64",
+        _ => unreachable!(),
+    };
+    format!("{}-{}", arch, platform)
+}
+
 test!(simple_cross {
     if disabled() { return }
 
@@ -472,6 +487,63 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
    doctest = DOCTEST)));
+});
+
+test!(no_cross_doctests {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+        "#)
+        .file("src/lib.rs", r#"
+            //! ```
+            //! extern crate foo;
+            //! assert!(true);
+            //! ```
+        "#);
+
+    let host_output = format!("\
+{compiling} foo v0.0.0 ({foo})
+{running} target[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 1 test
+test _0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, foo = p.url(), doctest = DOCTEST);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0)
+                       .with_stdout(&host_output));
+
+    let target = host();
+    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+                execs().with_status(0)
+                       .with_stdout(&host_output));
+
+    let target = alternate();
+    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} foo v0.0.0 ({foo})
+{running} target[..]{triple}[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target)));
 });
 
 test!(simple_cargo_run {
