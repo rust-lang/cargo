@@ -479,8 +479,7 @@ test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
-   doctest = DOCTEST)));
+", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target)));
 });
 
 test!(no_cross_doctests {
