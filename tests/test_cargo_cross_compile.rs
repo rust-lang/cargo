@@ -479,12 +479,6 @@ test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
    doctest = DOCTEST)));
 });
