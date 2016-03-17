@@ -52,6 +52,7 @@ impl Config {
         try!(cfg.scrape_tool_config());
         try!(cfg.scrape_rustc_version());
         try!(cfg.scrape_target_dir_config());
+        try!(cfg.load_colors());
 
         Ok(cfg)
     }
@@ -346,6 +347,26 @@ impl Config {
         }
 
         Ok(PathBuf::from(tool))
+    }
+
+    fn load_colors(&self) -> CargoResult<()> {
+        if let Some((map, _)) = try!(self.get_table("color")) {
+            if let Some(val) = map.get("status_color") {
+                if let &ConfigValue::String(ref color, _) = val {
+                    try!(self.shell.borrow_mut().set_status_color(color));
+                } else {
+                    return Err(human("invalid type for status_color"));
+                }
+            }
+            if let Some(val) = map.get("status_bold") {
+                if let &ConfigValue::Boolean(bold, _) = val {
+                    self.shell.borrow_mut().set_status_bold(bold);
+                } else {
+                    return Err(human("invalid type for status_bold"));
+                }
+            }
+        }
+        Ok(())
     }
 }
 

@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io;
 
-use term::color::{Color, BLACK, RED, GREEN, YELLOW};
+use term::color::{Color, BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE};
 use term::{self, Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
@@ -10,6 +10,7 @@ use self::Verbosity::{Verbose, Normal, Quiet};
 use self::ColorConfig::{Auto, Always, Never};
 
 use util::errors::CargoResult;
+use util::human;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Verbosity {
@@ -44,12 +45,20 @@ pub struct Shell {
 pub struct MultiShell {
     out: Shell,
     err: Shell,
-    verbosity: Verbosity
+    verbosity: Verbosity,
+    status_color: Option<Color>,
+    status_bold: bool,
 }
 
 impl MultiShell {
     pub fn new(out: Shell, err: Shell, verbosity: Verbosity) -> MultiShell {
-        MultiShell { out: out, err: err, verbosity: verbosity }
+        MultiShell {
+            out: out,
+            err: err,
+            verbosity: verbosity,
+            status_color: None,
+            status_bold: true,
+        }
     }
 
     pub fn out(&mut self) -> &mut Shell {
@@ -71,9 +80,11 @@ impl MultiShell {
     pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
+        let color = self.status_color.unwrap_or(GREEN);
+        let bold = self.status_bold;
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.out().say_status(status, message, GREEN)
+            _ => self.out().say_status(status, message, color, bold),
         }
     }
 
@@ -139,6 +150,26 @@ impl MultiShell {
     pub fn get_verbose(&self) -> Verbosity {
         self.verbosity
     }
+
+    pub fn set_status_color(&mut self, color_name: &str) -> CargoResult<()> {
+        let color = match color_name {
+            "black" => BLACK,
+            "red" => RED,
+            "green" => GREEN,
+            "yellow" => YELLOW,
+            "blue" => BLUE,
+            "magenta" => MAGENTA,
+            "cyan" => CYAN,
+            "white" => WHITE,
+            _ => return Err(human(format!("invalid color name '{}'", color_name))),
+        };
+        self.status_color = Some(color);
+        Ok(())
+    }
+
+    pub fn set_status_bold(&mut self, bold: bool) {
+        self.status_bold = bold
+    }
 }
 
 impl Shell {
@@ -179,13 +210,13 @@ impl Shell {
         Ok(())
     }
 
-    pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color)
+    pub fn say_status<T, U>(&mut self, status: T, message: U, color: Color, bold: bool)
                             -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
         try!(self.reset());
         if color != BLACK { try!(self.fg(color)); }
-        if self.supports_attr(Attr::Bold) { try!(self.attr(Attr::Bold)); }
+        if bold && self.supports_attr(Attr::Bold) { try!(self.attr(Attr::Bold)); }
         try!(write!(self, "{:>12}", status.to_string()));
         try!(self.reset());
         try!(write!(self, " {}\n", message));
