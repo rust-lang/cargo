@@ -19,7 +19,7 @@ pub struct UpdateOptions<'a> {
 pub fn generate_lockfile(manifest_path: &Path, config: &Config)
                          -> CargoResult<()> {
     let package = try!(Package::for_path(manifest_path, config));
-    let mut registry = PackageRegistry::new(config);
+    let mut registry = try!(PackageRegistry::new(config));
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
                                                   None, None));
@@ -41,7 +41,7 @@ pub fn update_lockfile(manifest_path: &Path,
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
-    let mut registry = PackageRegistry::new(opts.config);
+    let mut registry = try!(PackageRegistry::new(opts.config));
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {

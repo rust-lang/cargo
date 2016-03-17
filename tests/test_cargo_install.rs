@@ -64,7 +64,7 @@ test!(simple {
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
 {downloading} foo v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 (registry file://[..])
+{compiling} foo v0.0.1
 {installing} {home}[..]bin[..]foo[..]
 ",
         updating = UPDATING,
@@ -91,7 +91,7 @@ test!(pick_max_version {
                 execs().with_status(0).with_stdout(&format!("\
 {updating} registry `[..]`
 {downloading} foo v0.0.2 (registry file://[..])
-{compiling} foo v0.0.2 (registry file://[..])
+{compiling} foo v0.0.2
 {installing} {home}[..]bin[..]foo[..]
 ",
         updating = UPDATING,
@@ -106,7 +106,7 @@ test!(missing {
     pkg("foo", "0.0.1");
     assert_that(cargo_process("install").arg("bar"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} could not find `bar` in `registry file://[..]`
+{error} could not find `bar` in `registry [..]`
 ",
 error = ERROR)));
 });
@@ -115,7 +115,7 @@ test!(bad_version {
     pkg("foo", "0.0.1");
     assert_that(cargo_process("install").arg("foo").arg("--vers=0.2.0"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} could not find `foo` in `registry file://[..]` with version `0.2.0`
+{error} could not find `foo` in `registry [..]` with version `0.2.0`
 ",
 error = ERROR)));
 });
@@ -466,9 +466,9 @@ test!(list {
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--list"),
                 execs().with_status(0).with_stdout("\
-bar v0.2.1 (registry [..]):
+bar v0.2.1:
     bar[..]
-foo v0.0.1 (registry [..]):
+foo v0.0.1:
     foo[..]
 "));
 });
@@ -488,7 +488,7 @@ test!(uninstall_bin_does_not_exist {
                 execs().with_status(0));
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=bar"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} binary `bar[..]` not installed as part of `foo v0.0.1 ([..])`
+{error} binary `bar[..]` not installed as part of `foo v0.0.1`
 ",
 error = ERROR)));
 });

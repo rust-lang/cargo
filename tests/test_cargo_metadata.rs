@@ -73,10 +73,10 @@ test!(cargo_metadata_with_deps_and_version {
             {
                 "dependencies": [],
                 "features": {},
-                "id": "baz 0.0.1 (registry+file:[..])",
+                "id": "baz 0.0.1 (registry+[..])",
                 "manifest_path": "[..]Cargo.toml",
                 "name": "baz",
-                "source": "registry+file:[..]",
+                "source": "registry+[..]",
                 "targets": [
                     {
                         "kind": [
@@ -96,16 +96,16 @@ test!(cargo_metadata_with_deps_and_version {
                         "name": "baz",
                         "optional": false,
                         "req": "^0.0.1",
-                        "source": "registry+file:[..]",
+                        "source": "registry+[..]",
                         "target": null,
                         "uses_default_features": true
                     }
                 ],
                 "features": {},
-                "id": "bar 0.0.1 (registry+file:[..])",
+                "id": "bar 0.0.1 (registry+[..])",
                 "manifest_path": "[..]Cargo.toml",
                 "name": "bar",
-                "source": "registry+file:[..]",
+                "source": "registry+[..]",
                 "targets": [
                     {
                         "kind": [
@@ -125,7 +125,7 @@ test!(cargo_metadata_with_deps_and_version {
                         "name": "bar",
                         "optional": false,
                         "req": "*",
-                        "source": "registry+file:[..]",
+                        "source": "registry+[..]",
                         "target": null,
                         "uses_default_features": true
                     }
@@ -151,19 +151,19 @@ test!(cargo_metadata_with_deps_and_version {
             "nodes": [
                 {
                     "dependencies": [
-                        "bar 0.0.1 (registry+file:[..])"
+                        "bar 0.0.1 (registry+[..])"
                     ],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 },
                 {
                     "dependencies": [
-                        "baz 0.0.1 (registry+file:[..])"
+                        "baz 0.0.1 (registry+[..])"
                     ],
-                    "id": "bar 0.0.1 (registry+file:[..])"
+                    "id": "bar 0.0.1 (registry+[..])"
                 },
                 {
                     "dependencies": [],
-                    "id": "baz 0.0.1 (registry+file:[..])"
+                    "id": "baz 0.0.1 (registry+[..])"
                 }
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"

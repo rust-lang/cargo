@@ -111,9 +111,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     };
 
     let mut resolved = try!(resolver::resolve(&summary, &method, registry));
-    match previous {
-        Some(r) => resolved.copy_metadata(r),
-        None => {}
+    if let Some(previous) = previous {
+        try!(resolved.merge_from(previous));
     }
     return Ok(resolved);
 

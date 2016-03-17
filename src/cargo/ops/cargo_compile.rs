@@ -105,7 +105,7 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
                                 no_default_features: bool)
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
-    let mut registry = PackageRegistry::new(config);
+    let mut registry = try!(PackageRegistry::new(config));
 
     if let Some(source) = source {
         registry.add_preloaded(root_package.package_id().source_id(), source);
@@ -389,6 +389,7 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         Some(list) => list,
         None => return Ok(())
     };
+
     let paths = paths.val.iter().map(|&(ref s, ref p)| {
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
