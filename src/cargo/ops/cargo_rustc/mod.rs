@@ -511,6 +511,9 @@ fn build_base_args(cx: &Context,
 
     if test && unit.target.harness() {
         cmd.arg("--test");
+    } else if test {
+        // We are still trying to run tests, even without a harness
+        cmd.arg("--cfg").arg("test");
     }
 
     if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {

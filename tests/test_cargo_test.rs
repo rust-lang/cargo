@@ -1210,6 +1210,46 @@ test!(test_no_harness {
                        .with_stdout(&format!("\
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]bar-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+                       compiling = COMPILING, running = RUNNING,
+                       dir = p.url())));
+});
+
+test!(test_no_harness_in_lib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            harness = false
+        "#)
+        .file("src/lib.rs", "#[cfg(tfoo)] fn main() {}");
+
+    assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} foo v0.0.1 ({dir})
+{running} target[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+   Doc-tests foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 ",
                        compiling = COMPILING, running = RUNNING,
                        dir = p.url())));

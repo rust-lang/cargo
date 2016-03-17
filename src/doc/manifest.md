@@ -512,9 +512,10 @@ doc = true
 # for Cargo to correctly compile it and make it available for all dependencies.
 plugin = false
 
+[[test]]
 # If set to false, `cargo test` will omit the --test flag to rustc, which stops
 # it from generating a test harness. This is useful when the binary being built
-# manages the test runner itself.
+# manages the test runner itself. It will still pass the cfg feature 'test'.
 harness = true
 ```
 
