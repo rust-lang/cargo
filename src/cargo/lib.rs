@@ -9,6 +9,7 @@ extern crate curl;
 extern crate docopt;
 extern crate filetime;
 extern crate flate2;
+extern crate fs2;
 extern crate git2;
 extern crate glob;
 extern crate libc;

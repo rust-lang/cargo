@@ -159,9 +159,10 @@
 //! ```
 
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::File;
+use std::io::SeekFrom;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use curl::http;
 use flate2::read::GzDecoder;
@@ -175,16 +176,17 @@ use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::{Dependency, DependencyInner, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
-use util::{hex, Sha256, paths};
+use util::{hex, Sha256, paths, Filesystem, FileLock};
 use ops;
 
-static DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
+const DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
+const INDEX_LOCK: &'static str = ".cargo-index-lock";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
-    checkout_path: PathBuf,
-    cache_path: PathBuf,
-    src_path: PathBuf,
+    checkout_path: Filesystem,
+    cache_path: Filesystem,
+    src_path: Filesystem,
     config: &'cfg Config,
     handle: Option<http::Handle>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
@@ -263,26 +265,13 @@ impl<'cfg> RegistrySource<'cfg> {
     ///
     /// This requires that the index has been at least checked out.
     pub fn config(&self) -> CargoResult<RegistryConfig> {
-        let contents = try!(paths::read(&self.checkout_path.join("config.json")));
+        let lock = try!(self.checkout_path.open_ro(Path::new(INDEX_LOCK),
+                                                   self.config,
+                                                   "the registry index"));
+        let path = lock.path().parent().unwrap();
+        let contents = try!(paths::read(&path.join("config.json")));
         let config = try!(json::decode(&contents));
         Ok(config)
-    }
-
-    /// Open the git repository for the index of the registry.
-    ///
-    /// This will attempt to open an existing checkout, and failing that it will
-    /// initialize a fresh new directory and git checkout. No remotes will be
-    /// configured by default.
-    fn open(&self) -> CargoResult<git2::Repository> {
-        match git2::Repository::open(&self.checkout_path) {
-            Ok(repo) => return Ok(repo),
-            Err(..) => {}
-        }
-
-        try!(fs::create_dir_all(&self.checkout_path));
-        let _ = fs::remove_dir_all(&self.checkout_path);
-        let repo = try!(git2::Repository::init(&self.checkout_path));
-        Ok(repo)
     }
 
     /// Download the given package from the given url into the local cache.
@@ -293,14 +282,16 @@ impl<'cfg> RegistrySource<'cfg> {
     ///
     /// No action is taken if the package is already downloaded.
     fn download_package(&mut self, pkg: &PackageId, url: &Url)
-                        -> CargoResult<PathBuf> {
-        // TODO: should discover filename from the S3 redirect
+                        -> CargoResult<FileLock> {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let dst = self.cache_path.join(&filename);
-        if fs::metadata(&dst).is_ok() { return Ok(dst) }
+        let path = Path::new(&filename);
+        let mut dst = try!(self.cache_path.open_rw(path, self.config, &filename));
+        let meta = try!(dst.file().metadata());
+        if meta.len() > 0 {
+            return Ok(dst)
+        }
         try!(self.config.shell().status("Downloading", pkg));
 
-        try!(fs::create_dir_all(dst.parent().unwrap()));
         let expected_hash = try!(self.hash(pkg));
         let handle = match self.handle {
             Some(ref mut handle) => handle,
@@ -326,7 +317,8 @@ impl<'cfg> RegistrySource<'cfg> {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
-        try!(paths::write(&dst, resp.get_body()));
+        try!(dst.write_all(resp.get_body()));
+        try!(dst.seek(SeekFrom::Start(0)));
         Ok(dst)
     }
 
@@ -347,18 +339,26 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self, pkg: &PackageId, tarball: PathBuf)
+    fn unpack_package(&self,
+                      pkg: &PackageId,
+                      tarball: &FileLock)
                       -> CargoResult<PathBuf> {
         let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
                                               pkg.version()));
-        if fs::metadata(&dst.join(".cargo-ok")).is_ok() { return Ok(dst) }
+        try!(dst.create_dir());
+        // Note that we've already got the `tarball` locked above, and that
+        // implies a lock on the unpacked destination as well, so this access
+        // via `into_path_unlocked` should be ok.
+        let dst = dst.into_path_unlocked();
+        let ok = dst.join(".cargo-ok");
+        if ok.exists() {
+            return Ok(dst)
+        }
 
-        try!(fs::create_dir_all(dst.parent().unwrap()));
-        let f = try!(File::open(&tarball));
-        let gz = try!(GzDecoder::new(f));
+        let gz = try!(GzDecoder::new(tarball.file()));
         let mut tar = Archive::new(gz);
         try!(tar.unpack(dst.parent().unwrap()));
-        try!(File::create(&dst.join(".cargo-ok")));
+        try!(File::create(&ok));
         Ok(dst)
     }
 
@@ -367,18 +367,27 @@ impl<'cfg> RegistrySource<'cfg> {
         if self.cache.contains_key(name) {
             return Ok(self.cache.get(name).unwrap());
         }
-        // see module comment for why this is structured the way it is
-        let path = self.checkout_path.clone();
-        let fs_name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
-        let path = match fs_name.len() {
-            1 => path.join("1").join(&fs_name),
-            2 => path.join("2").join(&fs_name),
-            3 => path.join("3").join(&fs_name[..1]).join(&fs_name),
-            _ => path.join(&fs_name[0..2])
-                     .join(&fs_name[2..4])
-                     .join(&fs_name),
-        };
-        let summaries = match File::open(&path) {
+        let lock = self.checkout_path.open_ro(Path::new(INDEX_LOCK),
+                                              self.config,
+                                              "the registry index");
+        let file = lock.and_then(|lock| {
+            let path = lock.path().parent().unwrap();
+            let fs_name = name.chars().flat_map(|c| {
+                c.to_lowercase()
+            }).collect::<String>();
+
+            // see module comment for why this is structured the way it is
+            let path = match fs_name.len() {
+                1 => path.join("1").join(&fs_name),
+                2 => path.join("2").join(&fs_name),
+                3 => path.join("3").join(&fs_name[..1]).join(&fs_name),
+                _ => path.join(&fs_name[0..2])
+                         .join(&fs_name[2..4])
+                         .join(&fs_name),
+            };
+            File::open(&path).map_err(human)
+        });
+        let summaries = match file {
             Ok(mut f) => {
                 let mut contents = String::new();
                 try!(f.read_to_string(&mut contents));
@@ -455,11 +464,21 @@ impl<'cfg> RegistrySource<'cfg> {
 
     /// Actually perform network operations to update the registry
     fn do_update(&mut self) -> CargoResult<()> {
-        if self.updated { return Ok(()) }
+        if self.updated {
+            return Ok(())
+        }
+        try!(self.checkout_path.create_dir());
+        let lock = try!(self.checkout_path.open_rw(Path::new(INDEX_LOCK),
+                                                   self.config,
+                                                   "the registry index"));
+        let path = lock.path().parent().unwrap();
 
         try!(self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.url())));
-        let repo = try!(self.open());
+        let repo = try!(git2::Repository::open(path).or_else(|_| {
+            let _ = lock.remove_siblings();
+            git2::Repository::init(path)
+        }));
 
         // git fetch origin
         let url = self.source_id.url().to_string();
@@ -542,11 +561,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         url.path_mut().unwrap().push(package.name().to_string());
         url.path_mut().unwrap().push(package.version().to_string());
         url.path_mut().unwrap().push("download".to_string());
-        let path = try!(self.download_package(package, &url).chain_error(|| {
+        let krate = try!(self.download_package(package, &url).chain_error(|| {
             internal(format!("failed to download package `{}` from {}",
                              package, url))
         }));
-        let path = try!(self.unpack_package(package, path).chain_error(|| {
+        let path = try!(self.unpack_package(package, &krate).chain_error(|| {
             internal(format!("failed to unpack package `{}`", package))
         }));
 
