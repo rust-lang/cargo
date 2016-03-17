@@ -93,7 +93,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         things.push_str(&missing.last().unwrap());
 
         try!(config.shell().warn(
-            &format!("warning: manifest has no {things}. \
+            &format!("manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
                     things = things)))
     }
