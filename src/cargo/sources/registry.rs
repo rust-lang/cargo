@@ -174,7 +174,7 @@ use url::Url;
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::{Dependency, DependencyInner, Kind};
 use sources::{PathSource, git};
-use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
+use util::{CargoResult, Config, internal, ChainError, ToUrl, ToUrlWithBase, human};
 use util::{hex, Sha256, paths};
 use ops;
 
@@ -249,9 +249,12 @@ impl<'cfg> RegistrySource<'cfg> {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a .cargo/config
     pub fn url(config: &Config) -> CargoResult<Url> {
-        let config = try!(ops::registry_configuration(config));
-        let url = config.index.unwrap_or(DEFAULT.to_string());
-        url.to_url().map_err(human)
+        let result = match try!(config.get_string("registry.index")) {
+            Some((value, path)) => value.to_url_with_base(path.as_path().clone()),
+            None => DEFAULT.to_string().to_url(),
+        };
+
+        Ok(try!(result.map_err(human)))
     }
 
     /// Get the default url for the registry
