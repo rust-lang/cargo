@@ -93,7 +93,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
     }).collect::<Vec<NewCrateDependency>>();
     let manifest = pkg.manifest();
     let ManifestMetadata {
-        ref authors, ref description, ref homepage, ref documentation,
+        ref authors, ref description, ref homepage, ref documentation, ref changelog,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
     } = *manifest.metadata();
     let readme = match *readme {
@@ -117,6 +117,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         description: description.clone(),
         homepage: homepage.clone(),
         documentation: documentation.clone(),
+        changelog: changelog.clone(),
         keywords: keywords.clone(),
         readme: readme,
         repository: repository.clone(),

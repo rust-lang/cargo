@@ -100,6 +100,7 @@ description = "..."
 documentation = "..."
 homepage = "..."
 repository = "..."
+changelog = "..."
 
 # This points to a file in the repository (relative to this Cargo.toml). The
 # contents of this file are stored and indexed in the registry.

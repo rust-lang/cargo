@@ -48,6 +48,7 @@ test!(simple {
             "documentation": null,
             "downloads": 2,
             "homepage": null,
+            "changelog": null,
             "id": "hoare",
             "keywords": [],
             "license": null,
