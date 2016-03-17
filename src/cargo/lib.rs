@@ -183,12 +183,12 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
 // and for others, e.g. docopt version info, print to stdout.
 fn output(err: String, shell: &mut MultiShell, fatal: bool) {
     let (std_shell, color, message) = if fatal {
-        (shell.err(), RED, Some("error"))
+        (shell.err(), RED, Some("error:"))
     } else {
         (shell.out(), BLACK, None)
     };
     let _ = match message{
-        Some(text) => std_shell.say_status(text, err.to_string(), color),
+        Some(text) => std_shell.say_status(text, err.to_string(), color, false),
         None => std_shell.say(err, color)
     };
 }
@@ -201,7 +201,8 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
 
     let hide = unknown && shell.get_verbose() != Verbose;
     if hide {
-        let _ = shell.err().say_status("error", "An unknown error occurred", RED);
+        let _ = shell.err().say_status("error:", "An unknown error occurred",
+                                       RED, false);
     } else {
         output(error.to_string(), shell, fatal);
     }
