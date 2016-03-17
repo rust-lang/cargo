@@ -22,7 +22,7 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -153,6 +153,11 @@ pub fn compile_pkg<'a>(root_package: &Package,
         s.split(' ')
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
+    if spec.len() > 0 && (no_default_features || features.len() > 0) {
+        bail!("features cannot be modified when the main package \
+               is not being built");
+    }
+
     if jobs == Some(0) {
         bail!("jobs must be at least 1")
     }
@@ -193,8 +198,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (Some(args), _) => {
+            let all_features = resolve_with_overrides.features(to_builds[0].package_id());
             let targets = try!(generate_targets(to_builds[0], profiles,
-                                                mode, filter, release));
+                                                mode, filter, all_features, release));
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -207,8 +213,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
             }
         }
         (None, Some(args)) => {
+            let all_features = resolve_with_overrides.features(to_builds[0].package_id());
             let targets = try!(generate_targets(to_builds[0], profiles,
-                                                mode, filter, release));
+                                                mode, filter, all_features, release));
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -222,8 +229,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
         }
         (None, None) => {
             for &to_build in to_builds.iter() {
+                let all_features = resolve_with_overrides.features(to_build.package_id());
                 let targets = try!(generate_targets(to_build, profiles, mode,
-                                                    filter, release));
+                                                    filter, all_features, release));
                 package_targets.push((to_build, targets));
             }
         }
@@ -299,6 +307,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                         profiles: &'a Profiles,
                         mode: CompileMode,
                         filter: &CompileFilter,
+                        features: Option<&HashSet<String>>,
                         release: bool)
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let build = if release {&profiles.release} else {&profiles.dev};
@@ -309,13 +318,13 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Build => build,
         CompileMode::Doc { .. } => &profiles.doc,
     };
-    match *filter {
+    let mut targets = match *filter {
         CompileFilter::Everything => {
             match mode {
                 CompileMode::Bench => {
-                    Ok(pkg.targets().iter().filter(|t| t.benched()).map(|t| {
+                    pkg.targets().iter().filter(|t| t.benched()).map(|t| {
                         (t, profile)
-                    }).collect::<Vec<_>>())
+                    }).collect::<Vec<_>>()
                 }
                 CompileMode::Test => {
                     let mut base = pkg.targets().iter().filter(|t| {
@@ -331,16 +340,16 @@ fn generate_targets<'a>(pkg: &'a Package,
                             base.push((t, build));
                         }
                     }
-                    Ok(base)
+                    base
                 }
                 CompileMode::Build => {
-                    Ok(pkg.targets().iter().filter(|t| {
+                    pkg.targets().iter().filter(|t| {
                         t.is_bin() || t.is_lib()
-                    }).map(|t| (t, profile)).collect())
+                    }).map(|t| (t, profile)).collect()
                 }
                 CompileMode::Doc { .. } => {
-                    Ok(pkg.targets().iter().filter(|t| t.documented())
-                          .map(|t| (t, profile)).collect())
+                    pkg.targets().iter().filter(|t| t.documented())
+                       .map(|t| (t, profile)).collect()
                 }
             }
         }
@@ -375,9 +384,19 @@ fn generate_targets<'a>(pkg: &'a Package,
                 try!(find(tests, "test", TargetKind::Test, test));
                 try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
             }
-            Ok(targets)
+            targets
         }
-    }
+    };
+
+    targets.retain(|&(t, _)| {
+        t.is_lib() ||
+        t.features().is_none() ||
+        t.features().unwrap().iter().filter(|&f| {
+            features.map_or(true, |x| !x.contains(f))
+        }).count() == 0
+    });
+
+    Ok(targets)
 }
 
 /// Read the `paths` configuration variable to discover all path overrides that
