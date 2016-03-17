@@ -45,6 +45,7 @@ mod test_cargo_compile_custom_build;
 mod test_cargo_compile_git_deps;
 mod test_cargo_compile_path_deps;
 mod test_cargo_compile_plugins;
+mod test_cargo_compile_rustflags;
 mod test_cargo_cross_compile;
 mod test_cargo_doc;
 mod test_cargo_features;
