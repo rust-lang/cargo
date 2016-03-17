@@ -67,7 +67,7 @@ struct SourceIdInner {
     canonical_url: Url,
     kind: Kind,
     // e.g. the exact git revision of the specified branch for a Git Source
-    precise: Option<String>
+    precise: Option<String>,
 }
 
 impl SourceId {
@@ -115,19 +115,18 @@ impl SourceId {
                 }
                 url.query = None;
                 let precise = mem::replace(&mut url.fragment, None);
-                SourceId::for_git(&url, reference)
-                         .with_precise(precise)
-            },
+                SourceId::for_git(&url, reference).with_precise(precise)
+            }
             "registry" => {
                 let url = url.to_url().unwrap();
                 SourceId::new(Kind::Registry, url)
-                         .with_precise(Some("locked".to_string()))
+                    .with_precise(Some("locked".to_string()))
             }
             "path" => {
                 let url = url.to_url().unwrap();
                 SourceId::new(Kind::Path, url)
             }
-            _ => panic!("Unsupported serialized SourceId")
+            _ => panic!("Unsupported serialized SourceId"),
         }
     }
 
@@ -148,7 +147,7 @@ impl SourceId {
                 };
 
                 format!("git+{}{}{}", url, ref_str, precise_str)
-            },
+            }
             SourceIdInner { kind: Kind::Registry, ref url, .. } => {
                 format!("registry+{}", url)
             }
@@ -177,19 +176,25 @@ impl SourceId {
         Ok(SourceId::for_registry(&try!(RegistrySource::url(config))))
     }
 
-    pub fn url(&self) -> &Url { &self.inner.url }
-    pub fn is_path(&self) -> bool { self.inner.kind == Kind::Path }
-    pub fn is_registry(&self) -> bool { self.inner.kind == Kind::Registry }
+    pub fn url(&self) -> &Url {
+        &self.inner.url
+    }
+    pub fn is_path(&self) -> bool {
+        self.inner.kind == Kind::Path
+    }
+    pub fn is_registry(&self) -> bool {
+        self.inner.kind == Kind::Registry
+    }
 
     pub fn is_git(&self) -> bool {
         match self.inner.kind {
             Kind::Git(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(&self, config: &'a Config) -> Box<Source+'a> {
+    pub fn load<'a>(&self, config: &'a Config) -> Box<Source + 'a> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Box::new(GitSource::new(self, config)),
@@ -219,8 +224,8 @@ impl SourceId {
         SourceId {
             inner: Arc::new(SourceIdInner {
                 precise: v,
-                .. (*self.inner).clone()
-            }),
+                ..(*self.inner).clone()
+            })
         }
     }
 
@@ -256,7 +261,7 @@ impl Encodable for SourceId {
         if self.is_path() {
             s.emit_option_none()
         } else {
-           self.to_url().encode(s)
+            self.to_url().encode(s)
         }
     }
 }
@@ -296,8 +301,12 @@ impl fmt::Display for SourceId {
 // to the same repository.
 impl PartialEq for SourceIdInner {
     fn eq(&self, other: &SourceIdInner) -> bool {
-        if self.kind != other.kind { return false }
-        if self.url == other.url { return true }
+        if self.kind != other.kind {
+            return false;
+        }
+        if self.url == other.url {
+            return true;
+        }
 
         match (&self.kind, &other.kind) {
             (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
@@ -328,7 +337,7 @@ impl Ord for SourceIdInner {
             (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
                 (ref1, &self.canonical_url).cmp(&(ref2, &other.canonical_url))
             }
-            _ => self.kind.cmp(&other.kind)
+            _ => self.kind.cmp(&other.kind),
         }
     }
 }
@@ -369,10 +378,10 @@ impl GitReference {
 }
 
 pub struct SourceMap<'src> {
-    map: HashMap<SourceId, Box<Source+'src>>
+    map: HashMap<SourceId, Box<Source + 'src>>,
 }
 
-pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source+'src>>;
+pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source + 'src>>;
 
 pub struct SourcesMut<'a, 'src: 'a> {
     inner: IterMut<'a, SourceId, Box<Source + 'src>>,
@@ -380,36 +389,34 @@ pub struct SourcesMut<'a, 'src: 'a> {
 
 impl<'src> SourceMap<'src> {
     pub fn new() -> SourceMap<'src> {
-        SourceMap {
-            map: HashMap::new()
-        }
+        SourceMap { map: HashMap::new() }
     }
 
     pub fn contains(&self, id: &SourceId) -> bool {
         self.map.contains_key(id)
     }
 
-    pub fn get(&self, id: &SourceId) -> Option<&(Source+'src)> {
+    pub fn get(&self, id: &SourceId) -> Option<&(Source + 'src)> {
         let source = self.map.get(id);
 
         source.map(|s| {
-            let s: &(Source+'src) = &**s;
+            let s: &(Source + 'src) = &**s;
             s
         })
     }
 
-    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source+'src)> {
+    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source + 'src)> {
         self.map.get_mut(id).map(|s| {
-            let s: &mut (Source+'src) = &mut **s;
+            let s: &mut (Source + 'src) = &mut **s;
             s
         })
     }
 
-    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source+'src)> {
+    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source + 'src)> {
         self.get(pkg_id.source_id())
     }
 
-    pub fn insert(&mut self, id: &SourceId, source: Box<Source+'src>) {
+    pub fn insert(&mut self, id: &SourceId, source: Box<Source + 'src>) {
         self.map.insert(id.clone(), source);
     }
 
