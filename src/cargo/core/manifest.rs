@@ -113,6 +113,7 @@ pub struct Profile {
     pub test: bool,
     pub doc: bool,
     pub run_custom_build: bool,
+    pub sysroot: Option<PathBuf>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -466,6 +467,7 @@ impl Default for Profile {
             test: false,
             doc: false,
             run_custom_build: false,
+            sysroot: None,
         }
     }
 }
