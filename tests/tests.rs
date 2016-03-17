@@ -62,6 +62,7 @@ mod test_cargo_publish;
 mod test_cargo_read_manifest;
 mod test_cargo_registry;
 mod test_cargo_run;
+mod test_cargo_concurrent;
 mod test_cargo_rustc;
 mod test_cargo_rustdoc;
 mod test_cargo_search;

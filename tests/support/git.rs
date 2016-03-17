@@ -122,3 +122,12 @@ pub fn commit(repo: &git2::Repository) -> git2::Oid {
                 &repo.find_tree(tree_id).unwrap(),
                 &parents).unwrap()
 }
+
+pub fn tag(repo: &git2::Repository, name: &str) {
+    let head = repo.head().unwrap().target().unwrap();
+    repo.tag(name,
+             &repo.find_object(head, None).unwrap(),
+             &repo.signature().unwrap(),
+             "make a new tag",
+             false).unwrap();
+}
