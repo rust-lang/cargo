@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{PathBuf, Path};
@@ -6,6 +7,7 @@ use flate2::Compression::Default;
 use flate2::write::GzEncoder;
 use git2;
 use rustc_serialize::hex::ToHex;
+use rustc_serialize::json::ToJson;
 use tar::{Builder, Header};
 use url::Url;
 
@@ -21,9 +23,18 @@ pub fn dl_url() -> Url { Url::from_file_path(&*dl_path()).ok().unwrap() }
 pub struct Package {
     name: String,
     vers: String,
-    deps: Vec<(String, String, &'static str, String)>,
+    deps: Vec<Dependency>,
     files: Vec<(String, String)>,
     yanked: bool,
+    features: HashMap<String, Vec<String>>,
+}
+
+struct Dependency {
+    name: String,
+    vers: String,
+    kind: String,
+    target: Option<String>,
+    features: Vec<String>,
 }
 
 fn init() {
@@ -55,6 +66,7 @@ impl Package {
             deps: Vec::new(),
             files: Vec::new(),
             yanked: false,
+            features: HashMap::new(),
         }
     }
 
@@ -64,23 +76,40 @@ impl Package {
     }
 
     pub fn dep(&mut self, name: &str, vers: &str) -> &mut Package {
-        self.deps.push((name.to_string(), vers.to_string(), "normal",
-                        "null".to_string()));
-        self
+        self.full_dep(name, vers, None, "normal", &[])
+    }
+
+    pub fn feature_dep(&mut self,
+                       name: &str,
+                       vers: &str,
+                       features: &[&str]) -> &mut Package {
+        self.full_dep(name, vers, None, "normal", features)
     }
 
     pub fn target_dep(&mut self,
                       name: &str,
                       vers: &str,
                       target: &str) -> &mut Package {
-        self.deps.push((name.to_string(), vers.to_string(), "normal",
-                        format!("\"{}\"", target)));
-        self
+        self.full_dep(name, vers, Some(target), "normal", &[])
     }
 
     pub fn dev_dep(&mut self, name: &str, vers: &str) -> &mut Package {
-        self.deps.push((name.to_string(), vers.to_string(), "dev",
-                        "null".to_string()));
+        self.full_dep(name, vers, None, "dev", &[])
+    }
+
+    fn full_dep(&mut self,
+                name: &str,
+                vers: &str,
+                target: Option<&str>,
+                kind: &str,
+                features: &[&str]) -> &mut Package {
+        self.deps.push(Dependency {
+            name: name.to_string(),
+            vers: vers.to_string(),
+            kind: kind.to_string(),
+            target: target.map(|s| s.to_string()),
+            features: features.iter().map(|s| s.to_string()).collect(),
+        });
         self
     }
 
@@ -89,30 +118,36 @@ impl Package {
         self
     }
 
-    #[allow(deprecated)] // connect => join in 1.3
     pub fn publish(&self) {
         self.make_archive();
 
         // Figure out what we're going to write into the index
-        let deps = self.deps.iter().map(|&(ref name, ref req, ref kind, ref target)| {
-            format!("{{\"name\":\"{}\",\
-                       \"req\":\"{}\",\
-                       \"features\":[],\
-                       \"default_features\":false,\
-                       \"target\":{},\
-                       \"optional\":false,\
-                       \"kind\":\"{}\"}}", name, req, target, kind)
-        }).collect::<Vec<_>>().connect(",");
+        let deps = self.deps.iter().map(|dep| {
+            let mut map = HashMap::new();
+            map.insert("name".to_string(), dep.name.to_json());
+            map.insert("req".to_string(), dep.vers.to_json());
+            map.insert("features".to_string(), dep.features.to_json());
+            map.insert("default_features".to_string(), false.to_json());
+            map.insert("target".to_string(), dep.target.to_json());
+            map.insert("optional".to_string(), false.to_json());
+            map.insert("kind".to_string(), dep.kind.to_json());
+            map
+        }).collect::<Vec<_>>();
         let cksum = {
             let mut c = Vec::new();
             File::open(&self.archive_dst()).unwrap()
                  .read_to_end(&mut c).unwrap();
             cksum(&c)
         };
-        let line = format!("{{\"name\":\"{}\",\"vers\":\"{}\",\
-                              \"deps\":[{}],\"cksum\":\"{}\",\"features\":{{}},\
-                              \"yanked\":{}}}",
-                         self.name, self.vers, deps, cksum, self.yanked);
+        let mut dep = HashMap::new();
+        dep.insert("name".to_string(), self.name.to_json());
+        dep.insert("vers".to_string(), self.vers.to_json());
+        dep.insert("deps".to_string(), deps.to_json());
+        dep.insert("cksum".to_string(), cksum.to_json());
+        dep.insert("features".to_string(), self.features.to_json());
+        dep.insert("yanked".to_string(), self.yanked.to_json());
+        let line = dep.to_json().to_string();
+
         let file = match self.name.len() {
             1 => format!("1/{}", self.name),
             2 => format!("2/{}", self.name),
@@ -152,12 +187,12 @@ impl Package {
             version = "{}"
             authors = []
         "#, self.name, self.vers);
-        for &(ref dep, ref req, kind, ref target) in self.deps.iter() {
-            let target = match &target[..] {
-                "null" => String::new(),
-                t => format!("target.{}.", t),
+        for dep in self.deps.iter() {
+            let target = match dep.target {
+                None => String::new(),
+                Some(ref s) => format!("target.{}.", s),
             };
-            let kind = match kind {
+            let kind = match &dep.kind[..] {
                 "build" => "build-",
                 "dev" => "dev-",
                 _ => ""
@@ -165,7 +200,7 @@ impl Package {
             manifest.push_str(&format!(r#"
                 [{}{}dependencies.{}]
                 version = "{}"
-            "#, target, kind, dep, req));
+            "#, target, kind, dep.name, dep.vers));
         }
 
         let dst = self.archive_dst();
