@@ -79,11 +79,12 @@ proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000   # Timeout for each HTTP request, in milliseconds
 
 [build]
-jobs = 1               # number of jobs to run by default (default to # cpus)
-rustc = "rustc"        # the rust compiler tool
-rustdoc = "rustdoc"    # the doc generator tool
-target = "triple"      # build for the target triple
-target-dir = "target"  # path of where to place all generated artifacts
+jobs = 1                  # number of jobs to run by default (default to # cpus)
+rustc = "rustc"           # the rust compiler tool
+rustdoc = "rustdoc"       # the doc generator tool
+target = "triple"         # build for the target triple
+target-dir = "target"     # path of where to place all generated artifacts
+rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
 
 [term]
 verbose = false        # whether cargo provides verbose output
