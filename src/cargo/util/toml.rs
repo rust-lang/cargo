@@ -568,8 +568,8 @@ impl TomlManifest {
                                          profiles,
                                          publish);
         if project.license_file.is_some() && project.license.is_some() {
-            manifest.add_warning(format!("warning: only one of `license` or \
-                                                   `license-file` is necessary"));
+            manifest.add_warning(format!("only one of `license` or \
+                                          `license-file` is necessary"));
         }
         for warning in warnings {
             manifest.add_warning(warning.clone());
@@ -680,7 +680,7 @@ fn process_dependencies(cx: &mut Context,
 
         if details.version.is_none() && details.path.is_none() &&
            details.git.is_none() {
-            cx.warnings.push(format!("warning: dependency ({}) specified \
+            cx.warnings.push(format!("dependency ({}) specified \
                                       without providing a local path, Git \
                                       repository, or version to use. This will \
                                       be considered an error in future \
@@ -839,7 +839,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
                 kinds.iter().filter_map(|s| {
                     let kind = LibKind::from_str(s);
                     if let Err(ref error) = kind {
-                        warnings.push(format!("warning: {}", error))
+                        warnings.push(error.to_string());
                     }
                     kind.ok()
                 }).collect()

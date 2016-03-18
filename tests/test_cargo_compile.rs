@@ -849,7 +849,9 @@ test!(unused_keys {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stderr("unused manifest key: project.bulid\n"));
+                       .with_stderr("\
+warning: unused manifest key: project.bulid
+"));
 
     let mut p = project("bar");
     p = p
@@ -870,7 +872,9 @@ test!(unused_keys {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stderr("unused manifest key: lib.build\n"));
+                       .with_stderr("\
+warning: unused manifest key: lib.build
+"));
 });
 
 test!(self_dependency {

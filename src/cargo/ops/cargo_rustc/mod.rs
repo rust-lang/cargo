@@ -3,12 +3,12 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::prelude::*;
-use std::path::{self, PathBuf};
+use std::path::{self, PathBuf, Path};
 use std::sync::Arc;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles};
-use util::{self, CargoResult, human};
+use util::{self, CargoResult, human, Filesystem};
 use util::{Config, internal, ChainError, profile, join_paths};
 
 use self::job::{Job, Work};
@@ -84,6 +84,13 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
     let target_layout = build_config.requested_target.as_ref().map(|target| {
         layout::Layout::new(config, root, Some(&target), &dest)
     });
+
+    // For now we don't do any more finer-grained locking on the artifact
+    // directory, so just lock the entire thing for the duration of this
+    // compile.
+    let fs = Filesystem::new(host_layout.root().to_path_buf());
+    let path = Path::new(".cargo-lock");
+    let _lock = try!(fs.open_rw(path, config, "build directory"));
 
     let mut cx = try!(Context::new(resolve, packages, config,
                                    host_layout, target_layout,
@@ -243,9 +250,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
-    return Ok(Work::new(move |desc_tx| {
-        debug!("about to run: {}", rustc);
+    let rustflags = try!(cx.rustflags_args(unit));
 
+    return Ok(Work::new(move |desc_tx| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -266,6 +273,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 try!(fs::remove_file(&dst));
             }
         }
+
+        // Add the arguments from RUSTFLAGS
+        rustc.args(&rustflags);
 
         desc_tx.send(rustc.to_string()).ok();
         try!(exec_engine.exec(rustc).chain_error(|| {

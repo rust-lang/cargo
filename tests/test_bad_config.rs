@@ -398,7 +398,7 @@ test!(unused_keys {
 
     assert_that(foo.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
-unused manifest key: target.foo.bar
+warning: unused manifest key: target.foo.bar
 "));
 });
 
