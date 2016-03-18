@@ -234,6 +234,44 @@ example
         sep = SEP)));
 });
 
+test!(run_with_filename {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"
+            extern crate foo;
+            fn main() { println!("hello a.rs"); }
+        "#)
+        .file("examples/a.rs", r#"
+            fn main() { println!("example"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--bin").arg("bin.rs"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} no bin target named `bin.rs`", error = ERROR)));
+
+    assert_that(p.cargo_process("run").arg("--bin").arg("a.rs"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} no bin target named `a.rs`
+
+Did you mean `a`?", error = ERROR)));
+
+    assert_that(p.cargo_process("run").arg("--example").arg("example.rs"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} no example target named `example.rs`", error = ERROR)));
+
+    assert_that(p.cargo_process("run").arg("--example").arg("a.rs"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} no example target named `a.rs`
+
+Did you mean `a`?", error = ERROR)));
+});
+
 test!(either_name_or_example {
     let p = project("foo")
         .file("Cargo.toml", r#"
