@@ -336,19 +336,19 @@ features = ["secure-password", "civet"]
 
 The usage of features is subject to a few rules:
 
-1. Feature names must not conflict with other package names in the manifest.
-   This is because they are opted into via `features = [...]`, which only has a
-   single namespace.
-2. With the exception of the `default` feature, all features are opt-in. To opt
-   out of the default feature, use `default-features = false` and cherry-pick
-   individual features.
-3. Feature groups are not allowed to cyclically depend on one another.
-4. Dev-dependencies cannot be optional.
-5. Features groups can only reference optional dependencies.
-6. When a feature is selected, Cargo will call `rustc` with `--cfg
-   feature="${feature_name}"`. If a feature group is included, it and all of its
-   individual features will be included. This can be tested in code via
-   `#[cfg(feature = "foo")]`.
+* Feature names must not conflict with other package names in the manifest. This
+  is because they are opted into via `features = [...]`, which only has a single
+  namespace.
+* With the exception of the `default` feature, all features are opt-in. To opt
+  out of the default feature, use `default-features = false` and cherry-pick
+  individual features.
+* Feature groups are not allowed to cyclically depend on one another.
+* Dev-dependencies cannot be optional.
+* Features groups can only reference optional dependencies.
+* When a feature is selected, Cargo will call `rustc` with `--cfg
+  feature="${feature_name}"`. If a feature group is included, it and all of its
+  individual features will be included. This can be tested in code via
+  `#[cfg(feature = "foo")]`.
 
 Note that it is explicitly allowed for features to not actually activate any
 optional dependencies. This allows packages to internally enable/disable
