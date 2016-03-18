@@ -11,17 +11,16 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["you@example.com"]
 ```
 
-All three of these fields are mandatory. Cargo bakes in the concept of
-[Semantic Versioning](http://semver.org/), so make sure you follow some
-basic rules:
+All three of these fields are mandatory. Cargo bakes in the concept of [Semantic
+Versioning](http://semver.org/), so make sure you follow some basic rules:
 
 * Before you reach 1.0.0, anything goes.
-* After 1.0.0, only make breaking changes when you increment the major
-  version. In Rust, breaking changes include adding fields to structs or
-  variants to enums. Don’t break the build.
-* After 1.0.0, don’t add any new public API (no new `pub` anything) in
-  tiny versions. Always increment the minor version if you add any new
-  `pub` structs, traits, fields, types, functions, methods or anything else.
+* After 1.0.0, only make breaking changes when you increment the major version.
+  In Rust, breaking changes include adding fields to structs or variants to
+  enums. Don’t break the build.
+* After 1.0.0, don’t add any new public API (no new `pub` anything) in tiny
+  versions. Always increment the minor version if you add any new `pub` structs,
+  traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
 For more on versions, see [this
@@ -29,9 +28,9 @@ documentation](crates-io.html#using-cratesio-based-crates).
 
 ## The `build` Field (optional)
 
-This field specifies a file in the repository which is a [build
-script][1] for building native code. More information can be
-found in the build script [guide][1].
+This field specifies a file in the repository which is a [build script][1] for
+building native code. More information can be found in the build script
+[guide][1].
 
 [1]: build-script.html
 
@@ -43,12 +42,12 @@ build = "build.rs"
 
 ## The `exclude` and `include` Fields (optional)
 
-You can explicitly specify to Cargo that a set of [globs][globs] should be ignored or
-included for the purposes of packaging and rebuilding a package. The globs
-specified in the `exclude` field identify a set of files that are not included
-when a package is published as well as ignored for the purposes of detecting
-when to rebuild a package, and the globs in `include` specify files that are
-explicitly included.
+You can explicitly specify to Cargo that a set of [globs][globs] should be
+ignored or included for the purposes of packaging and rebuilding a package. The
+globs specified in the `exclude` field identify a set of files that are not
+included when a package is published as well as ignored for the purposes of
+detecting when to rebuild a package, and the globs in `include` specify files
+that are explicitly included.
 
 If a VCS is being used for a package, the `exclude` field will be seeded with
 the VCS’ ignore settings (`.gitignore` for git for example).
@@ -71,11 +70,10 @@ necessary source files may not be included.
 
 [globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
 
-
 ## The `publish`  Field (optional)
 
-The `publish` field can be used to prevent a package from being
-published to a repository by mistake.
+The `publish` field can be used to prevent a package from being published to a
+repository by mistake.
 
 ```toml
 [package]
@@ -111,8 +109,8 @@ keywords = ["...", "..."]
 
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
-# license identifiers from http://spdx.org/licenses/. Multiple licenses can
-# be separated with a `/`
+# license identifiers from http://spdx.org/licenses/. Multiple licenses can be
+# separated with a `/`
 license = "..."
 
 # If a project is using a nonstandard license, then this key may be specified in
@@ -126,7 +124,6 @@ the license, link to the three URLs and categorize by the keywords. These keys
 provide useful information to users of the registry and also influence the
 search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
-
 
 # The `[dependencies]` Section
 
@@ -292,37 +289,33 @@ features. The format for specifying features is:
 name = "awesome"
 
 [features]
-# The “default” set of optional packages. Most people will
-# want to use these packages, but they are strictly optional.
-# Note that `session` is not a package but rather another
-# feature listed in this manifest.
+# The “default” set of optional packages. Most people will want to use these
+# packages, but they are strictly optional. Note that `session` is not a package
+# but rather another feature listed in this manifest.
 default = ["jquery", "uglifier", "session"]
 
-# A feature with no dependencies is used mainly for conditional
-# compilation, like `#[cfg(feature = "go-faster")]`.
+# A feature with no dependencies is used mainly for conditional compilation,
+# like `#[cfg(feature = "go-faster")]`.
 go-faster = []
 
-# The “secure-password” feature depends on the bcrypt package.
-# This aliasing will allow people to talk about the feature in
-# a higher-level way and allow this package to add more
-# requirements to the feature in the future.
+# The “secure-password” feature depends on the bcrypt package. This aliasing
+# will allow people to talk about the feature in a higher-level way and allow
+# this package to add more requirements to the feature in the future.
 secure-password = ["bcrypt"]
 
-# Features can be used to reexport features of other packages.
-# The `session` feature of package `awesome` will ensure that the
-# `session` feature of the package `cookie` is also enabled.
+# Features can be used to reexport features of other packages. The `session`
+# feature of package `awesome` will ensure that the `session` feature of the
+# package `cookie` is also enabled.
 session = ["cookie/session"]
 
 [dependencies]
-# These packages are mandatory and form the core of this
-# package’s distribution
+# These packages are mandatory and form the core of this package’s distribution
 cookie = "1.2.0"
 oauth = "1.1.0"
 route-recognizer = "=2.1.0"
 
-# A list of all of the optional dependencies, some of which
-# are included in the above “features”. They can be opted
-# into by apps.
+# A list of all of the optional dependencies, some of which are included in the
+# above “features”. They can be opted into by apps.
 jquery = { version = "1.0.2", optional = true }
 uglifier = { version = "1.5.3", optional = true }
 bcrypt = { version = "*", optional = true }
@@ -352,10 +345,10 @@ The usage of features is subject to a few rules:
 3. Feature groups are not allowed to cyclically depend on one another.
 4. Dev-dependencies cannot be optional
 5. Features groups can only reference optional dependencies
-6. When a feature is selected, Cargo will call `rustc` with
-   `--cfg feature="${feature_name}"`. If a feature group is included,
-   it and all of its individual features will be included. This can be
-   tested in code via `#[cfg(feature = "foo")]`
+6. When a feature is selected, Cargo will call `rustc` with `--cfg
+   feature="${feature_name}"`. If a feature group is included, it and all of its
+   individual features will be included. This can be tested in code via
+   `#[cfg(feature = "foo")]`
 
 Note that it is explicitly allowed for features to not actually activate any
 optional dependencies. This allows packages to internally enable/disable
@@ -414,11 +407,10 @@ package.
 
 # The Project Layout
 
-If your project is an executable, name the main source file `src/main.rs`.
-If it is a library, name the main source file `src/lib.rs`.
+If your project is an executable, name the main source file `src/main.rs`. If it
+is a library, name the main source file `src/lib.rs`.
 
-Cargo will also treat any files located in `src/bin/*.rs` as
-executables.
+Cargo will also treat any files located in `src/bin/*.rs` as executables.
 
 Your project can optionally contain folders named `examples`, `tests`, and
 `benches`, which Cargo will treat as containing example executable files,
@@ -440,15 +432,15 @@ integration tests, and benchmarks respectively.
 
 # Examples
 
-Files located under `examples` are example uses of the functionality
-provided by the library. When compiled, they are placed in the
-`target/examples` directory.
+Files located under `examples` are example uses of the functionality provided by
+the library. When compiled, they are placed in the `target/examples` directory.
 
 They must compile as executables (with a `main()` function) and load in the
 library by using `extern crate <library-name>`. They are compiled when you run
 your tests to protect them from bitrotting.
 
-You can run individual examples with the command `cargo run --example <example-name>`.
+You can run individual examples with the command `cargo run --example
+<example-name>`.
 
 # Tests
 
@@ -456,8 +448,8 @@ When you run `cargo test`, Cargo will:
 
 * Compile and run your library’s unit tests, which are in files reachable from
   `lib.rs`. Any sections marked with `#[cfg(test)]` will be included.
-* Compile and run your library’s documentation tests, which are embedded
-  inside of documentation blocks.
+* Compile and run your library’s documentation tests, which are embedded inside
+  of documentation blocks.
 * Compile and run your library’s [integration tests](#integration-tests).
 * Compile your library’s examples.
 
@@ -465,22 +457,22 @@ When you run `cargo test`, Cargo will:
 
 Each file in `tests/*.rs` is an integration test. When you run `cargo test`,
 Cargo will compile each of these files as a separate crate. The crate can link
-to your library by using `extern crate <library-name>`, like any other code
-that depends on it.
+to your library by using `extern crate <library-name>`, like any other code that
+depends on it.
 
-Cargo will not automatically compile files inside subdirectories of `tests`,
-but an integration test can import modules from these directories as usual.
-For example, if you want several integration tests to share some code, you can
-put the shared code in `tests/common/mod.rs` and then put `mod common;` in
-each of the test files.
+Cargo will not automatically compile files inside subdirectories of `tests`, but
+an integration test can import modules from these directories as usual. For
+example, if you want several integration tests to share some code, you can put
+the shared code in `tests/common/mod.rs` and then put `mod common;` in each of
+the test files.
 
 # Configuring a target
 
 All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
 sections support similar configuration for specifying how a target should be
-built. The example below uses `[lib]`, but it also applies to all other
-sections as well. All values listed are the defaults for that option unless
-otherwise specified.
+built. The example below uses `[lib]`, but it also applies to all other sections
+as well. All values listed are the defaults for that option unless otherwise
+specified.
 
 ```toml
 [package]
@@ -497,8 +489,8 @@ path = "src/lib.rs"
 # A flag for enabling unit tests for this target. This is used by `cargo test`.
 test = true
 
-# A flag for enabling documentation tests for this target. This is only
-# relevant for libraries, it has no effect on other sections. This is used by
+# A flag for enabling documentation tests for this target. This is only relevant
+# for libraries, it has no effect on other sections. This is used by
 # `cargo test`.
 doctest = true
 
@@ -520,8 +512,8 @@ harness = true
 
 # Building Dynamic or Static Libraries
 
-If your project produces a library, you can specify which kind of
-library to build by explicitly listing the library in your `Cargo.toml`:
+If your project produces a library, you can specify which kind of library to
+build by explicitly listing the library in your `Cargo.toml`:
 
 ```toml
 # ...
