@@ -138,25 +138,6 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
     Ok((packages, resolved_with_overrides))
 }
 
-fn validate_target(package: &Package,
-                   name: &str,
-                   kind: TargetKind,
-                   kind_str: &str) -> CargoResult<()> {
-    let target = package.targets().iter().find(|t: &&Target| {
-        t.name() == name && *t.kind() == kind
-    });
-    if target.is_none() {
-        let suggestion = package.find_closest_target(name, kind);
-        match suggestion {
-            Some(s) => bail!("no {} target named `{}`\n\nDid you mean `{}`?",
-                             kind_str, name, s.name()),
-            None => bail!("no {} target named `{}`", kind_str, name),
-        }
-    }
-
-    Ok(())
-}
-
 pub fn compile_pkg<'a>(root_package: &Package,
                        source: Option<Box<Source + 'a>>,
                        options: &CompileOptions<'a>)
@@ -174,16 +155,6 @@ pub fn compile_pkg<'a>(root_package: &Package,
 
     if jobs == Some(0) {
         bail!("jobs must be at least 1")
-    }
-
-    if let CompileFilter::Only{bins, examples, ..} = *filter {
-        for bin in bins {
-            try!(validate_target(root_package, bin, TargetKind::Bin, "bin"));
-        }
-
-        for example in examples {
-            try!(validate_target(root_package, example, TargetKind::Example, "example"));
-        }
     }
 
     let (packages, resolve_with_overrides) = {
@@ -392,7 +363,14 @@ fn generate_targets<'a>(pkg: &'a Package,
                         });
                         let t = match target {
                             Some(t) => t,
-                            None => bail!("no {} target named `{}`", desc, name),
+                            None => {
+                                let suggestion = pkg.find_closest_target(name, kind);
+                                match suggestion {
+                                    Some(s) => bail!("no {} target named `{}`\n\nDid you mean `{}`?",
+                                                     desc, name, s.name()),
+                                    None => bail!("no {} target named `{}`", desc, name),
+                                }
+                            }
                         };
                         debug!("found {} `{}`", desc, name);
                         targets.push((t, profile));
