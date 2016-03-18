@@ -23,7 +23,7 @@ impl Rustc {
         first.arg("--cap-lints").arg("allow");
         let output = match first.exec_with_output() {
             Ok(output) => { ret.cap_lints = true; output }
-            Err(..) => try!(cmd.exec_with_output()),
+            Err(..) => cmd.exec_with_output()?,
         };
         ret.verbose_version = try!(String::from_utf8(output.stdout).map_err(|_| {
             internal("rustc -v didn't return utf8 output")

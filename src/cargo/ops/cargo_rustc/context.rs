@@ -67,11 +67,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
-        let target_info = try!(Context::target_info(target, config));
+        let target_info = Context::target_info(target, config)?;
         let host_info = if build_config.requested_target.is_none() {
             target_info.clone()
         } else {
-            try!(Context::target_info(None, config))
+            Context::target_info(None, config)?
         };
         let target_triple = target.unwrap_or_else(|| {
             &config.rustc_info().host[..]
@@ -162,7 +162,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
 
         let cfg = if has_cfg {
-            Some(try!(lines.map(Cfg::from_str).collect()))
+            Some(lines.map(Cfg::from_str).collect()?)
         } else {
             None
         };
@@ -464,7 +464,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profile: &self.profiles.dev,
             ..*unit
         };
-        let deps = try!(self.dep_targets(&tmp));
+        let deps = self.dep_targets(&tmp)?;
         Ok(deps.iter().filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None
@@ -499,7 +499,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // the documentation of the library being built.
         let mut ret = Vec::new();
         for dep in deps {
-            let dep = try!(dep);
+            let dep = dep?;
             let lib = match dep.targets().iter().find(|t| t.is_lib()) {
                 Some(lib) => lib,
                 None => continue,
@@ -660,7 +660,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         // Then the build.rustflags value
-        if let Some(args) = try!(self.config.get_list("build.rustflags")) {
+        if let Some(args) = self.config.get_list("build.rustflags")? {
             let args = args.val.into_iter().map(|a| a.0);
             return Ok(args.collect());
         }

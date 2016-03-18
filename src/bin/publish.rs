@@ -43,7 +43,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         ..
     } = options;
 
-    let root = try!(find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd()));
-    try!(ops::publish(&root, config, token, host, !no_verify));
+    let root = find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd())?;
+    ops::publish(&root, config, token, host, !no_verify)?;
     Ok(None)
 }

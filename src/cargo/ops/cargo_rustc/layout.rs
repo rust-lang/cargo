@@ -94,20 +94,20 @@ impl Layout {
 
     pub fn prepare(&mut self) -> io::Result<()> {
         if fs::metadata(&self.root).is_err() {
-            try!(fs::create_dir_all(&self.root));
+            fs::create_dir_all(&self.root)?;
         }
 
-        try!(mkdir(&self.deps));
-        try!(mkdir(&self.native));
-        try!(mkdir(&self.fingerprint));
-        try!(mkdir(&self.examples));
-        try!(mkdir(&self.build));
+        mkdir(&self.deps)?;
+        mkdir(&self.native)?;
+        mkdir(&self.fingerprint)?;
+        mkdir(&self.examples)?;
+        mkdir(&self.build)?;
 
         return Ok(());
 
         fn mkdir(dir: &Path) -> io::Result<()> {
             if fs::metadata(&dir).is_err() {
-                try!(fs::create_dir(dir));
+                fs::create_dir(dir)?;
             }
             Ok(())
         }

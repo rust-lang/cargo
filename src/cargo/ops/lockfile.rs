@@ -26,12 +26,12 @@ pub fn load_lockfile(path: &Path, pkg: &Package, config: &Config)
     };
 
     let mut s = String::new();
-    try!(f.read_to_string(&mut s));
+    f.read_to_string(&mut s)?;
 
-    let table = toml::Value::Table(try!(cargo_toml::parse(&s, path)));
+    let table = toml::Value::Table(cargo_toml::parse(&s, path)?);
     let mut d = toml::Decoder::new(table);
-    let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
-    Ok(Some(try!(v.to_resolve(pkg, config))))
+    let v: resolver::EncodableResolve = Decodable::decode(&mut d)?;
+    Ok(Some(v.to_resolve(pkg, config)?))
 }
 
 pub fn write_pkg_lockfile(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
@@ -81,7 +81,7 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
         }
     }
 
-    try!(paths::write(dst, out.as_bytes()));
+    paths::write(dst, out.as_bytes())?;
     Ok(())
 }
 

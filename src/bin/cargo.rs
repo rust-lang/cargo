@@ -1,3 +1,5 @@
+#![feature(question_mark)]
+
 extern crate cargo;
 extern crate url;
 extern crate env_logger;
@@ -171,7 +173,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     }
     each_subcommand!(cmd);
 
-    try!(execute_subcommand(config, &args[1], &args));
+    execute_subcommand(config, &args[1], &args)?;
     Ok(None)
 }
 

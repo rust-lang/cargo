@@ -52,10 +52,10 @@ impl CargoPathExt for Path {
     fn rm_rf(&self) -> io::Result<()> {
         if self.c_exists() {
             for file in fs::read_dir(self).unwrap() {
-                let file = try!(file).path();
+                let file = file?.path();
 
                 if file.c_is_dir() {
-                    try!(file.rm_rf());
+                    file.rm_rf()?;
                 } else {
                     // On windows we can't remove a readonly file, and git will
                     // often clone files as readonly. As a result, we have some
@@ -67,7 +67,7 @@ impl CargoPathExt for Path {
                             let mut p = file.c_metadata().unwrap().permissions();
                             p.set_readonly(false);
                             fs::set_permissions(&file, p).unwrap();
-                            try!(fs::remove_file(&file));
+                            fs::remove_file(&file)?;
                         }
                         Err(e) => return Err(e)
                     }
@@ -85,9 +85,9 @@ impl CargoPathExt for Path {
 
     fn move_into_the_past(&self) -> io::Result<()> {
         if self.c_is_file() {
-            try!(time_travel(self));
+            time_travel(self)?;
         } else {
-            try!(recurse(self, &self.join("target")));
+            recurse(self, &self.join("target"))?;
         }
         return Ok(());
 
@@ -97,16 +97,16 @@ impl CargoPathExt for Path {
             } else if p.starts_with(bad) {
                 Ok(())
             } else {
-                for f in try!(fs::read_dir(p)) {
-                    let f = try!(f).path();
-                    try!(recurse(&f, bad));
+                for f in fs::read_dir(p)? {
+                    let f = f?.path();
+                    recurse(&f, bad)?;
                 }
                 Ok(())
             }
         }
 
         fn time_travel(path: &Path) -> io::Result<()> {
-            let stat = try!(path.c_metadata());
+            let stat = path.c_metadata()?;
 
             let mtime = FileTime::from_last_modification_time(&stat);
             let newtime = mtime.seconds_relative_to_1970() - 3600;
@@ -121,7 +121,7 @@ impl CargoPathExt for Path {
             }
             let mut perms = stat.permissions();
             perms.set_readonly(false);
-            try!(fs::set_permissions(path, perms));
+            fs::set_permissions(path, perms)?;
             filetime::set_file_times(path, newtime, newtime)
         }
     }

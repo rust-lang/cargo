@@ -1,3 +1,5 @@
+#![feature(question_mark)]
+
 extern crate curl;
 extern crate url;
 extern crate rustc_serialize;
@@ -123,35 +125,35 @@ impl Registry {
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = try!(json::encode(&OwnersReq { users: owners }));
+        let body = json::encode(&OwnersReq { users: owners })?;
         let body = try!(self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes()));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = try!(json::encode(&OwnersReq { users: owners }));
+        let body = json::encode(&OwnersReq { users: owners })?;
         let body = try!(self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes())));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
-        let body = try!(self.get(format!("/crates/{}/owners", krate)));
-        Ok(try!(json::decode::<Users>(&body)).users)
+        let body = self.get(format!("/crates/{}/owners", krate))?;
+        Ok(json::decode::<Users>(&body)?.users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
-        let json = try!(json::encode(krate));
+        let json = json::encode(krate)?;
         // Prepare the body. The format of the upload request is:
         //
         //      <le u32 of json>
         //      <json request> (metadata for the package)
         //      <le u32 of tarball>
         //      <source tarball>
-        let stat = try!(fs::metadata(tarball).map_err(Error::Io));
+        let stat = fs::metadata(tarball).map_err(Error::Io)?;
         let header = {
             let mut w = Vec::new();
             w.extend([
@@ -169,7 +171,7 @@ impl Registry {
             ].iter().map(|x| *x));
             w
         };
-        let tarball = try!(File::open(tarball).map_err(Error::Io));
+        let tarball = File::open(tarball).map_err(Error::Io)?;
         let size = stat.len() as usize + header.len();
         let mut body = Cursor::new(header).chain(tarball);
 
@@ -184,7 +186,7 @@ impl Registry {
             .header("Accept", "application/json")
             .header("Authorization", &token);
         let response = handle(request.exec());
-        let _body = try!(response);
+        let _body = response?;
         Ok(())
     }
 
@@ -195,21 +197,21 @@ impl Registry {
             None, Get, Auth::Unauthorized
         ));
 
-        let crates = try!(json::decode::<Crates>(&body));
+        let crates = json::decode::<Crates>(&body)?;
         Ok((crates.crates, crates.meta.total))
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.delete(format!("/crates/{}/{}/yank", krate, version),
                                     None));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.put(format!("/crates/{}/{}/unyank", krate, version),
                                  &[]));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
@@ -249,7 +251,7 @@ impl Registry {
 
 fn handle(response: result::Result<http::Response, curl::ErrCode>)
           -> Result<String> {
-    let response = try!(response.map_err(Error::Curl));
+    let response = response.map_err(Error::Curl)?;
     match response.get_code() {
         0 => {} // file upload url sometimes
         200 => {}

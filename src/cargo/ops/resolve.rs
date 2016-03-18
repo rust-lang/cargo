@@ -15,12 +15,12 @@ pub fn resolve_pkg(registry: &mut PackageRegistry,
                    package: &Package,
                    config: &Config)
                    -> CargoResult<Resolve> {
-    let prev = try!(ops::load_pkg_lockfile(package, config));
+    let prev = ops::load_pkg_lockfile(package, config)?;
     let resolve = try!(resolve_with_previous(registry, package,
                                              Method::Everything,
                                              prev.as_ref(), None));
     if package.package_id().source_id().is_path() {
-        try!(ops::write_pkg_lockfile(package, &resolve));
+        ops::write_pkg_lockfile(package, &resolve)?;
     }
     Ok(resolve)
 }
@@ -110,7 +110,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => summary,
     };
 
-    let mut resolved = try!(resolver::resolve(&summary, &method, registry));
+    let mut resolved = resolver::resolve(&summary, &method, registry)?;
     match previous {
         Some(r) => resolved.copy_metadata(r),
         None => {}

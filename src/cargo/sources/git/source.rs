@@ -53,7 +53,7 @@ impl<'cfg> GitSource<'cfg> {
 
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
-            try!(self.update());
+            self.update()?;
         }
         self.path_source.as_mut().unwrap().read_packages()
     }
@@ -124,7 +124,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
 
 impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.url()));
+        write!(f, "git repo at {}", self.remote.url())?;
 
         match self.reference.to_ref_string() {
             Some(s) => write!(f, " ({})", s),
@@ -179,17 +179,17 @@ impl<'cfg> Source for GitSource<'cfg> {
                 format!("git repository `{}`", self.remote.url())));
 
             trace!("updating git source `{:?}`", self.remote);
-            let repo = try!(self.remote.checkout(&db_path));
-            let rev = try!(repo.rev_for(&self.reference));
+            let repo = self.remote.checkout(&db_path)?;
+            let rev = repo.rev_for(&self.reference)?;
             (repo, rev)
         } else {
-            (try!(self.remote.db_at(&db_path)), actual_rev.unwrap())
+            (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };
 
         // Copy the database to the checkout location. After this we could drop
         // the lock on the database as we no longer needed it, but we leave it
         // in scope so the destructors here won't tamper with too much.
-        try!(repo.copy_to(actual_rev.clone(), &checkout_path));
+        repo.copy_to(actual_rev.clone(), &checkout_path)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path,

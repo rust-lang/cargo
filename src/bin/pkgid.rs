@@ -50,10 +50,10 @@ pub fn execute(options: Options,
     try!(config.configure_shell(options.flag_verbose,
                                 options.flag_quiet,
                                 &options.flag_color));
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd())?;
 
     let spec = options.arg_spec.as_ref().map(|s| &s[..]);
-    let spec = try!(ops::pkgid(&root, spec, config));
+    let spec = ops::pkgid(&root, spec, config)?;
     println!("{}", spec);
     Ok(None)
 }

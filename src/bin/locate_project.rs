@@ -24,7 +24,7 @@ pub struct ProjectLocation {
 
 pub fn execute(flags: LocateProjectFlags,
                config: &Config) -> CliResult<Option<ProjectLocation>> {
-    let root = try!(find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd())?;
 
     let string = try!(root.to_str()
                       .chain_error(|| human("Your project path contains \

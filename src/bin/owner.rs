@@ -52,7 +52,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         to_remove: options.flag_remove,
         list: options.flag_list,
     };
-    try!(ops::modify_owners(config, &opts));
+    ops::modify_owners(config, &opts)?;
     Ok(None)
 }
 

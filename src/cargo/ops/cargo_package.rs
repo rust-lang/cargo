@@ -17,17 +17,17 @@ pub fn package(manifest_path: &Path,
                list: bool,
                metadata: bool) -> CargoResult<Option<PathBuf>> {
     let path = manifest_path.parent().unwrap();
-    let id = try!(SourceId::for_path(path));
+    let id = SourceId::for_path(path)?;
     let mut src = PathSource::new(path, &id, config);
-    let pkg = try!(src.root_package());
+    let pkg = src.root_package()?;
 
     if metadata {
-        try!(check_metadata(&pkg, config));
+        check_metadata(&pkg, config)?;
     }
 
     if list {
         let root = pkg.root();
-        let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
+        let mut list: Vec<_> = src.list_files(&pkg)?.iter().map(|file| {
             util::without_prefix(&file, &root).unwrap().to_path_buf()
         }).collect();
         list.sort();
@@ -48,7 +48,7 @@ pub fn package(manifest_path: &Path,
     // location if it actually passes all our tests. Any previously existing
     // tarball can be assumed as corrupt or invalid, so we just blow it away if
     // it exists.
-    try!(config.shell().status("Packaging", pkg.package_id().to_string()));
+    config.shell().status("Packaging", pkg.package_id().to_string())?;
     let tmp_dst = dir.join(format!(".{}", filename));
     let _ = fs::remove_file(&tmp_dst);
     try!(tar(&pkg, &src, config, &tmp_dst, &filename).chain_error(|| {
@@ -109,27 +109,27 @@ fn tar(pkg: &Package,
         bail!("destination already exists: {}", dst.display())
     }
 
-    try!(fs::create_dir_all(dst.parent().unwrap()));
+    fs::create_dir_all(dst.parent().unwrap())?;
 
-    let tmpfile = try!(File::create(dst));
+    let tmpfile = File::create(dst)?;
 
     // Prepare the encoder and its header
     let filename = Path::new(filename);
-    let encoder = GzBuilder::new().filename(try!(util::path2bytes(filename)))
+    let encoder = GzBuilder::new().filename(util::path2bytes(filename)?)
                                   .write(tmpfile, Compression::Best);
 
     // Put all package files into a compressed archive
     let mut ar = Builder::new(encoder);
     let root = pkg.root();
-    for file in try!(src.list_files(pkg)).iter() {
+    for file in src.list_files(pkg)?.iter() {
         if &**file == dst { continue }
         let relative = util::without_prefix(&file, &root).unwrap();
-        try!(check_filename(relative));
+        check_filename(relative)?;
         let relative = try!(relative.to_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         }));
-        let mut file = try!(File::open(file));
+        let mut file = File::open(file)?;
         try!(config.shell().verbose(|shell| {
             shell.status("Archiving", &relative)
         }));
@@ -168,23 +168,23 @@ fn tar(pkg: &Package,
             internal(format!("could not archive source file `{}`", relative))
         }));
     }
-    let encoder = try!(ar.into_inner());
-    try!(encoder.finish());
+    let encoder = ar.into_inner()?;
+    encoder.finish()?;
     Ok(())
 }
 
 fn run_verify(config: &Config, pkg: &Package, tar: &Path)
               -> CargoResult<()> {
-    try!(config.shell().status("Verifying", pkg));
+    config.shell().status("Verifying", pkg)?;
 
-    let f = try!(GzDecoder::new(try!(File::open(tar))));
+    let f = GzDecoder::new(File::open(tar)?)?;
     let dst = pkg.root().join(&format!("target/package/{}-{}",
                                        pkg.name(), pkg.version()));
     if fs::metadata(&dst).is_ok() {
-        try!(fs::remove_dir_all(&dst));
+        fs::remove_dir_all(&dst)?;
     }
     let mut archive = Archive::new(f);
-    try!(archive.unpack(dst.parent().unwrap()));
+    archive.unpack(dst.parent().unwrap())?;
     let manifest_path = dst.join("Cargo.toml");
 
     // When packages are uploaded to the registry, all path dependencies are
@@ -195,10 +195,10 @@ fn run_verify(config: &Config, pkg: &Package, tar: &Path)
     // location that the package was originally read from. In locking the
     // `SourceId` we're telling it that the corresponding `PathSource` will be
     // considered updated and we won't actually read any packages.
-    let registry = try!(SourceId::for_central(config));
+    let registry = SourceId::for_central(config)?;
     let precise = Some("locked".to_string());
-    let new_src = try!(SourceId::for_path(&dst)).with_precise(precise);
-    let new_pkgid = try!(PackageId::new(pkg.name(), pkg.version(), &new_src));
+    let new_src = SourceId::for_path(&dst)?.with_precise(precise);
+    let new_pkgid = PackageId::new(pkg.name(), pkg.version(), &new_src)?;
     let new_summary = pkg.summary().clone().map_dependencies(|d| {
         if !d.source_id().is_path() { return d }
         d.clone_inner().set_source_id(registry.clone()).into_dependency()

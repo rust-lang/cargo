@@ -41,7 +41,7 @@ impl FileBuilder {
     }
 
     fn mk(&self) -> Result<(), String> {
-        try!(mkdir_recursive(&self.dirname()));
+        mkdir_recursive(&self.dirname())?;
 
         let mut file = try!(
             fs::File::create(&self.path)
@@ -71,7 +71,7 @@ impl SymlinkBuilder {
 
     #[cfg(unix)]
     fn mk(&self) -> Result<(), String> {
-        try!(mkdir_recursive(&self.dirname()));
+        mkdir_recursive(&self.dirname())?;
 
         os::unix::fs::symlink(&self.dst, &self.src)
             .with_err_msg(format!("Could not create symlink; dst={} src={}",
@@ -80,7 +80,7 @@ impl SymlinkBuilder {
 
     #[cfg(windows)]
     fn mk(&self) -> Result<(), String> {
-        try!(mkdir_recursive(&self.dirname()));
+        mkdir_recursive(&self.dirname())?;
 
         os::windows::fs::symlink_file(&self.dst, &self.src)
             .with_err_msg(format!("Could not create symlink; dst={} src={}",
@@ -175,17 +175,17 @@ impl ProjectBuilder {
 
     pub fn build_with_result(&self) -> Result<(), String> {
         // First, clean the directory if it already exists
-        try!(self.rm_root());
+        self.rm_root()?;
 
         // Create the empty directory
-        try!(mkdir_recursive(&self.root));
+        mkdir_recursive(&self.root)?;
 
         for file in self.files.iter() {
-            try!(file.mk());
+            file.mk()?;
         }
 
         for symlink in self.symlinks.iter() {
-            try!(symlink.mk());
+            symlink.mk()?;
         }
 
         Ok(())
@@ -339,7 +339,7 @@ impl Execs {
         }
 
         if let Some(ref expect_json) = self.expect_json {
-            try!(self.match_json(expect_json, &actual.stdout));
+            self.match_json(expect_json, &actual.stdout)?;
         }
         Ok(())
     }

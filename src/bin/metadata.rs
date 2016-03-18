@@ -44,7 +44,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
     try!(config.configure_shell(options.flag_verbose,
                                 options.flag_quiet,
                                 &options.flag_color));
-    let manifest = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let manifest = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let options = OutputMetadataOptions {
         features: options.flag_features,
@@ -54,6 +54,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
         version: options.flag_format_version,
     };
 
-    let result = try!(output_metadata(options, config));
+    let result = output_metadata(options, config)?;
     Ok(Some(result))
 }

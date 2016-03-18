@@ -31,7 +31,7 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(try!(Version::parse(version).map_err(human))),
+            Some(version) => Some(Version::parse(version).map_err(human)?),
             None => None,
         };
         for ch in name.chars() {
@@ -82,7 +82,7 @@ impl PackageIdSpec {
                     let name_or_version = parts.next().unwrap();
                     match parts.next() {
                         Some(part) => {
-                            let version = try!(part.to_semver().map_err(human));
+                            let version = part.to_semver().map_err(human)?;
                             (name_or_version.to_string(), Some(version))
                         }
                         None => {
@@ -193,18 +193,18 @@ impl fmt::Display for PackageIdSpec {
                     try!(write!(f, "{}/{}", url.host().unwrap(),
                                 url.path().unwrap().join("/")));
                 } else {
-                    try!(write!(f, "{}", url));
+                    write!(f, "{}", url)?;
                 }
                 if url.path().unwrap().last().unwrap() != &self.name {
                     printed_name = true;
-                    try!(write!(f, "#{}", self.name));
+                    write!(f, "#{}", self.name)?;
                 }
             }
-            None => { printed_name = true; try!(write!(f, "{}", self.name)) }
+            None => { printed_name = true; write!(f, "{}", self.name)? }
         }
         match self.version {
             Some(ref v) => {
-                try!(write!(f, "{}{}", if printed_name {":"} else {"#"}, v));
+                write!(f, "{}{}", if printed_name {":"} else {"#"}, v)?;
             }
             None => {}
         }

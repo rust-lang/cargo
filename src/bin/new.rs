@@ -48,7 +48,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         name: flag_name.as_ref().map(|s| s.as_ref()),
     };
 
-    try!(ops::new(opts, config));
+    ops::new(opts, config)?;
     Ok(None)
 }
 

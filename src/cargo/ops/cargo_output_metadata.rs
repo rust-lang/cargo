@@ -34,7 +34,7 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
 }
 
 fn metadata_no_deps(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
-    let root = try!(Package::for_path(opt.manifest_path, config));
+    let root = Package::for_path(opt.manifest_path, config)?;
     Ok(ExportInfo {
         packages: vec![root],
         resolve: None,
@@ -110,7 +110,7 @@ fn resolve_dependencies<'a>(manifest: &Path,
                             features: Vec<String>,
                             no_default_features: bool)
                             -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let package = try!(Package::for_path(manifest, config));
+    let package = Package::for_path(manifest, config)?;
     ops::resolve_dependencies(&package,
                               config,
                               None,

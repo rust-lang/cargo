@@ -15,12 +15,12 @@ pub struct TestOptions<'a> {
 pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<CargoTestError>> {
-    let compilation = try!(compile_tests(manifest_path, options));
+    let compilation = compile_tests(manifest_path, options)?;
 
     if options.no_run {
         return Ok(None)
     }
-    let mut errors = try!(run_unit_tests(options, test_args, &compilation));
+    let mut errors = run_unit_tests(options, test_args, &compilation)?;
 
     // If we have an error and want to fail fast, return
     if !errors.is_empty() && !options.no_fail_fast {
@@ -36,7 +36,7 @@ pub fn run_tests(manifest_path: &Path,
         }
     }
 
-    errors.extend(try!(run_doc_tests(options, test_args, &compilation)));
+    errors.extend(run_doc_tests(options, test_args, &compilation)?);
     if errors.is_empty() {
         Ok(None)
     } else {
@@ -49,12 +49,12 @@ pub fn run_benches(manifest_path: &Path,
                    args: &[String]) -> CargoResult<Option<CargoTestError>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());
-    let compilation = try!(compile_tests(manifest_path, options));
+    let compilation = compile_tests(manifest_path, options)?;
 
     if options.no_run {
         return Ok(None)
     }
-    let errors = try!(run_unit_tests(options, &args, &compilation));
+    let errors = run_unit_tests(options, &args, &compilation)?;
     match errors.len() {
         0 => Ok(None),
         _ => Ok(Some(CargoTestError::new(errors))),
@@ -87,7 +87,7 @@ fn run_unit_tests(options: &TestOptions,
             Some(path) => path,
             None => &**exe,
         };
-        let mut cmd = try!(compilation.target_process(exe, pkg));
+        let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
         try!(config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
@@ -127,8 +127,8 @@ fn run_doc_tests(options: &TestOptions,
 
     for (package, tests) in libs {
         for (lib, name, crate_name) in tests {
-            try!(config.shell().status("Doc-tests", name));
-            let mut p = try!(compilation.rustdoc_process(package));
+            config.shell().status("Doc-tests", name)?;
+            let mut p = compilation.rustdoc_process(package)?;
             p.arg("--test").arg(lib)
              .arg("--crate-name").arg(&crate_name);
 

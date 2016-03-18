@@ -18,10 +18,10 @@ pub struct ProcessBuilder {
 
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", self.program.to_string_lossy()));
+        write!(f, "`{}", self.program.to_string_lossy())?;
 
         for arg in self.args.iter() {
-            try!(write!(f, " {}", escape(arg.to_string_lossy())));
+            write!(f, " {}", escape(arg.to_string_lossy()))?;
         }
 
         write!(f, "`")

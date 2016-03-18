@@ -101,7 +101,7 @@ impl<'cfg> Compilation<'cfg> {
         search_path.push(self.deps_output.clone());
         let search_path = try!(util::join_paths(&search_path,
                                                 util::dylib_path_envvar()));
-        let mut cmd = try!(CommandPrototype::new(cmd, self.config));
+        let mut cmd = CommandPrototype::new(cmd, self.config)?;
         cmd.env(util::dylib_path_envvar(), &search_path);
         if let Some(env) = self.extra_env.get(pkg.package_id()) {
             for &(ref k, ref v) in env {

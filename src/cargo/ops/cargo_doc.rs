@@ -14,7 +14,7 @@ pub struct DocOptions<'a> {
 
 pub fn doc(manifest_path: &Path,
            options: &DocOptions) -> CargoResult<()> {
-    let package = try!(Package::for_path(manifest_path, options.compile_opts.config));
+    let package = Package::for_path(manifest_path, options.compile_opts.config)?;
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
@@ -35,13 +35,13 @@ pub fn doc(manifest_path: &Path,
         }
     }
 
-    try!(ops::compile(manifest_path, &options.compile_opts));
+    ops::compile(manifest_path, &options.compile_opts)?;
 
     if options.open_result {
         let name = if options.compile_opts.spec.len() > 1 {
             bail!("Passing multiple packages and `open` is not supported")
         } else if options.compile_opts.spec.len() == 1 {
-            try!(PackageIdSpec::parse(&options.compile_opts.spec[0]))
+            PackageIdSpec::parse(&options.compile_opts.spec[0])?
                                              .name().replace("-", "_")
         } else {
             match lib_names.iter().chain(bin_names.iter()).nth(0) {
@@ -55,12 +55,12 @@ pub fn doc(manifest_path: &Path,
         if fs::metadata(&path).is_ok() {
             let mut shell = options.compile_opts.config.shell();
             match open_docs(&path) {
-                Ok(m) => try!(shell.status("Launching", m)),
+                Ok(m) => shell.status("Launching", m)?,
                 Err(e) => {
                     try!(shell.warn(
                             "warning: could not determine a browser to open docs with, tried:"));
                     for method in e {
-                        try!(shell.warn(format!("\t{}", method)));
+                        shell.warn(format!("\t{}", method))?;
                     }
                 }
             }

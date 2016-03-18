@@ -41,7 +41,7 @@ struct MkOptions<'a> {
 
 impl Decodable for VersionControl {
     fn decode<D: Decoder>(d: &mut D) -> Result<VersionControl, D::Error> {
-        Ok(match &try!(d.read_str())[..] {
+        Ok(match &d.read_str()?[..] {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
             "none" => VersionControl::NoVcs,
@@ -82,7 +82,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
             let message = format!(
                 "note: package will be named `{}`; use --name to override",
                 new_name);
-            try!(config.shell().say(&message, BLACK));
+            config.shell().say(&message, BLACK)?;
         }
         Ok(new_name)
     }
@@ -150,7 +150,7 @@ fn detect_source_paths_and_types(project_path : &Path,
                 }
             }
             H::Detect => {
-                let content = try!(paths::read(&path.join(pp.clone())));
+                let content = paths::read(&path.join(pp.clone()))?;
                 let isbin = content.contains("fn main");
                 SourceFileInformation {
                     relative_path: pp,
@@ -215,8 +215,8 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
               path.display())
     }
 
-    let name = try!(get_name(&path, &opts, config));
-    try!(check_name(name));
+    let name = get_name(&path, &opts, config)?;
+    check_name(name)?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
@@ -240,12 +240,12 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         bail!("`cargo init` cannot be run on existing Cargo projects")
     }
 
-    let name = try!(get_name(&path, &opts, config));
-    try!(check_name(name));
+    let name = get_name(&path, &opts, config)?;
+    check_name(name)?;
 
     let mut src_paths_types = vec![];
 
-    try!(detect_source_paths_and_types(&path, name, &mut src_paths_types));
+    detect_source_paths_and_types(&path, name, &mut src_paths_types)?;
 
     if src_paths_types.len() == 0 {
         src_paths_types.push(plan_new_source_file(opts.bin, name.to_string()));
@@ -315,7 +315,7 @@ fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
 fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
-    let cfg = try!(global_config(config));
+    let cfg = global_config(config)?;
     let mut ignore = "target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
     if !opts.bin {
@@ -332,22 +332,22 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !fs::metadata(&path.join(".git")).is_ok() {
-                try!(GitRepo::init(path, config.cwd()));
+                GitRepo::init(path, config.cwd())?;
             }
-            try!(paths::append(&path.join(".gitignore"), ignore.as_bytes()));
+            paths::append(&path.join(".gitignore"), ignore.as_bytes())?;
         },
         VersionControl::Hg => {
             if !fs::metadata(&path.join(".hg")).is_ok() {
-                try!(HgRepo::init(path, config.cwd()));
+                HgRepo::init(path, config.cwd())?;
             }
-            try!(paths::append(&path.join(".hgignore"), ignore.as_bytes()));
+            paths::append(&path.join(".hgignore"), ignore.as_bytes())?;
         },
         VersionControl::NoVcs => {
-            try!(fs::create_dir_all(path));
+            fs::create_dir_all(path)?;
         },
     };
 
-    let (author_name, email) = try!(discover_author());
+    let (author_name, email) = discover_author()?;
     // Hoo boy, sure glad we've got exhaustivenes checking behind us.
     let author = match (cfg.name, cfg.email, author_name, email) {
         (Some(name), Some(email), _, _) |
@@ -402,7 +402,7 @@ authors = [{}]
         let path_of_source_file = path.join(i.relative_path.clone());
 
         if let Some(src_dir) = path_of_source_file.parent() {
-            try!(fs::create_dir_all(src_dir));
+            fs::create_dir_all(src_dir)?;
         }
 
         let default_file_content : &[u8] = if i.bin {
@@ -454,9 +454,9 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
 }
 
 fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
-    let name = try!(config.get_string("cargo-new.name")).map(|s| s.val);
-    let email = try!(config.get_string("cargo-new.email")).map(|s| s.val);
-    let vcs = try!(config.get_string("cargo-new.vcs"));
+    let name = config.get_string("cargo-new.name")?.map(|s| s.val);
+    let email = config.get_string("cargo-new.email")?.map(|s| s.val);
+    let vcs = config.get_string("cargo-new.vcs")?;
 
     let vcs = match vcs.as_ref().map(|p| (&p.val[..], &p.definition)) {
         Some(("git", _)) => Some(VersionControl::Git),

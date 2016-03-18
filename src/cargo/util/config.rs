@@ -49,9 +49,9 @@ impl Config {
             target_dir: RefCell::new(None),
         };
 
-        try!(cfg.scrape_tool_config());
-        try!(cfg.scrape_rustc_version());
-        try!(cfg.scrape_target_dir_config());
+        cfg.scrape_tool_config()?;
+        cfg.scrape_rustc_version()?;
+        cfg.scrape_target_dir_config()?;
 
         Ok(cfg)
     }
@@ -102,7 +102,7 @@ impl Config {
 
     pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
         if !self.values_loaded.get() {
-            try!(self.load_values());
+            self.load_values()?;
             self.values_loaded.set(true);
         }
         Ok(self.values.borrow())
@@ -121,7 +121,7 @@ impl Config {
     }
 
     fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
-        let vals = try!(self.values());
+        let vals = self.values()?;
         let mut parts = key.split('.').enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
             Some(val) => val,
@@ -162,7 +162,7 @@ impl Config {
         match env::var(&format!("CARGO_{}", key)) {
             Ok(value) => {
                 Ok(Some(Value {
-                    val: try!(value.parse()),
+                    val: value.parse()?,
                     definition: Definition::Environment,
                 }))
             }
@@ -171,10 +171,10 @@ impl Config {
     }
 
     pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
-        if let Some(v) = try!(self.get_env(key)) {
+        if let Some(v) = self.get_env(key)? {
             return Ok(Some(v))
         }
-        match try!(self.get(key)) {
+        match self.get(key)? {
             Some(CV::String(i, path)) => {
                 Ok(Some(Value {
                     val: i,
@@ -187,10 +187,10 @@ impl Config {
     }
 
     pub fn get_bool(&self, key: &str) -> CargoResult<Option<Value<bool>>> {
-        if let Some(v) = try!(self.get_env(key)) {
+        if let Some(v) = self.get_env(key)? {
             return Ok(Some(v))
         }
-        match try!(self.get(key)) {
+        match self.get(key)? {
             Some(CV::Boolean(b, path)) => {
                 Ok(Some(Value {
                     val: b,
@@ -203,7 +203,7 @@ impl Config {
     }
 
     pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
-        if let Some(val) = try!(self.get_string(&key)) {
+        if let Some(val) = self.get_string(&key)? {
             let is_path = val.val.contains("/") ||
                           (cfg!(windows) && val.val.contains("\\"));
             let path = if is_path {
@@ -223,7 +223,7 @@ impl Config {
 
     pub fn get_list(&self, key: &str)
                     -> CargoResult<Option<Value<Vec<(String, PathBuf)>>>> {
-        match try!(self.get(key)) {
+        match self.get(key)? {
             Some(CV::List(i, path)) => {
                 Ok(Some(Value {
                     val: i,
@@ -237,7 +237,7 @@ impl Config {
 
     pub fn get_table(&self, key: &str)
                     -> CargoResult<Option<Value<HashMap<String, CV>>>> {
-        match try!(self.get(key)) {
+        match self.get(key)? {
             Some(CV::Table(i, path)) => {
                 Ok(Some(Value {
                     val: i,
@@ -250,10 +250,10 @@ impl Config {
     }
 
     pub fn get_i64(&self, key: &str) -> CargoResult<Option<Value<i64>>> {
-        if let Some(v) = try!(self.get_env(key)) {
+        if let Some(v) = self.get_env(key)? {
             return Ok(Some(v))
         }
-        match try!(self.get(key)) {
+        match self.get(key)? {
             Some(CV::Integer(i, path)) => {
                 Ok(Some(Value {
                     val: i,
@@ -275,14 +275,14 @@ impl Config {
                            verbose: Option<bool>,
                            quiet: Option<bool>,
                            color: &Option<String>) -> CargoResult<()> {
-        let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
-        let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
+        let cfg_verbose = self.get_bool("term.verbose")?.map(|v| v.val);
+        let cfg_color = self.get_string("term.color")?.map(|v| v.val);
         let verbose = verbose.or(cfg_verbose).unwrap_or(false);
         let quiet = quiet.unwrap_or(false);
         let color = color.as_ref().or(cfg_color.as_ref());
 
-        try!(self.shell().set_verbosity(verbose, quiet));
-        try!(self.shell().set_color_config(color.map(|s| &s[..])));
+        self.shell().set_verbosity(verbose, quiet)?;
+        self.shell().set_color_config(color.map(|s| &s[..]))?;
 
         Ok(())
     }
@@ -292,7 +292,7 @@ impl Config {
 
         try!(walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
-            try!(file.read_to_string(&mut contents));
+            file.read_to_string(&mut contents)?;
             let table = try!(cargo_toml::parse(&contents, &path).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
@@ -302,7 +302,7 @@ impl Config {
                 human(format!("failed to load TOML configuration from `{}`",
                               path.display()))
             }));
-            try!(cfg.merge(value));
+            cfg.merge(value)?;
             Ok(())
         }).chain_error(|| human("Couldn't load Cargo configuration")));
 
@@ -315,20 +315,20 @@ impl Config {
     }
 
     fn scrape_tool_config(&mut self) -> CargoResult<()> {
-        self.rustc = try!(self.get_tool("rustc"));
-        self.rustdoc = try!(self.get_tool("rustdoc"));
+        self.rustc = self.get_tool("rustc")?;
+        self.rustdoc = self.get_tool("rustdoc")?;
         Ok(())
     }
 
     fn scrape_rustc_version(&mut self) -> CargoResult<()> {
-        self.rustc_info = try!(Rustc::new(&self.rustc));
+        self.rustc_info = Rustc::new(&self.rustc)?;
         Ok(())
     }
 
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
-        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
+        } else if let Some(val) = self.get_path("build.target-dir")? {
             *self.target_dir.borrow_mut() = Some(val.val);
         }
         Ok(())
@@ -341,7 +341,7 @@ impl Config {
         }
 
         let var = format!("build.{}", tool);
-        if let Some(tool_path) = try!(self.get_path(&var)) {
+        if let Some(tool_path) = self.get_path(&var)? {
             return Ok(tool_path.val);
         }
 
@@ -384,10 +384,10 @@ impl fmt::Debug for ConfigValue {
             CV::String(ref s, ref path) => write!(f, "{} (from {})", s,
                                                   path.display()),
             CV::List(ref list, ref path) => {
-                try!(write!(f, "["));
+                write!(f, "[")?;
                 for (i, &(ref s, ref path)) in list.iter().enumerate() {
-                    if i > 0 { try!(write!(f, ", ")); }
-                    try!(write!(f, "{} (from {})", s, path.display()));
+                    if i > 0 { write!(f, ", ")?; }
+                    write!(f, "{} (from {})", s, path.display())?;
                 }
                 write!(f, "] (from {})", path.display())
             }
@@ -590,9 +590,9 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     loop {
         let possible = current.join(".cargo").join("config");
         if fs::metadata(&possible).is_ok() {
-            let file = try!(File::open(&possible));
+            let file = File::open(&possible)?;
 
-            try!(walk(file, &possible));
+            walk(file, &possible)?;
         }
         match current.parent() {
             Some(p) => current = p,
@@ -610,8 +610,8 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     if !pwd.starts_with(&home) {
         let config = home.join("config");
         if fs::metadata(&config).is_ok() {
-            let file = try!(File::open(&config));
-            try!(walk(file, &config));
+            let file = File::open(&config)?;
+            walk(file, &config)?;
         }
     }
 
@@ -629,7 +629,7 @@ pub fn set_config(cfg: &Config,
     // 3. This blows away the previous ordering of a file.
     let mut file = match loc {
         Location::Global => {
-            try!(cfg.home_path.create_dir());
+            cfg.home_path.create_dir()?;
             try!(cfg.home_path.open_rw(Path::new("config"), cfg,
                                        "the global config file"))
         }
@@ -637,11 +637,11 @@ pub fn set_config(cfg: &Config,
     };
     let mut contents = String::new();
     let _ = file.read_to_string(&mut contents);
-    let mut toml = try!(cargo_toml::parse(&contents, file.path()));
+    let mut toml = cargo_toml::parse(&contents, file.path())?;
     toml.insert(key.to_string(), value.into_toml());
 
     let contents = toml::Value::Table(toml).to_string();
-    try!(file.seek(SeekFrom::Start(0)));
-    try!(file.write_all(contents.as_bytes()));
+    file.seek(SeekFrom::Start(0))?;
+    file.write_all(contents.as_bytes())?;
     Ok(())
 }

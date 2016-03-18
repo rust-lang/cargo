@@ -21,11 +21,11 @@ pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
 pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
                     -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
-    let data = try!(paths::read(path));
+    let data = paths::read(path)?;
 
     let layout = project_layout(path.parent().unwrap());
     let (manifest, nested) =
-        try!(read_manifest(data.as_bytes(), layout, source_id, config));
+        read_manifest(data.as_bytes(), layout, source_id, config)?;
 
     Ok((Package::new(manifest, path), nested))
 }
@@ -75,7 +75,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 
 fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
         -> CargoResult<()> {
-    if !try!(callback(path)) {
+    if !callback(path)? {
         trace!("not processing {}", path.display());
         return Ok(())
     }
@@ -94,9 +94,9 @@ fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
         }
     };
     for dir in dirs {
-        let dir = try!(dir);
-        if try!(dir.file_type()).is_dir() {
-            try!(walk(&dir.path(), callback));
+        let dir = dir?;
+        if dir.file_type()?.is_dir() {
+            walk(&dir.path(), callback)?;
         }
     }
     Ok(())
@@ -113,9 +113,9 @@ fn read_nested_packages(path: &Path,
                         visited: &mut HashSet<PathBuf>) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) { return Ok(()) }
 
-    let manifest = try!(find_project_manifest_exact(path, "Cargo.toml"));
+    let manifest = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (pkg, nested) = try!(read_package(&manifest, source_id, config));
+    let (pkg, nested) = read_package(&manifest, source_id, config)?;
     let pkg_id = pkg.package_id().clone();
     if !all_packages.contains_key(&pkg_id) {
         all_packages.insert(pkg_id, pkg);
