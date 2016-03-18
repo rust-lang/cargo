@@ -81,7 +81,7 @@ repository by mistake.
 publish = false
 ```
 
-## Package metadata
+## Package Metadata
 
 There are a number of optional metadata fields also accepted under the
 `[package]` section:
@@ -91,15 +91,15 @@ There are a number of optional metadata fields also accepted under the
 # ...
 
 # A short blurb about the package. This is not rendered in any format when
-# uploaded to crates.io (aka this is not markdown)
+# uploaded to crates.io (aka this is not markdown).
 description = "..."
 
-# These URLs point to more information about the repository
+# These URLs point to more information about the repository.
 documentation = "..."
 homepage = "..."
 repository = "..."
 
-# This points to a file in the repository (relative to this Cargo.toml). The
+# This points to a file in the repository (relative to this `Cargo.toml`). The
 # contents of this file are stored and indexed in the registry.
 readme = "..."
 
@@ -110,12 +110,12 @@ keywords = ["...", "..."]
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
 # license identifiers from http://spdx.org/licenses/. Multiple licenses can be
-# separated with a `/`
+# separated with a `/`.
 license = "..."
 
 # If a project is using a nonstandard license, then this key may be specified in
 # lieu of the above key and must point to a file relative to this manifest
-# (similar to the readme key)
+# (similar to the readme key).
 license-file = "..."
 ```
 
@@ -142,13 +142,13 @@ geometry = { path = "crates/geometry" }
 
 You can specify the source of a dependency in a few ways:
 
-* `git = "<git-url>"`: A git repository with a `Cargo.toml` inside it (not
-  necessarily at the root). The `rev`, `tag`, and `branch` options are also
+* `git = "<git-url>"` refers to a git repository with a `Cargo.toml` inside it
+  (not necessarily at the root). The `rev`, `tag`, and `branch` options are also
   recognized to use something other than the `master` branch.
-* `path = "<relative-path>"`: A path relative to the current `Cargo.toml`
-  pointing to another directory with a `Cargo.toml` and an associated package.
-* If `path` and `git` are omitted, then a dependencies will come from crates.io
-  and use the `version` key to indicate the version requirement.
+* `path = "<relative-path>"` refers to another directory with a `Cargo.toml`
+  inside it. The specified path should be relative to the current `Cargo.toml`.
+* If `path` and `git` are omitted, the dependency will come from crates.io, and
+  the `version` key will be used to indicate the version requirement.
 
 Dependencies from crates.io can also use a shorthand where just the version
 requirement is specified:
@@ -213,8 +213,8 @@ native = { path = "native/x86_64" }
 
 # The `[profile.*]` Sections
 
-Cargo supports custom configuration of how rustc is invoked through **profiles**
-at the top level. Any manifest may declare a profile, but only the **top level**
+Cargo supports custom configuration of how rustc is invoked through profiles at
+the top level. Any manifest may declare a profile, but only the top level
 project’s profiles are actually read. All dependencies’ profiles will be
 overridden. This is done so the top-level project has control over how its
 dependencies are compiled.
@@ -224,17 +224,17 @@ configuration available to them. Listed below is the configuration available,
 along with the defaults for each profile.
 
 ```toml
-# The development profile, used for `cargo build`
+# The development profile, used for `cargo build`.
 [profile.dev]
-opt-level = 0  # Controls the --opt-level the compiler builds with
-debug = true   # Controls whether the compiler passes `-g`
-rpath = false  # Controls whether the compiler passes `-C rpath`
-lto = false    # Controls `-C lto` for binaries and staticlibs
-debug-assertions = true  # Controls whether debug assertions are enabled
-codegen-units = 1 # Controls whether the compiler passes `-C codegen-units`
-                  # `codegen-units` is ignored when `lto = true`
+opt-level = 0      # controls the `--opt-level` the compiler builds with
+debug = true       # controls whether the compiler passes `-g`
+rpath = false      # controls whether the compiler passes `-C rpath`
+lto = false        # controls `-C lto` for binaries and staticlibs
+debug-assertions = true # controls whether debug assertions are enabled
+codegen-units = 1  # controls whether the compiler passes `-C codegen-units`
+                   # `codegen-units` is ignored when `lto = true`
 
-# The release profile, used for `cargo build --release`
+# The release profile, used for `cargo build --release`.
 [profile.release]
 opt-level = 3
 debug = false
@@ -243,7 +243,7 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 
-# The testing profile, used for `cargo test`
+# The testing profile, used for `cargo test`.
 [profile.test]
 opt-level = 0
 debug = true
@@ -252,7 +252,7 @@ lto = false
 debug-assertions = true
 codegen-units = 1
 
-# The benchmarking profile, used for `cargo bench`
+# The benchmarking profile, used for `cargo bench`.
 [profile.bench]
 opt-level = 3
 debug = false
@@ -261,7 +261,7 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 
-# The documentation profile, used for `cargo doc`
+# The documentation profile, used for `cargo doc`.
 [profile.doc]
 opt-level = 0
 debug = true
@@ -273,13 +273,13 @@ codegen-units = 1
 
 # The `[features]` Section
 
-Cargo supports **features** to allow expression of:
+Cargo supports features to allow expression of:
 
-* Conditional compilation options (usable through `cfg` attributes);
-* Optional dependencies, which enhance a package, but are not required;
-* Clusters of optional dependencies, such as “postgres”, that would include the
+* conditional compilation options (usable through `cfg` attributes);
+* optional dependencies, which enhance a package, but are not required; and
+* clusters of optional dependencies, such as `postgres`, that would include the
   `postgres` package, the `postgres-macros` package, and possibly other packages
-  (such as development-time mocking libraries, debugging tools, etc.)
+  (such as development-time mocking libraries, debugging tools, etc.).
 
 A feature of a package is either an optional dependency, or a set of other
 features. The format for specifying features is:
@@ -289,7 +289,7 @@ features. The format for specifying features is:
 name = "awesome"
 
 [features]
-# The “default” set of optional packages. Most people will want to use these
+# The default set of optional packages. Most people will want to use these
 # packages, but they are strictly optional. Note that `session` is not a package
 # but rather another feature listed in this manifest.
 default = ["jquery", "uglifier", "session"]
@@ -298,7 +298,7 @@ default = ["jquery", "uglifier", "session"]
 # like `#[cfg(feature = "go-faster")]`.
 go-faster = []
 
-# The “secure-password” feature depends on the bcrypt package. This aliasing
+# The `secure-password` feature depends on the bcrypt package. This aliasing
 # will allow people to talk about the feature in a higher-level way and allow
 # this package to add more requirements to the feature in the future.
 secure-password = ["bcrypt"]
@@ -309,13 +309,13 @@ secure-password = ["bcrypt"]
 session = ["cookie/session"]
 
 [dependencies]
-# These packages are mandatory and form the core of this package’s distribution
+# These packages are mandatory and form the core of this package’s distribution.
 cookie = "1.2.0"
 oauth = "1.1.0"
 route-recognizer = "=2.1.0"
 
 # A list of all of the optional dependencies, some of which are included in the
-# above “features”. They can be opted into by apps.
+# above `features`. They can be opted into by apps.
 jquery = { version = "1.0.2", optional = true }
 uglifier = { version = "1.5.3", optional = true }
 bcrypt = { version = "*", optional = true }
@@ -338,23 +338,23 @@ The usage of features is subject to a few rules:
 
 1. Feature names must not conflict with other package names in the manifest.
    This is because they are opted into via `features = [...]`, which only has a
-   single namespace
+   single namespace.
 2. With the exception of the `default` feature, all features are opt-in. To opt
    out of the default feature, use `default-features = false` and cherry-pick
    individual features.
 3. Feature groups are not allowed to cyclically depend on one another.
-4. Dev-dependencies cannot be optional
-5. Features groups can only reference optional dependencies
+4. Dev-dependencies cannot be optional.
+5. Features groups can only reference optional dependencies.
 6. When a feature is selected, Cargo will call `rustc` with `--cfg
    feature="${feature_name}"`. If a feature group is included, it and all of its
    individual features will be included. This can be tested in code via
-   `#[cfg(feature = "foo")]`
+   `#[cfg(feature = "foo")]`.
 
 Note that it is explicitly allowed for features to not actually activate any
 optional dependencies. This allows packages to internally enable/disable
 features without requiring a new dependency.
 
-## Usage In End Products
+## Usage in End Products
 
 One major use-case for this feature is specifying optional features in
 end-products. For example, the Servo project may want to include optional
@@ -369,9 +369,9 @@ $ cargo build --release --features "shumway pdf"
 
 Default features could be excluded using `--no-default-features`.
 
-## Usage In Packages
+## Usage in Packages
 
-In most cases, the concept of “optional dependency” in a library is best
+In most cases, the concept of *optional dependency* in a library is best
 expressed as a separate package that the top-level application depends on.
 
 However, high-level packages, like Iron or Piston, may want the ability to
@@ -379,18 +379,18 @@ curate a number of packages for easy installation. The current Cargo system
 allows them to curate a number of mandatory dependencies into a single package
 for easy installation.
 
-In some cases, packages may want to provide additional curation for **optional**
+In some cases, packages may want to provide additional curation for optional
 dependencies:
 
-* Grouping a number of low-level optional dependencies together into a single
-  high-level “feature”.
-* Specifying packages that are recommended (or suggested) to be included by
-  users of the package.
-* Including a feature (like `secure-password` in the motivating example) that
+* grouping a number of low-level optional dependencies together into a single
+  high-level feature;
+* specifying packages that are recommended (or suggested) to be included by
+  users of the package; and
+* including a feature (like `secure-password` in the motivating example) that
   will only work if an optional dependency is available, and would be difficult
-  to implement as a separate package. For example, it may be overly difficult to
+  to implement as a separate package (for example, it may be overly difficult to
   design an IO package to be completely decoupled from OpenSSL, with opt-in via
-  the inclusion of a separate package.
+  the inclusion of a separate package).
 
 In almost all cases, it is an antipattern to use these features outside of
 high-level packages that are designed for curation. If a feature is optional, it
@@ -417,16 +417,16 @@ Your project can optionally contain folders named `examples`, `tests`, and
 integration tests, and benchmarks respectively.
 
 ```notrust
-▾ src/          # directory containing source files
-  lib.rs        # the main entry point for libraries and packages
-  main.rs       # the main entry point for projects producing executables
-  ▾ bin/        # (optional) directory containing additional executables
+▾ src/           # directory containing source files
+  lib.rs         # the main entry point for libraries and packages
+  main.rs        # the main entry point for projects producing executables
+  ▾ bin/         # (optional) directory containing additional executables
     *.rs
-▾ examples/     # (optional) examples
+▾ examples/      # (optional) examples
   *.rs
-▾ tests/        # (optional) integration tests
+▾ tests/         # (optional) integration tests
   *.rs
-▾ benches/      # (optional) benchmarks
+▾ benches/       # (optional) benchmarks
   *.rs
 ```
 
@@ -446,14 +446,15 @@ You can run individual examples with the command `cargo run --example
 
 When you run `cargo test`, Cargo will:
 
-* Compile and run your library’s unit tests, which are in files reachable from
-  `lib.rs`. Any sections marked with `#[cfg(test)]` will be included.
-* Compile and run your library’s documentation tests, which are embedded inside
-  of documentation blocks.
-* Compile and run your library’s [integration tests](#integration-tests).
-* Compile your library’s examples.
+* compile and run your library’s unit tests, which are in the files reachable
+  from `lib.rs` (naturally, any sections marked with `#[cfg(test)]` will be
+  considered at this stage);
+* compile and run your library’s documentation tests, which are embedded inside
+  of documentation blocks;
+* compile and run your library’s [integration tests](#integration-tests); and
+* compile your library’s examples.
 
-## Integration tests
+## Integration Tests
 
 Each file in `tests/*.rs` is an integration test. When you run `cargo test`,
 Cargo will compile each of these files as a separate crate. The crate can link
@@ -466,7 +467,7 @@ example, if you want several integration tests to share some code, you can put
 the shared code in `tests/common/mod.rs` and then put `mod common;` in each of
 the test files.
 
-# Configuring a target
+# Configuring a Target
 
 All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
 sections support similar configuration for specifying how a target should be
@@ -483,7 +484,7 @@ specified.
 # is defaulted to the name of the package or project.
 name = "foo"
 
-# This field points at where the crate is located, relative to the Cargo.toml.
+# This field points at where the crate is located, relative to the `Cargo.toml`.
 path = "src/lib.rs"
 
 # A flag for enabling unit tests for this target. This is used by `cargo test`.
@@ -504,9 +505,9 @@ doc = true
 # for Cargo to correctly compile it and make it available for all dependencies.
 plugin = false
 
-# If set to false, `cargo test` will omit the --test flag to rustc, which stops
-# it from generating a test harness. This is useful when the binary being built
-# manages the test runner itself.
+# If set to false, `cargo test` will omit the `--test` flag to rustc, which
+# stops it from generating a test harness. This is useful when the binary being
+# built manages the test runner itself.
 harness = true
 ```
 
@@ -520,10 +521,9 @@ build by explicitly listing the library in your `Cargo.toml`:
 
 [lib]
 name = "..."
-# this could be “staticlib” as well
-crate-type = ["dylib"]
+crate-type = ["dylib"] # could be `staticlib` as well
 ```
 
 The available options are `dylib`, `rlib`, and `staticlib`. You should only use
-this option in a project. Cargo will always compile **packages** (dependencies)
+this option in a project. Cargo will always compile packages (dependencies)
 based on the requirements of the project that includes them.
