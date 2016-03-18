@@ -363,7 +363,17 @@ fn generate_targets<'a>(pkg: &'a Package,
                         });
                         let t = match target {
                             Some(t) => t,
-                            None => bail!("no {} target named `{}`", desc, name),
+                            None => {
+                                let suggestion = pkg.find_closest_target(name, kind);
+                                match suggestion {
+                                    Some(s) => {
+                                        let suggested_name = s.name();
+                                        bail!("no {} target named `{}`\n\nDid you mean `{}`?",
+                                              desc, name, suggested_name)
+                                    }
+                                    None => bail!("no {} target named `{}`", desc, name),
+                                }
+                            }
                         };
                         debug!("found {} `{}`", desc, name);
                         targets.push((t, profile));
