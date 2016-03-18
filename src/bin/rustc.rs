@@ -60,7 +60,9 @@ will simply be added to the compiler invocation.
 
 This command requires that only one target is being compiled. If more than one
 target is available for the current package the filters of --lib, --bin, etc,
-must be used to select which target is compiled.
+must be used to select which target is compiled. To pass flags to all compiler
+processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
+`build.rustflags` configuration option.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {

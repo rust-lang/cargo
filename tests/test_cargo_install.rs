@@ -13,7 +13,7 @@ use support::paths;
 use support::registry::Package;
 use support::git;
 
-use self::InstalledExe as has_installed_exe;
+pub use self::InstalledExe as has_installed_exe;
 
 fn setup() {
 }
@@ -38,11 +38,11 @@ fn exe(name: &str) -> String {
     if cfg!(windows) {format!("{}.exe", name)} else {name.to_string()}
 }
 
-fn cargo_home() -> PathBuf {
+pub fn cargo_home() -> PathBuf {
     paths::home().join(".cargo")
 }
 
-struct InstalledExe(&'static str);
+pub struct InstalledExe(pub &'static str);
 
 impl<P: AsRef<Path>> Matcher<P> for InstalledExe {
     fn matches(&self, path: P) -> MatchResult {
@@ -579,7 +579,7 @@ test!(do_not_rebuilds_on_local_install {
                 execs().with_status(0).with_stdout(&format!("\
 {installing} [..]
 ", installing = INSTALLING)).with_stderr("\
-be sure to add `[..]` to your PATH to be able to run the installed binaries
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 "));
 
     assert!(p.build_dir().c_exists());
