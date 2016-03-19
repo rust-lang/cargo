@@ -1,4 +1,4 @@
-% Configuration - Cargo Documentation
+% Configuration
 
 This document will explain how Cargo’s configuration system works, as well as
 available keys or configuration.  For configuration of a project through its
