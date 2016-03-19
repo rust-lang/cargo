@@ -4,6 +4,8 @@ rust:
   - beta
   - nightly
 sudo: false
+before_script:
+  - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
   - ./configure --prefix=$HOME/cargo-install --disable-cross-tests --disable-optimize
   - make
@@ -12,16 +14,13 @@ script:
   - make doc
   - make install
   - make uninstall
-after_success: |
-  [ $TRAVIS_BRANCH = master ] &&
-  [ $TRAVIS_PULL_REQUEST = false ] &&
-  [ $(uname -s) = Linux ] &&
-  pip install ghp-import --user $USER &&
-  $HOME/.local/bin/ghp-import -n target/doc &&
-  git push -qf https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+after_success:
+  - travis-cargo --only nightly doc-upload
+  - travis-cargo coveralls --no-sudo --verify
+
 env:
   global:
-    - secure: scGpeetUfba5RWyuS4yt10bPoFAI9wpHEReIFqEx7eH5vr2Anajk6+70jW6GdrWVdUvdINiArlQ3An2DeB9vEUWcBjw8WvuPtOH0tDMoSsuVloPlFD8yn1Ac0Bx9getAO5ofxqtoNg+OV4MDVuGabEesqAOWqURNrBC7XK+ntC8=
+    secure: NPKMWqUiZ+FzOmvgLDrUiQkOQhKSrmUiB6qUTWK0uLnyJa31EZw7eW5WRcN/bkCE5cVj5ZSW9EFuejFb/VL8N/to4MvYh5uFIgKMXrW5ZIuAvM2GtJuOr58VS2KtvS1hNIIIQUzfBkRFXz/jS3aWjv2hDLk2lTQCTCKt1FT7xZQ=
 
 os:
   - linux
@@ -37,5 +36,7 @@ addons:
       - kalakris-cmake
     packages:
       - cmake
-      - g++-multilib
-      - lib32stdc++6
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
