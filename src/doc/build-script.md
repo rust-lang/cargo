@@ -1,4 +1,4 @@
-% Build Script Support - Cargo Documentation
+% Build Script Support
 
 Some packages need to compile third-party non-Rust code, for example C
 libraries. Other packages need to link to C libraries which can either be
