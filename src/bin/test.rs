@@ -77,7 +77,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.configure_shell(options.flag_verbose,
                                 options.flag_quiet,
                                 &options.flag_color));
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
@@ -102,7 +102,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    let err = try!(ops::run_tests(&root, &ops, &options.arg_args));
+    let err = ops::run_tests(&root, &ops, &options.arg_args)?;
     match err {
         None => Ok(None),
         Some(err) => {

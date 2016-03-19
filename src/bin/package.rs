@@ -35,7 +35,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.configure_shell(options.flag_verbose,
                                 options.flag_quiet,
                                 &options.flag_color));
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     try!(ops::package(&root, config,
                       !options.flag_no_verify,
                       options.flag_list,

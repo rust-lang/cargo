@@ -21,7 +21,7 @@ impl EncodableResolve {
     pub fn to_resolve(&self, root: &Package, config: &Config)
                       -> CargoResult<Resolve> {
         let mut path_deps = HashMap::new();
-        try!(build_path_deps(root, &mut path_deps, config));
+        build_path_deps(root, &mut path_deps, config)?;
         let default = root.package_id().source_id();
 
         let mut g = Graph::new();
@@ -76,9 +76,9 @@ impl EncodableResolve {
                 Ok(())
             };
 
-            try!(add_dependencies(&root, &self.root));
+            add_dependencies(&root, &self.root)?;
             for (id, pkg) in ids.iter().zip(packages) {
-                try!(add_dependencies(id, pkg));
+                add_dependencies(id, pkg)?;
             }
         }
 
@@ -113,7 +113,7 @@ fn build_path_deps(root: &Package,
     for pkg in deps {
         let source_id = pkg.package_id().source_id();
         if map.insert(pkg.name().to_string(), source_id.clone()).is_none() {
-            try!(build_path_deps(&pkg, map, config));
+            build_path_deps(&pkg, map, config)?;
         }
     }
 
@@ -158,7 +158,7 @@ impl Encodable for EncodablePackageId {
 
 impl Decodable for EncodablePackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
-        let string: String = try!(Decodable::decode(d));
+        let string: String = Decodable::decode(d)?;
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
         let captures = regex.captures(&string)
                             .expect("invalid serialized PackageId");

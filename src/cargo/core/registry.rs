@@ -122,13 +122,13 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
         }
 
-        try!(self.load(namespace, kind));
+        self.load(namespace, kind)?;
         Ok(())
     }
 
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.ensure_loaded(id, Kind::Locked));
+            self.ensure_loaded(id, Kind::Locked)?;
         }
         Ok(())
     }
@@ -162,7 +162,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
             // Ensure the source has fetched all necessary remote data.
             let p = profile::start(format!("updating: {}", source_id));
-            try!(source.update());
+            source.update()?;
             drop(p);
 
             if kind == Kind::Override {
@@ -183,7 +183,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
-            ret.extend(try!(src.query(&dep)).into_iter().filter(|s| {
+            ret.extend(src.query(&dep)?.into_iter().filter(|s| {
                 seen.insert(s.name().to_string())
             }));
         }
@@ -270,15 +270,15 @@ impl<'cfg> PackageRegistry<'cfg> {
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let overrides = try!(self.query_overrides(dep));
+        let overrides = self.query_overrides(dep)?;
 
         let ret = if overrides.is_empty() {
             // Ensure the requested source_id is loaded
-            try!(self.ensure_loaded(dep.source_id(), Kind::Normal));
+            self.ensure_loaded(dep.source_id(), Kind::Normal)?;
             let mut ret = Vec::new();
             for (id, src) in self.sources.sources_mut() {
                 if id == dep.source_id() {
-                    ret.extend(try!(src.query(dep)).into_iter());
+                    ret.extend(src.query(dep)?.into_iter());
                 }
             }
             ret

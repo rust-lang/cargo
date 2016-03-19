@@ -104,7 +104,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     };
 
     let source = if let Some(url) = options.flag_git {
-        let url = try!(url.to_url().map_err(human));
+        let url = url.to_url().map_err(human)?;
         let gitref = if let Some(branch) = options.flag_branch {
             GitReference::Branch(branch)
         } else if let Some(tag) = options.flag_tag {
@@ -116,11 +116,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         };
         SourceId::for_git(&url, gitref)
     } else if let Some(path) = options.flag_path {
-        try!(SourceId::for_path(&config.cwd().join(path)))
+        SourceId::for_path(&config.cwd().join(path))?
     } else if options.arg_crate == None {
-        try!(SourceId::for_path(&config.cwd()))
+        SourceId::for_path(&config.cwd())?
     } else {
-        try!(SourceId::for_central(config))
+        SourceId::for_central(config)?
     };
 
     let krate = options.arg_crate.as_ref().map(|s| &s[..]);
@@ -128,9 +128,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {
-        try!(ops::install_list(root, config));
+        ops::install_list(root, config)?;
     } else {
-        try!(ops::install(root, krate, &source, vers, &compile_opts));
+        ops::install(root, krate, &source, vers, &compile_opts)?;
     }
     Ok(None)
 }

@@ -8,7 +8,7 @@ pub fn run(manifest_path: &Path,
            options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = options.config;
-    let root = try!(Package::for_path(manifest_path, config));
+    let root = Package::for_path(manifest_path, config)?;
 
     let mut bins = root.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
@@ -40,7 +40,7 @@ pub fn run(manifest_path: &Path,
         }
     }
 
-    let compile = try!(ops::compile(manifest_path, options));
+    let compile = ops::compile(manifest_path, options)?;
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(&exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str())
@@ -48,10 +48,10 @@ pub fn run(manifest_path: &Path,
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
-    let mut process = try!(compile.target_process(exe, &root))
+    let mut process = compile.target_process(exe, &root)?
                                   .into_process_builder();
     process.args(args).cwd(config.cwd());
 
-    try!(config.shell().status("Running", process.to_string()));
+    config.shell().status("Running", process.to_string())?;
     Ok(process.exec().err())
 }

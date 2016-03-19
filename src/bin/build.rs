@@ -65,7 +65,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 options.flag_quiet,
                                 &options.flag_color));
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let opts = CompileOptions {
         config: config,
@@ -86,6 +86,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    try!(ops::compile(&root, &opts));
+    ops::compile(&root, &opts)?;
     Ok(None)
 }

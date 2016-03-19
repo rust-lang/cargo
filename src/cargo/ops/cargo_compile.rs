@@ -89,11 +89,11 @@ pub fn compile<'a>(manifest_path: &Path,
                    -> CargoResult<ops::Compilation<'a>> {
     debug!("compile; manifest-path={}", manifest_path.display());
 
-    let package = try!(Package::for_path(manifest_path, options.config));
+    let package = Package::for_path(manifest_path, options.config)?;
     debug!("loaded package; package={}", package);
 
     for key in package.manifest().warnings().iter() {
-        try!(options.config.shell().warn(key))
+        options.config.shell().warn(key)?
     }
     compile_pkg(&package, None, options)
 }
@@ -113,14 +113,14 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = try!(ops::resolve_pkg(&mut registry, root_package, config));
+    let resolve = ops::resolve_pkg(&mut registry, root_package, config)?;
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
     // overrides, etc.
     let _p = profile::start("resolving w/ overrides...");
 
-    try!(add_overrides(&mut registry, root_package.root(), config));
+    add_overrides(&mut registry, root_package.root(), config)?;
 
     let method = Method::Required{
         dev_deps: true, // TODO: remove this option?
@@ -237,7 +237,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
 
     let mut ret = {
         let _p = profile::start("compiling");
-        let mut build_config = try!(scrape_build_config(config, jobs, target));
+        let mut build_config = scrape_build_config(config, jobs, target)?;
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
         if let CompileMode::Doc { deps } = mode {
@@ -380,10 +380,10 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(())
                 };
-                try!(find(bins, "bin", TargetKind::Bin, profile));
-                try!(find(examples, "example", TargetKind::Example, build));
-                try!(find(tests, "test", TargetKind::Test, test));
-                try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
+                find(bins, "bin", TargetKind::Bin, profile)?;
+                find(examples, "example", TargetKind::Example, build)?;
+                find(tests, "test", TargetKind::Test, test)?;
+                find(benches, "bench", TargetKind::Bench, &profiles.bench)?;
             }
             Ok(targets)
         }
@@ -395,7 +395,7 @@ fn generate_targets<'a>(pkg: &'a Package,
 fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
                      cur_path: &Path,
                      config: &'a Config) -> CargoResult<()> {
-    let paths = match try!(config.get_list("paths")) {
+    let paths = match config.get_list("paths")? {
         Some(list) => list,
         None => return Ok(())
     };
@@ -411,7 +411,7 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
     });
 
     for (path, definition) in paths {
-        let id = try!(SourceId::for_path(&path));
+        let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, &id, config);
         try!(source.update().chain_error(|| {
             human(format!("failed to update path override `{}` \
@@ -435,7 +435,7 @@ fn scrape_build_config(config: &Config,
                        jobs: Option<u32>,
                        target: Option<String>)
                        -> CargoResult<ops::BuildConfig> {
-    let cfg_jobs = match try!(config.get_i64("build.jobs")) {
+    let cfg_jobs = match config.get_i64("build.jobs")? {
         Some(v) => {
             if v.val <= 0 {
                 bail!("build.jobs must be positive, but found {} in {}",
@@ -450,16 +450,16 @@ fn scrape_build_config(config: &Config,
         None => None,
     };
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-    let cfg_target = try!(config.get_string("build.target")).map(|s| s.val);
+    let cfg_target = config.get_string("build.target")?.map(|s| s.val);
     let target = target.or(cfg_target);
     let mut base = ops::BuildConfig {
         jobs: jobs,
         requested_target: target.clone(),
         ..Default::default()
     };
-    base.host = try!(scrape_target_config(config, &config.rustc_info().host));
+    base.host = scrape_target_config(config, &config.rustc_info().host)?;
     base.target = match target.as_ref() {
-        Some(triple) => try!(scrape_target_config(config, &triple)),
+        Some(triple) => scrape_target_config(config, &triple)?,
         None => base.host.clone(),
     };
     Ok(base)
@@ -470,11 +470,11 @@ fn scrape_target_config(config: &Config, triple: &str)
 
     let key = format!("target.{}", triple);
     let mut ret = ops::TargetConfig {
-        ar: try!(config.get_path(&format!("{}.ar", key))).map(|v| v.val),
-        linker: try!(config.get_path(&format!("{}.linker", key))).map(|v| v.val),
+        ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
+        linker: config.get_path(&format!("{}.linker", key))?.map(|v| v.val),
         overrides: HashMap::new(),
     };
-    let table = match try!(config.get_table(&key)) {
+    let table = match config.get_table(&key)? {
         Some(table) => table.val,
         None => return Ok(ret),
     };
@@ -491,12 +491,12 @@ fn scrape_target_config(config: &Config, triple: &str)
             rerun_if_changed: Vec::new(),
         };
         let key = format!("{}.{}", key, lib_name);
-        let table = try!(config.get_table(&key)).unwrap().val;
+        let table = config.get_table(&key)?.unwrap().val;
         for (k, _) in table.into_iter() {
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
-                    let flags = try!(config.get_string(&key)).unwrap();
+                    let flags = config.get_string(&key)?.unwrap();
                     let whence = format!("in `{}` (in {})", key,
                                          flags.definition);
                     let (paths, links) = try!(
@@ -506,22 +506,22 @@ fn scrape_target_config(config: &Config, triple: &str)
                     output.library_links.extend(links.into_iter());
                 }
                 "rustc-link-lib" => {
-                    let list = try!(config.get_list(&key)).unwrap();
+                    let list = config.get_list(&key)?.unwrap();
                     output.library_links.extend(list.val.into_iter()
                                                         .map(|v| v.0));
                 }
                 "rustc-link-search" => {
-                    let list = try!(config.get_list(&key)).unwrap();
+                    let list = config.get_list(&key)?.unwrap();
                     output.library_paths.extend(list.val.into_iter().map(|v| {
                         PathBuf::from(&v.0)
                     }));
                 }
                 "rustc-cfg" => {
-                    let list = try!(config.get_list(&key)).unwrap();
+                    let list = config.get_list(&key)?.unwrap();
                     output.cfgs.extend(list.val.into_iter().map(|v| v.0));
                 }
                 _ => {
-                    let val = try!(config.get_string(&key)).unwrap();
+                    let val = config.get_string(&key)?.unwrap();
                     output.metadata.push((k, val.val));
                 }
             }

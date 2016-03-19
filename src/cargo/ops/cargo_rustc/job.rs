@@ -38,7 +38,7 @@ impl Work {
 
     pub fn then(self, next: Work) -> Work {
         Work::new(move |tx| {
-            try!(self.call(tx.clone()));
+            self.call(tx.clone())?;
             next.call(tx)
         })
     }

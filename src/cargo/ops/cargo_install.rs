@@ -45,7 +45,7 @@ pub fn install(root: Option<&str>,
                vers: Option<&str>,
                opts: &ops::CompileOptions) -> CargoResult<()> {
     let config = opts.config;
-    let root = try!(resolve_root(root, config));
+    let root = resolve_root(root, config)?;
     let (pkg, source) = if source_id.is_git() {
         try!(select_pkg(GitSource::new(source_id, config), source_id,
                         krate, vers, &mut |git| git.read_packages()))
@@ -73,10 +73,10 @@ pub fn install(root: Option<&str>,
     // We have to check this again afterwards, but may as well avoid building
     // anything if we're gonna throw it away anyway.
     {
-        let metadata = try!(metadata(config, &root));
-        let list = try!(read_crate_list(metadata.file()));
+        let metadata = metadata(config, &root)?;
+        let list = read_crate_list(metadata.file())?;
         let dst = metadata.parent().join("bin");
-        try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
+        check_overwrites(&dst, &pkg, &opts.filter, &list)?;
     }
 
     let target_dir = if source_id.is_path() {
@@ -90,16 +90,16 @@ pub fn install(root: Option<&str>,
                        found at `{}`", pkg, target_dir.display()))
     }));
 
-    let metadata = try!(metadata(config, &root));
-    let mut list = try!(read_crate_list(metadata.file()));
+    let metadata = metadata(config, &root)?;
+    let mut list = read_crate_list(metadata.file())?;
     let dst = metadata.parent().join("bin");
-    try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
+    check_overwrites(&dst, &pkg, &opts.filter, &list)?;
 
     let mut t = Transaction { bins: Vec::new() };
-    try!(fs::create_dir_all(&dst));
+    fs::create_dir_all(&dst)?;
     for bin in compile.binaries.iter() {
         let dst = dst.join(bin.file_name().unwrap());
-        try!(config.shell().status("Installing", dst.display()));
+        config.shell().status("Installing", dst.display())?;
         try!(fs::copy(&bin, &dst).chain_error(|| {
             human(format!("failed to copy `{}` to `{}`", bin.display(),
                           dst.display()))
@@ -108,7 +108,7 @@ pub fn install(root: Option<&str>,
     }
 
     if !source_id.is_path() {
-        try!(fs::remove_dir_all(&target_dir));
+        fs::remove_dir_all(&target_dir)?;
     }
 
     list.v1.entry(pkg.package_id().clone()).or_insert_with(|| {
@@ -116,7 +116,7 @@ pub fn install(root: Option<&str>,
     }).extend(t.bins.iter().map(|t| {
         t.file_name().unwrap().to_string_lossy().into_owned()
     }));
-    try!(write_crate_list(metadata.file(), list));
+    write_crate_list(metadata.file(), list)?;
 
     t.bins.truncate(0);
 
@@ -143,14 +143,14 @@ fn select_pkg<'a, T>(mut source: T,
                      -> CargoResult<(Package, Box<Source + 'a>)>
     where T: Source + 'a
 {
-    try!(source.update());
+    source.update()?;
     match name {
         Some(name) => {
-            let dep = try!(Dependency::parse(name, vers, source_id));
-            let deps = try!(source.query(&dep));
+            let dep = Dependency::parse(name, vers, source_id)?;
+            let deps = source.query(&dep)?;
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {
-                    let pkg = try!(source.download(pkgid));
+                    let pkg = source.download(pkgid)?;
                     Ok((pkg, Box::new(source)))
                 }
                 None => {
@@ -162,17 +162,17 @@ fn select_pkg<'a, T>(mut source: T,
             }
         }
         None => {
-            let candidates = try!(list_all(&mut source));
+            let candidates = list_all(&mut source)?;
             let binaries = candidates.iter().filter(|cand| {
                 cand.targets().iter().filter(|t| t.is_bin()).count() > 0
             });
             let examples = candidates.iter().filter(|cand| {
                 cand.targets().iter().filter(|t| t.is_example()).count() > 0
             });
-            let pkg = match try!(one(binaries, |v| multi_err("binaries", v))) {
+            let pkg = match one(binaries, |v| multi_err("binaries", v))? {
                 Some(p) => p,
                 None => {
-                    match try!(one(examples, |v| multi_err("examples", v))) {
+                    match one(examples, |v| multi_err("examples", v))? {
                         Some(p) => p,
                         None => bail!("no packages found with binaries or \
                                        examples"),
@@ -231,12 +231,12 @@ fn check_overwrites(dst: &Path,
             }
 
             for target in pkg.targets().iter().filter(|t| t.is_bin()) {
-                try!(check(target.name()));
+                check(target.name())?;
             }
         }
         CompileFilter::Only { bins, examples, .. } => {
             for bin in bins.iter().chain(examples) {
-                try!(check(bin));
+                check(bin)?;
             }
         }
     }
@@ -246,7 +246,7 @@ fn check_overwrites(dst: &Path,
 fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
     (|| -> CargoResult<_> {
         let mut contents = String::new();
-        try!(file.read_to_string(&mut contents));
+        file.read_to_string(&mut contents)?;
         let listing = try!(toml::decode_str(&contents).chain_error(|| {
             internal("invalid TOML found for metadata")
         }));
@@ -263,10 +263,10 @@ fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
 
 fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()> {
     (|| -> CargoResult<_> {
-        try!(file.seek(SeekFrom::Start(0)));
-        try!(file.set_len(0));
+        file.seek(SeekFrom::Start(0))?;
+        file.set_len(0)?;
         let data = toml::encode_str::<CrateListing>(&CrateListing::V1(listing));
-        try!(file.write_all(data.as_bytes()));
+        file.write_all(data.as_bytes())?;
         Ok(())
     }).chain_error(|| {
         human("failed to write crate metadata")
@@ -274,15 +274,15 @@ fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()>
 }
 
 pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
-    let dst = try!(resolve_root(dst, config));
-    let dst = try!(metadata(config, &dst));
-    let list = try!(read_crate_list(dst.file()));
+    let dst = resolve_root(dst, config)?;
+    let dst = metadata(config, &dst)?;
+    let list = read_crate_list(dst.file())?;
     let mut shell = config.shell();
     let out = shell.out();
     for (k, v) in list.v1.iter() {
-        try!(writeln!(out, "{}:", k));
+        writeln!(out, "{}:", k)?;
         for bin in v {
-            try!(writeln!(out, "    {}", bin));
+            writeln!(out, "    {}", bin)?;
         }
     }
     Ok(())
@@ -292,12 +292,12 @@ pub fn uninstall(root: Option<&str>,
                  spec: &str,
                  bins: &[String],
                  config: &Config) -> CargoResult<()> {
-    let root = try!(resolve_root(root, config));
-    let crate_metadata = try!(metadata(config, &root));
-    let mut metadata = try!(read_crate_list(crate_metadata.file()));
+    let root = resolve_root(root, config)?;
+    let crate_metadata = metadata(config, &root)?;
+    let mut metadata = read_crate_list(crate_metadata.file())?;
     let mut to_remove = Vec::new();
     {
-        let result = try!(PackageIdSpec::query_str(spec, metadata.v1.keys()))
+        let result = PackageIdSpec::query_str(spec, metadata.v1.keys())?
                                         .clone();
         let mut installed = match metadata.v1.entry(result.clone()) {
             Entry::Occupied(e) => e,
@@ -339,10 +339,10 @@ pub fn uninstall(root: Option<&str>,
             installed.remove();
         }
     }
-    try!(write_crate_list(crate_metadata.file(), metadata));
+    write_crate_list(crate_metadata.file(), metadata)?;
     for bin in to_remove {
-        try!(config.shell().status("Removing", bin.display()));
-        try!(fs::remove_file(bin));
+        config.shell().status("Removing", bin.display())?;
+        fs::remove_file(bin)?;
     }
 
     Ok(())
@@ -354,7 +354,7 @@ fn metadata(config: &Config, root: &Filesystem) -> CargoResult<FileLock> {
 
 fn resolve_root(flag: Option<&str>,
                 config: &Config) -> CargoResult<Filesystem> {
-    let config_root = try!(config.get_path("install.root"));
+    let config_root = config.get_path("install.root")?;
     Ok(flag.map(PathBuf::from).or_else(|| {
         env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from)
     }).or_else(move || {

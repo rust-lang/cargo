@@ -53,7 +53,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 options.flag_quiet,
                                 &options.flag_color));
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let (mut examples, mut bins) = (Vec::new(), Vec::new());
     if let Some(s) = options.flag_bin {
@@ -85,7 +85,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    match try!(ops::run(&root, &compile_opts, &options.arg_args)) {
+    match ops::run(&root, &compile_opts, &options.arg_args)? {
         None => Ok(None),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {

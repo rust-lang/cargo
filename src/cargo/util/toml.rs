@@ -115,13 +115,13 @@ pub fn to_manifest(contents: &[u8],
     let contents = try!(str::from_utf8(contents).map_err(|_| {
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
-    let root = try!(parse(contents, &manifest));
+    let root = parse(contents, &manifest)?;
     let mut d = toml::Decoder::new(toml::Value::Table(root));
     let manifest: TomlManifest = try!(Decodable::decode(&mut d).map_err(|e| {
         human(e.to_string())
     }));
 
-    let pair = try!(manifest.to_manifest(source_id, &layout, config));
+    let pair = manifest.to_manifest(source_id, &layout, config)?;
     let (mut manifest, paths) = pair;
     match d.toml {
         Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
@@ -269,7 +269,7 @@ pub struct TomlVersion {
 
 impl Decodable for TomlVersion {
     fn decode<D: Decoder>(d: &mut D) -> Result<TomlVersion, D::Error> {
-        let s = try!(d.read_str());
+        let s = d.read_str()?;
         match s.to_semver() {
             Ok(s) => Ok(TomlVersion { version: s }),
             Err(e) => Err(d.error(&e)),
@@ -381,7 +381,7 @@ impl TomlManifest {
             bail!("package name cannot be an empty string.")
         }
 
-        let pkgid = try!(project.to_package_id(source_id));
+        let pkgid = project.to_package_id(source_id)?;
         let metadata = pkgid.generate_metadata();
 
         // If we have no lib at all, use the inferred lib if available
@@ -390,7 +390,7 @@ impl TomlManifest {
 
         let lib = match self.lib {
             Some(ref lib) => {
-                try!(validate_library_name(lib));
+                validate_library_name(lib)?;
                 Some(
                     TomlTarget {
                         name: lib.name.clone().or(Some(project.name.clone())),
@@ -409,7 +409,7 @@ impl TomlManifest {
                 let bin = layout.main();
 
                 for target in bins {
-                    try!(validate_binary_name(target));
+                    validate_binary_name(target)?;
                 }
 
                 bins.iter().map(|t| {
@@ -438,7 +438,7 @@ impl TomlManifest {
         let examples = match self.example {
             Some(ref examples) => {
                 for target in examples {
-                    try!(validate_example_name(target));
+                    validate_example_name(target)?;
                 }
                 examples.clone()
             }
@@ -448,7 +448,7 @@ impl TomlManifest {
         let tests = match self.test {
             Some(ref tests) => {
                 for target in tests {
-                    try!(validate_test_name(target));
+                    validate_test_name(target)?;
                 }
                 tests.clone()
             }
@@ -458,7 +458,7 @@ impl TomlManifest {
         let benches = match self.bench {
             Some(ref benches) => {
                 for target in benches {
-                    try!(validate_bench_name(target));
+                    validate_bench_name(target)?;
                 }
                 benches.clone()
             }
@@ -526,7 +526,7 @@ impl TomlManifest {
 
             if let Some(targets) = self.target.as_ref() {
                 for (name, platform) in targets.iter() {
-                    cx.platform = Some(try!(name.parse()));
+                    cx.platform = Some(name.parse()?);
                     try!(process_dependencies(&mut cx,
                                               platform.dependencies.as_ref(),
                                               None));
@@ -714,7 +714,7 @@ fn process_dependencies(cx: &mut Context,
                         if cx.source_id.is_path() {
                             let path = cx.layout.root.join(path);
                             let path = util::normalize_path(&path);
-                            Some(try!(SourceId::for_path(&path)))
+                            Some(SourceId::for_path(&path)?)
                         } else {
                             Some(cx.source_id.clone())
                         }
@@ -722,10 +722,10 @@ fn process_dependencies(cx: &mut Context,
                     None => None,
                 }
             }
-        }.unwrap_or(try!(SourceId::for_central(cx.config)));
+        }.unwrap_or(SourceId::for_central(cx.config)?);
 
         let version = details.version.as_ref().map(|v| &v[..]);
-        let mut dep = try!(DependencyInner::parse(&n, version, &new_source_id));
+        let mut dep = DependencyInner::parse(&n, version, &new_source_id)?;
         dep = dep.set_features(details.features.unwrap_or(Vec::new()))
                  .set_default_features(details.default_features.unwrap_or(true))
                  .set_optional(details.optional.unwrap_or(false))

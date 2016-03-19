@@ -103,7 +103,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
     };
 
-    try!(ops::compile(&root, &opts));
+    ops::compile(&root, &opts)?;
     Ok(None)
 }
 

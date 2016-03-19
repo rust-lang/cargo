@@ -91,7 +91,7 @@ impl DependencyInner {
                  version: Option<&str>,
                  source_id: &SourceId) -> CargoResult<DependencyInner> {
         let version_req = match version {
-            Some(v) => try!(VersionReq::parse(v)),
+            Some(v) => VersionReq::parse(v)?,
             None => VersionReq::any()
         };
 

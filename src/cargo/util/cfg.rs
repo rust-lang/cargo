@@ -42,7 +42,7 @@ impl FromStr for Cfg {
 
     fn from_str(s: &str) -> CargoResult<Cfg> {
         let mut p = Parser::new(s);
-        let e = try!(p.cfg());
+        let e = p.cfg()?;
         if p.t.next().is_some() {
             bail!("malformed cfg value or key/value pair")
         }
@@ -75,7 +75,7 @@ impl FromStr for CfgExpr {
 
     fn from_str(s: &str) -> CargoResult<CfgExpr> {
         let mut p = Parser::new(s);
-        let e = try!(p.expr());
+        let e = p.expr()?;
         if p.t.next().is_some() {
             bail!("can only have one cfg-expression, consider using all() or \
                    any() explicitly")
@@ -101,9 +101,9 @@ impl<'a, T: fmt::Display> fmt::Display for CommaSep<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (i, v) in self.0.iter().enumerate() {
             if i > 0 {
-                try!(write!(f, ", "));
+                write!(f, ", ")?;
             }
-            try!(write!(f, "{}", v));
+            write!(f, "{}", v)?;
         }
         Ok(())
     }
@@ -125,11 +125,11 @@ impl<'a> Parser<'a> {
             Some(&Ok(Token::Ident(op @ "any"))) => {
                 self.t.next();
                 let mut e = Vec::new();
-                try!(self.eat(Token::LeftParen));
+                self.eat(Token::LeftParen)?;
                 while !self.try(Token::RightParen) {
-                    e.push(try!(self.expr()));
+                    e.push(self.expr()?);
                     if !self.try(Token::Comma) {
-                        try!(self.eat(Token::RightParen));
+                        self.eat(Token::RightParen)?;
                         break
                     }
                 }
@@ -141,9 +141,9 @@ impl<'a> Parser<'a> {
             }
             Some(&Ok(Token::Ident("not"))) => {
                 self.t.next();
-                try!(self.eat(Token::LeftParen));
-                let e = try!(self.expr());
-                try!(self.eat(Token::RightParen));
+                self.eat(Token::LeftParen)?;
+                let e = self.expr()?;
+                self.eat(Token::RightParen)?;
                 Ok(CfgExpr::Not(Box::new(e)))
             }
             Some(&Ok(..)) => self.cfg().map(CfgExpr::Value),

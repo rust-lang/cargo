@@ -36,7 +36,7 @@ impl Encodable for PackageId {
 
 impl Decodable for PackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
-        let string: String = try!(Decodable::decode(d));
+        let string: String = Decodable::decode(d)?;
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
         let captures = regex.captures(&string).expect("invalid serialized PackageId");
 
@@ -121,7 +121,7 @@ pub struct Metadata {
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T,
                              sid: &SourceId) -> CargoResult<PackageId> {
-        let v = try!(version.to_semver().map_err(PackageIdError::InvalidVersion));
+        let v = version.to_semver().map_err(PackageIdError::InvalidVersion)?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
                 name: name.to_string(),
@@ -163,10 +163,10 @@ impl Metadata {
 
 impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "{} v{}", self.inner.name, self.inner.version));
+        write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
         if !self.inner.source_id.is_default_registry() {
-            try!(write!(f, " ({})", self.inner.source_id));
+            write!(f, " ({})", self.inner.source_id)?;
         }
 
         Ok(())

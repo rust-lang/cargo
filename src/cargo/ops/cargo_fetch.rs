@@ -9,12 +9,12 @@ use util::{CargoResult, Config};
 pub fn fetch<'a>(manifest_path: &Path,
                  config: &'a Config)
                  -> CargoResult<(Resolve, PackageSet<'a>)> {
-    let package = try!(Package::for_path(manifest_path, config));
+    let package = Package::for_path(manifest_path, config)?;
     let mut registry = PackageRegistry::new(config);
-    let resolve = try!(ops::resolve_pkg(&mut registry, &package, config));
+    let resolve = ops::resolve_pkg(&mut registry, &package, config)?;
     let packages = get_resolved_packages(&resolve, registry);
     for id in resolve.iter() {
-        try!(packages.get(id));
+        packages.get(id)?;
     }
     Ok((resolve, packages))
 }

@@ -40,6 +40,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         ..
     } = options;
 
-    try!(ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8));
+    ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8)?;
     Ok(None)
 }

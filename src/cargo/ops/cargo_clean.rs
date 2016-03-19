@@ -16,7 +16,7 @@ pub struct CleanOptions<'a> {
 
 /// Cleans the project from build artifacts.
 pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
-    let root = try!(Package::for_path(manifest_path, opts.config));
+    let root = Package::for_path(manifest_path, opts.config)?;
     let target_dir = opts.config.target_dir(&root);
 
     // If we have a spec, then we need to delete some packages, otherwise, just
@@ -25,7 +25,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         return rm_rf(&target_dir);
     }
 
-    let (resolve, packages) = try!(ops::fetch(manifest_path, opts.config));
+    let (resolve, packages) = ops::fetch(manifest_path, opts.config)?;
 
     let dest = if opts.release {"release"} else {"debug"};
     let host_layout = Layout::new(opts.config, &root, None, dest);
@@ -41,15 +41,15 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     // resolve package specs and remove the corresponding packages
     for spec in opts.spec {
         // Translate the spec to a Package
-        let pkgid = try!(resolve.query(spec));
-        let pkg = try!(packages.get(&pkgid));
+        let pkgid = resolve.query(spec)?;
+        let pkg = packages.get(&pkgid)?;
 
         // And finally, clean everything out!
         for target in pkg.targets() {
             for kind in [Kind::Host, Kind::Target].iter() {
                 let layout = cx.layout(&pkg, *kind);
-                try!(rm_rf(&layout.proxy().fingerprint(&pkg)));
-                try!(rm_rf(&layout.build(&pkg)));
+                rm_rf(&layout.proxy().fingerprint(&pkg))?;
+                rm_rf(&layout.build(&pkg))?;
                 let Profiles {
                     ref release, ref dev, ref test, ref bench, ref doc,
                     ref custom_build,
@@ -62,8 +62,8 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
                         kind: *kind,
                     };
                     let root = cx.out_dir(&unit);
-                    for filename in try!(cx.target_filenames(&unit)).iter() {
-                        try!(rm_rf(&root.join(&filename)));
+                    for filename in cx.target_filenames(&unit)?.iter() {
+                        rm_rf(&root.join(&filename))?;
                     }
                 }
             }

@@ -69,17 +69,17 @@ impl<N: Eq + Hash + Clone> Graph<N> {
 
 impl<N: fmt::Display + Eq + Hash> fmt::Debug for Graph<N> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(writeln!(fmt, "Graph {{"));
+        writeln!(fmt, "Graph {{")?;
 
         for (n, e) in self.nodes.iter() {
-            try!(writeln!(fmt, "  - {}", n));
+            writeln!(fmt, "  - {}", n)?;
 
             for n in e.iter() {
-                try!(writeln!(fmt, "    - {}", n));
+                writeln!(fmt, "    - {}", n)?;
             }
         }
 
-        try!(write!(fmt, "}}"));
+        write!(fmt, "}}")?;
 
         Ok(())
     }

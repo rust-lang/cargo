@@ -156,7 +156,7 @@ impl SourceId {
 
     // Pass absolute path
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
-        let url = try!(path.to_url().map_err(human));
+        let url = path.to_url().map_err(human)?;
         Ok(SourceId::new(Kind::Path, url))
     }
 
@@ -173,7 +173,7 @@ impl SourceId {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
     pub fn for_central(config: &Config) -> CargoResult<SourceId> {
-        Ok(SourceId::for_registry(&try!(RegistrySource::url(config))))
+        Ok(SourceId::for_registry(&RegistrySource::url(config)?))
     }
 
     pub fn url(&self) -> &Url {
@@ -281,11 +281,11 @@ impl fmt::Display for SourceId {
             }
             SourceIdInner { kind: Kind::Git(ref reference), ref url,
                             ref precise, .. } => {
-                try!(write!(f, "{}{}", url, url_ref(reference)));
+                write!(f, "{}{}", url, url_ref(reference))?;
 
                 if let Some(ref s) = *precise {
                     let len = cmp::min(s.len(), 8);
-                    try!(write!(f, "#{}", &s[..len]));
+                    write!(f, "#{}", &s[..len])?;
                 }
                 Ok(())
             }

@@ -74,7 +74,7 @@ impl<'a> JobQueue<'a> {
                          job: Job,
                          fresh: Freshness) -> CargoResult<()> {
         let key = Key::new(unit);
-        let deps = try!(key.dependencies(cx));
+        let deps = key.dependencies(cx)?;
         self.queue.queue(Fresh, key, Vec::new(), &deps).push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
@@ -111,7 +111,7 @@ impl<'a> JobQueue<'a> {
             while self.active < self.jobs {
                 if !queue.is_empty() {
                     let (key, job, fresh) = queue.remove(0);
-                    try!(self.run(key, fresh, job, config, scope));
+                    self.run(key, fresh, job, config, scope)?;
                 } else if let Some((fresh, key, jobs)) = self.queue.dequeue() {
                     let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
                         f.combine(fresh)
@@ -188,11 +188,11 @@ impl<'a> JobQueue<'a> {
         });
 
         // Print out some nice progress information
-        try!(self.note_working_on(config, &key, fresh));
+        self.note_working_on(config, &key, fresh)?;
 
         // only the first message of each job is processed
         if let Ok(msg) = desc_rx.recv() {
-            try!(config.shell().verbose(|c| c.status("Running", &msg)));
+            config.shell().verbose(|c| c.status("Running", &msg))?;
         }
         Ok(())
     }
@@ -219,15 +219,15 @@ impl<'a> JobQueue<'a> {
             Dirty => {
                 if key.profile.doc {
                     self.documented.insert(key.pkg);
-                    try!(config.shell().status("Documenting", key.pkg));
+                    config.shell().status("Documenting", key.pkg)?;
                 } else {
                     self.compiled.insert(key.pkg);
-                    try!(config.shell().status("Compiling", key.pkg));
+                    config.shell().status("Compiling", key.pkg)?;
                 }
             }
             Fresh if self.counts[key.pkg] == 0 => {
                 self.compiled.insert(key.pkg);
-                try!(config.shell().verbose(|c| c.status("Fresh", key.pkg)));
+                config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
             }
             Fresh => {}
         }
@@ -248,12 +248,12 @@ impl<'a> Key<'a> {
     fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
                           -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: try!(cx.get_package(self.pkg)),
+            pkg: cx.get_package(self.pkg)?,
             target: self.target,
             profile: self.profile,
             kind: self.kind,
         };
-        let targets = try!(cx.dep_targets(&unit));
+        let targets = cx.dep_targets(&unit)?;
         Ok(targets.iter().filter_map(|unit| {
             // Binaries aren't actually needed to *compile* tests, just to run
             // them, so we don't include this dependency edge in the job graph.

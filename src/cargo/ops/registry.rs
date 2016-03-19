@@ -34,15 +34,15 @@ pub fn publish(manifest_path: &Path,
                token: Option<String>,
                index: Option<String>,
                verify: bool) -> CargoResult<()> {
-    let pkg = try!(Package::for_path(&manifest_path, config));
+    let pkg = Package::for_path(&manifest_path, config)?;
 
     if !pkg.publish() {
         bail!("some crates cannot be published.\n\
                `{}` is marked as unpublishable", pkg.name());
     }
 
-    let (mut registry, reg_id) = try!(registry(config, token, index));
-    try!(verify_dependencies(&pkg, &reg_id));
+    let (mut registry, reg_id) = registry(config, token, index)?;
+    verify_dependencies(&pkg, &reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
@@ -50,8 +50,8 @@ pub fn publish(manifest_path: &Path,
                                     false, true)).unwrap();
 
     // Upload said tarball to the specified destination
-    try!(config.shell().status("Uploading", pkg.package_id().to_string()));
-    try!(transmit(&pkg, &tarball, &mut registry));
+    config.shell().status("Uploading", pkg.package_id().to_string())?;
+    transmit(&pkg, &tarball, &mut registry)?;
 
     Ok(())
 }
@@ -97,7 +97,7 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
         ref keywords, ref readme, ref repository, ref license, ref license_file,
     } = *manifest.metadata();
     let readme = match *readme {
-        Some(ref readme) => Some(try!(paths::read(&pkg.root().join(readme)))),
+        Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
         None => None,
     };
     match *license_file {
@@ -128,8 +128,8 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
 }
 
 pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
-    let index = try!(config.get_string("registry.index")).map(|p| p.val);
-    let token = try!(config.get_string("registry.token")).map(|p| p.val);
+    let index = config.get_string("registry.index")?.map(|p| p.val);
+    let token = config.get_string("registry.token")?.map(|p| p.val);
     Ok(RegistryConfig { index: index, token: token })
 }
 
@@ -140,19 +140,19 @@ pub fn registry(config: &Config,
     let RegistryConfig {
         token: token_config,
         index: index_config,
-    } = try!(registry_configuration(config));
+    } = registry_configuration(config)?;
     let token = token.or(token_config);
     let index = index.or(index_config).unwrap_or(RegistrySource::default_url());
-    let index = try!(index.to_url().map_err(human));
+    let index = index.to_url().map_err(human)?;
     let sid = SourceId::for_registry(&index);
     let api_host = {
         let mut src = RegistrySource::new(&sid, config);
         try!(src.update().chain_error(|| {
             human(format!("failed to update registry {}", index))
         }));
-        (try!(src.config())).api
+        (src.config()?).api
     };
-    let handle = try!(http_handle(config));
+    let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 
@@ -166,11 +166,11 @@ pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
                                .connect_timeout(30_000 /* milliseconds */)
                                .low_speed_limit(10 /* bytes per second */)
                                .low_speed_timeout(30 /* seconds */);
-    let handle = match try!(http_proxy(config)) {
+    let handle = match http_proxy(config)? {
         Some(proxy) => handle.proxy(proxy),
         None => handle,
     };
-    let handle = match try!(http_timeout(config)) {
+    let handle = match http_timeout(config)? {
         Some(timeout) => handle.connect_timeout(timeout as usize)
                                .low_speed_timeout((timeout as usize) / 1000),
         None => handle,
@@ -183,7 +183,7 @@ pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
 /// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
 /// via environment variables are picked up by libcurl.
 fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
-    match try!(config.get_string("http.proxy")) {
+    match config.get_string("http.proxy")? {
         Some(s) => return Ok(Some(s.val)),
         None => {}
     }
@@ -210,7 +210,7 @@ fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
 /// * https_proxy env var
 /// * HTTPS_PROXY env var
 pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
-    if try!(http_proxy(config)).is_some() {
+    if http_proxy(config)?.is_some() {
         Ok(true)
     } else {
         Ok(["http_proxy", "HTTP_PROXY",
@@ -219,7 +219,7 @@ pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
 }
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
-    match try!(config.get_i64("http.timeout")) {
+    match config.get_i64("http.timeout")? {
         Some(s) => return Ok(Some(s.val)),
         None => {}
     }
@@ -227,7 +227,7 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
-    let RegistryConfig { index, token: _ } = try!(registry_configuration(config));
+    let RegistryConfig { index, token: _ } = registry_configuration(config)?;
     let mut map = HashMap::new();
     let p = config.cwd().to_path_buf();
     match index {
@@ -255,8 +255,8 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let name = match opts.krate {
         Some(ref name) => name.clone(),
         None => {
-            let manifest_path = try!(find_root_manifest_for_wd(None, config.cwd()));
-            let pkg = try!(Package::for_path(&manifest_path, config));
+            let manifest_path = find_root_manifest_for_wd(None, config.cwd())?;
+            let pkg = Package::for_path(&manifest_path, config)?;
             pkg.name().to_string()
         }
     };
@@ -315,8 +315,8 @@ pub fn yank(config: &Config,
     let name = match krate {
         Some(name) => name,
         None => {
-            let manifest_path = try!(find_root_manifest_for_wd(None, config.cwd()));
-            let pkg = try!(Package::for_path(&manifest_path, config));
+            let manifest_path = find_root_manifest_for_wd(None, config.cwd())?;
+            let pkg = Package::for_path(&manifest_path, config)?;
             pkg.name().to_string()
         }
     };
@@ -325,15 +325,15 @@ pub fn yank(config: &Config,
         None => bail!("a version must be specified to yank")
     };
 
-    let (mut registry, _) = try!(registry(config, token, index));
+    let (mut registry, _) = registry(config, token, index)?;
 
     if undo {
-        try!(config.shell().status("Unyank", format!("{}:{}", name, version)));
+        config.shell().status("Unyank", format!("{}:{}", name, version))?;
         try!(registry.unyank(&name, &version).map_err(|e| {
             human(format!("failed to undo a yank: {}", e))
         }));
     } else {
-        try!(config.shell().status("Yank", format!("{}:{}", name, version)));
+        config.shell().status("Yank", format!("{}:{}", name, version))?;
         try!(registry.yank(&name, &version).map_err(|e| {
             human(format!("failed to yank: {}", e))
         }));
@@ -354,7 +354,7 @@ pub fn search(query: &str,
         }
     }
 
-    let (mut registry, _) = try!(registry(config, None, index));
+    let (mut registry, _) = registry(config, None, index)?;
     let (crates, total_crates) = try!(registry.search(query, limit).map_err(|e| {
         human(format!("failed to retrieve search results from the registry: {}", e))
     }));
@@ -380,7 +380,7 @@ pub fn search(query: &str,
             }
             None => name
         };
-        try!(config.shell().say(line, BLACK));
+        config.shell().say(line, BLACK)?;
     }
 
     let search_max_limit = 100;

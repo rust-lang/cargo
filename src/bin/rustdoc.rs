@@ -91,7 +91,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    try!(ops::doc(&root, &doc_opts));
+    ops::doc(&root, &doc_opts)?;
 
     Ok(None)
 }

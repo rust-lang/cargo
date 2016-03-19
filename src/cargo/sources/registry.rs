@@ -251,7 +251,7 @@ impl<'cfg> RegistrySource<'cfg> {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a .cargo/config
     pub fn url(config: &Config) -> CargoResult<Url> {
-        let config = try!(ops::registry_configuration(config));
+        let config = ops::registry_configuration(config)?;
         let url = config.index.unwrap_or(DEFAULT.to_string());
         url.to_url().map_err(human)
     }
@@ -269,8 +269,8 @@ impl<'cfg> RegistrySource<'cfg> {
                                                    self.config,
                                                    "the registry index"));
         let path = lock.path().parent().unwrap();
-        let contents = try!(paths::read(&path.join("config.json")));
-        let config = try!(json::decode(&contents));
+        let contents = paths::read(&path.join("config.json"))?;
+        let config = json::decode(&contents)?;
         Ok(config)
     }
 
@@ -285,23 +285,23 @@ impl<'cfg> RegistrySource<'cfg> {
                         -> CargoResult<FileLock> {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let path = Path::new(&filename);
-        let mut dst = try!(self.cache_path.open_rw(path, self.config, &filename));
-        let meta = try!(dst.file().metadata());
+        let mut dst = self.cache_path.open_rw(path, self.config, &filename)?;
+        let meta = dst.file().metadata()?;
         if meta.len() > 0 {
             return Ok(dst)
         }
-        try!(self.config.shell().status("Downloading", pkg));
+        self.config.shell().status("Downloading", pkg)?;
 
-        let expected_hash = try!(self.hash(pkg));
+        let expected_hash = self.hash(pkg)?;
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
-                self.handle = Some(try!(ops::http_handle(self.config)));
+                self.handle = Some(ops::http_handle(self.config)?);
                 self.handle.as_mut().unwrap()
             }
         };
         // TODO: don't download into memory (curl-rust doesn't expose it)
-        let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
+        let resp = handle.get(url.to_string()).follow_redirects(true).exec()?;
         if resp.get_code() != 200 && resp.get_code() != 0 {
             return Err(internal(format!("failed to get 200 response from {}\n{}",
                                         url, resp)))
@@ -317,8 +317,8 @@ impl<'cfg> RegistrySource<'cfg> {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
-        try!(dst.write_all(resp.get_body()));
-        try!(dst.seek(SeekFrom::Start(0)));
+        dst.write_all(resp.get_body())?;
+        dst.seek(SeekFrom::Start(0))?;
         Ok(dst)
     }
 
@@ -329,7 +329,7 @@ impl<'cfg> RegistrySource<'cfg> {
             return Ok(s.clone())
         }
         // Ok, we're missing the key, so parse the index file to load it.
-        try!(self.summaries(pkg.name()));
+        self.summaries(pkg.name())?;
         self.hashes.get(&key).chain_error(|| {
             internal(format!("no hash listed for {}", pkg))
         }).map(|s| s.clone())
@@ -345,7 +345,7 @@ impl<'cfg> RegistrySource<'cfg> {
                       -> CargoResult<PathBuf> {
         let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
                                               pkg.version()));
-        try!(dst.create_dir());
+        dst.create_dir()?;
         // Note that we've already got the `tarball` locked above, and that
         // implies a lock on the unpacked destination as well, so this access
         // via `into_path_unlocked` should be ok.
@@ -355,10 +355,10 @@ impl<'cfg> RegistrySource<'cfg> {
             return Ok(dst)
         }
 
-        let gz = try!(GzDecoder::new(tarball.file()));
+        let gz = GzDecoder::new(tarball.file())?;
         let mut tar = Archive::new(gz);
-        try!(tar.unpack(dst.parent().unwrap()));
-        try!(File::create(&ok));
+        tar.unpack(dst.parent().unwrap())?;
+        File::create(&ok)?;
         Ok(dst)
     }
 
@@ -390,7 +390,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let summaries = match file {
             Ok(mut f) => {
                 let mut contents = String::new();
-                try!(f.read_to_string(&mut contents));
+                f.read_to_string(&mut contents)?;
                 let ret: CargoResult<Vec<(Summary, bool)>>;
                 ret = contents.lines().filter(|l| l.trim().len() > 0)
                               .map(|l| self.parse_registry_package(l))
@@ -417,14 +417,14 @@ impl<'cfg> RegistrySource<'cfg> {
                               -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
             name, vers, cksum, deps, features, yanked
-        } = try!(json::decode::<RegistryPackage>(line));
-        let pkgid = try!(PackageId::new(&name, &vers, &self.source_id));
+        } = json::decode::<RegistryPackage>(line)?;
+        let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
         let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
             self.parse_registry_dependency(dep)
         }).collect();
-        let deps = try!(deps);
+        let deps = deps?;
         self.hashes.insert((name, vers), cksum);
-        Ok((try!(Summary::new(pkgid, deps, features)), yanked.unwrap_or(false)))
+        Ok((Summary::new(pkgid, deps, features)?, yanked.unwrap_or(false)))
     }
 
     /// Converts an encoded dependency in the registry to a cargo dependency
@@ -443,7 +443,7 @@ impl<'cfg> RegistrySource<'cfg> {
         };
 
         let platform = match target {
-            Some(target) => Some(try!(target.parse())),
+            Some(target) => Some(target.parse()?),
             None => None,
         };
 
@@ -467,7 +467,7 @@ impl<'cfg> RegistrySource<'cfg> {
         if self.updated {
             return Ok(())
         }
-        try!(self.checkout_path.create_dir());
+        self.checkout_path.create_dir()?;
         let lock = try!(self.checkout_path.open_rw(Path::new(INDEX_LOCK),
                                                    self.config,
                                                    "the registry index"));
@@ -489,10 +489,10 @@ impl<'cfg> RegistrySource<'cfg> {
 
         // git reset --hard origin/master
         let reference = "refs/remotes/origin/master";
-        let oid = try!(repo.refname_to_id(reference));
+        let oid = repo.refname_to_id(reference)?;
         trace!("[{}] updating to rev {}", self.source_id, oid);
-        let object = try!(repo.find_object(oid, None));
-        try!(repo.reset(&object, git2::ResetType::Hard, None));
+        let object = repo.find_object(oid, None)?;
+        repo.reset(&object, git2::ResetType::Hard, None)?;
         self.updated = true;
         self.cache.clear();
         Ok(())
@@ -506,16 +506,16 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() {
-            let mut summaries = try!(self.summaries(dep.name())).iter().map(|s| {
+            let mut summaries = self.summaries(dep.name())?.iter().map(|s| {
                 s.0.clone()
             }).collect::<Vec<_>>();
-            if try!(summaries.query(dep)).is_empty() {
-                try!(self.do_update());
+            if summaries.query(dep)?.is_empty() {
+                self.do_update()?;
             }
         }
 
         let mut summaries = {
-            let summaries = try!(self.summaries(dep.name()));
+            let summaries = self.summaries(dep.name())?;
             summaries.iter().filter(|&&(_, yanked)| {
                 dep.source_id().precise().is_some() || !yanked
             }).map(|s| s.0.clone()).collect::<Vec<_>>()
@@ -549,14 +549,14 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // `Some("locked")` as other `Some` values indicate a `cargo update
         // --precise` request
         if self.source_id.precise() != Some("locked") {
-            try!(self.do_update());
+            self.do_update()?;
         }
         Ok(())
     }
 
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
-        let config = try!(self.config());
-        let url = try!(config.dl.to_url().map_err(internal));
+        let config = self.config()?;
+        let url = config.dl.to_url().map_err(internal)?;
         let mut url = url.clone();
         url.path_mut().unwrap().push(package.name().to_string());
         url.path_mut().unwrap().push(package.version().to_string());
@@ -570,7 +570,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         }));
 
         let mut src = PathSource::new(&path, &self.source_id, self.config);
-        try!(src.update());
+        src.update()?;
         src.download(package)
     }
 
