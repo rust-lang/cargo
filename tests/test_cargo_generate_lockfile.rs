@@ -1,8 +1,8 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs};
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, is_not};
 
 fn setup() {}
 
@@ -170,4 +170,27 @@ test!(preserve_line_endings_issue_2076 {
 
     assert!(lock2.starts_with("[root]\r\n"));
     assert_eq!(lock1, lock2);
+});
+
+test!(cargo_update_generate_lockfile {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    let lockfile = p.root().join("Cargo.lock");
+    assert_that(&lockfile, is_not(existing_file()));
+    assert_that(p.cargo_process("update"), execs().with_status(0).with_stdout(""));
+    assert_that(&lockfile, existing_file());
+
+    fs::remove_file(p.root().join("Cargo.lock")).unwrap();
+
+    assert_that(&lockfile, is_not(existing_file()));
+    assert_that(p.cargo("update"), execs().with_status(0).with_stdout(""));
+    assert_that(&lockfile, existing_file());
+
 });
