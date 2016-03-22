@@ -89,6 +89,12 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
 }
 
 fn check_name(name: &str) -> CargoResult<()> {
+    if name == "test" {
+        bail!("The name `{}` cannot be used as a crate name\n\
+               use --name to override crate name",
+               name)
+    }
+
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
