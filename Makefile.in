@@ -1,6 +1,9 @@
 CFG_RELEASE_NUM=0.10.0
 CFG_RELEASE_LABEL=
 
+OPENSSL_VERS=1.0.2g
+OPENSSL_SHA256=b784b1b3907ce39abf4098702dade6365522a253ad1552e267a9a0e89594aa33
+
 include config.mk
 
 ifneq ($(CFG_LOCAL_RUST_ROOT),)
@@ -46,6 +49,12 @@ else
 VERBOSE_FLAG=
 endif
 
+ifdef CFG_CUSTOM_BUILD_DIR
+export CARGO_TARGET_DIR := $(CFG_CUSTOM_BUILD_DIR)
+endif
+
+S := $(CFG_SRC_DIR)/
+
 export CFG_VERSION
 export CFG_DISABLE_CROSS_TESTS
 
@@ -81,10 +90,12 @@ endif
 all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
 define CARGO_TARGET
-cargo-$(1): $$(CARGO)
+cargo-$(1): $$(CARGO) target/openssl/$(1).stamp
 	$$(CFG_RUSTC) -V
 	$$(CARGO) --version
-	$$(CARGO) build --target $(1) $$(OPT_FLAG) $$(VERBOSE_FLAG) $$(ARGS)
+	$$(CARGO) build --target $(1) \
+		--manifest-path $(S)Cargo.toml \
+		$$(OPT_FLAG) $$(VERBOSE_FLAG) $$(ARGS)
 
 test-unit-$(1): $$(CARGO)
 	@mkdir -p target/$(1)/cit
@@ -92,8 +103,8 @@ test-unit-$(1): $$(CARGO)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
-$(TARGET_ROOT)/snapshot/bin/cargo$(X): src/snapshots.txt
-	$(CFG_PYTHON) src/etc/dl-snapshot.py $(CFG_BUILD)
+$(TARGET_ROOT)/snapshot/bin/cargo$(X): $(S)src/snapshots.txt
+	$(CFG_PYTHON) $(S)src/etc/dl-snapshot.py $(CFG_BUILD)
 	touch $@
 
 
@@ -155,6 +166,76 @@ $(DOC_DIR)/%: src/doc/%
 	@mkdir -p $(@D)
 	cp $< $@
 
+ifdef CFG_ENABLE_NIGHTLY
+
+OPENSSL_OS_x86_64-unknown-linux-gnu := linux-x86_64
+OPENSSL_OS_x86_64-unknown-linux-musl := linux-x86_64
+OPENSSL_OS_i686-unknown-linux-gnu := linux-x32
+OPENSSL_OS_arm-unknown-linux-gnueabi := linux-armv4
+OPENSSL_OS_arm-unknown-linux-gnueabihf := linux-armv4
+OPENSSL_OS_armv7-unknown-linux-gnueabihf := linux-armv4
+OPENSSL_OS_x86_64-unknown-freebsd := BSD-x86_64
+OPENSSL_OS_x86_64-unknown-netbsd := BSD-x86_64
+
+OPENSSL_CC_x86_64-unknown-linux-gnu := gcc
+OPENSSL_CC_x86_64-unknown-linux-musl := musl-gcc
+OPENSSL_CC_i686-unknown-linux-gnu := gcc
+OPENSSL_CC_arm-unknown-linux-gnueabi := arm-linux-gnueabi-gcc
+OPENSSL_CC_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-gcc
+OPENSSL_CC_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-gcc
+OPENSSL_CC_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-gcc
+OPENSSL_CC_x86_64-unknown-netbsd := x86_64-unknown-netbsd-gcc
+OPENSSL_AR_x86_64-unknown-linux-gnu := ar
+OPENSSL_AR_x86_64-unknown-linux-musl := ar
+OPENSSL_AR_i686-unknown-linux-gnu := ar
+OPENSSL_AR_arm-unknown-linux-gnueabi := arm-linux-gnueabi-ar
+OPENSSL_AR_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-ar
+OPENSSL_AR_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-ar
+OPENSSL_AR_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-ar
+OPENSSL_AR_x86_64-unknown-netbsd := x86_64-unknown-netbsd-ar
+
+define BUILD_OPENSSL
+OPENSSL_INSTALL_$(1) := $$(CFG_BUILD_DIR)/target/openssl/$(1)-install
+
+target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
+		| target/openssl/
+	mkdir -p target/openssl/$(1)
+	tar xf $$< -C target/openssl/$(1) --strip-components 1
+	(cd target/openssl/$(1) && \
+	 CC=$$(OPENSSL_CC_$(1)) \
+	 AR=$$(OPENSSL_AR_$(1)) \
+	 ./Configure --prefix=$$(OPENSSL_INSTALL_$(1)) \
+	   no-dso $$(OPENSSL_OS_$(1)) -fPIC && \
+	 $(MAKE) -j10 && \
+	 $(MAKE) install)
+	touch $$@
+
+# variables read by various build scripts to find openssl
+cargo-$(1): export OPENSSL_STATIC := 1
+cargo-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
+cargo-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
+cargo-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
+
+# build libz statically into the cargo we're producing
+cargo-$(1): export LIBZ_SYS_STATIC := 1
+endef
+
+$(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
+
+target/openssl/openssl-$(OPENSSL_VERS).tar.gz: | target/openssl/
+	curl -o $(@) https://openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
+	sha256sum $(@) > $(@).sha256
+	test $(OPENSSL_SHA256) = `cut -d ' ' -f 1 $(@).sha256`
+
+target/openssl/:
+	mkdir -p $(@)
+else
+define BUILD_OPENSSL
+target/openssl/$(1).stamp:
+endef
+$(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
+endif
+
 # === Distribution
 
 define DO_DIST_TARGET
@@ -186,21 +267,23 @@ prepare-image-$(1):
 		$$(IMGDIR_$(1))/share/zsh/site-functions \
 		$$(IMGDIR_$(1))/etc/bash_completion.d
 	cp $$(TARGET_$(1))/cargo$$(X) $$(IMGDIR_$(1))/bin
-	cp src/etc/cargo.1 $$(IMGDIR_$(1))/share/man/man1
-	cp src/etc/_cargo $$(IMGDIR_$(1))/share/zsh/site-functions/_cargo
-	cp src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))/etc/bash_completion.d/cargo
-	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
+	cp $(S)src/etc/cargo.1 $$(IMGDIR_$(1))/share/man/man1
+	cp $(S)src/etc/_cargo $$(IMGDIR_$(1))/share/zsh/site-functions/_cargo
+	cp $(S)src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))/etc/bash_completion.d/cargo
+	cp $(S)README.md $(S)LICENSE-MIT $(S)LICENSE-APACHE \
+		$(S)LICENSE-THIRD-PARTY \
 		$$(IMGDIR_$(1))/share/doc/cargo
 
 prepare-overlay-$(1):
 	rm -Rf $$(OVERLAYDIR_$(1))
 	mkdir -p $$(OVERLAYDIR_$(1))
-	cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-THIRD-PARTY \
+	cp $(S)README.md $(S)LICENSE-MIT $(S)LICENSE-APACHE \
+		$(S)LICENSE-THIRD-PARTY \
 		$$(OVERLAYDIR_$(1))
 	echo "$(CFG_VERSION)" > $$(OVERLAYDIR_$(1))/version
 
 $$(DISTDIR_$(1))/$$(PKG_NAME)-$(1).tar.gz: prepare-image-$(1) prepare-overlay-$(1)
-	sh src/rust-installer/gen-installer.sh \
+	sh $(S)src/rust-installer/gen-installer.sh \
 		--product-name=Rust \
 		--rel-manifest-dir=rustlib \
 		--success-message=Rust-is-ready-to-roll. \
