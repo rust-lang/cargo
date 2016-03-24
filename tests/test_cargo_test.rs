@@ -1651,6 +1651,45 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 ", compiling = COMPILING, running = RUNNING, doctest = DOCTEST)))
 });
 
+test!(test_gets_env_features {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            [features]
+            bar = []
+        "#)
+        .file("src/lib.rs", r#"
+            #[test]
+            fn assert_features() {
+                use std::env;
+                assert_eq!(env::var("CARGO_FEATURE_BAR").unwrap(), "1");
+            }
+        "#)
+        .file("tests/test.rs", r#"
+            #[test]
+            fn assert_features() {
+                use std::env;
+                assert_eq!(env::var("CARGO_FEATURE_BAR").unwrap(), "1");
+            }
+        "#);
+
+    assert_that(p.cargo_process("test").arg("--features").arg("bar")
+                                       .arg("--test").arg("test"),
+                execs().with_status(0).with_stdout(format!("\
+{compiling} foo [..]
+{running} target[..]test-[..]
+
+running 1 test
+test assert_features ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING)))
+});
+
 test!(dashes_to_underscores {
     let p = project("foo")
         .file("Cargo.toml", r#"

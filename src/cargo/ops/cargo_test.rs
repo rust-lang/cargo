@@ -89,6 +89,11 @@ fn run_unit_tests(options: &TestOptions,
         };
         let mut cmd = try!(compilation.target_process(exe, pkg));
         cmd.args(test_args);
+
+        for feat in options.compile_opts.features.iter() {
+            cmd.env(&format!("CARGO_FEATURE_{}", ops::envify(feat)), "1");
+        }
+
         try!(config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         }));

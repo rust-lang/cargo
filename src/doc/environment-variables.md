@@ -84,6 +84,25 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `DEP_<name>_<key>` - For more information about this set of environment
                        variables, see build script documentation about [`links`][links].
 
+# Environment variables Cargo sets for tests
+
+Cargo sets several environment variables when tests are
+run. Because these variables are set at the run time of the test,
+the above example using `env!` won't work and instead you'll need
+to retrieve the values when the build script is run:
+
+```
+use std::env;
+let foo = env::var("CARGO_FEATURE_FOO").unwrap();
+```
+
+`foo` will now contain the value of `1` if the feature is active.
+
+* `CARGO_FEATURE_<name>` - For each activated feature of the package being
+                           built, this environment variable will be present
+                           where `<name>` is the name of the feature uppercased
+                           and having `-` translated to `_`.
+
 [links]: build-script.html#the-links-manifest-key
 [profile]: manifest.html#the-profile-sections
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
