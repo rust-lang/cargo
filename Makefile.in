@@ -166,11 +166,9 @@ $(DOC_DIR)/%: src/doc/%
 	@mkdir -p $(@D)
 	cp $< $@
 
-ifdef CFG_ENABLE_NIGHTLY
-
 OPENSSL_OS_x86_64-unknown-linux-gnu := linux-x86_64
 OPENSSL_OS_x86_64-unknown-linux-musl := linux-x86_64
-OPENSSL_OS_i686-unknown-linux-gnu := linux-x32
+OPENSSL_OS_i686-unknown-linux-gnu := linux-elf
 OPENSSL_OS_arm-unknown-linux-gnueabi := linux-armv4
 OPENSSL_OS_arm-unknown-linux-gnueabihf := linux-armv4
 OPENSSL_OS_armv7-unknown-linux-gnueabihf := linux-armv4
@@ -194,7 +192,12 @@ OPENSSL_AR_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-ar
 OPENSSL_AR_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-ar
 OPENSSL_AR_x86_64-unknown-netbsd := x86_64-unknown-netbsd-ar
 
+SETARCH_i686-unknown-linux-gnu := setarch i386
+OPENSSL_CFLAGS_i686-unknown-linux-gnu := -m32
+
 define BUILD_OPENSSL
+ifdef OPENSSL_OS_$(1)
+ifdef CFG_ENABLE_NIGHTLY
 OPENSSL_INSTALL_$(1) := $$(CFG_BUILD_DIR)/target/openssl/$(1)-install
 
 target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
@@ -204,8 +207,8 @@ target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 	(cd target/openssl/$(1) && \
 	 CC=$$(OPENSSL_CC_$(1)) \
 	 AR=$$(OPENSSL_AR_$(1)) \
-	 ./Configure --prefix=$$(OPENSSL_INSTALL_$(1)) \
-	   no-dso $$(OPENSSL_OS_$(1)) -fPIC && \
+	 $$(SETARCH_$(1)) ./Configure --prefix=$$(OPENSSL_INSTALL_$(1)) \
+	   no-dso $$(OPENSSL_OS_$(1)) -fPIC $$(OPENSSL_CFLAGS_$(1))&& \
 	 $(MAKE) -j10 && \
 	 $(MAKE) install)
 	touch $$@
@@ -215,9 +218,19 @@ cargo-$(1): export OPENSSL_STATIC := 1
 cargo-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
 cargo-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
 cargo-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
+test-unit-$(1): export OPENSSL_STATIC := 1
+test-unit-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
+test-unit-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
+test-unit-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
 
 # build libz statically into the cargo we're producing
 cargo-$(1): export LIBZ_SYS_STATIC := 1
+else
+target/openssl/$(1).stamp:
+endif
+else
+target/openssl/$(1).stamp:
+endif
 endef
 
 $(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
@@ -229,12 +242,6 @@ target/openssl/openssl-$(OPENSSL_VERS).tar.gz: | target/openssl/
 
 target/openssl/:
 	mkdir -p $(@)
-else
-define BUILD_OPENSSL
-target/openssl/$(1).stamp:
-endef
-$(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
-endif
 
 # === Distribution
 
