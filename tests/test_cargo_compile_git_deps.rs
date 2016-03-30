@@ -1749,3 +1749,49 @@ test!(denied_lints_are_allowed {
 {compiling} foo v0.0.1 ([..])
 ", compiling = COMPILING, updating = UPDATING)));
 });
+
+test!(add_a_git_dep {
+    let git = git::new("git", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "git"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+    }).unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = {{ path = 'a' }}
+            git = {{ git = '{}' }}
+        "#, git.url()))
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+
+    File::create(p.root().join("a/Cargo.toml")).unwrap().write_all(format!(r#"
+        [package]
+        name = "a"
+        version = "0.0.1"
+        authors = []
+
+        [dependencies]
+        git = {{ git = '{}' }}
+    "#, git.url()).as_bytes()).unwrap();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+});
