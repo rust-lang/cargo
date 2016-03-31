@@ -39,8 +39,7 @@ pub fn update_lockfile(manifest_path: &Path,
     let previous_resolve = match try!(ops::load_pkg_lockfile(&package, opts.config)) {
     	Some(resolve) => resolve,
 	None => {
-	     let _ = generate_lockfile(manifest_path, opts.config);
-	     return Ok(());
+	     return generate_lockfile(manifest_path, opts.config);
 	}
     };
     let mut registry = PackageRegistry::new(opts.config);
