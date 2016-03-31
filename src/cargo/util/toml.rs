@@ -540,6 +540,18 @@ impl TomlManifest {
             }
         }
 
+        {
+            let mut names_sources = HashMap::new();
+            for dep in deps.iter() {
+                let name = dep.name();
+                let prev = names_sources.insert(name, dep.source_id());
+                if prev.is_some() && prev != Some(dep.source_id()) {
+                    bail!("found duplicate dependency name {}, but all \
+                           dependencies must have a unique name", name);
+                }
+            }
+        }
+
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 

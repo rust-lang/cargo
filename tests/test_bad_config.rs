@@ -383,6 +383,50 @@ Caused by:
     error = ERROR)));
 });
 
+test!(duplicate_deps {
+    let foo = project("foo")
+    .file("shim-bar/Cargo.toml", r#"
+       [package]
+       name = "bar"
+       version = "0.0.1"
+       authors = []
+    "#)
+    .file("shim-bar/src/lib.rs", r#"
+            pub fn a() {}
+    "#)
+    .file("linux-bar/Cargo.toml", r#"
+       [package]
+       name = "bar"
+       version = "0.0.1"
+       authors = []
+    "#)
+    .file("linux-bar/src/lib.rs", r#"
+            pub fn a() {}
+    "#)
+    .file("Cargo.toml", r#"
+       [package]
+       name = "qqq"
+       version = "0.0.1"
+       authors = []
+
+       [dependencies]
+       bar = { path = "shim-bar" }
+
+       [target.x86_64-unknown-linux-gnu.dependencies]
+       bar = { path = "linux-bar" }
+    "#)
+    .file("src/main.rs", r#"fn main () {}"#);
+
+    assert_that(foo.cargo_process("build"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} failed to parse manifest at `[..]`
+
+Caused by:
+  found duplicate dependency name bar, but all dependencies must have a unique name
+",
+    error = ERROR)));
+});
+
 test!(unused_keys {
     let foo = project("foo")
         .file("Cargo.toml", r#"
