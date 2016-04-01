@@ -29,18 +29,19 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
 
 pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
-    let package = try!(Package::for_path(manifest_path, opts.config));
-
-    let previous_resolve = match try!(ops::load_pkg_lockfile(&package,
-                                                             opts.config)) {
-        Some(resolve) => resolve,
-        None => bail!("a Cargo.lock must exist before it is updated")
-    };
 
     if opts.aggressive && opts.precise.is_some() {
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
+    let package = try!(Package::for_path(manifest_path, opts.config));
+
+    let previous_resolve = match try!(ops::load_pkg_lockfile(&package, opts.config)) {
+    	Some(resolve) => resolve,
+	None => {
+	     return generate_lockfile(manifest_path, opts.config);
+	}
+    };
     let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
 
