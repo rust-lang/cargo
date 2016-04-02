@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::env;
-use std::fs;
+use std::fs::{self, File};
 use std::io::prelude::*;
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
@@ -51,7 +51,7 @@ pub fn publish(manifest_path: &Path,
 
     // Upload said tarball to the specified destination
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
-    try!(transmit(&pkg, &tarball, &mut registry));
+    try!(transmit(&pkg, tarball.file(), &mut registry));
 
     Ok(())
 }
@@ -74,7 +74,7 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
     Ok(())
 }
 
-fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
+fn transmit(pkg: &Package, tarball: &File, registry: &mut Registry)
             -> CargoResult<()> {
     let deps = pkg.dependencies().iter().map(|dep| {
         NewCrateDependency {

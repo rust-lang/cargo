@@ -82,9 +82,9 @@ pub fn install(root: Option<&str>,
     let target_dir = if source_id.is_path() {
         config.target_dir(&pkg)
     } else {
-        config.cwd().join("target-install")
+        Filesystem::new(config.cwd().join("target-install"))
     };
-    config.set_target_dir(&target_dir);
+    config.set_target_dir(target_dir.clone());
     let compile = try!(ops::compile_pkg(&pkg, Some(source), opts).chain_error(|| {
         human(format!("failed to compile `{}`, intermediate artifacts can be \
                        found at `{}`", pkg, target_dir.display()))
@@ -108,6 +108,9 @@ pub fn install(root: Option<&str>,
     }
 
     if !source_id.is_path() {
+        // Don't bother grabbing a lock as we're going to blow it all away
+        // anyway.
+        let target_dir = target_dir.into_path_unlocked();
         try!(fs::remove_dir_all(&target_dir));
     }
 
