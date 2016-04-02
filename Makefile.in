@@ -172,6 +172,7 @@ OPENSSL_OS_i686-unknown-linux-gnu := linux-elf
 OPENSSL_OS_arm-unknown-linux-gnueabi := linux-armv4
 OPENSSL_OS_arm-unknown-linux-gnueabihf := linux-armv4
 OPENSSL_OS_armv7-unknown-linux-gnueabihf := linux-armv4
+OPENSSL_OS_aarch64-unknown-linux-gnu := linux-aarch64
 OPENSSL_OS_x86_64-unknown-freebsd := BSD-x86_64
 OPENSSL_OS_x86_64-unknown-netbsd := BSD-x86_64
 
@@ -181,6 +182,7 @@ OPENSSL_CC_i686-unknown-linux-gnu := gcc
 OPENSSL_CC_arm-unknown-linux-gnueabi := arm-linux-gnueabi-gcc
 OPENSSL_CC_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-gcc
 OPENSSL_CC_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-gcc
+OPENSSL_CC_aarch64-unknown-linux-gnu := aarch64-linux-gnu-gcc
 OPENSSL_CC_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-gcc
 OPENSSL_CC_x86_64-unknown-netbsd := x86_64-unknown-netbsd-gcc
 OPENSSL_AR_x86_64-unknown-linux-gnu := ar
@@ -189,6 +191,7 @@ OPENSSL_AR_i686-unknown-linux-gnu := ar
 OPENSSL_AR_arm-unknown-linux-gnueabi := arm-linux-gnueabi-ar
 OPENSSL_AR_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-ar
 OPENSSL_AR_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-ar
+OPENSSL_AR_aarch64-unknown-linux-gnu := aarch64-linux-gnu-ar
 OPENSSL_AR_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-ar
 OPENSSL_AR_x86_64-unknown-netbsd := x86_64-unknown-netbsd-ar
 
