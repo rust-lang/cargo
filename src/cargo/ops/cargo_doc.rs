@@ -50,8 +50,12 @@ pub fn doc(manifest_path: &Path,
             }
         };
 
+        // Don't bother locking here as if this is getting deleted there's
+        // nothing we can do about it and otherwise if it's getting overwritten
+        // then that's also ok!
         let target_dir = options.compile_opts.config.target_dir(&package);
         let path = target_dir.join("doc").join(&name).join("index.html");
+        let path = path.into_path_unlocked();
         if fs::metadata(&path).is_ok() {
             let mut shell = options.compile_opts.config.shell();
             match open_docs(&path) {
