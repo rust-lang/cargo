@@ -158,21 +158,16 @@ impl<'cfg> PackageRegistry<'cfg> {
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
-            let mut source = source_id.load(self.config);
-
-            // Ensure the source has fetched all necessary remote data.
-            let p = profile::start(format!("updating: {}", source_id));
-            try!(source.update());
-            drop(p);
-
+            // Save off the source
+            let source = source_id.load(self.config);
             if kind == Kind::Override {
                 self.overrides.push(source_id.clone());
             }
-
-            // Save off the source
             self.add_source(source_id, source, kind);
 
-            Ok(())
+            // Ensure the source has fetched all necessary remote data.
+            let _p = profile::start(format!("updating: {}", source_id));
+            self.sources.get_mut(source_id).unwrap().update()
         }).chain_error(|| human(format!("Unable to update {}", source_id)))
     }
 
