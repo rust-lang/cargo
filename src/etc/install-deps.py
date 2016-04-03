@@ -26,6 +26,7 @@ if sys.platform == 'linux' or sys.platform == 'linux2':
         'arm-unknown-linux-gnueabi',
         'arm-unknown-linux-gnueabihf',
         'armv7-unknown-linux-gnueabihf',
+        'aarch64-unknown-linux-gnu',
         'x86_64-unknown-freebsd',
         'x86_64-unknown-netbsd',
     ]
