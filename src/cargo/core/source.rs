@@ -2,7 +2,6 @@ use std::cmp::{self, Ordering};
 use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::fmt::{self, Formatter};
 use std::hash;
-use std::mem;
 use std::path::Path;
 use std::sync::Arc;
 use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
@@ -113,8 +112,9 @@ impl SourceId {
                         _ => {}
                     }
                 }
-                url.query = None;
-                let precise = mem::replace(&mut url.fragment, None);
+                let precise = url.fragment().map(|s| s.to_owned());
+                url.set_fragment(None);
+                url.set_query(None);
                 SourceId::for_git(&url, reference).with_precise(precise)
             }
             "registry" => {
