@@ -62,6 +62,7 @@ test!(adding_and_removing_packages {
     assert!(lock2 != lock3);
 
     // remove the dep
+    println!("lock4");
     File::create(&toml).unwrap().write_all(br#"
         [package]
         name = "foo"
