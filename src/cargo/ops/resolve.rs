@@ -20,7 +20,7 @@ pub fn resolve_pkg(registry: &mut PackageRegistry,
                                              Method::Everything,
                                              prev.as_ref(), None));
     if package.package_id().source_id().is_path() {
-        try!(ops::write_pkg_lockfile(package, &resolve));
+        try!(ops::write_pkg_lockfile(package, &resolve, config));
     }
     Ok(resolve)
 }
