@@ -50,7 +50,7 @@ use std::io;
 use std::path::{PathBuf, Path};
 
 use core::{Package, Target};
-use util::Config;
+use util::{Config, FileLock, CargoResult, Filesystem};
 use util::hex::short_hash;
 
 pub struct Layout {
@@ -60,6 +60,7 @@ pub struct Layout {
     build: PathBuf,
     fingerprint: PathBuf,
     examples: PathBuf,
+    _lock: FileLock,
 }
 
 pub struct LayoutProxy<'a> {
@@ -68,8 +69,10 @@ pub struct LayoutProxy<'a> {
 }
 
 impl Layout {
-    pub fn new(config: &Config, pkg: &Package, triple: Option<&str>,
-               dest: &str) -> Layout {
+    pub fn new(config: &Config,
+               pkg: &Package,
+               triple: Option<&str>,
+               dest: &str) -> CargoResult<Layout> {
         let mut path = config.target_dir(pkg);
         // Flexible target specifications often point at filenames, so interpret
         // the target triple as a Path and then just use the file stem as the
@@ -78,18 +81,25 @@ impl Layout {
             path.push(Path::new(triple).file_stem().unwrap());
         }
         path.push(dest);
-        Layout::at(path)
+        Layout::at(config, path)
     }
 
-    pub fn at(root: PathBuf) -> Layout {
-        Layout {
+    pub fn at(config: &Config, root: Filesystem) -> CargoResult<Layout> {
+        // For now we don't do any more finer-grained locking on the artifact
+        // directory, so just lock the entire thing for the duration of this
+        // compile.
+        let lock = try!(root.open_rw(".cargo-lock", config, "build directory"));
+        let root = root.into_path_unlocked();
+
+        Ok(Layout {
             deps: root.join("deps"),
             native: root.join("native"),
             build: root.join("build"),
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
             root: root,
-        }
+            _lock: lock,
+        })
     }
 
     pub fn prepare(&mut self) -> io::Result<()> {

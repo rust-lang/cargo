@@ -1,7 +1,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::*;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, Display};
 
 use term::color::CYAN;
 use fs2::{FileExt, lock_contended_error};
@@ -102,7 +102,7 @@ impl Drop for FileLock {
 /// The `Path` of a filesystem cannot be learned unless it's done in a locked
 /// fashion, and otherwise functions on this structure are prepared to handle
 /// concurrent invocations across multiple instances of Cargo.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Filesystem {
     root: PathBuf,
 }
@@ -119,6 +119,11 @@ impl Filesystem {
         Filesystem::new(self.root.join(other))
     }
 
+    /// Like `Path::push`, pushes a new path component onto this filesystem.
+    pub fn push<T: AsRef<Path>>(&mut self, other: T) {
+        self.root.push(other);
+    }
+
     /// Consumes this filesystem and returns the underlying `PathBuf`.
     ///
     /// Note that this is a relatively dangerous operation and should be used
@@ -133,6 +138,12 @@ impl Filesystem {
     /// concurrently create this directory.
     pub fn create_dir(&self) -> io::Result<()> {
         return create_dir_all(&self.root);
+    }
+
+    /// Returns an adaptor that can be used to print the path of this
+    /// filesystem.
+    pub fn display(&self) -> Display {
+        self.root.display()
     }
 
     /// Opens exclusive access to a file, returning the locked version of a
