@@ -4,10 +4,9 @@ extern crate rustc_serialize;
 
 use std::collections::HashMap;
 use std::fmt;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, Cursor};
-use std::path::Path;
 use std::result;
 
 use curl::http;
@@ -143,7 +142,7 @@ impl Registry {
         Ok(try!(json::decode::<Users>(&body)).users)
     }
 
-    pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
+    pub fn publish(&mut self, krate: &NewCrate, tarball: &File) -> Result<()> {
         let json = try!(json::encode(krate));
         // Prepare the body. The format of the upload request is:
         //
@@ -151,7 +150,7 @@ impl Registry {
         //      <json request> (metadata for the package)
         //      <le u32 of tarball>
         //      <source tarball>
-        let stat = try!(fs::metadata(tarball).map_err(Error::Io));
+        let stat = try!(tarball.metadata().map_err(Error::Io));
         let header = {
             let mut w = Vec::new();
             w.extend([
@@ -169,7 +168,6 @@ impl Registry {
             ].iter().map(|x| *x));
             w
         };
-        let tarball = try!(File::open(tarball).map_err(Error::Io));
         let size = stat.len() as usize + header.len();
         let mut body = Cursor::new(header).chain(tarball);
 

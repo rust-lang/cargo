@@ -30,7 +30,7 @@ pub struct Config {
     cwd: PathBuf,
     rustc: PathBuf,
     rustdoc: PathBuf,
-    target_dir: RefCell<Option<PathBuf>>,
+    target_dir: RefCell<Option<Filesystem>>,
 }
 
 impl Config {
@@ -110,14 +110,14 @@ impl Config {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
-    pub fn target_dir(&self, pkg: &Package) -> PathBuf {
+    pub fn target_dir(&self, pkg: &Package) -> Filesystem {
         self.target_dir.borrow().clone().unwrap_or_else(|| {
-            pkg.root().join("target")
+            Filesystem::new(pkg.root().join("target"))
         })
     }
 
-    pub fn set_target_dir(&self, path: &Path) {
-        *self.target_dir.borrow_mut() = Some(path.to_owned());
+    pub fn set_target_dir(&self, path: Filesystem) {
+        *self.target_dir.borrow_mut() = Some(path);
     }
 
     fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
@@ -327,9 +327,9 @@ impl Config {
 
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
+            *self.target_dir.borrow_mut() = Some(Filesystem::new(self.cwd.join(dir)));
         } else if let Some(val) = try!(self.get_path("build.target-dir")) {
-            *self.target_dir.borrow_mut() = Some(val.val);
+            *self.target_dir.borrow_mut() = Some(Filesystem::new(val.val));
         }
         Ok(())
     }
