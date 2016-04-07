@@ -116,10 +116,8 @@ pub fn update_lockfile(manifest_path: &Path,
             return
         }
         set.insert(dep);
-        if let Some(deps) =  resolve.deps(dep) {
-            for dep in deps {
-                fill_with_deps(resolve, dep, set, visited);
-            }
+        for dep in resolve.deps(dep) {
+            fill_with_deps(resolve, dep, set, visited);
         }
     }
 

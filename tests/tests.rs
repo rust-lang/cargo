@@ -58,6 +58,7 @@ mod test_cargo_metadata;
 mod test_cargo_new;
 mod test_cargo_package;
 mod test_cargo_profiles;
+mod test_cargo_overrides;
 mod test_cargo_publish;
 mod test_cargo_read_manifest;
 mod test_cargo_registry;
