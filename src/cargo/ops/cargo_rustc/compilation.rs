@@ -109,12 +109,17 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
+	 let metadata = pkg.manifest().metadata();
+
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
            .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
            .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
            .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
            .env("CARGO_PKG_VERSION_PRE", &pre_version_component(pkg.version()))
            .env("CARGO_PKG_VERSION", &pkg.version().to_string())
+           .env("CARGO_PKG_NAME", &pkg.name())
+           .env("CARGO_PKG_DESCRIPTION", metadata.description.as_ref().unwrap_or(&String::new()))
+           .env("CARGO_PKG_HOMEPAGE", metadata.homepage.as_ref().unwrap_or(&String::new()))
            .cwd(pkg.root());
         Ok(cmd)
     }

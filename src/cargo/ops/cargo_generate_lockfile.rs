@@ -23,24 +23,25 @@ pub fn generate_lockfile(manifest_path: &Path, config: &Config)
     let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
                                                   Method::Everything,
                                                   None, None));
-    try!(ops::write_pkg_lockfile(&package, &resolve));
+    try!(ops::write_pkg_lockfile(&package, &resolve, config));
     Ok(())
 }
 
 pub fn update_lockfile(manifest_path: &Path,
                        opts: &UpdateOptions) -> CargoResult<()> {
-    let package = try!(Package::for_path(manifest_path, opts.config));
-
-    let previous_resolve = match try!(ops::load_pkg_lockfile(&package,
-                                                             opts.config)) {
-        Some(resolve) => resolve,
-        None => bail!("a Cargo.lock must exist before it is updated")
-    };
 
     if opts.aggressive && opts.precise.is_some() {
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
+    let package = try!(Package::for_path(manifest_path, opts.config));
+
+    let previous_resolve = match try!(ops::load_pkg_lockfile(&package, opts.config)) {
+    	Some(resolve) => resolve,
+	None => {
+	     return generate_lockfile(manifest_path, opts.config);
+	}
+    };
     let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
 
@@ -105,7 +106,7 @@ pub fn update_lockfile(manifest_path: &Path,
         }
     }
 
-    try!(ops::write_pkg_lockfile(&package, &resolve));
+    try!(ops::write_pkg_lockfile(&package, &resolve, opts.config));
     return Ok(());
 
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
@@ -115,10 +116,8 @@ pub fn update_lockfile(manifest_path: &Path,
             return
         }
         set.insert(dep);
-        if let Some(deps) =  resolve.deps(dep) {
-            for dep in deps {
-                fill_with_deps(resolve, dep, set, visited);
-            }
+        for dep in resolve.deps(dep) {
+            fill_with_deps(resolve, dep, set, visited);
         }
     }
 

@@ -58,6 +58,7 @@ mod test_cargo_metadata;
 mod test_cargo_new;
 mod test_cargo_package;
 mod test_cargo_profiles;
+mod test_cargo_overrides;
 mod test_cargo_publish;
 mod test_cargo_read_manifest;
 mod test_cargo_registry;
@@ -93,6 +94,7 @@ fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
     p.cwd(&support::paths::root())
      .env("HOME", &support::paths::home())
      .env_remove("CARGO_HOME")
+     .env_remove("RUSTC")
      .env_remove("XDG_CONFIG_HOME")      // see #2345
      .env("GIT_CONFIG_NOSYSTEM", "1")    // keep trying to sandbox ourselves
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'

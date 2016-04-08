@@ -1,4 +1,4 @@
-% Package ID Specifications - Cargo Documentation
+% Package ID Specifications
 
 # Package ID Specifications
 

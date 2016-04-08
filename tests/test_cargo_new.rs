@@ -95,6 +95,15 @@ use --name to override crate name",
 error = ERROR)));
 });
 
+test!(reserved_name {
+    assert_that(cargo_process("new").arg("test"),
+                execs().with_status(101)
+                       .with_stderr(&format!("\
+{error} The name `test` cannot be used as a crate name\n\
+use --name to override crate name",
+error = ERROR)));
+});
+
 test!(rust_prefix_stripped {
     assert_that(cargo_process("new").arg("rust-foo").env("USER", "foo"),
                 execs().with_status(0)

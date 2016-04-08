@@ -1,4 +1,4 @@
-% Frequently Asked Questions - Cargo Documentation
+% Frequently Asked Questions
 
 # Is the plan to use GitHub as a package repository?
 

@@ -1,45 +1,39 @@
-use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
 
 use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
 
 use core::{Resolve, resolver, Package};
-use util::{CargoResult, ChainError, human, paths, Config};
+use util::{CargoResult, ChainError, human, Config, Filesystem};
 use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(pkg: &Package, config: &Config)
                          -> CargoResult<Option<Resolve>> {
-    let lockfile = pkg.root().join("Cargo.lock");
-    load_lockfile(&lockfile, pkg, config).chain_error(|| {
-        human(format!("failed to parse lock file at: {}", lockfile.display()))
+    if !pkg.root().join("Cargo.lock").exists() {
+        return Ok(None)
+    }
+
+    let root = Filesystem::new(pkg.root().to_path_buf());
+    let mut f = try!(root.open_ro("Cargo.lock", config, "Cargo.lock file"));
+
+    let mut s = String::new();
+    try!(f.read_to_string(&mut s).chain_error(|| {
+        human(format!("failed to read file: {}", f.path().display()))
+    }));
+
+    (|| {
+        let table = toml::Value::Table(try!(cargo_toml::parse(&s, f.path())));
+        let mut d = toml::Decoder::new(table);
+        let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
+        Ok(Some(try!(v.to_resolve(pkg, config))))
+    }).chain_error(|| {
+        human(format!("failed to parse lock file at: {}", f.path().display()))
     })
 }
 
-pub fn load_lockfile(path: &Path, pkg: &Package, config: &Config)
-                     -> CargoResult<Option<Resolve>> {
-    // If there is no lockfile, return none.
-    let mut f = match File::open(path) {
-        Ok(f) => f,
-        Err(_) => return Ok(None)
-    };
-
-    let mut s = String::new();
-    try!(f.read_to_string(&mut s));
-
-    let table = toml::Value::Table(try!(cargo_toml::parse(&s, path)));
-    let mut d = toml::Decoder::new(table);
-    let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
-    Ok(Some(try!(v.to_resolve(pkg, config))))
-}
-
-pub fn write_pkg_lockfile(pkg: &Package, resolve: &Resolve) -> CargoResult<()> {
-    let loc = pkg.root().join("Cargo.lock");
-    write_lockfile(&loc, resolve)
-}
-
-pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
+pub fn write_pkg_lockfile(pkg: &Package,
+                          resolve: &Resolve,
+                          config: &Config) -> CargoResult<()> {
     let mut e = Encoder::new();
     resolve.encode(&mut e).unwrap();
 
@@ -69,20 +63,36 @@ pub fn write_lockfile(dst: &Path, resolve: &Resolve) -> CargoResult<()> {
         None => {}
     }
 
+    let root = Filesystem::new(pkg.root().to_path_buf());
+
     // Load the original lockfile if it exists.
-    if let Ok(orig) = paths::read(dst) {
+    //
+    // If the lockfile contents haven't changed so don't rewrite it. This is
+    // helpful on read-only filesystems.
+    let orig = root.open_ro("Cargo.lock", config, "Cargo.lock file");
+    let orig = orig.and_then(|mut f| {
+        let mut s = String::new();
+        try!(f.read_to_string(&mut s));
+        Ok(s)
+    });
+    if let Ok(orig) = orig {
         if has_crlf_line_endings(&orig) {
             out = out.replace("\n", "\r\n");
         }
         if out == orig {
-            // The lockfile contents haven't changed so don't rewrite it.
-            // This is helpful on read-only filesystems.
             return Ok(())
         }
     }
 
-    try!(paths::write(dst, out.as_bytes()));
-    Ok(())
+    // Ok, if that didn't work just write it out
+    root.open_rw("Cargo.lock", config, "Cargo.lock file").and_then(|mut f| {
+        try!(f.file().set_len(0));
+        try!(f.write_all(out.as_bytes()));
+        Ok(())
+    }).chain_error(|| {
+        human(format!("failed to write {}",
+                      pkg.root().join("Cargo.lock").display()))
+    })
 }
 
 fn has_crlf_line_endings(s: &str) -> bool {
@@ -115,6 +125,8 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
             out.push_str("]\n");
         }
         out.push_str("\n");
+    } else if dep.contains_key("replace") {
+        out.push_str(&format!("replace = {}\n\n", lookup(dep, "replace")));
     }
 }
 

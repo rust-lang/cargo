@@ -366,22 +366,26 @@ done
 CFG_TARGET=$V_TEMP
 
 if [ "$CFG_SRC_DIR" != "$CFG_BUILD_DIR" ]; then
-    err "cargo does not currently support an out-of-tree build dir"
+    CFG_CUSTOM_BUILD_DIR=$CFG_BUILD_DIR/target
+    putvar CFG_CUSTOM_BUILD_DIR
 fi
 
 if [ ! -z "$CFG_ENABLE_NIGHTLY" ]; then
     if [ ! -f .cargo/config ]; then
         mkdir -p .cargo
         cat > .cargo/config <<-EOF
-[target.x86_64-unknown-linux-gnu.openssl]
-rustc-flags = "-l static=ssl -l static=crypto -l dl -L /home/rustbuild/root64/lib"
-root = "/home/rustbuild/root64"
-include = "/home/rustbuild/root64/include"
-
-[target.i686-unknown-linux-gnu.openssl]
-rustc-flags = "-l static=ssl -l static=crypto -l dl -L /home/rustbuild/root32/lib"
-root = "/home/rustbuild/root32"
-include = "/home/rustbuild/root32/include"
+[target.arm-unknown-linux-gnueabi]
+linker = "arm-linux-gnueabi-gcc"
+[target.arm-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+[target.armv7-unknown-linux-gnueabihf]
+linker = "armv7-linux-gnueabihf-gcc"
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+[target.x86_64-unknown-freebsd]
+linker = "x86_64-unknown-freebsd10-gcc"
+[target.x86_64-unknown-netbsd]
+linker = "x86_64-unknown-netbsd-gcc"
 EOF
     fi
 fi
