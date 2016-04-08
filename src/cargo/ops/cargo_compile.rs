@@ -158,7 +158,9 @@ pub fn compile_pkg<'a>(root_package: &Package,
     }
 
     let profiles = root_package.manifest().profiles();
-    try!(generate_targets(root_package, profiles, mode, filter, release));
+    if spec.len() == 0 {
+        try!(generate_targets(root_package, profiles, mode, filter, release));
+    }
 
     let (packages, resolve_with_overrides) = {
         try!(resolve_dependencies(root_package, config, source, features,
