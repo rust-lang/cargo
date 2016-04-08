@@ -784,6 +784,44 @@ test!(crate_env_vars {
                 execs().with_status(0));
 });
 
+test!(crate_authors_env_vars {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.1-alpha.1"
+            authors = ["wycats@example.com", "neikos@example.com"]
+        "#)
+        .file("src/main.rs", r#"
+            extern crate foo;
+
+            static AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
+
+            fn main() {
+                let s = "wycats@example.com:neikos@example.com";
+                assert_eq!(AUTHORS, foo::authors());
+                println!("{}", AUTHORS);
+                assert_eq!(s, AUTHORS);
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn authors() -> String {
+                format!("{}", env!("CARGO_PKG_AUTHORS"))
+            }
+        "#);
+
+    println!("build");
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
+
+    println!("bin");
+    assert_that(process(&p.bin("foo")),
+                execs().with_stdout(&format!("wycats@example.com:neikos@example.com")));
+
+    println!("test");
+    assert_that(p.cargo("test").arg("-v"),
+                execs().with_status(0));
+});
+
 // this is testing that src/<pkg-name>.rs still works (for now)
 test!(many_crate_types_old_style_lib_location {
     let mut p = project("foo");
