@@ -71,16 +71,9 @@ error = ERROR)));
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 test!(find_closest_dont_correct_nonsense {
-    let paths = path().into_iter().filter(|p| {
-        fs::read_dir(p).into_iter()
-           .flat_map(|i| i)
-           .filter_map(|e| e.ok())
-           .all(|e| !e.file_name().to_str().unwrap_or("").starts_with("cargo-"))
-    });
     let mut pr = cargo_process();
-    pr.arg("asdf")
-      .cwd(&paths::root())
-      .env("PATH", env::join_paths(paths).unwrap());
+    pr.arg("there-is-no-way-that-there-is-a-command-close-to-this")
+      .cwd(&paths::root());
 
     assert_that(pr,
                 execs().with_status(101)
