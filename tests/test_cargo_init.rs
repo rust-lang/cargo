@@ -239,6 +239,20 @@ error = ERROR)));
     assert_that(&foo.join("Cargo.toml"), is_not(existing_file()));
 });
 
+test!(reserved_name {
+    let test = &paths::root().join("test");
+    fs::create_dir_all(&test).unwrap();
+    assert_that(cargo_process("init").cwd(test.clone())
+                                     .env("USER", "foo"),
+                execs().with_status(101).with_stderr(&format!("\
+{error} The name `test` cannot be used as a crate name\n\
+use --name to override crate name
+",
+error = ERROR)));
+
+    assert_that(&test.join("Cargo.toml"), is_not(existing_file()));
+});
+
 test!(git_autodetect {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 

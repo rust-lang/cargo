@@ -8,7 +8,7 @@ use std::thread;
 use git2;
 use hamcrest::{assert_that, existing_file};
 
-use support::{execs, project, ERROR};
+use support::{execs, project, ERROR, COMPILING};
 use support::git;
 use support::registry::Package;
 use test_cargo_install::{cargo_home, has_installed_exe};
@@ -349,4 +349,36 @@ test!(killing_cargo_releases_the_lock {
     // We killed `a`, so it shouldn't succeed, but `b` should have succeeded.
     assert!(!a.status.success());
     assert_that(b, execs().with_status(0));
+});
+
+test!(debug_release_ok {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    fs::remove_dir_all(p.root().join("target")).unwrap();
+
+    let mut a = p.cargo("build").build_command();
+    let mut b = p.cargo("build").arg("--release").build_command();
+    a.stdout(Stdio::piped()).stderr(Stdio::piped());
+    b.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let a = a.spawn().unwrap();
+    let b = b.spawn().unwrap();
+    let a = thread::spawn(move || a.wait_with_output().unwrap());
+    let b = b.wait_with_output().unwrap();
+    let a = a.join().unwrap();
+
+    assert_that(a, execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.0.0 [..]
+", compiling = COMPILING)));
+    assert_that(b, execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.0.0 [..]
+", compiling = COMPILING)));
 });

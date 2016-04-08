@@ -20,7 +20,7 @@ pub fn resolve_pkg(registry: &mut PackageRegistry,
                                              Method::Everything,
                                              prev.as_ref(), None));
     if package.package_id().source_id().is_path() {
-        try!(ops::write_pkg_lockfile(package, &resolve));
+        try!(ops::write_pkg_lockfile(package, &resolve, config));
     }
     Ok(resolve)
 }
@@ -40,7 +40,6 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>)
                                  -> CargoResult<Resolve> {
-
     try!(registry.add_sources(&[package.package_id().source_id()
                                        .clone()]));
 
@@ -52,20 +51,14 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     // TODO: This seems like a hokey reason to single out the registry as being
     //       different
     let mut to_avoid_sources = HashSet::new();
-    match to_avoid {
-        Some(set) => {
-            for package_id in set.iter() {
-                let source = package_id.source_id();
-                if !source.is_registry() {
-                    to_avoid_sources.insert(source);
-                }
-            }
-        }
-        None => {}
+    if let Some(to_avoid) = to_avoid {
+        to_avoid_sources.extend(to_avoid.iter()
+                                        .map(|p| p.source_id())
+                                        .filter(|s| !s.is_registry()));
     }
 
     let summary = package.summary().clone();
-    let summary = match previous {
+    let (summary, replace) = match previous {
         Some(r) => {
             // In the case where a previous instance of resolve is available, we
             // want to lock as many packages as possible to the previous version
@@ -89,31 +82,44 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             //    to the previously resolved version if the dependency listed
             //    still matches the locked version.
             for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
-                let deps = r.deps(node).into_iter().flat_map(|i| i)
+                let deps = r.deps_not_replaced(node)
                             .filter(|p| keep(p, to_avoid, &to_avoid_sources))
                             .cloned().collect();
                 registry.register_lock(node.clone(), deps);
             }
 
-            let map = r.deps(r.root()).into_iter().flat_map(|i| i).filter(|p| {
-                keep(p, to_avoid, &to_avoid_sources)
-            }).map(|d| {
-                (d.name(), d)
-            }).collect::<HashMap<_, _>>();
-            summary.map_dependencies(|d| {
-                match map.get(d.name()) {
-                    Some(&lock) if d.matches_id(lock) => d.lock_to(lock),
-                    _ => d,
+            let summary = {
+                let map = r.deps_not_replaced(r.root()).filter(|p| {
+                    keep(p, to_avoid, &to_avoid_sources)
+                }).map(|d| {
+                    (d.name(), d)
+                }).collect::<HashMap<_, _>>();
+
+                summary.map_dependencies(|dep| {
+                    match map.get(dep.name()) {
+                        Some(&lock) if dep.matches_id(lock) => dep.lock_to(lock),
+                        _ => dep,
+                    }
+                })
+            };
+            let replace = package.manifest().replace();
+            let replace = replace.iter().map(|&(ref spec, ref dep)| {
+                for (key, val) in r.replacements().iter() {
+                    if spec.matches(key) && dep.matches_id(val) {
+                        return (spec.clone(), dep.clone().lock_to(val))
+                    }
                 }
-            })
+                (spec.clone(), dep.clone())
+            }).collect::<Vec<_>>();
+            (summary, replace)
         }
-        None => summary,
+        None => (summary, package.manifest().replace().to_owned()),
     };
 
-    let mut resolved = try!(resolver::resolve(&summary, &method, registry));
-    match previous {
-        Some(r) => resolved.copy_metadata(r),
-        None => {}
+    let mut resolved = try!(resolver::resolve(&summary, &method, &replace,
+                                              registry));
+    if let Some(previous) = previous {
+        resolved.copy_metadata(previous);
     }
     return Ok(resolved);
 

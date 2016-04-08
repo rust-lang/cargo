@@ -351,7 +351,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let id = unit.pkg.package_id();
-        let deps = self.resolve.deps(id).into_iter().flat_map(|a| a);
+        let deps = self.resolve.deps(id);
         let mut ret = try!(deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
@@ -479,8 +479,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the dependencies necessary to document a package
     fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        let deps = self.resolve.deps(unit.pkg.package_id()).into_iter();
-        let deps = deps.flat_map(|a| a).filter(|dep| {
+        let deps = self.resolve.deps(unit.pkg.package_id()).filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {

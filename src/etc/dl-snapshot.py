@@ -10,7 +10,8 @@ cksumre = re.compile('^  ([^ ]+) ([^$]+)$')
 
 current = None
 snaps = {}
-with open('src/snapshots.txt') as f:
+d = os.path.dirname(os.path.dirname(__file__))
+with open(d + '/snapshots.txt') as f:
     for line in iter(f):
         line = line.rstrip()
         m = datere.match(line)
