@@ -1866,3 +1866,36 @@ test!(please_respect_the_dag {
 {running} `rustc [..] -L native=foo -L native=bar[..]`
 ", running = RUNNING)));
 });
+
+test!(non_utf8_output {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+            use std::io::prelude::*;
+
+            fn main() {
+                let mut out = std::io::stdout();
+                // print something that's not utf8
+                out.write_all(b"\xff\xff\n").unwrap();
+
+                // now print some cargo metadata that's utf8
+                println!("cargo:rustc-cfg=foo");
+
+                // now print more non-utf8
+                out.write_all(b"\xff\xff\n").unwrap();
+            }
+        "#)
+        .file("src/main.rs", r#"
+            #[cfg(foo)]
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});
