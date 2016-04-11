@@ -6,7 +6,7 @@ use std::str;
 use std::sync::{Mutex, Arc};
 
 use core::PackageId;
-use util::{CargoResult, human, Human};
+use util::{CargoResult, Human};
 use util::{internal, ChainError, profile, paths};
 use util::Freshness;
 
@@ -213,10 +213,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        let output = try!(str::from_utf8(&output.stdout).map_err(|_| {
-            human("build script output was not valid utf-8")
-        }));
-        let parsed_output = try!(BuildOutput::parse(output, &pkg_name));
+        let parsed_output = try!(BuildOutput::parse(&output.stdout, &pkg_name));
         build_state.insert(id, kind, parsed_output);
         Ok(())
     });
@@ -270,13 +267,13 @@ impl BuildState {
 
 impl BuildOutput {
     pub fn parse_file(path: &Path, pkg_name: &str) -> CargoResult<BuildOutput> {
-        let contents = try!(paths::read(path));
+        let contents = try!(paths::read_bytes(path));
         BuildOutput::parse(&contents, pkg_name)
     }
 
     // Parses the output of a script.
     // The `pkg_name` is used for error messages.
-    pub fn parse(input: &str, pkg_name: &str) -> CargoResult<BuildOutput> {
+    pub fn parse(input: &[u8], pkg_name: &str) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
         let mut cfgs = Vec::new();
@@ -284,7 +281,11 @@ impl BuildOutput {
         let mut rerun_if_changed = Vec::new();
         let whence = format!("build script of `{}`", pkg_name);
 
-        for line in input.lines() {
+        for line in input.split(|b| *b == b'\n') {
+            let line = match str::from_utf8(line) {
+                Ok(line) => line.trim(),
+                Err(..) => continue,
+            };
             let mut iter = line.splitn(2, ':');
             if iter.next() != Some("cargo") {
                 // skip this line since it doesn't start with "cargo:"
