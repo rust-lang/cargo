@@ -85,15 +85,15 @@ impl<'a> JobQueue<'a> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, config: &Config) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
 
         crossbeam::scope(|scope| {
-            self.drain_the_queue(config, scope)
+            self.drain_the_queue(cx, scope)
         })
     }
 
-    fn drain_the_queue(&mut self, config: &Config, scope: &Scope<'a>)
+    fn drain_the_queue(&mut self, cx: &mut Context, scope: &Scope<'a>)
                        -> CargoResult<()> {
         let mut queue = Vec::new();
         trace!("queue: {:#?}", self.queue);
@@ -111,7 +111,7 @@ impl<'a> JobQueue<'a> {
             while self.active < self.jobs {
                 if !queue.is_empty() {
                     let (key, job, fresh) = queue.remove(0);
-                    try!(self.run(key, fresh, job, config, scope));
+                    try!(self.run(key, fresh, job, cx.config, scope));
                 } else if let Some((fresh, key, jobs)) = self.queue.dequeue() {
                     let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
                         f.combine(fresh)
@@ -139,15 +139,11 @@ impl<'a> JobQueue<'a> {
             self.active -= 1;
             match msg.result {
                 Ok(()) => {
-                    let state = self.pending.get_mut(&msg.key).unwrap();
-                    state.amt -= 1;
-                    if state.amt == 0 {
-                        self.queue.finish(&msg.key, state.fresh);
-                    }
+                    try!(self.finish(msg.key, cx));
                 }
                 Err(e) => {
                     if self.active > 0 {
-                        try!(config.shell().say(
+                        try!(cx.config.shell().say(
                                     "Build failed, waiting for other \
                                      jobs to finish...", YELLOW));
                         for _ in self.rx.iter().take(self.active as usize) {}
@@ -193,6 +189,23 @@ impl<'a> JobQueue<'a> {
         // only the first message of each job is processed
         if let Ok(msg) = desc_rx.recv() {
             try!(config.shell().verbose(|c| c.status("Running", &msg)));
+        }
+        Ok(())
+    }
+
+    fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
+        if key.profile.run_custom_build && cx.show_warnings(key.pkg) {
+            let output = cx.build_state.outputs.lock().unwrap();
+            if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
+                for warning in output.warnings.iter() {
+                    try!(cx.config.shell().warn(warning));
+                }
+            }
+        }
+        let state = self.pending.get_mut(&key).unwrap();
+        state.amt -= 1;
+        if state.amt == 0 {
+            self.queue.finish(&key, state.fresh);
         }
         Ok(())
     }

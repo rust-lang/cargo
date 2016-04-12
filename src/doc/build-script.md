@@ -55,7 +55,7 @@ cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
 
-There are a few special keys that Cargo recognizes, affecting how the
+There are a few special keys that Cargo recognizes, some affecting how the
 crate is built:
 
 * `rustc-link-lib` indicates that the specified value should be passed to the
@@ -75,6 +75,10 @@ crate is built:
   directory, depending on platform) will trigger a rebuild. To request a re-run
   on any changes within an entire directory, print a line for the directory and
   another line for everything inside it, recursively.)
+* `warning` is a message that will be printed to the main console after a build
+  script has finished running. Warnings are only shown for path dependencies
+  (that is, those you're working on locally), so for example warnings printed
+  out in crates.io crates are not emitted by default.
 
 Any other element is a user-defined metadata that will be passed to
 dependencies. More information about this can be found in the [`links`][links]
