@@ -7,7 +7,7 @@ pub struct Options {
     flag_host: Option<String>,
     flag_token: Option<String>,
     flag_manifest_path: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_no_verify: bool,
@@ -27,7 +27,7 @@ Options:
     --no-verify              Don't verify package tarball before publish
     --allow-dirty            Allow publishing with a dirty source directory
     --manifest-path PATH     Path to the manifest of the package to publish
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 

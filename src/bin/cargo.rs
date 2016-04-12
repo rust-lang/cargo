@@ -21,7 +21,7 @@ use cargo::util::process_builder::process;
 pub struct Flags {
     flag_list: bool,
     flag_version: bool,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_explain: Option<String>,
@@ -41,7 +41,7 @@ Options:
     -V, --version       Print version info and exit
     --list              List installed commands
     --explain CODE      Run `rustc --explain CODE`
-    -v, --verbose       Use verbose output
+    -v, --verbose ...   Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
 

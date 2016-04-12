@@ -4,7 +4,7 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_manifest_path: Option<String>,
@@ -27,7 +27,7 @@ Options:
     --no-metadata           Ignore warnings about a lack of human-usable metadata
     --allow-dirty           Allow dirty working directories to be packaged
     --manifest-path PATH    Path to the manifest to compile
-    -v, --verbose           Use verbose output
+    -v, --verbose ...       Use verbose output
     -q, --quiet             No output printed to stdout
     --color WHEN            Coloring: auto, always, never
 

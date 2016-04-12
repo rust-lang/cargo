@@ -9,7 +9,7 @@ pub struct Options {
     flag_package: Vec<String>,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_release: bool,
@@ -27,7 +27,7 @@ Options:
     --manifest-path PATH         Path to the manifest to the package to clean
     --target TRIPLE              Target triple to clean output for (default all)
     --release                    Whether or not to clean release artifacts
-    -v, --verbose                Use verbose output
+    -v, --verbose ...            Use verbose output
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
 

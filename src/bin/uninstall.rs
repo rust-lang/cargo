@@ -5,7 +5,7 @@ use cargo::util::{CliResult, Config};
 pub struct Options {
     flag_bin: Vec<String>,
     flag_root: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
 
@@ -23,7 +23,7 @@ Options:
     -h, --help                Print this message
     --root DIR                Directory to uninstall packages from
     --bin NAME                Only uninstall the binary NAME
-    -v, --verbose             Use verbose output
+    -v, --verbose ...         Use verbose output
     -q, --quiet               Less output printed to stdout
     --color WHEN              Coloring: auto, always, never
 

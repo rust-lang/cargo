@@ -1045,3 +1045,28 @@ fn resolve_and_backtracking() {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
+
+#[test]
+fn upstream_warnings_on_extra_verbose() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("foo", "0.1.0")
+            .file("src/lib.rs", "fn unused() {}")
+            .publish();
+
+    assert_that(p.cargo("build").arg("-vv"),
+                execs().with_status(0).with_stderr_contains("\
+[..] warning: function is never used[..]
+"));
+}

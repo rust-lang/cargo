@@ -13,7 +13,7 @@ pub type Error = HashMap<String, String>;
 #[derive(RustcDecodable)]
 pub struct Flags {
     flag_manifest_path: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
@@ -28,7 +28,7 @@ Usage:
 Options:
     -h, --help              Print this message
     --manifest-path PATH    Path to the manifest to verify
-    -v, --verbose           Use verbose output
+    -v, --verbose ...       Use verbose output
     -q, --quiet             No output printed to stdout
     --color WHEN            Coloring: auto, always, never
 ";

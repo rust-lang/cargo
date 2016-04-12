@@ -10,7 +10,7 @@ use cargo::util::{CliResult, Config, human, ChainError};
 pub struct Options {
     flag_host: Option<String>,
     arg_token: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
@@ -24,7 +24,7 @@ Usage:
 Options:
     -h, --help               Print this message
     --host HOST              Host to set the token for
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 
