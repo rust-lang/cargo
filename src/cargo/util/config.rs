@@ -31,6 +31,7 @@ pub struct Config {
     rustc: PathBuf,
     rustdoc: PathBuf,
     target_dir: RefCell<Option<Filesystem>>,
+    extra_verbose: Cell<bool>,
 }
 
 impl Config {
@@ -47,6 +48,7 @@ impl Config {
             rustc: PathBuf::from("rustc"),
             rustdoc: PathBuf::from("rustdoc"),
             target_dir: RefCell::new(None),
+            extra_verbose: Cell::new(false),
         };
 
         try!(cfg.scrape_tool_config());
@@ -287,9 +289,11 @@ impl Config {
     }
 
     pub fn configure_shell(&self,
-                           verbose: Option<bool>,
+                           verbose: u32,
                            quiet: Option<bool>,
                            color: &Option<String>) -> CargoResult<()> {
+        let extra_verbose = verbose >= 2;
+        let verbose = if verbose == 0 {None} else {Some(true)};
         let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
         let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
         let color = color.as_ref().or(cfg_color.as_ref());
@@ -320,8 +324,13 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         try!(self.shell().set_color_config(color.map(|s| &s[..])));
+        self.extra_verbose.set(extra_verbose);
 
         Ok(())
+    }
+
+    pub fn extra_verbose(&self) -> bool {
+        self.extra_verbose.get()
     }
 
     fn load_values(&self) -> CargoResult<()> {

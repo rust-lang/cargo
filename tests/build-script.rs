@@ -4,15 +4,10 @@ extern crate hamcrest;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-<<<<<<< 07c1d9900de40c59b898d08d64273447560ffbe3:tests/build-script.rs
 use cargotest::{rustc_host, is_nightly, sleep_ms};
 use cargotest::support::{project, execs};
 use cargotest::support::paths::CargoPathExt;
-=======
-use support::{project, execs};
-use support::paths::CargoPathExt;
-use support::registry::Package;
->>>>>>> Forward warnings from build scripts:tests/test_cargo_compile_custom_build.rs
+use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir};
 
 #[test]
@@ -2086,4 +2081,43 @@ fn warnings_hidden_for_upstream() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(""));
+}
+
+#[test]
+fn warnings_printed_on_vv() {
+    Package::new("bar", "0.1.0")
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:warning=foo");
+                    println!("cargo:warning=bar");
+                }
+            "#)
+            .file("Cargo.toml", r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-vv"),
+                execs().with_status(0)
+                       .with_stderr("\
+warning: foo
+warning: bar
+"));
 }

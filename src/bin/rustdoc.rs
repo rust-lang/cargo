@@ -11,7 +11,7 @@ pub struct Options {
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_open: bool,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_release: bool,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -44,7 +44,7 @@ Options:
     --no-default-features    Do not build the `default` feature
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to document
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 

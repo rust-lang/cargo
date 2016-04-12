@@ -648,7 +648,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        pkg == self.resolve.root() || pkg.source_id().is_path()
+        pkg == self.resolve.root() || pkg.source_id().is_path() ||
+            self.config.extra_verbose()
     }
 }
 

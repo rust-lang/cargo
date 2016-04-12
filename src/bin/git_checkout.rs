@@ -6,7 +6,7 @@ use cargo::util::{Config, CliResult, CliError, human, ToUrl};
 pub struct Options {
     flag_url: String,
     flag_reference: String,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
@@ -20,7 +20,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 ";

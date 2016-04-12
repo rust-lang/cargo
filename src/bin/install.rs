@@ -10,7 +10,7 @@ pub struct Options {
     flag_debug: bool,
     flag_bin: Vec<String>,
     flag_example: Vec<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_root: Option<String>,
@@ -53,7 +53,7 @@ Build and install options:
     --bin NAME                Only install the binary NAME
     --example EXAMPLE         Install the example EXAMPLE instead of binaries
     --root DIR                Directory to install packages into
-    -v, --verbose             Use verbose output
+    -v, --verbose ...         Use verbose output
     -q, --quiet               Less output printed to stdout
     --color WHEN              Coloring: auto, always, never
 
