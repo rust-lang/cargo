@@ -109,7 +109,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
     }
 
     // Now that we've figured out everything that we're going to do, do it!
-    try!(queue.execute(cx.config));
+    try!(queue.execute(&mut cx));
 
     for unit in units.iter() {
         let out_dir = cx.layout(unit.pkg, unit.kind).build_out(unit.pkg)
@@ -211,10 +211,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let mut rustc = try!(prepare_rustc(cx, crate_types, unit));
 
     let name = unit.pkg.name().to_string();
-    let is_path_source = unit.pkg.package_id().source_id().is_path();
-    let allow_warnings = unit.pkg.package_id() == cx.resolve.root() ||
-                         is_path_source;
-    if !allow_warnings {
+    if !cx.show_warnings(unit.pkg.package_id()) {
         if cx.config.rustc_info().cap_lints {
             rustc.arg("--cap-lints").arg("allow");
         } else {
