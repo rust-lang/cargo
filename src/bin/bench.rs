@@ -70,6 +70,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: false,
+        only_doc: false,
         compile_opts: ops::CompileOptions {
             config: config,
             jobs: options.flag_jobs,
