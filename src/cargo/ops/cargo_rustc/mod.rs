@@ -247,7 +247,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     let rustflags = try!(cx.rustflags_args(unit));
 
-    return Ok(Work::new(move |desc_tx| {
+    return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -272,7 +272,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         // Add the arguments from RUSTFLAGS
         rustc.args(&rustflags);
 
-        desc_tx.send(rustc.to_string()).ok();
+        state.running(&rustc);
         try!(exec_engine.exec(rustc).chain_error(|| {
             human(format!("Could not compile `{}`.", name))
         }));
@@ -410,13 +410,13 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let key = (unit.pkg.package_id().clone(), unit.kind);
     let exec_engine = cx.exec_engine.clone();
 
-    Ok(Work::new(move |desc_tx| {
+    Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
                 rustdoc.arg("--cfg").arg(cfg);
             }
         }
-        desc_tx.send(rustdoc.to_string()).unwrap();
+        state.running(&rustdoc);
         exec_engine.exec(rustdoc).chain_error(|| {
             human(format!("Could not document `{}`.", name))
         })
