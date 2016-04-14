@@ -8,9 +8,8 @@ pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
     pub no_run: bool,
     pub no_fail_fast: bool,
+    pub only_doc: bool,
 }
-
-
 
 pub fn run_tests(manifest_path: &Path,
                  options: &TestOptions,
@@ -20,7 +19,11 @@ pub fn run_tests(manifest_path: &Path,
     if options.no_run {
         return Ok(None)
     }
-    let mut errors = try!(run_unit_tests(options, test_args, &compilation));
+    let mut errors = if options.only_doc {
+        Vec::new()
+    } else {
+        try!(run_unit_tests(options, test_args, &compilation))
+    };
 
     // If we have an error and want to fail fast, return
     if !errors.is_empty() && !options.no_fail_fast {
