@@ -644,3 +644,18 @@ test!(git_with_lockfile {
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
                 execs().with_status(0));
 });
+
+test!(q_silences_warnings {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("-q").arg("--path").arg(p.root()),
+                execs().with_status(0).with_stderr(""));
+});
