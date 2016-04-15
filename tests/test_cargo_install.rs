@@ -8,7 +8,7 @@ use cargo::util::ProcessBuilder;
 use hamcrest::{assert_that, existing_file, is_not, Matcher, MatchResult};
 
 use support::{project, execs};
-use support::{UPDATING, DOWNLOADING, COMPILING, INSTALLING, REMOVING, ERROR};
+use support::{UPDATING, DOWNLOADING, COMPILING, INSTALLING, REPLACING, REMOVING, ERROR};
 use support::paths;
 use support::registry::Package;
 use support::git;
@@ -199,6 +199,7 @@ test!(install_path {
     assert_that(cargo_process("install").arg("--path").arg(".").cwd(p.root()),
                 execs().with_status(101).with_stderr(&format!("\
 {error} binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
+Add --force to overwrite
 ",
 error = ERROR)));
 });
@@ -389,16 +390,154 @@ test!(install_twice {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/bin/foo-bin1.rs", "fn main() {}")
+        .file("src/bin/foo-bin2.rs", "fn main() {}");
     p.build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(101).with_stderr(&format!("\
-{error} binary `foo[..]` already exists in destination as part of `foo v0.1.0 ([..])`
+{error} binary `foo-bin1[..]` already exists in destination as part of `foo v0.1.0 ([..])`
+binary `foo-bin2[..]` already exists in destination as part of `foo v0.1.0 ([..])`
+Add --force to overwrite
 ",
 error = ERROR)));
+});
+
+test!(install_force {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("--path").arg(p.root()),
+                execs().with_status(0));
+
+    let p = project("foo2")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.2.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.2.0 ([..])
+{replacing} {home}[..]bin[..]foo[..]
+",
+        compiling = COMPILING,
+        replacing = REPLACING,
+        home = cargo_home().display())));
+
+    assert_that(cargo_process("install").arg("--list"),
+                execs().with_status(0).with_stdout("\
+foo v0.2.0 ([..]):
+    foo[..]
+"));
+});
+
+test!(install_force_partial_overlap {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/bin/foo-bin1.rs", "fn main() {}")
+        .file("src/bin/foo-bin2.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("--path").arg(p.root()),
+                execs().with_status(0));
+
+    let p = project("foo2")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.2.0"
+            authors = []
+        "#)
+        .file("src/bin/foo-bin2.rs", "fn main() {}")
+        .file("src/bin/foo-bin3.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.2.0 ([..])
+{installing} {home}[..]bin[..]foo-bin3[..]
+{replacing} {home}[..]bin[..]foo-bin2[..]
+",
+        compiling = COMPILING,
+        installing = INSTALLING,
+        replacing = REPLACING,
+        home = cargo_home().display())));
+
+    assert_that(cargo_process("install").arg("--list"),
+                execs().with_status(0).with_stdout("\
+foo v0.1.0 ([..]):
+    foo-bin1[..]
+foo v0.2.0 ([..]):
+    foo-bin2[..]
+    foo-bin3[..]
+"));
+});
+
+test!(install_force_bin {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/bin/foo-bin1.rs", "fn main() {}")
+        .file("src/bin/foo-bin2.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("--path").arg(p.root()),
+                execs().with_status(0));
+
+    let p = project("foo2")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.2.0"
+            authors = []
+        "#)
+        .file("src/bin/foo-bin1.rs", "fn main() {}")
+        .file("src/bin/foo-bin2.rs", "fn main() {}");
+    p.build();
+
+    assert_that(cargo_process("install").arg("--force")
+                    .arg("--bin")
+                    .arg("foo-bin2")
+                    .arg("--path")
+                    .arg(p.root()),
+                execs().with_status(0).with_stdout(&format!("\
+{compiling} foo v0.2.0 ([..])
+{replacing} {home}[..]bin[..]foo-bin2[..]
+",
+        compiling = COMPILING,
+        replacing = REPLACING,
+        home = cargo_home().display())));
+
+    assert_that(cargo_process("install").arg("--list"),
+                execs().with_status(0).with_stdout("\
+foo v0.1.0 ([..]):
+    foo-bin1[..]
+foo v0.2.0 ([..]):
+    foo-bin2[..]
+"));
 });
 
 test!(compile_failure {
