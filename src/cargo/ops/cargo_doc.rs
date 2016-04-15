@@ -75,6 +75,57 @@ pub fn doc(manifest_path: &Path,
     Ok(())
 }
 
+fn walk_through_dirs(read_dir: &Path, output_path: &Path) -> CargoResult<()> {
+    let mut dir_list = vec!();
+
+    for entry in try!(fs::read_dir(read_dir)) {
+        let entry = try!(entry);
+        let path = entry.path();
+
+        if path.is_dir() {
+            dir_list.push(path);
+        } else {
+            let extension = match path.extension() {
+                Some(e) => e,
+                None => continue,
+            };
+
+            if "md" == extension {
+                if !output_path.exists() {
+                    try!(fs::create_dir_all(&output_path));
+                }
+                let output_result = Command::new("rustdoc")
+                    .arg(&path)
+                    .arg(&format!("-o{}", output_path.to_str().unwrap_or("target/doc")))
+                    .output();
+                let output = try!(output_result);
+
+                if !output.status.success() {
+                    println!("failed");
+                }
+            }
+        }
+    }
+    if dir_list.len() < 1 {
+        Ok(())
+    } else {
+        // this code can be multithreaded if needed
+        for dir in dir_list.iter().skip(1) {
+            if let Some(rel) = dir.file_name() {
+                let output_path = output_path.join(rel);
+                try!(walk_through_dirs(dir, output_path.as_path()));
+            }
+        }
+        for dir in dir_list[0..1].iter() {
+            if let Some(rel) = dir.file_name() {
+                let output_path = output_path.join(rel);
+                return walk_through_dirs(&dir_list[0], output_path.as_path());
+            }
+        }
+        Ok(())
+    }
+}
+
 fn build_markdown_docs(manifest_path: &Path) -> CargoResult<()> {
     let docs_dir = if let Some(dir) = manifest_path.parent() {
         dir.join("doc")
@@ -89,35 +140,8 @@ fn build_markdown_docs(manifest_path: &Path) -> CargoResult<()> {
     };
 
     try!(fs::create_dir_all(&target_dir));
-    try!(fs::create_dir_all(&docs_dir));
-    println!("4");
 
-    for entry in try!(fs::read_dir(target_dir)) {
-        let entry = try!(entry);
-        println!("5");
-        let path = entry.path();
-
-        let extension = match path.extension() {
-            Some(e) => e,
-            None => continue,
-        };
-        println!("6");
-
-        if "md" == extension {
-            println!("let's do this: {:?}", path);
-            let output_result = Command::new("rustdoc")
-                .arg(&path)
-                .arg("-otarget/doc")
-                .output();
-            let output = try!(output_result);
-
-            if !output.status.success() {
-                println!("failed");
-            }
-        }
-    }
-
-    Ok(())
+    walk_through_dirs(&docs_dir, Path::new("target/doc"))
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
