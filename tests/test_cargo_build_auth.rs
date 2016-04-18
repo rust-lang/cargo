@@ -145,17 +145,10 @@ test!(https_something_happens {
         updating = UPDATING,
         addr = addr,
         ))
-                      .with_stderr(&format!("\
-{error} Unable to update https://{addr}/foo/bar
-
-Caused by:
-  failed to clone into: [..]
-
+                      .with_stderr_contains(&format!("\
 Caused by:
   {errmsg}
 ",
-        addr = addr,
-        error = ERROR,
         errmsg = if cfg!(windows) {
             "[[..]] failed to send request: [..]\n"
         } else if cfg!(target_os = "macos") {
@@ -197,16 +190,9 @@ test!(ssh_something_happens {
         updating = UPDATING,
         addr = addr,
         ))
-                      .with_stderr(&format!("\
-{error} Unable to update ssh://{addr}/foo/bar
-
-Caused by:
-  failed to clone into: [..]
-
+                      .with_stderr_contains("\
 Caused by:
   [[..]] Failed to start SSH session: Failed getting banner
-",
-        addr = addr,
-        error = ERROR)));
+"));
     t.join().ok().unwrap();
 });
