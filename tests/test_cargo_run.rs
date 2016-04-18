@@ -70,6 +70,26 @@ test!(simple_quiet_and_verbose {
 error = ERROR)));
 });
 
+test!(quiet_and_verbose_config {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file(".cargo/config", r#"
+            [term]
+            verbose = true
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("-q"),
+                execs().with_status(0));
+});
+
 test!(simple_with_args {
     let p = project("foo")
         .file("Cargo.toml", r#"
