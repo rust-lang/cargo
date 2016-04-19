@@ -9,7 +9,7 @@ extern crate toml;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path,PathBuf};
 
 use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
@@ -195,10 +195,9 @@ fn execute_subcommand(config: &Config,
     let path = search_directories(config)
                     .iter()
                     .map(|dir| dir.join(&command_exe))
-                    .filter_map(|dir| fs::metadata(&dir).ok().map(|m| (dir, m)))
-                    .find(|&(_, ref meta)| is_executable(meta));
+                    .find(|file| is_executable(file));
     let command = match path {
-        Some((command, _)) => command,
+        Some(command) => command,
         None => {
             return Err(human(match find_closest(config, cmd) {
                 Some(closest) => format!("no such subcommand\n\n\t\
@@ -233,11 +232,9 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
             if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
                 continue
             }
-            if let Ok(meta) = entry.metadata() {
-                if is_executable(&meta) {
-                    let end = filename.len() - suffix.len();
-                    commands.insert(filename[prefix.len()..end].to_string());
-                }
+            if is_executable(entry.path()) {
+                let end = filename.len() - suffix.len();
+                commands.insert(filename[prefix.len()..end].to_string());
             }
         }
     }
@@ -250,13 +247,15 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
 }
 
 #[cfg(unix)]
-fn is_executable(metadata: &fs::Metadata) -> bool {
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     use std::os::unix::prelude::*;
-    metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    fs::metadata(path).map(|metadata| {
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    }).unwrap_or(false)
 }
 #[cfg(windows)]
-fn is_executable(metadata: &fs::Metadata) -> bool {
-    metadata.is_file()
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    fs::metadata(path).map(|metadata| metadata.is_file()).unwrap_or(false)
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
