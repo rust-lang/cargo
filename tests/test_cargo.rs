@@ -79,7 +79,8 @@ test!(list_command_looks_at_path {
 #[cfg(unix)]
 test!(list_command_resolves_symlinks {
     let proj = project("list-non-overlapping");
-    let proj = fake_file(proj, &Path::new("path-test"), "cargo-2", FakeKind::Symlink{target:&cargo_dir().join("cargo")});
+    let proj = fake_file(proj, &Path::new("path-test"), "cargo-2",
+                         FakeKind::Symlink{target:&cargo_dir().join("cargo")});
     let mut pr = cargo_process();
 
     let mut path = path();
