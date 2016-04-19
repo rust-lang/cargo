@@ -27,7 +27,7 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
     fn make_executable(p: &Path) {
         use std::os::unix::prelude::*;
 
-        let mut perms = fs::metadata(p).unwrap().permissions();;
+        let mut perms = fs::metadata(p).unwrap().permissions();
         let mode = perms.mode();
         perms.set_mode(mode | 0o111);
         fs::set_permissions(p, perms).unwrap();
@@ -40,7 +40,7 @@ fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or(OsString::new())).collect()
 }
 
-test!(list_commands_looks_at_path {
+test!(list_command_looks_at_path {
     let proj = project("list-non-overlapping");
     let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
     let mut pr = cargo_process();
