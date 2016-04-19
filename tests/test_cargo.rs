@@ -7,20 +7,32 @@ use std::str;
 
 use cargo_process;
 use support::paths;
-use support::{execs, project, mkdir_recursive, ProjectBuilder, ERROR};
+use support::{cargo_dir, execs, project, mkdir_recursive, ProjectBuilder, ERROR};
 use hamcrest::{assert_that};
 
 fn setup() {
 }
 
+enum FakeKind<'a> {
+    Executable,
+    Symlink{target:&'a Path},
+}
+
 /// Add an empty file with executable flags (and platform-dependent suffix).
 /// TODO: move this to `ProjectBuilder` if other cases using this emerge.
-fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuilder {
+fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: FakeKind) -> ProjectBuilder {
     let path = proj.root().join(dir).join(&format!("{}{}", name,
                                                    env::consts::EXE_SUFFIX));
     mkdir_recursive(path.parent().unwrap()).unwrap();
-    File::create(&path).unwrap();
-    make_executable(&path);
+    match kind {
+        FakeKind::Executable => {
+            File::create(&path).unwrap();
+            make_executable(&path);
+        },
+        FakeKind::Symlink{target} => {
+            make_symlink(&path,target);
+        }
+    }
     return proj;
 
     #[cfg(unix)]
@@ -34,6 +46,14 @@ fn fake_executable(proj: ProjectBuilder, dir: &Path, name: &str) -> ProjectBuild
     }
     #[cfg(windows)]
     fn make_executable(_: &Path) {}
+    #[cfg(unix)]
+    fn make_symlink(p: &Path, t: &Path) {
+        ::std::os::unix::fs::symlink(t,p).expect("Failed to create symlink");
+    }
+    #[cfg(windows)]
+    fn make_symlink(_: &Path, _: &Path) {
+        panic!("Not supported")
+    }
 }
 
 fn path() -> Vec<PathBuf> {
@@ -42,7 +62,7 @@ fn path() -> Vec<PathBuf> {
 
 test!(list_command_looks_at_path {
     let proj = project("list-non-overlapping");
-    let proj = fake_executable(proj, &Path::new("path-test"), "cargo-1");
+    let proj = fake_file(proj, &Path::new("path-test"), "cargo-1", FakeKind::Executable);
     let mut pr = cargo_process();
 
     let mut path = path();
@@ -53,6 +73,23 @@ test!(list_command_looks_at_path {
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);
+});
+
+// windows and symlinks don't currently agree that well
+#[cfg(unix)]
+test!(list_command_resolves_symlinks {
+    let proj = project("list-non-overlapping");
+    let proj = fake_file(proj, &Path::new("path-test"), "cargo-2", FakeKind::Symlink{target:&cargo_dir().join("cargo")});
+    let mut pr = cargo_process();
+
+    let mut path = path();
+    path.push(proj.root().join("path-test"));
+    let path = env::join_paths(path.iter()).unwrap();
+    let output = pr.arg("-v").arg("--list")
+                   .env("PATH", &path);
+    let output = output.exec_with_output().unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(output.contains("\n    2\n"), "missing 2: {}", output);
 });
 
 test!(find_closest_biuld_to_build {
