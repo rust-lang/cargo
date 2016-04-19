@@ -247,9 +247,9 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
 #[cfg(unix)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     use std::os::unix::prelude::*;
-    fs::metadata(path).map(|metadata|
+    fs::metadata(path).map(|metadata| {
         metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
-    ).unwrap_or(false)
+    }).unwrap_or(false)
 }
 #[cfg(windows)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
