@@ -11,8 +11,10 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, ChainError};
+use cargo::util::ChainError;
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 
 #[derive(RustcDecodable)]
 pub struct Flags {
@@ -132,7 +134,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         // `cargo -h` so we can go through the normal process of printing the
         // help message.
         "" | "help" if flags.arg_args.is_empty() => {
-            config.shell().set_verbose(true);
+            config.shell().set_verbosity(Verbosity::Verbose);
             let args = &["cargo".to_string(), "-h".to_string()];
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
@@ -160,7 +162,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
     macro_rules! cmd{
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
-            config.shell().set_verbose(true);
+            config.shell().set_verbosity(Verbosity::Verbose);
             let r = cargo::call_main_without_stdin($name::execute, config,
                                                    $name::USAGE,
                                                    &args,

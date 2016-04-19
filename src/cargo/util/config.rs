@@ -277,11 +277,33 @@ impl Config {
                            color: &Option<String>) -> CargoResult<()> {
         let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
         let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
-        let verbose = verbose.or(cfg_verbose).unwrap_or(false);
-        let quiet = quiet.unwrap_or(false);
         let color = color.as_ref().or(cfg_color.as_ref());
 
-        try!(self.shell().set_verbosity(verbose, quiet));
+        let verbosity = match (verbose, cfg_verbose, quiet) {
+            (Some(true), _, None) |
+            (None, Some(true), None) => Verbosity::Verbose,
+
+            // command line takes precedence over configuration, so ignore the
+            // configuration.
+            (None, _, Some(true)) => Verbosity::Quiet,
+
+            // Can't pass both at the same time on the command line regardless
+            // of configuration.
+            (Some(true), _, Some(true)) => {
+                bail!("cannot set both --verbose and --quiet");
+            }
+
+            // Can't actually get `Some(false)` as a value from the command
+            // line, so just ignore them here to appease exhaustiveness checking
+            // in match statements.
+            (Some(false), _, _) |
+            (_, _, Some(false)) |
+
+            (None, Some(false), None) |
+            (None, None, None) => Verbosity::Normal,
+        };
+
+        self.shell().set_verbosity(verbosity);
         try!(self.shell().set_color_config(color.map(|s| &s[..])));
 
         Ok(())
