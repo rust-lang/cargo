@@ -7,12 +7,13 @@ use std::str;
 
 use cargo_process;
 use support::paths;
-use support::{cargo_dir, execs, project, mkdir_recursive, ProjectBuilder, ERROR};
+use support::{execs, project, mkdir_recursive, ProjectBuilder, ERROR};
 use hamcrest::{assert_that};
 
 fn setup() {
 }
 
+#[cfg_attr(windows,allow(dead_code))]
 enum FakeKind<'a> {
     Executable,
     Symlink{target:&'a Path},
@@ -78,6 +79,8 @@ test!(list_command_looks_at_path {
 // windows and symlinks don't currently agree that well
 #[cfg(unix)]
 test!(list_command_resolves_symlinks {
+    use support::cargo_dir;
+
     let proj = project("list-non-overlapping");
     let proj = fake_file(proj, &Path::new("path-test"), "cargo-2",
                          FakeKind::Symlink{target:&cargo_dir().join("cargo")});
