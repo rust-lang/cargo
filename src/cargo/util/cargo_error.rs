@@ -94,7 +94,7 @@ impl<E: CargoError> CargoError for ChainedError<E> {
 // Human errors
 
 #[derive(Debug)]
-pub struct Human<E>(E);
+struct Human<E>(E);
 
 impl<E: Error> Error for Human<E> {
     fn description(&self) -> &str { self.0.description() }
@@ -120,7 +120,7 @@ impl<E: CargoError> From<Human<E>> for Box<CargoError> {
 // Internal errors
 
 #[derive(Debug)]
-pub struct Internal<E>(E);
+struct Internal<E>(E);
 
 impl<E: Error> Error for Internal<E> {
     fn description(&self) -> &str { self.0.description() }

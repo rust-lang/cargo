@@ -3,7 +3,7 @@ pub use self::config::Config;
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
 pub use self::errors::{CargoResult, CargoError, ChainError, CliResult};
 pub use self::errors::{CliError, ProcessError, CargoTestError};
-pub use self::errors::{Human, caused_human};
+pub use self::errors::{caused_human};
 pub use self::errors::{process_error, internal, human};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;
