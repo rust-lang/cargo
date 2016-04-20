@@ -227,8 +227,8 @@ pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
     where S: fmt::Display,
           E: Error + Send + 'static
 {
-    human(Box::new(ChainedError {
-        error: error,
+    Box::new(HumanError(Box::new(ChainedError {
+        error: StringError(error.to_string()),
         cause: Box::new(ConcreteError(Box::new(cause)))
-    }))
+    })))
 }
