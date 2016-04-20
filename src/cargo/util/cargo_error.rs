@@ -121,7 +121,6 @@ impl<E: CargoError> From<Human<E>> for Box<CargoError> {
 
 struct ConcreteCargoError {
     description: String,
-    detail: Option<String>,
     cause: Option<Box<Error+Send>>,
     is_human: bool,
 }
@@ -129,9 +128,6 @@ struct ConcreteCargoError {
 impl fmt::Display for ConcreteCargoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.description));
-        if let Some(ref s) = self.detail {
-            try!(write!(f, " ({})", s));
-        }
         Ok(())
     }
 }
@@ -171,7 +167,6 @@ macro_rules! from_error {
 pub fn internal<S: fmt::Display>(error: S) -> Box<CargoError> {
     Box::new(ConcreteCargoError {
         description: error.to_string(),
-        detail: None,
         cause: None,
         is_human: false
     })
@@ -180,7 +175,6 @@ pub fn internal<S: fmt::Display>(error: S) -> Box<CargoError> {
 pub fn human<S: fmt::Display>(error: S) -> Box<CargoError> {
     Box::new(ConcreteCargoError {
         description: error.to_string(),
-        detail: None,
         cause: None,
         is_human: true
     })
@@ -192,7 +186,6 @@ pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
 {
     Box::new(ConcreteCargoError {
         description: error.to_string(),
-        detail: None,
         cause: Some(Box::new(cause)),
         is_human: true
     })
