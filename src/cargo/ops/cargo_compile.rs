@@ -157,6 +157,11 @@ pub fn compile_pkg<'a>(root_package: &Package,
         bail!("jobs must be at least 1")
     }
 
+    let profiles = root_package.manifest().profiles();
+    if spec.len() == 0 {
+        try!(generate_targets(root_package, profiles, mode, filter, release));
+    }
+
     let (packages, resolve_with_overrides) = {
         try!(resolve_dependencies(root_package, config, source, features,
                                   no_default_features))
@@ -186,7 +191,6 @@ pub fn compile_pkg<'a>(root_package: &Package,
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
 
-    let profiles = root_package.manifest().profiles();
     match (*target_rustc_args, *target_rustdoc_args) {
         (Some(..), _) |
         (_, Some(..)) if to_builds.len() != 1 => {
