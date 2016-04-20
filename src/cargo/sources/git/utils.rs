@@ -339,6 +339,7 @@ impl<'a> GitCheckout<'a> {
                     }
                     Err(..) => {
                         let path = repo.workdir().unwrap().join(child.path());
+                        let _ = fs::remove_dir_all(&path);
                         try!(git2::Repository::clone(url, &path))
                     }
                 };
