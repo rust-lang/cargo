@@ -20,6 +20,8 @@ pub use self::to_url::ToUrl;
 pub use self::vcs::{GitRepo, HgRepo};
 
 pub mod config;
+#[macro_use]
+mod cargo_error;
 pub mod errors;
 pub mod graph;
 pub mod hex;
