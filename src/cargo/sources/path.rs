@@ -9,7 +9,7 @@ use glob::Pattern;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{self, CargoResult, internal, internal_error, human, ChainError};
+use util::{self, CargoResult, internal, human, ChainError};
 use util::Config;
 
 pub struct PathSource<'cfg> {
@@ -149,7 +149,7 @@ impl<'cfg> PathSource<'cfg> {
         warn!("list_files_git {}", pkg.package_id());
         let index = try!(repo.index());
         let root = try!(repo.workdir().chain_error(|| {
-            internal_error("Can't list files on a bare repository.", "")
+            internal("Can't list files on a bare repository.")
         }));
         let pkg_path = pkg.root();
 
@@ -338,7 +338,7 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         if !self.updated {
-            return Err(internal_error("BUG: source was not updated", ""));
+            return Err(internal("BUG: source was not updated"));
         }
 
         let mut max = FileTime::zero();

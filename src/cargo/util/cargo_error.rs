@@ -168,15 +168,6 @@ macro_rules! from_error {
     )
 }
 
-pub fn internal_error(error: &str, detail: &str) -> Box<CargoError> {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        detail: Some(detail.to_string()),
-        cause: None,
-        is_human: false
-    })
-}
-
 pub fn internal<S: fmt::Display>(error: S) -> Box<CargoError> {
     Box::new(ConcreteCargoError {
         description: error.to_string(),
