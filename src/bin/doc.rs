@@ -16,6 +16,8 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_package: Vec<String>,
+    flag_lib: bool,
+    flag_bin: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -30,6 +32,8 @@ Options:
     -p SPEC, --package SPEC ...  Package to document
     --no-deps                    Don't build documentation for dependencies
     -j N, --jobs N               The number of jobs to run in parallel
+    --lib                        Document only this package's library
+    --bin NAME                   Document only the specified binary
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
     --no-default-features        Do not build the `default` feature
@@ -55,6 +59,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
+    let empty = Vec::new();
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
@@ -65,7 +70,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             no_default_features: options.flag_no_default_features,
             spec: &options.flag_package,
             exec_engine: None,
-            filter: ops::CompileFilter::Everything,
+            filter: ops::CompileFilter::new(options.flag_lib,
+                                            &options.flag_bin,
+                                            &empty,
+                                            &empty,
+                                            &empty),
             release: options.flag_release,
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
