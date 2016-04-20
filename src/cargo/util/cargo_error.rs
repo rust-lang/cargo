@@ -145,25 +145,25 @@ impl From<InternalError> for Box<CargoError> {
 // =============================================================================
 // Concrete errors
 
-struct ConcreteCargoError(Box<Error+Send>);
+struct ConcreteError(Box<Error+Send>);
 
-impl fmt::Display for ConcreteCargoError {
+impl fmt::Display for ConcreteError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
-impl fmt::Debug for ConcreteCargoError {
+impl fmt::Debug for ConcreteError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl Error for ConcreteCargoError {
+impl Error for ConcreteError {
     fn description(&self) -> &str { &self.0.description() }
     fn cause(&self) -> Option<&Error> { Some(&*self.0) }
 }
 
-impl CargoError for ConcreteCargoError {
+impl CargoError for ConcreteError {
     fn is_human(&self) -> bool { false }
 }
 
@@ -215,7 +215,7 @@ pub fn caused_internal<S, E>(error: S, cause: E) -> Box<CargoError>
 {
     Box::new(ChainedError {
         error: internal(error),
-        cause: Box::new(ConcreteCargoError(Box::new(cause)))
+        cause: Box::new(ConcreteError(Box::new(cause)))
     })
 }
 
@@ -229,6 +229,6 @@ pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
 {
     human(Box::new(ChainedError {
         error: error,
-        cause: Box::new(ConcreteCargoError(Box::new(cause)))
+        cause: Box::new(ConcreteError(Box::new(cause)))
     }))
 }
