@@ -153,6 +153,32 @@ impl CargoError for ConcreteCargoError {
 }
 
 // =============================================================================
+// Strings as errors
+
+#[derive(Debug)]
+pub struct StringError(String);
+
+impl Error for StringError {
+    fn description(&self) -> &str { &self.0 }
+    fn cause(&self) -> Option<&Error> { None }
+}
+
+impl fmt::Display for StringError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl CargoError for StringError {
+    fn is_human(&self) -> bool { true }
+    fn cargo_cause(&self) -> Option<&CargoError> { None }
+}
+
+impl From<StringError> for Box<CargoError> {
+    fn from(t: StringError) -> Box<CargoError> { Box::new(t) }
+}
+
+// =============================================================================
 // Stuff
 
 #[macro_export]
@@ -173,20 +199,19 @@ pub fn internal<S: fmt::Display>(error: S) -> Box<CargoError> {
 }
 
 pub fn human<S: fmt::Display>(error: S) -> Box<CargoError> {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        cause: None,
-        is_human: true
-    })
+    Box::new(Human(StringError(error.to_string())))
 }
 
 pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
     where S: fmt::Display,
           E: Error + Send + 'static
 {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        cause: Some(Box::new(cause)),
-        is_human: true
+    Box::new(ChainedError {
+        error: human(error),
+        cause: Box::new(ConcreteCargoError {
+            description: cause.description().to_string(),
+            cause: Some(Box::new(cause)),
+            is_human: false,
+        })
     })
 }
