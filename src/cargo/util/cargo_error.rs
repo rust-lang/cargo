@@ -117,6 +117,32 @@ impl<E: CargoError> From<Human<E>> for Box<CargoError> {
 }
 
 // =============================================================================
+// Internal errors
+
+#[derive(Debug)]
+pub struct Internal<E>(E);
+
+impl<E: Error> Error for Internal<E> {
+    fn description(&self) -> &str { self.0.description() }
+    fn cause(&self) -> Option<&Error> { self.0.cause() }
+}
+
+impl<E: fmt::Display> fmt::Display for Internal<E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl<E: CargoError> CargoError for Internal<E> {
+    fn is_human(&self) -> bool { false }
+    fn cargo_cause(&self) -> Option<&CargoError> { self.0.cargo_cause() }
+}
+
+impl<E: CargoError> From<Internal<E>> for Box<CargoError> {
+    fn from(t: Internal<E>) -> Box<CargoError> { Box::new(t) }
+}
+
+// =============================================================================
 // Concrete errors
 
 struct ConcreteCargoError {
@@ -191,10 +217,20 @@ macro_rules! from_error {
 }
 
 pub fn internal<S: fmt::Display>(error: S) -> Box<CargoError> {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        cause: None,
-        is_human: false
+    Box::new(Internal(StringError(error.to_string())))
+}
+
+pub fn caused_internal<S, E>(error: S, cause: E) -> Box<CargoError>
+    where S: fmt::Display,
+          E: Error + Send + 'static
+{
+    Box::new(ChainedError {
+        error: internal(error),
+        cause: Box::new(ConcreteCargoError {
+            description: cause.description().to_string(),
+            cause: Some(Box::new(cause)),
+            is_human: false,
+        })
     })
 }
 
