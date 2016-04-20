@@ -148,7 +148,6 @@ impl<E: CargoError> From<Internal<E>> for Box<CargoError> {
 struct ConcreteCargoError {
     description: String,
     cause: Option<Box<Error+Send>>,
-    is_human: bool,
 }
 
 impl fmt::Display for ConcreteCargoError {
@@ -173,9 +172,7 @@ impl Error for ConcreteCargoError {
 }
 
 impl CargoError for ConcreteCargoError {
-    fn is_human(&self) -> bool {
-        self.is_human
-    }
+    fn is_human(&self) -> bool { false }
 }
 
 // =============================================================================
@@ -229,7 +226,6 @@ pub fn caused_internal<S, E>(error: S, cause: E) -> Box<CargoError>
         cause: Box::new(ConcreteCargoError {
             description: cause.description().to_string(),
             cause: Some(Box::new(cause)),
-            is_human: false,
         })
     })
 }
@@ -242,12 +238,11 @@ pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
     where S: fmt::Display,
           E: Error + Send + 'static
 {
-    Box::new(ChainedError {
-        error: human(error),
+    human(Box::new(ChainedError {
+        error: error,
         cause: Box::new(ConcreteCargoError {
             description: cause.description().to_string(),
             cause: Some(Box::new(cause)),
-            is_human: false,
         })
-    })
+    }))
 }
