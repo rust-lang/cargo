@@ -550,3 +550,27 @@ test!(rerun_when_dir_removed {
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 });
+
+test!(document_only_lib {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            /// dox
+            pub fn foo() {}
+        "#)
+        .file("src/bin/bar.rs", r#"
+            /// ```
+            /// ☃
+            /// ```
+            pub fn foo() {}
+            fn main() { foo(); }
+        "#);
+    assert_that(p.cargo_process("doc").arg("--lib"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
+});
