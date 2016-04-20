@@ -6,7 +6,7 @@ use std::str;
 use std::sync::{Mutex, Arc};
 
 use core::PackageId;
-use util::{CargoResult, Human};
+use util::{CargoResult, human};
 use util::{internal, ChainError, profile, paths};
 use util::Freshness;
 
@@ -202,7 +202,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         let output = try!(exec_engine.exec_with_output(p).map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);
-            Human(e)
+            human(e)
         }));
         try!(paths::write(&output_file, &output.stdout));
 
