@@ -13,6 +13,7 @@ pub struct Options {
     flag_package: Vec<String>,
     flag_target: Option<String>,
     flag_lib: bool,
+    flag_doc: bool,
     flag_bin: Vec<String>,
     flag_example: Vec<String>,
     flag_test: Vec<String>,
@@ -33,6 +34,7 @@ Usage:
 Options:
     -h, --help                   Print this message
     --lib                        Test only this package's library
+    --doc                        Test only this library's documentation
     --bin NAME                   Test only the specified binary
     --example NAME               Test only the specified example
     --test NAME                  Test only the specified integration test target
@@ -79,9 +81,24 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 &options.flag_color));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
+    let empty = Vec::new();
+    let (mode, filter);
+    if options.flag_doc {
+        mode = ops::CompileMode::Build;
+        filter = ops::CompileFilter::new(true, &empty, &empty, &empty, &empty);
+    } else {
+        mode = ops::CompileMode::Test;
+        filter = ops::CompileFilter::new(options.flag_lib,
+                                         &options.flag_bin,
+                                         &options.flag_test,
+                                         &options.flag_example,
+                                         &options.flag_bench);
+    }
+
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: options.flag_no_fail_fast,
+        only_doc: options.flag_doc,
         compile_opts: ops::CompileOptions {
             config: config,
             jobs: options.flag_jobs,
@@ -91,12 +108,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             spec: &options.flag_package,
             exec_engine: None,
             release: options.flag_release,
-            mode: ops::CompileMode::Test,
-            filter: ops::CompileFilter::new(options.flag_lib,
-                                            &options.flag_bin,
-                                            &options.flag_test,
-                                            &options.flag_example,
-                                            &options.flag_bench),
+            mode: mode,
+            filter: filter,
             target_rustdoc_args: None,
             target_rustc_args: None,
         },
