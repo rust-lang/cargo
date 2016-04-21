@@ -17,7 +17,7 @@ pub struct Options {
     flag_list: bool,
     flag_force: bool,
 
-    arg_crate: Option<String>,
+    arg_crate: Vec<String>,
     flag_vers: Option<String>,
 
     flag_git: Option<String>,
@@ -32,7 +32,7 @@ pub const USAGE: &'static str = "
 Install a Rust binary
 
 Usage:
-    cargo install [options] [<crate>]
+    cargo install [options] [<crate>...]
     cargo install [options] --list
 
 Specifying what crate to install:
@@ -123,20 +123,20 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         SourceId::for_git(&url, gitref)
     } else if let Some(path) = options.flag_path {
         try!(SourceId::for_path(&config.cwd().join(path)))
-    } else if options.arg_crate == None {
+    } else if options.arg_crate.is_empty() {
         try!(SourceId::for_path(&config.cwd()))
     } else {
         try!(SourceId::for_central(config))
     };
 
-    let krate = options.arg_crate.as_ref().map(|s| &s[..]);
+    let krates = options.arg_crate.iter().map(|s| &s[..]).collect::<Vec<_>>();
     let vers = options.flag_vers.as_ref().map(|s| &s[..]);
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {
         try!(ops::install_list(root, config));
     } else {
-        try!(ops::install(root, krate, &source, vers, &compile_opts, options.flag_force));
+        try!(ops::install(root, krates, &source, vers, &compile_opts, options.flag_force));
     }
     Ok(None)
 }
