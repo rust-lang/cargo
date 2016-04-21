@@ -162,3 +162,8 @@ test!(cargo_help {
     assert_that(cargo_process().arg("help").arg("help"),
                 execs().with_status(0));
 });
+
+test!(explain {
+    assert_that(cargo_process().arg("--explain").arg("E0001"),
+                execs().with_status(0));
+});
