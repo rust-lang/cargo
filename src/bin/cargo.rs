@@ -15,6 +15,7 @@ use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
 use cargo::util::ChainError;
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::process_builder::process;
 
 #[derive(RustcDecodable)]
 pub struct Flags {
@@ -23,6 +24,7 @@ pub struct Flags {
     flag_verbose: Option<bool>,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
+    flag_explain: Option<String>,
     arg_command: String,
     arg_args: Vec<String>,
 }
@@ -38,6 +40,7 @@ Options:
     -h, --help          Display this message
     -V, --version       Print version info and exit
     --list              List installed commands
+    --explain CODE      Run `rustc --explain CODE`
     -v, --verbose       Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
@@ -126,6 +129,12 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         for command in list_commands(config) {
             println!("    {}", command);
         };
+        return Ok(None)
+    }
+
+    if let Some(ref code) = flags.flag_explain {
+        try!(process(config.rustc()).arg("--explain").arg(code).exec()
+                                    .map_err(human));
         return Ok(None)
     }
 
