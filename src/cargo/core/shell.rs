@@ -100,7 +100,10 @@ impl MultiShell {
     }
 
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.err().say_status("warning:", message, YELLOW, false)
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.err().say_status("warning:", message, YELLOW, false),
+        }
     }
 
     pub fn set_verbosity(&mut self, verbosity: Verbosity) {
