@@ -2082,3 +2082,30 @@ test!(selective_test_optional_dep {
 {running} `rustc a[..]src[..]lib.rs [..]`
 ", compiling = COMPILING, running = RUNNING)));
 });
+
+test!(only_test_docs {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            #[test]
+            fn foo() {
+                let a: u32 = "hello";
+            }
+
+            /// ```
+            /// println!("ok");
+            /// ```
+            pub fn bar() {
+            }
+        "#)
+        .file("tests/foo.rs", "this is not rust");
+    p.build();
+
+    assert_that(p.cargo("test").arg("--doc"),
+                execs().with_status(0));
+});
