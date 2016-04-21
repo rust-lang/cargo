@@ -72,8 +72,12 @@ crate is built:
   build script should be re-run if it changes (detected by a more-recent
   last-modified timestamp on the file). Normally build scripts are re-run if
   any file inside the crate root changes, but this can be used to scope changes
-  to just a small set of files. If this path points to a directory the entire
-  directory will be traversed for changes.
+  to just a small set of files. (If this path points to a directory the entire
+  directory will not be traversed for changes -- only changes to the timestamp
+  of the directory itself (which corresponds to some types of changes within the
+  directory, depending on platform) will trigger a rebuild. To request a re-run
+  on any changes within an entire directory, print a line for the directory and
+  another line for everything inside it, recursively.)
 
 Any other element is a user-defined metadata that will be passed to
 dependencies. More information about this can be found in the [`links`][links]
