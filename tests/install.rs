@@ -55,7 +55,45 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 }
 
 #[test]
-fn pick_max_version() {
+test!(multiple_pkgs {
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.1");
+
+    assert_that(cargo_process("install").arg("foo").arg("bar"),
+                execs().with_status(0).with_stdout(&format!("\
+{updating} registry `[..]`
+{downloading} foo v0.0.1 (registry file://[..])
+{compiling} foo v0.0.1 (registry file://[..])
+{installing} {home}[..]bin[..]foo[..]
+{downloading} bar v0.0.1 (registry file://[..])
+{compiling} bar v0.0.1 (registry file://[..])
+{installing} {home}[..]bin[..]bar[..]
+",
+        updating = UPDATING,
+        downloading = DOWNLOADING,
+        compiling = COMPILING,
+        installing = INSTALLING,
+        home = cargo_home().display())));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(cargo_home(), has_installed_exe("bar"));
+
+    assert_that(cargo_process("uninstall").arg("foo"),
+                execs().with_status(0).with_stdout(&format!("\
+{removing} {home}[..]bin[..]foo[..]
+",
+        removing = REMOVING,
+        home = cargo_home().display())));
+    assert_that(cargo_process("uninstall").arg("bar"),
+                execs().with_status(0).with_stdout(&format!("\
+{removing} {home}[..]bin[..]bar[..]
+",
+        removing = REMOVING,
+        home = cargo_home().display())));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+});
+
+test!(pick_max_version {
     pkg("foo", "0.0.1");
     pkg("foo", "0.0.2");
 
