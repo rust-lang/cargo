@@ -659,3 +659,18 @@ test!(q_silences_warnings {
     assert_that(cargo_process("install").arg("-q").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(""));
 });
+
+test!(readonly_dir {
+    pkg("foo", "0.0.1");
+
+    let root = paths::root();
+    let dir = &root.join("readonly");
+    fs::create_dir(root.join("readonly")).unwrap();
+    let mut perms = fs::metadata(dir).unwrap().permissions();
+    perms.set_readonly(true);
+    fs::set_permissions(dir, perms).unwrap();
+
+    assert_that(cargo_process("install").arg("foo").cwd(dir),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+});
