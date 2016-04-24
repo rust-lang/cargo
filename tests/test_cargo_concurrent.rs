@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, str};
 use std::fs::{self, File};
 use std::io::Write;
 use std::net::TcpListener;
@@ -14,6 +14,12 @@ use support::registry::Package;
 use test_cargo_install::{cargo_home, has_installed_exe};
 
 fn setup() {}
+
+fn pkg(name: &str, vers: &str) {
+    Package::new(name, vers)
+        .file("src/main.rs", "fn main() {{}}")
+        .publish();
+}
 
 test!(multiple_installs {
     let p = project("foo")
@@ -44,6 +50,34 @@ test!(multiple_installs {
     let a = thread::spawn(move || a.wait_with_output().unwrap());
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
+
+    assert_that(a, execs().with_status(0));
+    assert_that(b, execs().with_status(0));
+
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(cargo_home(), has_installed_exe("bar"));
+});
+
+test!(concurrent_installs {
+    const LOCKED_BUILD: &'static str = "waiting for file lock on build directory";
+
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.1");
+
+    let mut a = ::cargo_process().arg("install").arg("foo").build_command();
+    let mut b = ::cargo_process().arg("install").arg("bar").build_command();
+
+    a.stdout(Stdio::piped()).stderr(Stdio::piped());
+    b.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+    let a = a.spawn().unwrap();
+    let b = b.spawn().unwrap();
+    let a = thread::spawn(move || a.wait_with_output().unwrap());
+    let b = b.wait_with_output().unwrap();
+    let a = a.join().unwrap();
+
+    assert!(!str::from_utf8(&a.stderr).unwrap().contains(LOCKED_BUILD));
+    assert!(!str::from_utf8(&b.stderr).unwrap().contains(LOCKED_BUILD));
 
     assert_that(a, execs().with_status(0));
     assert_that(b, execs().with_status(0));

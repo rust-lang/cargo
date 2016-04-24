@@ -19,6 +19,7 @@ extern crate regex;
 extern crate rustc_serialize;
 extern crate semver;
 extern crate tar;
+extern crate tempdir;
 extern crate term;
 extern crate time;
 extern crate toml;
