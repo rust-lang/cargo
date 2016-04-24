@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
+use tempdir::TempDir;
 use toml;
 
 use core::{SourceId, Source, Package, Registry, Dependency, PackageIdSpec};
@@ -79,13 +80,25 @@ pub fn install(root: Option<&str>,
         try!(check_overwrites(&dst, &pkg, &opts.filter, &list));
     }
 
+    let mut td_opt = None;
     let target_dir = if source_id.is_path() {
         config.target_dir(&pkg)
     } else {
-        Filesystem::new(config.cwd().join("target-install"))
+        if let Ok(td) = TempDir::new("cargo-install") {
+            let p = td.path().to_owned();
+            td_opt = Some(td);
+            Filesystem::new(p)
+        } else {
+            Filesystem::new(config.cwd().join("target-install"))
+        }
     };
     config.set_target_dir(target_dir.clone());
     let compile = try!(ops::compile_pkg(&pkg, Some(source), opts).chain_error(|| {
+        if let Some(td) = td_opt.take() {
+            // preserve the temporary directory, so the user can inspect it
+            td.into_path();
+        }
+
         human(format!("failed to compile `{}`, intermediate artifacts can be \
                        found at `{}`", pkg, target_dir.display()))
     }));
