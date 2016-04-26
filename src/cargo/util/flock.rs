@@ -250,6 +250,21 @@ fn acquire(config: &Config,
            path: &Path,
            try: &Fn() -> io::Result<()>,
            block: &Fn() -> io::Result<()>) -> CargoResult<()> {
+
+    // File locking on Unix is currently implemented via `flock`, which is known
+    // to be broken on NFS. We could in theory just ignore errors that happen on
+    // NFS, but apparently the failure mode [1] for `flock` on NFS is **blocking
+    // forever**, even if the nonblocking flag is passed!
+    //
+    // As a result, we just skip all file locks entirely on NFS mounts. That
+    // should avoid calling any `flock` functions at all, and it wouldn't work
+    // there anyway.
+    //
+    // [1]: https://github.com/rust-lang/cargo/issues/2615
+    if is_on_nfs_mount(path) {
+        return Ok(())
+    }
+
     match try() {
         Ok(()) => return Ok(()),
         Err(e) => {
@@ -263,9 +278,34 @@ fn acquire(config: &Config,
     let msg = format!("waiting for file lock on {}", msg);
     try!(config.shell().err().say_status("Blocking", &msg, CYAN, true));
 
-    block().chain_error(|| {
+    return block().chain_error(|| {
         human(format!("failed to lock file: {}", path.display()))
-    })
+    });
+
+    #[cfg(target_os = "linux")]
+    fn is_on_nfs_mount(path: &Path) -> bool {
+        use std::ffi::CString;
+        use std::mem;
+        use std::os::unix::prelude::*;
+        use libc;
+
+        let path = match CString::new(path.as_os_str().as_bytes()) {
+            Ok(path) => path,
+            Err(_) => return false,
+        };
+
+        unsafe {
+            let mut buf: libc::statfs = mem::zeroed();
+            let r = libc::statfs(path.as_ptr(), &mut buf);
+
+            r == 0 && buf.f_type == libc::NFS_SUPER_MAGIC
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn is_on_nfs_mount(_path: &Path) -> bool {
+        false
+    }
 }
 
 fn create_dir_all(path: &Path) -> io::Result<()> {
