@@ -47,7 +47,7 @@ pub struct CompileOptions<'a> {
     pub features: &'a [String],
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
-    /// Root package to build (if None it's the current one)
+    /// Root package(s) to build (if empty, just build the current one)
     pub spec: &'a [String],
     /// Filter to apply to the root package to select which targets will be
     /// built.
