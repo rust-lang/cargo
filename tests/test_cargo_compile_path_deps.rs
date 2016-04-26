@@ -216,7 +216,7 @@ test!(cargo_compile_with_transitive_dev_deps {
 
             [dev-dependencies.baz]
 
-            git = "git://example.com/path/to/nowhere"
+            path = "../baz"
 
             [lib]
 
@@ -226,7 +226,15 @@ test!(cargo_compile_with_transitive_dev_deps {
             pub fn gimme() -> &'static str {
                 "zoidberg"
             }
-        "#);
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+
+            name = "baz"
+            version = "0.1.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("baz/src/lib.rs", r#""#);
 
     assert_that(p.cargo_process("build"),
         execs().with_stdout(&format!("{} bar v0.5.0 ({}/bar)\n\

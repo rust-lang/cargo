@@ -93,6 +93,7 @@ pub enum Method<'a> {
     Everything,
     Required {
         dev_deps: bool,
+        dev_deps_packages: &'a [String],
         features: &'a [String],
         uses_default_features: bool,
     },
@@ -469,8 +470,15 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
             }
         };
 
+        let dev_deps = match *top_method {
+            Method::Everything => true,
+            Method::Required { dev_deps, dev_deps_packages, .. } =>
+                dev_deps && dev_deps_packages.iter().any(|s| s == dep.name()),
+        };
+
         let method = Method::Required {
-            dev_deps: false,
+            dev_deps: dev_deps,
+            dev_deps_packages: &[],
             features: &features,
             uses_default_features: dep.uses_default_features(),
         };

@@ -113,5 +113,6 @@ fn resolve_dependencies<'a>(manifest: &Path,
                               config,
                               None,
                               features,
-                              no_default_features)
+                              no_default_features,
+                              &[])
 }

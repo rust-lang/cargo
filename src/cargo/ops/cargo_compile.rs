@@ -102,7 +102,8 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
                                 config: &'a Config,
                                 source: Option<Box<Source + 'a>>,
                                 features: Vec<String>,
-                                no_default_features: bool)
+                                no_default_features: bool,
+                                dev_deps_packages: &'a [String])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
     let mut registry = PackageRegistry::new(config);
@@ -122,8 +123,9 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
 
     try!(add_overrides(&mut registry, root_package.root(), config));
 
-    let method = Method::Required{
+    let method = Method::Required {
         dev_deps: true, // TODO: remove this option?
+        dev_deps_packages: dev_deps_packages,
         features: &features,
         uses_default_features: !no_default_features,
     };
@@ -164,7 +166,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
 
     let (packages, resolve_with_overrides) = {
         try!(resolve_dependencies(root_package, config, source, features,
-                                  no_default_features))
+                                  no_default_features, spec))
     };
 
     let mut invalid_spec = vec![];
