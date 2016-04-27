@@ -200,7 +200,8 @@ fn test_resolving_with_dev_deps() {
         pkg!("foo" => ["bar", dep_kind("baz", Development)]),
         pkg!("baz" => ["bat", dep_kind("bam", Development)]),
         pkg!("bar"),
-        pkg!("bat")
+        pkg!("bat"),
+        pkg!("bam"),
     ]);
 
     let res = resolve(pkg_id("root"),
