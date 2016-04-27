@@ -446,6 +446,15 @@ in the `hello_utils` folder (relative to the `Cargo.toml` it’s written in).
 
 And that’s it! The next `cargo build` will automatically build `hello_utils` and
 all of its own dependencies, and others can also start using the crate as well.
+However, dependencies with only a path are not permitted on crates.io so if we
+wanted to publish our `hello_world` crate we would need to publish a version of
+`hello_utils` to crates.io (or specify a git repository location) and specify it
+in the dependencies line:
+
+```toml
+[dependencies]
+hello_utils = { path = "hello_utils", version = "0.1.0" }
+```
 
 ## Travis-CI
 
