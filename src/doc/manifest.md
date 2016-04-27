@@ -149,6 +149,9 @@ You can specify the source of a dependency in a few ways:
   inside it. The specified path should be relative to the current `Cargo.toml`.
 * If `path` and `git` are omitted, the dependency will come from crates.io, and
   the `version` key will be used to indicate the version requirement.
+* `path` will be ignored for all dependencies retrieved from crates.io, so `git`
+  or `version` must be specified for all crate dependencies when uploading to
+  crates.io.
 
 Dependencies from crates.io can also use a shorthand where just the version
 requirement is specified:
