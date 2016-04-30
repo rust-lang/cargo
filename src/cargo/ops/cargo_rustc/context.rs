@@ -67,11 +67,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
-        let target_info = try!(Context::target_info(target, config));
+        let target_info = try!(Context::target_info(target, config, &build_config));
         let host_info = if build_config.requested_target.is_none() {
             target_info.clone()
         } else {
-            try!(Context::target_info(None, config))
+            try!(Context::target_info(None, config, &build_config))
         };
         let target_triple = target.unwrap_or_else(|| {
             &config.rustc_info().host[..]
@@ -103,8 +103,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Run `rustc` to discover the dylib prefix/suffix for the target
     /// specified as well as the exe suffix
-    fn target_info(target: Option<&str>, cfg: &Config)
+    fn target_info(target: Option<&str>,
+                   cfg: &Config,
+                   build_config: &BuildConfig)
                    -> CargoResult<TargetInfo> {
+        let kind = if target.is_none() {Kind::Host} else {Kind::Target};
         let mut process = util::process(cfg.rustc());
         process.arg("-")
                .arg("--crate-name").arg("_")
@@ -112,6 +115,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                .arg("--crate-type").arg("staticlib")
                .arg("--crate-type").arg("bin")
                .arg("--print=file-names")
+               .args(&try!(rustflags_args(cfg, build_config, kind)))
                .env_remove("RUST_LOG");
         if let Some(s) = target {
             process.arg("--target").arg(s);
@@ -617,53 +621,59 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         &self.profiles.dev
     }
 
-    // Acquire extra flags to pass to the compiler from the
-    // RUSTFLAGS environment variable and similar config values
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        // We *want* to apply RUSTFLAGS only to builds for the
-        // requested target architecture, and not to things like build
-        // scripts and plugins, which may be for an entirely different
-        // architecture. Cargo's present architecture makes it quite
-        // hard to only apply flags to things that are not build
-        // scripts and plugins though, so we do something more hacky
-        // instead to avoid applying the same RUSTFLAGS to multiple targets
-        // arches:
-        //
-        // 1) If --target is not specified we just apply RUSTFLAGS to
-        // all builds; they are all going to have the same target.
-        //
-        // 2) If --target *is* specified then we only apply RUSTFLAGS
-        // to compilation units with the Target kind, which indicates
-        // it was chosen by the --target flag.
-        //
-        // This means that, e.g. even if the specified --target is the
-        // same as the host, build scripts in plugins won't get
-        // RUSTFLAGS.
-        let compiling_with_target = self.build_config.requested_target.is_some();
-        let is_target_kind = unit.kind == Kind::Target;
-
-        if compiling_with_target && ! is_target_kind {
-            // This is probably a build script or plugin and we're
-            // compiling with --target. In this scenario there are
-            // no rustflags we can apply.
-            return Ok(Vec::new());
-        }
-
-        // First try RUSTFLAGS from the environment
-        if let Some(a) = env::var("RUSTFLAGS").ok() {
-            let args = a.split(" ")
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-                .map(str::to_string);
-            return Ok(args.collect());
-        }
-
-        // Then the build.rustflags value
-        if let Some(args) = try!(self.config.get_list("build.rustflags")) {
-            let args = args.val.into_iter().map(|a| a.0);
-            return Ok(args.collect());
-        }
-
-        Ok(Vec::new())
+        rustflags_args(self.config, &self.build_config, unit.kind)
     }
+}
+
+// Acquire extra flags to pass to the compiler from the
+// RUSTFLAGS environment variable and similar config values
+fn rustflags_args(config: &Config,
+                  build_config: &BuildConfig,
+                  kind: Kind) -> CargoResult<Vec<String>> {
+    // We *want* to apply RUSTFLAGS only to builds for the
+    // requested target architecture, and not to things like build
+    // scripts and plugins, which may be for an entirely different
+    // architecture. Cargo's present architecture makes it quite
+    // hard to only apply flags to things that are not build
+    // scripts and plugins though, so we do something more hacky
+    // instead to avoid applying the same RUSTFLAGS to multiple targets
+    // arches:
+    //
+    // 1) If --target is not specified we just apply RUSTFLAGS to
+    // all builds; they are all going to have the same target.
+    //
+    // 2) If --target *is* specified then we only apply RUSTFLAGS
+    // to compilation units with the Target kind, which indicates
+    // it was chosen by the --target flag.
+    //
+    // This means that, e.g. even if the specified --target is the
+    // same as the host, build scripts in plugins won't get
+    // RUSTFLAGS.
+    let compiling_with_target = build_config.requested_target.is_some();
+    let is_target_kind = kind == Kind::Target;
+
+    if compiling_with_target && !is_target_kind {
+        // This is probably a build script or plugin and we're
+        // compiling with --target. In this scenario there are
+        // no rustflags we can apply.
+        return Ok(Vec::new());
+    }
+
+    // First try RUSTFLAGS from the environment
+    if let Some(a) = env::var("RUSTFLAGS").ok() {
+        let args = a.split(" ")
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+        return Ok(args.collect());
+    }
+
+    // Then the build.rustflags value
+    if let Some(args) = try!(config.get_list("build.rustflags")) {
+        let args = args.val.into_iter().map(|a| a.0);
+        return Ok(args.collect());
+    }
+
+    Ok(Vec::new())
 }
