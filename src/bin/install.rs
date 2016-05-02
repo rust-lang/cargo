@@ -15,6 +15,7 @@ pub struct Options {
     flag_color: Option<String>,
     flag_root: Option<String>,
     flag_list: bool,
+    flag_force: bool,
 
     arg_crate: Option<String>,
     flag_vers: Option<String>,
@@ -46,6 +47,7 @@ Build and install options:
     -h, --help                Print this message
     -j N, --jobs N            The number of jobs to run in parallel
     --features FEATURES       Space-separated list of features to activate
+    -f, --force               Force overwriting existing crates or binaries
     --no-default-features     Do not build the `default` feature
     --debug                   Build in debug mode instead of release mode
     --bin NAME                Only install the binary NAME
@@ -55,7 +57,7 @@ Build and install options:
     -q, --quiet               Less output printed to stdout
     --color WHEN              Coloring: auto, always, never
 
-This command manages Cargo's local set of install binary crates. Only packages
+This command manages Cargo's local set of installed binary crates. Only packages
 which have [[bin]] targets can be installed, and all binaries are installed into
 the installation root's `bin` folder. The installation root is determined, in
 order of precedence, by `--root`, `$CARGO_INSTALL_ROOT`, the `install.root`
@@ -74,6 +76,10 @@ optionally specify the branch, tag, or revision that should be installed. If a
 crate has multiple binaries, the `--bin` argument can selectively install only
 one of them, and if you'd rather install examples the `--example` argument can
 be used as well.
+
+By default cargo will refuse to overwrite existing binaries. The `--force` flag
+enables overwriting existing binaries. Thus you can reinstall a crate with
+`cargo install --force <crate>`.
 
 As a special convenience, omitting the <crate> specification entirely will
 install the crate in the current directory. That is, `install` is equivalent to
@@ -130,7 +136,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     if options.flag_list {
         try!(ops::install_list(root, config));
     } else {
-        try!(ops::install(root, krate, &source, vers, &compile_opts));
+        try!(ops::install(root, krate, &source, vers, &compile_opts, options.flag_force));
     }
     Ok(None)
 }
