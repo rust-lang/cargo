@@ -219,6 +219,29 @@ impl GitDatabase {
         try!(self.repo.revparse_single(reference));
         Ok(())
     }
+
+    pub fn tag(&self, version: &str, description: &str, force: bool) -> CargoResult<()>{
+        let mut revwalk = try!(self.repo.revwalk());
+        revwalk.simplify_first_parent();
+        let mut flags = git2::Sort::empty();
+        flags.insert(git2::SORT_TIME);
+        flags.insert(git2::SORT_TOPOLOGICAL);
+        revwalk.set_sorting(flags);
+        try!(revwalk.push_head());
+        // If there are no commits this will fail but we should have no package to tag
+        let last_commit_id = try!(revwalk.nth(0).ok_or(human("No commit found to tag")));
+        let last_commit =  try!(self.repo.find_object(try!(last_commit_id),
+                                                      Some(git2::ObjectType::Commit)));
+        let signature = try!(self.repo.signature());
+        match self.repo.tag(version, &last_commit, &signature, &description, force){
+            Ok(_) => Ok(()),
+            Err(_) => {
+                Err(human("unable to tag commit"))
+            },
+
+        }
+    }
+
 }
 
 impl<'a> GitCheckout<'a> {

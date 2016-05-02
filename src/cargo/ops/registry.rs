@@ -6,6 +6,8 @@ use std::iter::repeat;
 use std::path::{Path, PathBuf};
 
 use curl::http;
+
+use semver;
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
 use term::color::BLACK;
@@ -49,11 +51,75 @@ pub fn publish(manifest_path: &Path,
     let tarball = try!(ops::package(manifest_path, config, verify,
                                     false, true)).unwrap();
 
+    try!(check_file_cleanliness());
+    // Tag the package
+    match source_control_tag(pkg.name(), pkg.version(), &config){
+        Err(e) => {
+            try!(config.shell().status("Tagging", format!("failed: {:?}", e)));
+        }
+        _ => {}
+    };
     // Upload said tarball to the specified destination
     try!(config.shell().status("Uploading", pkg.package_id().to_string()));
     try!(transmit(&pkg, tarball.file(), &mut registry));
 
     Ok(())
+}
+
+fn check_file_cleanliness() -> CargoResult<()>{
+    let current_path = Path::new(".");
+    if fs::metadata(&current_path.join(".git")).is_ok() {
+        match git2::Repository::open(&current_path){
+            Ok(repo) =>{
+                let mut opts = git2::StatusOptions::new();
+                opts.include_untracked(true);
+                let status = try!(repo.statuses(Some(&mut opts)));
+                match status.len() {
+                    0 => Ok(()),
+                    _ => Err(human("there are uncommited or untacked files \
+                    that need to be addressed before publishing"))
+                }
+            },
+            Err(_) => Err(human("unable to open local git"))
+        }
+    }else{
+        Ok(())
+    }
+
+}
+
+fn source_control_tag(name: &str, version: &semver::Version, config: &Config)
+    -> CargoResult<()> {
+    let auto_tag = try!(config.get_bool("publish.auto_tag")).
+        map(|v| v.val).unwrap_or(false);
+    if auto_tag {
+        let tag_message = format!("repository for version {}", version);
+        try!(config.shell().status("Tagging", tag_message));
+        let current_path = Path::new(".");
+        if fs::metadata(&current_path.join(".git")).is_ok() {
+            match git2::Repository::open(&current_path){
+                Ok(repo) =>{
+                    let tag_name = format!("{}-{}", name, version);
+                    let tag_description = format!("Version {}", version);
+                    let sig = try!(repo.signature().map_err(human));
+                    let obj = try!(repo.revparse_single("HEAD").map_err(human));
+                    match repo.tag(&tag_name, &obj, &sig,
+                                        &tag_description, false){
+                        Ok(_) => Ok(()),
+                        Err(_) => {
+                            Err(human("unable to tag commit"))
+                        },
+                    }
+                },
+                Err(_) => Err(human("unable to open local git"))
+            }
+        } else {
+            Err(human("no taggable source control. auto_tag can be \
+                      turned off in your cargo config file"))
+        }
+    } else {
+        Ok(())
+    }
 }
 
 fn verify_dependencies(pkg: &Package, registry_src: &SourceId)

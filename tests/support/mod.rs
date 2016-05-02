@@ -669,6 +669,7 @@ pub static DOCTEST:     &'static str = "   Doc-tests";
 pub static PACKAGING:   &'static str = "   Packaging";
 pub static DOWNLOADING: &'static str = " Downloading";
 pub static UPLOADING:   &'static str = "   Uploading";
+pub static TAGGING:     &'static str = "     Tagging";
 pub static VERIFYING:   &'static str = "   Verifying";
 pub static ARCHIVING:   &'static str = "   Archiving";
 pub static INSTALLING:  &'static str = "  Installing";
