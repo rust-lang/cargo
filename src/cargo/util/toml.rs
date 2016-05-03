@@ -32,6 +32,38 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// Returns a new `Layout` for a given root path.
+    /// The `root_path` represents the directory that contains the `Cargo.toml` file.
+    pub fn from_project_path(root_path: &Path) -> Layout {
+        let mut lib = None;
+        let mut bins = vec![];
+        let mut examples = vec![];
+        let mut tests = vec![];
+        let mut benches = vec![];
+
+        let lib_canidate = root_path.join("src").join("lib.rs");
+        if fs::metadata(&lib_canidate).is_ok() {
+            lib = Some(lib_canidate);
+        }
+
+        try_add_file(&mut bins, root_path.join("src").join("main.rs"));
+        try_add_files(&mut bins, root_path.join("src").join("bin"));
+
+        try_add_files(&mut examples, root_path.join("examples"));
+
+        try_add_files(&mut tests, root_path.join("tests"));
+        try_add_files(&mut benches, root_path.join("benches"));
+
+        Layout {
+            root: root_path.to_path_buf(),
+            lib: lib,
+            bins: bins,
+            examples: examples,
+            tests: tests,
+            benches: benches,
+        }
+    }
+
     fn main(&self) -> Option<&PathBuf> {
         self.bins.iter().find(|p| {
             match p.file_name().and_then(|s| s.to_str()) {
@@ -66,39 +98,6 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
             }))
         }
         Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
-    }
-}
-
-/// Returns a new `Layout` for a given root path.
-/// The `root_path` represents the directory that contains the `Cargo.toml` file.
-
-pub fn project_layout(root_path: &Path) -> Layout {
-    let mut lib = None;
-    let mut bins = vec![];
-    let mut examples = vec![];
-    let mut tests = vec![];
-    let mut benches = vec![];
-
-    let lib_canidate = root_path.join("src").join("lib.rs");
-    if fs::metadata(&lib_canidate).is_ok() {
-        lib = Some(lib_canidate);
-    }
-
-    try_add_file(&mut bins, root_path.join("src").join("main.rs"));
-    try_add_files(&mut bins, root_path.join("src").join("bin"));
-
-    try_add_files(&mut examples, root_path.join("examples"));
-
-    try_add_files(&mut tests, root_path.join("tests"));
-    try_add_files(&mut benches, root_path.join("benches"));
-
-    Layout {
-        root: root_path.to_path_buf(),
-        lib: lib,
-        bins: bins,
-        examples: examples,
-        tests: tests,
-        benches: benches,
     }
 }
 
