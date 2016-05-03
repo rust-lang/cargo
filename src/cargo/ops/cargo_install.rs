@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use tempdir::TempDir;
 use toml;
 
-use core::{SourceId, Source, Package, Registry, Dependency, PackageIdSpec};
+use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
 use core::PackageId;
 use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, RegistrySource};

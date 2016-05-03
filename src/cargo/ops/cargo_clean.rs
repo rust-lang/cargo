@@ -3,7 +3,6 @@ use std::fs;
 use std::path::Path;
 
 use core::{Package, Profiles};
-use core::source::Source;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context, BuildConfig, Kind, Unit};
 
