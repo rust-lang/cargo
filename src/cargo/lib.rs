@@ -26,7 +26,6 @@ extern crate toml;
 extern crate url;
 
 use std::env;
-use std::error::Error;
 use std::io::prelude::*;
 use std::io;
 use rustc_serialize::{Decodable, Encodable};

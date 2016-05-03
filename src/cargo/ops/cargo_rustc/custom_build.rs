@@ -1,6 +1,5 @@
 use std::collections::{HashMap, BTreeSet, HashSet};
 use std::fs;
-use std::io::prelude::*;
 use std::path::{PathBuf, Path};
 use std::str;
 use std::sync::{Mutex, Arc};

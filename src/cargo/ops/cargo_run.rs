@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ops::{self, ExecEngine, CompileFilter};
+use ops::{self, CompileFilter};
 use util::{self, CargoResult, process, ProcessError};
 use core::Package;
 
