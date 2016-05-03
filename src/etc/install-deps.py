@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
-import contextlib
 import download
 import os
 import shutil
 import sys
-import tarfile
 
 if os.environ.get('BITS') == '32':
     host_bits = 'i686'
@@ -13,7 +11,6 @@ if os.environ.get('BITS') == '32':
 else:
     host_bits = 'x86_64'
     extra_bits = 'i686'
-
 
 
 # Figure out our target triple
@@ -69,6 +66,7 @@ def install_via_tarballs():
     if os.path.isdir("rustc"):
         shutil.rmtree("rustc")
     os.rename("rustc-install", "rustc")
+
 
 def fetch_std(target):
     fname = 'rust-std-nightly-' + target + '.tar.gz'
