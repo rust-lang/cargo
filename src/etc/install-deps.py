@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
-import contextlib
 import download
 import os
 import shutil
 import sys
-import tarfile
 
 if os.environ.get('BITS') == '32':
     host_bits = 'i686'
