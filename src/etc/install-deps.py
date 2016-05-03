@@ -13,7 +13,6 @@ else:
     extra_bits = 'i686'
 
 
-
 # Figure out our target triple
 if sys.platform == 'linux' or sys.platform == 'linux2':
     host = host_bits + '-unknown-linux-gnu'
@@ -67,6 +66,7 @@ def install_via_tarballs():
     if os.path.isdir("rustc"):
         shutil.rmtree("rustc")
     os.rename("rustc-install", "rustc")
+
 
 def fetch_std(target):
     fname = 'rust-std-nightly-' + target + '.tar.gz'
