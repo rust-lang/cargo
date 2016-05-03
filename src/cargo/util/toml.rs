@@ -390,7 +390,7 @@ impl TomlManifest {
 
         let lib = match self.lib {
             Some(ref lib) => {
-                try!(validate_library_name(lib));
+                try!(lib.validate_library_name());
                 Some(
                     TomlTarget {
                         name: lib.name.clone().or(Some(project.name.clone())),
@@ -409,7 +409,7 @@ impl TomlManifest {
                 let bin = layout.main();
 
                 for target in bins {
-                    try!(validate_binary_name(target));
+                    try!(target.validate_binary_name());
                 }
 
                 bins.iter().map(|t| {
@@ -438,7 +438,7 @@ impl TomlManifest {
         let examples = match self.example {
             Some(ref examples) => {
                 for target in examples {
-                    try!(validate_example_name(target));
+                    try!(target.validate_example_name());
                 }
                 examples.clone()
             }
@@ -448,7 +448,7 @@ impl TomlManifest {
         let tests = match self.test {
             Some(ref tests) => {
                 for target in tests {
-                    try!(validate_test_name(target));
+                    try!(target.validate_test_name());
                 }
                 tests.clone()
             }
@@ -458,7 +458,7 @@ impl TomlManifest {
         let benches = match self.bench {
             Some(ref benches) => {
                 for target in benches {
-                    try!(validate_bench_name(target));
+                    try!(target.validate_bench_name());
                 }
                 benches.clone()
             }
@@ -636,74 +636,6 @@ fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_library_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("library target names cannot be empty.")))
-            } else if name.contains("-") {
-                Err(human(format!("library target names cannot contain hyphens: {}",
-                                  name)))
-            } else {
-                Ok(())
-            }
-        },
-        None => Ok(())
-    }
-}
-
-fn validate_binary_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("binary target names cannot be empty.")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("binary target bin.name is required")))
-    }
-}
-
-fn validate_example_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("example target names cannot be empty")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("example target example.name is required")))
-    }
-}
-
-fn validate_test_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("test target names cannot be empty")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("test target test.name is required")))
-    }
-}
-
-fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("bench target names cannot be empty")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("bench target bench.name is required")))
-    }
-}
-
 impl TomlDependency {
     fn to_dependency(&self,
                      name: &str,
@@ -840,6 +772,74 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => name.clone(),
             None => panic!("target name is required")
+        }
+    }
+
+    fn validate_library_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("library target names cannot be empty.")))
+                } else if name.contains("-") {
+                    Err(human(format!("library target names cannot contain hyphens: {}",
+                                      name)))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Ok(())
+        }
+    }
+
+    fn validate_binary_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("binary target names cannot be empty.")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("binary target bin.name is required")))
+        }
+    }
+
+    fn validate_example_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("example target names cannot be empty")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("example target example.name is required")))
+        }
+    }
+
+    fn validate_test_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("test target names cannot be empty")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("test target test.name is required")))
+        }
+    }
+
+    fn validate_bench_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("bench target names cannot be empty")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("bench target bench.name is required")))
         }
     }
 }
