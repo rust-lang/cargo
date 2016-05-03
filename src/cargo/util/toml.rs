@@ -156,9 +156,8 @@ pub fn to_manifest(contents: &[u8],
 
 pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
     let mut parser = toml::Parser::new(&toml);
-    match parser.parse() {
-        Some(toml) => return Ok(toml),
-        None => {}
+    if let Some(toml) = parser.parse() {
+        return Ok(toml);
     }
     let mut error_str = format!("could not parse input as TOML\n");
     for error in parser.errors.iter() {
