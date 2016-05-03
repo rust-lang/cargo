@@ -14,5 +14,5 @@ path = "lib.rs"
 
 [dependencies]
 curl = "0.2"
-url = "0.2"
+url = "1.0"
 rustc-serialize = "0.3"

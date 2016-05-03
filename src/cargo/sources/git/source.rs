@@ -1,8 +1,7 @@
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher, SipHasher};
-use std::mem;
 
-use url::{self, Url};
+use url::Url;
 
 use core::source::{Source, SourceId};
 use core::GitReference;
@@ -62,15 +61,11 @@ impl<'cfg> GitSource<'cfg> {
 fn ident(url: &Url) -> String {
     let mut hasher = SipHasher::new_with_keys(0,0);
 
-    // FIXME: this really should be able to not use to_str() everywhere, but the
-    //        compiler seems to currently ask for static lifetimes spuriously.
-    //        Perhaps related to rust-lang/rust#15144
     let url = canonicalize_url(url);
-    let ident = url.path().unwrap_or(&[])
-                   .last().map(|a| a.clone()).unwrap_or(String::new());
+    let ident = url.path_segments().and_then(|mut s| s.next_back()).unwrap_or("");
 
     let ident = if ident == "" {
-        "_empty".to_string()
+        "_empty"
     } else {
         ident
     };
@@ -84,39 +79,27 @@ pub fn canonicalize_url(url: &Url) -> Url {
     let mut url = url.clone();
 
     // Strip a trailing slash
-    if let url::SchemeData::Relative(ref mut rel) = url.scheme_data {
-        if rel.path.last().map(|s| s.is_empty()).unwrap_or(false) {
-            rel.path.pop();
-        }
-    }
+    url.path_segments_mut().unwrap().pop_if_empty();
 
     // HACKHACK: For github URL's specifically just lowercase
     // everything.  GitHub treats both the same, but they hash
     // differently, and we're gonna be hashing them. This wants a more
     // general solution, and also we're almost certainly not using the
     // same case conversion rules that GitHub does. (#84)
-    if url.domain() == Some("github.com") {
-        url.scheme = "https".to_string();
-        if let url::SchemeData::Relative(ref mut rel) = url.scheme_data {
-            rel.port = Some(443);
-            rel.default_port = Some(443);
-            let path = mem::replace(&mut rel.path, Vec::new());
-            rel.path = path.into_iter().map(|s| {
-                s.chars().flat_map(|c| c.to_lowercase()).collect()
-            }).collect();
-        }
+    if url.host_str() == Some("github.com") {
+        url.set_scheme("https").unwrap();
+        let path = url.path().to_lowercase();
+        url.set_path(&path);
     }
 
     // Repos generally can be accessed with or w/o '.git'
-    if let url::SchemeData::Relative(ref mut rel) = url.scheme_data {
-        let needs_chopping = {
-            let last = rel.path.last().map(|s| &s[..]).unwrap_or("");
-            last.ends_with(".git")
+    let needs_chopping = url.path().ends_with(".git");
+    if needs_chopping {
+        let last = {
+            let last = url.path_segments().unwrap().next_back().unwrap();
+            last[..last.len() - 4].to_owned()
         };
-        if needs_chopping {
-            let last = rel.path.pop().unwrap();
-            rel.path.push(last[..last.len() - 4].to_string())
-        }
+        url.path_segments_mut().unwrap().pop().push(&last);
     }
 
     url
