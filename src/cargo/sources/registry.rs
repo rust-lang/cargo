@@ -231,7 +231,7 @@ impl<'cfg> RegistrySource<'cfg> {
     pub fn new(source_id: &SourceId,
                config: &'cfg Config) -> RegistrySource<'cfg> {
         let hash = hex::short_hash(source_id);
-        let ident = source_id.url().host().unwrap().to_string();
+        let ident = source_id.url().host_str().unwrap_or("").to_string();
         let part = format!("{}-{}", ident, hash);
         RegistrySource {
             checkout_path: config.registry_index_path().join(&part),
@@ -558,9 +558,10 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         let config = try!(self.config());
         let url = try!(config.dl.to_url().map_err(internal));
         let mut url = url.clone();
-        url.path_mut().unwrap().push(package.name().to_string());
-        url.path_mut().unwrap().push(package.version().to_string());
-        url.path_mut().unwrap().push("download".to_string());
+        url.path_segments_mut().unwrap()
+            .push(package.name())
+            .push(&package.version().to_string())
+            .push("download");
         let krate = try!(self.download_package(package, &url).chain_error(|| {
             internal(format!("failed to download package `{}` from {}",
                              package, url))
