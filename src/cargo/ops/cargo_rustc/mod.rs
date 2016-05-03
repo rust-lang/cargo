@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::prelude::*;
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
