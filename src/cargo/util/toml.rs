@@ -626,9 +626,8 @@ impl TomlManifest {
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
 /// If not, the name of the offending binary target is returned.
 fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
-    let values = targets.iter().map(|e| e.name()).collect::<Vec<String>>();
     let mut seen = HashSet::new();
-    for v in values {
+    for v in targets.iter().map(|e| e.name()) {
         if !seen.insert(v.clone()) {
             return Err(v);
         }
