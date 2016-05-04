@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use core::{Package, Manifest, SourceId, PackageId};
 use util::{self, paths, CargoResult, human, Config, ChainError};
 use util::important_paths::find_project_manifest_exact;
-use util::toml::{Layout, project_layout};
+use util::toml::Layout;
 
 pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
                      config: &Config)
@@ -23,7 +23,7 @@ pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
     let data = try!(paths::read(path));
 
-    let layout = project_layout(path.parent().unwrap());
+    let layout = Layout::from_project_path(path.parent().unwrap());
     let (manifest, nested) =
         try!(read_manifest(data.as_bytes(), layout, source_id, config));
 

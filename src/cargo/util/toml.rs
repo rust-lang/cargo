@@ -32,6 +32,38 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// Returns a new `Layout` for a given root path.
+    /// The `root_path` represents the directory that contains the `Cargo.toml` file.
+    pub fn from_project_path(root_path: &Path) -> Layout {
+        let mut lib = None;
+        let mut bins = vec![];
+        let mut examples = vec![];
+        let mut tests = vec![];
+        let mut benches = vec![];
+
+        let lib_canidate = root_path.join("src").join("lib.rs");
+        if fs::metadata(&lib_canidate).is_ok() {
+            lib = Some(lib_canidate);
+        }
+
+        try_add_file(&mut bins, root_path.join("src").join("main.rs"));
+        try_add_files(&mut bins, root_path.join("src").join("bin"));
+
+        try_add_files(&mut examples, root_path.join("examples"));
+
+        try_add_files(&mut tests, root_path.join("tests"));
+        try_add_files(&mut benches, root_path.join("benches"));
+
+        Layout {
+            root: root_path.to_path_buf(),
+            lib: lib,
+            bins: bins,
+            examples: examples,
+            tests: tests,
+            benches: benches,
+        }
+    }
+
     fn main(&self) -> Option<&PathBuf> {
         self.bins.iter().find(|p| {
             match p.file_name().and_then(|s| s.to_str()) {
@@ -66,39 +98,6 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
             }))
         }
         Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
-    }
-}
-
-/// Returns a new `Layout` for a given root path.
-/// The `root_path` represents the directory that contains the `Cargo.toml` file.
-
-pub fn project_layout(root_path: &Path) -> Layout {
-    let mut lib = None;
-    let mut bins = vec![];
-    let mut examples = vec![];
-    let mut tests = vec![];
-    let mut benches = vec![];
-
-    let lib_canidate = root_path.join("src").join("lib.rs");
-    if fs::metadata(&lib_canidate).is_ok() {
-        lib = Some(lib_canidate);
-    }
-
-    try_add_file(&mut bins, root_path.join("src").join("main.rs"));
-    try_add_files(&mut bins, root_path.join("src").join("bin"));
-
-    try_add_files(&mut examples, root_path.join("examples"));
-
-    try_add_files(&mut tests, root_path.join("tests"));
-    try_add_files(&mut benches, root_path.join("benches"));
-
-    Layout {
-        root: root_path.to_path_buf(),
-        lib: lib,
-        bins: bins,
-        examples: examples,
-        tests: tests,
-        benches: benches,
     }
 }
 
@@ -157,9 +156,8 @@ pub fn to_manifest(contents: &[u8],
 
 pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
     let mut parser = toml::Parser::new(&toml);
-    match parser.parse() {
-        Some(toml) => return Ok(toml),
-        None => {}
+    if let Some(toml) = parser.parse() {
+        return Ok(toml);
     }
     let mut error_str = format!("could not parse input as TOML\n");
     for error in parser.errors.iter() {
@@ -391,7 +389,7 @@ impl TomlManifest {
 
         let lib = match self.lib {
             Some(ref lib) => {
-                try!(validate_library_name(lib));
+                try!(lib.validate_library_name());
                 Some(
                     TomlTarget {
                         name: lib.name.clone().or(Some(project.name.clone())),
@@ -410,7 +408,7 @@ impl TomlManifest {
                 let bin = layout.main();
 
                 for target in bins {
-                    try!(validate_binary_name(target));
+                    try!(target.validate_binary_name());
                 }
 
                 bins.iter().map(|t| {
@@ -439,7 +437,7 @@ impl TomlManifest {
         let examples = match self.example {
             Some(ref examples) => {
                 for target in examples {
-                    try!(validate_example_name(target));
+                    try!(target.validate_example_name());
                 }
                 examples.clone()
             }
@@ -449,7 +447,7 @@ impl TomlManifest {
         let tests = match self.test {
             Some(ref tests) => {
                 for target in tests {
-                    try!(validate_test_name(target));
+                    try!(target.validate_test_name());
                 }
                 tests.clone()
             }
@@ -459,7 +457,7 @@ impl TomlManifest {
         let benches = match self.bench {
             Some(ref benches) => {
                 for target in benches {
-                    try!(validate_bench_name(target));
+                    try!(target.validate_bench_name());
                 }
                 benches.clone()
             }
@@ -627,82 +625,13 @@ impl TomlManifest {
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
 /// If not, the name of the offending binary target is returned.
 fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
-    let values = targets.iter().map(|e| e.name()).collect::<Vec<String>>();
     let mut seen = HashSet::new();
-    for v in values {
+    for v in targets.iter().map(|e| e.name()) {
         if !seen.insert(v.clone()) {
             return Err(v);
         }
     }
     Ok(())
-}
-
-fn validate_library_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("library target names cannot be empty.")))
-            } else if name.contains("-") {
-                Err(human(format!("library target names cannot contain hyphens: {}",
-                                  name)))
-            } else {
-                Ok(())
-            }
-        },
-        None => Ok(())
-    }
-}
-
-fn validate_binary_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("binary target names cannot be empty.")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("binary target bin.name is required")))
-    }
-}
-
-fn validate_example_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("example target names cannot be empty")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("example target example.name is required")))
-    }
-}
-
-fn validate_test_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("test target names cannot be empty")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("test target test.name is required")))
-    }
-}
-
-fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                Err(human(format!("bench target names cannot be empty")))
-            } else {
-                Ok(())
-            }
-        },
-        None => Err(human(format!("bench target bench.name is required")))
-    }
 }
 
 impl TomlDependency {
@@ -841,6 +770,74 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => name.clone(),
             None => panic!("target name is required")
+        }
+    }
+
+    fn validate_library_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("library target names cannot be empty.")))
+                } else if name.contains("-") {
+                    Err(human(format!("library target names cannot contain hyphens: {}",
+                                      name)))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Ok(())
+        }
+    }
+
+    fn validate_binary_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("binary target names cannot be empty.")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("binary target bin.name is required")))
+        }
+    }
+
+    fn validate_example_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("example target names cannot be empty")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("example target example.name is required")))
+        }
+    }
+
+    fn validate_test_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("test target names cannot be empty")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("test target test.name is required")))
+        }
+    }
+
+    fn validate_bench_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err(human(format!("bench target names cannot be empty")))
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err(human(format!("bench target bench.name is required")))
         }
     }
 }
