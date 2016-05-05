@@ -44,7 +44,7 @@ impl Decodable for PackageId {
         let version = captures.at(2).unwrap();
         let url = captures.at(3).unwrap();
         let version = semver::Version::parse(version).ok().expect("invalid version");
-        let source_id = SourceId::from_url(url.to_string());
+        let source_id = SourceId::from_url(url);
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {

@@ -89,9 +89,9 @@ impl SourceId {
     /// use cargo::core::SourceId;
     /// SourceId::from_url("git+https://github.com/alexcrichton/\
     ///                     libssh2-static-sys#80e71a3021618eb05\
-    ///                     656c58fb7c5ef5f12bc747f".to_string());
+    ///                     656c58fb7c5ef5f12bc747f");
     /// ```
-    pub fn from_url(string: String) -> SourceId {
+    pub fn from_url(string: &str) -> SourceId {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
@@ -268,7 +268,7 @@ impl Encodable for SourceId {
 impl Decodable for SourceId {
     fn decode<D: Decoder>(d: &mut D) -> Result<SourceId, D::Error> {
         let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
-        Ok(SourceId::from_url(string))
+        Ok(SourceId::from_url(&string))
     }
 }
 
