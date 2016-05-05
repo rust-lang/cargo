@@ -5,18 +5,6 @@ pub trait ToUrl {
     fn to_url(self) -> Result<Url, String>;
 }
 
-impl ToUrl for Url {
-    fn to_url(self) -> Result<Url, String> {
-        Ok(self)
-    }
-}
-
-impl<'a> ToUrl for &'a Url {
-    fn to_url(self) -> Result<Url, String> {
-        Ok(self.clone())
-    }
-}
-
 impl<'a> ToUrl for &'a str {
     fn to_url(self) -> Result<Url, String> {
         Url::parse(self).map_err(|s| {
