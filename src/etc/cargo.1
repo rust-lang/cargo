@@ -34,57 +34,105 @@ Configure coloring of output
 
 To get extended information about commands, run 'cargo help <command>'
 
-.TP
-\fBcargo build\fR
+.SS build
 Compile the current project
 .TP
-\fBcargo clean\fR
+\fB\-h, \-\-help\fR
+Print this message
+.TP
+\fB\-p\fR \fISPEC\fR, \fB\-\-package\fR \fISPEC ...\fR
+Package to build
+.TP
+\fB\-j\fR \fIN\fR, \fB\-\-jobs\fR \fIN\fR
+The number of jobs to run in parallel
+.TP
+\fB\-\-lib\fR
+Build only this package's library
+.TP
+\fB\-\-bin\fR \fINAME\fR
+Build only the specified binary
+.TP
+\fB\-\-example\fR \fINAME\fR
+Build only the specified example
+.TP
+\fB\-\-test\fR \fINAME\fR
+Build only the specified test target
+.TP
+\fB\-\-bench\fR \fINAME\fR
+Build only the specified benchmark target
+.TP
+\fB\-\-release\fR
+Build artifacts in release mode, with optimizations
+.TP
+\fB\-\-features\fR \fIFEATURES\fR
+Space-separated list of features to also build
+.TP
+\fB\-\-no-default-features\fR
+Do not build the `default` feature
+.TP
+\fB\-\-target\fR \fITRIPLE\fR
+Build for the target triple
+.TP
+\fB\-\-manifest-path\fR \fIPATH\fR
+Path to the manifest to compile
+.TP
+\fB\-v, \-\-verbose\fR
+Use verbose output
+.TP
+\fB\-q, \-\-quiet\fR
+No output printed to stdout
+.TP
+\fB\-\-color\fR \fIWHEN\fR
+Coloring: auto, always, never
+
+.PP
+If the \fB--package\fR argument is given, then \fISPEC\fR is a package id
+specification which indicates which package should be built. If it is not given,
+then the current package is built. For more information on \fISPEC\fR and its
+format, see the `cargo help pkgid` command.
+
+Compilation can be configured via the use of profiles which are configured in
+the manifest. The default profile for this command is `dev`, but passing the
+\fB--release\fR flag will use the `release` profile instead.
+
+
+
+.SS clean
 Remove the target directory with build output
-.TP
-\fBcargo doc\fR
+.SS doc
 Build this project's and its dependencies' documentation
-.TP
-\fBcargo init\fR
+.SS init
 Create a new cargo project in the current directory
-.TP
-\fBcargo install\fR
+.SS install
 Install a Rust binary
-.TP
-\fBcargo new\fR
+.SS new
 Create a new cargo project
-.TP
-\fBcargo run\fR
+.SS run
 Build and execute src/main.rs
-.TP
-\fBcargo test\fR
+.SS test
 Run the tests for the package
-.TP
-\fBcargo bench\fR
+.SS bench
 Run the benchmarks for the package
-.TP
-\fBcargo update\fR
+.SS update
 Update dependencies in Cargo.lock
-.TP
-\fBcargo package\fR
+.SS package
 Generate a source tarball for the current package
-.TP
-\fBcargo publish\fR
+.SS publish
 Package and upload this project to the registry
-.TP
-\fBcargo uninstall\fR
+.SS uninstall
 Remove a Rust binary
-.TP
-\fBcargo search\fR
+.SS search
 Search registry for crates
-.TP
-\fBcargo version\fR
+.SS version
 Print cargo's version and exit
 
 .SH FILES
 
 .TP
 ~/.cargo
-Directory in which Cargo stores repository data. Cargo can be instructed to use a .cargo subdirectory in a different location by setting the CARGO_HOME environment variable.
+Directory in which Cargo stores repository data. Cargo can be instructed to use
+a .cargo subdirectory in a different location by setting the CARGO_HOME
+environment variable.
 
 .SH "EXAMPLES"
 Build a local package and all of its dependencies
