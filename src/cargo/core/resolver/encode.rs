@@ -181,7 +181,7 @@ impl Decodable for EncodablePackageId {
 
         let source = captures.at(3);
 
-        let source_id = source.map(|s| SourceId::from_url(s.to_string()));
+        let source_id = source.map(|s| SourceId::from_url(s));
 
         Ok(EncodablePackageId {
             name: name.to_string(),
