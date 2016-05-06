@@ -89,9 +89,9 @@ impl SourceId {
     /// use cargo::core::SourceId;
     /// SourceId::from_url("git+https://github.com/alexcrichton/\
     ///                     libssh2-static-sys#80e71a3021618eb05\
-    ///                     656c58fb7c5ef5f12bc747f".to_string());
+    ///                     656c58fb7c5ef5f12bc747f");
     /// ```
-    pub fn from_url(string: String) -> SourceId {
+    pub fn from_url(string: &str) -> SourceId {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
@@ -137,7 +137,7 @@ impl SourceId {
             SourceIdInner {
                 kind: Kind::Git(ref reference), ref url, ref precise, ..
             } => {
-                let ref_str = url_ref(reference);
+                let ref_str = reference.url_ref();
 
                 let precise_str = if precise.is_some() {
                     format!("#{}", precise.as_ref().unwrap())
@@ -268,7 +268,7 @@ impl Encodable for SourceId {
 impl Decodable for SourceId {
     fn decode<D: Decoder>(d: &mut D) -> Result<SourceId, D::Error> {
         let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
-        Ok(SourceId::from_url(string))
+        Ok(SourceId::from_url(&string))
     }
 }
 
@@ -280,7 +280,7 @@ impl fmt::Display for SourceId {
             }
             SourceIdInner { kind: Kind::Git(ref reference), ref url,
                             ref precise, .. } => {
-                try!(write!(f, "{}{}", url, url_ref(reference)));
+                try!(write!(f, "{}{}", url, reference.url_ref()));
 
                 if let Some(ref s) = *precise {
                     let len = cmp::min(s.len(), 8);
@@ -353,13 +353,6 @@ impl hash::Hash for SourceId {
     }
 }
 
-fn url_ref(r: &GitReference) -> String {
-    match r.to_ref_string() {
-        None => "".to_string(),
-        Some(s) => format!("?{}", s),
-    }
-}
-
 impl GitReference {
     pub fn to_ref_string(&self) -> Option<String> {
         match *self {
@@ -372,6 +365,13 @@ impl GitReference {
             }
             GitReference::Tag(ref s) => Some(format!("tag={}", s)),
             GitReference::Rev(ref s) => Some(format!("rev={}", s)),
+        }
+    }
+
+    fn url_ref(&self) -> String {
+        match self.to_ref_string() {
+            None => "".to_string(),
+            Some(s) => format!("?{}", s),
         }
     }
 }
