@@ -113,6 +113,17 @@ case $state in
                     '*: :_cargo_cmds' \
                     ;;
 
+            init)
+                _arguments \
+                    '--bin[use binary template]' \
+                    '--vcs:initialize a new repo with a given VCS:(git hg none)' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '--name=[set the resulting package name]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '--color=:colorization option:(auto always never)' \
+                    ;;
+
             install)
                 _arguments \
                     '--bin=[only install the specified binary]' \
@@ -358,6 +369,7 @@ local -a commands;commands=(
 'generate-lockfile:create lockfile'
 'git-checkout:git checkout'
 'help:get help for commands'
+'init:create new project in current directory'
 'install:install a Rust binary'
 'locate-project:print "Cargo.toml" location'
 'login:login to remote server'
