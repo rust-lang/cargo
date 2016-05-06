@@ -1,0 +1,89 @@
+.TH CARGO\-BUILD "1" "May 2016" "cargo 0.10.0" "Cargo Manual"
+.SH NAME
+cargo-build \- Compile the current project
+.SH SYNOPSIS
+
+.B cargo build
+[\fIOPTIONS\fR]
+
+.SH DESCRIPTION
+This command compiles the current project.
+
+If the \fB--package\fR argument is given, then \fISPEC\fR is a package id
+specification which indicates which package should be built. If it is not given,
+then the current package is built. For more information on \fISPEC\fR and its
+format, see the `cargo help pkgid` command.
+
+Compilation can be configured via the use of profiles which are configured in
+the manifest. The default profile for this command is `dev`, but passing the
+\fB--release\fR flag will use the `release` profile instead.
+
+
+.SH OPTIONS
+
+.TP
+\fB\-h, \-\-help\fR
+Print this message
+.TP
+\fB\-p\fR \fISPEC\fR, \fB\-\-package\fR \fISPEC ...\fR
+Package to build
+.TP
+\fB\-j\fR \fIN\fR, \fB\-\-jobs\fR \fIN\fR
+The number of jobs to run in parallel
+.TP
+\fB\-\-lib\fR
+Build only this package's library
+.TP
+\fB\-\-bin\fR \fINAME\fR
+Build only the specified binary
+.TP
+\fB\-\-example\fR \fINAME\fR
+Build only the specified example
+.TP
+\fB\-\-test\fR \fINAME\fR
+Build only the specified test target
+.TP
+\fB\-\-bench\fR \fINAME\fR
+Build only the specified benchmark target
+.TP
+\fB\-\-release\fR
+Build artifacts in release mode, with optimizations
+.TP
+\fB\-\-features\fR \fIFEATURES\fR
+Space-separated list of features to also build
+.TP
+\fB\-\-no-default-features\fR
+Do not build the `default` feature
+.TP
+\fB\-\-target\fR \fITRIPLE\fR
+Build for the target triple
+.TP
+\fB\-\-manifest-path\fR \fIPATH\fR
+Path to the manifest to compile
+.TP
+\fB\-v, \-\-verbose\fR
+Use verbose output
+.TP
+\fB\-q, \-\-quiet\fR
+No output printed to stdout
+.TP
+\fB\-\-color\fR \fIWHEN\fR
+Coloring: auto, always, never
+
+
+.SH "EXAMPLES"
+Build a local package and all of its dependencies
+    $ cargo build
+
+Build a package with optimizations
+    $ cargo build --release
+
+
+.SH "SEE ALSO"
+
+cargo(1)
+
+
+.SH "COPYRIGHT"
+This work is dual-licensed under Apache 2.0 and MIT terms.
+See \fBCOPYRIGHT\fR file in the cargo source distribution.
