@@ -17,14 +17,12 @@ pub struct PackageIdSpec {
 impl PackageIdSpec {
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
         if spec.contains("/") {
-            match spec.to_url() {
-                Ok(url) => return PackageIdSpec::from_url(url),
-                Err(..) => {}
+            if let Ok(url) = spec.to_url() {
+                return PackageIdSpec::from_url(url);
             }
             if !spec.contains("://") {
-                match Url::parse(&format!("cargo://{}", spec)) {
-                    Ok(url) => return PackageIdSpec::from_url(url),
-                    Err(..) => {}
+                if let Ok(url) = Url::parse(&format!("cargo://{}", spec)) {
+                    return PackageIdSpec::from_url(url);
                 }
             }
         }
