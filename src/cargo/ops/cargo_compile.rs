@@ -324,9 +324,13 @@ fn generate_targets<'a>(pkg: &'a Package,
                 CompileMode::Test => {
                     let mut base = pkg.targets().iter().filter(|t| {
                         t.tested()
-                    }).map(|t| {
-                        (t, if t.is_example() {build} else {profile})
-                    }).collect::<Vec<_>>();
+                    }).map(|t| (t, profile)).collect::<Vec<_>>();
+
+                    for example in pkg.targets().iter().filter(|t| t.is_example()) {
+                        // Always build the examples even when they are being tested
+                        // so that code inside `main` which has errors will be caught.
+                        base.push((example, build));
+                    }
 
                     // Always compile the library if we're testing everything as
                     // it'll be needed for doctests
@@ -384,6 +388,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(())
                 };
+
                 try!(find(bins, "bin", TargetKind::Bin, profile));
                 try!(find(examples, "example", TargetKind::Example, build));
                 try!(find(tests, "test", TargetKind::Test, test));
