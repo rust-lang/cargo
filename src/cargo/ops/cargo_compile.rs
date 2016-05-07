@@ -322,23 +322,25 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }).collect::<Vec<_>>())
                 }
                 CompileMode::Test => {
-                    let mut base = pkg.targets().iter().filter(|t| {
-                        t.tested()
-                    }).map(|t| (t, profile)).collect::<Vec<_>>();
+                    let mut base = Vec::new();
 
-                    for example in pkg.targets().iter().filter(|t| t.is_example()) {
+                    for t in pkg.targets() {
                         // Always build the examples even when they are being tested
                         // so that code inside `main` which has errors will be caught.
-                        base.push((example, build));
-                    }
+                        let always_build = (t.is_example() && t.tested())
+                            // Always compile the library if we're testing everything as
+                            // it'll be needed for doctests
+                            || (t.is_lib() && t.doctested());
 
-                    // Always compile the library if we're testing everything as
-                    // it'll be needed for doctests
-                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
-                        if t.doctested() {
+                        if always_build {
                             base.push((t, build));
                         }
+
+                        if t.tested() {
+                           base.push((t, profile));
+                        }
                     }
+
                     Ok(base)
                 }
                 CompileMode::Build => {
