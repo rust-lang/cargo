@@ -75,7 +75,6 @@ Learn about a command's options and usage::
 
 
 == SEE ALSO
-
 *rustc*(1), *rustdoc*(1)
 
 
