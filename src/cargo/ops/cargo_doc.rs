@@ -61,11 +61,11 @@ pub fn doc(manifest_path: &Path,
             match open_docs(&path) {
                 Ok(m) => try!(shell.status("Launching", m)),
                 Err(e) => {
-                    try!(shell.warn(
-                            "warning: could not determine a browser to open docs with, tried:"));
-                    for method in e {
-                        try!(shell.warn(format!("\t{}", method)));
-                    }
+                    let message = format!(
+                        "could not determine a browser to open docs with, tried:{}",
+                        e.into_iter().map(|method| format!("\n\t{}", method)).collect::<String>()
+                    );
+                    try!(shell.warn(message));
                 }
             }
         }

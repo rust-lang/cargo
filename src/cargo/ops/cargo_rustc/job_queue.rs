@@ -4,7 +4,6 @@ use std::fmt;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use crossbeam::{self, Scope};
-use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
@@ -147,9 +146,8 @@ impl<'a> JobQueue<'a> {
                 }
                 Err(e) => {
                     if self.active > 0 {
-                        try!(config.shell().say(
-                                    "Build failed, waiting for other \
-                                     jobs to finish...", YELLOW));
+                        try!(config.shell().error(
+                                "build failed, waiting for other jobs to finish..."));
                         for _ in self.rx.iter().take(self.active as usize) {}
                     }
                     return Err(e)
