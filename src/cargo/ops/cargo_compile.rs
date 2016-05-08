@@ -392,7 +392,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                 };
 
                 try!(find(bins, "bin", TargetKind::Bin, profile));
-                try!(find(examples, "example", TargetKind::Example, build));
+                try!(find(examples, "example", TargetKind::Example, profile));
                 try!(find(tests, "test", TargetKind::Test, test));
                 try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
             }

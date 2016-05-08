@@ -667,6 +667,44 @@ test!(test_example_failing_in_non_test_code {
 ").with_status(101));
 });
 
+test!(example_test_specific {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("examples/i-have-tests.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn inside_example_test() {
+                assert_eq!(foo::get_hello(), "hello")
+            }
+
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("test").arg("--example").arg("i-have-tests"),
+                execs().with_stdout(format!("\
+{} foo v0.0.1 ({})
+{running} target[..]i_have_tests-[..]
+
+running 1 test
+test inside_example_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.url(), running = RUNNING)));
+});
+
 test!(dont_run_examples {
     let p = project("foo")
         .file("Cargo.toml", r#"
