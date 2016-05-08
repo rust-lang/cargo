@@ -250,6 +250,7 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<bool>,
+    css_extension: Option<String>,
 
     // package metadata
     description: Option<String>,
@@ -584,6 +585,7 @@ impl TomlManifest {
 
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
+        let css_extension = project.css_extension.clone();
 
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
@@ -609,7 +611,8 @@ impl TomlManifest {
                                          metadata,
                                          profiles,
                                          publish,
-                                         replace);
+                                         replace,
+                                         css_extension);
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("only one of `license` or \
                                           `license-file` is necessary"));

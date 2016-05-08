@@ -21,6 +21,7 @@ pub struct Manifest {
     profiles: Profiles,
     publish: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
+    css_extension: Option<String>,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -166,7 +167,8 @@ impl Manifest {
                metadata: ManifestMetadata,
                profiles: Profiles,
                publish: bool,
-               replace: Vec<(PackageIdSpec, Dependency)>) -> Manifest {
+               replace: Vec<(PackageIdSpec, Dependency)>,
+               css_extension: Option<String>) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -178,6 +180,7 @@ impl Manifest {
             profiles: profiles,
             publish: publish,
             replace: replace,
+            css_extension: css_extension,
         }
     }
 
@@ -196,6 +199,9 @@ impl Manifest {
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
+    }
+    pub fn css_extension(&self) -> Option<&str> {
+        self.css_extension.as_ref().map(|s| &s[..])
     }
 
     pub fn add_warning(&mut self, s: String) {
