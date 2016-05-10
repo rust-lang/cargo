@@ -1,4 +1,4 @@
-use support::{project, execs, ERROR};
+use support::{project, execs};
 use support::registry::Package;
 use hamcrest::assert_that;
 
@@ -19,11 +19,10 @@ test!(bad1 {
         "#);
     assert_that(foo.cargo_process("build").arg("-v")
                    .arg("--target=nonexistent-target"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} expected table for configuration key `target.nonexistent-target`, \
+                execs().with_status(101).with_stderr("\
+[ERROR] expected table for configuration key `target.nonexistent-target`, \
 but found string in [..]config
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad2 {
@@ -40,8 +39,8 @@ test!(bad2 {
                 proxy = 3.0
         "#);
     assert_that(foo.cargo_process("publish").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} Couldn't load Cargo configuration
+                execs().with_status(101).with_stderr("\
+[ERROR] Couldn't load Cargo configuration
 
 Caused by:
   failed to load TOML configuration from `[..]config`
@@ -54,7 +53,7 @@ Caused by:
 
 Caused by:
   found TOML configuration value of unknown type `float`
-", error = ERROR)));
+"));
 });
 
 test!(bad3 {
@@ -71,11 +70,10 @@ test!(bad3 {
               proxy = true
         "#);
     assert_that(foo.cargo_process("publish").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} invalid configuration for key `http.proxy`
+                execs().with_status(101).with_stderr("\
+[ERROR] invalid configuration for key `http.proxy`
 expected a string, but found a boolean in [..]config
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad4 {
@@ -85,14 +83,13 @@ test!(bad4 {
               name = false
         "#);
     assert_that(foo.cargo_process("new").arg("-v").arg("foo"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} Failed to create project `foo` at `[..]`
+                execs().with_status(101).with_stderr("\
+[ERROR] Failed to create project `foo` at `[..]`
 
 Caused by:
   invalid configuration for key `cargo-new.name`
 expected a string, but found a boolean in [..]config
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad5 {
@@ -106,8 +103,8 @@ test!(bad5 {
     foo.build();
     assert_that(foo.cargo("new")
                    .arg("-v").arg("foo").cwd(&foo.root().join("foo")),
-                execs().with_status(101).with_stderr(&format!("\
-{error} Couldn't load Cargo configuration
+                execs().with_status(101).with_stderr("\
+[ERROR] Couldn't load Cargo configuration
 
 Caused by:
   failed to merge key `foo` between files:
@@ -116,8 +113,7 @@ Caused by:
 
 Caused by:
   expected integer, but found string
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad_cargo_config_jobs {
@@ -134,10 +130,9 @@ test!(bad_cargo_config_jobs {
         jobs = -1
     "#);
     assert_that(foo.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} build.jobs must be positive, but found -1 in [..]
-",
-    error = ERROR)));
+                execs().with_status(101).with_stderr("\
+[ERROR] build.jobs must be positive, but found -1 in [..]
+"));
 });
 
 test!(default_cargo_config_jobs {
@@ -189,8 +184,8 @@ test!(invalid_global_config {
     .file("src/lib.rs", "");
 
     assert_that(foo.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} Couldn't load Cargo configuration
+                execs().with_status(101).with_stderr("\
+[ERROR] Couldn't load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]config`
@@ -199,8 +194,7 @@ Caused by:
   could not parse input as TOML
 [..]config:1:2 expected `=`, but found eof
 
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad_cargo_lock {
@@ -215,13 +209,12 @@ test!(bad_cargo_lock {
     .file("src/lib.rs", "");
 
     assert_that(foo.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse lock file at: [..]Cargo.lock
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
   expected a section for the key `root`
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad_git_dependency {
@@ -238,16 +231,15 @@ test!(bad_git_dependency {
     .file("src/lib.rs", "");
 
     assert_that(foo.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} Unable to update file:///
+                execs().with_status(101).with_stderr("\
+[ERROR] Unable to update file:///
 
 Caused by:
   failed to clone into: [..]
 
 Caused by:
   [[..]] 'file:///' is not a valid local file URI
-",
-    error = ERROR)));
+"));
 });
 
 test!(bad_crate_type {
@@ -285,15 +277,14 @@ test!(malformed_override {
     .file("src/lib.rs", "");
 
     assert_that(foo.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   could not parse input as TOML
 Cargo.toml:[..]
 
-",
-    error = ERROR)));
+"));
 });
 
 test!(duplicate_binary_names {
@@ -316,13 +307,12 @@ test!(duplicate_binary_names {
     .file("b.rs", r#"fn main() -> () {}"#);
 
     assert_that(foo.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate binary name e, but all binary targets must have a unique name
-",
-    error = ERROR)));
+"));
 });
 
 test!(duplicate_example_names {
@@ -345,13 +335,12 @@ test!(duplicate_example_names {
     .file("examples/ex2.rs", r#"fn main () -> () {}"#);
 
     assert_that(foo.cargo_process("build").arg("--example").arg("ex"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate example name ex, but all binary targets must have a unique name
-",
-    error = ERROR)));
+"));
 });
 
 test!(duplicate_bench_names {
@@ -374,13 +363,12 @@ test!(duplicate_bench_names {
     .file("benches/ex2.rs", r#"fn main () {}"#);
 
     assert_that(foo.cargo_process("bench"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate bench name ex, but all binary targets must have a unique name
-",
-    error = ERROR)));
+"));
 });
 
 test!(duplicate_deps {
@@ -418,13 +406,12 @@ test!(duplicate_deps {
     .file("src/main.rs", r#"fn main () {}"#);
 
     assert_that(foo.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate dependency name bar, but all dependencies must have a unique name
-",
-    error = ERROR)));
+"));
 });
 
 test!(unused_keys {
