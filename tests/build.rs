@@ -2240,3 +2240,26 @@ fn explicit_color_config_is_propagated_to_rustc() {
         -L dependency=[..]target[..]debug[..]deps`
 "));
 }
+
+#[test]
+fn no_warn_about_package_metadata() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [package.metadata]
+            foo = "bar"
+            a = true
+            b = 3
+
+            [package.metadata.another]
+            bar = 3
+        "#)
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr("[..] foo v0.0.1 ([..])\n"));
+}
