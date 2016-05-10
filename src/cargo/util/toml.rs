@@ -134,6 +134,9 @@ pub fn to_manifest(contents: &[u8],
     return Ok((manifest, paths));
 
     fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
+        if key == "package.metadata" {
+            return
+        }
         match *toml {
             toml::Value::Table(ref table) => {
                 for (k, v) in table.iter() {
