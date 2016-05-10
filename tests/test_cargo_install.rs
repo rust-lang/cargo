@@ -62,23 +62,18 @@ test!(simple {
 
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0).with_stdout(&format!("\
-{updating} registry `[..]`
-{downloading} foo v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 (registry file://[..])
-{installing} {home}[..]bin[..]foo[..]
+[UPDATING] registry `[..]`
+[DOWNLOADING] foo v0.0.1 (registry file://[..])
+[COMPILING] foo v0.0.1 (registry file://[..])
+[INSTALLING] {home}[..]bin[..]foo[..]
 ",
-        updating = UPDATING,
-        downloading = DOWNLOADING,
-        compiling = COMPILING,
-        installing = INSTALLING,
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
 
     assert_that(cargo_process("uninstall").arg("foo"),
                 execs().with_status(0).with_stdout(&format!("\
-{removing} {home}[..]bin[..]foo[..]
+[REMOVING] {home}[..]bin[..]foo[..]
 ",
-        removing = REMOVING,
         home = cargo_home().display())));
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 });

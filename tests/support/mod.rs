@@ -354,7 +354,7 @@ impl Execs {
                  description: &str, extra: &[u8],
                  partial: bool) -> ham::MatchResult {
         let out = match expected {
-            Some(out) => out,
+            Some(out) => substitute_macros(out),
             None => return ham::success(),
         };
         let actual = match str::from_utf8(actual) {
@@ -655,6 +655,32 @@ pub fn basic_lib_manifest(name: &str) -> String {
 
 pub fn path2url(p: PathBuf) -> Url {
     Url::from_file_path(&*p).ok().unwrap()
+}
+
+fn substitute_macros(input: &str) -> String {
+    let macros = [
+        ("[RUNNING]",     "     Running"),
+        ("[COMPILING]",   "   Compiling"),
+        ("[ERROR]",       "error:"),
+        ("[DOCUMENTING]", " Documenting"),
+        ("[FRESH]",       "       Fresh"),
+        ("[UPDATING]",    "    Updating"),
+        ("[ADDING]",      "      Adding"),
+        ("[REMOVING]",    "    Removing"),
+        ("[DOCTEST]",     "   Doc-tests"),
+        ("[PACKAGING]",   "   Packaging"),
+        ("[DOWNLOADING]", " Downloading"),
+        ("[UPLOADING]",   "   Uploading"),
+        ("[VERIFYING]",   "   Verifying"),
+        ("[ARCHIVING]",   "   Archiving"),
+        ("[INSTALLING]",  "  Installing"),
+        ("[REPLACING]",   "   Replacing")
+    ];
+    let mut result = input.to_owned();
+    for &(pat, subst) in macros.iter() {
+        result = result.replace(pat, subst)
+    }
+    return result;
 }
 
 pub static RUNNING:     &'static str = "     Running";
