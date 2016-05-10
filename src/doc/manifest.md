@@ -403,7 +403,7 @@ can almost certainly be expressed as a separate package.
 
 The format of this section is equivalent to `[dependencies]`. Dev-dependencies
 are not used when compiling a package for building, but are used for compiling
-tests and benchmarks.
+tests, examples, and benchmarks.
 
 These dependencies are *not* propagated to other packages which depend on this
 package.
