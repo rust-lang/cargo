@@ -717,11 +717,7 @@ test!(reports_unsuccessful_subcommand_result {
     assert_that(cargo_process("fail"),
                 execs().with_status(101).with_stderr_contains("\
 thread '<main>' panicked at 'explicit panic', [..]
-").with_stderr_contains(format!("\
-[ERROR] third party subcommand `cargo-fail[..]` exited unsuccessfully
-
-To learn more, run the command again with --verbose.
-")));
+"));
 });
 
 test!(git_with_lockfile {
