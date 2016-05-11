@@ -32,8 +32,8 @@ branches:
     - master
 
 before_install:
-    - brew update
-    - brew install pandoc
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install pandoc  ; fi
 
 addons:
   apt:
