@@ -1,4 +1,4 @@
-% CARGO(1)
+% CARGO(1) The Rust package manager  | Cargo Manual
 %
 % May 2016
 

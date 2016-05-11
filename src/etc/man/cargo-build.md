@@ -1,5 +1,5 @@
-% CARGO(1)
-% Daniel Campoverde
+% CARGO(1) The Rust package manager  | Cargo Manual
+%
 % May 2016
 
 # NAME
