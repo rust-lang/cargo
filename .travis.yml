@@ -31,6 +31,10 @@ branches:
   only:
     - master
 
+before_install:
+    - brew update
+    - brew install pandoc
+
 addons:
   apt:
     sources:
