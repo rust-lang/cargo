@@ -8,7 +8,7 @@ use std::thread;
 use git2;
 use hamcrest::{assert_that, existing_file};
 
-use support::{execs, project, ERROR, COMPILING};
+use support::{execs, project};
 use support::git;
 use support::registry::Package;
 use test_cargo_install::{cargo_home, has_installed_exe};
@@ -118,8 +118,8 @@ test!(one_install_should_be_bad {
 
     let (bad, good) = if a.status.code() == Some(101) {(a, b)} else {(b, a)};
     assert_that(bad, execs().with_status(101).with_stderr_contains(&format!("\
-{error} binary `foo[..]` already exists in destination as part of `[..]`
-", error = ERROR)));
+[ERROR] binary `foo[..]` already exists in destination as part of `[..]`
+")));
     assert_that(good, execs().with_status(0).with_stderr_contains("\
 warning: be sure to add `[..]` to your PATH [..]
 "));
@@ -357,7 +357,7 @@ test!(killing_cargo_releases_the_lock {
     p.build();
 
     // Our build script will connect to our local TCP socket to inform us that
-    // it's started running, and that's how we know that `a` will have the lock
+    // it's started  and that's how we know that `a` will have the lock
     // when we kill it.
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let mut a = p.cargo("build").build_command();
@@ -410,9 +410,9 @@ test!(debug_release_ok {
     let a = a.join().unwrap();
 
     assert_that(a, execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.0 [..]
-", compiling = COMPILING)));
+[COMPILING] foo v0.0.0 [..]
+")));
     assert_that(b, execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.0 [..]
-", compiling = COMPILING)));
+[COMPILING] foo v0.0.0 [..]
+")));
 });

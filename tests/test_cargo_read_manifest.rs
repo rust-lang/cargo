@@ -1,4 +1,4 @@
-use support::{project, execs, main_file, basic_bin_manifest, ERROR};
+use support::{project, execs, main_file, basic_bin_manifest};
 use hamcrest::{assert_that};
 
 fn setup() {}
@@ -58,8 +58,8 @@ test!(cargo_read_manifest_path_to_cargo_toml_parent_relative {
                  .arg("--manifest-path").arg("foo")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr(&format!("{error} the manifest-path must be \
-                                             a path to a Cargo.toml file", error = ERROR)));
+                       .with_stderr(&format!("[ERROR] the manifest-path must be \
+                                             a path to a Cargo.toml file")));
 });
 
 test!(cargo_read_manifest_path_to_cargo_toml_parent_absolute {
@@ -71,8 +71,8 @@ test!(cargo_read_manifest_path_to_cargo_toml_parent_absolute {
                  .arg("--manifest-path").arg(p.root())
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr(&format!("{error} the manifest-path must be \
-                                             a path to a Cargo.toml file", error = ERROR)));
+                       .with_stderr(&format!("[ERROR] the manifest-path must be \
+                                             a path to a Cargo.toml file")));
 });
 
 test!(cargo_read_manifest_cwd {

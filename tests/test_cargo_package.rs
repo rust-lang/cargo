@@ -7,7 +7,7 @@ use git2;
 use tar::Archive;
 
 use support::{project, execs, paths, git, path2url};
-use support::{PACKAGING, VERIFYING, COMPILING, ARCHIVING};
+use support::{PACKAGING, VERIFYING, ARCHIVING};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -33,11 +33,10 @@ test!(simple {
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
-        compiling = COMPILING,
         dir = p.url())));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
     assert_that(p.cargo("package").arg("-l"),
@@ -78,11 +77,10 @@ test!(metadata_warning {
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
-        compiling = COMPILING,
         dir = p.url()))
                 .with_stderr("\
 warning: manifest has no description, license, license-file, documentation, \
@@ -104,11 +102,10 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
-        compiling = COMPILING,
         dir = p.url()))
                 .with_stderr("\
 warning: manifest has no description, documentation, homepage or repository. See \
@@ -131,11 +128,10 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
-        compiling = COMPILING,
         dir = p.url())));
 });
 
@@ -202,11 +198,10 @@ test!(package_verification {
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ({dir})
 {verifying} foo v0.0.1 ({dir})
-{compiling} foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
-        compiling = COMPILING,
         dir = p.url())));
 });
 
@@ -379,11 +374,10 @@ test!(ignore_nested {
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} nested v0.0.1 ({dir})
 {verifying} nested v0.0.1 ({dir})
-{compiling} nested v0.0.1 ({dir}[..])
+[COMPILING] nested v0.0.1 ({dir}[..])
 ",
         packaging = PACKAGING,
         verifying = VERIFYING,
-        compiling = COMPILING,
         dir = p.url())));
     assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
     assert_that(p.cargo("package").arg("-l"),
@@ -411,8 +405,6 @@ src[..]main.rs
 
 #[cfg(unix)] // windows doesn't allow these characters in filenames
 test!(package_weird_characters {
-
-    use support::ERROR;
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -428,10 +420,9 @@ test!(package_weird_characters {
     assert_that(p.cargo_process("package"),
                 execs().with_status(101).with_stderr(format!("\
 warning: [..]
-{error} failed to prepare local package for uploading
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
-",
-error = ERROR)));
+")));
 });

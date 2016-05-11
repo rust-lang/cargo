@@ -4,7 +4,6 @@ use std::path::Path;
 use git2;
 
 use support::{git, project, execs, main_file, path2url};
-use support::{COMPILING, UPDATING, RUNNING, ERROR};
 use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that,existing_file};
 use cargo::util::process;
@@ -57,12 +56,12 @@ test!(cargo_compile_simple_git_dep {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}#[..])\n\
-                              {} foo v0.5.0 ({})\n",
-                             UPDATING, path2url(git_root.clone()),
-                             COMPILING, path2url(git_root),
-                             COMPILING, path2url(root)))
+        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                              [COMPILING] dep1 v0.5.0 ({}#[..])\n\
+                              [COMPILING] foo v0.5.0 ({})\n",
+                             path2url(git_root.clone()),
+                             path2url(git_root),
+                             path2url(root)))
         .with_stderr(""));
 
     assert_that(&project.bin("foo"), existing_file());
@@ -124,12 +123,12 @@ test!(cargo_compile_git_dep_branch {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}?branch=branchy#[..])\n\
-                              {} foo v0.5.0 ({})\n",
-                             UPDATING, path2url(git_root.clone()),
-                             COMPILING, path2url(git_root),
-                             COMPILING, path2url(root)))
+        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                              [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
+                              [COMPILING] foo v0.5.0 ({})\n",
+                             path2url(git_root.clone()),
+                             path2url(git_root),
+                             path2url(root)))
         .with_stderr(""));
 
     assert_that(&project.bin("foo"), existing_file());
@@ -194,12 +193,12 @@ test!(cargo_compile_git_dep_tag {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("{} git repository `{}`\n\
-                              {} dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
-                              {} foo v0.5.0 ({})\n",
-                             UPDATING, path2url(git_root.clone()),
-                             COMPILING, path2url(git_root),
-                             COMPILING, path2url(root))));
+        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                              [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
+                              [COMPILING] foo v0.5.0 ({})\n",
+                             path2url(git_root.clone()),
+                             path2url(git_root),
+                             path2url(root))));
 
     assert_that(&project.bin("foo"), existing_file());
 
@@ -381,11 +380,11 @@ test!(cargo_compile_with_short_ssh_git {
         execs()
         .with_stdout("")
         .with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   invalid url `{}`: relative URL without a base
-", url, error = ERROR)));
+", url)));
 });
 
 test!(two_revs_same_deps {
@@ -497,12 +496,12 @@ test!(recompilation {
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("{} git repository `{}`\n\
-                                             {} bar v0.5.0 ({}#[..])\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            UPDATING, git_project.url(),
-                                            COMPILING, git_project.url(),
-                                            COMPILING, p.url())));
+                execs().with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                                             [COMPILING] bar v0.5.0 ({}#[..])\n\
+                                             [COMPILING] foo v0.5.0 ({})\n",
+                                            git_project.url(),
+                                            git_project.url(),
+                                            p.url())));
 
     // Don't recompile the second time
     assert_that(p.cargo("build"),
@@ -517,8 +516,7 @@ test!(recompilation {
                 execs().with_stdout(""));
 
     assert_that(p.cargo("update"),
-                execs().with_stdout(&format!("{} git repository `{}`",
-                                            UPDATING,
+                execs().with_stdout(&format!("[UPDATING] git repository `{}`",
                                             git_project.url())));
 
     assert_that(p.cargo("build"),
@@ -537,26 +535,24 @@ test!(recompilation {
 
     // Update the dependency and carry on!
     assert_that(p.cargo("update"),
-                execs().with_stdout(&format!("{} git repository `{}`\n\
-                                              {} bar v0.5.0 ([..]) -> #[..]\n\
+                execs().with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                                              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
                                              ",
-                                            UPDATING,
-                                            git_project.url(),
-                                            UPDATING)));
+                                            git_project.url())));
     println!("going for the last compile");
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("{} bar v0.5.0 ({}#[..])\n\
-                                             {} foo v0.5.0 ({})\n",
-                                            COMPILING, git_project.url(),
-                                            COMPILING, p.url())));
+                execs().with_stdout(&format!("[COMPILING] bar v0.5.0 ({}#[..])\n\
+                                             [COMPILING] foo v0.5.0 ({})\n",
+                                            git_project.url(),
+                                            p.url())));
 
     // Make sure clean only cleans one dep
     assert_that(p.cargo("clean")
                  .arg("-p").arg("foo"),
                 execs().with_stdout(""));
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("{} foo v0.5.0 ({})\n",
-                                            COMPILING, p.url())));
+                execs().with_stdout(&format!("[COMPILING] foo v0.5.0 ({})\n",
+                                            p.url())));
 });
 
 test!(update_with_shared_deps {
@@ -620,13 +616,11 @@ test!(update_with_shared_deps {
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
                 execs().with_stdout(&format!("\
-{updating} git repository `{git}`
-{compiling} bar v0.5.0 ({git}#[..])
-{compiling} [..] v0.5.0 ([..])
-{compiling} [..] v0.5.0 ([..])
-{compiling} foo v0.5.0 ({dir})\n",
-                    updating = UPDATING, git = git_project.url(),
-                    compiling = COMPILING, dir = p.url())));
+[UPDATING] git repository `{git}`
+[COMPILING] bar v0.5.0 ({git}#[..])
+[COMPILING] [..] v0.5.0 ([..])
+[COMPILING] [..] v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ({dir})\n", git = git_project.url(), dir = p.url())));
 
     // Modify a file manually, and commit it
     File::create(&git_project.root().join("src/bar.rs")).unwrap().write_all(br#"
@@ -651,11 +645,10 @@ test!(update_with_shared_deps {
                  .arg("-p").arg("bar")
                  .arg("--precise").arg("0.1.2"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} Unable to update [..]
+[ERROR] Unable to update [..]
 
 To learn more, run the command again with --verbose.
-",
-error = ERROR)));
+")));
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
@@ -670,28 +663,23 @@ error = ERROR)));
     assert_that(p.cargo("update")
                  .arg("-p").arg("dep1")
                  .arg("--aggressive"),
-                execs().with_stdout(&format!("{} git repository `{}`\n\
-                                              {} bar v0.5.0 ([..]) -> #[..]\n\
-                                             ",
-                                            UPDATING,
-                                            git_project.url(),
-                                            UPDATING)));
+                execs().with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                                              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
+                                             ", git_project.url())));
 
     // Make sure we still only compile one version of the git repo
     println!("build");
     assert_that(p.cargo("build"),
                 execs().with_stdout(&format!("\
-{compiling} bar v0.5.0 ({git}#[..])
-{compiling} [..] v0.5.0 ({dir}[..]dep[..])
-{compiling} [..] v0.5.0 ({dir}[..]dep[..])
-{compiling} foo v0.5.0 ({dir})\n",
-                    git = git_project.url(),
-                    compiling = COMPILING, dir = p.url())));
+[COMPILING] bar v0.5.0 ({git}#[..])
+[COMPILING] [..] v0.5.0 ({dir}[..]dep[..])
+[COMPILING] [..] v0.5.0 ({dir}[..]dep[..])
+[COMPILING] foo v0.5.0 ({dir})\n",
+                    git = git_project.url(), dir = p.url())));
 
     // We should be able to update transitive deps
     assert_that(p.cargo("update").arg("-p").arg("bar"),
-                execs().with_stdout(&format!("{} git repository `{}`",
-                                            UPDATING,
+                execs().with_stdout(&format!("[UPDATING] git repository `{}`",
                                             git_project.url())));
 });
 
@@ -776,16 +764,12 @@ test!(two_deps_only_update_one {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("{} git repository `[..]`\n\
-                              {} git repository `[..]`\n\
-                              {} [..] v0.5.0 ([..])\n\
-                              {} [..] v0.5.0 ([..])\n\
-                              {} foo v0.5.0 ({})\n",
-                             UPDATING,
-                             UPDATING,
-                             COMPILING,
-                             COMPILING,
-                             COMPILING, project.url()))
+        .with_stdout(&format!("[UPDATING] git repository `[..]`\n\
+                              [UPDATING] git repository `[..]`\n\
+                              [COMPILING] [..] v0.5.0 ([..])\n\
+                              [COMPILING] [..] v0.5.0 ([..])\n\
+                              [COMPILING] foo v0.5.0 ({})\n",
+                             project.url()))
         .with_stderr(""));
 
     File::create(&git1.root().join("src/lib.rs")).unwrap().write_all(br#"
@@ -798,12 +782,9 @@ test!(two_deps_only_update_one {
     assert_that(project.cargo("update")
                        .arg("-p").arg("dep1"),
         execs()
-        .with_stdout(&format!("{} git repository `{}`\n\
-                               {} dep1 v0.5.0 ([..]) -> #[..]\n\
-                              ",
-                             UPDATING,
-                             git1.url(),
-                             UPDATING))
+        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                               [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
+                              ", git1.url()))
         .with_stderr(""));
 });
 
@@ -870,10 +851,10 @@ test!(stale_cached_version {
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{updating} git repository `{bar}`
-{compiling} bar v0.0.0 ({bar}#[..])
-{compiling} foo v0.0.0 ({foo})
-", updating = UPDATING, compiling = COMPILING, bar = bar.url(), foo = foo.url())));
+[UPDATING] git repository `{bar}`
+[COMPILING] bar v0.0.0 ({bar}#[..])
+[COMPILING] foo v0.0.0 ({foo})
+", bar = bar.url(), foo = foo.url())));
     assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
 });
 
@@ -920,16 +901,11 @@ test!(dep_with_changed_submodule {
 
     println!("first run");
     assert_that(project.cargo_process("run"), execs()
-                .with_stdout(&format!("{} git repository `[..]`\n\
-                                      {} dep1 v0.5.0 ([..])\n\
-                                      {} foo v0.5.0 ([..])\n\
-                                      {} `target[..]foo[..]`\n\
-                                      project2\
-                                      ",
-                                      UPDATING,
-                                      COMPILING,
-                                      COMPILING,
-                                      RUNNING))
+                .with_stdout(&format!("[UPDATING] git repository `[..]`\n\
+                                      [COMPILING] dep1 v0.5.0 ([..])\n\
+                                      [COMPILING] foo v0.5.0 ([..])\n\
+                                      [RUNNING] `target[..]foo[..]`\n\
+                                      project2"))
                 .with_stderr("")
                 .with_status(0));
 
@@ -961,21 +937,17 @@ test!(dep_with_changed_submodule {
     assert_that(project.cargo("update").arg("-v"),
                 execs()
                 .with_stderr("")
-                .with_stdout(&format!("{} git repository `{}`\n\
-                                       {} dep1 v0.5.0 ([..]) -> #[..]\n\
-                                      ",
-                                     UPDATING,
-                                     git_project.url(),
-                                     UPDATING)));
+                .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                                       [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
+                                      ", git_project.url())));
 
     println!("last run");
     assert_that(project.cargo("run"), execs()
-                .with_stdout(&format!("{compiling} dep1 v0.5.0 ([..])\n\
-                                      {compiling} foo v0.5.0 ([..])\n\
-                                      {running} `target[..]foo[..]`\n\
+                .with_stdout(&format!("[COMPILING] dep1 v0.5.0 ([..])\n\
+                                      [COMPILING] foo v0.5.0 ([..])\n\
+                                      [RUNNING] `target[..]foo[..]`\n\
                                       project3\
-                                      ",
-                                      compiling = COMPILING, running = RUNNING))
+                                      "))
                 .with_stderr("")
                 .with_status(0));
 });
@@ -1019,24 +991,24 @@ test!(dev_deps_with_testing {
     // `bar` to generate the lockfile
     assert_that(p.cargo_process("build"),
         execs().with_stdout(&format!("\
-{updating} git repository `{bar}`
-{compiling} foo v0.5.0 ({url})
-", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
+[UPDATING] git repository `{bar}`
+[COMPILING] foo v0.5.0 ({url})
+", url = p.url(), bar = p2.url())));
 
     // Make sure we use the previous resolution of `bar` instead of updating it
     // a second time.
     assert_that(p.cargo("test"),
         execs().with_stdout(&format!("\
-{compiling} [..] v0.5.0 ([..])
-{compiling} [..] v0.5.0 ([..]
-{running} target[..]foo-[..]
+[COMPILING] [..] v0.5.0 ([..])
+[COMPILING] [..] v0.5.0 ([..]
+[RUNNING] target[..]foo-[..]
 
 running 1 test
 test tests::foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, running = RUNNING)));
+")));
 });
 
 test!(git_build_cmd_freshness {
@@ -1061,8 +1033,8 @@ test!(git_build_cmd_freshness {
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.0 ({url})
-", compiling = COMPILING, url = foo.url())));
+[COMPILING] foo v0.0.0 ({url})
+", url = foo.url())));
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
@@ -1112,9 +1084,9 @@ test!(git_name_not_always_needed {
     // `bar` to generate the lockfile
     assert_that(p.cargo_process("build"),
         execs().with_stdout(&format!("\
-{updating} git repository `{bar}`
-{compiling} foo v0.5.0 ({url})
-", updating = UPDATING, compiling = COMPILING, url = p.url(), bar = p2.url())));
+[UPDATING] git repository `{bar}`
+[COMPILING] foo v0.5.0 ({url})
+", url = p.url(), bar = p2.url())));
 });
 
 test!(git_repo_changing_no_rebuild {
@@ -1145,10 +1117,10 @@ test!(git_repo_changing_no_rebuild {
     p1.root().move_into_the_past().unwrap();
     assert_that(p1.cargo("build"),
                 execs().with_stdout(&format!("\
-{updating} git repository `{bar}`
-{compiling} [..]
-{compiling} [..]
-", updating = UPDATING, compiling = COMPILING, bar = bar.url())));
+[UPDATING] git repository `{bar}`
+[COMPILING] [..]
+[COMPILING] [..]
+", bar = bar.url())));
 
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs")).unwrap().write_all(br#"
@@ -1171,10 +1143,10 @@ test!(git_repo_changing_no_rebuild {
         .file("src/main.rs", "fn main() {}");
     assert_that(p2.cargo_process("build"),
                 execs().with_stdout(&format!("\
-{updating} git repository `{bar}`
-{compiling} [..]
-{compiling} [..]
-", updating = UPDATING, compiling = COMPILING, bar = bar.url())));
+[UPDATING] git repository `{bar}`
+[COMPILING] [..]
+[COMPILING] [..]
+", bar = bar.url())));
 
     // And now for the real test! Make sure that p1 doesn't get rebuilt
     // even though the git repo has changed.
@@ -1267,8 +1239,8 @@ test!(fetch_downloads {
         .file("src/main.rs", "fn main() {}");
     assert_that(p.cargo_process("fetch"),
                 execs().with_status(0).with_stdout(&format!("\
-{updating} git repository `{url}`
-", updating = UPDATING, url = bar.url())));
+[UPDATING] git repository `{url}`
+", url = bar.url())));
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(0).with_stdout(""));
@@ -1298,12 +1270,12 @@ test!(warnings_in_git_dep {
 
     assert_that(p.cargo_process("build"),
         execs()
-        .with_stdout(&format!("{} git repository `{}`\n\
-                              {} bar v0.5.0 ({}#[..])\n\
-                              {} foo v0.5.0 ({})\n",
-                             UPDATING, bar.url(),
-                             COMPILING, bar.url(),
-                             COMPILING, p.url()))
+        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                              [COMPILING] bar v0.5.0 ({}#[..])\n\
+                              [COMPILING] foo v0.5.0 ({})\n",
+                             bar.url(),
+                             bar.url(),
+                             p.url()))
         .with_stderr(""));
 });
 
@@ -1357,14 +1329,13 @@ test!(update_ambiguous {
                  .arg("-p").arg("foo"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-{error} There are multiple `foo` packages in your project, and the specification `foo` \
+[ERROR] There are multiple `foo` packages in your project, and the specification `foo` \
 is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the \
 following:
   foo:0.[..].0
   foo:0.[..].0
-",
-error = ERROR)));
+")));
 });
 
 test!(update_one_dep_in_repo_with_many_deps {
@@ -1403,8 +1374,8 @@ test!(update_one_dep_in_repo_with_many_deps {
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{updating} git repository `{}`
-", foo.url(), updating = UPDATING)));
+[UPDATING] git repository `{}`
+", foo.url())));
 });
 
 test!(switch_deps_does_not_update_transitive {
@@ -1457,12 +1428,12 @@ test!(switch_deps_does_not_update_transitive {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{updating} git repository `{}`
-{updating} git repository `{}`
-{compiling} transitive [..]
-{compiling} dep [..]
-{compiling} project [..]
-", dep1.url(), transitive.url(), compiling = COMPILING, updating = UPDATING)));
+[UPDATING] git repository `{}`
+[UPDATING] git repository `{}`
+[COMPILING] transitive [..]
+[COMPILING] dep [..]
+[COMPILING] project [..]
+", dep1.url(), transitive.url())));
 
     // Update the dependency to point to the second repository, but this
     // shouldn't update the transitive dependency which is the same.
@@ -1478,10 +1449,10 @@ test!(switch_deps_does_not_update_transitive {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{updating} git repository `{}`
-{compiling} dep [..]
-{compiling} project [..]
-", dep2.url(), compiling = COMPILING, updating = UPDATING)));
+[UPDATING] git repository `{}`
+[COMPILING] dep [..]
+[COMPILING] project [..]
+", dep2.url())));
 });
 
 test!(update_one_source_updates_all_packages_in_that_git_source {
@@ -1583,11 +1554,11 @@ test!(switch_sources {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{updating} git repository `file://[..]a1`
-{compiling} a v0.5.0 ([..]a1#[..]
-{compiling} b v0.5.0 ([..])
-{compiling} project v0.5.0 ([..])
-", updating = UPDATING, compiling = COMPILING)));
+[UPDATING] git repository `file://[..]a1`
+[COMPILING] a v0.5.0 ([..]a1#[..]
+[COMPILING] b v0.5.0 ([..])
+[COMPILING] project v0.5.0 ([..])
+")));
 
     File::create(&p.root().join("b/Cargo.toml")).unwrap().write_all(format!(r#"
         [project]
@@ -1601,11 +1572,11 @@ test!(switch_sources {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{updating} git repository `file://[..]a2`
-{compiling} a v0.5.1 ([..]a2#[..]
-{compiling} b v0.5.0 ([..])
-{compiling} project v0.5.0 ([..])
-", updating = UPDATING, compiling = COMPILING)));
+[UPDATING] git repository `file://[..]a2`
+[COMPILING] a v0.5.1 ([..]a2#[..]
+[COMPILING] b v0.5.0 ([..])
+[COMPILING] project v0.5.0 ([..])
+")));
 });
 
 test!(dont_require_submodules_are_checked_out {
@@ -1707,10 +1678,10 @@ test!(lints_are_suppressed {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(&format!("\
-{updating} git repository `[..]`
-{compiling} a v0.5.0 ([..])
-{compiling} foo v0.0.1 ([..])
-", compiling = COMPILING, updating = UPDATING)));
+[UPDATING] git repository `[..]`
+[COMPILING] a v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
+")));
 });
 
 test!(denied_lints_are_allowed {
@@ -1744,10 +1715,10 @@ test!(denied_lints_are_allowed {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(&format!("\
-{updating} git repository `[..]`
-{compiling} a v0.5.0 ([..])
-{compiling} foo v0.0.1 ([..])
-", compiling = COMPILING, updating = UPDATING)));
+[UPDATING] git repository `[..]`
+[COMPILING] a v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
+")));
 });
 
 test!(add_a_git_dep {

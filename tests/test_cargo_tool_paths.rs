@@ -1,5 +1,4 @@
 use support::{path2url, project, execs};
-use support::{COMPILING, RUNNING};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -27,9 +26,9 @@ test!(pathless_tools {
 
     assert_that(foo.cargo_process("build").arg("--verbose"),
                 execs().with_stdout(&format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
-", compiling = COMPILING, running = RUNNING, url = foo.url())))
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
+", url = foo.url())))
 });
 
 test!(absolute_tools {
@@ -67,9 +66,9 @@ test!(absolute_tools {
 
     assert_that(foo.cargo_process("build").arg("--verbose"),
                 execs().with_stdout(&format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc [..] -C ar={ar} -C linker={linker} [..]`
-", compiling = COMPILING, running = RUNNING, url = foo.url(), ar = output.0, linker = output.1)))
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
+", url = foo.url(), ar = output.0, linker = output.1)))
 });
 
 test!(relative_tools {
@@ -114,7 +113,7 @@ test!(relative_tools {
 
     assert_that(origin.cargo_process("build").cwd(foo_path).arg("--verbose"),
                 execs().with_stdout(&format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc [..] -C ar={ar} -C linker={linker} [..]`
-", compiling = COMPILING, running = RUNNING, url = foo_url, ar = output.0, linker = output.1)))
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
+", url = foo_url, ar = output.0, linker = output.1)))
 });
