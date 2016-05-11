@@ -262,6 +262,7 @@ need_cmd date
 need_cmd tr
 need_cmd sed
 need_cmd cmake
+need_cmd pandoc
 if [ "${OS}" != "Windows_NT" ]; then
     need_cmd curl
 fi
