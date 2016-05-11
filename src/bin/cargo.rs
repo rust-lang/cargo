@@ -13,8 +13,8 @@ use std::path::{Path,PathBuf};
 
 use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
-use cargo::util::ChainError;
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::{self, CliResult, lev_distance, Config, human};
+use cargo::util::CliError;
 use cargo::util::process_builder::process;
 
 #[derive(RustcDecodable)]
@@ -199,7 +199,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
 
 fn execute_subcommand(config: &Config,
                       cmd: &str,
-                      args: &[String]) -> CargoResult<()> {
+                      args: &[String]) -> CliResult<()> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
                     .iter()
@@ -212,13 +212,19 @@ fn execute_subcommand(config: &Config,
                 Some(closest) => format!("no such subcommand\n\n\t\
                                           Did you mean `{}`?\n", closest),
                 None => "no such subcommand".to_string()
-            }))
+            }).into())
         }
     };
-    try!(util::process(&command).args(&args[1..]).exec().chain_error(|| {
-        human(format!("third party subcommand `{}` exited unsuccessfully", command_exe))
-    }));
-    Ok(())
+    let err = match util::process(&command).args(&args[1..]).exec() {
+        Ok(()) => return Ok(()),
+        Err(e) => e,
+    };
+
+    if let Some(code) = err.exit.as_ref().and_then(|c| c.code()) {
+        Err(CliError::new("", code))
+    } else {
+        Err(CliError::from_error(err, 101))
+    }
 }
 
 /// List all runnable commands. find_command should always succeed
