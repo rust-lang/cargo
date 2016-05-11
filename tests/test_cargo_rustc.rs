@@ -1,7 +1,6 @@
 use std::path::MAIN_SEPARATOR as SEP;
 
 use support::{execs, project};
-use support::{COMPILING, RUNNING, ERROR};
 
 use hamcrest::assert_that;
 
@@ -9,9 +8,9 @@ fn setup() {
 }
 
 fn cargo_rustc_error() -> String {
-    format!("{error} extra arguments to `rustc` can only be passed to one target, \
+    format!("[ERROR] extra arguments to `rustc` can only be passed to one target, \
     consider filtering\nthe package by passing e.g. `--lib` or `--bin NAME` to \
-    specify a single target", error = ERROR)
+    specify a single target")
 }
 
 test!(build_lib_for_foo {
@@ -31,14 +30,13 @@ test!(build_lib_for_foo {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
+", sep = SEP,
             dir = p.root().display(), url = p.url())));
 });
 
@@ -60,15 +58,14 @@ test!(build_lib_and_allow_unstable_options {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         -Z unstable-options \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
+", sep = SEP,
             dir = p.root().display(), url = p.url())))
 });
 
@@ -90,21 +87,20 @@ test!(build_main_and_allow_unstable_options {
                 execs()
                 .with_status(0)
                 .with_stdout(&format!("\
-{compiling} {name} v{version} ({url})
-{running} `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
+[COMPILING] {name} v{version} ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-{running} `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
+[RUNNING] `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
         -Z unstable-options \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         --extern {name}={dir}{sep}target{sep}debug{sep}lib{name}.rlib`
-",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
+", sep = SEP,
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")));
 });
@@ -153,13 +149,12 @@ test!(build_with_args_to_one_of_multiple_binaries {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
-{running} `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
+[RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
         -Z unstable-options [..]`
-",
-                compiling = COMPILING, running = RUNNING, sep = SEP,
+", sep = SEP,
                 dir = p.root().display(), url = p.url())));
 });
 
@@ -207,13 +202,12 @@ test!(build_with_args_to_one_of_multiple_tests {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} foo v0.0.1 ({url})
-{running} `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
-{running} `rustc tests{sep}bar.rs --crate-name bar --crate-type bin -g \
+[RUNNING] `rustc tests{sep}bar.rs --crate-name bar --crate-type bin -g \
         -Z unstable-options [..]--test[..]`
-",
-                compiling = COMPILING, running = RUNNING, sep = SEP,
+", sep = SEP,
                 dir = p.root().display(), url = p.url())));
 });
 
@@ -250,12 +244,11 @@ test!(build_foo_with_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} bar v0.1.0 ([..])
-{running} `[..] -g -C [..]`
-{compiling} foo v0.0.1 ({url})
-{running} `[..] -g -Z unstable-options [..]`
+[COMPILING] bar v0.1.0 ([..])
+[RUNNING] `[..] -g -C [..]`
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `[..] -g -Z unstable-options [..]`
 ",
-                compiling = COMPILING, running = RUNNING,
                 url = foo.url())));
 });
 
@@ -293,10 +286,9 @@ test!(build_only_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} bar v0.1.0 ([..])
-{running} `[..]--crate-name bar --crate-type lib [..] -Z unstable-options [..]`
-",
-                compiling = COMPILING, running = RUNNING)));
+[COMPILING] bar v0.1.0 ([..])
+[RUNNING] `[..]--crate-name bar --crate-type lib [..] -Z unstable-options [..]`
+")));
 });
 
 test!(fail_with_multiple_packages {
@@ -349,10 +341,10 @@ test!(fail_with_multiple_packages {
     assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
                                           .arg("-p").arg("baz"),
                 execs().with_status(1).with_stderr(format!("\
-{error} Invalid arguments.
+[ERROR] Invalid arguments.
 
 Usage:
-    cargo rustc [options] [--] [<opts>...]", error = ERROR)));
+    cargo rustc [options] [--] [<opts>...]")));
 });
 
 test!(rustc_with_other_profile {

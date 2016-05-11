@@ -8,7 +8,7 @@ use tar::Archive;
 use url::Url;
 
 use support::{project, execs};
-use support::{UPDATING, PACKAGING, UPLOADING, ERROR};
+use support::{PACKAGING, UPLOADING};
 use support::paths;
 use support::git::repo;
 
@@ -51,11 +51,10 @@ test!(simple {
 
     assert_that(p.cargo_process("publish").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
-{updating} registry `{reg}`
+[UPDATING] registry `{reg}`
 {packaging} foo v0.0.1 ({dir})
 {uploading} foo v0.0.1 ({dir})
 ",
-        updating = UPDATING,
         uploading = UPLOADING,
         packaging = PACKAGING,
         dir = p.url(),
@@ -104,10 +103,9 @@ test!(git_deps {
 
     assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} all dependencies must come from the same source.
+[ERROR] all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
-",
-error = ERROR)));
+")));
 });
 
 test!(path_dependency_no_version {
@@ -134,10 +132,9 @@ test!(path_dependency_no_version {
 
     assert_that(p.cargo_process("publish"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} all path dependencies must have a version specified when publishing.
+[ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
-",
-error = ERROR)));
+")));
 });
 
 test!(unpublishable_crate {
@@ -155,8 +152,7 @@ test!(unpublishable_crate {
 
     assert_that(p.cargo_process("publish"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} some crates cannot be published.
+[ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
-",
-error = ERROR)));
+")));
 });

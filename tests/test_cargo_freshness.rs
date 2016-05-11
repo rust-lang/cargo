@@ -2,7 +2,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs, path2url};
-use support::COMPILING;
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file};
 
@@ -23,8 +22,8 @@ test!(modifying_and_moving {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = path2url(p.root()))));
+[COMPILING] foo v0.0.1 ({dir})
+", dir = path2url(p.root()))));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
@@ -35,8 +34,8 @@ test!(modifying_and_moving {
          .write_all(b"fn main() {}").unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = path2url(p.root()))));
+[COMPILING] foo v0.0.1 ({dir})
+", dir = path2url(p.root()))));
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
     assert_that(p.cargo("build"),
@@ -62,8 +61,8 @@ test!(modify_only_some_files {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = path2url(p.root()))));
+[COMPILING] foo v0.0.1 ({dir})
+", dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
     ::sleep_ms(1000);
@@ -81,8 +80,8 @@ test!(modify_only_some_files {
     assert_that(p.cargo("build")
                  .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = path2url(p.root()))));
+[COMPILING] foo v0.0.1 ({dir})
+", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 });
 
@@ -251,10 +250,10 @@ test!(no_rebuild_transitive_target_deps {
     assert_that(p.cargo("test").arg("--no-run"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} c v0.0.1 ([..])
-{compiling} b v0.0.1 ([..])
-{compiling} foo v0.0.1 ([..])
-", compiling = COMPILING)));
+[COMPILING] c v0.0.1 ([..])
+[COMPILING] b v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+")));
 });
 
 test!(rerun_if_changed_in_dep {
@@ -342,13 +341,13 @@ test!(same_build_dir_cached_packages {
 
     assert_that(p.cargo("build").cwd(p.root().join("a1")),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} d v0.0.1 ({dir}/d)
-{compiling} c v0.0.1 ({dir}/c)
-{compiling} b v0.0.1 ({dir}/b)
-{compiling} a1 v0.0.1 ({dir}/a1)
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] d v0.0.1 ({dir}/d)
+[COMPILING] c v0.0.1 ({dir}/c)
+[COMPILING] b v0.0.1 ({dir}/b)
+[COMPILING] a1 v0.0.1 ({dir}/a1)
+", dir = p.url())));
     assert_that(p.cargo("build").cwd(p.root().join("a2")),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} a2 v0.0.1 ({dir}/a2)
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] a2 v0.0.1 ({dir}/a2)
+", dir = p.url())));
 });
