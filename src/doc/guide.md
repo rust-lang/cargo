@@ -412,8 +412,8 @@ You can also run a specific test by passing a filter:
 
 This will run any test with `foo` in its name.
 
-`cargo test` runs additional tests as well. For example, it will compile any
-examples, you’ve included, and will also test the examples in your
+`cargo test` runs additional tests as well. For example, it will compile and
+test any examples, you’ve included, and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
 documentation for more details.
 

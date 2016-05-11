@@ -272,12 +272,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 m.mix(&"test");
                 m
             })
-        } else if unit.target.is_bin() && unit.profile.test {
+        } else if (unit.target.is_bin() || unit.target.is_example()) && unit.profile.test {
             // Make sure that the name of this test executable doesn't
             // conflict with a library that has the same name and is
             // being tested
             let mut metadata = unit.pkg.generate_metadata();
-            metadata.mix(&format!("bin-{}", unit.target.name()));
+            metadata.mix(
+                &format!("{}-{}",
+                    if unit.target.is_bin() { "bin" } else { "example" },
+                    unit.target.name()
+                )
+            );
             Some(metadata)
         } else if unit.pkg.package_id() == self.resolve.root() &&
                   !unit.profile.test {

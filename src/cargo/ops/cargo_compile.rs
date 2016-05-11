@@ -322,19 +322,25 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }).collect::<Vec<_>>())
                 }
                 CompileMode::Test => {
-                    let mut base = pkg.targets().iter().filter(|t| {
-                        t.tested()
-                    }).map(|t| {
-                        (t, if t.is_example() {build} else {profile})
-                    }).collect::<Vec<_>>();
+                    let mut base = Vec::new();
 
-                    // Always compile the library if we're testing everything as
-                    // it'll be needed for doctests
-                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
-                        if t.doctested() {
+                    for t in pkg.targets() {
+                        // Always build the examples even when they are being tested
+                        // so that code inside `main` which has errors will be caught.
+                        let always_build = (t.is_example() && t.tested())
+                            // Always compile the library if we're testing everything as
+                            // it'll be needed for doctests
+                            || (t.is_lib() && t.doctested());
+
+                        if always_build {
                             base.push((t, build));
                         }
+
+                        if t.tested() {
+                           base.push((t, profile));
+                        }
                     }
+
                     Ok(base)
                 }
                 CompileMode::Build => {
@@ -384,8 +390,9 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(())
                 };
+
                 try!(find(bins, "bin", TargetKind::Bin, profile));
-                try!(find(examples, "example", TargetKind::Example, build));
+                try!(find(examples, "example", TargetKind::Example, profile));
                 try!(find(tests, "test", TargetKind::Test, test));
                 try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
             }

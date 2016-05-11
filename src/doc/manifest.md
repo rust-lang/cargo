@@ -455,7 +455,7 @@ When you run `cargo test`, Cargo will:
 * compile and run your library’s documentation tests, which are embedded inside
   of documentation blocks;
 * compile and run your library’s [integration tests](#integration-tests); and
-* compile your library’s examples.
+* compile and test your library’s examples.
 
 ## Integration Tests
 

@@ -436,6 +436,275 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
         COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)))
 });
 
+test!(example_test {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("examples/i-have-tests.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn inside_example_test() {
+                assert_eq!(foo::get_hello(), "hello")
+            }
+
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_stdout(format!("\
+{} foo v0.0.1 ({})
+{running} target[..]foo-[..]
+
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]i_have_tests-[..]
+
+running 1 test
+test inside_example_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)));
+});
+
+test!(example_test_failing {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("examples/i-have-tests.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn inside_example_test() {
+                assert_eq!(foo::get_hello(), "nope")
+            }
+
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_stdout_contains(format!("\
+{} foo v0.0.1 ({})
+{running} target[..]foo-[..]
+
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]i_have_tests-[..]
+
+running 1 test
+test inside_example_test ... FAILED
+
+failures:
+
+---- inside_example_test stdout ----
+<tab>thread 'inside_example_test' panicked at 'assertion failed: \
+    `(left == right)` (left: \
+    `\"hello\"`, right: `\"nope\"`)', examples[..]i-have-tests.rs:6",
+        COMPILING, p.url(), running = RUNNING))
+                .with_stdout_contains("\
+failures:
+    inside_example_test
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
+")
+                 .with_status(101));
+});
+
+test!(example_test_disabled {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "i-have-tests"
+            path = "examples/i-have-tests.rs"
+            test = false
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("examples/i-have-tests.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn inside_example_test() {
+                assert_eq!(foo::get_hello(), "hello")
+            }
+
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_stdout(format!("\
+{} foo v0.0.1 ({})
+{running} target[..]foo-[..]
+
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)));
+});
+
+test!(example_test_feature {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            [features]
+            bar = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("examples/i-have-tests.rs", r#"
+            extern crate foo;
+
+            #[test]
+            #[cfg(feature = "bar")]
+            fn inside_example_test() {
+                assert_eq!(foo::get_hello(), "hello")
+            }
+
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("test").arg("--features").arg("bar"),
+                execs().with_stdout(format!("\
+{} foo v0.0.1 ({})
+{running} target[..]foo-[..]
+
+running 1 test
+test internal_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{running} target[..]i_have_tests-[..]
+
+running 1 test
+test inside_example_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+{doctest} foo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.url(), running = RUNNING, doctest = DOCTEST)));
+});
+
+test!(test_example_failing_in_non_test_code {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+        "#)
+        .file("examples/has-broken-code.rs", r#"
+            #[cfg(not(test))]
+            fn main() { unknown::method() }
+        "#);
+    assert_that(p.cargo_process("test"),
+                execs().with_stderr_contains("\
+[..]error: failed to resolve[..]
+[..]fn main() { unknown::method() }
+[..]            ^~~~~~~~~~~~~~~
+").with_status(101));
+});
+
+test!(example_test_specific {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn get_hello() -> &'static str { "hello" }
+
+            #[test]
+            fn internal_test() {}
+        "#)
+        .file("examples/i-have-tests.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn inside_example_test() {
+                assert_eq!(foo::get_hello(), "hello")
+            }
+
+            fn main() { panic!("Examples should not be run by 'cargo test'"); }
+        "#);
+    assert_that(p.cargo_process("test").arg("--example").arg("i-have-tests"),
+                execs().with_stdout(format!("\
+{} foo v0.0.1 ({})
+{running} target[..]i_have_tests-[..]
+
+running 1 test
+test inside_example_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+",
+        COMPILING, p.url(), running = RUNNING)));
+});
+
 test!(dont_run_examples {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1495,6 +1764,7 @@ test!(example_bin_same_name {
 {compiling} foo v0.0.1 ({dir})
 {running} `rustc [..]`
 {running} `rustc [..]`
+{running} `rustc [..]`
 ", compiling = COMPILING, running = RUNNING, dir = p.url())));
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
@@ -1568,6 +1838,13 @@ test!(example_with_dev_dep {
 [..]
 [..]
 {running} `rustc [..] --crate-name ex [..] --extern a=[..]`
+[..]
+[..]
+[..]
+[..]
+[..]
+[..]
+[..]
 ", running = RUNNING)));
 });
 
