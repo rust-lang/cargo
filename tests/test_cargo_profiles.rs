@@ -2,7 +2,6 @@ use std::env;
 use std::path::MAIN_SEPARATOR as SEP;
 
 use support::{project, execs};
-use support::{COMPILING, RUNNING};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -26,8 +25,8 @@ test!(profile_overrides {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} test v0.0.0 ({url})
-{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+[COMPILING] test v0.0.0 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -C debug-assertions=on \
         -C rpath \
@@ -35,8 +34,7 @@ test!(profile_overrides {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-",
-running = RUNNING, compiling = COMPILING, sep = SEP,
+", sep = SEP,
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -78,8 +76,8 @@ test!(top_level_overrides_deps {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.0 ({url}/foo)
-{running} `rustc foo{sep}src{sep}lib.rs --crate-name foo \
+[COMPILING] foo v0.0.0 ({url}/foo)
+[RUNNING] `rustc foo{sep}src{sep}lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
@@ -89,8 +87,8 @@ test!(top_level_overrides_deps {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
-{compiling} test v0.0.0 ({url})
-{running} `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+[COMPILING] test v0.0.0 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
         --out-dir {dir}{sep}target{sep}release \
@@ -101,8 +99,6 @@ test!(top_level_overrides_deps {
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps{sep}libfoo-[..].rlib`
 ",
-                    running = RUNNING,
-                    compiling = COMPILING,
                     dir = p.root().display(),
                     url = p.url(),
                     sep = SEP,

@@ -2,7 +2,6 @@ use std::str;
 use std::fs;
 
 use support::{project, execs, path2url};
-use support::{COMPILING, DOCUMENTING, RUNNING, ERROR};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -66,9 +65,8 @@ test!(doc_twice {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(&format!("\
-{documenting} foo v0.0.1 ({dir})
+[DOCUMENTING] foo v0.0.1 ({dir})
 ",
-        documenting = DOCUMENTING,
         dir = path2url(p.root()))));
 
     assert_that(p.cargo("doc"),
@@ -104,9 +102,8 @@ test!(doc_deps {
                 execs().with_status(0).with_stdout(&format!("\
 [..] bar v0.0.1 ({dir}/bar)
 [..] bar v0.0.1 ({dir}/bar)
-{documenting} foo v0.0.1 ({dir})
+[DOCUMENTING] foo v0.0.1 ({dir})
 ",
-        documenting = DOCUMENTING,
         dir = path2url(p.root()))));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -149,10 +146,9 @@ test!(doc_no_deps {
 
     assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir}/bar)
-{documenting} foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 ({dir}/bar)
+[DOCUMENTING] foo v0.0.1 ({dir})
 ",
-        documenting = DOCUMENTING, compiling = COMPILING,
         dir = path2url(p.root()))));
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -207,10 +203,9 @@ test!(doc_lib_bin_same_name {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-{error} cannot document a package where a library and a binary have the same name. \
+[ERROR] cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
-",
-error = ERROR)));
+")));
 });
 
 test!(doc_dash_p {
@@ -248,8 +243,8 @@ test!(doc_dash_p {
                        .with_stdout(&format!("\
 [..] b v0.0.1 (file://[..])
 [..] b v0.0.1 (file://[..])
-{documenting} a v0.0.1 (file://[..])
-", documenting = DOCUMENTING)));
+[DOCUMENTING] a v0.0.1 (file://[..])
+")));
 });
 
 test!(doc_same_name {
@@ -432,9 +427,9 @@ test!(doc_release {
     assert_that(p.cargo("doc").arg("--release").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{documenting} foo v0.0.1 ([..])
-{running} `rustdoc src[..]lib.rs [..]`
-", documenting = DOCUMENTING, running = RUNNING)));
+[DOCUMENTING] foo v0.0.1 ([..])
+[RUNNING] `rustdoc src[..]lib.rs [..]`
+")));
 });
 
 test!(doc_multiple_deps {

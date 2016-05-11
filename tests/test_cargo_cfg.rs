@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use hamcrest::assert_that;
 
-use support::{project, execs, COMPILING, UPDATING, DOWNLOADING, ERROR};
+use support::{project, execs, DOWNLOADING};
 use support::registry::Package;
 
 macro_rules! c {
@@ -185,8 +185,8 @@ test!(dont_include {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} a v0.0.1 ([..])
-", compiling = COMPILING)));
+[COMPILING] a v0.0.1 ([..])
+")));
 });
 
 test!(works_through_the_registry {
@@ -212,13 +212,13 @@ test!(works_through_the_registry {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(&format!("\
-{updating} registry [..]
+[UPDATING] registry [..]
 {downloading} [..]
 {downloading} [..]
-{compiling} foo v0.1.0 ([..])
-{compiling} bar v0.1.0 ([..])
-{compiling} a v0.0.1 ([..])
-", compiling = COMPILING, updating = UPDATING, downloading = DOWNLOADING)));
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[COMPILING] a v0.0.1 ([..])
+", downloading = DOWNLOADING)));
 });
 
 test!(bad_target_spec {
@@ -236,15 +236,14 @@ test!(bad_target_spec {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   failed to parse `4` as a cfg expression
 
 Caused by:
   unexpected character in cfg `4`, [..]
-",
-error = ERROR)));
+")));
 });
 
 test!(bad_target_spec2 {
@@ -262,15 +261,14 @@ test!(bad_target_spec2 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   failed to parse `foo =` as a cfg expression
 
 Caused by:
   expected a string, found nothing
-",
-error = ERROR)));
+")));
 });
 
 test!(multiple_match_ok {

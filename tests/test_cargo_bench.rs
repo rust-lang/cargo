@@ -1,7 +1,6 @@
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, FRESH, RUNNING};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
@@ -38,17 +37,15 @@ test!(cargo_bench_simple {
 
     assert_that(p.cargo("bench"),
                 execs().with_stdout(&format!("\
-{} foo v0.5.0 ({})
-{} target[..]release[..]foo-[..]
+[COMPILING] foo v0.5.0 ({})
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-",
-        COMPILING, p.url(),
-        RUNNING)));
+", p.url())));
 });
 
 test!(bench_tarname {
@@ -71,8 +68,8 @@ test!(bench_tarname {
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
 
     let expected_stdout = format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} target[..]release[..]bin2[..]
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] target[..]release[..]bin2[..]
 
 running 1 test
 test run2 ... bench: [..] 0 ns/iter (+/- 0)
@@ -80,8 +77,6 @@ test run2 ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-       compiling = COMPILING,
-       running = RUNNING,
        dir = prj.url());
 
     assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
@@ -102,17 +97,16 @@ test!(cargo_bench_verbose {
 
     assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
         execs().with_stdout(&format!("\
-{compiling} foo v0.5.0 ({url})
-{running} `rustc src[..]foo.rs [..]`
-{running} `[..]target[..]release[..]foo-[..] hello --bench`
+[COMPILING] foo v0.5.0 ({url})
+[RUNNING] `rustc src[..]foo.rs [..]`
+[RUNNING] `[..]target[..]release[..]foo-[..] hello --bench`
 
 running 1 test
 test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-",
-        compiling = COMPILING, url = p.url(), running = RUNNING)));
+", url = p.url())));
 });
 
 test!(many_similar_names {
@@ -181,12 +175,12 @@ test!(cargo_bench_failing_test {
 
     assert_that(p.cargo("bench"),
                 execs().with_stdout_contains(&format!("\
-{} foo v0.5.0 ({})
-{} target[..]release[..]foo-[..]
+[COMPILING] foo v0.5.0 ({})
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test bench_hello ... ",
-        COMPILING, p.url(), RUNNING))
+        p.url()))
               .with_stderr_contains("\
 thread '<main>' panicked at 'assertion failed: \
     `(left == right)` (left: \
@@ -237,15 +231,15 @@ test!(bench_with_lib_dep {
 
     assert_that(p.cargo_process("bench"),
         execs().with_stdout(&format!("\
-{} foo v0.0.1 ({})
-{running} target[..]release[..]baz-[..]
+[COMPILING] foo v0.0.1 ({})
+[RUNNING] target[..]release[..]baz-[..]
 
 running 1 test
 test bin_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]release[..]foo-[..]
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test lib_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -253,7 +247,7 @@ test lib_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-        COMPILING, p.url(), running = RUNNING)))
+        p.url())))
 });
 
 test!(bench_with_deep_lib_dep {
@@ -299,9 +293,9 @@ test!(bench_with_deep_lib_dep {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ([..])
-{compiling} bar v0.0.1 ({dir})
-{running} target[..]
+[COMPILING] foo v0.0.1 ([..])
+[COMPILING] bar v0.0.1 ({dir})
+[RUNNING] target[..]
 
 running 1 test
 test bar_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -309,7 +303,6 @@ test bar_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
                        dir = p.url())));
 });
 
@@ -346,15 +339,15 @@ test!(external_bench_explicit {
 
     assert_that(p.cargo_process("bench"),
         execs().with_stdout(&format!("\
-{} foo v0.0.1 ({})
-{running} target[..]release[..]bench-[..]
+[COMPILING] foo v0.0.1 ({})
+[RUNNING] target[..]release[..]bench-[..]
 
 running 1 test
 test external_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]release[..]foo-[..]
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -362,7 +355,7 @@ test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-        COMPILING, p.url(), running = RUNNING)))
+        p.url())))
 });
 
 test!(external_bench_implicit {
@@ -395,15 +388,15 @@ test!(external_bench_implicit {
 
     assert_that(p.cargo_process("bench"),
         execs().with_stdout(&format!("\
-{} foo v0.0.1 ({})
-{running} target[..]release[..]external-[..]
+[COMPILING] foo v0.0.1 ({})
+[RUNNING] target[..]release[..]external-[..]
 
 running 1 test
 test external_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]release[..]foo-[..]
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -411,7 +404,7 @@ test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-        COMPILING, p.url(), running = RUNNING)))
+        p.url())))
 });
 
 test!(dont_run_examples {
@@ -454,8 +447,8 @@ test!(pass_through_command_line {
     assert_that(p.cargo_process("bench").arg("bar"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} target[..]release[..]foo-[..]
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test bar ... bench: [..] 0 ns/iter (+/- 0)
@@ -463,20 +456,19 @@ test bar ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
                        dir = p.url())));
 
     assert_that(p.cargo("bench").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{running} target[..]release[..]foo-[..]
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-", running = RUNNING)));
+")));
 });
 
 // Regression test for running cargo-bench twice with
@@ -535,15 +527,15 @@ test!(lib_bin_same_name {
 
     assert_that(p.cargo_process("bench"),
         execs().with_stdout(&format!("\
-{} foo v0.0.1 ({})
-{running} target[..]release[..]foo-[..]
+[COMPILING] foo v0.0.1 ({})
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test [..] ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]release[..]foo-[..]
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test [..] ... bench: [..] 0 ns/iter (+/- 0)
@@ -551,7 +543,7 @@ test [..] ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-        COMPILING, p.url(), running = RUNNING)))
+        p.url())))
 });
 
 test!(lib_with_standard_name {
@@ -588,15 +580,15 @@ test!(lib_with_standard_name {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} syntax v0.0.1 ({dir})
-{running} target[..]release[..]bench-[..]
+[COMPILING] syntax v0.0.1 ({dir})
+[RUNNING] target[..]release[..]bench-[..]
 
 running 1 test
 test bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} target[..]release[..]syntax-[..]
+[RUNNING] target[..]release[..]syntax-[..]
 
 running 1 test
 test foo_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -604,7 +596,6 @@ test foo_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
                        dir = p.url())));
 });
 
@@ -640,8 +631,8 @@ test!(lib_with_standard_name2 {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} syntax v0.0.1 ({dir})
-{running} target[..]release[..]syntax-[..]
+[COMPILING] syntax v0.0.1 ({dir})
+[RUNNING] target[..]release[..]syntax-[..]
 
 running 1 test
 test bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -649,7 +640,6 @@ test bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
                        dir = p.url())));
 });
 
@@ -705,20 +695,20 @@ test!(bench_dylib {
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir}/bar)
-{running} [..] -C opt-level=3 [..]
-{compiling} foo v0.0.1 ({dir})
-{running} [..] -C opt-level=3 [..]
-{running} [..] -C opt-level=3 [..]
-{running} [..] -C opt-level=3 [..]
-{running} [..]target[..]release[..]bench-[..]
+[COMPILING] bar v0.0.1 ({dir}/bar)
+[RUNNING] [..] -C opt-level=3 [..]
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] [..] -C opt-level=3 [..]
+[RUNNING] [..] -C opt-level=3 [..]
+[RUNNING] [..] -C opt-level=3 [..]
+[RUNNING] [..]target[..]release[..]bench-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} [..]target[..]release[..]foo-[..]
+[RUNNING] [..]target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -726,22 +716,21 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
                        dir = p.url())));
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{fresh} bar v0.0.1 ({dir}/bar)
-{fresh} foo v0.0.1 ({dir})
-{running} [..]target[..]release[..]bench-[..]
+[FRESH] bar v0.0.1 ({dir}/bar)
+[FRESH] foo v0.0.1 ({dir})
+[RUNNING] [..]target[..]release[..]bench-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} [..]target[..]release[..]foo-[..]
+[RUNNING] [..]target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -749,7 +738,6 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       fresh = FRESH, running = RUNNING,
                        dir = p.url())));
 });
 
@@ -775,8 +763,8 @@ test!(bench_twice_with_build_cmd {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} target[..]release[..]foo-[..]
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -784,21 +772,19 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING, running = RUNNING,
                        dir = p.url())));
 
     assert_that(p.cargo("bench"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{running} target[..]release[..]foo-[..]
+[RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-",
-                       running = RUNNING)));
+")));
 });
 
 test!(bench_with_examples {
@@ -857,18 +843,18 @@ test!(bench_with_examples {
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} testbench v6.6.6 ({url})
-{running} `rustc [..]`
-{running} `rustc [..]`
-{running} `rustc [..]`
-{running} `{dir}[..]target[..]release[..]testb1-[..] --bench`
+[COMPILING] testbench v6.6.6 ({url})
+[RUNNING] `rustc [..]`
+[RUNNING] `rustc [..]`
+[RUNNING] `rustc [..]`
+[RUNNING] `{dir}[..]target[..]release[..]testb1-[..] --bench`
 
 running 1 test
 test bench_bench2 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-{running} `{dir}[..]target[..]release[..]testbench-[..] --bench`
+[RUNNING] `{dir}[..]target[..]release[..]testbench-[..] --bench`
 
 running 1 test
 test bench_bench1 ... bench: [..] 0 ns/iter (+/- 0)
@@ -876,8 +862,6 @@ test bench_bench1 ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 ",
-                       compiling = COMPILING,
-                       running = RUNNING,
                        dir = p.root().display(),
                        url = p.url())));
 });
@@ -910,15 +894,15 @@ test!(test_a_bench {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.1.0 ([..])
-{running} target[..]debug[..]b-[..]
+[COMPILING] foo v0.1.0 ([..])
+[RUNNING] target[..]debug[..]b-[..]
 
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, running = RUNNING)));
+")));
 });
 
 test!(test_bench_no_run {
@@ -946,8 +930,8 @@ test!(test_bench_no_run {
     assert_that(p.cargo_process("bench").arg("--no-run"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.1.0 ([..])
-", compiling = COMPILING)));
+[COMPILING] foo v0.1.0 ([..])
+")));
 });
 
 test!(test_bench_multiple_packages {
@@ -1018,19 +1002,19 @@ test!(test_bench_multiple_packages {
     assert_that(p.cargo_process("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
                 execs().with_status(0)
                        .with_stdout_contains(&format!("\
-{running} target[..]release[..]bbaz-[..]
+[RUNNING] target[..]release[..]bbaz-[..]
 
 running 1 test
 test bench_baz ... bench:           0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-", running = RUNNING))
+"))
                        .with_stdout_contains(&format!("\
-{running} target[..]release[..]bbar-[..]
+[RUNNING] target[..]release[..]bbar-[..]
 
 running 1 test
 test bench_bar ... bench:           0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-", running = RUNNING)));
+")));
 });
