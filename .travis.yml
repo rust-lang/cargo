@@ -39,3 +39,4 @@ addons:
       - cmake
       - g++-multilib
       - lib32stdc++6
+      - pandoc
