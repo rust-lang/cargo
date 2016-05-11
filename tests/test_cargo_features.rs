@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{COMPILING, FRESH, ERROR};
 use support::paths::CargoPathExt;
 use hamcrest::assert_that;
 
@@ -24,12 +23,11 @@ test!(invalid1 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` includes `baz` which is neither a dependency nor another feature
-",
-error = ERROR)));
+")));
 });
 
 test!(invalid2 {
@@ -50,12 +48,11 @@ test!(invalid2 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Features and dependencies cannot have the same name: `bar`
-",
-error = ERROR)));
+")));
 });
 
 test!(invalid3 {
@@ -76,13 +73,12 @@ test!(invalid3 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` depends on `baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
-",
-error = ERROR)));
+")));
 });
 
 test!(invalid4 {
@@ -108,9 +104,8 @@ test!(invalid4 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} Package `bar v0.0.1 ([..])` does not have these features: `bar`
-",
-error = ERROR)));
+[ERROR] Package `bar v0.0.1 ([..])` does not have these features: `bar`
+")));
 
     let p = p.file("Cargo.toml", r#"
             [project]
@@ -121,9 +116,8 @@ error = ERROR)));
 
     assert_that(p.cargo_process("build").arg("--features").arg("test"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} Package `foo v0.0.1 ([..])` does not have these features: `test`
-",
-error = ERROR)));
+[ERROR] Package `foo v0.0.1 ([..])` does not have these features: `test`
+")));
 });
 
 test!(invalid5 {
@@ -142,12 +136,11 @@ test!(invalid5 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Dev-dependencies are not allowed to be optional: `bar`
-",
-error = ERROR)));
+")));
 });
 
 test!(invalid6 {
@@ -165,12 +158,11 @@ test!(invalid6 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
-",
-error = ERROR)));
+")));
 });
 
 test!(invalid7 {
@@ -189,12 +181,11 @@ test!(invalid7 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} failed to parse manifest at `[..]`
+[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
-",
-error = ERROR)));
+")));
 });
 
 test!(invalid8 {
@@ -220,9 +211,8 @@ test!(invalid8 {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} features in dependencies cannot enable features in other dependencies: `foo/bar`
-",
-error = ERROR)));
+[ERROR] features in dependencies cannot enable features in other dependencies: `foo/bar`
+")));
 });
 
 test!(no_feature_doesnt_build {
@@ -255,16 +245,16 @@ test!(no_feature_doesnt_build {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir}/bar)
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] bar v0.0.1 ({dir}/bar)
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 });
@@ -302,16 +292,16 @@ test!(default_feature_pulled_in {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir}/bar)
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] bar v0.0.1 ({dir}/bar)
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 
     assert_that(p.cargo("build").arg("--no-default-features"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 });
@@ -331,9 +321,8 @@ test!(cyclic_feature {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} Cyclic feature dependency: feature `default` depends on itself
-",
-error = ERROR)));
+[ERROR] Cyclic feature dependency: feature `default` depends on itself
+")));
 });
 
 test!(cyclic_feature2 {
@@ -352,9 +341,8 @@ test!(cyclic_feature2 {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} Cyclic feature dependency: feature `[..]` depends on itself
-",
-error = ERROR)));
+[ERROR] Cyclic feature dependency: feature `[..]` depends on itself
+")));
 });
 
 test!(groups_on_groups_on_groups {
@@ -405,10 +393,10 @@ test!(groups_on_groups_on_groups {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} ba[..] v0.0.1 ({dir}/ba[..])
-{compiling} ba[..] v0.0.1 ({dir}/ba[..])
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
 });
 
 test!(many_cli_features {
@@ -449,10 +437,10 @@ test!(many_cli_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar baz"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} ba[..] v0.0.1 ({dir}/ba[..])
-{compiling} ba[..] v0.0.1 ({dir}/ba[..])
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
 });
 
 test!(union_features {
@@ -510,10 +498,10 @@ test!(union_features {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} d2 v0.0.1 ({dir}/d2)
-{compiling} d1 v0.0.1 ({dir}/d1)
-{compiling} foo v0.0.1 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] d2 v0.0.1 ({dir}/d2)
+[COMPILING] d1 v0.0.1 ({dir}/d1)
+[COMPILING] foo v0.0.1 ({dir})
+", dir = p.url())));
 });
 
 test!(many_features_no_rebuilds {
@@ -544,16 +532,16 @@ test!(many_features_no_rebuilds {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} a v0.1.0 ({dir}/a)
-{compiling} b v0.1.0 ({dir})
-", compiling = COMPILING, dir = p.url())));
+[COMPILING] a v0.1.0 ({dir}/a)
+[COMPILING] b v0.1.0 ({dir})
+", dir = p.url())));
     p.root().move_into_the_past().unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stdout(format!("\
-{fresh} a v0.1.0 ([..]/a)
-{fresh} b v0.1.0 ([..])
-", fresh = FRESH)));
+[FRESH] a v0.1.0 ([..]/a)
+[FRESH] b v0.1.0 ([..])
+")));
 });
 
 // Tests that all cmd lines work with `--features ""`
@@ -777,8 +765,8 @@ test!(optional_and_dev_dep {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(format!("\
-{compiling} test v0.1.0 ([..])
-", compiling = COMPILING)));
+[COMPILING] test v0.1.0 ([..])
+")));
 });
 
 test!(activating_feature_activates_dep {

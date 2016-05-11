@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::env;
 use tempdir::TempDir;
-use support::{execs, paths, cargo_dir, ERROR};
+use support::{execs, paths, cargo_dir};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 use cargo::util::{process, ProcessBuilder};
@@ -126,9 +126,8 @@ test!(confused_by_multiple_lib_files {
     assert_that(cargo_process("init").arg("--vcs").arg("none")
                                     .env("USER", "foo").cwd(&path),
                 execs().with_status(101).with_stderr(&format!("\
-{error} cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`
-",
-error = ERROR)));
+[ERROR] cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`
+")));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
 });
@@ -157,12 +156,11 @@ test!(multibin_project_name_clash {
     assert_that(cargo_process("init").arg("--vcs").arg("none")
                                     .env("USER", "foo").cwd(&path),
                 execs().with_status(101).with_stderr(&format!("\
-{error} multiple possible binary sources found:
+[ERROR] multiple possible binary sources found:
   main.rs
   foo.rs
 cannot automatically generate Cargo.toml as the main target would be ambiguous
-",
-error = ERROR)));
+")));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
 });
@@ -231,10 +229,9 @@ test!(invalid_dir_name {
     assert_that(cargo_process("init").cwd(foo.clone())
                                      .env("USER", "foo"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} Invalid character `.` in crate name: `foo.bar`
+[ERROR] Invalid character `.` in crate name: `foo.bar`
 use --name to override crate name
-",
-error = ERROR)));
+")));
 
     assert_that(&foo.join("Cargo.toml"), is_not(existing_file()));
 });
@@ -245,10 +242,9 @@ test!(reserved_name {
     assert_that(cargo_process("init").cwd(test.clone())
                                      .env("USER", "foo"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} The name `test` cannot be used as a crate name\n\
+[ERROR] The name `test` cannot be used as a crate name\n\
 use --name to override crate name
-",
-error = ERROR)));
+")));
 
     assert_that(&test.join("Cargo.toml"), is_not(existing_file()));
 });
@@ -375,13 +371,12 @@ test!(unknown_flags {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
                 execs().with_status(1)
                        .with_stderr(&format!("\
-{error} Unknown flag: '--flag'
+[ERROR] Unknown flag: '--flag'
 
 Usage:
     cargo init [options] [<path>]
     cargo init -h | --help
-",
-error = ERROR)));
+")));
 });
 
 #[cfg(not(windows))]
@@ -389,7 +384,6 @@ test!(no_filename {
     assert_that(cargo_process("init").arg("/"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-{error} cannot auto-detect project name from path \"/\" ; use --name to override
-",
-error = ERROR)));
+[ERROR] cannot auto-detect project name from path \"/\" ; use --name to override
+")));
 });

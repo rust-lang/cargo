@@ -1,6 +1,5 @@
 use std::path::MAIN_SEPARATOR as SEP;
 use support::{execs, project};
-use support::{COMPILING, RUNNING, DOCUMENTING, ERROR};
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -21,13 +20,12 @@ test!(rustdoc_simple {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{documenting} foo v0.0.1 ({url})
-{running} `rustdoc src{sep}lib.rs --crate-name foo \
+[DOCUMENTING] foo v0.0.1 ({url})
+[RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-",
-            running = RUNNING, documenting = DOCUMENTING, sep = SEP,
+", sep = SEP,
             dir = p.root().display(), url = p.url())));
 });
 
@@ -45,14 +43,13 @@ test!(rustdoc_args {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{documenting} foo v0.0.1 ({url})
-{running} `rustdoc src{sep}lib.rs --crate-name foo \
+[DOCUMENTING] foo v0.0.1 ({url})
+[RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-",
-            running = RUNNING, documenting = DOCUMENTING, sep = SEP,
+", sep = SEP,
             dir = p.root().display(), url = p.url())));
 });
 
@@ -89,18 +86,16 @@ test!(rustdoc_foo_with_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{compiling} bar v0.0.1 ([..])
-{running} `rustc [..]bar{sep}src{sep}lib.rs [..]`
-{documenting} foo v0.0.1 ({url})
-{running} `rustdoc src{sep}lib.rs --crate-name foo \
+[COMPILING] bar v0.0.1 ([..])
+[RUNNING] `rustc [..]bar{sep}src{sep}lib.rs [..]`
+[DOCUMENTING] foo v0.0.1 ({url})
+[RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         --extern [..]`
-",
-            running = RUNNING, compiling = COMPILING, sep = SEP,
-            documenting = DOCUMENTING,
+", sep = SEP,
             dir = foo.root().display(), url = foo.url())));
 });
 
@@ -138,14 +133,13 @@ test!(rustdoc_only_bar_dependency {
                 execs()
                 .with_status(0)
                 .with_stdout(format!("\
-{documenting} bar v0.0.1 ([..])
-{running} `rustdoc [..]bar{sep}src{sep}lib.rs --crate-name bar \
+[DOCUMENTING] bar v0.0.1 ([..])
+[RUNNING] `rustdoc [..]bar{sep}src{sep}lib.rs --crate-name bar \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-",
-            running = RUNNING, documenting = DOCUMENTING, sep = SEP,
+", sep = SEP,
             dir = foo.root().display())));
 });
 
@@ -167,8 +161,7 @@ test!(rustdoc_same_name_err {
                  .arg("--").arg("--no-defaults"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("{error} cannot document a package where a library and a \
+                .with_stderr(&format!("[ERROR] cannot document a package where a library and a \
                               binary have the same name. Consider renaming one \
-                              or marking the target as `doc = false`",
-                              error = ERROR)));
+                              or marking the target as `doc = false`")));
 });

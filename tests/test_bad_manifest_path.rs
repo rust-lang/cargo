@@ -1,4 +1,4 @@
-use support::{project, execs, main_file, basic_bin_manifest, ERROR};
+use support::{project, execs, main_file, basic_bin_manifest};
 use hamcrest::{assert_that};
 
 fn setup() {}
@@ -12,9 +12,8 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
                  .arg("--manifest-path").arg(manifest_path_argument)
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr(&format!("{error} the manifest-path must be a path \
-                                             to a Cargo.toml file",
-                                             error = ERROR)));
+                       .with_stderr(&format!("[ERROR] the manifest-path must be a path \
+                                             to a Cargo.toml file")));
 }
 
 #[allow(deprecated)] // connect => join in 1.3
@@ -28,8 +27,8 @@ fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
                        .with_stderr(
-                           format!("{error} manifest path `{}` does not exist",
-                                   expected_path, error = ERROR)
+                           format!("[ERROR] manifest path `{}` does not exist",
+                                   expected_path)
                        ));
 }
 

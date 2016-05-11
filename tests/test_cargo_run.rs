@@ -1,7 +1,6 @@
 use std::path::MAIN_SEPARATOR as SEP;
 
 use support::{project, execs, path2url};
-use support::{COMPILING, RUNNING, ERROR};
 use hamcrest::{assert_that, existing_file};
 
 fn setup() {
@@ -21,12 +20,10 @@ test!(simple {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}foo[..]`
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] `target{sep}debug{sep}foo[..]`
 hello
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = path2url(p.root()),
         sep = SEP)));
     assert_that(&p.bin("foo"), existing_file());
@@ -65,9 +62,8 @@ test!(simple_quiet_and_verbose {
 
     assert_that(p.cargo_process("run").arg("-q").arg("-v"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} cannot set both --verbose and --quiet
-",
-error = ERROR)));
+[ERROR] cannot set both --verbose and --quiet
+")));
 });
 
 test!(quiet_and_verbose_config {
@@ -124,9 +120,8 @@ test!(exit_code {
     assert_that(p.cargo_process("run"),
                 execs().with_status(2)
                        .with_stderr(&format!("\
-{error} Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-",
-error = ERROR)));
+[ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+")));
 });
 
 test!(exit_code_verbose {
@@ -144,9 +139,8 @@ test!(exit_code_verbose {
     assert_that(p.cargo_process("run").arg("-v"),
                 execs().with_status(2)
                        .with_stderr(&format!("\
-{error} Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-",
-error = ERROR)));
+[ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+")));
 });
 
 test!(no_main_file {
@@ -161,8 +155,8 @@ test!(no_main_file {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
-                       .with_stderr(&format!("{error} a bin target must be available \
-                                     for `cargo run`\n", error = ERROR)));
+                       .with_stderr(&format!("[ERROR] a bin target must be available \
+                                     for `cargo run`\n")));
 });
 
 test!(too_many_bins {
@@ -179,9 +173,9 @@ test!(too_many_bins {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
-                       .with_stderr(&format!("{error} `cargo run` requires that a project only \
+                       .with_stderr(&format!("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
-                                     to specify which one to run\n", error = ERROR)));
+                                     to specify which one to run\n")));
 });
 
 test!(specify_name {
@@ -204,25 +198,22 @@ test!(specify_name {
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("-v"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} `rustc src[..]lib.rs [..]`
-{running} `rustc src[..]a.rs [..]`
-{running} `target{sep}debug{sep}a[..]`
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] `rustc src[..]lib.rs [..]`
+[RUNNING] `rustc src[..]a.rs [..]`
+[RUNNING] `target{sep}debug{sep}a[..]`
 hello a.rs
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = path2url(p.root()),
         sep = SEP)));
 
     assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ([..])
-{running} `rustc src[..]b.rs [..]`
-{running} `target{sep}debug{sep}b[..]`
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc src[..]b.rs [..]`
+[RUNNING] `target{sep}debug{sep}b[..]`
 hello b.rs
 ",
-        running = RUNNING, compiling = COMPILING,
         sep = SEP)));
 });
 
@@ -244,12 +235,10 @@ test!(run_example {
 
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}examples{sep}a[..]`
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] `target{sep}debug{sep}examples{sep}a[..]`
 example
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = path2url(p.root()),
         sep = SEP)));
 });
@@ -273,23 +262,23 @@ test!(run_with_filename {
 
     assert_that(p.cargo_process("run").arg("--bin").arg("bin.rs"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} no bin target named `bin.rs`", error = ERROR)));
+[ERROR] no bin target named `bin.rs`")));
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a.rs"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} no bin target named `a.rs`
+[ERROR] no bin target named `a.rs`
 
-Did you mean `a`?", error = ERROR)));
+Did you mean `a`?")));
 
     assert_that(p.cargo_process("run").arg("--example").arg("example.rs"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} no example target named `example.rs`", error = ERROR)));
+[ERROR] no example target named `example.rs`")));
 
     assert_that(p.cargo_process("run").arg("--example").arg("a.rs"),
                 execs().with_status(101).with_stderr(&format!("\
-{error} no example target named `a.rs`
+[ERROR] no example target named `a.rs`
 
-Did you mean `a`?", error = ERROR)));
+Did you mean `a`?")));
 });
 
 test!(either_name_or_example {
@@ -309,10 +298,9 @@ test!(either_name_or_example {
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("--example").arg("b"),
                 execs().with_status(101)
-                       .with_stderr(&format!("{error} `cargo run` can run at most one \
+                       .with_stderr(&format!("[ERROR] `cargo run` can run at most one \
                                      executable, but multiple were \
-                                     specified",
-                                     error = ERROR)));
+                                     specified")));
 });
 
 test!(one_bin_multiple_examples {
@@ -336,12 +324,10 @@ test!(one_bin_multiple_examples {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} `target{sep}debug{sep}main[..]`
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] `target{sep}debug{sep}main[..]`
 hello main.rs
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = path2url(p.root()),
         sep = SEP)));
 });
@@ -391,8 +377,8 @@ test!(example_with_release_flag {
 
     assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} bar v0.0.1 ({url}/bar)
-{running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
+[COMPILING] bar v0.0.1 ({url}/bar)
+[RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
         -C extra-filename=[..] \
@@ -400,28 +386,26 @@ test!(example_with_release_flag {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
-{compiling} foo v0.0.1 ({url})
-{running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
         --out-dir {dir}{sep}target{sep}release{sep}examples \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
          --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}release{sep}examples{sep}a[..]`
+[RUNNING] `target{sep}release{sep}examples{sep}a[..]`
 fast1
 fast2
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = p.root().display(),
         url = path2url(p.root()),
         sep = SEP)));
 
     assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} bar v0.0.1 ({url}/bar)
-{running} `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
+[COMPILING] bar v0.0.1 ({url}/bar)
+[RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
@@ -429,20 +413,18 @@ fast2
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-{compiling} foo v0.0.1 ({url})
-{running} `rustc examples{sep}a.rs --crate-name a --crate-type bin \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -g \
         --out-dir {dir}{sep}target{sep}debug{sep}examples \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
          --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
-{running} `target{sep}debug{sep}examples{sep}a[..]`
+[RUNNING] `target{sep}debug{sep}examples{sep}a[..]`
 slow1
 slow2
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = p.root().display(),
         url = path2url(p.root()),
         sep = SEP)));
@@ -493,11 +475,9 @@ test!(release_works {
 
     assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
-{running} `target{sep}release{sep}foo[..]`
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] `target{sep}release{sep}foo[..]`
 ",
-        compiling = COMPILING,
-        running = RUNNING,
         dir = path2url(p.root()),
         sep = SEP)));
     assert_that(&p.release_bin("foo"), existing_file());
@@ -562,10 +542,9 @@ test!(run_from_executable_folder {
 
     assert_that(p.cargo("run").cwd(cwd),
                 execs().with_status(0).with_stdout(&format!("\
-{running} `.{sep}foo[..]`
+[RUNNING] `.{sep}foo[..]`
 hello
 ",
-        running = RUNNING,
         sep = SEP
         )));
 });

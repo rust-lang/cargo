@@ -683,12 +683,6 @@ fn substitute_macros(input: &str) -> String {
     return result;
 }
 
-pub static RUNNING:     &'static str = "     Running";
-pub static COMPILING:   &'static str = "   Compiling";
-pub static ERROR:       &'static str = "error:";
-pub static DOCUMENTING: &'static str = " Documenting";
-pub static FRESH:       &'static str = "       Fresh";
-pub static UPDATING:    &'static str = "    Updating";
 pub static ADDING:      &'static str = "      Adding";
 pub static REMOVING:    &'static str = "    Removing";
 pub static DOCTEST:     &'static str = "   Doc-tests";

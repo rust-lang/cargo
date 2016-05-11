@@ -1,7 +1,6 @@
 use std::env;
 
 use support::{git, project, execs, main_file, basic_bin_manifest};
-use support::{COMPILING, RUNNING};
 use support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
@@ -129,8 +128,8 @@ test!(clean_release {
                 execs().with_status(0));
     assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ([..])
-", compiling = COMPILING)));
+[COMPILING] foo v0.0.1 ([..])
+")));
 });
 
 test!(build_script {
@@ -165,11 +164,11 @@ test!(build_script {
                 execs().with_status(0));
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} foo v0.0.1 ([..])
-{running} `rustc build.rs [..]`
-{running} `[..]build-script-build[..]`
-{running} `rustc src[..]main.rs [..]`
-", compiling = COMPILING, running = RUNNING)));
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc build.rs [..]`
+[RUNNING] `[..]build-script-build[..]`
+[RUNNING] `rustc src[..]main.rs [..]`
+")));
 });
 
 test!(clean_git {
