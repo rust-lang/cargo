@@ -43,12 +43,12 @@ test!(cargo_compile_with_invalid_manifest {
     assert_that(p.cargo_process("build"),
         execs()
         .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   no `package` or `project` section found.
-")))
+"))
 });
 
 test!(cargo_compile_with_invalid_manifest2 {
@@ -61,14 +61,14 @@ test!(cargo_compile_with_invalid_manifest2 {
     assert_that(p.cargo_process("build"),
         execs()
         .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   could not parse input as TOML
 Cargo.toml:3:19-3:20 expected a value
 
-")))
+"))
 });
 
 test!(cargo_compile_with_invalid_manifest3 {
@@ -85,12 +85,12 @@ test!(cargo_compile_with_invalid_manifest3 {
                  .arg("src/Cargo.toml"),
         execs()
         .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   could not parse input as TOML\n\
-src[..]Cargo.toml:1:5-1:6 expected a value\n\n")))
+src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
 });
 
 test!(cargo_compile_with_invalid_version {
@@ -105,12 +105,12 @@ test!(cargo_compile_with_invalid_version {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("\
+                .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   cannot parse '1.0' as a semver for the key `project.version`
-")))
+"))
 
 });
 
@@ -126,12 +126,12 @@ test!(cargo_compile_with_invalid_package_name {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("\
+                .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   package name cannot be an empty string.
-")))
+"))
 });
 
 test!(cargo_compile_with_invalid_bin_target_name {
@@ -149,12 +149,12 @@ test!(cargo_compile_with_invalid_bin_target_name {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("\
+                .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   binary target names cannot be empty.
-")))
+"))
 });
 
 test!(cargo_compile_with_forbidden_bin_target_name {
@@ -172,12 +172,12 @@ test!(cargo_compile_with_forbidden_bin_target_name {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("\
+                .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   the binary target name `build` is forbidden
-")))
+"))
 });
 
 test!(cargo_compile_with_invalid_lib_target_name {
@@ -195,12 +195,12 @@ test!(cargo_compile_with_invalid_lib_target_name {
     assert_that(p.cargo_process("build"),
                 execs()
                 .with_status(101)
-                .with_stderr(&format!("\
+                .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   library target names cannot be empty.
-")))
+"))
 });
 
 test!(cargo_compile_without_manifest {
@@ -209,9 +209,9 @@ test!(cargo_compile_without_manifest {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] could not find `Cargo.toml` in `[..]` or any parent directory
-")));
+"));
 });
 
 test!(cargo_compile_with_invalid_code {
@@ -227,10 +227,10 @@ src[..]foo.rs:1:1: 1:8 error: expected item[..]found `invalid`
 src[..]foo.rs:1 invalid rust code!
              ^~~~~~~
 ")
-        .with_stderr_contains(format!("\
+        .with_stderr_contains("\
 [ERROR] Could not compile `foo`.
 
-To learn more, run the command again with --verbose.\n")));
+To learn more, run the command again with --verbose.\n"));
     assert_that(&p.root().join("Cargo.lock"), existing_file());
 });
 
@@ -630,24 +630,24 @@ test!(cargo_compile_with_filename{
         "#);
 
     assert_that(p.cargo_process("build").arg("--bin").arg("bin.rs"),
-                execs().with_status(101).with_stderr(&format!("\
-[ERROR] no bin target named `bin.rs`")));
+                execs().with_status(101).with_stderr("\
+[ERROR] no bin target named `bin.rs`"));
 
     assert_that(p.cargo_process("build").arg("--bin").arg("a.rs"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `a.rs`
 
-Did you mean `a`?")));
+Did you mean `a`?"));
 
     assert_that(p.cargo_process("build").arg("--example").arg("example.rs"),
-                execs().with_status(101).with_stderr(&format!("\
-[ERROR] no example target named `example.rs`")));
+                execs().with_status(101).with_stderr("\
+[ERROR] no example target named `example.rs`"));
 
     assert_that(p.cargo_process("build").arg("--example").arg("a.rs"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no example target named `a.rs`
 
-Did you mean `a`?")));
+Did you mean `a`?"));
 });
 
 test!(compile_path_dep_then_change_version {
@@ -680,13 +680,13 @@ test!(compile_path_dep_then_change_version {
     "#).unwrap();
 
     assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no matching package named `bar` found (required by `foo`)
 location searched: [..]
 version required: = 0.0.1
 versions found: 0.0.2
 consider running `cargo update` to update a path dependency's locked version
-")));
+"));
 });
 
 test!(ignores_carriage_return_in_lockfile {
@@ -805,7 +805,7 @@ test!(crate_authors_env_vars {
 
     println!("bin");
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout(&format!("wycats@example.com:neikos@example.com")));
+                execs().with_stdout("wycats@example.com:neikos@example.com"));
 
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
@@ -935,9 +935,9 @@ test!(self_dependency {
         .file("src/test.rs", "fn main() {}");
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself
-")));
+"));
 });
 
 test!(ignore_broken_symlinks {
@@ -968,12 +968,12 @@ test!(missing_lib_and_bin {
         "#);
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] failed to parse manifest at `[..]Cargo.toml`
 
 Caused by:
   no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present\n")));
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present\n"));
 });
 
 test!(lto_build {
@@ -1546,7 +1546,7 @@ test!(bad_cargo_config {
               this is not valid toml
         "#);
     assert_that(foo.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Couldn't load Cargo configuration
 
 Caused by:
@@ -1556,7 +1556,7 @@ Caused by:
   could not parse input as TOML
 [..].cargo[..]config:2:20-2:21 expected `=`, but found `i`
 
-")));
+"));
 });
 
 test!(cargo_platform_specific_dependency {
@@ -1769,7 +1769,7 @@ test!(transitive_dependencies_not_available {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr(format!("\
+                       .with_stderr("\
 [..] can't find crate for `bbbbb`[..]
 [..] extern crate bbbbb; [..]
 [..]
@@ -1778,7 +1778,7 @@ error: aborting due to previous error
 
 Caused by:
   [..]
-")));
+"));
 });
 
 test!(cyclic_deps_rejected {
@@ -1806,9 +1806,9 @@ test!(cyclic_deps_rejected {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] cyclic package dependency: package `foo v0.0.1 ([..])` depends on itself
-")));
+"));
 });
 
 test!(predictable_filenames {
@@ -1882,12 +1882,12 @@ test!(rustc_env_var {
     assert_that(p.cargo("build")
                  .env("RUSTC", "rustc-that-does-not-exist").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] Could not execute process `rustc-that-does-not-exist -vV` ([..])
 
 Caused by:
 [..]
-")));
+"));
     assert_that(&p.bin("a"), is_not(existing_file()));
 });
 

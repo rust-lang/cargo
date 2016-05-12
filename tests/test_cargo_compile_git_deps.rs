@@ -644,11 +644,11 @@ test!(update_with_shared_deps {
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar")
                  .arg("--precise").arg("0.1.2"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Unable to update [..]
 
 To learn more, run the command again with --verbose.
-")));
+"));
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
@@ -901,11 +901,11 @@ test!(dep_with_changed_submodule {
 
     println!("first run");
     assert_that(project.cargo_process("run"), execs()
-                .with_stdout(&format!("[UPDATING] git repository `[..]`\n\
+                .with_stdout("[UPDATING] git repository `[..]`\n\
                                       [COMPILING] dep1 v0.5.0 ([..])\n\
                                       [COMPILING] foo v0.5.0 ([..])\n\
                                       [RUNNING] `target[..]foo[..]`\n\
-                                      project2"))
+                                      project2")
                 .with_stderr("")
                 .with_status(0));
 
@@ -943,11 +943,11 @@ test!(dep_with_changed_submodule {
 
     println!("last run");
     assert_that(project.cargo("run"), execs()
-                .with_stdout(&format!("[COMPILING] dep1 v0.5.0 ([..])\n\
+                .with_stdout("[COMPILING] dep1 v0.5.0 ([..])\n\
                                       [COMPILING] foo v0.5.0 ([..])\n\
                                       [RUNNING] `target[..]foo[..]`\n\
                                       project3\
-                                      "))
+                                      ")
                 .with_stderr("")
                 .with_status(0));
 });
@@ -998,7 +998,7 @@ test!(dev_deps_with_testing {
     // Make sure we use the previous resolution of `bar` instead of updating it
     // a second time.
     assert_that(p.cargo("test"),
-        execs().with_stdout(&format!("\
+        execs().with_stdout("\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..]
 [RUNNING] target[..]foo-[..]
@@ -1008,7 +1008,7 @@ test tests::foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-")));
+"));
 });
 
 test!(git_build_cmd_freshness {
@@ -1328,14 +1328,14 @@ test!(update_ambiguous {
     assert_that(p.cargo("update")
                  .arg("-p").arg("foo"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] There are multiple `foo` packages in your project, and the specification `foo` \
 is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the \
 following:
   foo:0.[..].0
   foo:0.[..].0
-")));
+"));
 });
 
 test!(update_one_dep_in_repo_with_many_deps {
@@ -1553,12 +1553,12 @@ test!(switch_sources {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [UPDATING] git repository `file://[..]a1`
 [COMPILING] a v0.5.0 ([..]a1#[..]
 [COMPILING] b v0.5.0 ([..])
 [COMPILING] project v0.5.0 ([..])
-")));
+"));
 
     File::create(&p.root().join("b/Cargo.toml")).unwrap().write_all(format!(r#"
         [project]
@@ -1571,12 +1571,12 @@ test!(switch_sources {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [UPDATING] git repository `file://[..]a2`
 [COMPILING] a v0.5.1 ([..]a2#[..]
 [COMPILING] b v0.5.0 ([..])
 [COMPILING] project v0.5.0 ([..])
-")));
+"));
 });
 
 test!(dont_require_submodules_are_checked_out {
@@ -1677,11 +1677,11 @@ test!(lints_are_suppressed {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] git repository `[..]`
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.0.1 ([..])
-")));
+"));
 });
 
 test!(denied_lints_are_allowed {
@@ -1714,11 +1714,11 @@ test!(denied_lints_are_allowed {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] git repository `[..]`
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.0.1 ([..])
-")));
+"));
 });
 
 test!(add_a_git_dep {

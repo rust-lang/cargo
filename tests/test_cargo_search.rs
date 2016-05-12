@@ -80,9 +80,9 @@ test!(simple {
     }
 
     assert_that(cargo_process("search").arg("postgres"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `[..]`
-hoare (0.1.1)    Design by contract style assertions for Rust")));
+hoare (0.1.1)    Design by contract style assertions for Rust"));
 });
 
 test!(multiple_query_params {
@@ -126,9 +126,9 @@ test!(multiple_query_params {
     }
 
     assert_that(cargo_process("search").arg("postgres").arg("sql"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `[..]`
-hoare (0.1.1)    Design by contract style assertions for Rust")));
+hoare (0.1.1)    Design by contract style assertions for Rust"));
 });
 
 test!(help {

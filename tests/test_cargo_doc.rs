@@ -202,10 +202,10 @@ test!(doc_lib_bin_same_name {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
-")));
+"));
 });
 
 test!(doc_dash_p {
@@ -240,11 +240,11 @@ test!(doc_dash_p {
 
     assert_that(p.cargo_process("doc").arg("-p").arg("a"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [..] b v0.0.1 (file://[..])
 [..] b v0.0.1 (file://[..])
 [DOCUMENTING] a v0.0.1 (file://[..])
-")));
+"));
 });
 
 test!(doc_same_name {
@@ -426,10 +426,10 @@ test!(doc_release {
                 execs().with_status(0));
     assert_that(p.cargo("doc").arg("--release").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc src[..]lib.rs [..]`
-")));
+"));
 });
 
 test!(doc_multiple_deps {

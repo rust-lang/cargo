@@ -41,12 +41,12 @@ test!(override_simple {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
-")));
+"));
 });
 
 test!(missing_version {
@@ -135,14 +135,14 @@ test!(transitive {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] bar v0.2.0 (registry [..])
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] bar v0.2.0 (registry [..])
 [COMPILING] local v0.0.1 (file://[..])
-")));
+"));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 });
@@ -181,12 +181,12 @@ test!(persists_across_rebuilds {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
-")));
+"));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
@@ -226,11 +226,11 @@ test!(replace_registry_with_path {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
-")));
+"));
 });
 
 test!(use_a_spec_to_select {
@@ -281,7 +281,7 @@ test!(use_a_spec_to_select {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] [..]
@@ -290,7 +290,7 @@ test!(use_a_spec_to_select {
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] local v0.0.1 (file://[..])
-")));
+"));
 });
 
 test!(override_adds_some_deps {
@@ -326,26 +326,26 @@ test!(override_adds_some_deps {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] foo v0.1.1 (registry [..])
 [COMPILING] foo v0.1.1 (registry [..])
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] local v0.0.1 (file://[..])
-")));
+"));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 
     Package::new("foo", "0.1.2").publish();
     assert_that(p.cargo("update").arg("-p").arg(&format!("{}#bar", foo.url())),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] git repository `file://[..]`
-")));
+"));
     assert_that(p.cargo("update").arg("-p").arg(&format!("{}#bar", registry())),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry `file://[..]`
-")));
+"));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 });

@@ -249,11 +249,11 @@ test!(no_rebuild_transitive_target_deps {
                 execs().with_status(0));
     assert_that(p.cargo("test").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-")));
+"));
 });
 
 test!(rerun_if_changed_in_dep {

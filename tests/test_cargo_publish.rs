@@ -99,10 +99,10 @@ test!(git_deps {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
-")));
+"));
 });
 
 test!(path_dependency_no_version {
@@ -128,10 +128,10 @@ test!(path_dependency_no_version {
         .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("publish"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
-")));
+"));
 });
 
 test!(unpublishable_crate {
@@ -148,8 +148,8 @@ test!(unpublishable_crate {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
-")));
+"));
 });
