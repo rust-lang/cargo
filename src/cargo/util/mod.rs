@@ -32,6 +32,7 @@ pub mod to_url;
 pub mod toml;
 pub mod lev_distance;
 pub mod job;
+pub mod network;
 mod cfg;
 mod dependency_queue;
 mod rustc;

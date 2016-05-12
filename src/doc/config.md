@@ -89,6 +89,10 @@ rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
 [term]
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
+
+# Network configuration
+[net]
+retry = 2 # number of times a network call will automatically retried
 ```
 
 # Environment Variables
