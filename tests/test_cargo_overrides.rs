@@ -1,7 +1,7 @@
 use hamcrest::assert_that;
 
 use support::registry::{registry, Package};
-use support::{execs, project, DOWNLOADING};
+use support::{execs, project};
 use support::git;
 use support::paths;
 
@@ -138,11 +138,11 @@ test!(transitive {
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
-{downloading} bar v0.2.0 (registry [..])
+[DOWNLOADING] bar v0.2.0 (registry [..])
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] bar v0.2.0 (registry [..])
 [COMPILING] local v0.0.1 (file://[..])
-", downloading = DOWNLOADING)));
+")));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 });
@@ -284,13 +284,13 @@ test!(use_a_spec_to_select {
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
-{downloading} [..]
-{downloading} [..]
+[DOWNLOADING] [..]
+[DOWNLOADING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] local v0.0.1 (file://[..])
-", downloading = DOWNLOADING)));
+")));
 });
 
 test!(override_adds_some_deps {
@@ -329,11 +329,11 @@ test!(override_adds_some_deps {
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
-{downloading} foo v0.1.1 (registry [..])
+[DOWNLOADING] foo v0.1.1 (registry [..])
 [COMPILING] foo v0.1.1 (registry [..])
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] local v0.0.1 (file://[..])
-", downloading = DOWNLOADING)));
+")));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 

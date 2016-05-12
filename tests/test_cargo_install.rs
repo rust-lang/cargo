@@ -8,7 +8,6 @@ use cargo::util::ProcessBuilder;
 use hamcrest::{assert_that, existing_file, is_not, Matcher, MatchResult};
 
 use support::{project, execs};
-use support::{DOWNLOADING, INSTALLING, REPLACING, REMOVING};
 use support::paths;
 use support::registry::Package;
 use support::git;
@@ -85,12 +84,10 @@ test!(pick_max_version {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry `[..]`
-{downloading} foo v0.0.2 (registry file://[..])
+[DOWNLOADING] foo v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.2 (registry file://[..])
-{installing} {home}[..]bin[..]foo[..]
+[INSTALLING] {home}[..]bin[..]foo[..]
 ",
-        downloading = DOWNLOADING,
-        installing = INSTALLING,
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
 });
@@ -417,9 +414,8 @@ test!(install_force {
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stdout(&format!("\
 [COMPILING] foo v0.2.0 ([..])
-{replacing} {home}[..]bin[..]foo[..]
+[REPLACING] {home}[..]bin[..]foo[..]
 ",
-        replacing = REPLACING,
         home = cargo_home().display())));
 
     assert_that(cargo_process("install").arg("--list"),
@@ -458,11 +454,9 @@ test!(install_force_partial_overlap {
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stdout(&format!("\
 [COMPILING] foo v0.2.0 ([..])
-{installing} {home}[..]bin[..]foo-bin3[..]
-{replacing} {home}[..]bin[..]foo-bin2[..]
+[INSTALLING] {home}[..]bin[..]foo-bin3[..]
+[REPLACING] {home}[..]bin[..]foo-bin2[..]
 ",
-        installing = INSTALLING,
-        replacing = REPLACING,
         home = cargo_home().display())));
 
     assert_that(cargo_process("install").arg("--list"),
@@ -508,9 +502,8 @@ test!(install_force_bin {
                     .arg(p.root()),
                 execs().with_status(0).with_stdout(&format!("\
 [COMPILING] foo v0.2.0 ([..])
-{replacing} {home}[..]bin[..]foo-bin2[..]
+[REPLACING] {home}[..]bin[..]foo-bin2[..]
 ",
-        replacing = REPLACING,
         home = cargo_home().display())));
 
     assert_that(cargo_process("install").arg("--list"),
@@ -562,9 +555,8 @@ test!(git_repo {
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 ([..])
-{installing} {home}[..]bin[..]foo[..]
+[INSTALLING] {home}[..]bin[..]foo[..]
 ",
-        installing = INSTALLING,
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("foo"));
@@ -627,17 +619,17 @@ test!(uninstall_piecemeal {
     assert_that(cargo_home(), has_installed_exe("bar"));
 
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=bar"),
-                execs().with_status(0).with_stdout(&format!("\
-{removing} [..]bar[..]
-", removing = REMOVING)));
+                execs().with_status(0).with_stdout("\
+[REMOVING] [..]bar[..]
+"));
 
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
 
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=foo"),
-                execs().with_status(0).with_stdout(&format!("\
-{removing} [..]foo[..]
-", removing = REMOVING)));
+                execs().with_status(0).with_stdout("\
+[REMOVING] [..]foo[..]
+"));
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(cargo_process("uninstall").arg("foo"),
@@ -691,9 +683,9 @@ test!(do_not_rebuilds_on_local_install {
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
-{installing} [..]
-", installing = INSTALLING)).with_stderr("\
+                execs().with_status(0).with_stdout("\
+[INSTALLING] [..]
+").with_stderr("\
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 "));
 

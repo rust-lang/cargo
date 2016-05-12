@@ -8,7 +8,6 @@ use tar::Archive;
 use url::Url;
 
 use support::{project, execs};
-use support::{PACKAGING, UPLOADING};
 use support::paths;
 use support::git::repo;
 
@@ -52,11 +51,9 @@ test!(simple {
     assert_that(p.cargo_process("publish").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry `{reg}`
-{packaging} foo v0.0.1 ({dir})
-{uploading} foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 ({dir})
+[UPLOADING] foo v0.0.1 ({dir})
 ",
-        uploading = UPLOADING,
-        packaging = PACKAGING,
         dir = p.url(),
         reg = registry())));
 
