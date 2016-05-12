@@ -600,8 +600,50 @@ fn homedir(cwd: &Path) -> Option<PathBuf> {
     let cargo_home = env::var_os("CARGO_HOME").map(|home| {
         cwd.join(home)
     });
-    let user_home = env::home_dir().map(|p| p.join(".cargo"));
-    cargo_home.or(user_home)
+    if cargo_home.is_some() {
+        return cargo_home
+    }
+
+    // If `CARGO_HOME` wasn't defined then we want to fall back to
+    // `$HOME/.cargo`. Note that currently, however, the implementation of
+    // `env::home_dir()` uses the $HOME environment variable *on all platforms*.
+    // Platforms like Windows then have *another* fallback based on system APIs
+    // if this isn't set.
+    //
+    // Specifically on Windows this can lead to some weird behavior where if you
+    // invoke cargo inside an MSYS shell it'll have $HOME defined and it'll
+    // place output there by default. If, however, you run in another shell
+    // (like cmd.exe or powershell) it'll place output in
+    // `C:\Users\$user\.cargo` by default.
+    //
+    // This snippet is meant to handle this case to ensure that on Windows we
+    // always place output in the same location, regardless of the shell we were
+    // invoked from. We first check `env::home_dir()` without tampering the
+    // environment, and then afterwards we remove `$HOME` and call it again to
+    // see what happened. If they both returned success then on Windows we only
+    // return the first (with the $HOME in place) if it already exists. This
+    // should help existing installs of Cargo continue using the same cargo home
+    // directory.
+    let home_dir_with_env = env::home_dir().map(|p| p.join(".cargo"));
+    let home_dir = env::var_os("HOME");
+    env::remove_var("HOME");
+    let home_dir_without_env = env::home_dir().map(|p| p.join(".cargo"));
+    if let Some(home_dir) = home_dir {
+        env::set_var("HOME", home_dir);
+    }
+
+    match (home_dir_with_env, home_dir_without_env) {
+        (None, None) => None,
+        (None, Some(p)) |
+        (Some(p), None) => Some(p),
+        (Some(a), Some(b)) => {
+            if cfg!(windows) && !a.exists() {
+                Some(b)
+            } else {
+                Some(a)
+            }
+        }
+    }
 }
 
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
