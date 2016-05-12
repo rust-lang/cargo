@@ -265,6 +265,21 @@ impl Config {
         }
     }
 
+    pub fn net_retry(&self) -> CargoResult<i64> {
+        match try!(self.get_i64("net.retry")) {
+            Some(v) => {
+                let value = v.val;
+                if value < 0 {
+                    bail!("net.retry must be positive, but found {} in {}",
+                      v.val, v.definition)
+                } else {
+                    Ok(value)
+                }
+            }
+            None => Ok(2),
+        }
+    }
+
     pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
         val.expected(ty).map_err(|e| {
             human(format!("invalid configuration for key `{}`\n{}", key, e))

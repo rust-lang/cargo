@@ -7,6 +7,7 @@ dependencies = [
  "crates-io 0.2.0",
  "crossbeam 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "curl 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl-sys 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "filetime 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",

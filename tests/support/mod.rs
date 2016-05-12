@@ -662,6 +662,7 @@ fn substitute_macros(input: &str) -> String {
         ("[RUNNING]",     "     Running"),
         ("[COMPILING]",   "   Compiling"),
         ("[ERROR]",       "error:"),
+        ("[WARNING]",     "warning:"),
         ("[DOCUMENTING]", " Documenting"),
         ("[FRESH]",       "       Fresh"),
         ("[UPDATING]",    "    Updating"),
