@@ -2,7 +2,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs};
-use support::{DOCTEST};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir};
 
@@ -482,14 +481,14 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", doctest = DOCTEST)));
+")));
 
     println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
@@ -1331,7 +1330,7 @@ test test_bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]
 
 running 1 test
@@ -1339,7 +1338,7 @@ test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url(), doctest = DOCTEST)));
+", dir = p.url())));
 });
 
 test!(cfg_doc {
@@ -1445,7 +1444,7 @@ test test_bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]
 
 running 1 test
@@ -1453,7 +1452,7 @@ test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url(), doctest = DOCTEST)));
+", dir = p.url())));
 });
 
 test!(cfg_override_doc {

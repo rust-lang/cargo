@@ -1,7 +1,6 @@
 use std::env;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{DOCTEST};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -505,14 +504,14 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test _0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", foo = p.url(), doctest = DOCTEST);
+", foo = p.url());
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)

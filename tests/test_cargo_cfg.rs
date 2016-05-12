@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use hamcrest::assert_that;
 
-use support::{project, execs, DOWNLOADING};
+use support::{project, execs};
 use support::registry::Package;
 
 macro_rules! c {
@@ -213,12 +213,12 @@ test!(works_through_the_registry {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry [..]
-{downloading} [..]
-{downloading} [..]
+[DOWNLOADING] [..]
+[DOWNLOADING] [..]
 [COMPILING] foo v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] a v0.0.1 ([..])
-", downloading = DOWNLOADING)));
+")));
 });
 
 test!(bad_target_spec {
