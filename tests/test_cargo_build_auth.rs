@@ -72,6 +72,7 @@ test!(http_auth_offered {
                 println!("password=bar");
             }
         "#);
+
     assert_that(script.cargo_process("build").arg("-v"),
                 execs().with_status(0));
     let script = script.bin("script");
@@ -91,7 +92,11 @@ test!(http_auth_offered {
             [dependencies.bar]
             git = "http://127.0.0.1:{}/foo/bar"
         "#, addr.port()))
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .file(".cargo/config","\
+        [net]
+        retry = 0
+        ");
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stdout(&format!("\
@@ -134,7 +139,11 @@ test!(https_something_happens {
             [dependencies.bar]
             git = "https://127.0.0.1:{}/foo/bar"
         "#, addr.port()))
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .file(".cargo/config","\
+        [net]
+        retry = 0
+        ");
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stdout(&format!("\

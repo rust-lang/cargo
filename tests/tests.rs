@@ -75,6 +75,7 @@ mod test_cargo_version;
 mod test_shell;
 mod test_cargo_death;
 mod test_cargo_cfg;
+mod test_cargo_net_config;
 
 thread_local!(static RUSTC: Rustc = Rustc::new("rustc").unwrap());
 
