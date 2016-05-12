@@ -61,9 +61,9 @@ test!(simple_quiet_and_verbose {
         "#);
 
     assert_that(p.cargo_process("run").arg("-q").arg("-v"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] cannot set both --verbose and --quiet
-")));
+"));
 });
 
 test!(quiet_and_verbose_config {
@@ -119,9 +119,9 @@ test!(exit_code {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(2)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-")));
+"));
 });
 
 test!(exit_code_verbose {
@@ -138,9 +138,9 @@ test!(exit_code_verbose {
 
     assert_that(p.cargo_process("run").arg("-v"),
                 execs().with_status(2)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-")));
+"));
 });
 
 test!(no_main_file {
@@ -155,8 +155,8 @@ test!(no_main_file {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] a bin target must be available \
-                                     for `cargo run`\n")));
+                       .with_stderr("[ERROR] a bin target must be available \
+                                     for `cargo run`\n"));
 });
 
 test!(too_many_bins {
@@ -173,9 +173,9 @@ test!(too_many_bins {
 
     assert_that(p.cargo_process("run"),
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] `cargo run` requires that a project only \
+                       .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
-                                     to specify which one to run\n")));
+                                     to specify which one to run\n"));
 });
 
 test!(specify_name {
@@ -261,24 +261,24 @@ test!(run_with_filename {
         "#);
 
     assert_that(p.cargo_process("run").arg("--bin").arg("bin.rs"),
-                execs().with_status(101).with_stderr(&format!("\
-[ERROR] no bin target named `bin.rs`")));
+                execs().with_status(101).with_stderr("\
+[ERROR] no bin target named `bin.rs`"));
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a.rs"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `a.rs`
 
-Did you mean `a`?")));
+Did you mean `a`?"));
 
     assert_that(p.cargo_process("run").arg("--example").arg("example.rs"),
-                execs().with_status(101).with_stderr(&format!("\
-[ERROR] no example target named `example.rs`")));
+                execs().with_status(101).with_stderr("\
+[ERROR] no example target named `example.rs`"));
 
     assert_that(p.cargo_process("run").arg("--example").arg("a.rs"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no example target named `a.rs`
 
-Did you mean `a`?")));
+Did you mean `a`?"));
 });
 
 test!(either_name_or_example {
@@ -298,9 +298,9 @@ test!(either_name_or_example {
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("--example").arg("b"),
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] `cargo run` can run at most one \
+                       .with_stderr("[ERROR] `cargo run` can run at most one \
                                      executable, but multiple were \
-                                     specified")));
+                                     specified"));
 });
 
 test!(one_bin_multiple_examples {

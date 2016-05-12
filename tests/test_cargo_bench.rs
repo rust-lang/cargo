@@ -460,7 +460,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
     assert_that(p.cargo("bench").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
@@ -468,7 +468,7 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-")));
+"));
 });
 
 // Regression test for running cargo-bench twice with
@@ -776,7 +776,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
     assert_that(p.cargo("bench"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [RUNNING] target[..]release[..]foo-[..]
 
 running 1 test
@@ -784,7 +784,7 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-")));
+"));
 });
 
 test!(bench_with_examples {
@@ -893,7 +893,7 @@ test!(test_a_bench {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] foo v0.1.0 ([..])
 [RUNNING] target[..]debug[..]b-[..]
 
@@ -902,7 +902,7 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-")));
+"));
 });
 
 test!(test_bench_no_run {
@@ -929,9 +929,9 @@ test!(test_bench_no_run {
 
     assert_that(p.cargo_process("bench").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] foo v0.1.0 ([..])
-")));
+"));
 });
 
 test!(test_bench_multiple_packages {
@@ -1001,20 +1001,20 @@ test!(test_bench_multiple_packages {
 
     assert_that(p.cargo_process("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
                 execs().with_status(0)
-                       .with_stdout_contains(&format!("\
+                       .with_stdout_contains("\
 [RUNNING] target[..]release[..]bbaz-[..]
 
 running 1 test
 test bench_baz ... bench:           0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-"))
-                       .with_stdout_contains(&format!("\
+")
+                       .with_stdout_contains("\
 [RUNNING] target[..]release[..]bbar-[..]
 
 running 1 test
 test bench_bar ... bench:           0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-")));
+"));
 });

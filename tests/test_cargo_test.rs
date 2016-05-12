@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{DOCTEST};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, is_not};
 use cargo::util::process;
@@ -100,14 +99,14 @@ test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 [RUNNING] `rustdoc --test [..]lib.rs[..]`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url(), doctest = DOCTEST)));
+", dir = p.url())));
 });
 
 test!(cargo_test_verbose {
@@ -258,7 +257,7 @@ test lib_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test foo_0 ... ok
@@ -266,7 +265,7 @@ test foo_0 ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        p.url(), doctest = DOCTEST)))
+        p.url())))
 });
 
 test!(test_with_deep_lib_dep {
@@ -319,7 +318,7 @@ test bar_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} bar
+[DOCTEST] bar
 
 running 1 test
 test bar_0 ... ok
@@ -327,7 +326,6 @@ test bar_0 ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       doctest = DOCTEST,
                        dir = p.url())));
 });
 
@@ -373,14 +371,14 @@ test external_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        p.url(), doctest = DOCTEST)))
+        p.url())))
 });
 
 test!(external_test_implicit {
@@ -421,13 +419,13 @@ test internal_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", p.url(), doctest = DOCTEST)))
+", p.url())))
 });
 
 test!(dont_run_examples {
@@ -471,19 +469,18 @@ test bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       doctest = DOCTEST,
                        dir = p.url())));
 
     assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [RUNNING] target[..]foo-[..]
 
 running 1 test
@@ -491,14 +488,13 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       doctest = DOCTEST)));
+"));
 });
 
 // Regression test for running cargo-test twice with
@@ -561,14 +557,14 @@ test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-        p.url(), doctest = DOCTEST)))
+        p.url())))
 });
 
 test!(lib_with_standard_name {
@@ -613,15 +609,14 @@ test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} syntax
+[DOCTEST] syntax
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       doctest = DOCTEST, dir = p.url())));
+", dir = p.url())));
 });
 
 test!(lib_with_standard_name2 {
@@ -731,11 +726,11 @@ test!(bin_without_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  binary target bin.name is required")));
+  binary target bin.name is required"));
 });
 
 test!(bench_without_name {
@@ -775,11 +770,11 @@ test!(bench_without_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  bench target bench.name is required")));
+  bench target bench.name is required"));
 });
 
 test!(test_without_name {
@@ -818,11 +813,11 @@ test!(test_without_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  test target test.name is required")));
+  test target test.name is required"));
 });
 
 test!(example_without_name {
@@ -861,11 +856,11 @@ test!(example_without_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  example target example.name is required")));
+  example target example.name is required"));
 });
 
 test!(bin_there_for_integration {
@@ -962,7 +957,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout("\
 [RUNNING] target[..]foo-[..]
 
 running 1 test
@@ -977,7 +972,7 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-")));
+"));
 
 });
 
@@ -1007,19 +1002,18 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       doctest = DOCTEST,
                        dir = p.url())));
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout(format!("\
+                       .with_stdout("\
 [RUNNING] target[..]foo-[..]
 
 running 1 test
@@ -1027,14 +1021,13 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       doctest = DOCTEST)));
+"));
 });
 
 test!(test_then_build {
@@ -1061,14 +1054,13 @@ test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ",
-                       doctest = DOCTEST,
                        dir = p.url())));
 
     assert_that(p.cargo("build"),
@@ -1443,14 +1435,13 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} d1
+[DOCTEST] d1
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url(),
-   doctest = DOCTEST)));
+", dir = p.url())));
 });
 
 test!(example_bin_same_name {
@@ -1480,11 +1471,11 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] [..]
 bin
-")));
+"));
     assert_that(&p.bin("foo"), existing_file());
 });
 
@@ -1537,13 +1528,13 @@ test!(example_with_dev_dep {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [..]
 [..]
 [..]
 [..]
 [RUNNING] `rustc [..] --crate-name ex [..] --extern a=[..]`
-")));
+"));
 });
 
 test!(bin_is_preserved {
@@ -1578,13 +1569,13 @@ test!(bad_example {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("run").arg("--example").arg("foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no example target named `foo`
-")));
+"));
     assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `foo`
-")));
+"));
 });
 
 test!(doctest_feature {
@@ -1606,7 +1597,7 @@ test!(doctest_feature {
         "#);
 
     assert_that(p.cargo_process("test").arg("--features").arg("bar"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout("\
 [COMPILING] foo [..]
 [RUNNING] target[..]foo[..]
 
@@ -1614,14 +1605,14 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", doctest = DOCTEST)))
+"))
 });
 
 test!(dashes_to_underscores {
@@ -1689,7 +1680,7 @@ test!(filter_no_doc_tests {
         .file("tests/foo.rs", "");
 
     assert_that(p.cargo_process("test").arg("--test=foo"),
-                execs().with_stdout(format!("\
+                execs().with_stdout("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] target[..]debug[..]foo[..]
 
@@ -1697,7 +1688,7 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-")));
+"));
 });
 
 test!(dylib_doctest {
@@ -1721,16 +1712,16 @@ test!(dylib_doctest {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stdout(format!("\
+                execs().with_stdout("\
 [COMPILING] foo v0.0.1 ([..])
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", doctest = DOCTEST)));
+"));
 });
 
 test!(dylib_doctest2 {
@@ -1787,7 +1778,7 @@ test!(cyclic_dev_dep_doc_test {
             extern crate foo;
         "#);
     assert_that(p.cargo_process("test"),
-                execs().with_stdout(format!("\
+                execs().with_stdout("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
 [RUNNING] target[..]foo[..]
@@ -1796,14 +1787,14 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test _0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", doctest = DOCTEST)))
+"))
 });
 
 test!(dev_dep_with_build_script {
@@ -1878,7 +1869,7 @@ test!(no_fail_fast {
         "#);
     assert_that(p.cargo_process("test").arg("--no-fail-fast"),
                 execs().with_status(101)
-                       .with_stdout_contains(format!("\
+                       .with_stdout_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] target[..]foo[..]
 
@@ -1887,8 +1878,8 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 [RUNNING] target[..]test_add_one[..]
-"))
-                       .with_stdout_contains(format!("\
+")
+                       .with_stdout_contains("\
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured
 
 [RUNNING] target[..]test_sub_one[..]
@@ -1898,14 +1889,14 @@ test sub_one_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test sub_one_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", doctest = DOCTEST)))
+"))
 });
 
 test!(test_multiple_packages {
@@ -1952,20 +1943,20 @@ test!(test_multiple_packages {
 
     assert_that(p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs().with_status(0)
-                       .with_stdout_contains(&format!("\
+                       .with_stdout_contains("\
 [RUNNING] target[..]debug[..]d1-[..]
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-"))
-                       .with_stdout_contains(&format!("\
+")
+                       .with_stdout_contains("\
 [RUNNING] target[..]debug[..]d2-[..]
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-")));
+"));
 });
 
 test!(bin_does_not_rebuild_tests {
@@ -1990,11 +1981,11 @@ test!(bin_does_not_rebuild_tests {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc src[..]main.rs [..]`
 [RUNNING] `rustc src[..]main.rs [..]`
-")));
+"));
 });
 
 test!(selective_test_wonky_profile {
@@ -2049,11 +2040,11 @@ test!(selective_test_optional_dep {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run")
                  .arg("--features").arg("a").arg("-p").arg("a"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [COMPILING] a v0.0.1 ([..])
 [RUNNING] `rustc a[..]src[..]lib.rs [..]`
 [RUNNING] `rustc a[..]src[..]lib.rs [..]`
-")));
+"));
 });
 
 test!(only_test_docs {

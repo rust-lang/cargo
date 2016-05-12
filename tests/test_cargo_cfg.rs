@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use hamcrest::assert_that;
 
-use support::{project, execs, DOWNLOADING};
+use support::{project, execs};
 use support::registry::Package;
 
 macro_rules! c {
@@ -184,9 +184,9 @@ test!(dont_include {
         "#)
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [COMPILING] a v0.0.1 ([..])
-")));
+"));
 });
 
 test!(works_through_the_registry {
@@ -211,14 +211,14 @@ test!(works_through_the_registry {
         .file("src/lib.rs", "extern crate bar;");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 [UPDATING] registry [..]
-{downloading} [..]
-{downloading} [..]
+[DOWNLOADING] [..]
+[DOWNLOADING] [..]
 [COMPILING] foo v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] a v0.0.1 ([..])
-", downloading = DOWNLOADING)));
+"));
 });
 
 test!(bad_target_spec {
@@ -235,7 +235,7 @@ test!(bad_target_spec {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -243,7 +243,7 @@ Caused by:
 
 Caused by:
   unexpected character in cfg `4`, [..]
-")));
+"));
 });
 
 test!(bad_target_spec2 {
@@ -260,7 +260,7 @@ test!(bad_target_spec2 {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -268,7 +268,7 @@ Caused by:
 
 Caused by:
   expected a string, found nothing
-")));
+"));
 });
 
 test!(multiple_match_ok {
