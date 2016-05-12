@@ -327,10 +327,10 @@ test!(no_duplicates_from_modified_tracked_files {
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(cargo.arg("package").arg("--list"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stdout("\
 Cargo.toml
 src/main.rs
-")));
+"));
 });
 
 test!(ignore_nested {
@@ -399,11 +399,11 @@ test!(package_weird_characters {
         .file("src/:foo", "");
 
     assert_that(p.cargo_process("package"),
-                execs().with_status(101).with_stderr(format!("\
+                execs().with_status(101).with_stderr("\
 warning: [..]
 [ERROR] failed to prepare local package for uploading
 
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
-")));
+"));
 });

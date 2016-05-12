@@ -22,12 +22,12 @@ test!(invalid1 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` includes `baz` which is neither a dependency nor another feature
-")));
+"));
 });
 
 test!(invalid2 {
@@ -47,12 +47,12 @@ test!(invalid2 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Features and dependencies cannot have the same name: `bar`
-")));
+"));
 });
 
 test!(invalid3 {
@@ -72,13 +72,13 @@ test!(invalid3 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` depends on `baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
-")));
+"));
 });
 
 test!(invalid4 {
@@ -103,9 +103,9 @@ test!(invalid4 {
         .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Package `bar v0.0.1 ([..])` does not have these features: `bar`
-")));
+"));
 
     let p = p.file("Cargo.toml", r#"
             [project]
@@ -115,9 +115,9 @@ test!(invalid4 {
         "#);
 
     assert_that(p.cargo_process("build").arg("--features").arg("test"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Package `foo v0.0.1 ([..])` does not have these features: `test`
-")));
+"));
 });
 
 test!(invalid5 {
@@ -135,12 +135,12 @@ test!(invalid5 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Dev-dependencies are not allowed to be optional: `bar`
-")));
+"));
 });
 
 test!(invalid6 {
@@ -157,12 +157,12 @@ test!(invalid6 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
-")));
+"));
 });
 
 test!(invalid7 {
@@ -180,12 +180,12 @@ test!(invalid7 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
-")));
+"));
 });
 
 test!(invalid8 {
@@ -210,9 +210,9 @@ test!(invalid8 {
         .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] features in dependencies cannot enable features in other dependencies: `foo/bar`
-")));
+"));
 });
 
 test!(no_feature_doesnt_build {
@@ -320,9 +320,9 @@ test!(cyclic_feature {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Cyclic feature dependency: feature `default` depends on itself
-")));
+"));
 });
 
 test!(cyclic_feature2 {
@@ -340,9 +340,9 @@ test!(cyclic_feature2 {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Cyclic feature dependency: feature `[..]` depends on itself
-")));
+"));
 });
 
 test!(groups_on_groups_on_groups {
@@ -538,10 +538,10 @@ test!(many_features_no_rebuilds {
     p.root().move_into_the_past().unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout("\
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
-")));
+"));
 });
 
 // Tests that all cmd lines work with `--features ""`
@@ -764,9 +764,9 @@ test!(optional_and_dev_dep {
         .file("foo/src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stdout("\
 [COMPILING] test v0.1.0 ([..])
-")));
+"));
 });
 
 test!(activating_feature_activates_dep {

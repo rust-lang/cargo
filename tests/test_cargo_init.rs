@@ -125,9 +125,9 @@ test!(confused_by_multiple_lib_files {
 
     assert_that(cargo_process("init").arg("--vcs").arg("none")
                                     .env("USER", "foo").cwd(&path),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`
-")));
+"));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
 });
@@ -155,12 +155,12 @@ test!(multibin_project_name_clash {
 
     assert_that(cargo_process("init").arg("--vcs").arg("none")
                                     .env("USER", "foo").cwd(&path),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] multiple possible binary sources found:
   main.rs
   foo.rs
 cannot automatically generate Cargo.toml as the main target would be ambiguous
-")));
+"));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
 });
@@ -228,10 +228,10 @@ test!(invalid_dir_name {
     fs::create_dir_all(&foo).unwrap();
     assert_that(cargo_process("init").cwd(foo.clone())
                                      .env("USER", "foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] Invalid character `.` in crate name: `foo.bar`
 use --name to override crate name
-")));
+"));
 
     assert_that(&foo.join("Cargo.toml"), is_not(existing_file()));
 });
@@ -241,10 +241,10 @@ test!(reserved_name {
     fs::create_dir_all(&test).unwrap();
     assert_that(cargo_process("init").cwd(test.clone())
                                      .env("USER", "foo"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr("\
 [ERROR] The name `test` cannot be used as a crate name\n\
 use --name to override crate name
-")));
+"));
 
     assert_that(&test.join("Cargo.toml"), is_not(existing_file()));
 });
@@ -370,13 +370,13 @@ test!(with_argument {
 test!(unknown_flags {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
                 execs().with_status(1)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] Unknown flag: '--flag'
 
 Usage:
     cargo init [options] [<path>]
     cargo init -h | --help
-")));
+"));
 });
 
 #[cfg(not(windows))]

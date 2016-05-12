@@ -174,7 +174,7 @@ test!(cargo_compile_with_root_dev_deps_with_testing {
 
     p2.build();
     assert_that(p.cargo_process("test"),
-        execs().with_stdout(&format!("\
+        execs().with_stdout("\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
 [RUNNING] target[..]foo-[..]
@@ -183,7 +183,7 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-")));
+"));
 });
 
 test!(cargo_compile_with_transitive_dev_deps {
@@ -509,7 +509,7 @@ test!(error_message_for_missing_manifest {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] Unable to update file://[..]
 
 Caused by:
@@ -517,7 +517,7 @@ Caused by:
 
 Caused by:
   [..] (os error [..])
-")));
+"));
 
 });
 
@@ -783,18 +783,18 @@ test!(custom_target_no_rebuild {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
-")));
+"));
 
     assert_that(p.cargo("build")
                  .arg("--manifest-path=b/Cargo.toml")
                  .env("CARGO_TARGET_DIR", "target"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] b v0.5.0 ([..])
-")));
+"));
 });
 
 test!(override_and_depend {
@@ -831,11 +831,11 @@ test!(override_and_depend {
     p.build();
     assert_that(p.cargo("build").cwd(p.root().join("b")),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])
-")));
+"));
 });
 
 test!(missing_path_dependency {
@@ -853,7 +853,7 @@ test!(missing_path_dependency {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
-                       .with_stderr(format!("\
+                       .with_stderr("\
 [ERROR] failed to update path override `[..]../whoa-this-does-not-exist` \
 (defined in `[..]`)
 
@@ -862,5 +862,5 @@ Caused by:
 
 Caused by:
   [..] (os error [..])
-")));
+"));
 });

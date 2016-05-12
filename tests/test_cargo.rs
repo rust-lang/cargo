@@ -102,11 +102,11 @@ test!(find_closest_biuld_to_build {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] no such subcommand
+                       .with_stderr("[ERROR] no such subcommand
 
 <tab>Did you mean `build`?
 
-")));
+"));
 });
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
@@ -117,8 +117,8 @@ test!(find_closest_dont_correct_nonsense {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] no such subcommand
-")));
+                       .with_stderr("[ERROR] no such subcommand
+"));
 });
 
 test!(override_cargo_home {
