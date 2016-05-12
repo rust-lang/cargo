@@ -8,6 +8,7 @@ use std::str;
 use std::string;
 
 use curl;
+use curl_sys;
 use git2;
 use rustc_serialize::json;
 use semver;
@@ -282,6 +283,36 @@ impl CliError {
 impl From<Box<CargoError>> for CliError {
     fn from(err: Box<CargoError>) -> CliError {
         CliError::from_boxed(err, 101)
+    }
+}
+
+// =============================================================================
+// NetworkError trait
+
+pub trait NetworkError: CargoError {
+    fn maybe_spurious(&self) -> bool;
+}
+
+impl NetworkError for git2::Error {
+    fn maybe_spurious(&self) -> bool {
+        match self.class() {
+            git2::ErrorClass::Net |
+            git2::ErrorClass::Os => true,
+            _ => false
+        }
+    }
+}
+impl NetworkError for curl::ErrCode {
+    fn maybe_spurious(&self) -> bool {
+        match self.code()  {
+            curl_sys::CURLcode::CURLE_COULDNT_CONNECT |
+            curl_sys::CURLcode::CURLE_COULDNT_RESOLVE_PROXY |
+            curl_sys::CURLcode::CURLE_COULDNT_RESOLVE_HOST |
+            curl_sys::CURLcode::CURLE_OPERATION_TIMEDOUT |
+            curl_sys::CURLcode::CURLE_RECV_ERROR
+            => true,
+            _ => false
+        }
     }
 }
 

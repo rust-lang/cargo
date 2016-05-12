@@ -8,7 +8,7 @@ use url::Url;
 use git2::{self, ObjectType};
 
 use core::GitReference;
-use util::{CargoResult, ChainError, human, ToUrl, internal};
+use util::{CargoResult, ChainError, human, ToUrl, internal, Config, network};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -109,16 +109,16 @@ impl GitRemote {
         db.rev_for(reference)
     }
 
-    pub fn checkout(&self, into: &Path) -> CargoResult<GitDatabase> {
+    pub fn checkout(&self, into: &Path, cargo_config: &Config) -> CargoResult<GitDatabase> {
         let repo = match git2::Repository::open(into) {
             Ok(repo) => {
-                try!(self.fetch_into(&repo).chain_error(|| {
+                try!(self.fetch_into(&repo, &cargo_config).chain_error(|| {
                     human(format!("failed to fetch into {}", into.display()))
                 }));
                 repo
             }
             Err(..) => {
-                try!(self.clone_into(into).chain_error(|| {
+                try!(self.clone_into(into, &cargo_config).chain_error(|| {
                     human(format!("failed to clone into: {}", into.display()))
                 }))
             }
@@ -140,21 +140,21 @@ impl GitRemote {
         })
     }
 
-    fn fetch_into(&self, dst: &git2::Repository) -> CargoResult<()> {
+    fn fetch_into(&self, dst: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
         let url = self.url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &url, refspec)
+        fetch(dst, &url, refspec, &cargo_config)
     }
 
-    fn clone_into(&self, dst: &Path) -> CargoResult<git2::Repository> {
+    fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
         let url = self.url.to_string();
         if fs::metadata(&dst).is_ok() {
             try!(fs::remove_dir_all(dst));
         }
         try!(fs::create_dir_all(dst));
         let repo = try!(git2::Repository::init_bare(dst));
-        try!(fetch(&repo, &url, "refs/heads/*:refs/heads/*"));
+        try!(fetch(&repo, &url, "refs/heads/*:refs/heads/*", &cargo_config));
         Ok(repo)
     }
 }
@@ -164,13 +164,13 @@ impl GitDatabase {
         &self.path
     }
 
-    pub fn copy_to(&self, rev: GitRevision, dest: &Path)
+    pub fn copy_to(&self, rev: GitRevision, dest: &Path, cargo_config: &Config)
                    -> CargoResult<GitCheckout> {
         let checkout = match git2::Repository::open(dest) {
             Ok(repo) => {
                 let checkout = GitCheckout::new(dest, self, rev, repo);
                 if !checkout.is_fresh() {
-                    try!(checkout.fetch());
+                    try!(checkout.fetch(&cargo_config));
                     try!(checkout.reset());
                     assert!(checkout.is_fresh());
                 }
@@ -178,7 +178,7 @@ impl GitDatabase {
             }
             Err(..) => try!(GitCheckout::clone_into(dest, self, rev)),
         };
-        try!(checkout.update_submodules().chain_error(|| {
+        try!(checkout.update_submodules(&cargo_config).chain_error(|| {
             internal("failed to update submodules")
         }));
         Ok(checkout)
@@ -276,12 +276,12 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn fetch(&self) -> CargoResult<()> {
+    fn fetch(&self, cargo_config: &Config) -> CargoResult<()> {
         info!("fetch {}", self.repo.path().display());
         let url = try!(self.database.path.to_url().map_err(human));
         let url = url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        try!(fetch(&self.repo, &url, refspec));
+        try!(fetch(&self.repo, &url, refspec, &cargo_config));
         Ok(())
     }
 
@@ -303,10 +303,10 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
-    fn update_submodules(&self) -> CargoResult<()> {
-        return update_submodules(&self.repo);
+    fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
+        return update_submodules(&self.repo, &cargo_config);
 
-        fn update_submodules(repo: &git2::Repository) -> CargoResult<()> {
+        fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in try!(repo.submodules()).into_iter() {
@@ -346,14 +346,14 @@ impl<'a> GitCheckout<'a> {
 
                 // Fetch data from origin and reset to the head commit
                 let refspec = "refs/heads/*:refs/heads/*";
-                try!(fetch(&repo, url, refspec).chain_error(|| {
+                try!(fetch(&repo, url, refspec, &cargo_config).chain_error(|| {
                     internal(format!("failed to fetch submodule `{}` from {}",
                                      child.name().unwrap_or(""), url))
                 }));
 
                 let obj = try!(repo.find_object(head, None));
                 try!(repo.reset(&obj, git2::ResetType::Hard, None));
-                try!(update_submodules(&repo));
+                try!(update_submodules(&repo, &cargo_config));
             }
             Ok(())
         }
@@ -389,7 +389,7 @@ impl<'a> GitCheckout<'a> {
 /// attempted and we don't try the same ones again.
 fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
                              -> CargoResult<T>
-    where F: FnMut(&mut git2::Credentials) -> Result<T, git2::Error>
+    where F: FnMut(&mut git2::Credentials) -> CargoResult<T>
 {
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
@@ -555,7 +555,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
 }
 
 pub fn fetch(repo: &git2::Repository, url: &str,
-             refspec: &str) -> CargoResult<()> {
+             refspec: &str, cargo_config: &Config) -> CargoResult<()> {
     // Create a local anonymous remote in the repository to fetch the url
 
     with_authentication(url, &try!(repo.config()), |f| {
@@ -565,7 +565,10 @@ pub fn fetch(repo: &git2::Repository, url: &str,
         let mut opts = git2::FetchOptions::new();
         opts.remote_callbacks(cb)
             .download_tags(git2::AutotagOption::All);
-        try!(remote.fetch(&[refspec], Some(&mut opts), None));
+
+        try!(network::with_retry(cargo_config, ||{
+            remote.fetch(&[refspec], Some(&mut opts), None)
+        }));
         Ok(())
     })
 }

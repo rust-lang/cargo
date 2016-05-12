@@ -483,7 +483,8 @@ impl<'cfg> RegistrySource<'cfg> {
         // git fetch origin
         let url = self.source_id.url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
-        try!(git::fetch(&repo, &url, refspec).chain_error(|| {
+
+        try!(git::fetch(&repo, &url, refspec, &self.config).chain_error(|| {
             internal(format!("failed to fetch `{}`", url))
         }));
 
