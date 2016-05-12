@@ -406,10 +406,11 @@ test!(rebuild_continues_to_pass_env_vars {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", r#"
+            use std::time::Duration;
             fn main() {
                 println!("cargo:foo=bar");
                 println!("cargo:bar=baz");
-                std::thread::sleep_ms(500);
+                std::thread::sleep(Duration::from_millis(500));
             }
         "#);
     a.build();
