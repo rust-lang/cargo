@@ -330,7 +330,9 @@ impl Config {
         try!(walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
             try!(file.read_to_string(&mut contents));
-            let table = try!(cargo_toml::parse(&contents, &path).chain_error(|| {
+            let table = try!(cargo_toml::parse(&contents,
+                                               &path,
+                                               self).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
             }));
@@ -717,7 +719,7 @@ pub fn set_config(cfg: &Config,
     };
     let mut contents = String::new();
     let _ = file.read_to_string(&mut contents);
-    let mut toml = try!(cargo_toml::parse(&contents, file.path()));
+    let mut toml = try!(cargo_toml::parse(&contents, file.path(), cfg));
     toml.insert(key.to_string(), value.into_toml());
 
     let contents = toml::Value::Table(toml).to_string();
