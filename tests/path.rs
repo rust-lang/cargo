@@ -256,8 +256,10 @@ fn no_rebuild_dependency() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]] name = "foo"
-            [dependencies.bar] path = "bar"
+            [[bin]]
+            name = "foo"
+            [dependencies.bar]
+            path = "bar"
         "#)
         .file("src/foo.rs", r#"
             extern crate bar;
@@ -270,7 +272,8 @@ fn no_rebuild_dependency() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [lib] name = "bar"
+            [lib]
+            name = "bar"
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
