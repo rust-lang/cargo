@@ -48,7 +48,7 @@ test!(build_with_no_lib {
 
     assert_that(p.cargo_process("build").arg("--lib"),
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] no library targets found")));
+                       .with_stderr("[ERROR] no library targets found"));
 });
 
 test!(build_with_relative_cargo_home_path {

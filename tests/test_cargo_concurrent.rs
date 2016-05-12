@@ -117,9 +117,9 @@ test!(one_install_should_be_bad {
     let a = a.join().unwrap();
 
     let (bad, good) = if a.status.code() == Some(101) {(a, b)} else {(b, a)};
-    assert_that(bad, execs().with_status(101).with_stderr_contains(&format!("\
+    assert_that(bad, execs().with_status(101).with_stderr_contains("\
 [ERROR] binary `foo[..]` already exists in destination as part of `[..]`
-")));
+"));
     assert_that(good, execs().with_status(0).with_stderr_contains("\
 warning: be sure to add `[..]` to your PATH [..]
 "));
@@ -409,10 +409,10 @@ test!(debug_release_ok {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs().with_status(0).with_stdout(&format!("\
+    assert_that(a, execs().with_status(0).with_stdout("\
 [COMPILING] foo v0.0.0 [..]
-")));
-    assert_that(b, execs().with_status(0).with_stdout(&format!("\
+"));
+    assert_that(b, execs().with_status(0).with_stdout("\
 [COMPILING] foo v0.0.0 [..]
-")));
+"));
 });

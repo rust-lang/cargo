@@ -177,11 +177,11 @@ test!(cargo_metadata_with_invalid_manifest {
             .file("Cargo.toml", "");
 
     assert_that(p.cargo_process("metadata"), execs().with_status(101)
-                                                    .with_stderr(&format!("\
+                                                    .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  no `package` or `project` section found.")))
+  no `package` or `project` section found."))
 });
 
 const MANIFEST_OUTPUT: &'static str=
@@ -238,8 +238,8 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_relative {
                  .arg("--manifest-path").arg("foo")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] the manifest-path must be \
-                                             a path to a Cargo.toml file")));
+                       .with_stderr("[ERROR] the manifest-path must be \
+                                             a path to a Cargo.toml file"));
 });
 
 test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
@@ -251,8 +251,8 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
                  .arg("--manifest-path").arg(p.root())
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
-                       .with_stderr(&format!("[ERROR] the manifest-path must be \
-                                             a path to a Cargo.toml file")));
+                       .with_stderr("[ERROR] the manifest-path must be \
+                                             a path to a Cargo.toml file"));
 });
 
 test!(cargo_metadata_no_deps_cwd {

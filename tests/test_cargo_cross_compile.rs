@@ -1,7 +1,6 @@
 use std::env;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{DOCTEST};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -505,14 +504,14 @@ running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+[DOCTEST] foo
 
 running 1 test
 test _0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", foo = p.url(), doctest = DOCTEST);
+", foo = p.url());
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
@@ -672,8 +671,8 @@ test!(build_script_needed_for_host_and_target {
                        .with_stdout_contains(&format!("\
 [RUNNING] `{dir}[..]target[..]build[..]d1-[..]build-script-build`",
     dir = p.root().display()))
-                       .with_stdout_contains(&format!("\
-[RUNNING] `rustc d1[..]src[..]lib.rs [..]`"))
+                       .with_stdout_contains("\
+[RUNNING] `rustc d1[..]src[..]lib.rs [..]`")
                        .with_stdout_contains(&format!("\
 [COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
                        .with_stdout_contains(&format!("\
@@ -790,12 +789,12 @@ test!(plugin_build_script_right_arch {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stdout("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
-")));
+"));
 });
 
 test!(build_script_with_platform_specific_dependencies {
@@ -889,7 +888,7 @@ test!(platform_specific_dependencies_do_not_leak {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr(format!("\
+                       .with_stderr("\
 [..] error: can't find crate for `d2`[..]
 [..] extern crate d2;
 [..]
@@ -898,7 +897,7 @@ error: aborting due to previous error
 
 Caused by:
   [..]
-")));
+"));
 });
 
 test!(platform_specific_variables_reflected_in_build_scripts {
