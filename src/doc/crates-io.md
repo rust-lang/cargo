@@ -1,35 +1,3 @@
-% Cargo and crates.io
-
-In addition to using dependencies from git repositories (as mentioned in
-[the guide](guide.html)) Cargo can also publish to and download from the
-[crates.io][crates-io] central repository. This site serves as a location to
-discover and download packages, and `cargo` is configured to use it by default
-to find requested packages.
-
-The guide will explain how crates can use crates.io through the `cargo` command
-line tool.
-
-[crates-io]: https://crates.io/
-
-# Using crates.io-based crates
-
-The method of specifying a dependency on a crate from crates.io is slightly
-different than the method of specifying a dependency on a git repository. The
-syntax for doing so is:
-
-```toml
-[dependencies]
-glob = "0.0.3"
-```
-
-With this format, adding new dependencies should just add a new line, you don’t
-need to add `[dependencies]` for each dependency listed, for example:
-
-```toml
-[dependencies]
-glob = "0.0.3"
-num = "0.0.4"
-```
 
 The string value for each key in this table is a [semver][semver] version
 requirement.
@@ -311,3 +279,5 @@ explicitly whitelisted crates.io querying the org in question by pressing
 the “Grant Access” button next to its name:
 
 ![Authentication Access Control](images/auth-level-acl.png)
+
+[crates-io]: https://crates.io/
