@@ -2,7 +2,7 @@
 
 Your crates can depend on other libraries from [crates.io], `git` repositories, or
 subdirectories on your local file system. You can also temporarily override the
-location of a dependency-- for example, to be able to test out a bug fix in the
+location of a dependency— for example, to be able to test out a bug fix in the
 dependency that you are working on locally. You can have different
 dependencies for different platforms, and dependencies that are only used during
 development. Let's take a look at how to do each of these.
