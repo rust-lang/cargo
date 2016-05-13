@@ -103,6 +103,9 @@ Once you’re ready for release, you can use `cargo build --release` to compile 
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
 
+`cargo build --release` puts the resulting binary in
+`target/release/hello_world` instead of `target/debug`.
+
 # Working on an existing Cargo project
 
 If you download an existing project that uses Cargo, it’s really easy
