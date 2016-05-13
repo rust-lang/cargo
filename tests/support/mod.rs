@@ -349,7 +349,6 @@ impl Execs {
                        "stderr", &actual.stdout, false)
     }
 
-    #[allow(deprecated)] // connect => join in 1.3
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
                  description: &str, extra: &[u8],
                  partial: bool) -> ham::MatchResult {
@@ -385,7 +384,7 @@ impl Execs {
                     format!("differences:\n\
                             {}\n\n\
                             other output:\n\
-                            `{}`", diffs.connect("\n"),
+                            `{}`", diffs.join("\n"),
                             String::from_utf8_lossy(extra)))
 
     }
