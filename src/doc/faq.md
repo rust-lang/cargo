@@ -2,7 +2,7 @@
 
 # Is the plan to use GitHub as a package repository?
 
-No. The plan for Cargo is to use crates.io, like npm or Rubygems do with
+No. The plan for Cargo is to use [crates.io], like npm or Rubygems do with
 npmjs.org and rubygems.org.
 
 We plan to support git repositories as a source of packages forever,
@@ -15,7 +15,7 @@ We think that it’s very important to support multiple ways to download
 packages, including downloading from GitHub and copying packages into
 your project itself.
 
-That said, we think that crates.io offers a number of important benefits, and
+That said, we think that [crates.io] offers a number of important benefits, and
 will likely become the primary way that people download packages in Cargo.
 
 For precedent, both Node.js’s [npm][1] and Ruby’s [bundler][2] support both a
@@ -130,7 +130,7 @@ picture to decide what versions of dependencies should be used.
 
 # Can libraries use `*` as a version for their dependencies?
 
-**Starting January 22nd, 2016, crates.io will begin rejecting packages with
+**Starting January 22nd, 2016, [crates.io] will begin rejecting packages with
 wildcard dependency constraints.**
 
 While they _can_, strictly speaking, they should not. A version requirement
@@ -153,3 +153,5 @@ Cargo does not allow other names such as `cargo.toml` or `Cargofile` to
 emphasize the ease of how a Cargo repository can be identified. An option of
 many possible names has historically led to confusion where one case was handled
 but others were accidentally forgotten.
+
+[crates.io]: https://crates.io/
