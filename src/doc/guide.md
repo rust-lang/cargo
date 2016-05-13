@@ -129,13 +129,13 @@ project.
 
 # Adding Dependencies from crates.io
 
-[crates.io][crates-io] is the Rust community's central repository that serves
+[crates.io] is the Rust community's central repository that serves
 as a location to discover and download packages. `cargo` is configured to use
 it by default to find requested packages.
 
 To depend on a library hosted on [crates.io], add it to your `Cargo.toml`.
 
-[crates-io]: https://crates.io/
+[crates.io]: https://crates.io/
 
 ## Adding a dependency
 
@@ -148,7 +148,7 @@ adds a dependency of the `time` crate:
 time = "0.1.12"
 ```
 
-The version string is a [semver][semver] version requirement. The [specifying
+The version string is a [semver] version requirement. The [specifying
 dependencies](specifying-dependencies.html) docs have more information about
 the options you have here.
 

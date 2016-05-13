@@ -18,7 +18,7 @@ guide](guide.html), we specified a dependency on the `time` crate:
 time = "0.1.12"
 ```
 
-The string `"0.1.12"` is a [semver][semver] version requirement. Since this
+The string `"0.1.12"` is a [semver] version requirement. Since this
 string does not have any operators in it, it is interpreted the same way as
 if we had specified `"^0.1.12"`, which is called a caret requirement.
 

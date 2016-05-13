@@ -1,7 +1,7 @@
 % Publishing on crates.io
 
 Once you've got a library that you'd like to share with the world, it's time to
-publish it on [crates.io][crates-io]! Publishing a crate is when a specific
+publish it on [crates.io]! Publishing a crate is when a specific
 version is uploaded to be hosted on crates.io.
 
 Take care when publishing a crate, because a publish is **permanent**. The
@@ -10,8 +10,8 @@ limit to the number of versions which can be published, however.
 
 # Before your first publish
 
-First thing’s first, you’ll need an account on [crates.io][crates-io] to acquire
-an API token. To do so, [visit the home page][crates-io] and log in via a GitHub
+First thing’s first, you’ll need an account on [crates.io] to acquire
+an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
 account (required for now). After this, visit your [Account
 Settings](https://crates.io/me) page and run the `cargo login` command
 specified.
@@ -214,4 +214,4 @@ the “Grant Access” button next to its name:
 
 ![Authentication Access Control](images/auth-level-acl.png)
 
-[crates-io]: https://crates.io/
+[crates.io]: https://crates.io/
