@@ -20,7 +20,7 @@ pub fn run_tests(manifest_path: &Path,
         return Ok(None)
     }
     let mut errors = if options.only_doc {
-        Vec::new()
+        try!(run_doc_tests(options, test_args, &compilation))
     } else {
         try!(run_unit_tests(options, test_args, &compilation))
     };
