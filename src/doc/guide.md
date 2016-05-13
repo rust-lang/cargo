@@ -424,6 +424,17 @@ documentation for more details.
 
 [testing]: https://doc.rust-lang.org/book/testing.html
 
+## Travis CI
+
+To test your project on Travis CI, here is a sample `.travis.yml` file:
+
+```
+language: rust
+```
+
+Please see the [Travis CI Rust documentation](https://docs.travis-ci.com/user/languages/rust/)
+for more information.
+
 # Path Dependencies
 
 Over time our `hello_world` project has grown significantly in size! It’s gotten
@@ -459,12 +470,4 @@ repository location) and specify its version in the dependencies line as well:
 ```toml
 [dependencies]
 hello_utils = { path = "hello_utils", version = "0.1.0" }
-```
-
-## Travis-CI
-
-To test your project on Travis-CI, here is a sample `.travis.yml` file:
-
-```
-language: rust
 ```
