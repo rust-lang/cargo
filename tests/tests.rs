@@ -93,8 +93,9 @@ fn is_nightly() -> bool {
 fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
     let mut p = cargo::util::process(t.as_ref());
     p.cwd(&support::paths::root())
-     .env("HOME", &support::paths::home())
      .env_remove("CARGO_HOME")
+     .env("HOME", support::paths::home())
+     .env("CARGO_HOME", support::paths::home().join(".cargo"))
      .env_remove("RUSTC")
      .env_remove("RUSTFLAGS")
      .env_remove("XDG_CONFIG_HOME")      // see #2345
