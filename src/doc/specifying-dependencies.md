@@ -49,10 +49,8 @@ be allowed with them:
 
 While SemVer says that there is no compatibility before 1.0.0, many programmers
 treat a `0.x.y` release in the same way as a `1.x.y` release: that is, `y` is
-incremented for bugfixes, and `x` is incremented for new features.
-
-As such, Cargo considers a `0.x.y` and `0.x.z` version, where `z > y`, to be
-compatible.
+incremented for bugfixes, and `x` is incremented for new features. As such,
+Cargo considers a `0.x.y` and `0.x.z` version, where `z > y`, to be compatible.
 
 ## Tilde requirements
 
