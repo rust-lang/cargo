@@ -94,9 +94,6 @@ class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello
 class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
 
-To pass some arguments to your program, use `cargo run first_arg second_arg`.
-If flags are being passed, use a “--” separator to tell Cargo which flags go where, like `cargo run -- --foo -b bar`.
-
 You’ll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don’t have any yet, it’s not very interesting.
 
