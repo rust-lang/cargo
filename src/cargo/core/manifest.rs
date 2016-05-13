@@ -113,6 +113,7 @@ pub struct Profile {
     pub test: bool,
     pub doc: bool,
     pub run_custom_build: bool,
+    pub panic: Option<String>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -120,7 +121,9 @@ pub struct Profiles {
     pub release: Profile,
     pub dev: Profile,
     pub test: Profile,
+    pub test_deps: Profile,
     pub bench: Profile,
+    pub bench_deps: Profile,
     pub doc: Profile,
     pub custom_build: Profile,
 }
@@ -469,6 +472,7 @@ impl Default for Profile {
             test: false,
             doc: false,
             run_custom_build: false,
+            panic: None,
         }
     }
 }

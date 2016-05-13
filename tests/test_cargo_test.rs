@@ -2072,3 +2072,36 @@ test result: ok.[..]
 "));
 });
 
+test!(test_panic_abort_with_dep {
+    if !::is_nightly() {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev]
+            panic = 'abort'
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate bar;
+
+            #[test]
+            fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0));
+});
