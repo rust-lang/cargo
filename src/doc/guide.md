@@ -83,11 +83,13 @@ $ ./target/debug/hello_world
 Hello, world!
 ```
 
-We can also use `cargo run` to compile and then run it, all in one step:
+We can also use `cargo run` to compile and then run it, all in one step (You
+won't see the `Compiling` line if you have not made any changes since you last
+compiled):
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo run
 <span style="font-weight: bold"
-class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
+class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
 class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
