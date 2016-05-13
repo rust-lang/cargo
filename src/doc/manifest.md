@@ -11,7 +11,11 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["you@example.com"]
 ```
 
-All three of these fields are mandatory. Cargo bakes in the concept of [Semantic
+All three of these fields are mandatory.
+
+## The `version` Field
+
+Cargo bakes in the concept of [Semantic
 Versioning](http://semver.org/), so make sure you follow some basic rules:
 
 * Before you reach 1.0.0, anything goes.
@@ -22,9 +26,6 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
   versions. Always increment the minor version if you add any new `pub` structs,
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
-
-For more on versions, see [this
-documentation](crates-io.html#using-cratesio-based-crates).
 
 ## The `build` Field (optional)
 

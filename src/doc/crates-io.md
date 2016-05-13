@@ -1,14 +1,14 @@
-# Publishing crates
+% Publishing on crates.io
 
-Ok, now that we’ve got a crate which is using dependencies from crates.io,
-let’s publish it! Publishing a crate is when a specific version is uploaded to
-crates.io.
+Once you've got a library that you'd like to share with the world, it's time to
+publish it on [crates.io][crates-io]! Publishing a crate is when a specific
+version is uploaded to be hosted on crates.io.
 
 Take care when publishing a crate, because a publish is **permanent**. The
 version can never be overwritten, and the code cannot be deleted. There is no
 limit to the number of versions which can be published, however.
 
-## Acquiring an API token
+# Before your first publish
 
 First thing’s first, you’ll need an account on [crates.io][crates-io] to acquire
 an API token. To do so, [visit the home page][crates-io] and log in via a GitHub
@@ -24,6 +24,11 @@ This command will inform Cargo of your API token and store it locally in your
 `~/.cargo/config`. Note that this token is a **secret** and should not be shared
 with anyone else. If it leaks for any reason, you should regenerate it
 immediately.
+
+# Before publishing a new crate
+
+Keep in mind that crate names on crates.io are allocated on a first-come-first-
+serve basis. Once a crate name is taken, it cannot be used for another crate.
 
 ## Packaging a crate
 
@@ -43,10 +48,10 @@ are there for the build to succeed. This behavior can be disabled with the
 `--no-verify` flag.
 
 Now’s a good time to take a look at the `*.crate` file to make sure you didn’t
-accidentally package up that 2GB video asset. Cargo will automatically ignore
-files ignored by your version control system when packaging, but if you want to
-specify an extra set of files to ignore you can use the `exclude` key in the
-manifest:
+accidentally package up that 2GB video asset. There is currently a 10MB upload
+size limit on `*.crate` files. Cargo will automatically ignore files ignored by
+your version control system when packaging, but if you want to specify an extra
+set of files to ignore you can use the `exclude` key in the manifest:
 
 ```toml
 [package]
@@ -88,15 +93,13 @@ Be sure to check out the [metadata you can
 specify](manifest.html#package-metadata) to ensure your crate can be discovered
 more easily!
 
-## Restrictions
+# Publishing a new version of an existing crate
 
-There are a few restrictions when publishing a crate in the registry:
-
-* Once a version is uploaded, it can never be overwritten. To upload a new copy
-  of a crate you must upload a new version.
-* Crate names are allocated on a first-come-first-serve basis. Once a crate name
-  is taken it cannot be used for another crate.
-* There is currently a 10MB upload size limit on `*.crate` files.
+In order to release a new version, change the `version` value specified in your
+`Cargo.toml` manifest. Keep in mind [the semver
+rules](manifest.html#the-version-field). Then optionally run `cargo package` if
+you want to inspect the `*.crate` file for the new version before publishing,
+and run `cargo publish` to upload the new version.
 
 # Managing a crates.io-based crate
 
