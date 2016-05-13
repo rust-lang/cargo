@@ -28,7 +28,7 @@ if we had specified `"^0.1.12"`, which is called a caret requirement.
 
 **Caret requirements** allow SemVer compatible updates to a specified version.
 An update is allowed if the new version number does not modify the left-most
-non-zero digit in the [major, minor, patch] tuple. In this case, if we ran
+non-zero digit in the major, minor, patch grouping. In this case, if we ran
 `cargo update -p time`, cargo would update us to version `0.1.13` if it was
 available, but would not update us to `0.2.0`. If instead we had specified the
 version string as `^1.0`, cargo would update to `1.1` but not `2.0`. `0.0.x` is
