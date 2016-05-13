@@ -1,6 +1,6 @@
 % Specifying Dependencies
 
-Your crates can depend on other libraries from crates.io, git repositories, or
+Your crates can depend on other libraries from [crates.io], git repositories, or
 subdirectories on your local file system. You can also temporarily override the
 location of a dependency-- for example, to be able to test out a bug fix in the
 dependency that you are working on locally. You can have different
@@ -9,7 +9,7 @@ development. Let's take a look at how to do each of these.
 
 # Specifying Dependencies from crates.io
 
-Cargo is configured to look for dependencies on `crates.io` by default. Only
+Cargo is configured to look for dependencies on [crates.io] by default. Only
 the name and a version string are required in this case. In [the cargo
 guide](guide.html), we specified a dependency on the `time` crate:
 
@@ -155,8 +155,8 @@ in the `hello_utils` folder (relative to the `Cargo.toml` it’s written in).
 And that’s it! The next `cargo build` will automatically build `hello_utils` and
 all of its own dependencies, and others can also start using the crate as well.
 However, crates that use dependencies specified with only a path are not
-permitted on crates.io. If we wanted to publish our `hello_world` crate, we
-would need to publish a version of `hello_utils` to crates.io (or specify a git
+permitted on [crates.io]. If we wanted to publish our `hello_world` crate, we
+would need to publish a version of `hello_utils` to [crates.io] (or specify a git
 repository location) and specify its version in the dependencies line as well:
 
 ```toml
@@ -190,7 +190,7 @@ $ git clone https://github.com/conduit-rust/conduit.git
 ```
 
 You’d like to have `conduit-static` use your local version of `conduit`,
-rather than the one on crates.io, while you fix the bug.
+rather than the one on [crates.io], while you fix the bug.
 
 Cargo solves this problem by allowing you to have a local configuration
 that specifies an **override**. If Cargo finds this configuration when
@@ -226,7 +226,7 @@ this instance, we’re just adding `conduit`, so it will be the only one that’
 overridden. This path must be an absolute path.
 
 Note: using a local configuration to override paths will only work for crates
-that have been published to crates.io. You cannot use this feature to tell Cargo
+that have been published to [crates.io]. You cannot use this feature to tell Cargo
 how to find local unpublished crates.
 
 More information about local configuration can be found in the [configuration
@@ -302,3 +302,5 @@ example:
 [target.'cfg(unix)'.dev-dependencies]
 mio = "0.0.1"
 ```
+
+[crates.io]: https://crates.io/

@@ -2,7 +2,7 @@
 
 Once you've got a library that you'd like to share with the world, it's time to
 publish it on [crates.io]! Publishing a crate is when a specific
-version is uploaded to be hosted on crates.io.
+version is uploaded to be hosted on [crates.io].
 
 Take care when publishing a crate, because a publish is **permanent**. The
 version can never be overwritten, and the code cannot be deleted. There is no
@@ -27,13 +27,13 @@ immediately.
 
 # Before publishing a new crate
 
-Keep in mind that crate names on crates.io are allocated on a first-come-first-
+Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
 serve basis. Once a crate name is taken, it cannot be used for another crate.
 
 ## Packaging a crate
 
 The next step is to package up your crate into a format that can be uploaded to
-crates.io. For this we’ll use the `cargo package` subcommand. This will take
+[crates.io]. For this we’ll use the `cargo package` subcommand. This will take
 our entire crate and package it all up into a `*.crate` file in the
 `target/package` directory.
 
@@ -79,7 +79,7 @@ include = [
 ## Uploading the crate
 
 Now that we’ve got a `*.crate` file ready to go, it can be uploaded to
-crates.io with the `cargo publish` command. And that’s it, you’ve now published
+[crates.io] with the `cargo publish` command. And that’s it, you’ve now published
 your first crate!
 
 ```notrust
@@ -104,7 +104,7 @@ and run `cargo publish` to upload the new version.
 # Managing a crates.io-based crate
 
 Management of crates is primarily done through the command line `cargo` tool
-rather than the crates.io web interface. For this, there are a few subcommands
+rather than the [crates.io] web interface. For this, there are a few subcommands
 to manage a crate.
 
 ## `cargo yank`
@@ -125,7 +125,7 @@ those secrets immediately.
 
 The semantics of a yanked version are that no new dependencies can be created
 against that version, but all existing dependencies continue to work. One of the
-major goals of crates.io is to act as a permanent archive of crates that does
+major goals of [crates.io] is to act as a permanent archive of crates that does
 not change over time, and allowing deletion of a version would go against this
 goal. Essentially a yank means that all projects with a `Cargo.lock` will not
 break, while any future `Cargo.lock` files generated will not list the yanked
@@ -151,7 +151,7 @@ full rights to the crate. In addition to being able to publish or yank versions
 of the crate, they have the ability to add or remove owners, *including* the
 owner that made *them* an owner. Needless to say, you shouldn’t make people you
 don’t fully trust into a named owner. In order to become a named owner, a user
-must have logged into crates.io previously.
+must have logged into [crates.io] previously.
 
 If a team name is given to `--add`, that team becomes a “team” owner, with
 restricted right to the crate. While they have permission to publish or yank
@@ -169,7 +169,7 @@ Team membership is not something GitHub provides simple public access to, and it
 is likely for you to encounter the following message when working with them:
 
 > It looks like you don’t have permission to query a necessary property from
-GitHub to complete this request. You may need to re-authenticate on crates.io
+GitHub to complete this request. You may need to re-authenticate on [crates.io]
 to grant permission to read GitHub org memberships. Just go to
 https://crates.io/login
 
@@ -190,9 +190,9 @@ as an owner, or publish a crate as a team owner. If you ever attempt to do this,
 you will get the error above. You may also see this error if you ever try to
 publish a crate that you don’t own at all, but otherwise happens to have a team.
 
-If you ever change your mind, or just aren’t sure if crates.io has sufficient
+If you ever change your mind, or just aren’t sure if [crates.io] has sufficient
 permission, you can always go to https://crates.io/login, which will prompt you
-for permission if crates.io doesn’t have all the scopes it would like to.
+for permission if [crates.io] doesn’t have all the scopes it would like to.
 
 An additional barrier to querying GitHub is that the organization may be
 actively denying third party access. To check this, you can go to:
@@ -204,12 +204,12 @@ something like:
 
 ![Organization Access Control](images/org-level-acl.png)
 
-Where you may choose to explicitly remove crates.io from your organization’s
+Where you may choose to explicitly remove [crates.io] from your organization’s
 blacklist, or simply press the “Remove Restrictions” button to allow all third
 party applications to access this data.
 
-Alternatively, when crates.io requested the `read:org` scope, you could have
-explicitly whitelisted crates.io querying the org in question by pressing
+Alternatively, when [crates.io] requested the `read:org` scope, you could have
+explicitly whitelisted [crates.io] querying the org in question by pressing
 the “Grant Access” button next to its name:
 
 ![Authentication Access Control](images/auth-level-acl.png)
