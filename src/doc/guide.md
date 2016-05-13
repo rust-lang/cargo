@@ -111,18 +111,18 @@ class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello
 If you download an existing project that uses Cargo, it’s really easy
 to get going.
 
-First, get the project from somewhere. In this example, we’ll use `color-rs`
+First, get the project from somewhere. In this example, we’ll use `rand`
 cloned from its repository on GitHub:
 
 ```sh
-$ git clone https://github.com/bjz/color-rs.git
-$ cd color-rs
+$ git clone https://github.com/rust-lang-nursery/rand.git
+$ cd rand
 ```
 
 To build, use `cargo build`:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">   Compiling</span> color v0.1.0 (file:///path/to/project/color-rs)</code></pre>
+<span style="font-weight: bold" class="s1">   Compiling</span> rand v0.1.0 (file:///path/to/project/rand)</code></pre>
 
 This will fetch all of the dependencies and then build them, along with the
 project.
@@ -254,25 +254,25 @@ version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies]
-color = { git = "https://github.com/bjz/color-rs.git" }
+rand = { git = "https://github.com/rust-lang-nursery/rand.git" }
 ```
 
-This project has a single dependency, on the `color` library. We’ve stated in
+This project has a single dependency, on the `rand` library. We’ve stated in
 this case that we’re relying on a particular Git repository that lives on
 GitHub. Since we haven’t specified any other information, Cargo assumes that
 we intend to use the latest commit on the `master` branch to build our project.
 
 Sound good? Well, there’s one problem: If you build this project today, and
 then you send a copy to me, and I build this project tomorrow, something bad
-could happen. `bjz` could update `color-rs` in the meantime, and my build would
-include new commits while yours would not. Therefore, we would get different
-builds. This would be bad because we want reproducible builds.
+could happen. There could be more commits to `rand` in the meantime, and my
+build would include new commits while yours would not. Therefore, we would
+get different builds. This would be bad because we want reproducible builds.
 
 We could fix this problem by putting a `rev` line in our `Cargo.toml`:
 
 ```toml
 [dependencies]
-color = { git = "https://github.com/bjz/color-rs.git", rev = "bf739419" }
+rand = { git = "https://github.com/rust-lang-nursery/rand.git", rev = "9f35b8e" }
 ```
 
 Now our builds will be the same. But there’s a big drawback: now we have to
@@ -290,7 +290,7 @@ version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 
 [dependencies]
-color = { git = "https://github.com/bjz/color-rs.git" }
+rand = { git = "https://github.com/rust-lang-nursery/rand.git" }
 ```
 
 Cargo will take the latest commit and write that information out into our
@@ -301,13 +301,13 @@ Cargo will take the latest commit and write that information out into our
 name = "hello_world"
 version = "0.1.0"
 dependencies = [
- "color 0.1.0 (git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98)",
+ "rand 0.1.0 (git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b9414c58f389bdc6a3284f9)",
 ]
 
 [[package]]
-name = "color"
+name = "rand"
 version = "0.1.0"
-source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b474269a4b98"
+source = "git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b9414c58f389bdc6a3284f9"
 
 ```
 
@@ -321,12 +321,12 @@ re-calculate the dependencies and update things for us:
 
 ```shell
 $ cargo update           # updates all dependencies
-$ cargo update -p color  # updates just “color”
+$ cargo update -p rand  # updates just “rand”
 ```
 
 This will write out a new `Cargo.lock` with the new version information. Note
 that the argument to `cargo update` is actually a
-[Package ID Specification](pkgid-spec.html) and `color` is just a short
+[Package ID Specification](pkgid-spec.html) and `rand` is just a short
 specification.
 
 # Tests
@@ -342,7 +342,7 @@ no tests:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo test
 <span style="font-weight: bold"
-class="s1">   Compiling</span> color v0.1.0 (https://github.com/bjz/color-rs.git#bf739419)
+class="s1">   Compiling</span> rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
 <span style="font-weight: bold"
 class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
 <span style="font-weight: bold"
