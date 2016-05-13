@@ -119,7 +119,7 @@ $ git clone https://github.com/bjz/color-rs.git
 $ cd color-rs
 ```
 
-To build, just use `cargo build`:
+To build, use `cargo build`:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo build
 <span style="font-weight: bold" class="s1">   Compiling</span> color v0.1.0 (file:///path/to/project/color-rs)</code></pre>
@@ -251,7 +251,7 @@ we intend to use the latest commit on the `master` branch to build our project.
 Sound good? Well, there’s one problem: If you build this project today, and
 then you send a copy to me, and I build this project tomorrow, something bad
 could happen. `bjz` could update `color-rs` in the meantime, and my build would
-include this commit while yours would not. Therefore, we would get different
+include new commits while yours would not. Therefore, we would get different
 builds. This would be bad because we want reproducible builds.
 
 We could fix this problem by putting a `rev` line in our `Cargo.toml`:
@@ -320,7 +320,8 @@ specification.
 Sometimes you may want to override one of Cargo’s dependencies. For example,
 let’s say you’re working on a project, `conduit-static`, which depends on
 the package `conduit`. You find a bug in `conduit`, and you want to write a
-patch. Here’s what `conduit-static`’s `Cargo.toml` looks like:
+patch and be able to test out your patch by using your version of `conduit`
+in `conduit-static`. Here’s what `conduit-static`’s `Cargo.toml` looks like:
 
 ```toml
 [package]
@@ -340,7 +341,7 @@ $ git clone https://github.com/conduit-rust/conduit.git
 ```
 
 You’d like to have `conduit-static` use your local version of `conduit`,
-rather than the one on GitHub, while you fix the bug.
+rather than the one on crates.io, while you fix the bug.
 
 Cargo solves this problem by allowing you to have a local configuration
 that specifies an **override**. If Cargo finds this configuration when
@@ -384,13 +385,14 @@ documentation](config.html).
 
 # Tests
 
-Cargo can run your tests with the `cargo test` command. Cargo runs tests in two
-places: in each of your `src` files and any tests in `tests/`. Tests
-in your `src` files should be unit tests, and tests in `tests/` should be
+Cargo can run your tests with the `cargo test` command. Cargo looks for tests
+to run in two places: in each of your `src` files and any tests in `tests/`.
+Tests in your `src` files should be unit tests, and tests in `tests/` should be
 integration-style tests. As such, you’ll need to import your crates into
 the files in `tests`.
 
-To run your tests, just run `cargo test`:
+Here's an example of running `cargo test` in our project, which currently has
+no tests:
 
 <pre><code class="language-shell"><span class="gp">$</span> cargo test
 <span style="font-weight: bold"
@@ -405,8 +407,8 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 </code></pre>
 
-Of course, if your project has tests, you’ll see more output with the
-correct number of tests.
+If our project had tests, we would see more output with the correct number of
+tests.
 
 You can also run a specific test by passing a filter:
 
@@ -415,7 +417,7 @@ You can also run a specific test by passing a filter:
 
 This will run any test with `foo` in its name.
 
-`cargo test` runs additional tests as well. For example, it will compile any
+`cargo test` runs additional checks as well. For example, it will compile any
 examples you’ve included and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
 documentation for more details.
@@ -437,7 +439,7 @@ $ cargo new hello_utils
 
 This will create a new folder `hello_utils` inside of which a `Cargo.toml` and
 `src` folder are ready to be configured. In order to tell Cargo about this, open
-up `hello_world/Cargo.toml` and add these lines:
+up `hello_world/Cargo.toml` and add `hello_utils` to your dependencies:
 
 ```toml
 [dependencies]
@@ -449,10 +451,10 @@ in the `hello_utils` folder (relative to the `Cargo.toml` it’s written in).
 
 And that’s it! The next `cargo build` will automatically build `hello_utils` and
 all of its own dependencies, and others can also start using the crate as well.
-However, dependencies with only a path are not permitted on crates.io. If we
-wanted to publish our `hello_world` crate, we would need to publish a version of
-`hello_utils` to crates.io (or specify a git repository location) and specify it
-in the dependencies line:
+However, crates that use dependencies specified with only a path are not
+permitted on crates.io. If we wanted to publish our `hello_world` crate, we
+would need to publish a version of `hello_utils` to crates.io (or specify a git
+repository location) and specify its version in the dependencies line as well:
 
 ```toml
 [dependencies]
