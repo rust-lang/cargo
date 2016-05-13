@@ -108,7 +108,7 @@ you need to specify is the location of the repository with the `git` key:
 
 ```toml
 [dependencies]
-color = { git = "https://github.com/bjz/color-rs" }
+rand = { git = "https://github.com/rust-lang-nursery/rand" }
 ```
 
 Cargo will fetch the git repository at this location then look for a
@@ -119,11 +119,11 @@ Since we haven’t specified any other information, Cargo assumes that
 we intend to use the latest commit on the `master` branch to build our project.
 You can combine the `git` key with the `rev`, `tag`, or `branch` keys to
 specify something else. Here's an example of specifying that you want to use
-the latest commit on a branch named `development`:
+the latest commit on a branch named `next`:
 
 ```toml
 [dependencies]
-color = { git = "https://github.com/bjz/color-rs", branch = "development" }
+rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 ```
 
 # Specifying path dependencies
