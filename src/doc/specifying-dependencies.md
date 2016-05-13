@@ -1,6 +1,6 @@
 % Specifying Dependencies
 
-Your crates can depend on other libraries from [crates.io], git repositories, or
+Your crates can depend on other libraries from [crates.io], `git` repositories, or
 subdirectories on your local file system. You can also temporarily override the
 location of a dependency-- for example, to be able to test out a bug fix in the
 dependency that you are working on locally. You can have different
@@ -101,9 +101,9 @@ Here are some examples of inequality requirements:
 Multiple version requirements can also be separated with a comma, e.g. `>= 1.2,
 < 1.5`.
 
-# Specifying dependencies from git repositories
+# Specifying dependencies from `git` repositories
 
-To depend on a library located in a git repository, the minimum information
+To depend on a library located in a `git` repository, the minimum information
 you need to specify is the location of the repository with the `git` key:
 
 ```toml
@@ -111,8 +111,8 @@ you need to specify is the location of the repository with the `git` key:
 rand = { git = "https://github.com/rust-lang-nursery/rand" }
 ```
 
-Cargo will fetch the git repository at this location then look for a
-`Cargo.toml` for the requested crate anywhere inside the git repository
+Cargo will fetch the `git` repository at this location then look for a
+`Cargo.toml` for the requested crate anywhere inside the `git` repository
 (not necessarily at the root).
 
 Since we haven’t specified any other information, Cargo assumes that
@@ -156,7 +156,7 @@ And that’s it! The next `cargo build` will automatically build `hello_utils` a
 all of its own dependencies, and others can also start using the crate as well.
 However, crates that use dependencies specified with only a path are not
 permitted on [crates.io]. If we wanted to publish our `hello_world` crate, we
-would need to publish a version of `hello_utils` to [crates.io] (or specify a git
+would need to publish a version of `hello_utils` to [crates.io] (or specify a `git`
 repository location) and specify its version in the dependencies line as well:
 
 ```toml
