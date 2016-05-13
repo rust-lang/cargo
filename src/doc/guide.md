@@ -148,7 +148,9 @@ adds a dependency of the `time` crate:
 time = "0.1.12"
 ```
 
-The version string is a [semver][semver] version requirement.
+The version string is a [semver][semver] version requirement. The [specifying
+dependencies](specifying-dependencies.html) docs have more information about
+the options you have here.
 
 [semver]: https://github.com/steveklabnik/semver#requirements
 
@@ -327,74 +329,6 @@ that the argument to `cargo update` is actually a
 [Package ID Specification](pkgid-spec.html) and `color` is just a short
 specification.
 
-# Overriding Dependencies
-
-Sometimes you may want to override one of Cargo’s dependencies. For example,
-let’s say you’re working on a project, `conduit-static`, which depends on
-the package `conduit`. You find a bug in `conduit`, and you want to write a
-patch and be able to test out your patch by using your version of `conduit`
-in `conduit-static`. Here’s what `conduit-static`’s `Cargo.toml` looks like:
-
-```toml
-[package]
-name = "conduit-static"
-version = "0.1.0"
-authors = ["Yehuda Katz <wycats@example.com>"]
-
-[dependencies]
-conduit = "0.7"
-```
-
-You check out a local copy of `conduit`, let’s say in your `~/src` directory:
-
-```shell
-$ cd ~/src
-$ git clone https://github.com/conduit-rust/conduit.git
-```
-
-You’d like to have `conduit-static` use your local version of `conduit`,
-rather than the one on crates.io, while you fix the bug.
-
-Cargo solves this problem by allowing you to have a local configuration
-that specifies an **override**. If Cargo finds this configuration when
-building your package, it will use the override on your local machine
-instead of the source specified in your `Cargo.toml`.
-
-Cargo looks for a directory named `.cargo` up the directory hierarchy of
-your project. If your project is in `/path/to/project/conduit-static`,
-it will search for a `.cargo` in:
-
-* `/path/to/project/conduit-static`
-* `/path/to/project`
-* `/path/to`
-* `/path`
-* `/`
-
-This allows you to specify your overrides in a parent directory that
-includes commonly used packages that you work on locally and share them
-with all projects.
-
-To specify overrides, create a `.cargo/config` file in some ancestor of
-your project’s directory (common places to put it is in the root of
-your code directory or in your home directory).
-
-Inside that file, put this:
-
-```toml
-paths = ["/path/to/project/conduit"]
-```
-
-This array should be filled with directories that contain a `Cargo.toml`. In
-this instance, we’re just adding `conduit`, so it will be the only one that’s
-overridden. This path must be an absolute path.
-
-Note: using a local configuration to override paths will only work for crates
-that have been published to crates.io. You cannot use this feature to tell Cargo
-how to find local unpublished crates.
-
-More information about local configuration can be found in the [configuration
-documentation](config.html).
-
 # Tests
 
 Cargo can run your tests with the `cargo test` command. Cargo looks for tests
@@ -446,40 +380,3 @@ language: rust
 
 Please see the [Travis CI Rust documentation](https://docs.travis-ci.com/user/languages/rust/)
 for more information.
-
-# Path Dependencies
-
-Over time our `hello_world` project has grown significantly in size! It’s gotten
-to the point that we probably want to split out a separate crate for others to
-use. To do this Cargo supports **path dependencies** which are typically
-sub-crates that live within one repository. Let’s start off by making a new
-crate inside of our `hello_world` project:
-
-```shell
-# inside of hello_world/
-$ cargo new hello_utils
-```
-
-This will create a new folder `hello_utils` inside of which a `Cargo.toml` and
-`src` folder are ready to be configured. In order to tell Cargo about this, open
-up `hello_world/Cargo.toml` and add `hello_utils` to your dependencies:
-
-```toml
-[dependencies]
-hello_utils = { path = "hello_utils" }
-```
-
-This tells Cargo that we depend on a crate called `hello_utils` which is found
-in the `hello_utils` folder (relative to the `Cargo.toml` it’s written in).
-
-And that’s it! The next `cargo build` will automatically build `hello_utils` and
-all of its own dependencies, and others can also start using the crate as well.
-However, crates that use dependencies specified with only a path are not
-permitted on crates.io. If we wanted to publish our `hello_world` crate, we
-would need to publish a version of `hello_utils` to crates.io (or specify a git
-repository location) and specify its version in the dependencies line as well:
-
-```toml
-[dependencies]
-hello_utils = { path = "hello_utils", version = "0.1.0" }
-```
