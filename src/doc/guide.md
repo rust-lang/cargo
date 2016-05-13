@@ -6,7 +6,7 @@ about how to use Cargo to develop Rust projects.
 # Why Cargo exists
 
 Cargo is a tool that allows Rust projects to declare their various
-dependencies, and ensure that you’ll always get a repeatable build.
+dependencies and ensure that you’ll always get a repeatable build.
 
 To accomplish this goal, Cargo does four things:
 
@@ -48,7 +48,7 @@ $ tree .
 1 directory, 2 files
 ```
 
-If we had just used `cargo new hello_world` without the `--bin` flag, then the
+If we had just used `cargo new hello_world` without the `--bin` flag, then
 we would have a `lib.rs` instead of a `main.rs`. For now, however, this is all
 we need to get started. First, let’s check out `Cargo.toml`:
 
@@ -92,7 +92,7 @@ class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_w
 class="s1">   Running</span> `target/debug/hello_world`
 Hello, world!</code></pre>
 
-To pass some arguments to your program, use `cargo run first_arg second_arg`.  
+To pass some arguments to your program, use `cargo run first_arg second_arg`.
 If flags are being passed, use a “--” separator to tell Cargo which flags go where, like `cargo run -- --foo -b bar`.
 
 You’ll now notice a new file, `Cargo.lock`. It contains information about our
@@ -194,7 +194,7 @@ Did our date match? true</code></pre>
 Our `Cargo.lock` contains the exact information about which revision of all of
 these dependencies we used.
 
-Now, if `regex` gets updated, we will still build with the same revision, until
+Now, if `regex` gets updated, we will still build with the same revision until
 we choose to `cargo update`.
 
 # Project Layout
@@ -248,8 +248,8 @@ we intend to use the latest commit on the `master` branch to build our project.
 Sound good? Well, there’s one problem: If you build this project today, and
 then you send a copy to me, and I build this project tomorrow, something bad
 could happen. `bjz` could update `color-rs` in the meantime, and my build would
-include this commit, while yours would not. Therefore, we would get different
-builds. This would be bad, because we want reproducible builds.
+include this commit while yours would not. Therefore, we would get different
+builds. This would be bad because we want reproducible builds.
 
 We could fix this problem by putting a `rev` line in our `Cargo.toml`:
 
@@ -258,7 +258,7 @@ We could fix this problem by putting a `rev` line in our `Cargo.toml`:
 color = { git = "https://github.com/bjz/color-rs.git", rev = "bf739419" }
 ```
 
-Now, our builds will be the same. But, there’s a big drawback: now we have to
+Now our builds will be the same. But there’s a big drawback: now we have to
 manually think about SHA-1s every time we want to update our library. This is
 both tedious and error prone.
 
@@ -276,7 +276,7 @@ authors = ["Your Name <you@example.com>"]
 color = { git = "https://github.com/bjz/color-rs.git" }
 ```
 
-Cargo will take the latest commit, and write that information out into our
+Cargo will take the latest commit and write that information out into our
 `Cargo.lock` when we build for the first time. That file will look like this:
 
 ```toml
@@ -295,12 +295,12 @@ source = "git+https://github.com/bjz/color-rs.git#bf739419e2d31050615c1ba1a395b4
 ```
 
 You can see that there’s a lot more information here, including the exact
-revision we used to build. Now, when you give your project to someone else,
+revision we used to build. Now when you give your project to someone else,
 they’ll use the exact same SHA, even though we didn’t specify it in our
 `Cargo.toml`.
 
 When we’re ready to opt in to a new version of the library, Cargo can
-re-calculate the dependencies, and update things for us:
+re-calculate the dependencies and update things for us:
 
 ```shell
 $ cargo update           # updates all dependencies
@@ -314,7 +314,7 @@ specification.
 
 # Overriding Dependencies
 
-Sometimes, you may want to override one of Cargo’s dependencies. For example,
+Sometimes you may want to override one of Cargo’s dependencies. For example,
 let’s say you’re working on a project, `conduit-static`, which depends on
 the package `conduit`. You find a bug in `conduit`, and you want to write a
 patch. Here’s what `conduit-static`’s `Cargo.toml` looks like:
@@ -355,7 +355,7 @@ it will search for a `.cargo` in:
 * `/`
 
 This allows you to specify your overrides in a parent directory that
-includes commonly used packages that you work on locally, and share them
+includes commonly used packages that you work on locally and share them
 with all projects.
 
 To specify overrides, create a `.cargo/config` file in some ancestor of
@@ -382,7 +382,7 @@ documentation](config.html).
 # Tests
 
 Cargo can run your tests with the `cargo test` command. Cargo runs tests in two
-places: in each of your `src` files, and any tests in `tests/`. Tests
+places: in each of your `src` files and any tests in `tests/`. Tests
 in your `src` files should be unit tests, and tests in `tests/` should be
 integration-style tests. As such, you’ll need to import your crates into
 the files in `tests`.
@@ -402,7 +402,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 </code></pre>
 
-Of course, if your project has tests, you’ll see more output, with the
+Of course, if your project has tests, you’ll see more output with the
 correct number of tests.
 
 You can also run a specific test by passing a filter:
@@ -413,7 +413,7 @@ You can also run a specific test by passing a filter:
 This will run any test with `foo` in its name.
 
 `cargo test` runs additional tests as well. For example, it will compile any
-examples, you’ve included, and will also test the examples in your
+examples you’ve included and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
 documentation for more details.
 
@@ -446,8 +446,8 @@ in the `hello_utils` folder (relative to the `Cargo.toml` it’s written in).
 
 And that’s it! The next `cargo build` will automatically build `hello_utils` and
 all of its own dependencies, and others can also start using the crate as well.
-However, dependencies with only a path are not permitted on crates.io so if we
-wanted to publish our `hello_world` crate we would need to publish a version of
+However, dependencies with only a path are not permitted on crates.io. If we
+wanted to publish our `hello_world` crate, we would need to publish a version of
 `hello_utils` to crates.io (or specify a git repository location) and specify it
 in the dependencies line:
 
