@@ -69,7 +69,7 @@ test!(list_command_looks_at_path {
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let output = pr.arg("-v").arg("--list")
+    let output = pr.arg("list")
                    .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
