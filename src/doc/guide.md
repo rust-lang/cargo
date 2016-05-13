@@ -111,7 +111,8 @@ class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello
 If you download an existing project that uses Cargo, it’s really easy
 to get going.
 
-First, get the project from somewhere. In this example, we’ll use `color-rs`:
+First, get the project from somewhere. In this example, we’ll use `color-rs`
+cloned from its repository on GitHub:
 
 ```sh
 $ git clone https://github.com/bjz/color-rs.git
