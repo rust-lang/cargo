@@ -27,7 +27,7 @@ test!(simple {
     Package::new("bar", "0.0.1").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -38,7 +38,7 @@ test!(simple {
 
     // Don't download a second time
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [..] bar v0.0.1 (registry file://[..])
 [..] foo v0.0.1 ({dir})
@@ -64,7 +64,7 @@ test!(deps {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
@@ -189,7 +189,7 @@ version required: >= 0.0.0
     Package::new("notyet", "0.0.1").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
 [COMPILING] notyet v0.0.1 (registry file://[..])
@@ -266,7 +266,7 @@ test!(lockfile_locks {
     Package::new("bar", "0.0.1").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -299,7 +299,7 @@ test!(lockfile_locks_transitively {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
@@ -337,7 +337,7 @@ test!(yanks_are_not_used {
     Package::new("bar", "0.0.2").dep("baz", "*").yanked(true).publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
@@ -468,7 +468,7 @@ test!(update_lockfile {
 
     println!("0.0.2 build");
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.2 (registry file://[..])
 [COMPILING] bar v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
@@ -485,7 +485,7 @@ test!(update_lockfile {
 
     println!("0.0.3 build");
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.3 (registry file://[..])
 [COMPILING] bar v0.0.3 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
@@ -532,7 +532,7 @@ test!(dev_dependency_not_used {
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -596,7 +596,7 @@ test!(updating_a_dep {
     Package::new("bar", "0.0.1").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -618,7 +618,7 @@ test!(updating_a_dep {
 
     println!("second");
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry file://[..])
 [COMPILING] bar v0.1.0 (registry file://[..])
@@ -661,7 +661,7 @@ test!(git_and_registry_dep {
 
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] a v0.0.1 (registry file://[..])
@@ -707,7 +707,7 @@ test!(update_publish_then_update {
 
     fs::remove_dir_all(&p.root().join("target")).unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry file://[..])
 [COMPILING] a v0.1.1 (registry [..])

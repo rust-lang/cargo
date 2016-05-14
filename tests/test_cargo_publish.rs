@@ -49,7 +49,7 @@ test!(simple {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish").arg("--no-verify"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [PACKAGING] foo v0.0.1 ({dir})
 [UPLOADING] foo v0.0.1 ({dir})

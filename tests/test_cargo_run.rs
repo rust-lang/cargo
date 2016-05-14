@@ -474,7 +474,7 @@ test!(release_works {
         "#);
 
     assert_that(p.cargo_process("run").arg("--release"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `target{sep}release{sep}foo[..]`
 ",

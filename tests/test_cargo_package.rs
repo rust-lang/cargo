@@ -29,7 +29,7 @@ test!(simple {
         .file("src/bar.txt", ""); // should be ignored when packaging
 
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -71,7 +71,7 @@ test!(metadata_warning {
             fn main() {}
         "#);
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -94,7 +94,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
             fn main() {}
         "#);
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -118,7 +118,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
             fn main() {}
         "#);
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -182,7 +182,7 @@ test!(package_verification {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
     assert_that(p.cargo("package"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -354,7 +354,7 @@ test!(ignore_nested {
         .file("a_dir/nested/src/main.rs", main_rs);
 
     assert_that(p.cargo_process("package"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] nested v0.0.1 ({dir})
 [VERIFYING] nested v0.0.1 ({dir})
 [COMPILING] nested v0.0.1 ({dir}[..])

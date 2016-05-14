@@ -850,7 +850,7 @@ test!(stale_cached_version {
     // Now build!
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [UPDATING] git repository `{bar}`
 [COMPILING] bar v0.0.0 ({bar}#[..])
 [COMPILING] foo v0.0.0 ({foo})
@@ -990,7 +990,7 @@ test!(dev_deps_with_testing {
     // Generate a lockfile which did not use `bar` to compile, but had to update
     // `bar` to generate the lockfile
     assert_that(p.cargo_process("build"),
-        execs().with_stdout(&format!("\
+        execs().with_stderr(&format!("\
 [UPDATING] git repository `{bar}`
 [COMPILING] foo v0.5.0 ({url})
 ", url = p.url(), bar = p2.url())));
@@ -1032,7 +1032,7 @@ test!(git_build_cmd_freshness {
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 
@@ -1083,7 +1083,7 @@ test!(git_name_not_always_needed {
     // Generate a lockfile which did not use `bar` to compile, but had to update
     // `bar` to generate the lockfile
     assert_that(p.cargo_process("build"),
-        execs().with_stdout(&format!("\
+        execs().with_stderr(&format!("\
 [UPDATING] git repository `{bar}`
 [COMPILING] foo v0.5.0 ({url})
 ", url = p.url(), bar = p2.url())));
@@ -1116,7 +1116,7 @@ test!(git_repo_changing_no_rebuild {
     p1.build();
     p1.root().move_into_the_past().unwrap();
     assert_that(p1.cargo("build"),
-                execs().with_stdout(&format!("\
+                execs().with_stderr(&format!("\
 [UPDATING] git repository `{bar}`
 [COMPILING] [..]
 [COMPILING] [..]
@@ -1142,7 +1142,7 @@ test!(git_repo_changing_no_rebuild {
         "#, bar.url()))
         .file("src/main.rs", "fn main() {}");
     assert_that(p2.cargo_process("build"),
-                execs().with_stdout(&format!("\
+                execs().with_stderr(&format!("\
 [UPDATING] git repository `{bar}`
 [COMPILING] [..]
 [COMPILING] [..]
@@ -1238,7 +1238,7 @@ test!(fetch_downloads {
         "#, bar.url()))
         .file("src/main.rs", "fn main() {}");
     assert_that(p.cargo_process("fetch"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `{url}`
 ", url = bar.url())));
 
@@ -1373,7 +1373,7 @@ test!(update_one_dep_in_repo_with_many_deps {
     assert_that(p.cargo("update")
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [UPDATING] git repository `{}`
 ", foo.url())));
 });
@@ -1427,7 +1427,7 @@ test!(switch_deps_does_not_update_transitive {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [UPDATING] git repository `{}`
 [UPDATING] git repository `{}`
 [COMPILING] transitive [..]
@@ -1448,7 +1448,7 @@ test!(switch_deps_does_not_update_transitive {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [UPDATING] git repository `{}`
 [COMPILING] dep [..]
 [COMPILING] project [..]

@@ -1312,7 +1312,7 @@ test!(lib_with_standard_name {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 ",
                        dir = p.url())));
@@ -1408,7 +1408,7 @@ test!(freshness_ignores_excluded {
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 
@@ -1455,14 +1455,14 @@ test!(rebuild_preserves_out_dir {
 
     assert_that(foo.cargo("build").env("FIRST", "1"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 });

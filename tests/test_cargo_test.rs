@@ -1083,7 +1083,7 @@ test!(test_no_run {
 
     assert_that(p.cargo_process("test").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ",
                        dir = p.url())));
@@ -1175,7 +1175,7 @@ test!(test_no_harness {
 
     assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]bar-[..]
 ",
@@ -1457,7 +1457,7 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo_process("test").arg("--no-run").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`

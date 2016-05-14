@@ -28,7 +28,7 @@ test!(custom_build_script_failed {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc build.rs --crate-name build_script_build --crate-type bin [..]`
 [RUNNING] `[..]build-script-build[..]`
