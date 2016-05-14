@@ -1553,7 +1553,7 @@ test!(switch_sources {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] git repository `file://[..]a1`
 [COMPILING] a v0.5.0 ([..]a1#[..]
 [COMPILING] b v0.5.0 ([..])
@@ -1571,7 +1571,7 @@ test!(switch_sources {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] git repository `file://[..]a2`
 [COMPILING] a v0.5.1 ([..]a2#[..]
 [COMPILING] b v0.5.0 ([..])
@@ -1677,7 +1677,7 @@ test!(lints_are_suppressed {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] git repository `[..]`
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.0.1 ([..])
@@ -1714,7 +1714,7 @@ test!(denied_lints_are_allowed {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] git repository `[..]`
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.0.1 ([..])

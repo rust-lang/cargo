@@ -783,7 +783,7 @@ test!(custom_target_no_rebuild {
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
 "));
@@ -792,7 +792,7 @@ test!(custom_target_no_rebuild {
                  .arg("--manifest-path=b/Cargo.toml")
                  .env("CARGO_TARGET_DIR", "target"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] b v0.5.0 ([..])
 "));
 });
@@ -831,7 +831,7 @@ test!(override_and_depend {
     p.build();
     assert_that(p.cargo("build").cwd(p.root().join("b")),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])

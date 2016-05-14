@@ -283,7 +283,7 @@ test!(build_only_bar_dependency {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout("\
+                .with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..]--crate-name bar --crate-type lib [..] -Z unstable-options [..]`
 "));

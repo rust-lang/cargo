@@ -430,7 +430,7 @@ test!(update_with_lockfile_if_packages_missing {
 
     paths::home().join(".cargo/registry").rm_rf().unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 "));
@@ -461,7 +461,7 @@ test!(update_lockfile {
     println!("0.0.2 update");
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.1 (registry file://[..]) -> v0.0.2
 "));
@@ -478,7 +478,7 @@ test!(update_lockfile {
     println!("0.0.3 update");
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.2 (registry file://[..]) -> v0.0.3
 "));
@@ -497,7 +497,7 @@ test!(update_lockfile {
    Package::new("spam", "0.2.5").publish();
    assert_that(p.cargo("update")
                 .arg("-p").arg("bar"),
-               execs().with_status(0).with_stdout("\
+               execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.3 (registry file://[..]) -> v0.0.4
 [ADDING] spam v0.2.5 (registry file://[..])
@@ -507,7 +507,7 @@ test!(update_lockfile {
    Package::new("bar", "0.0.5").publish();
    assert_that(p.cargo("update")
                 .arg("-p").arg("bar"),
-               execs().with_status(0).with_stdout("\
+               execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.4 (registry file://[..]) -> v0.0.5
 [REMOVING] spam v0.2.5 (registry file://[..])
@@ -735,7 +735,7 @@ test!(fetch_downloads {
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] a v0.1.0 (registry [..])
 "));
@@ -765,14 +765,14 @@ test!(update_transitive_dependency {
 
     assert_that(p.cargo("update").arg("-pb"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] b v0.1.0 (registry [..]) -> v0.1.1
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [DOWNLOADING] b v0.1.1 (registry file://[..])
 [COMPILING] b v0.1.1 (registry [..])
 [COMPILING] a v0.1.0 (registry [..])
@@ -811,7 +811,7 @@ test!(update_backtracking_ok {
 
     assert_that(p.cargo("update").arg("-p").arg("hyper"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 "));
 });
@@ -845,7 +845,7 @@ test!(update_multiple_packages {
 
     assert_that(p.cargo("update").arg("-pa").arg("-pb"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] a v0.1.0 (registry [..]) -> v0.1.1
 [UPDATING] b v0.1.0 (registry [..]) -> v0.1.1
@@ -853,7 +853,7 @@ test!(update_multiple_packages {
 
     assert_that(p.cargo("update").arg("-pb").arg("-pc"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] c v0.1.0 (registry [..]) -> v0.1.1
 "));
@@ -982,7 +982,7 @@ test!(only_download_relevant {
     Package::new("baz", "0.1.0").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0 ([..])

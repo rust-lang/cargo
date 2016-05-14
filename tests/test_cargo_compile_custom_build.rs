@@ -289,7 +289,7 @@ test!(overrides_and_links {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]
 [..]
 [..]
@@ -386,7 +386,7 @@ test!(only_rerun_build_script {
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
@@ -494,7 +494,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [DOCUMENTING] foo v0.5.0 (file://[..])
 [RUNNING] `rustdoc [..]`
 "));
@@ -504,7 +504,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     println!("run");
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `target[..]foo[..]`
 "));
@@ -642,7 +642,7 @@ test!(build_deps_simple {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] a v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name a [..]`
 [COMPILING] foo v0.5.0 (file://[..])
@@ -819,7 +819,7 @@ test!(output_separate_lines {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
@@ -845,7 +845,7 @@ test!(output_separate_lines_new {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
@@ -1617,7 +1617,7 @@ test!(diamond_passes_args_only_once {
         .file("c/src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] c v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
@@ -1651,7 +1651,7 @@ test!(adding_an_override_invalidates {
         "#);
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
@@ -1664,7 +1664,7 @@ test!(adding_an_override_invalidates {
     ", target).as_bytes()).unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 "));
@@ -1689,7 +1689,7 @@ test!(changing_an_override_invalidates {
         .file("build.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=foo`
 "));
@@ -1700,7 +1700,7 @@ test!(changing_an_override_invalidates {
     ", target).as_bytes()).unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 "));
@@ -1730,7 +1730,7 @@ test!(rebuild_only_on_explicit_paths {
     // files don't exist, so should always rerun if they don't exist
     println!("run without");
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1743,7 +1743,7 @@ test!(rebuild_only_on_explicit_paths {
     // now the exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1751,7 +1751,7 @@ test!(rebuild_only_on_explicit_paths {
 
     println!("run with2");
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [FRESH] a v0.5.0 ([..])
 "));
 
@@ -1761,7 +1761,7 @@ test!(rebuild_only_on_explicit_paths {
     println!("run baz");
     File::create(p.root().join("baz")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [FRESH] a v0.5.0 ([..])
 "));
 
@@ -1769,7 +1769,7 @@ test!(rebuild_only_on_explicit_paths {
     println!("run foo change");
     File::create(p.root().join("foo")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1779,7 +1779,7 @@ test!(rebuild_only_on_explicit_paths {
     println!("run foo delete");
     fs::remove_file(p.root().join("bar")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`

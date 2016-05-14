@@ -929,7 +929,7 @@ test!(test_bench_no_run {
 
     assert_that(p.cargo_process("bench").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.1.0 ([..])
 "));
 });
