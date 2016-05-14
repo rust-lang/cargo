@@ -1528,7 +1528,7 @@ test!(example_with_dev_dep {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]
 [..]
 [..]
@@ -1981,7 +1981,7 @@ test!(bin_does_not_rebuild_tests {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc src[..]main.rs [..]`
 [RUNNING] `rustc src[..]main.rs [..]`
@@ -2040,7 +2040,7 @@ test!(selective_test_optional_dep {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run")
                  .arg("--features").arg("a").arg("-p").arg("a"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 [RUNNING] `rustc a[..]src[..]lib.rs [..]`
 [RUNNING] `rustc a[..]src[..]lib.rs [..]`

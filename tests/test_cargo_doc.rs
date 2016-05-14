@@ -240,7 +240,7 @@ test!(doc_dash_p {
 
     assert_that(p.cargo_process("doc").arg("-p").arg("a"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..] b v0.0.1 (file://[..])
 [..] b v0.0.1 (file://[..])
 [DOCUMENTING] a v0.0.1 (file://[..])
@@ -426,7 +426,7 @@ test!(doc_release {
                 execs().with_status(0));
     assert_that(p.cargo("doc").arg("--release").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc src[..]lib.rs [..]`
 "));

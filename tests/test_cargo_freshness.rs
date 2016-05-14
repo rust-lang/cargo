@@ -151,19 +151,19 @@ test!(changing_features_is_ok {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
 "));
 
@@ -249,7 +249,7 @@ test!(no_rebuild_transitive_target_deps {
                 execs().with_status(0));
     assert_that(p.cargo("test").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])

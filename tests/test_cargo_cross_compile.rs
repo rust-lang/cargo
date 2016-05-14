@@ -789,7 +789,7 @@ test!(plugin_build_script_right_arch {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`

@@ -538,7 +538,7 @@ test!(many_features_no_rebuilds {
     p.root().move_into_the_past().unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
 "));
@@ -764,7 +764,7 @@ test!(optional_and_dev_dep {
         .file("foo/src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] test v0.1.0 ([..])
 "));
 });

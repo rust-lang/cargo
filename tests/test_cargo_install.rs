@@ -619,7 +619,7 @@ test!(uninstall_piecemeal {
     assert_that(cargo_home(), has_installed_exe("bar"));
 
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=bar"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [REMOVING] [..]bar[..]
 "));
 
@@ -627,7 +627,7 @@ test!(uninstall_piecemeal {
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
 
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=foo"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [REMOVING] [..]foo[..]
 "));
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
@@ -683,7 +683,7 @@ test!(do_not_rebuilds_on_local_install {
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [INSTALLING] [..]
 ").with_stderr("\
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries

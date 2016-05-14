@@ -152,7 +152,7 @@ test!(package_verbose {
 
     println!("package main repo");
     assert_that(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -161,7 +161,7 @@ test!(package_verbose {
     println!("package sub-repo");
     assert_that(cargo.arg("package").arg("-v").arg("--no-verify")
                      .cwd(p.root().join("a")),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -206,7 +206,7 @@ test!(exclude {
         .file("src/bar.txt", "");
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -230,7 +230,7 @@ test!(include {
         .file("src/bar.txt", ""); // should be ignored when packaging
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -269,7 +269,7 @@ test!(package_new_git_repo {
 
     assert_that(::cargo_process().arg("package").cwd(p.root())
                  .arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
