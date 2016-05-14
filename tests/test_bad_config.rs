@@ -71,6 +71,7 @@ test!(bad3 {
         "#);
     assert_that(foo.cargo_process("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry `https://[..]`
 [ERROR] invalid configuration for key `http.proxy`
 expected a string, but found a boolean in [..]config
 "));
@@ -232,6 +233,7 @@ test!(bad_git_dependency {
 
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] git repository `file:///`
 [ERROR] Unable to update file:///
 
 Caused by:
@@ -258,6 +260,8 @@ test!(bad_crate_type {
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 warning: crate-type \"bad_type\" was not one of lib|rlib|dylib|staticlib
+[COMPILING] foo v0.0.0 (file:///[..])
+[RUNNING] `rustc [..] --crate-type rlib [..]`
 "));
 });
 
@@ -430,6 +434,7 @@ test!(unused_keys {
     assert_that(foo.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 warning: unused manifest key: target.foo.bar
+[COMPILING] foo v0.1.0 (file:///[..])
 "));
 });
 
