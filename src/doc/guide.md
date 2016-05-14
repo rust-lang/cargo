@@ -24,8 +24,8 @@ $ cargo new hello_world --bin
 ```
 
 We’re passing `--bin` because we’re making a binary program: if we
-were making a library, we’d leave it off. If you’d like to not initialize a new
-git repository as well (the default), you can also pass `--vcs none`.
+were making a library, we’d leave it off. This also initializes a new `git`
+repository by default. If you don't want it to do that, pass `--vcs none`.
 
 Let’s check out what Cargo has generated for us:
 
