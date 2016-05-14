@@ -127,7 +127,7 @@ test!(clean_release {
     assert_that(p.cargo("clean").arg("-p").arg("foo").arg("--release"),
                 execs().with_status(0));
     assert_that(p.cargo("build").arg("--release"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 "));
 });
@@ -163,7 +163,7 @@ test!(build_script {
     assert_that(p.cargo("clean").arg("-p").arg("foo"),
                 execs().with_status(0));
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
