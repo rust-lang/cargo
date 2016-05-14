@@ -60,7 +60,7 @@ test!(simple {
     pkg("foo", "0.0.1");
 
     assert_that(cargo_process("install").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 (registry file://[..])
@@ -70,7 +70,7 @@ test!(simple {
     assert_that(cargo_home(), has_installed_exe("foo"));
 
     assert_that(cargo_process("uninstall").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [REMOVING] {home}[..]bin[..]foo[..]
 ",
         home = cargo_home().display())));
@@ -82,7 +82,7 @@ test!(pick_max_version {
     pkg("foo", "0.0.2");
 
     assert_that(cargo_process("install").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.2 (registry file://[..])
@@ -412,7 +412,7 @@ test!(install_force {
     p.build();
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
 [REPLACING] {home}[..]bin[..]foo[..]
 ",
@@ -452,7 +452,7 @@ test!(install_force_partial_overlap {
     p.build();
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
 [INSTALLING] {home}[..]bin[..]foo-bin3[..]
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
@@ -500,7 +500,7 @@ test!(install_force_bin {
                     .arg("foo-bin2")
                     .arg("--path")
                     .arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
 ",
@@ -552,7 +552,7 @@ test!(git_repo {
     p.build();
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 ([..])
 [INSTALLING] {home}[..]bin[..]foo[..]

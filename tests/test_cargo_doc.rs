@@ -22,7 +22,7 @@ test!(simple {
         "#);
 
     assert_that(p.cargo_process("doc"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [..] foo v0.0.1 ({dir})
 [..] foo v0.0.1 ({dir})
 ",
@@ -64,7 +64,7 @@ test!(doc_twice {
         "#);
 
     assert_that(p.cargo_process("doc"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [DOCUMENTING] foo v0.0.1 ({dir})
 ",
         dir = path2url(p.root()))));
@@ -99,7 +99,7 @@ test!(doc_deps {
         "#);
 
     assert_that(p.cargo_process("doc"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [..] bar v0.0.1 ({dir}/bar)
 [..] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
@@ -145,7 +145,7 @@ test!(doc_no_deps {
         "#);
 
     assert_that(p.cargo_process("doc").arg("--no-deps"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
 ",

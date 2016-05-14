@@ -594,7 +594,7 @@ test!(cross_with_a_build_script {
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 (file://[..])
 [RUNNING] `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..]`
 [RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build`
@@ -835,7 +835,7 @@ test!(build_script_with_platform_specific_dependencies {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] d2 v0.0.0 ([..])
 [RUNNING] `rustc d2[..]src[..]lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([..])

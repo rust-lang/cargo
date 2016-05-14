@@ -340,14 +340,14 @@ test!(same_build_dir_cached_packages {
     p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("a1")),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
 [COMPILING] a1 v0.0.1 ({dir}/a1)
 ", dir = p.url())));
     assert_that(p.cargo("build").cwd(p.root().join("a2")),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] a2 v0.0.1 ({dir}/a2)
 ", dir = p.url())));
 });
