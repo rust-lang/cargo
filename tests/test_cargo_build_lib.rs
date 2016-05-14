@@ -35,7 +35,7 @@ test!(build_lib_only {
     assert_that(p.cargo_process("build").arg("--lib").arg("-v"),
                 execs()
                 .with_status(0)
-                .with_stdout(verbose_output_for_lib(&p)));
+                .with_stderr(verbose_output_for_lib(&p)));
 });
 
 
