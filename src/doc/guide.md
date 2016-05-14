@@ -15,14 +15,6 @@ To accomplish this goal, Cargo does four things:
 * Invokes `rustc` or another build tool with the correct parameters to build your project.
 * Introduces conventions, making working with Rust projects easier.
 
-# Converting to Cargo
-
-You can convert an existing Rust project to use Cargo. You’ll have to create a
-`Cargo.toml` file with all of your dependencies, and move your source files and
-test files into the places where Cargo expects them to be. See the [manifest
-description](manifest.html) and the [Project Layout](#project-layout) section
-below for more details.
-
 # Creating A New Project
 
 To start a new project with Cargo, use `cargo new`:
