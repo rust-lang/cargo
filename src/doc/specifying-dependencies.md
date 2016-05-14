@@ -165,29 +165,30 @@ hello_utils = { path = "hello_utils", version = "0.1.0" }
 # Overriding Dependencies
 
 Sometimes you may want to override one of Cargo’s dependencies. For example,
-let’s say you’re working on a project, `conduit-static`, which depends on
-the package `conduit`. You find a bug in `conduit`, and you want to write a
-patch and be able to test out your patch by using your version of `conduit`
-in `conduit-static`. Here’s what `conduit-static`’s `Cargo.toml` looks like:
+let’s say you’re working on a project,
+[`uuid`](https://crates.io/crates/uuid), which depends on
+the package [`rand`](https://crates.io/crates/rand). You find a bug in `rand`, and
+you want to write a patch and be able to test out your patch by using your
+version of `rand` in `uuid`. Here’s what `uuid`’s `Cargo.toml` looks like:
 
 ```toml
 [package]
-name = "conduit-static"
-version = "0.1.0"
-authors = ["Yehuda Katz <wycats@example.com>"]
+name = "uuid"
+version = "0.2.2"
+authors = ["The Rust Project Developers"]
 
 [dependencies]
-conduit = "0.7"
+rand = { version = "0.3", optional = true }
 ```
 
-You check out a local copy of `conduit`, let’s say in your `~/src` directory:
+You check out a local copy of `rand`, let’s say in your `~/src` directory:
 
 ```shell
 $ cd ~/src
-$ git clone https://github.com/conduit-rust/conduit.git
+$ git clone https://github.com/rust-lang-nursery/rand.git
 ```
 
-You’d like to have `conduit-static` use your local version of `conduit`,
+You’d like to have `uuid` use your local version of `rand`,
 rather than the one on [crates.io], while you fix the bug.
 
 Cargo solves this problem by allowing you to have a local configuration
@@ -196,10 +197,10 @@ building your package, it will use the override on your local machine
 instead of the source specified in your `Cargo.toml`.
 
 Cargo looks for a directory named `.cargo` up the directory hierarchy of
-your project. If your project is in `/path/to/project/conduit-static`,
+your project. If your project is in `/path/to/project/uuid`,
 it will search for a `.cargo` in:
 
-* `/path/to/project/conduit-static`
+* `/path/to/project/uuid`
 * `/path/to/project`
 * `/path/to`
 * `/path`
@@ -216,11 +217,11 @@ your code directory or in your home directory).
 Inside that file, put this:
 
 ```toml
-paths = ["/path/to/project/conduit"]
+paths = ["/path/to/project/rand"]
 ```
 
 This array should be filled with directories that contain a `Cargo.toml`. In
-this instance, we’re just adding `conduit`, so it will be the only one that’s
+this instance, we’re just adding `rand`, so it will be the only one that’s
 overridden. This path must be an absolute path.
 
 Note: using a local configuration to override paths will only work for crates
