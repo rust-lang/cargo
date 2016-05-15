@@ -211,6 +211,23 @@ Did our date match? true</code></pre>
 Cargo uses conventions for file placement to make it easy to dive into a new
 Cargo project:
 
+```shell
+.
+├── Cargo.lock
+├── Cargo.toml
+├── benches
+│   └── large-input.rs
+├── examples
+│   └── simple.rs
+├── src
+│   ├── bin
+│   │   └── another_executable.rs
+│   ├── lib.rs
+│   └── main.rs
+└── tests
+    └── some-integration-tests.rs
+```
+
 * `Cargo.toml` and `Cargo.lock` are stored in the root of your project.
 * Source code goes in the `src` directory.
 * The default library file is `src/lib.rs`.
