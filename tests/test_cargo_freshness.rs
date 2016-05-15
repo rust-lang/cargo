@@ -21,7 +21,7 @@ test!(modifying_and_moving {
         .file("src/a.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
 
@@ -33,7 +33,7 @@ test!(modifying_and_moving {
     File::create(&p.root().join("src/a.rs")).unwrap()
          .write_all(b"fn main() {}").unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
 
@@ -60,7 +60,7 @@ test!(modify_only_some_files {
         .file("tests/test.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
@@ -79,7 +79,7 @@ test!(modify_only_some_files {
     // Make sure the binary is rebuilt, not the lib
     assert_that(p.cargo("build")
                  .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());

@@ -244,14 +244,14 @@ test!(no_feature_doesnt_build {
         .file("bar/src/lib.rs", "pub fn bar() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("build").arg("--features").arg("bar"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
@@ -291,7 +291,7 @@ test!(default_feature_pulled_in {
         .file("bar/src/lib.rs", "pub fn bar() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
@@ -299,7 +299,7 @@ test!(default_feature_pulled_in {
                 execs().with_status(0).with_stdout("bar\n"));
 
     assert_that(p.cargo("build").arg("--no-default-features"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
@@ -392,7 +392,7 @@ test!(groups_on_groups_on_groups {
         .file("baz/src/lib.rs", "pub fn baz() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] foo v0.0.1 ({dir})
@@ -436,7 +436,7 @@ test!(many_cli_features {
         .file("baz/src/lib.rs", "pub fn baz() {}");
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar baz"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] foo v0.0.1 ({dir})
@@ -497,7 +497,7 @@ test!(union_features {
         "#);
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] d2 v0.0.1 ({dir}/d2)
 [COMPILING] d1 v0.0.1 ({dir}/d1)
 [COMPILING] foo v0.0.1 ({dir})
@@ -531,7 +531,7 @@ test!(many_features_no_rebuilds {
         .file("a/src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] a v0.1.0 ({dir}/a)
 [COMPILING] b v0.1.0 ({dir})
 ", dir = p.url())));

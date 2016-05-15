@@ -27,7 +27,7 @@ test!(build_lib_for_foo {
     assert_that(p.cargo_process("rustc").arg("--lib").arg("-v"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug \
@@ -55,7 +55,7 @@ test!(build_lib_and_allow_unstable_options {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         -Z unstable-options \
@@ -241,7 +241,7 @@ test!(build_foo_with_bar_dependency {
     assert_that(foo.cargo_process("rustc").arg("-v").arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -g -C [..]`
 [COMPILING] foo v0.0.1 ({url})

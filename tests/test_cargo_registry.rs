@@ -239,7 +239,7 @@ version required: ^0.0.1
     Package::new("notyet", "0.0.1").publish();
 
     assert_that(p.cargo("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [UPDATING] registry `[..]`
