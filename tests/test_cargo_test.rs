@@ -480,15 +480,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
     assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
@@ -957,15 +957,15 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]test-[..]")
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test-[..]
 
 running 1 test
 test foo ... ok
@@ -1013,15 +1013,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
@@ -1471,9 +1471,10 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] [..]
+[RUNNING] [..]")
+                       .with_stdout("\
 bin
 "));
     assert_that(&p.bin("foo"), existing_file());
@@ -1597,15 +1598,16 @@ test!(doctest_feature {
         "#);
 
     assert_that(p.cargo_process("test").arg("--features").arg("bar"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0)
+                       .with_stderr("\
 [COMPILING] foo [..]
 [RUNNING] target[..]foo[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test foo_0 ... ok
@@ -1680,10 +1682,10 @@ test!(filter_no_doc_tests {
         .file("tests/foo.rs", "");
 
     assert_that(p.cargo_process("test").arg("--test=foo"),
-                execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] target[..]debug[..]foo[..]
-
+[RUNNING] target[..]debug[..]foo[..]")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
@@ -1712,10 +1714,10 @@ test!(dylib_doctest {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[DOCTEST] foo
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 1 test
 test foo_0 ... ok
 
@@ -1778,16 +1780,16 @@ test!(cyclic_dev_dep_doc_test {
             extern crate foo;
         "#);
     assert_that(p.cargo_process("test"),
-                execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
 [RUNNING] target[..]foo[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test _0 ... ok
