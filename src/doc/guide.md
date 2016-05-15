@@ -216,7 +216,7 @@ Cargo project:
 * The default library file is `src/lib.rs`.
 * The default executable file is `src/main.rs`.
 * Other executables can be placed in `src/bin/*.rs`.
-* External tests go in the `tests` directory.
+* Integration tests go in the `tests` directory (unit tests go in each file they're testing).
 * Example executable files go in the `examples` directory.
 * Benchmarks go in the `benches` directory.
 
