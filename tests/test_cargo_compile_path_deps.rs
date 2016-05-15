@@ -174,11 +174,11 @@ test!(cargo_compile_with_root_dev_deps_with_testing {
 
     p2.build();
     assert_that(p.cargo_process("test"),
-        execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
-[RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]foo-[..]")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
