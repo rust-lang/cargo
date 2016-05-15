@@ -20,6 +20,7 @@ extern crate log;
 
 use cargo::util::Rustc;
 use std::ffi::OsStr;
+use std::time::Duration;
 
 mod support;
 macro_rules! test {
@@ -109,7 +110,6 @@ fn cargo_process() -> cargo::util::ProcessBuilder {
     process(&support::cargo_dir().join("cargo"))
 }
 
-#[allow(deprecated)] // sleep_ms is now deprecated in favor of sleep()
-fn sleep_ms(ms: u32) {
-    std::thread::sleep_ms(ms);
+fn sleep_ms(ms: u64) {
+    std::thread::sleep(Duration::from_millis(ms));
 }
