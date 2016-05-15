@@ -174,7 +174,7 @@ test!(custom_build_script_rustc_flags {
     // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(101)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] bar v0.5.0 ({url})
 [RUNNING] `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \

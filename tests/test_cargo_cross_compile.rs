@@ -347,7 +347,7 @@ test!(linker_and_ar {
     assert_that(p.cargo_process("build").arg("--target").arg(&target)
                                               .arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target}[..]debug \
