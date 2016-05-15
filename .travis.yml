@@ -31,6 +31,10 @@ branches:
   only:
     - master
 
+before_install:
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install pandoc  ; fi
+
 addons:
   apt:
     sources:
@@ -39,3 +43,4 @@ addons:
       - cmake
       - g++-multilib
       - lib32stdc++6
+      - pandoc
