@@ -4,8 +4,13 @@ use std::path::{PathBuf, Path};
 use semver::Version;
 use rustc_serialize::{Encoder, Encodable};
 
-use core::{Dependency, PackageId, PackageIdSpec, Summary};
+use core::{Dependency, PackageId, PackageIdSpec, Summary, WorkspaceConfig};
 use core::package_id::Metadata;
+
+pub enum EitherManifest {
+    Real(Manifest),
+    Virtual(VirtualManifest),
+}
 
 /// Contains all the information about a package, as loaded from a Cargo.toml.
 #[derive(Clone, Debug)]
@@ -20,6 +25,13 @@ pub struct Manifest {
     profiles: Profiles,
     publish: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
+    workspace: WorkspaceConfig,
+}
+
+#[derive(Clone, Debug)]
+pub struct VirtualManifest {
+    replace: Vec<(PackageIdSpec, Dependency)>,
+    workspace: WorkspaceConfig,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -175,7 +187,8 @@ impl Manifest {
                metadata: ManifestMetadata,
                profiles: Profiles,
                publish: bool,
-               replace: Vec<(PackageIdSpec, Dependency)>) -> Manifest {
+               replace: Vec<(PackageIdSpec, Dependency)>,
+               workspace: WorkspaceConfig) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -187,6 +200,7 @@ impl Manifest {
             profiles: profiles,
             publish: publish,
             replace: replace,
+            workspace: workspace,
         }
     }
 
@@ -207,12 +221,34 @@ impl Manifest {
         self.links.as_ref().map(|s| &s[..])
     }
 
+    pub fn workspace_config(&self) -> &WorkspaceConfig {
+        &self.workspace
+    }
+
     pub fn add_warning(&mut self, s: String) {
         self.warnings.push(s)
     }
 
     pub fn set_summary(&mut self, summary: Summary) {
         self.summary = summary;
+    }
+}
+
+impl VirtualManifest {
+    pub fn new(replace: Vec<(PackageIdSpec, Dependency)>,
+               workspace: WorkspaceConfig) -> VirtualManifest {
+        VirtualManifest {
+            replace: replace,
+            workspace: workspace,
+        }
+    }
+
+    pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
+        &self.replace
+    }
+
+    pub fn workspace_config(&self) -> &WorkspaceConfig {
+        &self.workspace
     }
 }
 

@@ -11,7 +11,7 @@ use tempdir::TempDir;
 use toml;
 
 use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
-use core::PackageId;
+use core::{PackageId, Workspace};
 use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, RegistrySource};
 use util::{CargoResult, ChainError, Config, human, internal};
@@ -76,6 +76,8 @@ pub fn install(root: Option<&str>,
                                             crates.io, or use --path or --git to \
                                             specify alternate source"))))
     };
+    let ws = Workspace::one(pkg, config);
+    let pkg = try!(ws.current());
 
     // Preflight checks to check up front whether we'll overwrite something.
     // We have to check this again afterwards, but may as well avoid building
@@ -84,12 +86,12 @@ pub fn install(root: Option<&str>,
         let metadata = try!(metadata(config, &root));
         let list = try!(read_crate_list(metadata.file()));
         let dst = metadata.parent().join("bin");
-        try!(check_overwrites(&dst, &pkg, &opts.filter, &list, force));
+        try!(check_overwrites(&dst, pkg, &opts.filter, &list, force));
     }
 
     let mut td_opt = None;
     let target_dir = if source_id.is_path() {
-        config.target_dir(&pkg)
+        config.target_dir(&ws)
     } else {
         if let Ok(td) = TempDir::new("cargo-install") {
             let p = td.path().to_owned();
@@ -100,7 +102,7 @@ pub fn install(root: Option<&str>,
         }
     };
     config.set_target_dir(target_dir.clone());
-    let compile = try!(ops::compile_pkg(&pkg, Some(source), opts).chain_error(|| {
+    let compile = try!(ops::compile_ws(&ws, Some(source), opts).chain_error(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
             td.into_path();
@@ -121,7 +123,8 @@ pub fn install(root: Option<&str>,
     let metadata = try!(metadata(config, &root));
     let mut list = try!(read_crate_list(metadata.file()));
     let dst = metadata.parent().join("bin");
-    let duplicates = try!(check_overwrites(&dst, &pkg, &opts.filter, &list, force));
+    let duplicates = try!(check_overwrites(&dst, pkg, &opts.filter,
+                                           &list, force));
 
     try!(fs::create_dir_all(&dst));
 

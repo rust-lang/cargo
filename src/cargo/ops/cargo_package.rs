@@ -8,7 +8,7 @@ use flate2::{GzBuilder, Compression};
 use git2;
 use tar::{Archive, Builder, Header};
 
-use core::{SourceId, Package, PackageId};
+use core::{SourceId, Package, PackageId, Workspace, Source};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config, FileLock};
 use ops;
@@ -21,16 +21,17 @@ pub struct PackageOpts<'cfg> {
     pub verify: bool,
 }
 
-pub fn package(manifest_path: &Path,
+pub fn package(ws: &Workspace,
                opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
-    let config = opts.config;
-    let path = manifest_path.parent().unwrap();
-    let id = try!(SourceId::for_path(path));
-    let mut src = PathSource::new(path, &id, config);
-    let pkg = try!(src.root_package());
+    let pkg = try!(ws.current());
+    let config = ws.config();
+    let mut src = PathSource::new(pkg.root(),
+                                  pkg.package_id().source_id(),
+                                  config);
+    try!(src.update());
 
     if opts.check_metadata {
-        try!(check_metadata(&pkg, config));
+        try!(check_metadata(pkg, config));
     }
 
     if opts.list {
@@ -50,7 +51,7 @@ pub fn package(manifest_path: &Path,
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-    let dir = config.target_dir(&pkg).join("package");
+    let dir = config.target_dir(ws).join("package");
     let mut dst = match dir.open_ro(&filename, config, "packaged crate") {
         Ok(f) => return Ok(Some(f)),
         Err(..) => {
@@ -65,12 +66,12 @@ pub fn package(manifest_path: &Path,
     // it exists.
     try!(config.shell().status("Packaging", pkg.package_id().to_string()));
     try!(dst.file().set_len(0));
-    try!(tar(&pkg, &src, config, dst.file(), &filename).chain_error(|| {
+    try!(tar(ws, &src, dst.file(), &filename).chain_error(|| {
         human("failed to prepare local package for uploading")
     }));
     if opts.verify {
         try!(dst.seek(SeekFrom::Start(0)));
-        try!(run_verify(config, &pkg, dst.file()).chain_error(|| {
+        try!(run_verify(ws, dst.file()).chain_error(|| {
             human("failed to verify package tarball")
         }))
     }
@@ -165,9 +166,8 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
     }
 }
 
-fn tar(pkg: &Package,
+fn tar(ws: &Workspace,
        src: &PathSource,
-       config: &Config,
        dst: &File,
        filename: &str) -> CargoResult<()> {
     // Prepare the encoder and its header
@@ -177,6 +177,8 @@ fn tar(pkg: &Package,
 
     // Put all package files into a compressed archive
     let mut ar = Builder::new(encoder);
+    let pkg = try!(ws.current());
+    let config = ws.config();
     let root = pkg.root();
     for file in try!(src.list_files(pkg)).iter() {
         let relative = util::without_prefix(&file, &root).unwrap();
@@ -229,10 +231,10 @@ fn tar(pkg: &Package,
     Ok(())
 }
 
-fn run_verify(config: &Config,
-              pkg: &Package,
-              tar: &File)
-              -> CargoResult<()> {
+fn run_verify(ws: &Workspace, tar: &File) -> CargoResult<()> {
+    let config = ws.config();
+    let pkg = try!(ws.current());
+
     try!(config.shell().status("Verifying", pkg));
 
     let f = try!(GzDecoder::new(tar));
@@ -266,7 +268,8 @@ fn run_verify(config: &Config,
     let new_pkg = Package::new(new_manifest, &manifest_path);
 
     // Now that we've rewritten all our path dependencies, compile it!
-    try!(ops::compile_pkg(&new_pkg, None, &ops::CompileOptions {
+    let ws = Workspace::one(new_pkg, config);
+    try!(ops::compile_ws(&ws, None, &ops::CompileOptions {
         config: config,
         jobs: None,
         target: None,

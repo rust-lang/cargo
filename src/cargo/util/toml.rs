@@ -9,9 +9,9 @@ use toml;
 use semver::{self, VersionReq};
 use rustc_serialize::{Decodable, Decoder};
 
-use core::{SourceId, Profiles, PackageIdSpec};
-use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId,
-           GitReference};
+use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
+use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId};
+use core::{EitherManifest, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
@@ -101,37 +101,41 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
     }
 }
 
-pub fn to_manifest(contents: &[u8],
+pub fn to_manifest(contents: &str,
                    source_id: &SourceId,
                    layout: Layout,
                    config: &Config)
-                   -> CargoResult<(Manifest, Vec<PathBuf>)> {
+                   -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let manifest = layout.root.join("Cargo.toml");
     let manifest = match util::without_prefix(&manifest, config.cwd()) {
         Some(path) => path.to_path_buf(),
         None => manifest.clone(),
     };
-    let contents = try!(str::from_utf8(contents).map_err(|_| {
-        human(format!("{} is not valid UTF-8", manifest.display()))
-    }));
     let root = try!(parse(contents, &manifest, config));
     let mut d = toml::Decoder::new(toml::Value::Table(root));
     let manifest: TomlManifest = try!(Decodable::decode(&mut d).map_err(|e| {
         human(e.to_string())
     }));
 
-    let pair = try!(manifest.to_manifest(source_id, &layout, config));
-    let (mut manifest, paths) = pair;
-    match d.toml {
-        Some(ref toml) => add_unused_keys(&mut manifest, toml, "".to_string()),
-        None => {}
-    }
-    if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
-        bail!("no targets specified in the manifest\n  \
-               either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] \
-               section must be present")
-    }
-    return Ok((manifest, paths));
+    return match manifest.to_real_manifest(source_id, &layout, config) {
+        Ok((mut manifest, paths)) => {
+            if let Some(ref toml) = d.toml {
+                add_unused_keys(&mut manifest, toml, String::new());
+            }
+            if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
+                bail!("no targets specified in the manifest\n  \
+                       either src/lib.rs, src/main.rs, a [lib] section, or \
+                       [[bin]] section must be present")
+            }
+            Ok((EitherManifest::Real(manifest), paths))
+        }
+        Err(e) => {
+            match manifest.to_virtual_manifest(source_id, &layout, config) {
+                Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
+                Err(..) => Err(e),
+            }
+        }
+    };
 
     fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
         if key == "package.metadata" {
@@ -240,6 +244,7 @@ pub struct TomlManifest {
     features: Option<HashMap<String, Vec<String>>>,
     target: Option<HashMap<String, TomlPlatform>>,
     replace: Option<HashMap<String, TomlDependency>>,
+    workspace: Option<TomlWorkspace>,
 }
 
 #[derive(RustcDecodable, Clone, Default)]
@@ -272,6 +277,7 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<bool>,
+    workspace: Option<String>,
 
     // package metadata
     description: Option<String>,
@@ -282,6 +288,11 @@ pub struct TomlProject {
     license: Option<String>,
     license_file: Option<String>,
     repository: Option<String>,
+}
+
+#[derive(RustcDecodable)]
+pub struct TomlWorkspace {
+    members: Option<Vec<String>>,
 }
 
 pub struct TomlVersion {
@@ -387,9 +398,11 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
 }
 
 impl TomlManifest {
-    pub fn to_manifest(&self, source_id: &SourceId, layout: &Layout,
-                       config: &Config)
-        -> CargoResult<(Manifest, Vec<PathBuf>)> {
+    fn to_real_manifest(&self,
+                        source_id: &SourceId,
+                        layout: &Layout,
+                        config: &Config)
+                        -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec![];
         let mut warnings = vec![];
 
@@ -523,7 +536,7 @@ impl TomlManifest {
         }
 
         let mut deps = Vec::new();
-        let mut replace = Vec::new();
+        let replace;
 
         {
 
@@ -560,35 +573,7 @@ impl TomlManifest {
                 }
             }
 
-            if let Some(ref map) = self.replace {
-                for (spec, replacement) in map {
-                    let spec = try!(PackageIdSpec::parse(spec));
-
-                    let version_specified = match *replacement {
-                        TomlDependency::Detailed(ref d) => d.version.is_some(),
-                        TomlDependency::Simple(..) => true,
-                    };
-                    if version_specified {
-                        bail!("replacements cannot specify a version \
-                               requirement, but found one for `{}`", spec);
-                    }
-
-                    let dep = try!(replacement.to_dependency(spec.name(),
-                                                             &mut cx,
-                                                             None));
-                    let dep = {
-                        let version = try!(spec.version().chain_error(|| {
-                            human(format!("replacements must specify a version \
-                                           to replace, but `{}` does not",
-                                          spec))
-                        }));
-                        let req = VersionReq::exact(version);
-                        dep.clone_inner().set_version_req(req)
-                           .into_dependency()
-                    };
-                    replace.push((spec, dep));
-                }
-            }
+            replace = try!(self.replace(&mut cx));
         }
 
         {
@@ -620,6 +605,20 @@ impl TomlManifest {
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
         };
+
+        let workspace_config = match (self.workspace.as_ref(),
+                                      project.workspace.as_ref()) {
+            (Some(config), None) => {
+                WorkspaceConfig::Root { members: config.members.clone() }
+            }
+            (None, root) => {
+                WorkspaceConfig::Member { root: root.cloned() }
+            }
+            (Some(..), Some(..)) => {
+                bail!("cannot configure both `package.workspace` and \
+                       `[workspace]`, only one can be specified")
+            }
+        };
         let profiles = build_profiles(&self.profile);
         let publish = project.publish.unwrap_or(true);
         let mut manifest = Manifest::new(summary,
@@ -630,7 +629,8 @@ impl TomlManifest {
                                          metadata,
                                          profiles,
                                          publish,
-                                         replace);
+                                         replace,
+                                         workspace_config);
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("only one of `license` or \
                                           `license-file` is necessary"));
@@ -640,6 +640,92 @@ impl TomlManifest {
         }
 
         Ok((manifest, nested_paths))
+    }
+
+    fn to_virtual_manifest(&self,
+                           source_id: &SourceId,
+                           layout: &Layout,
+                           config: &Config)
+                           -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
+        if self.project.is_some() {
+            bail!("virtual manifests do not define [project]");
+        }
+        if self.package.is_some() {
+            bail!("virtual manifests do not define [package]");
+        }
+        if self.lib.is_some() {
+            bail!("virtual manifests do not specifiy [lib]");
+        }
+        if self.bin.is_some() {
+            bail!("virtual manifests do not specifiy [[bin]]");
+        }
+        if self.example.is_some() {
+            bail!("virtual manifests do not specifiy [[example]]");
+        }
+        if self.test.is_some() {
+            bail!("virtual manifests do not specifiy [[test]]");
+        }
+        if self.bench.is_some() {
+            bail!("virtual manifests do not specifiy [[bench]]");
+        }
+
+        let mut nested_paths = Vec::new();
+        let mut warnings = Vec::new();
+        let mut deps = Vec::new();
+        let replace = try!(self.replace(&mut Context {
+            deps: &mut deps,
+            source_id: source_id,
+            nested_paths: &mut nested_paths,
+            config: config,
+            warnings: &mut warnings,
+            platform: None,
+            layout: layout,
+        }));
+        let workspace_config = match self.workspace {
+            Some(ref config) => {
+                WorkspaceConfig::Root { members: config.members.clone() }
+            }
+            None => {
+                bail!("virtual manifests must be configured with [workspace]");
+            }
+        };
+        Ok((VirtualManifest::new(replace, workspace_config), nested_paths))
+    }
+
+    fn replace(&self, cx: &mut Context)
+               -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
+        let map = match self.replace {
+            Some(ref map) => map,
+            None => return Ok(Vec::new()),
+        };
+
+        let mut replace = Vec::new();
+        for (spec, replacement) in map {
+            let spec = try!(PackageIdSpec::parse(spec));
+
+            let version_specified = match *replacement {
+                TomlDependency::Detailed(ref d) => d.version.is_some(),
+                TomlDependency::Simple(..) => true,
+            };
+            if version_specified {
+                bail!("replacements cannot specify a version \
+                       requirement, but found one for `{}`", spec);
+            }
+
+            let dep = try!(replacement.to_dependency(spec.name(), cx, None));
+            let dep = {
+                let version = try!(spec.version().chain_error(|| {
+                    human(format!("replacements must specify a version \
+                                   to replace, but `{}` does not",
+                                  spec))
+                }));
+                let req = VersionReq::exact(version);
+                dep.clone_inner().set_version_req(req)
+                   .into_dependency()
+            };
+            replace.push((spec, dep));
+        }
+        Ok(replace)
     }
 }
 

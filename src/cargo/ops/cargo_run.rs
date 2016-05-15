@@ -2,13 +2,13 @@ use std::path::Path;
 
 use ops::{self, CompileFilter};
 use util::{self, CargoResult, process, ProcessError};
-use core::Package;
+use core::Workspace;
 
-pub fn run(manifest_path: &Path,
+pub fn run(ws: &Workspace,
            options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
-    let config = options.config;
-    let root = try!(Package::for_path(manifest_path, config));
+    let config = ws.config();
+    let root = try!(ws.current());
 
     let mut bins = root.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
@@ -40,7 +40,7 @@ pub fn run(manifest_path: &Path,
         }
     }
 
-    let compile = try!(ops::compile(manifest_path, options));
+    let compile = try!(ops::compile(ws, options));
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(&exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str())

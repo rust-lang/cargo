@@ -199,20 +199,17 @@ struct Context<'a> {
 }
 
 /// Builds the list of all packages required to build the first argument.
-pub fn resolve(summary: &Summary,
-               method: &Method,
+pub fn resolve(root: &PackageId,
+               summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
                registry: &mut Registry) -> CargoResult<Resolve> {
-    trace!("resolve; summary={}", summary.package_id());
-    let summary = Rc::new(summary.clone());
-
     let cx = Context {
-        resolve: Resolve::new(summary.package_id().clone()),
+        resolve: Resolve::new(root.clone()),
         activations: HashMap::new(),
         replacements: replacements,
     };
-    let _p = profile::start(format!("resolving: {}", summary.package_id()));
-    let cx = try!(activate_deps_loop(cx, registry, summary, method));
+    let _p = profile::start(format!("resolving: {}", root));
+    let cx = try!(activate_deps_loop(cx, registry, summaries));
     try!(check_cycles(&cx));
     Ok(cx.resolve)
 }
@@ -357,8 +354,8 @@ struct BacktrackFrame<'a> {
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop<'a>(mut cx: Context<'a>,
                           registry: &mut Registry,
-                          top: Rc<Summary>,
-                          top_method: &Method) -> CargoResult<Context<'a>> {
+                          summaries: &[(Summary, Method)])
+                          -> CargoResult<Context<'a>> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
     // constrained dependency, or the one with the least candidates.
@@ -368,9 +365,13 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
-    remaining_deps.extend(try!(activate(&mut cx, registry, None,
-                                        Candidate { summary: top, replace: None },
-                                        &top_method)));
+    for &(ref summary, ref method) in summaries {
+        debug!("initial activation: {}", summary.package_id());
+        let summary = Rc::new(summary.clone());
+        let candidate = Candidate { summary: summary, replace: None };
+        remaining_deps.extend(try!(activate(&mut cx, registry, None, candidate,
+                                            method)));
+    }
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
     //
