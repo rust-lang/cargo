@@ -246,7 +246,7 @@ description](manifest.html#the-project-layout).
 about them, here’s a summary:
 
 * `Cargo.toml` is about describing your dependencies in a broad sense, and is written by you.
-* `Cargo.lock` contains exact information about your dependencies, and is maintained by Cargo.
+* `Cargo.lock` contains exact information about your dependencies. It is maintained by Cargo and should not be manually edited.
 * If you’re building a library, put `Cargo.lock` in your `.gitignore`.
 * If you’re building an executable, check `Cargo.lock` into `git`.
 
