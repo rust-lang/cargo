@@ -120,6 +120,8 @@ test!(exit_code {
     assert_that(p.cargo_process("run"),
                 execs().with_status(2)
                        .with_stderr("\
+[COMPILING] foo v0.0.1 (file[..])
+[RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
 });
@@ -139,6 +141,9 @@ test!(exit_code_verbose {
     assert_that(p.cargo_process("run").arg("-v"),
                 execs().with_status(2)
                        .with_stderr("\
+[COMPILING] foo v0.0.1 (file[..])
+[RUNNING] `rustc [..]`
+[RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
 });
