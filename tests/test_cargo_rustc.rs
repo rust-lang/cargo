@@ -84,7 +84,7 @@ test!(build_main_and_allow_unstable_options {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout(&format!("\
+                .with_stderr(&format!("\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug \
@@ -146,7 +146,7 @@ test!(build_with_args_to_one_of_multiple_binaries {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
@@ -199,7 +199,7 @@ test!(build_with_args_to_one_of_multiple_tests {
                 .arg("--").arg("-Z").arg("unstable-options"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
