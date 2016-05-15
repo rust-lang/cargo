@@ -197,24 +197,25 @@ test!(specify_name {
         "#);
 
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("-v"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `rustc src[..]lib.rs [..]`
 [RUNNING] `rustc src[..]a.rs [..]`
-[RUNNING] `target{sep}debug{sep}a[..]`
+[RUNNING] `target{sep}debug{sep}a[..]`", dir = path2url(p.root()), sep = SEP))
+                       .with_stdout("\
 hello a.rs
-",
-        dir = path2url(p.root()),
-        sep = SEP)));
+"));
 
     assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc src[..]b.rs [..]`
-[RUNNING] `target{sep}debug{sep}b[..]`
+[RUNNING] `target{sep}debug{sep}b[..]`", sep = SEP))
+                       .with_stdout("\
 hello b.rs
-",
-        sep = SEP)));
+"));
 });
 
 test!(run_example {
@@ -234,13 +235,13 @@ test!(run_example {
         "#);
 
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `target{sep}debug{sep}examples{sep}a[..]`
+[RUNNING] `target{sep}debug{sep}examples{sep}a[..]`", dir = path2url(p.root()), sep = SEP))
+                       .with_stdout("\
 example
-",
-        dir = path2url(p.root()),
-        sep = SEP)));
+"));
 });
 
 test!(run_with_filename {
@@ -323,13 +324,13 @@ test!(one_bin_multiple_examples {
         "#);
 
     assert_that(p.cargo_process("run"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `target{sep}debug{sep}main[..]`
+[RUNNING] `target{sep}debug{sep}main[..]`", dir = path2url(p.root()), sep = SEP))
+                       .with_stdout("\
 hello main.rs
-",
-        dir = path2url(p.root()),
-        sep = SEP)));
+"));
 });
 
 test!(example_with_release_flag {
@@ -376,7 +377,8 @@ test!(example_with_release_flag {
         "#);
 
     assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
@@ -395,15 +397,17 @@ test!(example_with_release_flag {
         -L dependency={dir}{sep}target{sep}release{sep}deps \
          --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
 [RUNNING] `target{sep}release{sep}examples{sep}a[..]`
-fast1
-fast2
 ",
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = SEP)));
+        sep = SEP))
+                       .with_stdout("\
+fast1
+fast2"));
 
     assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
@@ -422,12 +426,13 @@ fast2
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
          --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
 [RUNNING] `target{sep}debug{sep}examples{sep}a[..]`
-slow1
-slow2
 ",
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = SEP)));
+        sep = SEP))
+                       .with_stdout("\
+slow1
+slow2"));
 });
 
 test!(run_dylib_dep {
@@ -541,10 +546,10 @@ test!(run_from_executable_folder {
     p.cargo_process("build").exec_with_output().unwrap();
 
     assert_that(p.cargo("run").cwd(cwd),
-                execs().with_status(0).with_stdout(&format!("\
-[RUNNING] `.{sep}foo[..]`
+                execs().with_status(0)
+                       .with_stderr(&format!("\
+[RUNNING] `.{sep}foo[..]`", sep = SEP))
+                       .with_stdout("\
 hello
-",
-        sep = SEP
-        )));
+"));
 });
