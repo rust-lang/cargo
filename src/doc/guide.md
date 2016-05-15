@@ -13,7 +13,7 @@ To accomplish this goal, Cargo does four things:
 * Introduces two metadata files with various bits of project information.
 * Fetches and builds your project’s dependencies.
 * Invokes `rustc` or another build tool with the correct parameters to build your project.
-* Introduces conventions, making working with Rust projects easier.
+* Introduces conventions to make working with Rust projects easier.
 
 # Creating A New Project
 
@@ -252,7 +252,7 @@ about them, here’s a summary:
 
 Let’s dig in a little bit more.
 
-`Cargo.toml` is a **manifest** file. In the manifest, we can specify a bunch of
+`Cargo.toml` is a **manifest** file in which we can specify a bunch of
 different metadata about our project. For example, we can say that we depend
 on another project:
 
