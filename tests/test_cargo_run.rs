@@ -19,13 +19,13 @@ test!(simple {
         "#);
 
     assert_that(p.cargo_process("run"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `target{sep}debug{sep}foo[..]`
+[RUNNING] `target{sep}debug{sep}foo[..]`", dir = path2url(p.root()), sep = SEP))
+                       .with_stdout("\
 hello
-",
-        dir = path2url(p.root()),
-        sep = SEP)));
+"));
     assert_that(&p.bin("foo"), existing_file());
 });
 

@@ -36,16 +36,16 @@ test!(cargo_bench_simple {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("bench"),
-                execs().with_stdout(&format!("\
+                execs().with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({})
-[RUNNING] target[..]release[..]foo-[..]
-
+[RUNNING] target[..]release[..]foo-[..]", p.url()))
+                       .with_stdout("
 running 1 test
 test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-", p.url())));
+"));
 });
 
 test!(bench_tarname {
