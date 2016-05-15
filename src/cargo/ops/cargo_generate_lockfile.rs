@@ -1,9 +1,8 @@
 use std::collections::{BTreeMap, HashSet};
-use std::path::Path;
 
 use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{Resolve, SourceId, Package};
+use core::{Resolve, SourceId, Workspace};
 use core::resolver::Method;
 use ops;
 use util::config::Config;
@@ -16,29 +15,25 @@ pub struct UpdateOptions<'a> {
     pub aggressive: bool,
 }
 
-pub fn generate_lockfile(manifest_path: &Path, config: &Config)
-                         -> CargoResult<()> {
-    let package = try!(Package::for_path(manifest_path, config));
-    let mut registry = PackageRegistry::new(config);
-    let resolve = try!(ops::resolve_with_previous(&mut registry, &package,
+pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
+    let mut registry = PackageRegistry::new(ws.config());
+    let resolve = try!(ops::resolve_with_previous(&mut registry, ws,
                                                   Method::Everything,
                                                   None, None));
-    try!(ops::write_pkg_lockfile(&package, &resolve, config));
+    try!(ops::write_pkg_lockfile(ws, &resolve));
     Ok(())
 }
 
-pub fn update_lockfile(manifest_path: &Path,
-                       opts: &UpdateOptions) -> CargoResult<()> {
+pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
+                       -> CargoResult<()> {
 
     if opts.aggressive && opts.precise.is_some() {
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
-    let package = try!(Package::for_path(manifest_path, opts.config));
-
-    let previous_resolve = match try!(ops::load_pkg_lockfile(&package, opts.config)) {
+    let previous_resolve = match try!(ops::load_pkg_lockfile(ws)) {
         Some(resolve) => resolve,
-        None => return generate_lockfile(manifest_path, opts.config),
+        None => return generate_lockfile(ws),
     };
     let mut registry = PackageRegistry::new(opts.config);
     let mut to_avoid = HashSet::new();
@@ -76,7 +71,7 @@ pub fn update_lockfile(manifest_path: &Path,
     }
 
     let resolve = try!(ops::resolve_with_previous(&mut registry,
-                                                  &package,
+                                                  ws,
                                                   Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid)));
@@ -104,7 +99,7 @@ pub fn update_lockfile(manifest_path: &Path,
         }
     }
 
-    try!(ops::write_pkg_lockfile(&package, &resolve, opts.config));
+    try!(ops::write_pkg_lockfile(&ws, &resolve));
     return Ok(());
 
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,

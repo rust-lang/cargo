@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File};
 use std::iter::repeat;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use curl::easy::Easy;
@@ -13,7 +13,7 @@ use term::color::BLACK;
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
 use core::source::Source;
-use core::{Package, SourceId};
+use core::{Package, SourceId, Workspace};
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
@@ -37,8 +37,8 @@ pub struct PublishOpts<'cfg> {
     pub allow_dirty: bool,
 }
 
-pub fn publish(manifest_path: &Path, opts: &PublishOpts) -> CargoResult<()> {
-    let pkg = try!(Package::for_path(&manifest_path, opts.config));
+pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
+    let pkg = try!(ws.current());
 
     if !pkg.publish() {
         bail!("some crates cannot be published.\n\
@@ -52,7 +52,7 @@ pub fn publish(manifest_path: &Path, opts: &PublishOpts) -> CargoResult<()> {
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
-    let tarball = try!(ops::package(manifest_path, &ops::PackageOpts {
+    let tarball = try!(ops::package(ws, &ops::PackageOpts {
         config: opts.config,
         verify: opts.verify,
         list: false,

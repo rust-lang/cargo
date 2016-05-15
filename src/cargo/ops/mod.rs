@@ -1,5 +1,5 @@
 pub use self::cargo_clean::{clean, CleanOptions};
-pub use self::cargo_compile::{compile, compile_pkg, resolve_dependencies, CompileOptions};
+pub use self::cargo_compile::{compile, compile_ws, resolve_dependencies, CompileOptions};
 pub use self::cargo_compile::{CompileFilter, CompileMode};
 pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
 pub use self::cargo_rustc::{compile_targets, Compilation, Layout, Kind, Unit};
@@ -21,7 +21,7 @@ pub use self::registry::{registry_login, search, http_proxy_exists, http_handle}
 pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::cargo_fetch::{fetch, get_resolved_packages};
 pub use self::cargo_pkgid::pkgid;
-pub use self::resolve::{resolve_pkg, resolve_with_previous};
+pub use self::resolve::{resolve_ws, resolve_with_previous};
 pub use self::cargo_output_metadata::{output_metadata, OutputMetadataOptions, ExportInfo};
 
 mod cargo_clean;

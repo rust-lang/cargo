@@ -1,3 +1,4 @@
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
@@ -47,7 +48,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     } = options;
 
     let root = try!(find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd()));
-    try!(ops::publish(&root, &ops::PublishOpts {
+    let ws = try!(Workspace::new(&root, config));
+    try!(ops::publish(&ws, &ops::PublishOpts {
         config: config,
         token: token,
         index: host,

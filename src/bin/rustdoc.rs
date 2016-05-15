@@ -1,3 +1,4 @@
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
@@ -91,7 +92,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    try!(ops::doc(&root, &doc_opts));
+    let ws = try!(Workspace::new(&root, config));
+    try!(ops::doc(&ws, &doc_opts));
 
     Ok(None)
 }

@@ -13,7 +13,7 @@ use std::str::FromStr;
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
-use core::{MultiShell, Package};
+use core::{MultiShell, Workspace};
 use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
 use util::Filesystem;
 
@@ -112,9 +112,9 @@ impl Config {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
-    pub fn target_dir(&self, pkg: &Package) -> Filesystem {
+    pub fn target_dir(&self, ws: &Workspace) -> Filesystem {
         self.target_dir.borrow().clone().unwrap_or_else(|| {
-            Filesystem::new(pkg.root().join("target"))
+            Filesystem::new(ws.root().join("target"))
         })
     }
 

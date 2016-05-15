@@ -23,13 +23,12 @@
 //!
 
 use std::collections::HashMap;
-use std::default::Default;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use core::registry::PackageRegistry;
 use core::{Source, SourceId, PackageSet, Package, Target};
-use core::{Profile, TargetKind, Profiles};
+use core::{Profile, TargetKind, Profiles, Workspace};
 use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
 use sources::PathSource;
@@ -84,43 +83,37 @@ pub enum CompileFilter<'a> {
     }
 }
 
-pub fn compile<'a>(manifest_path: &Path,
-                   options: &CompileOptions<'a>)
+pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
-    debug!("compile; manifest-path={}", manifest_path.display());
-
-    let package = try!(Package::for_path(manifest_path, options.config));
-    debug!("loaded package; package={}", package);
-
-    for key in package.manifest().warnings().iter() {
+    for key in try!(ws.current()).manifest().warnings().iter() {
         try!(options.config.shell().warn(key))
     }
-    compile_pkg(&package, None, options)
+    compile_ws(ws, None, options)
 }
 
-pub fn resolve_dependencies<'a>(root_package: &Package,
-                                config: &'a Config,
+pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 source: Option<Box<Source + 'a>>,
                                 features: Vec<String>,
                                 no_default_features: bool)
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
-    let mut registry = PackageRegistry::new(config);
+    let mut registry = PackageRegistry::new(ws.config());
 
     if let Some(source) = source {
-        registry.add_preloaded(root_package.package_id().source_id(), source);
+        registry.add_preloaded(try!(ws.current()).package_id().source_id(),
+                               source);
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = try!(ops::resolve_pkg(&mut registry, root_package, config));
+    let resolve = try!(ops::resolve_ws(&mut registry, ws));
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
     // overrides, etc.
     let _p = profile::start("resolving w/ overrides...");
 
-    try!(add_overrides(&mut registry, root_package.root(), config));
+    try!(add_overrides(&mut registry, ws));
 
     let method = Method::Required{
         dev_deps: true, // TODO: remove this option?
@@ -129,7 +122,7 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
     };
 
     let resolved_with_overrides =
-            try!(ops::resolve_with_previous(&mut registry, root_package,
+            try!(ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None));
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
@@ -138,10 +131,11 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
     Ok((packages, resolved_with_overrides))
 }
 
-pub fn compile_pkg<'a>(root_package: &Package,
-                       source: Option<Box<Source + 'a>>,
-                       options: &CompileOptions<'a>)
-                       -> CargoResult<ops::Compilation<'a>> {
+pub fn compile_ws<'a>(ws: &Workspace<'a>,
+                      source: Option<Box<Source + 'a>>,
+                      options: &CompileOptions<'a>)
+                      -> CargoResult<ops::Compilation<'a>> {
+    let root_package = try!(ws.current());
     let CompileOptions { config, jobs, target, spec, features,
                          no_default_features, release, mode,
                          ref filter, ref exec_engine,
@@ -163,8 +157,7 @@ pub fn compile_pkg<'a>(root_package: &Package,
     }
 
     let (packages, resolve_with_overrides) = {
-        try!(resolve_dependencies(root_package, config, source, features,
-                                  no_default_features))
+        try!(resolve_dependencies(ws, source, features, no_default_features))
     };
 
     let mut pkgids = Vec::new();
@@ -241,13 +234,13 @@ pub fn compile_pkg<'a>(root_package: &Package,
             build_config.doc_all = deps;
         }
 
-        try!(ops::compile_targets(&package_targets,
+        try!(ops::compile_targets(ws,
+                                  &package_targets,
                                   &packages,
                                   &resolve_with_overrides,
                                   config,
                                   build_config,
-                                  root_package.manifest().profiles(),
-                                  ))
+                                  profiles))
     };
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
@@ -390,12 +383,12 @@ fn generate_targets<'a>(pkg: &'a Package,
 /// Read the `paths` configuration variable to discover all path overrides that
 /// have been configured.
 fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
-                     cur_path: &Path,
-                     config: &'a Config) -> CargoResult<()> {
-    let paths = match try!(config.get_list("paths")) {
+                     ws: &Workspace<'a>) -> CargoResult<()> {
+    let paths = match try!(ws.config().get_list("paths")) {
         Some(list) => list,
         None => return Ok(())
     };
+    let current = try!(ws.current());
     let paths = paths.val.iter().map(|&(ref s, ref p)| {
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
@@ -404,12 +397,12 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
     }).filter(|&(ref p, _)| {
         // Make sure we don't override the local package, even if it's in the
         // list of override paths.
-        cur_path != &**p
+        current.root() != &**p
     });
 
     for (path, definition) in paths {
         let id = try!(SourceId::for_path(&path));
-        let mut source = PathSource::new_recursive(&path, &id, config);
+        let mut source = PathSource::new_recursive(&path, &id, ws.config());
         try!(source.update().chain_error(|| {
             human(format!("failed to update path override `{}` \
                            (defined in `{}`)", path.display(),

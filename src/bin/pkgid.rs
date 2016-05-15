@@ -1,3 +1,4 @@
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
@@ -51,9 +52,10 @@ pub fn execute(options: Options,
                                 options.flag_quiet,
                                 &options.flag_color));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd()));
+    let ws = try!(Workspace::new(&root, config));
 
     let spec = options.arg_spec.as_ref().map(|s| &s[..]);
-    let spec = try!(ops::pkgid(&root, spec, config));
+    let spec = try!(ops::pkgid(&ws, spec));
     println!("{}", spec);
     Ok(None)
 }

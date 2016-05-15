@@ -1,5 +1,6 @@
 use std::env;
 
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
@@ -66,6 +67,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         config: config,
     };
 
-    try!(ops::update_lockfile(&root, &update_opts));
+    let ws = try!(Workspace::new(&root, config));
+    try!(ops::update_lockfile(&ws, &update_opts));
     Ok(None)
 }

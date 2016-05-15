@@ -1,8 +1,8 @@
 use std::ffi::{OsString, OsStr};
-use std::path::Path;
 
 use ops::{self, ExecEngine, ProcessEngine, Compilation};
 use util::{self, CargoResult, CargoTestError, ProcessError};
+use core::Workspace;
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -11,10 +11,10 @@ pub struct TestOptions<'a> {
     pub only_doc: bool,
 }
 
-pub fn run_tests(manifest_path: &Path,
+pub fn run_tests(ws: &Workspace,
                  options: &TestOptions,
                  test_args: &[String]) -> CargoResult<Option<CargoTestError>> {
-    let compilation = try!(compile_tests(manifest_path, options));
+    let compilation = try!(compile_tests(ws, options));
 
     if options.no_run {
         return Ok(None)
@@ -47,12 +47,12 @@ pub fn run_tests(manifest_path: &Path,
     }
 }
 
-pub fn run_benches(manifest_path: &Path,
+pub fn run_benches(ws: &Workspace,
                    options: &TestOptions,
                    args: &[String]) -> CargoResult<Option<CargoTestError>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());
-    let compilation = try!(compile_tests(manifest_path, options));
+    let compilation = try!(compile_tests(ws, options));
 
     if options.no_run {
         return Ok(None)
@@ -64,11 +64,10 @@ pub fn run_benches(manifest_path: &Path,
     }
 }
 
-fn compile_tests<'a>(manifest_path: &Path,
+fn compile_tests<'a>(ws: &Workspace<'a>,
                      options: &TestOptions<'a>)
                      -> CargoResult<Compilation<'a>> {
-    let mut compilation = try!(ops::compile(manifest_path,
-                                            &options.compile_opts));
+    let mut compilation = try!(ops::compile(ws, &options.compile_opts));
     compilation.tests.sort_by(|a, b| {
         (a.0.package_id(), &a.1).cmp(&(b.0.package_id(), &b.1))
     });
