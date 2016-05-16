@@ -435,12 +435,20 @@ mod tests {
     Ok(())
 }
 
+fn get_environment_variable(variables: &[&str] ) -> Option<String>{
+    variables.iter()
+             .filter_map(|var| env::var(var).ok())
+             .next()
+}
+
 fn discover_author() -> CargoResult<(String, Option<String>)> {
     let git_config = GitConfig::open_default().ok();
     let git_config = git_config.as_ref();
+    let name_variables = ["NAME", "GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME",
+                        "USER", "USERNAME"];
     let name = git_config.and_then(|g| g.get_string("user.name").ok())
-                         .or_else(|| env::var("USER").ok())      // unix
-                         .or_else(|| env::var("USERNAME").ok()); // windows
+                         .or_else(|| get_environment_variable(&name_variables));
+
     let name = match name {
         Some(name) => name,
         None => {
@@ -449,8 +457,9 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
                   username_var)
         }
     };
+    let email_variables = ["EMAIL", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"];
     let email = git_config.and_then(|g| g.get_string("user.email").ok())
-                          .or_else(|| env::var("EMAIL").ok());
+                          .or_else(|| get_environment_variable(&email_variables) );
 
     let name = name.trim().to_string();
     let email = email.map(|s| s.trim().to_string());
