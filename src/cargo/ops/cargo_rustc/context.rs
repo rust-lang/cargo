@@ -315,15 +315,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let mut ret = Vec::new();
         match *unit.target.kind() {
-            TargetKind::Example | TargetKind::Bin | TargetKind::CustomBuild |
-            TargetKind::Bench | TargetKind::Test => {
+            TargetKind::Example |
+            TargetKind::Bin |
+            TargetKind::CustomBuild |
+            TargetKind::Bench |
+            TargetKind::Test => {
                 ret.push(format!("{}{}", stem, suffix));
             }
             TargetKind::Lib(..) if unit.profile.test => {
                 ret.push(format!("{}{}", stem, suffix));
             }
             TargetKind::Lib(ref libs) => {
-                for lib in libs.iter() {
+                for lib in libs {
                     match *lib {
                         LibKind::Dylib => {
                             if let Ok((prefix, suffix)) = self.dylib(unit.kind) {
@@ -339,9 +342,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         }
                     }
                 }
+                if ret.is_empty() {
+                    if libs.contains(&LibKind::Dylib) {
+                        bail!("cannot produce dylib for `{}` as the target `{}` \
+                               does not support dynamic libraries",
+                              unit.pkg, self.target_triple)
+                    }
+                    bail!("cannot compile `{}` as the target `{}` does not \
+                           support any of the output crate types",
+                          unit.pkg, self.target_triple);
+                }
             }
         }
-        assert!(!ret.is_empty());
         Ok(ret)
     }
 
