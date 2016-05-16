@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use core::{Package, Profiles};
+use core::registry::PackageRegistry;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context, BuildConfig, Kind, Unit};
 
@@ -28,7 +29,9 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         return rm_rf(&target_dir);
     }
 
-    let (resolve, packages) = try!(ops::fetch(manifest_path, opts.config));
+    let mut registry = PackageRegistry::new(opts.config);
+    let resolve = try!(ops::resolve_pkg(&mut registry, &root, opts.config));
+    let packages = ops::get_resolved_packages(&resolve, registry);
 
     let dest = if opts.release {"release"} else {"debug"};
     let host_layout = try!(Layout::new(opts.config, &root, None, dest));
