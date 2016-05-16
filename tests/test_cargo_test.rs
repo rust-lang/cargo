@@ -2079,6 +2079,7 @@ running 1 test
 test bar_0 ... ok
 
 test result: ok.[..]
+
 ")));
 });
 
