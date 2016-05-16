@@ -116,7 +116,8 @@ build = "build.rs"
 This manifest states that the package links to the `libfoo` native library, and
 it also has a build script for locating and/or building the library. Cargo
 requires that a `build` command is specified if a `links` entry is also
-specified.
+specified. `links` can be also be overridden with the environment variable
+`RUST_LIB=value`.
 
 The purpose of this manifest key is to give Cargo an understanding about the set
 of native dependencies that a package has, as well as providing a principled

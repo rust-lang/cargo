@@ -1,3 +1,4 @@
+use std::env;
 use std::fmt;
 use std::path::{PathBuf, Path};
 
@@ -167,6 +168,7 @@ impl Manifest {
                profiles: Profiles,
                publish: bool,
                replace: Vec<(PackageIdSpec, Dependency)>) -> Manifest {
+        let links = env::var("RUST_LIB").ok().or(links);
         Manifest {
             summary: summary,
             targets: targets,

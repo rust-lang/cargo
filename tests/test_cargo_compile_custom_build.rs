@@ -190,6 +190,24 @@ url = p.url(),
 });
 */
 
+test!(links_environment_variable{
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").env("RUST_LIB", "ENVVAR"),
+                execs().with_status(101)
+                       .with_stderr("\
+[ERROR] package `foo v0.5.0 (file://[..])` specifies that it links to `ENVVAR` but does \
+not have a custom build script
+"));
+});
+
 test!(links_no_build_cmd {
     let p = project("foo")
         .file("Cargo.toml", r#"
