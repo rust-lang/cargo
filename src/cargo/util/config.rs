@@ -366,7 +366,8 @@ impl Config {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             *self.target_dir.borrow_mut() = Some(Filesystem::new(self.cwd.join(dir)));
         } else if let Some(val) = try!(self.get_path("build.target-dir")) {
-            *self.target_dir.borrow_mut() = Some(Filesystem::new(val.val));
+            let val = self.cwd.join(val.val);
+            *self.target_dir.borrow_mut() = Some(Filesystem::new(val));
         }
         Ok(())
     }
