@@ -1,0 +1,186 @@
+.TH "CARGO" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo \- The Rust package manager
+.SH SYNOPSIS
+.PP
+\f[I]cargo\f[] <COMMAND> [<ARGS>...]
+.SH DESCRIPTION
+.PP
+This program is a package manager for the Rust language, available at
+<http://rust-lang.org>.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Display a help message.
+.RS
+.RE
+.TP
+.B \-V, \-\-version
+Print version information and exit.
+.RS
+.RE
+.TP
+.B \-\-list
+List all available cargo commands.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-\-color
+Configure coloring of output.
+.RS
+.RE
+.SH COMMANDS
+.PP
+To get extended information about commands, run \f[I]cargo help
+<command>\f[] or \f[I]man cargo\-command\f[]
+.TP
+.B cargo\-build(1)
+Compile the current project.
+.RS
+.RE
+.TP
+.B cargo\-clean(1)
+Remove the target directory with build output.
+.RS
+.RE
+.TP
+.B cargo\-doc(1)
+Build this project\[aq]s and its dependencies\[aq] documentation.
+.RS
+.RE
+.TP
+.B cargo\-init(1)
+Create a new cargo project in the current directory.
+.RS
+.RE
+.TP
+.B cargo\-install(1)
+Install a Rust binary.
+.RS
+.RE
+.TP
+.B cargo\-new(1)
+Create a new cargo project.
+.RS
+.RE
+.TP
+.B cargo\-run(1)
+Build and execute src/main.rs.
+.RS
+.RE
+.TP
+.B cargo\-test(1)
+Run the tests for the package.
+.RS
+.RE
+.TP
+.B cargo\-bench(1)
+Run the benchmarks for the package.
+.RS
+.RE
+.TP
+.B cargo\-update(1)
+Update dependencies in Cargo.lock.
+.RS
+.RE
+.TP
+.B cargo\-package(1)
+Generate a source tarball for the current package.
+.RS
+.RE
+.TP
+.B cargo\-publish(1)
+Package and upload this project to the registry.
+.RS
+.RE
+.TP
+.B cargo\-uninstall(1)
+Remove a Rust binary.
+.RS
+.RE
+.TP
+.B cargo\-search(1)
+Search registry for crates.
+.RS
+.RE
+.TP
+.B cargo\-version(1)
+Print cargo\[aq]s version and exit.
+.RS
+.RE
+.SH FILES
+.TP
+.B ~/.cargo
+Directory in which Cargo stores repository data.
+Cargo can be instructed to use a \f[I]\&.cargo\f[] subdirectory in a
+different location by setting the \f[B]CARGO_HOME\f[] environment
+variable.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Build a local package and all of its dependencies
+.IP
+.nf
+\f[C]
+$\ cargo\ build
+\f[]
+.fi
+.PP
+Build a package with optimizations
+.IP
+.nf
+\f[C]
+$\ cargo\ build\ \-\-release
+\f[]
+.fi
+.PP
+Run tests for a cross\-compiled target
+.IP
+.nf
+\f[C]
+$\ cargo\ test\ \-\-target\ i686\-unknown\-linux\-gnu
+\f[]
+.fi
+.PP
+Create a new project that builds an executable
+.IP
+.nf
+\f[C]
+$\ cargo\ new\ \-\-init\ foobar
+\f[]
+.fi
+.PP
+Create a project in the current directory
+.IP
+.nf
+\f[C]
+$\ mkdir\ foo\ &&\ cd\ foo
+$\ cargo\ init\ .
+\f[]
+.fi
+.PP
+Learn about a command\[aq]s options and usage
+.IP
+.nf
+\f[C]
+$\ cargo\ help\ clean
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+rustc(1), rustdoc(1)
+.SH BUGS
+.PP
+See <https://github.com/rust-lang/cargo/issues> for issues.
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
