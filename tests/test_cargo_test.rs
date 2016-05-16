@@ -2071,5 +2071,14 @@ test!(only_test_docs {
     p.build();
 
     assert_that(p.cargo("test").arg("--doc"),
-                execs().with_status(0));
+                execs().with_status(0).with_stdout(&format!("\
+[COMPILING] foo v0.0.1 ([..])
+[DOCTEST] foo
+
+running 1 test
+test bar_0 ... ok
+
+test result: ok.[..]
+")));
 });
+
