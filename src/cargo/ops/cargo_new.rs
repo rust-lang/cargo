@@ -88,7 +88,21 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
 }
 
 fn check_name(name: &str) -> CargoResult<()> {
-    if name == "test" {
+
+    // Ban keywords + test list found at
+    // https://doc.rust-lang.org/grammar.html#keywords
+    let blacklist = ["abstract", "alignof", "as", "become", "box",
+        "break", "const", "continue", "crate", "do",
+        "else", "enum", "extern", "false", "final",
+        "fn", "for", "if", "impl", "in",
+        "let", "loop", "macro", "match", "mod",
+        "move", "mut", "offsetof", "override", "priv",
+        "proc", "pub", "pure", "ref", "return",
+        "self", "sizeof", "static", "struct",
+        "super", "test", "trait", "true", "type", "typeof",
+        "unsafe", "unsized", "use", "virtual", "where",
+        "while", "yield"];
+    if blacklist.contains(&name) {
         bail!("The name `{}` cannot be used as a crate name\n\
                use --name to override crate name",
                name)
