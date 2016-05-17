@@ -203,6 +203,37 @@ test!(finds_author_git {
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 });
 
+test!(finds_git_email{
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("foo")
+                                    .env("GIT_AUTHOR_NAME", "foo")
+                                    .env("GIT_AUTHOR_EMAIL", "gitfoo")
+                                    .cwd(td.path().clone()),
+                execs().with_status(0));
+
+    let toml = td.path().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
+});
+
+
+test!(finds_git_author{
+    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
+    // the hierarchy
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("foo")
+                                    .env_remove("USER")
+                                    .env("GIT_COMMITTER_NAME", "gitfoo")
+                                    .cwd(td.path().clone()),
+                execs().with_status(0));
+
+    let toml = td.path().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["gitfoo"]"#));
+});
+
 test!(author_prefers_cargo {
     ::process("git").args(&["config", "--global", "user.name", "foo"])
                     .exec().unwrap();
