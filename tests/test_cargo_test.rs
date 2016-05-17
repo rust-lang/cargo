@@ -2048,10 +2048,10 @@ test!(selective_test_optional_dep {
 });
 
 test!(only_test_docs {
-    let p = project("foo")
+    let p = project("foo_docs")
         .file("Cargo.toml", r#"
             [package]
-            name = "foo"
+            name = "foo_docs"
             version = "0.0.1"
             authors = []
         "#)
@@ -2067,13 +2067,13 @@ test!(only_test_docs {
             pub fn bar() {
             }
         "#)
-        .file("tests/foo.rs", "this is not rust");
+        .file("tests/foo_docs.rs", "this is not rust");
     p.build();
 
     assert_that(p.cargo("test").arg("--doc"),
                 execs().with_status(0).with_stdout(&format!("\
-[COMPILING] foo v0.0.1 ([..])
-[DOCTEST] foo
+[COMPILING] foo_docs v0.0.1 ([..])
+[DOCTEST] foo_docs
 
 running 1 test
 test bar_0 ... ok
