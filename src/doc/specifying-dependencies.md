@@ -249,7 +249,7 @@ openssl = "1.0.1"
 native = { path = "native/i686" }
 
 [target.'cfg(target_pointer_width = "64")'.dependencies]
-native = { path = "native/i686" }
+native = { path = "native/x86_64" }
 ```
 
 Like with Rust, the syntax here supports the `not`, `any`, and `all` operators
