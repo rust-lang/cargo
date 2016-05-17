@@ -101,6 +101,14 @@ test!(reserved_name {
 use --name to override crate name"));
 });
 
+test!(keyword_name {
+    assert_that(cargo_process("new").arg("pub"),
+                execs().with_status(101)
+                       .with_stderr("\
+[ERROR] The name `pub` cannot be used as a crate name\n\
+use --name to override crate name"));
+});
+
 test!(rust_prefix_stripped {
     assert_that(cargo_process("new").arg("rust-foo").env("USER", "foo"),
                 execs().with_status(0)
