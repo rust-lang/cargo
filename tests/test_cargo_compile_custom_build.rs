@@ -353,7 +353,11 @@ test!(links_passes_env_vars {
         "#)
         .file("a/src/lib.rs", "")
         .file("a/build.rs", r#"
+            use std::env;
             fn main() {
+                let lib = env::var("CARGO_MANIFEST_LINKS").unwrap();
+                assert_eq!(lib, "foo");
+
                 println!("cargo:foo=bar");
                 println!("cargo:bar=baz");
             }

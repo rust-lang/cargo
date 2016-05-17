@@ -109,6 +109,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
      .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
      .env("HOST", &cx.config.rustc_info().host);
 
+     if let Some(links) = unit.pkg.manifest().links(){
+        p.env("CARGO_MANIFEST_LINKS", links);
+     }
+
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
     if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
