@@ -1,0 +1,104 @@
+.TH "CARGO\-DOC" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-doc \- Build a package\[aq]s documentation
+.SH SYNOPSIS
+.PP
+\f[I]cargo doc\f[] [OPTIONS]
+.SH DESCRIPTION
+.PP
+Build a package\[aq]s documentation.
+.PP
+By default the documentation for the local package and all dependencies
+is built.
+The output is all placed in \[aq]target/doc\[aq] in rustdoc\[aq]s usual
+format.
+.PP
+If the \f[B]\-\-package\f[] argument is given, then \f[I]SPEC\f[] is a
+package id specification which indicates which package should be built.
+If it is not given, then the current package is built.
+For more information on \f[I]SPEC\f[] and its format, see the "cargo
+help pkgid" command.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-p \f[I]SPEC\f[], \-\-package \f[I]SPEC ...\f[]
+Package to document.
+.RS
+.RE
+.TP
+.B \-\-open
+Opens the docs in a browser after the operation.
+.RS
+.RE
+.TP
+.B \-\-no\-deps
+Don\[aq]t build documentation for dependencies.
+.RS
+.RE
+.TP
+.B \-j \f[I]N\f[], \-\-jobs \f[I]N\f[]
+The number of jobs to run in parallel.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space\-separated list of features to also build.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Build for the target triple.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to compile.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Build a local package documentation in \[aq]target/doc\[aq]
+.IP
+.nf
+\f[C]
+$\ cargo\ doc
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-build(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
