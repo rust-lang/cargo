@@ -98,6 +98,10 @@ class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello
 `cargo build --release` puts the resulting binary in
 `target/release` instead of `target/debug`.
 
+Compiling in debug mode is the default for development-- compilation time is
+shorter since the compiler doesn't do optimizations, but the code will run
+slower. Release mode takes longer to compile, but the code will run faster.
+
 # Working on an existing Cargo project
 
 If you download an existing project that uses Cargo, it’s really easy
