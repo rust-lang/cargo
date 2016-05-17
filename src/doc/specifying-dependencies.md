@@ -310,3 +310,19 @@ mio = "0.0.1"
 ```
 
 [crates.io]: https://crates.io/
+
+# Build dependencies
+
+You can depend on other Cargo-based crates for use in your build scripts.
+Dependencies are declared through the `build-dependencies` section of the
+manifest:
+
+```toml
+[build-dependencies]
+gcc = "0.3"
+```
+
+The build script **does not** have access to the dependencies listed in the
+`dependencies` or `dev-dependencies` section (they’re not built yet!). All build
+dependencies will also not be available to the package itself unless listed
+under the `dependencies` section as well.
