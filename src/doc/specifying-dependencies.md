@@ -286,7 +286,14 @@ native = { path = "native/x86_64" }
 # Development dependencies
 
 You can add a `[dev-dependencies]` section to your `Cargo.toml` whose format
-is equivalent to `[dependencies]`. Dev-dependencies are not used when compiling
+is equivalent to `[dependencies]`:
+
+```toml
+[dev-dependencies]
+tempdir = "0.3"
+```
+
+Dev-dependencies are not used when compiling
 a package for building, but are used for compiling tests, examples, and
 benchmarks.
 
