@@ -1,0 +1,146 @@
+.TH "CARGO\-INSTALL" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-install \- Install a Rust binary
+.SH SYNOPSIS
+.PP
+\f[I]cargo install\f[] [OPTIONS] <CRATE> \f[I]cargo install\f[]
+[OPTIONS] \-\-list
+.SH DESCRIPTION
+.PP
+Install a Rust binary
+.PP
+This command manages Cargo\[aq]s local set of install binary crates.
+Only packages which have [[bin]] targets can be installed, and all
+binaries are installed into the installation root\[aq]s \f[I]bin\f[]
+folder.
+The installation root is determined, in order of precedence, by
+\f[B]\-\-root\f[], \f[I]$CARGO_INSTALL_ROOT\f[], the
+\f[I]install.root\f[] configuration key, and finally the home directory
+(which is either \f[I]$CARGO_HOME\f[] if set or \f[I]$HOME/.cargo\f[] by
+default).
+.PP
+There are multiple sources from which a crate can be installed.
+The default location is crates.io but the \f[B]\-\-git\f[] and
+\f[B]\-\-path\f[] flags can change this source.
+If the source contains more than one package (such as \f[I]crates.io\f[]
+or a git repository with multiple crates) the \f[B]\f[] argument is
+required to indicate which crate should be installed.
+.PP
+Crates from crates.io can optionally specify the version they wish to
+install via the \f[B]\-\-vers\f[] flags, and similarly packages from git
+repositories can optionally specify the branch, tag, or revision that
+should be installed.
+If a crate has multiple binaries, the \f[B]\-\-bin\f[] argument can
+selectively install only one of them, and if you\[aq]d rather install
+examples the \f[B]\-\-example\f[] argument can be used as well.
+.PP
+As a special convenience, omitting the <crate> specification entirely
+will install the crate in the current directory.
+That is, \f[I]install\f[] is equivalent to the more explicit "install
+\-\-path .".
+.PP
+The \f[B]\-\-list\f[] option will list all installed packages (and their
+versions).
+.SH OPTIONS
+.SS Query options
+.TP
+.B \-\-list
+List all installed packages (and their versions).
+.RS
+.RE
+.SS Specifying what crate to install
+.TP
+.B \-\-vers \f[I]VERS\f[]
+Specify a version to install from crates.io.
+.RS
+.RE
+.TP
+.B \-\-git \f[I]URL\f[]
+Git URL to install the specified crate from.
+.RS
+.RE
+.TP
+.B \-\-branch \f[I]BRANCH\f[]
+Branch to use when installing from git.
+.RS
+.RE
+.TP
+.B \-\-tag \f[I]TAG\f[]
+Tag to use when installing from git.
+.RS
+.RE
+.TP
+.B \-\-rev \f[I]SHA\f[]
+Specific commit to use when installing from git.
+.RS
+.RE
+.TP
+.B \-\-path \f[I]PATH\f[]
+Filesystem path to local crate to install.
+.RS
+.RE
+.SS Built and install options
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-j \f[I]N\f[], \-\-jobs \f[I]N\f[]
+The number of jobs to run in parallel.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space\-separated list of features to activate.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-debug
+Build in debug mode instead of release mode.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Only install the binary NAME.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]EXAMPLE\f[]
+Install the example EXAMPLE instead of binaries.
+.RS
+.RE
+.TP
+.B \-\-root \f[I]DIR\f[]
+Directory to install packages into.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-search(1), cargo\-publish(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
