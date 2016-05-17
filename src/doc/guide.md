@@ -407,3 +407,13 @@ This will test all three release channels, but any breakage in nightly
 will not fail your overall build. Please see the [Travis CI Rust
 documentation](https://docs.travis-ci.com/user/languages/rust/) for more
 information.
+
+# Further reading
+
+Now that you have an overview of how to use cargo and have created your first crate, you may be interested in:
+
+* [Publishing your crate on crates.io](crates-io.html)
+* [Reading about all the possible ways of specifying dependencies](specifying-dependencies.html)
+* [Learning more details about what you can specify in your `Cargo.toml` manifest](manifest.html)
+
+Even more topics are available in the Docs menu at the top!
