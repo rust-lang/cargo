@@ -184,10 +184,10 @@ test!(cargo_test_failing_test {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
-                execs().with_stdout_contains(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]foo-[..]", url = p.url()))
+                       .with_stdout_contains("
 running 1 test
 test test_hello ... FAILED
 
@@ -197,14 +197,14 @@ failures:
 <tab>thread 'test_hello' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:12
-", url = p.url()))
-                    .with_stdout_contains("\
+")
+                       .with_stdout_contains("\
 failures:
     test_hello
 
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
 ")
-                    .with_status(101));
+                       .with_status(101));
 });
 
 test!(test_with_lib_dep {
