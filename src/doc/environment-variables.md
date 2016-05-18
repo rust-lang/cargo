@@ -68,6 +68,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
                          script). Also note that this is the value of the
                          current working directory of the build script when it
                          starts.
+* `CARGO_MANIFEST_LINKS` - the manifest `links` value.
 * `CARGO_FEATURE_<name>` - For each activated feature of the package being
                            built, this environment variable will be present
                            where `<name>` is the name of the feature uppercased
