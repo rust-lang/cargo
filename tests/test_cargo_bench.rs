@@ -174,20 +174,18 @@ test!(cargo_bench_failing_test {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("bench"),
-                execs().with_stdout_contains(&format!("\
+                execs().with_stdout_contains("
+running 1 test
+test bench_hello ... ")
+                       .with_stderr_contains(format!("\
 [COMPILING] foo v0.5.0 ({})
 [RUNNING] target[..]release[..]foo-[..]
-
-running 1 test
-test bench_hello ... ",
-        p.url()))
-              .with_stderr_contains("\
 thread '<main>' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
 [..]
-")
-              .with_status(101));
+", p.url()))
+                       .with_status(101));
 });
 
 test!(bench_with_lib_dep {

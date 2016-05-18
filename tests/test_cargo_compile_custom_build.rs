@@ -556,7 +556,7 @@ test!(propagation_of_l_flags {
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name foo [..] -L bar -L foo`
@@ -609,7 +609,7 @@ test!(propagation_of_l_flags_new {
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name foo [..] -L bar -L foo`
@@ -1815,7 +1815,7 @@ test!(doctest_recieves_build_link_args {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
 "));
 });
@@ -1855,7 +1855,7 @@ test!(please_respect_the_dag {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc [..] -L native=foo -L native=bar[..]`
 "));
 });

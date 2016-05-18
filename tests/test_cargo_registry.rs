@@ -860,19 +860,19 @@ test!(update_multiple_packages {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [DOWNLOADING] a v0.1.1 (registry file://[..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [DOWNLOADING] b v0.1.1 (registry file://[..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [DOWNLOADING] c v0.1.1 (registry file://[..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] a v0.1.1 (registry [..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] b v0.1.1 (registry [..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] c v0.1.1 (registry [..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.5.0 ([..])"));
 });
 
