@@ -9,9 +9,7 @@ use std::io::prelude::*;
 use std::io::{self, Cursor};
 use std::result;
 
-use curl::http;
-use curl::http::handle::Method::{Put, Get, Delete};
-use curl::http::handle::{Method, Request};
+use curl::easy::{Easy, List};
 use rustc_serialize::json;
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
@@ -19,7 +17,7 @@ use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 pub struct Registry {
     host: String,
     token: Option<String>,
-    handle: http::Handle,
+    handle: Easy,
 }
 
 pub type Result<T> = result::Result<T, Error>;
@@ -31,8 +29,8 @@ pub enum Auth {
 }
 
 pub enum Error {
-    Curl(curl::ErrCode),
-    NotOkResponse(http::Response),
+    Curl(curl::Error),
+    NotOkResponse(u32, Vec<String>, Vec<u8>),
     NonUtf8Body,
     Api(Vec<String>),
     Unauthorized,
@@ -52,6 +50,12 @@ impl From<json::EncoderError> for Error {
 impl From<json::DecoderError> for Error {
     fn from(err: json::DecoderError) -> Error {
         Error::JsonDecodeError(err)
+    }
+}
+
+impl From<curl::Error> for Error {
+    fn from(err: curl::Error) -> Error {
+        Error::Curl(err)
     }
 }
 
@@ -109,11 +113,12 @@ pub struct User {
 
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {
-        Registry::new_handle(host, token, http::Handle::new())
+        Registry::new_handle(host, token, Easy::new())
     }
 
-    pub fn new_handle(host: String, token: Option<String>,
-                      handle: http::Handle) -> Registry {
+    pub fn new_handle(host: String,
+                      token: Option<String>,
+                      handle: Easy) -> Registry {
         Registry {
             host: host,
             token: token,
@@ -177,12 +182,17 @@ impl Registry {
             Some(s) => s,
             None => return Err(Error::TokenMissing),
         };
-        let request = self.handle.put(url, &mut body)
-            .content_length(size)
-            .header("Accept", "application/json")
-            .header("Authorization", &token);
-        let response = handle(request.exec());
-        let _body = try!(response);
+        try!(self.handle.put(true));
+        try!(self.handle.url(&url));
+        try!(self.handle.in_filesize(size as u64));
+        let mut headers = List::new();
+        try!(headers.append("Accept: application/json"));
+        try!(headers.append(&format!("Authorization: {}", token)));
+        try!(self.handle.http_headers(headers));
+
+        let _body = try!(handle(&mut self.handle, &mut |buf| {
+            body.read(buf).unwrap_or(0)
+        }));
         Ok(())
     }
 
@@ -190,7 +200,7 @@ impl Registry {
         let formated_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
         let body = try!(self.req(
             format!("/crates?q={}&per_page={}", formated_query, limit),
-            None, Get, Auth::Unauthorized
+            None, Auth::Unauthorized
         ));
 
         let crates = try!(json::decode::<Crates>(&body));
@@ -212,51 +222,75 @@ impl Registry {
     }
 
     fn put(&mut self, path: String, b: &[u8]) -> Result<String> {
-        self.req(path, Some(b), Put, Auth::Authorized)
+        try!(self.handle.put(true));
+        self.req(path, Some(b), Auth::Authorized)
     }
 
     fn get(&mut self, path: String) -> Result<String> {
-        self.req(path, None, Get, Auth::Authorized)
+        try!(self.handle.get(true));
+        self.req(path, None, Auth::Authorized)
     }
 
     fn delete(&mut self, path: String, b: Option<&[u8]>) -> Result<String> {
-        self.req(path, b, Delete, Auth::Authorized)
+        try!(self.handle.custom_request("DELETE"));
+        self.req(path, b, Auth::Authorized)
     }
 
-    fn req(&mut self, path: String, body: Option<&[u8]>,
-           method: Method, authorized: Auth) -> Result<String> {
-        let mut req = Request::new(&mut self.handle, method)
-                              .uri(format!("{}/api/v1{}", self.host, path))
-                              .header("Accept", "application/json")
-                              .content_type("application/json");
+    fn req(&mut self,
+           path: String,
+           body: Option<&[u8]>,
+           authorized: Auth) -> Result<String> {
+        try!(self.handle.url(&format!("{}/api/v1{}", self.host, path)));
+        let mut headers = List::new();
+        try!(headers.append("Accept: application/json"));
+        try!(headers.append("Content-Type: application/json"));
 
         if authorized == Auth::Authorized {
             let token = match self.token.as_ref() {
                 Some(s) => s,
                 None => return Err(Error::TokenMissing),
             };
-            req = req.header("Authorization", &token);
+            try!(headers.append(&format!("Authorization: {}", token)));
         }
+        try!(self.handle.http_headers(headers));
         match body {
-            Some(b) => req = req.body(b),
-            None => {}
+            Some(mut body) => {
+                try!(self.handle.upload(true));
+                try!(self.handle.in_filesize(body.len() as u64));
+                handle(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))
+            }
+            None => handle(&mut self.handle, &mut |_| 0),
         }
-        handle(req.exec())
     }
 }
 
-fn handle(response: result::Result<http::Response, curl::ErrCode>)
-          -> Result<String> {
-    let response = try!(response.map_err(Error::Curl));
-    match response.get_code() {
+fn handle(handle: &mut Easy,
+          read: &mut FnMut(&mut [u8]) -> usize) -> Result<String> {
+    let mut headers = Vec::new();
+    let mut body = Vec::new();
+    {
+        let mut handle = handle.transfer();
+        try!(handle.read_function(|buf| Ok(read(buf))));
+        try!(handle.write_function(|data| {
+            body.extend_from_slice(data);
+            Ok(data.len())
+        }));
+        try!(handle.header_function(|data| {
+            headers.push(String::from_utf8_lossy(data).into_owned());
+            true
+        }));
+        try!(handle.perform());
+    }
+
+    match try!(handle.response_code()) {
         0 => {} // file upload url sometimes
         200 => {}
         403 => return Err(Error::Unauthorized),
         404 => return Err(Error::NotFound),
-        _ => return Err(Error::NotOkResponse(response))
+        code => return Err(Error::NotOkResponse(code, headers, body))
     }
 
-    let body = match String::from_utf8(response.move_body()) {
+    let body = match String::from_utf8(body) {
         Ok(body) => body,
         Err(..) => return Err(Error::NonUtf8Body),
     };
@@ -275,8 +309,15 @@ impl fmt::Display for Error {
         match *self {
             Error::NonUtf8Body => write!(f, "response body was not utf-8"),
             Error::Curl(ref err) => write!(f, "http error: {}", err),
-            Error::NotOkResponse(ref resp) => {
-                write!(f, "failed to get a 200 OK response: {}", resp)
+            Error::NotOkResponse(code, ref headers, ref body) => {
+                try!(writeln!(f, "failed to get a 200 OK response, got {}", code));
+                try!(writeln!(f, "headers:"));
+                for header in headers {
+                    try!(writeln!(f, "    {}", header));
+                }
+                try!(writeln!(f, "body:"));
+                try!(writeln!(f, "{}", String::from_utf8_lossy(body)));
+                Ok(())
             }
             Error::Api(ref errs) => {
                 write!(f, "api errors: {}", errs.join(", "))
