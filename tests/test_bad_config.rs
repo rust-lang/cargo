@@ -1,5 +1,6 @@
-use support::{project, execs};
+use support::{project, execs, paths};
 use support::registry::Package;
+use support::git::repo;
 use hamcrest::assert_that;
 
 fn setup() {}
@@ -57,7 +58,8 @@ Caused by:
 });
 
 test!(bad3 {
-    let foo = project("foo")
+    let root = paths::root().join("bad3");
+    let p = repo(&root)
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -69,7 +71,11 @@ test!(bad3 {
             [http]
               proxy = true
         "#);
-    assert_that(foo.cargo_process("publish").arg("-v"),
+    p.build();
+
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] invalid configuration for key `http.proxy`
 expected a string, but found a boolean in [..]config

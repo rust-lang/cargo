@@ -7,7 +7,7 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 use url::Url;
 
-use support::{project, execs};
+use support::execs;
 use support::paths;
 use support::git::repo;
 
@@ -36,8 +36,100 @@ fn setup() {
         .build();
 }
 
+test!(uncommited_git_files_allowed {
+    let root = paths::root().join("uncommited_git_files_allowed");
+    let p = repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .nocommit_file("bad","file")
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("--allow-untracked").arg("--no-verify"),
+                execs().with_status(0).with_stdout(&format!("\
+[UPDATING] registry `{reg}`
+[PACKAGING] foo v0.0.1 ({dir})
+[UPLOADING] foo v0.0.1 ({dir})",
+        dir = p.url(),
+        reg = registry())));
+});
+
+test!(uncommited_git_files_error_from_sub_crate {
+    let root = paths::root().join("sub_uncommited_git");
+    let p = repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .nocommit_file("bad.txt","file")
+        .file("src/main.rs", "fn main() {}")
+        .file("sub/lib.rs", "pub fn l() {}")
+        .file("sub/Cargo.toml", r#"
+            [package]
+            name = "crates-io"
+            version = "0.2.0"
+            authors = []
+            license = "MIT/Apache-2.0"
+            repository = "https://github.com/rust-lang/cargo"
+            description = """
+            """
+
+            [lib]
+            name = "crates_io"
+            path = "lib.rs"
+        "#);
+    p.build();
+
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root().join("sub"));
+    assert_that(cargo.arg("publish").arg("--no-verify"),
+                execs().with_status(101).with_stderr(&"\
+[ERROR] 1 uncommited or untacked files that need to be addressed before \
+publishing. to force the publish command include --allow-untracked
+problem files:
+bad.txt",
+        ));
+});
+
+test!(uncommited_git_files_error {
+    let root = paths::root().join("uncommited_git_files_error");
+    let p = repo(&root)
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .nocommit_file("bad.txt","file")
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("--no-verify"),
+                execs().with_status(101).with_stderr_contains(&"\
+[ERROR] 1 uncommited or untacked files that need to be addressed before \
+publishing. to force the publish command include --allow-untracked
+problem files:",
+        ).with_stderr_contains(&"bad.txt"));
+});
+
 test!(simple {
-    let p = project("foo")
+    let root = paths::root().join("simple");
+    let p = repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -47,8 +139,12 @@ test!(simple {
             description = "foo"
         "#)
         .file("src/main.rs", "fn main() {}");
+    p.build();
 
-    assert_that(p.cargo_process("publish").arg("--no-verify"),
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+
+    assert_that(cargo.arg("publish").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
 [UPDATING] registry `{reg}`
 [PACKAGING] foo v0.0.1 ({dir})
@@ -84,7 +180,8 @@ test!(simple {
 });
 
 test!(git_deps {
-    let p = project("foo")
+    let root = paths::root().join("git_deps");
+    let p = repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -97,8 +194,11 @@ test!(git_deps {
             git = "git://path/to/nowhere"
         "#)
         .file("src/main.rs", "fn main() {}");
+    p.build();
 
-    assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("-v").arg("--no-verify"),
                 execs().with_status(101).with_stderr("\
 [ERROR] all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
@@ -106,7 +206,8 @@ dependency `foo` comes from git://path/to/nowhere instead
 });
 
 test!(path_dependency_no_version {
-    let p = project("foo")
+    let root = paths::root().join("path_dependency_no_version");
+    let p = repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -126,8 +227,11 @@ test!(path_dependency_no_version {
             authors = []
         "#)
         .file("bar/src/lib.rs", "");
+    p.build();
 
-    assert_that(p.cargo_process("publish"),
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish"),
                 execs().with_status(101).with_stderr("\
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
@@ -135,7 +239,8 @@ dependency `bar` does not specify a version
 });
 
 test!(unpublishable_crate {
-    let p = project("foo")
+    let root = paths::root().join("unpublishable_crate");
+    let p = repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -146,8 +251,11 @@ test!(unpublishable_crate {
             publish = false
         "#)
         .file("src/main.rs", "fn main() {}");
+    p.build();
 
-    assert_that(p.cargo_process("publish"),
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish"),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
