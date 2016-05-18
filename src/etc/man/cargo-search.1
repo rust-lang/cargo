@@ -1,0 +1,49 @@
+.TH "CARGO\-SEARCH" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-search \- Search packages in crates.io
+.SH SYNOPSIS
+.PP
+\f[I]cargo search\f[] [OPTIONS] <QUERY>...
+.SH DESCRIPTION
+.PP
+Search packages in \f[I]crates.io\f[].
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-host \f[I]HOST\f[]
+Host of a registry to search in.
+.RS
+.RE
+.TP
+.B \-\-limit \f[I]LIMIT\f[]
+Limit the number of results (default: 10, max: 100).
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-install(1), cargo\-publish(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

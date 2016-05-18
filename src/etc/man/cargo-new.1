@@ -1,0 +1,68 @@
+.TH "CARGO\-NEW" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-new \- Create a new cargo package
+.SH SYNOPSIS
+.PP
+\f[I]cargo new\f[] [OPTIONS] <PATH>
+.SH DESCRIPTION
+.PP
+Create a new cargo package at <PATH>.
+.PP
+Use the \f[B]\-\-vcs\f[] option to control the version control system to
+use.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-vcs \f[I]VCS\f[]
+Initialize a new repository for the given version control system (git or
+hg) or do not initialize any version control at all (none) overriding a
+global configuration.
+.RS
+.RE
+.TP
+.B \-\-bin
+Use a binary instead of a library template.
+.RS
+.RE
+.TP
+.B \-\-name \f[I]NAME\f[]
+Set the resulting package name.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Create a binary cargo package in the current directory
+.IP
+.nf
+\f[C]
+$\ cargo\ new\ \-\-bin\ ./
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-init(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

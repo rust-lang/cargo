@@ -1,0 +1,98 @@
+.TH "CARGO\-RUN" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-run \- Run the current project
+.SH SYNOPSIS
+.PP
+\f[I]cargo run\f[] [OPTIONS] [\-\-] [<ARGS>...]
+.SH DESCRIPTION
+.PP
+Run the main binary of the local package (src/main.rs).
+.PP
+If neither \f[B]\-\-bin\f[] nor \f[B]\-\-example\f[] are given, then if
+the project only has one bin target it will be run.
+Otherwise \f[B]\-\-bin\f[] specifies the bin target to run, and
+\f[B]\-\-example\f[] specifies the example target to run.
+At most one of \f[B]\-\-bin\f[] or \f[B]\-\-example\f[] can be provided.
+.PP
+All of the trailing arguments are passed to the binary to run.
+If you\[aq]re passing arguments to both Cargo and the binary, the ones
+after \f[B]\-\-\f[] go to the binary, the ones before go to Cargo.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Name of the bin target to run.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]NAME\f[]
+Name of the example target to run.
+.RS
+.RE
+.TP
+.B \-j \f[I]IN\f[], \-\-jobs \f[I]IN\f[]
+The number of jobs to run in parallel.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space\-separated list of features to also build.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Build for the target triple.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to compile.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Run the main binary of the current package
+.IP
+.nf
+\f[C]
+$\ cargo\ run
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-new(1), cargo\-init(1), cargo\-build(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
