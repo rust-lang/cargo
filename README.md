@@ -87,7 +87,14 @@ a list of known community-developed subcommands.
 ## Contributing to the Docs
 
 To contribute to the docs, all you need to do is change the markdown files in
-the `src/doc` directory.
+the `src/doc` directory. To view the rendered version of changes you have
+made locally, run:
+
+```sh
+./configure
+make doc
+open target/doc/index.html
+```
 
 ## Release notes
 

@@ -11,7 +11,11 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["you@example.com"]
 ```
 
-All three of these fields are mandatory. Cargo bakes in the concept of [Semantic
+All three of these fields are mandatory.
+
+## The `version` Field
+
+Cargo bakes in the concept of [Semantic
 Versioning](http://semver.org/), so make sure you follow some basic rules:
 
 * Before you reach 1.0.0, anything goes.
@@ -22,9 +26,6 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
   versions. Always increment the minor version if you add any new `pub` structs,
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
-
-For more on versions, see [this
-documentation](crates-io.html#using-cratesio-based-crates).
 
 ## The `build` Field (optional)
 
@@ -125,94 +126,11 @@ provide useful information to users of the registry and also influence the
 search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
 
-# The `[dependencies]` Section
+# Dependency Sections
 
-You list dependencies using keys inside of the `[dependencies]` section. For
-example, if you wanted to depend on `hammer`, `color`, and `geometry`:
-
-```toml
-[package]
-# ...
-
-[dependencies]
-hammer = { version = "0.5.0", git = "https://github.com/wycats/hammer.rs" }
-color = { git = "https://github.com/bjz/color-rs" }
-geometry = { path = "crates/geometry" }
-```
-
-You can specify the source of a dependency in a few ways:
-
-* `git = "<git-url>"` refers to a git repository with a `Cargo.toml` inside it
-  (not necessarily at the root). The `rev`, `tag`, and `branch` options are also
-  recognized to use something other than the `master` branch.
-* `path = "<relative-path>"` refers to another directory with a `Cargo.toml`
-  inside it. The specified path should be relative to the current `Cargo.toml`.
-* If `path` and `git` are omitted, the dependency will come from crates.io, and
-  the `version` key will be used to indicate the version requirement.
-* `path` will be ignored for all dependencies retrieved from crates.io, so `git`
-  or `version` must be specified for all crate dependencies when uploading to
-  crates.io.
-
-Dependencies from crates.io can also use a shorthand where just the version
-requirement is specified:
-
-```toml
-[dependencies]
-hammer = "0.5.0"
-color = "> 0.6.0, < 0.8.0"
-```
-
-The syntax of the requirement strings is described in the [crates.io
-guide](crates-io.html#using-cratesio-based-crates).
-
-Platform-specific dependencies take the same format, but are listed under the
-`target` section. Normally Rust-like `#[cfg]` syntax will be used to define
-these sections:
-
-```toml
-[target.'cfg(windows)'.dependencies]
-winhttp = "0.4.0"
-
-[target.'cfg(unix)'.dependencies]
-openssl = "1.0.1"
-
-[target.'cfg(target_pointer_width = "32")'.dependencies]
-native = { path = "native/i686" }
-
-[target.'cfg(target_pointer_width = "64")'.dependencies]
-native = { path = "native/i686" }
-```
-
-Like with Rust, the syntax here supports the `not`, `any`, and `all` operators
-to combine various cfg name/value pairs. Note that the `cfg` syntax has only
-been available since Cargo 0.9.0 (Rust 1.8.0).
-
-In addition to `#[cfg]` syntax, Cargo also supports listing out the full target
-the dependencies would apply to:
-
-```toml
-[target.x86_64-pc-windows-gnu.dependencies]
-winhttp = "0.4.0"
-
-[target.i686-unknown-linux-gnu.dependencies]
-openssl = "1.0.1"
-```
-
-If you’re using a custom target specification, quote the full path and file
-name:
-
-```toml
-[target."x86_64/windows.json".dependencies]
-winhttp = "0.4.0"
-
-[target."i686/linux.json".dependencies]
-openssl = "1.0.1"
-native = { path = "native/i686" }
-
-[target."x86_64/linux.json".dependencies]
-openssl = "1.0.1"
-native = { path = "native/x86_64" }
-```
+See the [specifying dependencies page](specifying-dependencies.html) for
+information on the `[dependencies]`, `[dev-dependencies]`, and target-specific
+`[target.*.dependencies]` sections.
 
 # The `[profile.*]` Sections
 
@@ -398,15 +316,6 @@ dependencies:
 In almost all cases, it is an antipattern to use these features outside of
 high-level packages that are designed for curation. If a feature is optional, it
 can almost certainly be expressed as a separate package.
-
-# The `[dev-dependencies]` Section
-
-The format of this section is equivalent to `[dependencies]`. Dev-dependencies
-are not used when compiling a package for building, but are used for compiling
-tests, examples, and benchmarks.
-
-These dependencies are *not* propagated to other packages which depend on this
-package.
 
 # The Project Layout
 
