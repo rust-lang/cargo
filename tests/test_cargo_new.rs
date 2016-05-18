@@ -181,6 +181,24 @@ test!(finds_author_username {
     assert!(contents.contains(r#"authors = ["foo"]"#));
 });
 
+test!(finds_author_priority {
+    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
+    // the hierarchy
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("foo")
+                                    .env("USER", "bar2")
+                                    .env("EMAIL", "baz2")
+                                    .env("CARGO_NAME", "bar")
+                                    .env("CARGO_EMAIL", "baz")
+                                    .cwd(td.path().clone()),
+                execs().with_status(0));
+
+    let toml = td.path().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
+});
+
 test!(finds_author_email {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
